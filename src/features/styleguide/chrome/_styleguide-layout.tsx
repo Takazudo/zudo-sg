@@ -35,13 +35,14 @@
 //   tocOverride     → the right-region CodeMirror code panel on detail pages
 //                     (#49). `<></>` (and `hideToc`) when absent so the content
 //                     band fills the freed width.
-//   headerOverride  → page-supplied HeaderWithDefaults PLUS SgHeaderToggles
-//                     island (absolute-positioned in the header's right region).
+//   headerOverride  → page-supplied HeaderWithDefaults PLUS the SgHeaderToggles
+//                     island, rendered as inline siblings in the slot.
 //
 // SgHeaderToggles is emitted by this layout directly (not the page) because it
 // belongs to the src/ boundary and is styleguide-specific, not host-chrome.
-// It is rendered as a fixed/absolute overlay positioned to sit in the header's
-// right-items row (the CSS lives in the ported sg-chrome.css utilities).
+// It renders inline (a `flex` row of bordered pill buttons via Tailwind
+// utilities — see header-toggles.tsx); there is no absolute/overlay positioning
+// and no `.sg-header-toggles` CSS.
 //
 // The active-item highlight is owned by the root SidebarTree's `useActiveSlug`,
 // which (since #46) also listens to AFTER_NAVIGATE_EVENT for soft-nav — there
@@ -120,12 +121,10 @@ export function StyleguideLayout({
   // the full width on the catalog + token routes.
   const tocOverride: VNode = showCodePanel ? (codePanel as VNode) : <></>;
 
-  // SgHeaderToggles island — rendered as a sibling to the page-supplied header
-  // in the headerOverride slot. Positioned via CSS (.sg-header-toggles) to sit
-  // in the header's right region (see ported sg-chrome.css). The page-supplied
-  // `header` element (HeaderWithDefaults) renders the <header> shell; the
-  // SgHeaderToggles island floats over it so the toggled code panel + token
-  // panel are accessible from every component route.
+  // SgHeaderToggles island — rendered inline as a sibling after the
+  // page-supplied header in the headerOverride slot (no positioning CSS; it is
+  // a `flex` row of bordered pill buttons — see header-toggles.tsx). Exposes the
+  // code panel + token panel toggles from every component route.
   const headerToggles = Island({
     when: "load",
     children: <SgHeaderToggles showCodePanel={showCodePanel} />,

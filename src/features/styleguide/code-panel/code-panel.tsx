@@ -110,3 +110,7 @@ export default function CodePanel({
     </div>
   );
 }
+
+// Pin the hydration name explicitly (matches every other island in this
+// feature) rather than relying on the minifier preserving `fn.name`.
+CodePanel.displayName = "CodePanel";

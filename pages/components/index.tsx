@@ -56,7 +56,7 @@ export default function ComponentsIndexPage(): JSX.Element {
       title={composeMetaTitle("Components")}
       activeSlug={OVERVIEW_SLUG}
       lang={locale}
-      head={<HeadWithDefaults title={`Components — ${settings.siteName}`} />}
+      head={<HeadWithDefaults title="Components" />}
       header={
         <HeaderWithDefaults
           lang={locale}

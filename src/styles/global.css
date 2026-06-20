@@ -1058,20 +1058,10 @@ dialog.zd-mermaid-dialog::backdrop {
 :root {
   /* Header height — referenced by the native header and the code panel's sticky
    * offset. Matches DocLayout's fixed header offset (`top-[3.5rem]`).
-   * Selector/var names stay in sync with src/chrome/panel-contract.ts. */
+   * Selector/var names stay in sync with
+   * src/features/styleguide/chrome/panel-contract.ts. */
   --sg-header-h: 3.5rem;
   --sg-code-panel-w: 28rem;
-}
-
-/* When the sidebar is toggled hidden, collapse DocLayout's fixed aside and
- * reclaim its margin so the content band fills the freed width. */
-:root[data-sg-sidebar-hidden] #desktop-sidebar {
-  display: none;
-}
-@media (min-width: 1024px) {
-  :root[data-sg-sidebar-hidden] .zd-sidebar-content-wrapper {
-    margin-left: 0;
-  }
 }
 
 /* ── Code panel: right-region layout (fills DocLayout's TOC column) ──
@@ -1174,15 +1164,6 @@ dialog.zd-mermaid-dialog::backdrop {
 }
 
 /* --- Usage snippet block (detail page) ------------------------------------ */
-.sg-snippet {
-  position: relative;
-}
-.sg-snippet-actions {
-  position: absolute;
-  top: var(--spacing-vsp-3xs, 0.2rem);
-  right: var(--spacing-hsp-xs, 0.5rem);
-  z-index: 1;
-}
 
 /* --- Landing search + tag filter ------------------------------------------ */
 .sg-filter {

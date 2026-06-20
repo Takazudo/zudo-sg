@@ -16,11 +16,11 @@
 //   - The code panel (DocLayout's TOC region) is styleguide-specific, so its
 //     width + hidden state stay under styleguide-private `sg-*` names.
 //
-// SIDEBAR hidden state: the sidebar toggle is handled by root's
-// desktop-sidebar-toggle island (part of the shared docs chrome). We keep
-// ATTR_SIDEBAR_HIDDEN / LS_SIDEBAR_HIDDEN here so the PanelStateHeadScript can
-// restore it on soft-nav, but we DO NOT duplicate the toggle logic — the root
-// island owns toggling.
+// SIDEBAR hidden state is NOT modelled here: the desktop sidebar toggle is
+// owned entirely by root's desktop-sidebar-toggle island + the `data-sidebar-hidden`
+// attribute (shared docs chrome). This module covers only the styleguide-private
+// CODE PANEL (its width + hidden state); it does not duplicate any sidebar toggle
+// logic or persistence.
 
 // ── Data attributes on <html> (drive visibility via CSS) ───────────────────
 export const ATTR_CODE_PANEL_HIDDEN = "data-sg-code-panel-hidden";

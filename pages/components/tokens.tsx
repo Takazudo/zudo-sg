@@ -75,7 +75,7 @@ export default function TokensPage(): JSX.Element {
       title={composeMetaTitle("Design Tokens")}
       activeSlug={TOKENS_SLUG}
       lang={locale}
-      head={<HeadWithDefaults title={`Design Tokens — ${settings.siteName}`} />}
+      head={<HeadWithDefaults title="Design Tokens" />}
       header={
         <HeaderWithDefaults
           lang={locale}

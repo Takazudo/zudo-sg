@@ -120,10 +120,6 @@ export function getAllSlugs(): string[] {
   return storyEntries.map((e) => e.slug);
 }
 
-export function getStoryByPath(path: string): StoryEntry | undefined {
-  return storyEntries.find((e) => e.path === path);
-}
-
 /** A category bucket for the catalog landing + sidebar. */
 export interface CategoryGroup {
   category: StoryCategory;
@@ -156,16 +152,4 @@ export function getCategoryGroups(): CategoryGroup[] {
     groups.push({ category, stories });
   }
   return groups;
-}
-
-/**
- * Resolve the verbatim source string the code panel shows for a variant.
- * Contract: explicit `Story.source` first, else `meta.usage` as the
- * component-level example.
- */
-export function resolveVariantSource(
-  entry: StoryEntry,
-  variant: VariantEntry,
-): string {
-  return variant.story.source ?? entry.meta.usage;
 }
