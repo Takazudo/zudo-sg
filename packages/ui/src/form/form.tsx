@@ -1,5 +1,4 @@
 import type { ComponentChildren, JSX } from "preact";
-import { useId } from "preact/hooks";
 import { cx } from "../lib/cx";
 
 /* Shared field-control surface (input + textarea). */
@@ -46,6 +45,19 @@ export function Textarea({ invalid = false, class: cls, rows, ...rest }: Textare
   );
 }
 
+// Auto-generated field ids use a module-scoped counter, NOT preact's useId().
+// @zudo-sg/ui is bundled into apps/demo with its own nested preact copy, so a
+// hook called from this component runs against a preact instance whose render
+// dispatcher is unset during the demo's zfb SSR build, throwing "Cannot read
+// properties of undefined (reading '__H')". A plain counter is preact-instance-
+// agnostic and stable across the single server render these Fields receive
+// (they are server-rendered, never hydrated). Do NOT swap this back to useId().
+let fieldSeq = 0;
+function nextId(prefix: string) {
+  fieldSeq += 1;
+  return `${prefix}-${fieldSeq}`;
+}
+
 type FieldProps = {
   label: ComponentChildren;
   /** id wired to the control via htmlFor; auto-generated when omitted. */
@@ -78,8 +90,7 @@ export function Field({
   class: cls,
   children,
 }: FieldProps) {
-  const generatedId = useId();
-  const id = htmlFor ?? generatedId;
+  const id = htmlFor ?? nextId("field");
   const describedById = hint || error ? `${id}-desc` : undefined;
 
   return (
