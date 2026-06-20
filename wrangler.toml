@@ -1,0 +1,33 @@
+# Cloudflare Workers Static Assets configuration for the zudo-sg styleguide host.
+#
+# Both sites (root + apps/demo) are fully static — no prerender=false API
+# routes, no SSR adapter. So `main` and `nodejs_compat` are OMITTED.
+# If an SSR route is added later, wire @takazudo/zfb-adapter-cloudflare in
+# zfb.config.ts and add: main = "./dist/_worker.js" plus
+# compatibility_flags = ["nodejs_compat"] here.
+
+name = "zudo-sg"
+
+compatibility_date = "2024-12-01"
+
+# workers_dev = false prevents serving on *.workers.dev production route.
+# preview_urls = true enables version-preview URLs for staging (used by
+# preview-deploy.yml / pr-checks.yml via `wrangler versions upload`).
+preview_urls = true
+workers_dev = false
+
+# ---------------------------------------------------------------------------
+# Static asset serving
+#
+# not_found_handling = "404-page" serves dist/404.html for unmatched GETs.
+# ---------------------------------------------------------------------------
+[assets]
+directory = "./dist"
+not_found_handling = "404-page"
+
+# ---------------------------------------------------------------------------
+# Custom domain routing
+# ---------------------------------------------------------------------------
+[[routes]]
+pattern = "zudo-sg.takazudomodular.com"
+custom_domain = true
