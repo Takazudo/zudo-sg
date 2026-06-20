@@ -20,6 +20,22 @@
    (radius values, --leading-snug, shadow-lg) are re-defined in @theme below. */
 @import "@zudo-sg/ui/styles/tokens.css";
 
+/* Shared SEMANTIC COLOR tokens from @zudo-sg/ui (ink/paper/surface/line/brand/
+   state, light + dark via light-dark()). Imported HERE — and not as part of the
+   S2 docs theme — so the S6 styleguide catalog can render `@zudo-sg/ui`
+   components (they reference `bg-brand`, `text-ink`, `border-line`,
+   `bg-surface-sunken`, `text-on-brand`, … utilities that only exist if these
+   tokens are declared). This adds the UI-only utilities WITHOUT changing the
+   docs theme: the four token names that overlap with the host palette
+   (`--color-surface`, `--color-accent`, `--color-success`, `--color-danger`)
+   are RE-ASSERTED to the host's `var(--zd-*)` values by the `@theme` block
+   below (line ~93), which wins by source order — so the docs site is unchanged
+   and the styleguide's surface/accent/state utilities resolve to the same
+   active palette. The remaining UI tokens (brand/ink/line/paper/on-brand/…)
+   are new, additive, and styleguide-scoped in practice (no docs markup emits
+   them). See packages/ui/STORIES.md §1 "Required style imports". */
+@import "@zudo-sg/ui/styles/colors.css";
+
 /* ========================================
  * @takazudo/zudo-doc package safelist
  *
@@ -69,6 +85,12 @@
 @source "src/hooks/**/*.{tsx,ts,jsx,js}";
 @source "src/utils/**/*.{tsx,ts,jsx,js}";
 @source "pages/**/*.{tsx,ts,jsx,js}";
+/* S6 styleguide catalog chrome lives under src/styleguide/. */
+@source "src/styleguide/**/*.{tsx,ts,jsx,js}";
+/* The @zudo-sg/ui component library lives outside this app's tree; scan its
+   source so Tailwind generates the utility classes the components emit (so the
+   styleguide preview iframes render correctly). Mirrors apps/demo's @source. */
+@source "../../packages/ui/src/**/*.{tsx,ts,jsx,js}";
 
 /* ========================================
  * Design Token System
@@ -1024,4 +1046,160 @@ dialog.zd-mermaid-dialog::backdrop {
 
 .diff-line-empty {
   background-color: color-mix(in oklch, var(--color-muted) 8%, transparent);
+}
+
+/* ============================================================================
+ * S6 — Styleguide catalog chrome
+ *
+ * 3-region shell (header + left sidebar + main + right code panel), resizable
+ * left/right panels persisted to localStorage. The sidebar/code-panel WIDTHS
+ * live in --sg-sidebar-w / --sg-code-panel-w (set inline on <html> by the
+ * resizer + the pre-paint restore script); VISIBILITY is driven by the
+ * data-sg-sidebar-hidden / data-sg-code-panel-hidden attributes on <html>.
+ * Keep these selector/var/attr names in sync with
+ * src/styleguide/chrome/panel-contract.ts.
+ * ========================================================================== */
+
+:root {
+  --sg-header-h: 3.25rem;
+  --sg-sidebar-w: 17rem;
+  --sg-code-panel-w: 28rem;
+}
+
+.sg-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-paper);
+  color: var(--color-ink);
+}
+
+.sg-header {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  height: var(--sg-header-h);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-hsp-md, 1rem);
+  padding-inline: var(--spacing-hsp-md, 1rem);
+  border-bottom: 1px solid var(--color-line);
+  background: var(--color-surface);
+}
+
+.sg-body {
+  flex: 1;
+  display: flex;
+  align-items: stretch;
+  min-height: 0;
+}
+
+.sg-sidebar {
+  position: relative;
+  flex-shrink: 0;
+  width: var(--sg-sidebar-w);
+  border-right: 1px solid var(--color-line);
+  background: var(--color-surface);
+  overflow-y: auto;
+  max-height: calc(100vh - var(--sg-header-h));
+  position: sticky;
+  top: var(--sg-header-h);
+}
+
+.sg-main {
+  flex: 1;
+  min-width: 0;
+  padding: var(--spacing-vsp-lg, 1.5rem) var(--spacing-hsp-lg, 1.5rem);
+}
+
+.sg-code-panel {
+  position: relative;
+  flex-shrink: 0;
+  width: var(--sg-code-panel-w);
+  border-left: 1px solid var(--color-line);
+  background: var(--color-surface);
+  overflow-y: auto;
+  max-height: calc(100vh - var(--sg-header-h));
+  position: sticky;
+  top: var(--sg-header-h);
+}
+
+/* Resizer handles — absolutely positioned grab strips at the panel edges. */
+.sg-resizer {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 10px;
+  cursor: col-resize;
+  z-index: 5;
+  background: transparent;
+}
+.sg-resizer:hover,
+.sg-resizer[data-sg-dragging] {
+  background: color-mix(in oklch, var(--color-brand) 30%, transparent);
+}
+.sg-sidebar .sg-resizer {
+  right: -5px;
+}
+.sg-code-panel .sg-resizer {
+  left: -5px;
+}
+
+/* Visibility toggles. */
+:root[data-sg-sidebar-hidden] .sg-sidebar {
+  display: none;
+}
+:root[data-sg-code-panel-hidden] .sg-code-panel {
+  display: none;
+}
+
+/* Below the lg breakpoint, stack: sidebar + code panel drop to full width. */
+@media (max-width: 1024px) {
+  .sg-sidebar,
+  .sg-code-panel {
+    position: static;
+    width: 100%;
+    max-height: none;
+    border: 0;
+    border-bottom: 1px solid var(--color-line);
+  }
+  .sg-body {
+    flex-direction: column;
+  }
+  .sg-resizer {
+    display: none;
+  }
+}
+
+.sg-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-hsp-2xs, 0.25rem);
+  padding: var(--spacing-vsp-3xs, 0.2rem) var(--spacing-hsp-xs, 0.5rem);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-sm, 0.25rem);
+  background: var(--color-surface);
+  color: var(--color-ink-mute);
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+.sg-toggle-btn:hover {
+  color: var(--color-ink);
+  border-color: var(--color-line-strong);
+}
+
+.sg-nav-link {
+  display: block;
+  padding: var(--spacing-vsp-3xs, 0.2rem) var(--spacing-hsp-sm, 0.75rem);
+  border-radius: var(--radius-sm, 0.25rem);
+  color: var(--color-ink-soft);
+  font-size: 0.875rem;
+}
+.sg-nav-link:hover {
+  background: var(--color-surface-sunken);
+  color: var(--color-ink);
+}
+.sg-nav-link[aria-current="page"] {
+  background: var(--color-brand);
+  color: var(--color-on-brand);
 }
