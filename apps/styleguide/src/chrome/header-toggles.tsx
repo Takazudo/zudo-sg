@@ -25,11 +25,26 @@ function openTokenPanel(): void {
 export default function SgHeaderToggles({
   showCodePanel = false,
 }: HeaderTogglesProps): JSX.Element {
+  // Native token styling (no `.sg-*`): bordered pills using the docs semantic
+  // utilities. The sidebar/code chrome toggles are `hidden lg:inline-flex` —
+  // off mobile, where the hamburger drawer is the nav affordance and the code
+  // panel stacks under the content. The Tokens trigger stays visible always.
+  // Class strings are written as full literals (not composed at runtime) so the
+  // Tailwind v4 scanner generates every utility.
+  const chromeToggleClass =
+    "hidden lg:inline-flex items-center gap-hsp-2xs px-hsp-xs py-vsp-3xs " +
+    "border border-muted rounded text-small text-muted hover:text-fg " +
+    "transition-colors cursor-pointer";
+  const tokenToggleClass =
+    "inline-flex items-center gap-hsp-2xs px-hsp-xs py-vsp-3xs " +
+    "border border-muted rounded text-small text-muted hover:text-fg " +
+    "transition-colors cursor-pointer";
+
   return (
     <div class="flex items-center gap-hsp-2xs">
       <button
         type="button"
-        class="sg-toggle-btn"
+        class={chromeToggleClass}
         onClick={() => toggleSidebar()}
         title="Toggle sidebar"
       >
@@ -38,7 +53,7 @@ export default function SgHeaderToggles({
       {showCodePanel && (
         <button
           type="button"
-          class="sg-toggle-btn"
+          class={chromeToggleClass}
           onClick={() => toggleCodePanel()}
           title="Toggle code panel"
         >
@@ -47,7 +62,7 @@ export default function SgHeaderToggles({
       )}
       <button
         type="button"
-        class="sg-toggle-btn"
+        class={tokenToggleClass}
         onClick={openTokenPanel}
         title="Open design-token tweaker"
       >
