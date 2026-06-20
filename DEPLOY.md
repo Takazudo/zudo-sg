@@ -8,7 +8,6 @@ One-time setup required before the CI workflows can deploy to Cloudflare Workers
 |---|---|---|
 | `zudo-sg` | `zudo-sg.takazudomodular.com` | `wrangler.toml` |
 | `zudo-sg-demo-site` | `zudo-sg-demo-site.takazudomodular.com` | `apps/demo/wrangler.toml` |
-| `zudo-sg-styleguide` | `zudo-sg-styleguide.takazudomodular.com` | `apps/styleguide/wrangler.toml` |
 
 Both sites are fully static (no SSR). If an SSR route (`prerender = false`) is added later, wire `@takazudo/zfb-adapter-cloudflare` in the relevant `zfb.config.ts`, add `main = "./dist/_worker.js"` and `compatibility_flags = ["nodejs_compat"]` to the corresponding `wrangler.toml`, and add the `.assetsignore` write step before the `wrangler deploy` call in the workflow (see reference in `zudo-doc`'s `main-deploy.yml`).
 
@@ -47,7 +46,6 @@ Add it as a GitHub Actions secret named `CLOUDFLARE_API_TOKEN`.
 |---|---|---|
 | `zudo-sg` | `zudo-sg.takazudomodular.com` | `wrangler deploy` (auto) |
 | `zudo-sg-demo-site` | `zudo-sg-demo-site.takazudomodular.com` | `wrangler deploy` (auto) |
-| `zudo-sg-styleguide` | `zudo-sg-styleguide.takazudomodular.com` | `wrangler deploy` (auto) |
 
 The `CLOUDFLARE_API_TOKEN` (§2) must be able to manage the zone's DNS for this auto-provisioning to succeed — the **Edit Cloudflare Workers** template scoped to the account + the `takazudomodular.com` zone covers it (this is what the configured token already has; both sites are live).
 
@@ -69,9 +67,6 @@ npx wrangler@4.85.0 deploy --dry-run --config wrangler.toml
 
 # Validate demo site config
 npx wrangler@4.85.0 deploy --dry-run --config apps/demo/wrangler.toml
-
-# Validate standalone styleguide config
-npx wrangler@4.85.0 deploy --dry-run --config apps/styleguide/wrangler.toml
 ```
 
 `--dry-run` validates the config and reports what would be deployed without sending anything to Cloudflare. It does not require credentials. If wrangler prompts for auth even with `--dry-run`, validate the TOML syntax instead:

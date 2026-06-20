@@ -9,11 +9,10 @@ set -euo pipefail
 #   3. Type checking (zfb check / tsc --noEmit)
 #   4. Unit tests (test:unit)
 #   5. Build (zfb build)
-#   6. Standalone styleguide typecheck + build (apps/styleguide)
-#   7. Link check (check:links)
-#   8. HTML validation (check:html)
-#   9. Playwright smoke e2e (test:e2e)
-#  10. Manual interactive smoke (operator-driven)
+#   6. Link check (check:links)
+#   7. HTML validation (check:html)
+#   8. Playwright smoke e2e (test:e2e)
+#   9. Manual interactive smoke (operator-driven)
 #
 # Env overrides for non-interactive use:
 #   B4PUSH_SKIP_HTML_VALIDATE=1  — skip HTML validation (step 7)
@@ -22,7 +21,7 @@ set -euo pipefail
 
 START_TIME=$(date +%s)
 FAILURES=()
-TOTAL_STEPS=10
+TOTAL_STEPS=9
 CURRENT_STEP=0
 
 step() {
@@ -90,15 +89,7 @@ else
   fail "Build"
 fi
 
-# ── Step 6: Standalone styleguide typecheck + build ───
-step "Standalone styleguide typecheck + build (apps/styleguide)"
-if (cd "$ROOT_DIR" && pnpm --filter @zudo-sg/styleguide typecheck && pnpm --filter @zudo-sg/styleguide build); then
-  pass "Standalone styleguide typecheck + build passed"
-else
-  fail "Standalone styleguide typecheck + build"
-fi
-
-# ── Step 7: Link check ────────────────────────────────
+# ── Step 6: Link check ────────────────────────────────
 step "Link check (check:links)"
 if (cd "$ROOT_DIR" && pnpm check:links); then
   pass "Link check passed"
@@ -106,7 +97,7 @@ else
   fail "Link check"
 fi
 
-# ── Step 8: HTML validation ───────────────────────────
+# ── Step 7: HTML validation ───────────────────────────
 step "HTML validation (html-validate)"
 if [[ "${B4PUSH_SKIP_HTML_VALIDATE:-}" == "1" ]]; then
   skip "HTML validation (B4PUSH_SKIP_HTML_VALIDATE=1)"
@@ -118,7 +109,7 @@ else
   fi
 fi
 
-# ── Step 9: Playwright smoke e2e ──────────────────────
+# ── Step 8: Playwright smoke e2e ──────────────────────
 # Runs a single smoke fixture against the pre-built dist/ to verify the built
 # site renders and has no console errors. Excluded from CI b4push (CI runs E2E
 # in the pr-checks e2e job instead) but included in local b4push for fast
@@ -134,7 +125,7 @@ else
   fi
 fi
 
-# ── Step 10: Manual interactive smoke ────────────────
+# ── Step 9: Manual interactive smoke ─────────────────
 step "Manual interactive smoke"
 if [[ "${B4PUSH_SKIP_MANUAL_SMOKE:-}" == "1" ]]; then
   skip "Manual smoke (B4PUSH_SKIP_MANUAL_SMOKE=1)"

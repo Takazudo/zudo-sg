@@ -30,6 +30,7 @@ import {
   buildNavTree,
   collectAutoIndexNodes,
 } from "@/utils/docs";
+import { getAllSlugs, TOKENS_SLUG } from "@/styleguide/data/registry";
 
 // ---------------------------------------------------------------------------
 // enumerateDocsRoutes
@@ -209,6 +210,33 @@ export function enumerateVersionedRoutes(
 }
 
 // ---------------------------------------------------------------------------
+// enumerateComponentsRoutes
+// ---------------------------------------------------------------------------
+
+/**
+ * Enumerate all /components URLs: the catalog landing, each story slug page,
+ * and the design-tokens page.
+ *
+ * Returns deduplicated URL strings with base prefix applied.
+ */
+export function enumerateComponentsRoutes(): string[] {
+  const urls: string[] = [];
+
+  // Catalog landing
+  urls.push(withBase("/components"));
+
+  // Design Tokens page
+  urls.push(withBase(`/components/${TOKENS_SLUG}`));
+
+  // One page per story slug
+  for (const slug of getAllSlugs()) {
+    urls.push(withBase(`/components/${slug}`));
+  }
+
+  return [...new Set(urls)];
+}
+
+// ---------------------------------------------------------------------------
 // enumerateAllRoutes
 // ---------------------------------------------------------------------------
 
@@ -237,6 +265,11 @@ export function enumerateAllRoutes(): Map<string, string> {
 
   // Site root
   add(withBase("/"));
+
+  // Components section
+  for (const url of enumerateComponentsRoutes()) {
+    add(url);
+  }
 
   // Default locale docs
   for (const url of enumerateDocsRoutes(defaultLocale)) {

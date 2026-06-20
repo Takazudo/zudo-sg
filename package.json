@@ -8,7 +8,7 @@
     "dev": "zfb dev",
     "build": "zfb build",
     "preview": "zfb preview",
-    "check": "zfb check && pnpm --filter @zudo-sg/ui typecheck && pnpm --filter @zudo-sg/styleguide typecheck",
+    "check": "zfb check && pnpm --filter @zudo-sg/ui typecheck",
     "check:html": "html-validate \"dist/**/*.html\"",
     "check:links": "node scripts/check-links.mjs",
     "gen:z-index": "node scripts/gen-z-index.mjs",
@@ -22,6 +22,12 @@
     "prepare": "lefthook install"
   },
   "dependencies": {
+    "@codemirror/commands": "^6.0.0",
+    "@codemirror/lang-css": "^6.0.0",
+    "@codemirror/lang-javascript": "^6.0.0",
+    "@codemirror/state": "^6.0.0",
+    "@codemirror/theme-one-dark": "^6.0.0",
+    "@codemirror/view": "^6.0.0",
     "@shikijs/transformers": "^4.0.0",
     "@takazudo/zdtp": "0.2.3",
     "@takazudo/zfb": "0.1.0-next.53",
