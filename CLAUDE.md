@@ -74,8 +74,6 @@ To build all packages: `pnpm install && pnpm build` (root only; apps/demo builds
 - **sidebarResizer** — Draggable sidebar width
 - **sidebarToggle** — Show/hide desktop sidebar
 - **versioning** — Multi-version documentation support
-- **docHistory** — Document edit history
-- **bodyFootUtil** — Body footer utility area (hosts docHistory)
 - **llmsTxt** — Generates llms.txt for LLM consumption
 - **skillSymlinker** — Links doc content into Claude Code skill via `pnpm setup:doc-skill`
 - **footerNavGroup** — Footer navigation link groups

@@ -27,7 +27,6 @@
 // shared renderDocPage. This file owns only the route's nav source and the
 // param/prop shapes.
 
-import { settings } from "@/config/settings";
 import { defaultLocale } from "@/config/i18n";
 import type { JSX } from "preact";
 import { resolveNavSource } from "../lib/_nav-source-docs";
@@ -85,6 +84,5 @@ type PageArgs = DocPageProps & { params: { slug: string[] } };
 export default function DocsPage(props: PageArgs): JSX.Element {
   return renderDocPage(props, {
     locale: defaultLocale,
-    docHistoryContentDir: settings.docsDir,
   });
 }

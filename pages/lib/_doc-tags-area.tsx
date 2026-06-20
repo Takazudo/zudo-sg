@@ -3,8 +3,7 @@
 // Locale-aware DocTags area wrapper for the zfb doc pages.
 //
 // Renders the page-level tag chips (e.g. "Tags: #customization") between
-// the DocMetainfo block and the description paragraph (doc-tags placement
-// — after-title, between the date block and description paragraph).
+// the <h1> and the description paragraph (doc-tags placement — after-title).
 //
 // Restoration of a Astro→zfb migration regression: the DocTags component
 // was correctly ported into @takazudo/zudo-doc/metainfo/doc-tags.tsx

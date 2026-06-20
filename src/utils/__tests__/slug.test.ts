@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { toRouteSlug, toHistorySlug, toSlugParams, toTitleCase } from "../slug";
+import { toRouteSlug, toSlugParams, toTitleCase } from "../slug";
 
 describe("toRouteSlug", () => {
   it('converts bare root "index" to empty string', () => {
@@ -13,16 +13,6 @@ describe("toRouteSlug", () => {
   it("leaves non-index slugs unchanged", () => {
     expect(toRouteSlug("getting-started")).toBe("getting-started");
     expect(toRouteSlug("docs/intro")).toBe("docs/intro");
-  });
-});
-
-describe("toHistorySlug", () => {
-  it('converts empty string (root) to "index"', () => {
-    expect(toHistorySlug("")).toBe("index");
-  });
-
-  it("leaves non-empty slugs unchanged", () => {
-    expect(toHistorySlug("getting-started")).toBe("getting-started");
   });
 });
 

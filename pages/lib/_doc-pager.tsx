@@ -35,9 +35,7 @@ interface DocPagerProps {
  *
  * Renders a two-column grid: prev card on the left, next card on the right.
  * When a node is absent its slot is filled with an empty `<div>` to maintain
- * the two-column layout. Placement: immediately after MDX content, before
- * `DocHistoryArea` (Astro reference order — content → pager → utilities,
- * per #1535).
+ * the two-column layout. Placement: immediately after MDX content (#1535).
  */
 export function DocPager({ prev, next, locale }: DocPagerProps): JSX.Element {
   return (
