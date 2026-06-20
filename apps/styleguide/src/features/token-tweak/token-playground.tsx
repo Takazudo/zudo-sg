@@ -104,7 +104,16 @@ export default function TokenPlayground(): JSX.Element {
         </button>
       </div>
 
-      <button type="button" class="sg-toggle-btn" onClick={openTweaker}>
+      {/* Native pill, mirroring the header's Tokens trigger (header-toggles.tsx
+          `tokenToggleClass`): the shared `.sg-toggle-btn` chrome class was
+          retired in the native-chrome restyle, so this feature trigger now
+          carries the same native utility literal. Kept as a full literal (not
+          composed) so the Tailwind v4 scanner emits every utility. */}
+      <button
+        type="button"
+        class="inline-flex items-center gap-hsp-2xs px-hsp-xs py-vsp-3xs border border-muted rounded text-small text-muted hover:text-fg transition-colors cursor-pointer"
+        onClick={openTweaker}
+      >
         Tweak tokens live →
       </button>
 

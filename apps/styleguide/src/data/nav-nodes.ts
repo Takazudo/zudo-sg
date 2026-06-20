@@ -16,7 +16,7 @@
 
 import type { NavNode } from "@/chrome/native/types";
 import { withBase } from "@/utils/base";
-import { getCategoryGroups } from "@/data/registry";
+import { getCategoryGroups, OVERVIEW_SLUG, TOKENS_SLUG } from "@/data/registry";
 
 /**
  * Build the styleguide nav tree. Pure + synchronous (reads the eager-import
@@ -27,7 +27,7 @@ export function buildNavNodes(): NavNode[] {
   const next = () => position++;
 
   const overview: NavNode = {
-    slug: "",
+    slug: OVERVIEW_SLUG,
     label: "Overview",
     position: next(),
     href: withBase("/"),
@@ -36,7 +36,7 @@ export function buildNavNodes(): NavNode[] {
   };
 
   const tokens: NavNode = {
-    slug: "tokens",
+    slug: TOKENS_SLUG,
     label: "Design Tokens",
     position: next(),
     href: withBase("/tokens"),
