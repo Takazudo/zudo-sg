@@ -27,7 +27,8 @@ import { TabItem } from "@takazudo/zudo-doc/tab-item";
 type Props = {
   tabs?: string[];
   children?: React.ReactNode;
-  [key: string]: unknown;
+  // zfb forwards `:::code-group{name="x"}` as the `name` prop (used as Tabs groupId).
+  name?: string;
 };
 
 function toArray(children: React.ReactNode): React.ReactNode[] {

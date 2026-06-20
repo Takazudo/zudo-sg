@@ -44,8 +44,11 @@ export default function SourceEditor({
       viewRef.current?.destroy();
       viewRef.current = null;
     };
-    // Editor is created once; `value` is the initial doc only (no re-init on
-    // prop change — the editor owns its buffer thereafter).
+    // Editor is created once; `value`, `language`, and `editable` are read as
+    // initial config only. They are intentionally omitted from the deps — the
+    // editor owns its buffer thereafter, and re-running this effect would
+    // destroy/recreate the CodeMirror view (losing cursor/scroll) on every
+    // prop change.
   }, []);
 
   return (
