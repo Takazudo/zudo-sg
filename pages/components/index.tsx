@@ -9,14 +9,22 @@
 // Data flow:
 //   getCategoryGroups()  [from src/styleguide/data/registry]
 //   → category-grouped cards (SSR, no-JS)
-//   → DocLayoutWithDefaults (mirrors root pages/index.tsx)
+//   → StyleguideLayout (the section shell: docs header/footer/sidebar reused,
+//     sidebar fed the styleguide nav tree). The Overview leaf (slug "") is the
+//     active highlight on this landing route.
+//
+// The docs chrome defaults (`HeaderWithDefaults` / `FooterWithDefaults` /
+// `HeadWithDefaults` / `BodyEndIslands`) live under `pages/lib/*` (the
+// tsc-excluded page tree that owns the `zfb/content` virtuals). This page —
+// itself under `pages/` — composes them and passes them into the `src/`-side
+// `StyleguideLayout` shell as props, so the shell never imports `pages/*`.
 
 import type { JSX } from "preact";
-import { DocLayoutWithDefaults } from "@takazudo/zudo-doc/doclayout";
 import { settings } from "@/config/settings";
-import { withBase } from "@/utils/base";
 import { defaultLocale } from "@/config/i18n";
-import { getCategoryGroups } from "@/styleguide/data/registry";
+import { withBase } from "@/utils/base";
+import { getCategoryGroups, OVERVIEW_SLUG } from "@/styleguide/data/registry";
+import { StyleguideLayout } from "@/features/styleguide/chrome/_styleguide-layout";
 import { FooterWithDefaults } from "../lib/_footer-with-defaults";
 import { HeaderWithDefaults } from "../lib/_header-with-defaults";
 import { HeadWithDefaults } from "../lib/_head-with-defaults";
@@ -32,17 +40,14 @@ export default function ComponentsIndexPage(): JSX.Element {
   const currentPath = withBase("/components");
 
   return (
-    <DocLayoutWithDefaults
+    <StyleguideLayout
       title={composeMetaTitle("Components")}
-      head={<HeadWithDefaults title={`Components — ${settings.siteName}`} />}
+      activeSlug={OVERVIEW_SLUG}
       lang={locale}
-      noindex={settings.noindex}
-      hideSidebar={true}
-      hideToc={true}
-      sidebarOverride={<></>}
-      headerOverride={<HeaderWithDefaults lang={locale} currentPath={currentPath} />}
-      footerOverride={<FooterWithDefaults lang={locale} />}
-      bodyEndComponents={<BodyEndIslands basePath={settings.base ?? "/"} />}
+      head={<HeadWithDefaults title={`Components — ${settings.siteName}`} />}
+      header={<HeaderWithDefaults lang={locale} currentPath={currentPath} />}
+      footer={<FooterWithDefaults lang={locale} />}
+      bodyEnd={<BodyEndIslands basePath={settings.base ?? "/"} />}
     >
       <div class="mx-auto max-w-[64rem]">
         <header class="mb-vsp-lg">
@@ -80,6 +85,6 @@ export default function ComponentsIndexPage(): JSX.Element {
           ))}
         </div>
       </div>
-    </DocLayoutWithDefaults>
+    </StyleguideLayout>
   );
 }
