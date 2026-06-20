@@ -7,16 +7,23 @@
 // instead of reinventing it.
 //
 // Slot wiring (DocLayoutWithDefaults):
-//   headerOverride  → catalog header: brand link + Tokens/Components nav +
+//   headerOverride  → catalog header (native token styling): mobile sidebar
+//                     drawer island + brand link + Tokens/Components nav tabs +
 //                     sidebar/code/token toggle island + ThemeToggle island.
-//   sidebarOverride → the story-category tree (<SidebarNav>), filling
-//                     DocLayout's `#desktop-sidebar` aside.
+//   sidebarOverride → the native interactive tree (<Sidebar> → SidebarTree
+//                     island), filling DocLayout's `#desktop-sidebar` aside.
 //   tocOverride     → the right-region CodeMirror code panel (detail pages),
-//                     wrapped with a drag-resizer handle. `<></>` when absent.
+//                     a native-token-framed `#sg-code-panel` with a drag-resizer
+//                     handle. `<></>` when absent.
 //   footerOverride  → `<></>` (the styleguide has no footer).
 //   head            → HeadWithDefaults (ColorSchemeProvider + meta) plus the
 //                     panel-state restore script, DocLayout's SidebarResizerInit
 //                     (sidebar drag), and the code-panel resizer init.
+//
+// The desktop SidebarTree and the mobile drawer's SidebarTree consume the SAME
+// `navNodes` array (src/data/nav-nodes.ts). The active-item highlight is owned
+// by the vendored tree's `useActiveSlug` (which listens to AFTER_NAVIGATE_EVENT
+// for soft-nav) — there is no separate active-slug-sync script.
 //
 // The design-token tweaker is wired in via the host's DesignTokenPanelBootstrap
 // island (mounted in bodyEndComponents), so the header "Tokens" button opens the
@@ -36,10 +43,10 @@ import { withBase } from "@/utils/base";
 import { composeMetaTitle } from "@/lib/compose-meta-title";
 import { HeadWithDefaults } from "@/lib/head-with-defaults";
 import DesignTokenPanelBootstrap from "@/components/design-token-panel-bootstrap";
-import { SidebarNav } from "./sidebar-nav";
+import { Sidebar } from "./sidebar";
+import { MobileSidebar } from "./mobile-sidebar";
 import SgHeaderToggles from "./header-toggles";
 import { PanelStateHeadScript, PanelResizersInitScript } from "./panel-scripts";
-import { ActiveSlugSyncScript } from "./active-slug-sync";
 
 (DesignTokenPanelBootstrap as { displayName?: string }).displayName =
   "DesignTokenPanelBootstrap";
@@ -59,9 +66,12 @@ export interface StyleguideLayoutProps {
 function StyleguideHeader({
   tokensActive,
   showCodePanel,
+  currentSlug,
 }: {
   tokensActive?: boolean;
   showCodePanel: boolean;
+  /** Active story slug — forwarded to the mobile sidebar drawer's tree. */
+  currentSlug?: string;
 }): JSX.Element {
   // `Island()` returns zfb's deliberately-opaque `IslandElement` shape, which
   // isn't structurally assignable to Preact's `VNode`. The `as unknown as
@@ -84,21 +94,34 @@ function StyleguideHeader({
     ),
   }) as unknown as VNode;
 
+  // Native nav-tab styling: active tab inverts to `bg-fg text-bg`, inactive is
+  // muted and brightens on hover — mirrors the docs/native header tabs.
+  const navTabBase =
+    "inline-flex items-center px-hsp-sm py-vsp-3xs rounded text-small transition-colors";
+  const navTabActive = `${navTabBase} bg-fg text-bg`;
+  const navTabInactive = `${navTabBase} text-muted hover:text-fg`;
+
+  // Mobile sidebar drawer (hamburger + slide-in tree) — visible below `lg`,
+  // where DocLayout hides the desktop sidebar. Fed the same nav nodes.
+  const mobileSidebar = MobileSidebar({ currentSlug });
+
   return (
-    <header class="sg-header">
-      <a href={withBase("/")} class="font-semibold text-ink no-underline">
+    <header class="flex items-center gap-hsp-md px-hsp-xl h-[var(--sg-header-h)] border-b border-muted bg-surface sticky top-0 z-toolbar">
+      {mobileSidebar}
+
+      <a href={withBase("/")} class="font-semibold text-fg no-underline">
         {settings.siteName}
       </a>
 
-      <nav class="sg-header-nav" aria-label="Site sections">
+      <nav class="flex items-center gap-hsp-2xs" aria-label="Site sections">
         <a
           href={withBase("/tokens")}
-          class="sg-nav-link"
+          class={tokensActive ? navTabActive : navTabInactive}
           aria-current={tokensActive ? "page" : undefined}
         >
           Tokens
         </a>
-        <a href={withBase("/")} class="sg-nav-link">
+        <a href={withBase("/")} class={navTabInactive}>
           Components
         </a>
       </nav>
@@ -120,6 +143,13 @@ export function StyleguideLayout({
 }: StyleguideLayoutProps): JSX.Element {
   const showCodePanel = Boolean(codePanel);
 
+  // The single active-slug value driving the native tree's `currentSlug`
+  // highlight: the tokens route highlights the "tokens" leaf, a story route
+  // highlights its slug, and the catalog landing (no activeSlug) highlights the
+  // "" (Overview) leaf. The runtime `useActiveSlug` re-derives this from the URL
+  // on soft-nav, so this is just the initial SSR value.
+  const treeSlug = tokensActive ? "tokens" : activeSlug ?? "";
+
   const tokenBootstrap = Island({
     when: "load",
     children: <DesignTokenPanelBootstrap />,
@@ -128,9 +158,20 @@ export function StyleguideLayout({
   // The right-region (DocLayout's TOC slot) hosts the code panel on detail
   // pages. When there is no code panel the slot is an empty fragment so the
   // content band fills the freed width.
+  //
+  // Native token frame: `border-l border-muted bg-surface` (matching the docs
+  // chrome's bordered surfaces). The structural behavior (width / sticky offset
+  // under `--sg-header-h` / responsive stacking / `data-sg-code-panel-hidden`
+  // visibility) stays in global.css keyed on the `#sg-code-panel` id. The
+  // resizer is a thin `cursor-col-resize` handle, targeted by its data-attr for
+  // both the drag wiring (panel-scripts.tsx) and its hover-tint styling.
   const tocOverride: VNode = showCodePanel ? (
-    <aside class="sg-code-panel" id="sg-code-panel" aria-label="Code panel">
-      <div class="sg-resizer" data-sg-code-panel-resizer aria-hidden="true" />
+    <aside
+      class="border-l border-muted bg-surface"
+      id="sg-code-panel"
+      aria-label="Code panel"
+    >
+      <div data-sg-code-panel-resizer aria-hidden="true" />
       {codePanel}
     </aside>
   ) : (
@@ -162,11 +203,10 @@ export function StyleguideLayout({
         <StyleguideHeader
           tokensActive={tokensActive}
           showCodePanel={showCodePanel}
+          currentSlug={treeSlug}
         />
       }
-      sidebarOverride={
-        <SidebarNav activeSlug={activeSlug} tokensActive={tokensActive} />
-      }
+      sidebarOverride={<Sidebar currentSlug={treeSlug} />}
       tocOverride={tocOverride}
       footerOverride={<></>}
       bodyEndComponents={
@@ -181,7 +221,6 @@ export function StyleguideLayout({
                 "(function(){if(window.__zdtpToggleShimInstalled)return;window.__zdtpToggleShimInstalled=true;var p=false;function s(){p=true;}window.addEventListener('toggle-design-token-panel',s);window.__zdtpReadyClicks=function(){window.removeEventListener('toggle-design-token-panel',s);delete window.__zdtpReadyClicks;if(p){p=false;window.dispatchEvent(new CustomEvent('toggle-design-token-panel'));}};})();",
             }}
           />
-          <ActiveSlugSyncScript />
         </>
       }
     >
