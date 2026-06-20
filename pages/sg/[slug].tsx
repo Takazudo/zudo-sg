@@ -12,6 +12,7 @@ import type { JSX, VNode } from "preact";
 import { Island } from "@takazudo/zfb";
 import { StyleguideLayout } from "@/styleguide/chrome/styleguide-layout";
 import VariantFrame from "@/styleguide/preview/variant-frame";
+import CopyButton from "@/styleguide/copy/copy-button";
 import CodePanel, {
   type CodePanelVariant,
 } from "@/styleguide/code-panel/code-panel";
@@ -77,9 +78,19 @@ export default function StoryDetailPage(
           <h2 class="mb-vsp-sm text-small font-semibold uppercase tracking-wide text-ink-mute">
             Usage
           </h2>
-          <pre class="overflow-auto rounded-md bg-surface-sunken p-hsp-md text-xs text-ink-soft">
-            <code>{entry.meta.usage}</code>
-          </pre>
+          <div class="sg-snippet">
+            <div class="sg-snippet-actions">
+              {
+                Island({
+                  when: "visible",
+                  children: <CopyButton text={entry.meta.usage} label="Copy usage" />,
+                }) as unknown as VNode
+              }
+            </div>
+            <pre class="overflow-auto rounded-md bg-surface-sunken p-hsp-md text-xs text-ink-soft">
+              <code>{entry.meta.usage}</code>
+            </pre>
+          </div>
         </section>
 
         <div class="flex flex-col gap-vsp-xl">

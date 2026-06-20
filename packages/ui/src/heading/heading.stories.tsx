@@ -17,6 +17,12 @@ export default meta;
 
 export const Page: Story = {
   name: "PageHeading",
+  source: `<PageHeading
+  eyebrow="Documentation"
+  description="A coherent set of Preact components styled with tight design tokens — dark-mode correct out of the box."
+>
+  Build with zudo-sg
+</PageHeading>`,
   render: () => (
     <PageHeading
       eyebrow="Documentation"
@@ -29,6 +35,9 @@ export const Page: Story = {
 
 export const Section: Story = {
   name: "SectionHeading",
+  source: `<SectionHeading description="Everything you need to assemble a marketing page.">
+  Components
+</SectionHeading>`,
   render: () => (
     <SectionHeading description="Everything you need to assemble a marketing page.">
       Components
@@ -38,6 +47,12 @@ export const Section: Story = {
 
 export const SectionWithAction: Story = {
   name: "SectionHeading with action",
+  source: `<SectionHeading
+  description="The most recently published entries."
+  action={<Link href="/articles" variant="standalone">View all</Link>}
+>
+  Latest articles
+</SectionHeading>`,
   render: () => (
     <SectionHeading
       description="The most recently published entries."

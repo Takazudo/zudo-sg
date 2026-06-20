@@ -21,6 +21,17 @@ export default meta;
 
 export const Basic: Story = {
   name: "Basic",
+  source: `<Hero
+  eyebrow="zudo-sg"
+  title="A tight component system that scales"
+  lede="Coherent spacing rhythm, consistent type, dark-mode correct…"
+  actions={
+    <>
+      <Button href="/start">Get started</Button>
+      <Button variant="secondary" href="/docs">Read the docs</Button>
+    </>
+  }
+/>`,
   render: () => (
     <Hero
       eyebrow="zudo-sg"
@@ -40,6 +51,22 @@ export const Basic: Story = {
 
 export const WithMedia: Story = {
   name: "With media panel",
+  source: `<Hero
+  eyebrow="Platform"
+  title="Everything you measure, in one view"
+  lede="Track uptime, latency, and traffic across every environment…"
+  actions={<Button href="/start">Start free</Button>}
+  media={
+    <div class="rounded-lg bg-surface p-hsp-xl shadow-card">
+      <StatGroup>
+        <Stat value="99.9%" label="Uptime" />
+        <Stat value="42ms" label="p95 latency" />
+        <Stat value="1.2M" label="Requests / day" />
+        <Stat value="12k" label="Active users" />
+      </StatGroup>
+    </div>
+  }
+/>`,
   render: () => (
     <Hero
       eyebrow="Platform"
@@ -62,6 +89,12 @@ export const WithMedia: Story = {
 
 export const Plain: Story = {
   name: "Plain (untinted)",
+  source: `<Hero
+  tinted={false}
+  title="Untinted hero"
+  lede="The same layout on a plain surface background."
+  actions={<Button href="/start">Get started</Button>}
+/>`,
   render: () => (
     <Hero
       tinted={false}

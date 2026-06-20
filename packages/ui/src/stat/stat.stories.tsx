@@ -18,11 +18,18 @@ export default meta;
 
 export const Single: Story = {
   name: "Single",
+  source: `<Stat value="99.9%" label="Uptime" hint="last 90 days" />`,
   render: () => <Stat value="99.9%" label="Uptime" hint="last 90 days" />,
 };
 
 export const Group: Story = {
   name: "Group",
+  source: `<StatGroup>
+  <Stat value="99.9%" label="Uptime" />
+  <Stat value="1.2M" label="Requests / day" />
+  <Stat value="42ms" label="p95 latency" />
+  <Stat value="12k" label="Active users" />
+</StatGroup>`,
   render: () => (
     <StatGroup>
       <Stat value="99.9%" label="Uptime" />
@@ -35,6 +42,12 @@ export const Group: Story = {
 
 export const Divided: Story = {
   name: "Divided",
+  source: `<StatGroup divided>
+  <Stat value="99.9%" label="Uptime" />
+  <Stat value="1.2M" label="Requests / day" />
+  <Stat value="42ms" label="p95 latency" />
+  <Stat value="12k" label="Active users" />
+</StatGroup>`,
   render: () => (
     <StatGroup divided>
       <Stat value="99.9%" label="Uptime" />

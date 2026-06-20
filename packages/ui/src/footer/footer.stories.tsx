@@ -46,6 +46,12 @@ const groups = [
 
 export const Default: Story = {
   name: "Default",
+  source: `<SiteFooter
+  brand="zudo-sg"
+  tagline="A tight, dark-correct Preact component system built on shared design tokens."
+  groups={groups}
+  copyright="© 2026 zudo-sg. Built with zfb."
+/>`,
   render: () => (
     <SiteFooter
       brand="zudo-sg"
@@ -58,6 +64,11 @@ export const Default: Story = {
 
 export const Minimal: Story = {
   name: "Minimal (no groups)",
+  source: `<SiteFooter
+  brand="zudo-sg"
+  tagline="A demo footer with just a brand and copyright."
+  copyright="© 2026 zudo-sg."
+/>`,
   render: () => (
     <SiteFooter
       brand="zudo-sg"

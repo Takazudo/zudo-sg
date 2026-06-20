@@ -27,6 +27,7 @@ const nav = [
 
 export const Default: Story = {
   name: "Default",
+  source: `<SiteHeader brand="zudo-sg" nav={nav} activePath="/docs" />`,
   // Non-sticky inside the catalog cell so it does not overlay the page.
   render: () => (
     <SiteHeader brand="zudo-sg" nav={nav} activePath="/docs" sticky={false} />
@@ -35,6 +36,12 @@ export const Default: Story = {
 
 export const WithAction: Story = {
   name: "With action",
+  source: `<SiteHeader
+  brand="zudo-sg"
+  nav={nav}
+  activePath="/"
+  action={<Button size="sm" href="/start">Get started</Button>}
+/>`,
   render: () => (
     <SiteHeader
       brand="zudo-sg"
