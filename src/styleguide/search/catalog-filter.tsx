@@ -121,7 +121,10 @@ export default function CatalogFilter({
             ref={inputRef}
             type="search"
             value={query}
-            onInput={(e) => setQuery((e.target as HTMLInputElement).value)}
+            onInput={(e) => {
+              if (!(e.target instanceof HTMLInputElement)) return;
+              setQuery(e.target.value);
+            }}
             placeholder="Search components…  ( / )"
             aria-label="Search components by name"
             class="sg-search-input"

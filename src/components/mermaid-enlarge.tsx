@@ -29,6 +29,7 @@
 import type { JSX } from "preact";
 import { useState, useEffect, useRef, useCallback } from "preact/compat";
 import { AFTER_NAVIGATE_EVENT } from "@takazudo/zudo-doc/transitions";
+import { useModalDialog } from "@/hooks/use-modal-dialog";
 
 // ---------------------------------------------------------------------------
 // Shared dialog shell constants
@@ -128,7 +129,9 @@ export default function MermaidEnlarge() {
   const [translate, setTranslate] = useState({ x: 0, y: 0 });
   const [panActive, setPanActive] = useState(false);
 
-  const dialogRef = useRef<HTMLDialogElement>(null);
+  // showModal/close sync, native-close → state reset, and the SPA-swap guard
+  // all live in the shared useModalDialog hook.
+  const { dialogRef } = useModalDialog(open !== null, () => setOpen(null));
   const innerRef = useRef<HTMLDivElement>(null);
   // Pointer-drag bookkeeping (refs so the handlers don't re-create on each move).
   const dragState = useRef<{
@@ -225,10 +228,10 @@ export default function MermaidEnlarge() {
   // -----------------------------------------------------------------------
   useEffect(() => {
     function handleDocumentClick(e: MouseEvent) {
-      const target = e.target as Element;
-      const container = target.closest(".zd-mermaid-enlargeable") as HTMLElement | null;
+      if (!(e.target instanceof Element)) return;
+      const container = e.target.closest<HTMLElement>(".zd-mermaid-enlargeable");
       if (!container) return;
-      if (!target.closest(".zd-enlarge-btn")) return;
+      if (!e.target.closest(".zd-enlarge-btn")) return;
       const svg = container.querySelector(DIAGRAM_SVG_SELECTOR);
       if (!svg) return;
       // Reset zoom/pan on every open.
@@ -257,49 +260,6 @@ export default function MermaidEnlarge() {
     observer.observe(container, { childList: true, subtree: true });
     return () => observer.disconnect();
   }, [open]);
-
-  const handleClose = useCallback(() => setOpen(null), []);
-
-  // -----------------------------------------------------------------------
-  // Dialog open/close sync (inlined from useModalDialog — template projects
-  // do not ship src/hooks/use-modal-dialog.ts, so the hook is not available).
-  // -----------------------------------------------------------------------
-  const isOpen = open !== null;
-
-  // Sync dialog open/close with state.
-  useEffect(() => {
-    const dialog = dialogRef.current;
-    if (!dialog) return;
-    if (isOpen && !dialog.open) {
-      dialog.showModal();
-    } else if (!isOpen && dialog.open) {
-      dialog.close();
-    }
-  }, [isOpen]);
-
-  // Fire handleClose when the dialog is closed natively (Escape key).
-  useEffect(() => {
-    const dialog = dialogRef.current;
-    if (!dialog) return;
-    function onDialogClose() {
-      if (isOpen) handleClose();
-    }
-    dialog.addEventListener("close", onDialogClose);
-    return () => dialog.removeEventListener("close", onDialogClose);
-  }, [isOpen, handleClose]);
-
-  // Close on SPA navigation when dialog is open.
-  useEffect(() => {
-    function handleNavigation() {
-      const dialog = dialogRef.current;
-      if (dialog?.open) {
-        dialog.close();
-        handleClose();
-      }
-    }
-    document.addEventListener(AFTER_NAVIGATE_EVENT, handleNavigation);
-    return () => document.removeEventListener(AFTER_NAVIGATE_EVENT, handleNavigation);
-  }, [handleClose]);
 
   // Backdrop-click handler: close when the click target is the dialog itself.
   // Preact-native event type so the template does not depend on @types/react
@@ -368,7 +328,9 @@ export default function MermaidEnlarge() {
       d.startY = e.clientY;
       d.originX = translate.x;
       d.originY = translate.y;
-      (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+      if (e.currentTarget instanceof HTMLElement) {
+        e.currentTarget.setPointerCapture?.(e.pointerId);
+      }
     },
     [panActive, scale, translate],
   );
@@ -388,7 +350,9 @@ export default function MermaidEnlarge() {
     const d = dragState.current;
     if (!d.dragging) return;
     d.dragging = false;
-    (e.currentTarget as HTMLElement).releasePointerCapture?.(e.pointerId);
+    if (e.currentTarget instanceof HTMLElement) {
+      e.currentTarget.releasePointerCapture?.(e.pointerId);
+    }
   }, []);
 
   const zoomed = scale > MIN_SCALE;
