@@ -1,0 +1,157 @@
+/*
+ * @zudo-sg/ui — shared design tokens
+ *
+ * Single source of truth for the tight-token @theme system.
+ * Consumed by the styleguide host (root), packages/ui, and apps/demo.
+ *
+ * Strategy: Tailwind v4 Approach B — import preflight + utilities only,
+ * never @import "tailwindcss" (which pulls in the default theme with 30+
+ * spacing steps and full Tailwind color palette). After these imports,
+ * only the tokens defined here exist; `p-4` or `bg-gray-500` cause build errors.
+ *
+ * What is shared:
+ *   - Spacing axes: hsp (horizontal) / vsp (vertical)
+ *   - Typography: 6 font sizes xs–2xl with paired line-heights, 3 weights
+ *   - Radius: sm / md / lg / full
+ *   - Shadows: card / raised / overlay
+ *   - Breakpoints: sm / lg / xl
+ *   - Transition defaults
+ *
+ * What is NOT shared (context-specific):
+ *   - Colors: root uses --zd-* palette (zudo-doc injection); demo uses
+ *     standalone oklch literals. Each consumer defines its own color tokens.
+ *   - Z-index: semantic tiers differ between root and demo.
+ *   - Semantic text aliases: root uses --text-micro, --text-caption etc.;
+ *     demo maps the same abstract scale to --text-body, --text-display etc.
+ *
+ * Values are sized for a compact documentation / UI context.
+ * Seeded from: $HOME/repos/myoss/zudo-doc/src/styles/global.css (root baseline)
+ * and reconciled with: $HOME/repos/zfb-ex/zfb-example-webshop/styles/global.css
+ */
+
+@theme {
+  /* ========================================
+   * Spacing — tight semantic axes
+   *
+   * Two axes encode intent at the class-name level:
+   *   hsp = horizontal spacing (inline gaps, horizontal padding/margin)
+   *   vsp = vertical spacing   (block gaps, vertical padding/margin)
+   *
+   * Each axis has 7 named steps (2xs → 2xl) plus 0 and 1px anchors.
+   * `p-4`, `m-8`, `gap-6` and any other numeric spacing utilities are
+   * build errors because --spacing-4 etc. no longer exist.
+   * ======================================== */
+
+  --spacing-0: 0;
+  --spacing-px: 1px;
+
+  /* Horizontal spacing (7 steps) */
+  --spacing-hsp-2xs: 0.125rem;   /*  2px — tight inline */
+  --spacing-hsp-xs:  0.375rem;   /*  6px — compact inline */
+  --spacing-hsp-sm:  0.5rem;     /*  8px — small padding */
+  --spacing-hsp-md:  0.75rem;    /* 12px — default gaps */
+  --spacing-hsp-lg:  1rem;       /* 16px — standard padding */
+  --spacing-hsp-xl:  1.5rem;     /* 24px — generous padding */
+  --spacing-hsp-2xl: 2rem;       /* 32px — large padding */
+
+  /* Vertical spacing (8 steps — includes 3xs for hairline gaps) */
+  --spacing-vsp-3xs: 0.25rem;    /*  4px — hairline gap */
+  --spacing-vsp-2xs: 0.4375rem;  /*  7px — tight gap */
+  --spacing-vsp-xs:  0.875rem;   /* 14px — small gap */
+  --spacing-vsp-sm:  1.25rem;    /* 20px — compact gap */
+  --spacing-vsp-md:  1.5rem;     /* 24px — standard gap */
+  --spacing-vsp-lg:  1.75rem;    /* 28px — section gap */
+  --spacing-vsp-xl:  2.5rem;     /* 40px — large section gap */
+  --spacing-vsp-2xl: 3.5rem;     /* 56px — page-level gap */
+
+  /* ========================================
+   * Typography — 6 font sizes with paired line-heights
+   *
+   * Abstract names (xs → 2xl) rather than semantic names (caption, body…)
+   * so any element that needs a given size can use the token without
+   * forcing a misleading role name. The role comes from context.
+   *
+   * Each font-size token is paired with an optimal line-height via the
+   * --font-size-*--line-height convention. `text-base` sets both
+   * font-size: 1rem and line-height: 1.75 in one utility class.
+   * ======================================== */
+
+  /* Font sizes (xs → 2xl, 6 steps) */
+  --font-size-xs:   0.75rem;   /* 12px */
+  --font-size-xs--line-height: 1.5;
+  --font-size-sm:   0.875rem;  /* 14px */
+  --font-size-sm--line-height: 1.5;
+  --font-size-base: 1rem;      /* 16px */
+  --font-size-base--line-height: 1.75;
+  --font-size-lg:   1.25rem;   /* 20px */
+  --font-size-lg--line-height: 1.5;
+  --font-size-xl:   1.75rem;   /* 28px */
+  --font-size-xl--line-height: 1.25;
+  --font-size-2xl:  2.5rem;    /* 40px */
+  --font-size-2xl--line-height: 1.1;
+
+  /* Font weights (3 steps + semibold) */
+  --font-weight-normal:   400;
+  --font-weight-medium:   500;
+  --font-weight-semibold: 600;
+  --font-weight-bold:     700;
+
+  /* Line heights (3 steps — Tailwind v4 --leading-* namespace for leading-* utilities.
+     Also used directly as var(--leading-*) in component CSS for manual overrides.) */
+  --leading-tight:   1.25;
+  --leading-normal:  1.5;
+  --leading-relaxed: 1.75;
+
+  /* Font families — --font-* generates font-* Tailwind utilities in v4.
+     Used both as Tailwind utilities (font-sans, font-mono) and as raw CSS vars
+     (var(--font-sans), var(--font-mono)) in component styles. */
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "JetBrains Mono", "Fira Code", monospace;
+
+  /* ========================================
+   * Border radius (4 steps)
+   * ======================================== */
+
+  --radius-sm:   0.25rem;   /*  4px */
+  --radius-md:   0.5rem;    /*  8px */
+  --radius-lg:   1rem;      /* 16px */
+  --radius-full: 9999px;    /* pill */
+
+  /* ========================================
+   * Shadows — layered, oklch-matched to ink color
+   *
+   * Three elevation levels. Shadow color matches the dark ink tone
+   * (oklch 0.21 0.03 264) for perceptually accurate depth perception.
+   * ======================================== */
+
+  --shadow-card:
+    0 0.5px 1px  oklch(0.21 0.03 264 / 0.05),
+    0 2px   4px  oklch(0.21 0.03 264 / 0.05),
+    0 5px   10px oklch(0.21 0.03 264 / 0.05);
+
+  --shadow-raised:
+    0 1px   2px  oklch(0.21 0.03 264 / 0.06),
+    0 4px   8px  oklch(0.21 0.03 264 / 0.06),
+    0 12px  24px oklch(0.21 0.03 264 / 0.07);
+
+  --shadow-overlay:
+    0 2px   4px  oklch(0.21 0.03 264 / 0.08),
+    0 8px   16px oklch(0.21 0.03 264 / 0.08),
+    0 24px  48px oklch(0.21 0.03 264 / 0.10);
+
+  /* ========================================
+   * Breakpoints (3 steps)
+   * ======================================== */
+
+  --breakpoint-sm: 640px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1280px;
+
+  /* ========================================
+   * Transition defaults (required when importing preflight + utilities only;
+   * `transition-colors` etc. rely on these internal Tailwind variables)
+   * ======================================== */
+
+  --default-transition-duration: 0.15s;
+  --default-transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
