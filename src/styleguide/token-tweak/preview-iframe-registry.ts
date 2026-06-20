@@ -58,7 +58,8 @@ function broadcast(): void {
   const names = pairs.map(([n]) => n);
 
   // Clear overrides that existed last time but are now gone (reset).
-  const removed = lastBroadcastNames.filter((n) => !names.includes(n));
+  const current = new Set(names);
+  const removed = lastBroadcastNames.filter((n) => !current.has(n));
   for (const iframe of registered) {
     if (removed.length > 0) sendClearCssVars(iframe, removed);
     if (pairs.length > 0) sendApplyCssVars(iframe, pairs);
