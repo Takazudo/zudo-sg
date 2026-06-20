@@ -19,6 +19,19 @@ export const CATEGORY_ORDER: StoryCategory[] = [
   "Navigation",
 ];
 
+/**
+ * Slugs reserved by the styleguide chrome's leading sidebar leaves — Overview
+ * (route "/") and Design Tokens (route "/tokens"). These are NOT story slugs.
+ * `buildEntries()` seeds the de-dupe set with them so a future story whose
+ * title slugifies to one of these (e.g. a story titled "Tokens" → "tokens")
+ * is auto-suffixed (→ "tokens-2") instead of colliding with the chrome route
+ * and the sidebar's active-item highlight. `nav-nodes.ts` consumes these same
+ * constants for its reserved leaves (single source of truth for the contract).
+ */
+export const OVERVIEW_SLUG = "";
+export const TOKENS_SLUG = "tokens";
+const RESERVED_NAV_SLUGS: readonly string[] = [OVERVIEW_SLUG, TOKENS_SLUG];
+
 /** One discovered story file, normalised. */
 export interface StoryEntry {
   /** URL slug, derived from meta.title (kebab-cased). Unique. */
@@ -59,7 +72,9 @@ function isStory(value: unknown): value is Story {
 
 function buildEntries(): StoryEntry[] {
   const entries: StoryEntry[] = [];
-  const seenSlugs = new Set<string>();
+  // Seed with the chrome-reserved slugs so a colliding story title is suffixed
+  // rather than overlapping the Overview / Design Tokens routes + highlight.
+  const seenSlugs = new Set<string>(RESERVED_NAV_SLUGS);
 
   for (const [path, mod] of Object.entries(storyModules)) {
     const meta = mod.default as StoryMeta | undefined;

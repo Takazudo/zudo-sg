@@ -37,53 +37,78 @@
 @source "../../packages/ui/src/**/*.{tsx,ts,jsx,js}";
 
 /* ============================================================================
- * Styleguide catalog chrome — slot CONTENT styling.
+ * Native-chrome design-token bridge.
  *
- * The 3-region shell itself (the <html> document, the fixed `#desktop-sidebar`
- * aside, its `--zd-sidebar-w` width var + drag-resizer, the content band) is
- * owned by zudo-doc's DocLayout — the styleguide renders THROUGH
- * DocLayoutWithDefaults. These rules style only what fills each slot:
- *   • headerOverride  → `.sg-header` (brand + nav + toggles + theme toggle)
- *   • sidebarOverride → `.sg-sidebar-nav` (story-category tree)
- *   • tocOverride     → `#sg-code-panel` (right-region code panel)
+ * The vendored native sidebar tree + the native-styled header/code-panel
+ * reference zudo-doc's SEMANTIC utilities — `text-fg`/`bg-bg`/`bg-surface`/
+ * `border-muted`/`text-muted`/`text-accent`/`bg-fg`/`text-bg`, the icon-size
+ * spacing utilities, `text-small`, the z-index scale, and `bg-overlay`. The
+ * styleguide themes via @zudo-sg/ui tokens (ink/paper/surface/line/brand) and
+ * did NOT define these docs aliases, so without this block the native chrome
+ * renders unstyled.
  *
- * Selector/var/attr names must stay in sync with src/chrome/panel-contract.ts.
+ * This @theme maps each native utility to the `--zd-*` palette that
+ * ColorSchemeProvider already injects on :root (light + dark via light-dark()),
+ * so the native chrome tracks the active color scheme. It mirrors the token
+ * names mapped in the root app's src/styles/global.css @theme block. Placed
+ * AFTER the @zudo-sg/ui imports so the re-asserted `--color-surface` /
+ * `--color-accent` (also defined by @zudo-sg/ui/colors.css) win by source order
+ * — matching the root app, which does the same re-assert.
+ * ========================================================================== */
+@theme {
+  /* ── Base fg/bg + selection (→ --zd-* injected by ColorSchemeProvider) ── */
+  --color-bg: var(--zd-bg);
+  --color-fg: var(--zd-fg);
+  --color-sel-bg: var(--zd-sel-bg);
+  --color-sel-fg: var(--zd-sel-fg);
+
+  /* ── Semantic aliases the native chrome uses ── */
+  --color-surface: var(--zd-surface);
+  --color-muted: var(--zd-muted);
+  --color-accent: var(--zd-accent);
+  --color-accent-hover: var(--zd-accent-hover);
+  /* Overlay is intentionally theme-independent (always dark), matching root. */
+  --color-overlay: #000;
+
+  /* ── Semantic text size used by the tree (`text-small`) ── */
+  --text-small: 0.875rem; /* 14px — secondary text / nav items */
+
+  /* ── Icon sizes (`h-icon-*` / `w-icon-*`) ── */
+  --spacing-icon-xs: 0.75rem; /* 12px */
+  --spacing-icon-sm: 1rem; /* 16px */
+  --spacing-icon-md: 1.25rem; /* 20px */
+  --spacing-icon-lg: 1.5rem; /* 24px */
+
+  /* ── Z-index scale used by the chrome (`z-toolbar`/`z-modal*`/`z-local-1`) ── */
+  --z-index-local-1: 1;
+  --z-index-toolbar: 20;
+  --z-index-modal-backdrop: 50;
+  --z-index-modal: 60;
+}
+
+/* ============================================================================
+ * Styleguide catalog chrome — slot LAYOUT behavior.
+ *
+ * The chrome is now styled with zudo-doc NATIVE tokens (Tailwind utilities in
+ * the chrome components), mirroring the docs site. The header, the sidebar tree,
+ * and the code-panel/resizer/toggle VISUALS live as native utility classes on
+ * the elements — NOT as `.sg-*` chrome classes here.
+ *
+ * What remains in this file is the styleguide-specific LAYOUT BEHAVIOR that has
+ * no native-utility equivalent: the right-region code panel's width / sticky
+ * offset / responsive stacking (keyed on the `#sg-code-panel` id), the
+ * resizer's positioned grab strip (keyed on its `data-sg-code-panel-resizer`
+ * attribute), and both panels' toggle-hidden states (driven by the `data-sg-*`
+ * attributes on :root). Selector/var/attr names stay in sync with
+ * src/chrome/panel-contract.ts.
  * ========================================================================== */
 
 :root {
-  /* Matches DocLayout's fixed header offset (`top-[3.5rem]`) so the sidebar
-   * aligns under the header bar. */
+  /* Header height — referenced by the native header (`h-[var(--sg-header-h)]`)
+   * and by the code panel's sticky offset below. Matches DocLayout's fixed
+   * header offset (`top-[3.5rem]`). */
   --sg-header-h: 3.5rem;
   --sg-code-panel-w: 28rem;
-}
-
-/* ── Header override (fills DocLayout's header region) ── */
-.sg-header {
-  position: sticky;
-  top: 0;
-  z-index: 40;
-  height: var(--sg-header-h);
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-hsp-md, 1rem);
-  padding-inline: var(--spacing-hsp-md, 1rem);
-  border-bottom: 1px solid var(--color-line);
-  background: var(--color-surface);
-  color: var(--color-ink);
-}
-
-.sg-header-nav {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-hsp-2xs, 0.25rem);
-}
-.sg-header-nav .sg-nav-link {
-  display: inline-block;
-}
-
-/* ── Sidebar override (fills DocLayout's #desktop-sidebar aside) ── */
-.sg-sidebar-nav {
-  display: block;
 }
 
 /* When the sidebar is toggled hidden, collapse DocLayout's fixed aside and
@@ -97,13 +122,13 @@
   }
 }
 
-/* ── Code-panel override (fills DocLayout's TOC column, right of main) ── */
+/* ── Code panel: right-region layout (fills DocLayout's TOC column) ──
+ * Frame VISUALS (border-l / bg-surface) are native utilities on the element;
+ * only the positioning / width / sticky / responsive behavior lives here. */
 #sg-code-panel {
   position: relative;
   flex-shrink: 0;
   width: var(--sg-code-panel-w);
-  border-left: 1px solid var(--color-line);
-  background: var(--color-surface);
   align-self: stretch;
   margin-block: var(--spacing-vsp-md, 1.5rem);
   padding-left: var(--spacing-hsp-lg, 1rem);
@@ -118,23 +143,23 @@
   }
 }
 
-/* Resizer handle — absolutely positioned grab strip at the code panel's edge.
+/* Resizer handle — absolutely positioned grab strip at the code panel's edge,
+ * targeted by its data-attr (the drag wiring in panel-scripts.tsx uses the same
+ * attribute). Hover/drag tint uses the native accent token (→ --zd-accent).
  * (The sidebar's own resizer is provided by DocLayout / SidebarResizerInit.) */
-.sg-resizer {
+#sg-code-panel [data-sg-code-panel-resizer] {
   position: absolute;
   top: 0;
   bottom: 0;
+  left: -5px;
   width: 10px;
   cursor: col-resize;
-  z-index: 5;
+  z-index: var(--z-index-local-1, 1);
   background: transparent;
 }
-.sg-resizer:hover,
-.sg-resizer[data-sg-dragging] {
-  background: color-mix(in oklch, var(--color-brand) 30%, transparent);
-}
-#sg-code-panel .sg-resizer {
-  left: -5px;
+#sg-code-panel [data-sg-code-panel-resizer]:hover,
+#sg-code-panel [data-sg-code-panel-resizer][data-sg-dragging] {
+  background: color-mix(in oklch, var(--color-accent) 30%, transparent);
 }
 
 /* Visibility toggle for the code panel. */
@@ -143,52 +168,20 @@
 }
 
 /* Below the lg breakpoint the DocLayout TOC column stacks under main; keep the
- * code panel full-width and drop the resizer. */
+ * code panel full-width, swap its left border for a top divider (using the
+ * native muted token), and drop the resizer. */
 @media (max-width: 1023px) {
   #sg-code-panel {
     width: 100%;
     position: static;
     max-height: none;
     border-left: 0;
-    border-top: 1px solid var(--color-line);
+    border-top: 1px solid var(--color-muted);
     padding-left: 0;
   }
-  .sg-resizer {
+  #sg-code-panel [data-sg-code-panel-resizer] {
     display: none;
   }
-}
-
-.sg-toggle-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--spacing-hsp-2xs, 0.25rem);
-  padding: var(--spacing-vsp-3xs, 0.2rem) var(--spacing-hsp-xs, 0.5rem);
-  border: 1px solid var(--color-line);
-  border-radius: var(--radius-sm, 0.25rem);
-  background: var(--color-surface);
-  color: var(--color-ink-mute);
-  font-size: 0.8125rem;
-  cursor: pointer;
-}
-.sg-toggle-btn:hover {
-  color: var(--color-ink);
-  border-color: var(--color-line-strong);
-}
-
-.sg-nav-link {
-  display: block;
-  padding: var(--spacing-vsp-3xs, 0.2rem) var(--spacing-hsp-sm, 0.75rem);
-  border-radius: var(--radius-sm, 0.25rem);
-  color: var(--color-ink-soft);
-  font-size: 0.875rem;
-}
-.sg-nav-link:hover {
-  background: var(--color-surface-sunken);
-  color: var(--color-ink);
-}
-.sg-nav-link[aria-current="page"] {
-  background: var(--color-brand);
-  color: var(--color-on-brand);
 }
 
 /* ============================================================================
