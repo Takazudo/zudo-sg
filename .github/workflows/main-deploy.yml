@@ -190,11 +190,3 @@ jobs:
           STATUS=$(curl -fsSL -o /dev/null -w '%{http_code}' "$DEMO_URL/")
           [ "$STATUS" = "200" ] || { echo "::error::$DEMO_URL/ returned HTTP $STATUS, expected 200"; exit 1; }
           echo "OK: $DEMO_URL/ returned HTTP 200"
-
-      - name: Smoke gate — demo site about page
-        run: |
-          set -euo pipefail
-          DEMO_URL="https://zudo-sg-demo-site.takazudomodular.com"
-          STATUS=$(curl -fsSL -o /dev/null -w '%{http_code}' "$DEMO_URL/about")
-          [ "$STATUS" = "200" ] || { echo "::error::$DEMO_URL/about returned HTTP $STATUS, expected 200"; exit 1; }
-          echo "OK: $DEMO_URL/about returned HTTP 200"

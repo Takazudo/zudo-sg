@@ -109,6 +109,8 @@ jobs:
     needs: [build-site]
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    outputs:
+      deploy_url: ${{ steps.deploy-site.outputs.deploy_url }}
 
     steps:
       - name: Checkout repository
@@ -174,6 +176,8 @@ jobs:
     needs: [build-demo]
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    outputs:
+      deploy_url: ${{ steps.deploy-demo.outputs.deploy_url }}
 
     steps:
       - name: Checkout repository
