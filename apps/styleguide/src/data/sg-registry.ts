@@ -7,8 +7,12 @@
 // real, statically-bundled object that works identically in SSR and client
 // builds. With only 10 story files this is trivial to maintain by hand.
 //
-// @zudo-sg/ui does NOT export *.stories.tsx from its package `exports`, so
-// imports must use relative source paths rather than the package's public API.
+// WHY PACKAGE PATH IMPORTS (NOT RELATIVE):
+// zfb creates a shadow copy of the project root during bundling, so relative
+// paths that escape the project root (e.g. ../../../../packages/ui/src/…)
+// resolve outside the shadow tree and fail. Importing via `@zudo-sg/ui/src/*`
+// keeps resolution within node_modules (which zfb includes in the shadow).
+// The `./src/*` export wildcard in packages/ui/package.json makes this work.
 //
 // The consumer (`apps/styleguide/src/data/registry.ts`) keys off the path→module
 // map via `Object.entries`. Keys use a glob-relative shape
@@ -17,16 +21,16 @@
 
 import type { StoryModule } from "@zudo-sg/ui";
 
-import * as badge from "../../../../packages/ui/src/badge/badge.stories";
-import * as button from "../../../../packages/ui/src/button/button.stories";
-import * as card from "../../../../packages/ui/src/card/card.stories";
-import * as footer from "../../../../packages/ui/src/footer/footer.stories";
-import * as form from "../../../../packages/ui/src/form/form.stories";
-import * as heading from "../../../../packages/ui/src/heading/heading.stories";
-import * as hero from "../../../../packages/ui/src/hero/hero.stories";
-import * as link from "../../../../packages/ui/src/link/link.stories";
-import * as siteHeader from "../../../../packages/ui/src/site-header/site-header.stories";
-import * as stat from "../../../../packages/ui/src/stat/stat.stories";
+import * as badge from "@zudo-sg/ui/src/badge/badge.stories.tsx";
+import * as button from "@zudo-sg/ui/src/button/button.stories.tsx";
+import * as card from "@zudo-sg/ui/src/card/card.stories.tsx";
+import * as footer from "@zudo-sg/ui/src/footer/footer.stories.tsx";
+import * as form from "@zudo-sg/ui/src/form/form.stories.tsx";
+import * as heading from "@zudo-sg/ui/src/heading/heading.stories.tsx";
+import * as hero from "@zudo-sg/ui/src/hero/hero.stories.tsx";
+import * as link from "@zudo-sg/ui/src/link/link.stories.tsx";
+import * as siteHeader from "@zudo-sg/ui/src/site-header/site-header.stories.tsx";
+import * as stat from "@zudo-sg/ui/src/stat/stat.stories.tsx";
 
 /**
  * Path → story module map. Keys are glob-relative (e.g.
