@@ -12,7 +12,8 @@
     "resolveJsonModule": true,
     "noEmit": true,
     "skipLibCheck": true,
-    "baseUrl": "."
+    "baseUrl": ".",
+    "types": ["node", "@testing-library/jest-dom"]
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules"]

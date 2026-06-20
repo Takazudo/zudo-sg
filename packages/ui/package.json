@@ -6,7 +6,8 @@
   "main": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./styles/tokens.css": "./styles/tokens.css"
+    "./styles/tokens.css": "./styles/tokens.css",
+    "./styles/colors.css": "./styles/colors.css"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"

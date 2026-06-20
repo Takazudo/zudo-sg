@@ -15,6 +15,15 @@ export default defineConfig({
     },
   },
   test: {
-    include: ["src/**/__tests__/**/*.test.ts", "scripts/__tests__/**/*.test.ts"],
+    include: [
+      "src/**/__tests__/**/*.test.ts",
+      "scripts/__tests__/**/*.test.ts",
+      // @zudo-sg/ui component DOM tests (Testing Library + happy-dom).
+      "packages/ui/src/**/__tests__/**/*.test.{ts,tsx}",
+    ],
+    // happy-dom provides the DOM for @testing-library/preact. The non-DOM
+    // suites (slug, generate, escape-for-mdx) run fine under it too.
+    environment: "happy-dom",
+    setupFiles: ["./vitest.setup.ts"],
   },
 });
