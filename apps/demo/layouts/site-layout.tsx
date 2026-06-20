@@ -47,7 +47,7 @@ export default function SiteLayout({
       </head>
       <body>
         <div class="flex min-h-dvh flex-col">
-          <header class="sticky top-0 z-10 border-b border-line bg-surface/95 backdrop-blur">
+          <header class="sticky top-0 z-raised border-b border-line bg-surface/95 backdrop-blur">
             <div class="mx-auto flex w-full max-w-[72rem] items-center justify-between gap-hsp-md px-hsp-md py-vsp-sm">
               <a href="/" class="flex items-baseline gap-hsp-xs">
                 <span class="text-heading font-bold tracking-tight text-ink">{SITE_NAME}</span>

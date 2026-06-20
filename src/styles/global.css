@@ -12,6 +12,14 @@
 @import "tailwindcss/preflight" layer(zd-preflight);
 @import "tailwindcss/utilities";
 
+/* Shared tight-token set — spacing (hsp/vsp), font-sizes (xs–2xl),
+   font-weights, line-heights (--leading-*), font-families (--font-sans/mono),
+   radius (--radius-sm/md/lg/full), shadows (card/raised/overlay),
+   breakpoints, and transition defaults.
+   Single source of truth for the monorepo; any root-specific overrides
+   (radius values, --leading-snug, shadow-lg) are re-defined in @theme below. */
+@import "@zudo-sg/ui/styles/tokens.css";
+
 /* ========================================
  * @takazudo/zudo-doc package safelist
  *
@@ -84,7 +92,10 @@
 
 @theme {
   /* ========================================
-   * Colors — Three-tier token system
+   * Colors — Three-tier token system (root-specific, referencing --zd-* palette)
+   *
+   * Spacing, typography, radius, shadows, breakpoints come from the shared
+   * @zudo-sg/ui token file imported above.
    * ======================================== */
 
   /* ── Base ── */
@@ -135,93 +146,56 @@
   --color-matched-keyword-fg: var(--zd-matched-keyword-fg);
 
   /* ========================================
-   * Spacing — hsp (horizontal) + vsp (vertical)
-   * ======================================== */
-  --spacing-0: 0;
-  --spacing-px: 1px;
-
-  /* Horizontal spacing (7 steps) */
-  --spacing-hsp-2xs: 0.125rem;   /* 2px  — tight inline */
-  --spacing-hsp-xs: 0.375rem;   /* 6px  — compact inline */
-  --spacing-hsp-sm: 0.5rem;     /* 8px  — small padding */
-  --spacing-hsp-md: 0.75rem;    /* 12px — default gaps */
-  --spacing-hsp-lg: 1rem;       /* 16px — standard padding */
-  --spacing-hsp-xl: 1.5rem;     /* 24px — generous padding */
-  --spacing-hsp-2xl: 2rem;      /* 32px — large padding */
-
-  /* Vertical spacing (8 steps) */
-  --spacing-vsp-3xs: 0.25rem;     /* 4px — hairline gap */
-  --spacing-vsp-2xs: 0.4375rem;   /* 7px — tight gap */
-  --spacing-vsp-xs: 0.875rem;    /* 14px — small gap */
-  --spacing-vsp-sm: 1.25rem;     /* 20px — compact gap */
-  --spacing-vsp-md: 1.5rem;      /* 24px — standard gap */
-  --spacing-vsp-lg: 1.75rem;     /* 28px — section gap */
-  --spacing-vsp-xl: 2.5rem;      /* 40px — large section gap */
-  --spacing-vsp-2xl: 3.5rem;     /* 56px — page-level gap */
-
-  /* ========================================
-   * Element sizes — semantic icon dimensions
+   * Element sizes — semantic icon dimensions (root-specific)
    * ======================================== */
   --spacing-icon-xs: 0.75rem;    /* 12px — inline meta icons, chevrons */
   --spacing-icon-sm: 1rem;       /* 16px — standard UI icons */
   --spacing-icon-md: 1.25rem;    /* 20px — medium emphasis icons */
   --spacing-icon-lg: 1.5rem;     /* 24px — large / mobile icons */
 
-  /* Image overlay button chrome */
+  /* Image overlay button chrome (root-specific) */
   --spacing-image-overlay-inset: 0.5rem;  /* 8px — overlay button corner inset + internal padding */
 
   /* ========================================
-   * Elevation — the tight `@import "tailwindcss/utilities"` (no default
-   * @theme) drops Tailwind's default shadow scale, so `shadow-*` utilities
-   * generate nothing. Re-add the one elevation the components use: header
-   * and version-switcher dropdown panels apply `shadow-lg`. Value is
-   * Tailwind v4's default shadow-lg; the black is intentionally
-   * theme-independent (a drop shadow is absence of light, not a themed color).
+   * Elevation — shadow-lg for header/dropdown panels.
+   * Uses Tailwind v4's default shadow-lg value; black is intentionally
+   * theme-independent (absence of light, not a themed color).
    * ======================================== */
   --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
 
   /* ========================================
-   * Typography
+   * Typography — Tier 2 semantic aliases (root-specific)
+   *
+   * These semantic names (--text-micro, --text-caption, etc.) reference the
+   * Tier 1 abstract scale in :root below. The Tier 1 scale is NOT for direct
+   * component use; always use semantic aliases here.
    * ======================================== */
-
-  /* ── Tier 2: Semantic font-size tokens (reference Tier 1 scale only) ── */
-  --text-micro:      var(--text-scale-2xs);  /* 12px — compact panel labels, color swatch annotations */
-  --text-caption:    var(--text-scale-xs);   /* labels, timestamps */
-  --text-small:      var(--text-scale-sm);   /* secondary text, nav items */
-  --text-body:       var(--text-scale-md);   /* paragraphs, default */
-  --text-title: var(--text-scale-lg);   /* card titles, section labels */
-  --text-heading:    var(--text-scale-xl);   /* page headings */
-  --text-display:    var(--text-scale-2xl);  /* hero text */
-
-  /* Font families */
-  --font-sans: system-ui, sans-serif;
-  --font-mono: ui-monospace, monospace;
-
-  /* Font weights (4 steps) */
-  --font-weight-normal: 400;
-  --font-weight-medium: 500;
-  --font-weight-semibold: 600;
-  --font-weight-bold: 700;
-
-  /* Line heights (4 steps) */
-  --leading-tight: 1.25;
-  --leading-snug: 1.375;
-  --leading-normal: 1.5;
-  --leading-relaxed: 1.625;
+  --text-micro:   var(--text-scale-2xs);  /* 12px — compact labels, color swatch annotations */
+  --text-caption: var(--text-scale-xs);   /* 14px — labels, timestamps */
+  --text-small:   var(--text-scale-sm);   /* 16px — secondary text, nav items */
+  --text-body:    var(--text-scale-md);   /* 19.2px — paragraphs, default */
+  --text-title:   var(--text-scale-lg);   /* 22.4px — card titles, section labels */
+  --text-heading: var(--text-scale-xl);   /* 48px — page headings */
+  --text-display: var(--text-scale-2xl);  /* 60px — hero text */
 
   /* ========================================
-   * Border radius (3 steps)
+   * Line height — snug step (shared file omits --leading-snug; add here)
+   * ======================================== */
+  --leading-snug: 1.375;
+
+  /* ========================================
+   * Border radius — root-specific values (override shared sm/md/lg/full)
+   *
+   * Root uses compact 4px/8px radii for documentation UI density.
+   * --radius-DEFAULT maps to Tailwind's `rounded` utility.
+   * Note: shared file defines --radius-lg: 1rem (16px) — overridden here
+   * to 0.5rem (8px) for the denser documentation context.
    * ======================================== */
   --radius-DEFAULT: 0.25rem;    /* 4px — rounded */
+  --radius-sm: 0.25rem;         /* 4px — rounded-sm */
+  --radius-md: 0.375rem;        /* 6px — rounded-md */
   --radius-lg: 0.5rem;          /* 8px — rounded-lg */
   --radius-full: 9999px;        /* rounded-full */
-
-  /* ========================================
-   * Breakpoints (3 steps)
-   * ======================================== */
-  --breakpoint-sm: 640px;
-  --breakpoint-lg: 1024px;
-  --breakpoint-xl: 1280px;
 }
 
 /* ========================================

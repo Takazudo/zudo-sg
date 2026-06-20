@@ -1,88 +1,81 @@
 /*
  * apps/demo — global styles + Tailwind v4 theme.
  *
- * Token strategy follows the zfb-example-webshop baseline:
- * a tight semantic token set with separate hsp (horizontal) and vsp
- * (vertical) spacing axes so every utility communicates intent.
+ * Token strategy: Tailwind v4 Approach B — import preflight + utilities only
+ * (never @import "tailwindcss", which pulls in the full default theme).
+ * After these imports, only project-defined tokens exist; `p-4` or `bg-gray-500`
+ * cause build errors at the CSS level.
  *
- * Ref: $HOME/repos/zfb-ex/zfb-example-webshop/styles/global.css
+ * Shared tokens (spacing, typography, radius, shadows, breakpoints) come from
+ * @zudo-sg/ui — the single source of truth for the whole monorepo.
+ * This file adds demo-specific color tokens and semantic text aliases.
  */
 
-@import "tailwindcss";
+@import "tailwindcss/preflight";
+@import "tailwindcss/utilities";
+
+/* Shared tight-token set — spacing (hsp/vsp), font-sizes (xs–2xl),
+   font-weights, line-heights, font-families, radius, shadows, breakpoints.
+   Single source of truth for the monorepo; do NOT duplicate these here. */
+@import "@zudo-sg/ui/styles/tokens.css";
+
+/* ── Content source declarations ─────────────────────────────────────── */
+@source "pages/**/*.{tsx,ts,jsx,js}";
+@source "layouts/**/*.{tsx,ts,jsx,js}";
 
 @theme {
-  /* ── Brand palette (oklch — perceptually uniform) ───────────────── */
-  --color-ink: oklch(0.21 0.03 264);
-  --color-ink-soft: oklch(0.44 0.02 264);
-  --color-paper: oklch(0.99 0.004 90);
-  --color-surface: oklch(1 0 0);
+  /* ========================================
+   * Colors — standalone oklch palette for the demo site
+   *
+   * These are demo-specific and do not need to match the root host's
+   * --zd-* palette (which is injected by @takazudo/zudo-doc at runtime).
+   * ======================================== */
+
+  /* Ink / paper */
+  --color-ink:            oklch(0.21 0.03 264);
+  --color-ink-soft:       oklch(0.44 0.02 264);
+  --color-paper:          oklch(0.99 0.004 90);
+  --color-surface:        oklch(1 0 0);
   --color-surface-sunken: oklch(0.97 0.006 90);
-  --color-line: oklch(0.91 0.008 90);
+  --color-line:           oklch(0.91 0.008 90);
 
-  --color-brand: oklch(0.52 0.13 200);
-  --color-brand-strong: oklch(0.44 0.13 200);
-  --color-brand-soft: oklch(0.96 0.03 200);
+  /* Brand */
+  --color-brand:          oklch(0.52 0.13 200);
+  --color-brand-strong:   oklch(0.44 0.13 200);
+  --color-brand-soft:     oklch(0.96 0.03 200);
 
-  --color-accent: oklch(0.7 0.16 55);
-  --color-success: oklch(0.62 0.14 155);
-  --color-success-soft: oklch(0.96 0.04 155);
-  --color-danger: oklch(0.58 0.18 25);
-  --color-danger-soft: oklch(0.96 0.04 25);
+  /* State */
+  --color-accent:         oklch(0.70 0.16 55);
+  --color-success:        oklch(0.62 0.14 155);
+  --color-success-soft:   oklch(0.96 0.04 155);
+  --color-danger:         oklch(0.58 0.18 25);
+  --color-danger-soft:    oklch(0.96 0.04 25);
 
-  /* ── Horizontal spacing axis ────────────────────────────────────── */
-  --spacing-hsp-2xs: 0.25rem;
-  --spacing-hsp-xs: 0.5rem;
-  --spacing-hsp-sm: 0.75rem;
-  --spacing-hsp-md: 1.25rem;
-  --spacing-hsp-lg: 2rem;
-  --spacing-hsp-xl: 3.5rem;
+  /* ========================================
+   * Semantic text aliases — maps the shared abstract scale (xs–2xl)
+   * to semantic names used in this site's components.
+   *
+   * These are Tailwind @theme entries so `text-display`, `text-body`,
+   * etc. work as utility classes alongside `text-2xl`, `text-base`.
+   * ======================================== */
 
-  /* ── Vertical spacing axis ──────────────────────────────────────── */
-  --spacing-vsp-2xs: 0.25rem;
-  --spacing-vsp-xs: 0.5rem;
-  --spacing-vsp-sm: 0.875rem;
-  --spacing-vsp-md: 1.5rem;
-  --spacing-vsp-lg: 2.5rem;
-  --spacing-vsp-xl: 4rem;
+  --text-micro:   var(--font-size-xs);     /* 12px — fine print, labels */
+  --text-small:   var(--font-size-sm);     /* 14px — secondary text */
+  --text-body:    var(--font-size-base);   /* 16px — body copy */
+  --text-heading: var(--font-size-lg);     /* 20px — card headings */
+  --text-title:   var(--font-size-xl);     /* 28px — section headings */
+  --text-display: var(--font-size-2xl);    /* 40px — hero display */
 
-  /* ── Type scale ─────────────────────────────────────────────────── */
-  --text-display: 2.5rem;
-  --text-display--line-height: 1.1;
-  --text-title: 1.75rem;
-  --text-title--line-height: 1.2;
-  --text-heading: 1.25rem;
-  --text-heading--line-height: 1.3;
-  --text-body: 1rem;
-  --text-body--line-height: 1.6;
-  --text-small: 0.875rem;
-  --text-small--line-height: 1.5;
-  --text-micro: 0.75rem;
-  --text-micro--line-height: 1.4;
+  /* ========================================
+   * Z-index — semantic steps for the demo layout
+   * ======================================== */
 
-  /* ── Radius ─────────────────────────────────────────────────────── */
-  --radius-sm: 0.375rem;
-  --radius-md: 0.625rem;
-  --radius-lg: 1rem;
-  --radius-pill: 999px;
-
-  /* ── Layered, color-matched elevation shadows ───────────────────── */
-  --shadow-card:
-    0 0.5px 1px oklch(0.21 0.03 264 / 0.05), 0 2px 4px oklch(0.21 0.03 264 / 0.05),
-    0 5px 10px oklch(0.21 0.03 264 / 0.05);
-  --shadow-raised:
-    0 1px 2px oklch(0.21 0.03 264 / 0.06), 0 4px 8px oklch(0.21 0.03 264 / 0.06),
-    0 12px 24px oklch(0.21 0.03 264 / 0.07);
-  --shadow-overlay:
-    0 2px 4px oklch(0.21 0.03 264 / 0.08), 0 8px 16px oklch(0.21 0.03 264 / 0.08),
-    0 24px 48px oklch(0.21 0.03 264 / 0.1);
-
-  /* ── Fonts ──────────────────────────────────────────────────────── */
-  --font-sans:
-    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
-    sans-serif;
+  --z-index-base:   0;
+  --z-index-raised: 10;   /* sticky header */
+  --z-index-modal:  50;
 }
 
-/* ── Base layer ─────────────────────────────────────────────────────── */
+/* ── Base styles ─────────────────────────────────────────────────────── */
 @layer base {
   *,
   *::before,
@@ -98,8 +91,8 @@
     margin: 0;
     min-height: 100dvh;
     font-family: var(--font-sans);
-    font-size: var(--text-body);
-    line-height: 1.6;
+    font-size: var(--font-size-base);
+    line-height: var(--font-size-base--line-height);
     background: var(--color-paper);
     color: var(--color-ink);
     -webkit-font-smoothing: antialiased;
@@ -123,7 +116,6 @@
     color: inherit;
   }
 
-  /* Visible keyboard focus across all interactive elements. */
   :focus-visible {
     outline: 2px solid var(--color-brand);
     outline-offset: 2px;
