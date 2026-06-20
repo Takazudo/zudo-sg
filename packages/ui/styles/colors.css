@@ -1,0 +1,99 @@
+/*
+ * @zudo-sg/ui — canonical semantic color tokens (light + dark)
+ *
+ * This is the COLOR contract the @zudo-sg/ui components depend on. Components
+ * reference these semantic Tailwind color utilities only (bg-surface, text-ink,
+ * bg-brand, border-line, …) — never raw oklch literals or numeric Tailwind
+ * shades (`bg-gray-500` is a build error under the tight-token strategy).
+ *
+ * Dark mode strategy (zudo-css-wisdom: dark-mode-strategies):
+ *   - Every token is declared with light-dark(<light>, <dark>) so a single
+ *     declaration carries both schemes.
+ *   - `color-scheme: light dark` is set on :root so light-dark() resolves and
+ *     UA-styled controls (inputs, scrollbars) follow the active scheme.
+ *   - Default is OS preference. A host that wants a manual toggle sets
+ *     `color-scheme: light` / `light` on :root[data-theme="…"] (see the
+ *     [data-theme] overrides at the bottom) — components need no changes.
+ *   - Dark values are NOT naive inversions: surfaces are dark gray (not pure
+ *     black), ink is off-white (not pure white), and brand/state hues gain
+ *     lightness + lose a touch of chroma so they don't vibrate on dark.
+ *
+ * Why this lives in @zudo-sg/ui (not per-consumer): the demo previously
+ * redefined these names inline with light-only values. Centralizing them here
+ * makes every consumer dark-correct for free and keeps the component contract
+ * stable. Spacing/typography/radius/shadow tokens come from ./tokens.css.
+ *
+ * NOTE: this file does NOT @import "tailwindcss" — import it AFTER the
+ * preflight + utilities imports in the consumer's global.css, alongside
+ * ./tokens.css, so Tailwind generates bg-*/text-*/border-* utilities from it.
+ */
+
+:root {
+  /* light-dark() requires color-scheme to be declared. */
+  color-scheme: light dark;
+}
+
+@theme {
+  /* ========================================
+   * Ink (foreground text) — off-black in light, off-white in dark.
+   * ======================================== */
+  --color-ink:      light-dark(oklch(0.21 0.03 264), oklch(0.93 0.01 264));
+  --color-ink-soft: light-dark(oklch(0.44 0.02 264), oklch(0.72 0.015 264));
+  --color-ink-mute: light-dark(oklch(0.58 0.015 264), oklch(0.58 0.012 264));
+
+  /* On-brand foreground — text/icons that sit on a filled brand surface.
+     Near-white in both schemes (brand stays dark enough behind it). */
+  --color-on-brand: oklch(0.99 0.004 90);
+
+  /* ========================================
+   * Surfaces — page paper, raised surface, sunken surface.
+   * Dark surfaces are dark gray (not #000) and step lighter as they raise,
+   * matching the light scheme's sunken→paper→surface ordering inverted.
+   * ======================================== */
+  --color-paper:          light-dark(oklch(0.99 0.004 90),  oklch(0.17 0.01 264));
+  --color-surface:        light-dark(oklch(1 0 0),          oklch(0.21 0.012 264));
+  --color-surface-sunken: light-dark(oklch(0.97 0.006 90),  oklch(0.25 0.014 264));
+
+  /* Lines / borders / dividers. */
+  --color-line:        light-dark(oklch(0.91 0.008 90),  oklch(0.32 0.014 264));
+  --color-line-strong: light-dark(oklch(0.83 0.01 90),   oklch(0.42 0.016 264));
+
+  /* ========================================
+   * Brand — primary action / link hue. Lighter + slightly less chroma in dark.
+   * ======================================== */
+  --color-brand:        light-dark(oklch(0.52 0.13 200), oklch(0.74 0.12 200));
+  --color-brand-strong: light-dark(oklch(0.44 0.13 200), oklch(0.82 0.11 200));
+  --color-brand-soft:   light-dark(oklch(0.96 0.03 200), oklch(0.30 0.05 200));
+
+  /* ========================================
+   * State — accent / success / danger, each with a soft tint companion.
+   * Soft tints invert (pale in light, deep-muted in dark) so they read as the
+   * same role without glowing on a dark surface.
+   * ======================================== */
+  --color-accent:       light-dark(oklch(0.70 0.16 55),  oklch(0.78 0.14 55));
+
+  --color-success:      light-dark(oklch(0.55 0.14 155), oklch(0.74 0.14 155));
+  --color-success-soft: light-dark(oklch(0.95 0.04 155), oklch(0.30 0.05 155));
+
+  --color-danger:       light-dark(oklch(0.55 0.18 25),  oklch(0.72 0.16 25));
+  --color-danger-soft:  light-dark(oklch(0.95 0.04 25),  oklch(0.30 0.06 25));
+
+  /* Focus ring — shared by all interactive components. */
+  --color-focus: light-dark(oklch(0.52 0.13 200), oklch(0.74 0.12 200));
+}
+
+/* ========================================
+ * Optional manual theme override.
+ *
+ * Default behavior follows the OS (prefers-color-scheme) via the
+ * `color-scheme: light dark` above. A host that ships a toggle can pin the
+ * scheme by setting data-theme on the root element; light-dark() then resolves
+ * to the forced side and UA controls follow. No component markup changes.
+ * ======================================== */
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+}

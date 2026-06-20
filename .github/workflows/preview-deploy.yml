@@ -1,0 +1,308 @@
+# Preview deployment for the `preview` and `expreview/**` branches.
+#
+# Triggered on pushes to `preview` and `expreview/**` branches.
+# Builds both sites and deploys each to a Cloudflare Workers preview alias
+# so the preview URL is predictable (e.g. preview-zudo-sg.<acct>.workers.dev).
+#
+# This is separate from PR preview deploys (handled by pr-checks.yml).
+# Both sites are fully static — no SSR adapter, no .assetsignore needed.
+
+name: Preview Deploy
+
+on:
+  push:
+    branches:
+      - 'preview'
+      - 'expreview/**'
+
+concurrency:
+  group: preview-deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+  statuses: write
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Job: Build the root styleguide site
+  # ---------------------------------------------------------------------------
+  build-site:
+    name: Build Styleguide Site
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4
+        with:
+          dest: ~/setup-pnpm-${{ github.job }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build site
+        run: pnpm build
+
+      - name: Archive site build output
+        run: tar -cf "$RUNNER_TEMP/site-dist.tar" -C dist .
+
+      - name: Upload site build output
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
+        with:
+          name: site-dist
+          path: ${{ runner.temp }}/site-dist.tar
+          retention-days: 1
+
+  # ---------------------------------------------------------------------------
+  # Job: Build the demo site (apps/demo)
+  # ---------------------------------------------------------------------------
+  build-demo:
+    name: Build Demo Site
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4
+        with:
+          dest: ~/setup-pnpm-${{ github.job }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build demo site
+        run: pnpm --filter @zudo-sg/demo build
+
+      - name: Archive demo build output
+        run: tar -cf "$RUNNER_TEMP/demo-dist.tar" -C apps/demo/dist .
+
+      - name: Upload demo build output
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
+        with:
+          name: demo-dist
+          path: ${{ runner.temp }}/demo-dist.tar
+          retention-days: 1
+
+  # ---------------------------------------------------------------------------
+  # Job: Deploy root styleguide site preview alias
+  # ---------------------------------------------------------------------------
+  deploy-site:
+    name: Deploy Styleguide Preview
+    needs: [build-site]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      deploy_url: ${{ steps.deploy-site.outputs.deploy_url }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+
+      - name: Download site build output
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: site-dist
+          path: ${{ runner.temp }}
+
+      - name: Extract site build output
+        run: mkdir -p dist && tar -xf "$RUNNER_TEMP/site-dist.tar" -C dist
+
+      - name: Determine branch slug
+        id: branch
+        run: |
+          BRANCH_NAME="${{ github.ref_name }}"
+          # wrangler preview aliases must be lowercase [a-z0-9-].
+          # Lowercase, replace every invalid char with a hyphen, collapse
+          # repeats, and trim leading/trailing hyphens.
+          BRANCH_SLUG=$(echo "$BRANCH_NAME" \
+            | tr '[:upper:]' '[:lower:]' \
+            | sed 's/[^a-z0-9]/-/g; s/-\{2,\}/-/g; s/^-//; s/-$//')
+          echo "slug=$BRANCH_SLUG" >> "$GITHUB_OUTPUT"
+          echo "Branch slug: $BRANCH_SLUG"
+
+      - name: Deploy styleguide preview alias
+        id: deploy-site
+        run: |
+          SLUG="${{ steps.branch.outputs.slug }}"
+          DEPLOY_LOG=$(mktemp)
+          npx wrangler@4.85.0 versions upload \
+            --config wrangler.toml \
+            --preview-alias="$SLUG" \
+            --message="Preview: ${SLUG} @ ${GITHUB_SHA:0:7}" \
+            2>&1 | tee "$DEPLOY_LOG"
+
+          DEPLOY_URL=$(grep -oE "https://${SLUG}-[a-z0-9.-]+\.workers\.dev" "$DEPLOY_LOG" | head -1)
+          if [ -z "$DEPLOY_URL" ]; then
+            echo "::error::Failed to parse alias preview URL for slug '$SLUG' from wrangler output"
+            exit 1
+          fi
+          echo "deploy_url=$DEPLOY_URL" >> "$GITHUB_OUTPUT"
+          echo "Styleguide preview URL: $DEPLOY_URL"
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Smoke gate — styleguide preview homepage
+        run: |
+          set -euo pipefail
+          PREVIEW_URL="${{ steps.deploy-site.outputs.deploy_url }}"
+          STATUS=$(curl -fsSL -o /dev/null -w '%{http_code}' "$PREVIEW_URL/")
+          [ "$STATUS" = "200" ] || { echo "::error::$PREVIEW_URL/ returned HTTP $STATUS, expected 200"; exit 1; }
+          echo "OK: $PREVIEW_URL/ returned HTTP 200"
+
+  # ---------------------------------------------------------------------------
+  # Job: Deploy demo site preview alias
+  # ---------------------------------------------------------------------------
+  deploy-demo:
+    name: Deploy Demo Site Preview
+    needs: [build-demo]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      deploy_url: ${{ steps.deploy-demo.outputs.deploy_url }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+
+      - name: Download demo build output
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: demo-dist
+          path: ${{ runner.temp }}
+
+      - name: Extract demo build output
+        run: mkdir -p apps/demo/dist && tar -xf "$RUNNER_TEMP/demo-dist.tar" -C apps/demo/dist
+
+      - name: Determine branch slug
+        id: branch
+        run: |
+          BRANCH_NAME="${{ github.ref_name }}"
+          BRANCH_SLUG=$(echo "$BRANCH_NAME" \
+            | tr '[:upper:]' '[:lower:]' \
+            | sed 's/[^a-z0-9]/-/g; s/-\{2,\}/-/g; s/^-//; s/-$//')
+          echo "slug=$BRANCH_SLUG" >> "$GITHUB_OUTPUT"
+          echo "Branch slug: $BRANCH_SLUG"
+
+      - name: Deploy demo site preview alias
+        id: deploy-demo
+        run: |
+          SLUG="${{ steps.branch.outputs.slug }}"
+          DEPLOY_LOG=$(mktemp)
+          npx wrangler@4.85.0 versions upload \
+            --config apps/demo/wrangler.toml \
+            --preview-alias="$SLUG" \
+            --message="Preview demo: ${SLUG} @ ${GITHUB_SHA:0:7}" \
+            2>&1 | tee "$DEPLOY_LOG"
+
+          DEPLOY_URL=$(grep -oE "https://${SLUG}-[a-z0-9.-]+\.workers\.dev" "$DEPLOY_LOG" | head -1)
+          if [ -z "$DEPLOY_URL" ]; then
+            echo "::error::Failed to parse alias preview URL for slug '$SLUG' from wrangler output"
+            exit 1
+          fi
+          echo "deploy_url=$DEPLOY_URL" >> "$GITHUB_OUTPUT"
+          echo "Demo site preview URL: $DEPLOY_URL"
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Smoke gate — demo site preview homepage
+        run: |
+          set -euo pipefail
+          PREVIEW_URL="${{ steps.deploy-demo.outputs.deploy_url }}"
+          STATUS=$(curl -fsSL -o /dev/null -w '%{http_code}' "$PREVIEW_URL/")
+          [ "$STATUS" = "200" ] || { echo "::error::$PREVIEW_URL/ returned HTTP $STATUS, expected 200"; exit 1; }
+          echo "OK: $PREVIEW_URL/ returned HTTP 200"
+
+  # ---------------------------------------------------------------------------
+  # Job: Post combined preview URLs to PR comment
+  # ---------------------------------------------------------------------------
+  comment-pr:
+    name: Comment Preview URLs on PR
+    needs: [deploy-site, deploy-demo]
+    if: success()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Comment on associated PR
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        env:
+          SITE_DEPLOY_URL: ${{ needs.deploy-site.outputs.deploy_url }}
+          DEMO_DEPLOY_URL: ${{ needs.deploy-demo.outputs.deploy_url }}
+        with:
+          script: |
+            const branch = context.ref.replace('refs/heads/', '');
+            const { data: prs } = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              head: `${context.repo.owner}:${branch}`,
+              state: 'open'
+            });
+
+            if (prs.length === 0) {
+              console.log('No open PR found for this branch, skipping comment');
+              return;
+            }
+
+            const pr = prs[0];
+            const siteUrl = process.env.SITE_DEPLOY_URL;
+            const demoUrl = process.env.DEMO_DEPLOY_URL;
+            const shortSha = context.sha.substring(0, 7);
+            const marker = '<!-- cf-preview-branch -->';
+
+            const body = [
+              marker,
+              `## Cloudflare Workers Assets Preview`,
+              '',
+              `Preview deployments are ready.`,
+              '',
+              `| Site | URL |`,
+              `|---|---|`,
+              `| Styleguide | ${siteUrl} |`,
+              `| Demo | ${demoUrl} |`,
+              '',
+              `Built from \`${branch}\` @ \`${shortSha}\``,
+            ].join('\n');
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.number,
+            });
+
+            const existing = comments.find(c => c.body.includes(marker));
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr.number,
+                body,
+              });
+            }

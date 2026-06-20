@@ -1,20 +1,33 @@
-# dependencies
-node_modules/
-.pnpm-store/
+# Build output
+node_modules
+dist
+.zfb
+.zfb-build
 
-# build output
-dist/
-.zfb-build/
+# Playwright artifacts
+test-results/
+playwright-report/
+
+# macOS
+.DS_Store
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Cloudflare Wrangler
 .wrangler/
 
-# env / secrets
-.env
-.env.*
-!.env.example
+# Generated doc-lookup skill
+.claude/skills/zudo-sg-wisdom/SKILL.md
+.claude/skills/zudo-sg-wisdom/docs
 
-# logs
-*.log
-
-# os / editor
-.DS_Store
-Thumbs.db
+# git worktrees (local only)
+worktrees/

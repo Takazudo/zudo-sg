@@ -1,0 +1,10 @@
+packages:
+  - "."
+  - "packages/*"
+  - "apps/*"
+allowBuilds:
+  esbuild: true
+  lefthook: true
+minimumReleaseAgeExclude:
+  - '@takazudo/zudo-doc-history-server@0.2.15'
+  - '@takazudo/zudo-doc@0.2.15'

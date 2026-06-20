@@ -1,0 +1,192 @@
+# Production deployment workflow for the zudo-sg styleguide host + demo site.
+#
+# Triggered on every push to `main`. The pipeline:
+#   1. Builds both static sites in parallel (root + apps/demo)
+#   2. Deploys root site to Worker `zudo-sg` (zudo-sg.takazudomodular.com)
+#   3. Deploys demo site to Worker `zudo-sg-demo-site` (zudo-sg-demo-site.takazudomodular.com)
+#   4. Per-subdomain smoke gates for each deployed site
+#
+# Both sites are fully static (no SSR adapter). Neither site generates
+# _worker.js or _zfb_inner.mjs, so no .assetsignore step is needed.
+# If an SSR route is added to either site in future, add the .assetsignore
+# write step before the corresponding wrangler deploy call (see DEPLOY.md).
+#
+# Inter-job data sharing uses actions/upload-artifact + actions/download-artifact
+# (retention-days: 1 keeps storage bounded; artifacts are scoped to a single run).
+#
+# Concurrency: only one production deploy runs at a time.
+# We do NOT cancel in-progress runs — the earlier deploy should finish.
+
+name: Production Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Job: Build the root styleguide site
+  # ---------------------------------------------------------------------------
+  build-site:
+    name: Build Styleguide Site
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4
+        with:
+          dest: ~/setup-pnpm-${{ github.job }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build site
+        run: pnpm build
+
+      - name: Archive site build output
+        # tar includes dotfiles (e.g. .assetsignore if written in future).
+        run: tar -cf "$RUNNER_TEMP/site-dist.tar" -C dist .
+
+      - name: Upload site build output
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
+        with:
+          name: site-dist
+          path: ${{ runner.temp }}/site-dist.tar
+          retention-days: 1
+
+  # ---------------------------------------------------------------------------
+  # Job: Build the demo site (apps/demo)
+  # ---------------------------------------------------------------------------
+  build-demo:
+    name: Build Demo Site
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4
+        with:
+          dest: ~/setup-pnpm-${{ github.job }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build demo site
+        run: pnpm --filter @zudo-sg/demo build
+
+      - name: Archive demo build output
+        run: tar -cf "$RUNNER_TEMP/demo-dist.tar" -C apps/demo/dist .
+
+      - name: Upload demo build output
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
+        with:
+          name: demo-dist
+          path: ${{ runner.temp }}/demo-dist.tar
+          retention-days: 1
+
+  # ---------------------------------------------------------------------------
+  # Job: Deploy root styleguide site to Cloudflare Workers (zudo-sg)
+  # ---------------------------------------------------------------------------
+  deploy-site:
+    name: Deploy Styleguide to Cloudflare Workers
+    needs: [build-site]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        # wrangler reads wrangler.toml from the repo root at deploy time.
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+
+      - name: Download site build output
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: site-dist
+          path: ${{ runner.temp }}
+
+      - name: Extract site build output
+        run: mkdir -p dist && tar -xf "$RUNNER_TEMP/site-dist.tar" -C dist
+
+      - name: Deploy to Cloudflare Workers
+        run: npx wrangler@4.85.0 deploy --config wrangler.toml
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Smoke gate — styleguide homepage
+        run: |
+          set -euo pipefail
+          PROD_URL="https://zudo-sg.takazudomodular.com"
+          STATUS=$(curl -fsSL -o /dev/null -w '%{http_code}' "$PROD_URL/")
+          [ "$STATUS" = "200" ] || { echo "::error::$PROD_URL/ returned HTTP $STATUS, expected 200"; exit 1; }
+          echo "OK: $PROD_URL/ returned HTTP 200"
+
+      - name: Smoke gate — styleguide 404 page
+        run: |
+          set -euo pipefail
+          PROD_URL="https://zudo-sg.takazudomodular.com"
+          STATUS=$(curl -sS -o /dev/null -w '%{http_code}' "$PROD_URL/this-page-does-not-exist")
+          [ "$STATUS" = "404" ] || { echo "::error::$PROD_URL/this-page-does-not-exist returned HTTP $STATUS, expected 404"; exit 1; }
+          echo "OK: $PROD_URL/this-page-does-not-exist returned HTTP 404 (404 handler working)"
+
+  # ---------------------------------------------------------------------------
+  # Job: Deploy demo site to Cloudflare Workers (zudo-sg-demo-site)
+  # ---------------------------------------------------------------------------
+  deploy-demo:
+    name: Deploy Demo Site to Cloudflare Workers
+    needs: [build-demo]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        # wrangler reads apps/demo/wrangler.toml at deploy time.
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+
+      - name: Download demo build output
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: demo-dist
+          path: ${{ runner.temp }}
+
+      - name: Extract demo build output
+        run: mkdir -p apps/demo/dist && tar -xf "$RUNNER_TEMP/demo-dist.tar" -C apps/demo/dist
+
+      - name: Deploy to Cloudflare Workers
+        run: npx wrangler@4.85.0 deploy --config apps/demo/wrangler.toml
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Smoke gate — demo site homepage
+        run: |
+          set -euo pipefail
+          DEMO_URL="https://zudo-sg-demo-site.takazudomodular.com"
+          STATUS=$(curl -fsSL -o /dev/null -w '%{http_code}' "$DEMO_URL/")
+          [ "$STATUS" = "200" ] || { echo "::error::$DEMO_URL/ returned HTTP $STATUS, expected 200"; exit 1; }
+          echo "OK: $DEMO_URL/ returned HTTP 200"

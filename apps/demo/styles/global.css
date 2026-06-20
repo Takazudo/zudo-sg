@@ -1,0 +1,107 @@
+/*
+ * apps/demo — global styles + Tailwind v4 theme.
+ *
+ * Token strategy: Tailwind v4 Approach B — import preflight + utilities only
+ * (never @import "tailwindcss", which pulls in the full default theme).
+ * After these imports, only project-defined tokens exist; `p-4` or `bg-gray-500`
+ * cause build errors at the CSS level.
+ *
+ * Shared tokens (spacing, typography, radius, shadows, breakpoints) AND the
+ * semantic color set come from @zudo-sg/ui — the single source of truth for the
+ * whole monorepo. This file adds only demo-specific extras: optional semantic
+ * text-size aliases and the demo's z-index tiers.
+ */
+
+@import "tailwindcss/preflight";
+@import "tailwindcss/utilities";
+
+/* Shared tight-token set — spacing (hsp/vsp), font-sizes (xs–2xl),
+   font-weights, line-heights, font-families, radius, shadows, breakpoints.
+   Single source of truth for the monorepo; do NOT duplicate these here. */
+@import "@zudo-sg/ui/styles/tokens.css";
+
+/* Shared semantic color tokens (ink/paper/surface/line/brand/state) with
+   light + dark values via light-dark(). This is the color contract the
+   @zudo-sg/ui components depend on — importing it makes the demo dark-correct
+   and keeps the component palette consistent across the monorepo. Do NOT
+   redefine these names here. */
+@import "@zudo-sg/ui/styles/colors.css";
+
+/* ── Content source declarations ─────────────────────────────────────── */
+@source "pages/**/*.{tsx,ts,jsx,js}";
+@source "layouts/**/*.{tsx,ts,jsx,js}";
+/* The component library lives outside this app's tree; scan it so Tailwind
+   picks up the utility classes the components emit. */
+@source "../../packages/ui/src/**/*.{tsx,ts,jsx,js}";
+
+@theme {
+  /* ========================================
+   * Semantic text aliases — maps the shared abstract scale (xs–2xl)
+   * to semantic names used in this site's components.
+   *
+   * These are Tailwind @theme entries so `text-display`, `text-body`,
+   * etc. work as utility classes alongside `text-2xl`, `text-base`.
+   * ======================================== */
+
+  --text-micro:   var(--font-size-xs);     /* 12px — fine print, labels */
+  --text-small:   var(--font-size-sm);     /* 14px — secondary text */
+  --text-body:    var(--font-size-base);   /* 16px — body copy */
+  --text-heading: var(--font-size-lg);     /* 20px — card headings */
+  --text-title:   var(--font-size-xl);     /* 28px — section headings */
+  --text-display: var(--font-size-2xl);    /* 40px — hero display */
+
+  /* ========================================
+   * Z-index — semantic steps for the demo layout
+   * ======================================== */
+
+  --z-index-base:   0;
+  --z-index-raised: 10;   /* sticky header */
+  --z-index-modal:  50;
+}
+
+/* ── Base styles ─────────────────────────────────────────────────────── */
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100dvh;
+    font-family: var(--font-sans);
+    font-size: var(--font-size-base);
+    line-height: var(--font-size-base--line-height);
+    background: var(--color-paper);
+    color: var(--color-ink);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  img,
+  svg {
+    display: block;
+    max-width: 100%;
+  }
+
+  a {
+    color: inherit;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+    color: inherit;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 2px;
+  }
+}

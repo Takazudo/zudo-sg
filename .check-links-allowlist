@@ -1,0 +1,10 @@
+# Known exceptions for `pnpm check:links` (consumed by scripts/check-links.mjs).
+#
+# Format: `<file-relative-to-root>:<href>` per line. `#` comments and blank
+# lines are ignored.
+#
+# Add entries here when a link cannot be fixed at the source — for example,
+# runtime-generated routes that exist in the served site but not as static files.
+# Delete an entry when the underlying issue is fixed.
+#
+# ----- Broken Links (0 entries) ------------------------------------------

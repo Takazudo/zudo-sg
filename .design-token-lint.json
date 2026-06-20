@@ -1,0 +1,15 @@
+{
+  "semanticPrefixes": ["hsp-", "vsp-"],
+  "suggestionSuffix": "use hsp-*/vsp-* for spacing or project semantic color tokens",
+  "patterns": [
+    "src/**/*.{tsx,ts,jsx,js}",
+    "packages/ui/src/**/*.{tsx,ts,jsx,js}",
+    "apps/demo/**/*.{tsx,ts,jsx,js}",
+    "pages/**/*.{tsx,ts,jsx,js}"
+  ],
+  "ignore": [
+    "**/*.test.*",
+    "**/*.spec.*",
+    "**/node_modules/**"
+  ]
+}
