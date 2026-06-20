@@ -1,0 +1,10 @@
+/*
+ * apps/styleguide — global styles + Tailwind v4 base.
+ *
+ * Minimal for now: preflight reset + utility generation only.
+ * Full token/safelist/@source wiring (shared tokens from @zudo-sg/ui,
+ * semantic color set, @theme block, @layer base rules) lands in sub-issue #2.
+ */
+
+@import "tailwindcss/preflight";
+@import "tailwindcss/utilities";
