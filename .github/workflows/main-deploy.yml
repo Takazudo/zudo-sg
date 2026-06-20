@@ -1,13 +1,12 @@
-# Production deployment workflow for the zudo-sg styleguide host + demo site + standalone styleguide.
+# Production deployment workflow for the zudo-sg styleguide host + demo site.
 #
 # Triggered on every push to `main`. The pipeline:
-#   1. Builds all three static sites in parallel (root + apps/demo + apps/styleguide)
+#   1. Builds both static sites in parallel (root + apps/demo)
 #   2. Deploys root site to Worker `zudo-sg` (zudo-sg.takazudomodular.com)
 #   3. Deploys demo site to Worker `zudo-sg-demo-site` (zudo-sg-demo-site.takazudomodular.com)
-#   4. Deploys standalone styleguide to Worker `zudo-sg-styleguide` (zudo-sg-styleguide.takazudomodular.com)
-#   5. Per-subdomain smoke gates for each deployed site
+#   4. Per-subdomain smoke gates for each deployed site
 #
-# All three sites are fully static (no SSR adapter). None generate
+# Both sites are fully static (no SSR adapter). Neither generates
 # _worker.js or _zfb_inner.mjs, so no .assetsignore step is needed.
 # If an SSR route is added to any site in future, add the .assetsignore
 # write step before the corresponding wrangler deploy call (see DEPLOY.md).
@@ -182,77 +181,3 @@ jobs:
       - name: Smoke gate — demo site homepage
         run: bash scripts/smoke-url.sh "https://zudo-sg-demo-site.takazudomodular.com/" 200
 
-  # ---------------------------------------------------------------------------
-  # Job: Build the standalone styleguide app (apps/styleguide)
-  # ---------------------------------------------------------------------------
-  build-styleguide:
-    name: Build Standalone Styleguide
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4
-        with:
-          dest: ~/setup-pnpm-${{ github.job }}
-
-      - name: Setup Node.js
-        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
-        with:
-          node-version: 22
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Build standalone styleguide
-        run: pnpm --filter @zudo-sg/styleguide build
-
-      - name: Archive standalone styleguide build output
-        run: tar -cf "$RUNNER_TEMP/styleguide-dist.tar" -C apps/styleguide/dist .
-
-      - name: Upload standalone styleguide build output
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
-        with:
-          name: styleguide-dist
-          path: ${{ runner.temp }}/styleguide-dist.tar
-          retention-days: 1
-
-  # ---------------------------------------------------------------------------
-  # Job: Deploy standalone styleguide to Cloudflare Workers (zudo-sg-styleguide)
-  # ---------------------------------------------------------------------------
-  deploy-styleguide:
-    name: Deploy Standalone Styleguide to Cloudflare Workers
-    needs: [build-styleguide]
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-
-    steps:
-      - name: Checkout repository
-        # wrangler reads apps/styleguide/wrangler.toml at deploy time.
-        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
-
-      - name: Download standalone styleguide build output
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
-        with:
-          name: styleguide-dist
-          path: ${{ runner.temp }}
-
-      - name: Extract standalone styleguide build output
-        run: mkdir -p apps/styleguide/dist && tar -xf "$RUNNER_TEMP/styleguide-dist.tar" -C apps/styleguide/dist
-
-      - name: Deploy to Cloudflare Workers
-        run: npx wrangler@4.85.0 deploy --config apps/styleguide/wrangler.toml
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-
-      # Retries through the first-deploy DNS/cert propagation window (see
-      # scripts/smoke-url.sh).
-      - name: Smoke gate — standalone styleguide homepage
-        run: bash scripts/smoke-url.sh "https://zudo-sg-styleguide.takazudomodular.com/" 200
-
-      - name: Smoke gate — standalone styleguide 404 page
-        run: bash scripts/smoke-url.sh "https://zudo-sg-styleguide.takazudomodular.com/this-page-does-not-exist" 404
