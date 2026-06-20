@@ -138,21 +138,14 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
+      # Retries through the first-deploy DNS/cert propagation window (see
+      # scripts/smoke-url.sh) — the custom domain is auto-provisioned by the
+      # `wrangler deploy` above, but propagation isn't instant on first creation.
       - name: Smoke gate — styleguide homepage
-        run: |
-          set -euo pipefail
-          PROD_URL="https://zudo-sg.takazudomodular.com"
-          STATUS=$(curl -fsSL -o /dev/null -w '%{http_code}' "$PROD_URL/")
-          [ "$STATUS" = "200" ] || { echo "::error::$PROD_URL/ returned HTTP $STATUS, expected 200"; exit 1; }
-          echo "OK: $PROD_URL/ returned HTTP 200"
+        run: bash scripts/smoke-url.sh "https://zudo-sg.takazudomodular.com/" 200
 
       - name: Smoke gate — styleguide 404 page
-        run: |
-          set -euo pipefail
-          PROD_URL="https://zudo-sg.takazudomodular.com"
-          STATUS=$(curl -sS -o /dev/null -w '%{http_code}' "$PROD_URL/this-page-does-not-exist")
-          [ "$STATUS" = "404" ] || { echo "::error::$PROD_URL/this-page-does-not-exist returned HTTP $STATUS, expected 404"; exit 1; }
-          echo "OK: $PROD_URL/this-page-does-not-exist returned HTTP 404 (404 handler working)"
+        run: bash scripts/smoke-url.sh "https://zudo-sg.takazudomodular.com/this-page-does-not-exist" 404
 
   # ---------------------------------------------------------------------------
   # Job: Deploy demo site to Cloudflare Workers (zudo-sg-demo-site)
@@ -183,10 +176,7 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
+      # Retries through the first-deploy DNS/cert propagation window (see
+      # scripts/smoke-url.sh).
       - name: Smoke gate — demo site homepage
-        run: |
-          set -euo pipefail
-          DEMO_URL="https://zudo-sg-demo-site.takazudomodular.com"
-          STATUS=$(curl -fsSL -o /dev/null -w '%{http_code}' "$DEMO_URL/")
-          [ "$STATUS" = "200" ] || { echo "::error::$DEMO_URL/ returned HTTP $STATUS, expected 200"; exit 1; }
-          echo "OK: $DEMO_URL/ returned HTTP 200"
+        run: bash scripts/smoke-url.sh "https://zudo-sg-demo-site.takazudomodular.com/" 200
