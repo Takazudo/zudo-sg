@@ -40,6 +40,9 @@ export const Variants: Story = {
 
 export const Sizes: Story = {
   name: "Sizes",
+  source: `<Button size="sm">Small</Button>
+<Button size="md">Medium</Button>
+<Button size="lg">Large</Button>`,
   controls: [
     {
       type: "select",
@@ -60,6 +63,8 @@ export const Sizes: Story = {
 
 export const AsLink: Story = {
   name: "As link",
+  source: `<Button href="/docs" variant="primary">Read the docs</Button>
+<Button href="https://example.com" variant="secondary">External</Button>`,
   render: () => (
     <div class="flex flex-wrap items-center gap-hsp-md">
       <Button href="/docs" variant="primary">
@@ -74,6 +79,9 @@ export const AsLink: Story = {
 
 export const Disabled: Story = {
   name: "Disabled",
+  source: `<Button disabled>Primary</Button>
+<Button variant="secondary" disabled>Secondary</Button>
+<Button variant="ghost" disabled>Ghost</Button>`,
   render: () => (
     <div class="flex flex-wrap items-center gap-hsp-md">
       <Button disabled>Primary</Button>
@@ -89,6 +97,8 @@ export const Disabled: Story = {
 
 export const Block: Story = {
   name: "Block",
+  source: `<Button block>Full width</Button>
+<Button variant="secondary" block>Full width</Button>`,
   render: () => (
     <div class="flex max-w-[20rem] flex-col gap-vsp-xs">
       <Button block>Full width</Button>

@@ -20,6 +20,12 @@ export default meta;
 
 export const Variants: Story = {
   name: "Variants",
+  source: `<Card variant="outlined">
+  <CardTitle>outlined</CardTitle>
+  <CardBody>A card surface using the shared semantic tokens.</CardBody>
+</Card>
+<Card variant="elevated">…</Card>
+<Card variant="filled">…</Card>`,
   controls: [
     {
       type: "select",
@@ -43,6 +49,16 @@ export const Variants: Story = {
 
 export const WithFooter: Story = {
   name: "With footer",
+  source: `<Card variant="elevated">
+  <div class="flex items-center justify-between gap-hsp-md">
+    <CardTitle>Project dashboard</CardTitle>
+    <Badge tone="success">Active</Badge>
+  </div>
+  <CardBody>Track build status, deploys, and errors…</CardBody>
+  <CardFooter>
+    <Link href="/dashboard" variant="standalone">Open dashboard</Link>
+  </CardFooter>
+</Card>`,
   render: () => (
     <div class="max-w-[24rem]">
       <Card variant="elevated">
@@ -65,6 +81,11 @@ export const WithFooter: Story = {
 
 export const Linked: Story = {
   name: "Linked (whole card)",
+  source: `<Card href="/articles/tokens" variant="outlined">
+  <Badge tone="brand">Guide</Badge>
+  <CardTitle>Designing with tight tokens</CardTitle>
+  <CardBody>How a constrained token set keeps a UI coherent as it grows.</CardBody>
+</Card>`,
   render: () => (
     <div class="max-w-[24rem]">
       <Card href="/articles/tokens" variant="outlined">

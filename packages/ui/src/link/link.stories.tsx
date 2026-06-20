@@ -16,6 +16,9 @@ export default meta;
 
 export const Variants: Story = {
   name: "Variants",
+  source: `<Link href="/docs">inline default link</Link>
+<Link href="/about" variant="subtle">Subtle nav link</Link>
+<Link href="/start" variant="standalone">Get started</Link>`,
   controls: [
     {
       type: "select",
@@ -40,6 +43,7 @@ export const Variants: Story = {
 
 export const External: Story = {
   name: "External",
+  source: `<Link href="https://example.com" external>external site</Link>`,
   render: () => (
     <p class="text-base text-ink">
       Visit the{" "}

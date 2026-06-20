@@ -18,6 +18,11 @@ const tones = ["neutral", "brand", "success", "danger", "accent"] as const;
 
 export const Soft: Story = {
   name: "Soft",
+  source: `<Badge tone="neutral">neutral</Badge>
+<Badge tone="brand">brand</Badge>
+<Badge tone="success">success</Badge>
+<Badge tone="danger">danger</Badge>
+<Badge tone="accent">accent</Badge>`,
   controls: [
     {
       type: "select",
@@ -40,6 +45,9 @@ export const Soft: Story = {
 
 export const Solid: Story = {
   name: "Solid",
+  source: `<Badge tone="brand" variant="solid">brand</Badge>
+<Badge tone="success" variant="solid">success</Badge>
+<Badge tone="danger" variant="solid">danger</Badge>`,
   render: () => (
     <div class="flex flex-wrap items-center gap-hsp-sm">
       {tones.map((tone) => (
@@ -53,6 +61,9 @@ export const Solid: Story = {
 
 export const Outline: Story = {
   name: "Outline",
+  source: `<Badge tone="brand" variant="outline">brand</Badge>
+<Badge tone="success" variant="outline">success</Badge>
+<Badge tone="danger" variant="outline">danger</Badge>`,
   render: () => (
     <div class="flex flex-wrap items-center gap-hsp-sm">
       {tones.map((tone) => (

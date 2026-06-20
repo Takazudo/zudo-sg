@@ -1,12 +1,22 @@
 /** @jsxRuntime automatic */
 /** @jsxImportSource preact */
-// Design-token reference (`/sg/tokens`). Static SSR reference of the
-// @zudo-sg/ui semantic color tokens plus the shared spacing + font scales.
-// (The interactive token playground is S7; this is the read-only reference.)
+// Interactive design-token playground (`/sg/tokens`).
+//
+// The swatch / spacing / type rows are SERVER-RENDERED (the full token
+// reference is visible with no JS). A client island (TokenPlayground) layers
+// the interactivity on top via event delegation:
+//   - click any token to copy its RESOLVED value (hex / rem) or its
+//     `var(--token)` reference (toggle in the toolbar),
+//   - open the existing zdtp tweaker to edit tokens live — because the swatches
+//     are painted with `var(--…)`, edits there restyle this page in real time.
+// See src/styleguide/tokens/token-playground.tsx for the SSR ↔ island contract
+// (`data-sg-tokens-root`, `data-sg-token`, `data-var`).
 
-import type { JSX } from "preact";
+import type { JSX, VNode } from "preact";
+import { Island } from "@takazudo/zfb";
 import { StyleguideLayout } from "@/styleguide/chrome/styleguide-layout";
 import { SPACING_TOKENS, FONT_TOKENS } from "@/config/design-tokens-manifest";
+import TokenPlayground from "@/styleguide/tokens/token-playground";
 
 export const frontmatter = { title: "Design Tokens" };
 
@@ -34,76 +44,110 @@ const COLOR_TOKENS: Array<{ name: string; varName: string }> = [
 ];
 
 export default function TokensPage(): JSX.Element {
+  const playground = Island({
+    when: "load",
+    children: <TokenPlayground />,
+  }) as unknown as VNode;
+
   return (
     <StyleguideLayout title="Design Tokens" tokensActive>
       <div class="mx-auto max-w-[64rem]">
-        <header class="mb-vsp-xl">
+        <header class="mb-vsp-lg">
           <h1 class="text-2xl font-bold text-ink">Design tokens</h1>
           <p class="mt-vsp-xs text-ink-soft">
             The semantic tokens the <code>@zudo-sg/ui</code> components consume.
-            Open the <strong>Tokens</strong> button in the header to tweak them
-            live — changes apply to every preview.
+            <strong> Click any token</strong> to copy it; use the toolbar to
+            pick whether you copy the resolved value or the{" "}
+            <code>var(--token)</code> reference, or open the tweaker to edit
+            tokens live.
           </p>
         </header>
 
-        <section class="mb-vsp-xl">
-          <h2 class="mb-vsp-sm text-lg font-semibold text-ink">Color</h2>
-          <div class="grid grid-cols-2 gap-hsp-md sm:grid-cols-3 lg:grid-cols-4">
-            {COLOR_TOKENS.map((tok) => (
-              <div class="rounded-md border border-line bg-surface p-hsp-sm">
-                <div
-                  class="h-12 w-full rounded-sm border border-line"
-                  style={{ background: `var(${tok.varName})` }}
-                />
-                <p class="mt-vsp-2xs text-small font-medium text-ink">
-                  {tok.name}
-                </p>
-                <p class="text-xs text-ink-mute">{tok.varName}</p>
-              </div>
-            ))}
-          </div>
-        </section>
+        {playground}
 
-        <section class="mb-vsp-xl">
-          <h2 class="mb-vsp-sm text-lg font-semibold text-ink">Spacing</h2>
-          <div class="flex flex-col gap-vsp-2xs">
-            {SPACING_TOKENS.filter(
-              (t) => t.group === "hsp" || t.group === "vsp",
-            ).map((tok) => (
-              <div class="flex items-center gap-hsp-md">
-                <span class="w-24 shrink-0 text-small text-ink">
-                  {tok.label}
-                </span>
-                <span class="w-20 shrink-0 text-xs text-ink-mute">
-                  {tok.default}
-                </span>
-                <span
-                  class="h-3 rounded-sm bg-brand"
-                  style={{ width: `var(${tok.cssVar})` }}
-                />
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <section class="mb-vsp-xl">
-          <h2 class="mb-vsp-sm text-lg font-semibold text-ink">Type scale</h2>
-          <div class="flex flex-col gap-vsp-sm">
-            {FONT_TOKENS.filter((t) => t.group === "font-size").map((tok) => (
-              <div class="flex items-baseline gap-hsp-md">
-                <span class="w-24 shrink-0 text-xs text-ink-mute">
-                  {tok.label}
-                </span>
-                <span
-                  class="text-ink"
-                  style={{ fontSize: `var(${tok.cssVar})` }}
+        <div data-sg-tokens-root>
+          <section class="mb-vsp-xl">
+            <h2 class="mb-vsp-sm text-lg font-semibold text-ink">Color</h2>
+            <div class="grid grid-cols-2 gap-hsp-md sm:grid-cols-3 lg:grid-cols-4">
+              {COLOR_TOKENS.map((tok) => (
+                <button
+                  type="button"
+                  class="sg-token-card"
+                  data-sg-token
+                  data-var={tok.varName}
+                  data-kind="color"
+                  title={`Click to copy ${tok.varName}`}
                 >
-                  The quick brown fox
-                </span>
-              </div>
-            ))}
-          </div>
-        </section>
+                  <span
+                    class="sg-token-swatch"
+                    style={{ background: `var(${tok.varName})` }}
+                  />
+                  <span class="sg-token-card-meta">
+                    <span class="text-small font-medium text-ink">
+                      {tok.name}
+                    </span>
+                    <span class="text-xs text-ink-mute">{tok.varName}</span>
+                  </span>
+                </button>
+              ))}
+            </div>
+          </section>
+
+          <section class="mb-vsp-xl">
+            <h2 class="mb-vsp-sm text-lg font-semibold text-ink">Spacing</h2>
+            <div class="flex flex-col gap-vsp-2xs">
+              {SPACING_TOKENS.filter(
+                (t) => t.group === "hsp" || t.group === "vsp",
+              ).map((tok) => (
+                <button
+                  type="button"
+                  class="sg-token-row"
+                  data-sg-token
+                  data-var={tok.cssVar}
+                  data-kind="length"
+                  title={`Click to copy ${tok.cssVar}`}
+                >
+                  <span class="w-24 shrink-0 text-left text-small text-ink">
+                    {tok.label}
+                  </span>
+                  <span class="w-20 shrink-0 text-left text-xs text-ink-mute">
+                    {tok.default}
+                  </span>
+                  <span
+                    class="h-3 rounded-sm bg-brand"
+                    style={{ width: `var(${tok.cssVar})` }}
+                  />
+                </button>
+              ))}
+            </div>
+          </section>
+
+          <section class="mb-vsp-xl">
+            <h2 class="mb-vsp-sm text-lg font-semibold text-ink">Type scale</h2>
+            <div class="flex flex-col gap-vsp-sm">
+              {FONT_TOKENS.filter((t) => t.group === "font-size").map((tok) => (
+                <button
+                  type="button"
+                  class="sg-token-row sg-token-row--baseline"
+                  data-sg-token
+                  data-var={tok.cssVar}
+                  data-kind="length"
+                  title={`Click to copy ${tok.cssVar}`}
+                >
+                  <span class="w-24 shrink-0 text-left text-xs text-ink-mute">
+                    {tok.label}
+                  </span>
+                  <span
+                    class="text-left text-ink"
+                    style={{ fontSize: `var(${tok.cssVar})` }}
+                  >
+                    The quick brown fox
+                  </span>
+                </button>
+              ))}
+            </div>
+          </section>
+        </div>
       </div>
     </StyleguideLayout>
   );

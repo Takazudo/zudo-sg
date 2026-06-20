@@ -16,6 +16,7 @@
 import type { JSX } from "preact";
 import { useRef, useState } from "preact/hooks";
 import SourceEditor from "./source-editor";
+import CopyButton from "../copy/copy-button";
 import { injectCssToAllPreviews } from "./css-injection";
 
 export interface CodePanelVariant {
@@ -56,9 +57,12 @@ export default function CodePanel({
   return (
     <div class="flex h-full flex-col gap-vsp-md p-hsp-md">
       <div>
-        <h2 class="text-small font-semibold uppercase tracking-wide text-ink-mute">
-          Source
-        </h2>
+        <div class="flex items-center justify-between gap-hsp-sm">
+          <h2 class="text-small font-semibold uppercase tracking-wide text-ink-mute">
+            Source
+          </h2>
+          {active && <CopyButton text={active.source} label="Copy source" />}
+        </div>
         {variants.length > 1 && (
           <div role="tablist" class="mt-vsp-2xs flex flex-wrap gap-hsp-3xs">
             {variants.map((v) => (
