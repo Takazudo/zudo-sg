@@ -1,4 +1,5 @@
 import type { ComponentChildren } from "preact";
+import { SiteHeader, SiteFooter, Button } from "@zudo-sg/ui";
 import "../styles/global.css";
 
 type Props = {
@@ -10,32 +11,36 @@ type Props = {
 };
 
 const SITE_NAME = "zudo-sg Demo";
-const TAGLINE = "A demo site for the zudo-sg styleguide.";
+const TAGLINE = "A demo site for the zudo-sg styleguide, built from @zudo-sg/ui.";
+
+const NAV = [
+  { label: "Home", href: "/" },
+  { label: "About", href: "/about" },
+];
+
+const FOOTER_GROUPS = [
+  {
+    heading: "Project",
+    links: [
+      { label: "Styleguide", href: "https://zudo-sg.takazudomodular.com/" },
+      { label: "Repository", href: "https://github.com/Takazudo/zudo-sg" },
+    ],
+  },
+  {
+    heading: "Built with",
+    links: [
+      { label: "zfb", href: "https://github.com/Takazudo/zudo-front-builder" },
+      { label: "Preact", href: "https://preactjs.com/" },
+    ],
+  },
+];
 
 /**
- * Shared page chrome for the demo site: document shell, sticky header
- * with nav links, and footer.
+ * Shared page chrome for the demo site: document shell + SiteHeader / SiteFooter
+ * from @zudo-sg/ui. Demonstrates the library composing a real layout.
  */
-export default function SiteLayout({
-  title,
-  activePath = "/",
-  children,
-}: Props) {
+export default function SiteLayout({ title, activePath = "/", children }: Props) {
   const pageTitle = title ? `${title} · ${SITE_NAME}` : SITE_NAME;
-  const navLink = (href: string, label: string) => {
-    const active = activePath === href;
-    return (
-      <a
-        href={href}
-        class={`rounded-sm px-hsp-xs py-vsp-2xs text-small transition-colors hover:text-brand ${
-          active ? "font-semibold text-brand" : "text-ink-soft"
-        }`}
-        aria-current={active ? "page" : undefined}
-      >
-        {label}
-      </a>
-    );
-  };
 
   return (
     <html lang="en">
@@ -47,33 +52,25 @@ export default function SiteLayout({
       </head>
       <body>
         <div class="flex min-h-dvh flex-col">
-          <header class="sticky top-0 z-raised border-b border-line bg-surface/95 backdrop-blur">
-            <div class="mx-auto flex w-full max-w-[72rem] items-center justify-between gap-hsp-md px-hsp-md py-vsp-sm">
-              <a href="/" class="flex items-baseline gap-hsp-xs">
-                <span class="text-heading font-bold tracking-tight text-ink">{SITE_NAME}</span>
-                <span class="hidden text-micro text-ink-soft sm:inline">{TAGLINE}</span>
-              </a>
-              <nav class="flex items-center gap-hsp-xs">
-                {navLink("/", "Home")}
-                {navLink("/about", "About")}
-              </nav>
-            </div>
-          </header>
+          <SiteHeader
+            brand={SITE_NAME}
+            nav={NAV}
+            activePath={activePath}
+            action={
+              <Button size="sm" variant="secondary" href="https://zudo-sg.takazudomodular.com/">
+                Styleguide
+              </Button>
+            }
+          />
 
-          <main class="mx-auto w-full max-w-[72rem] flex-1 px-hsp-md py-vsp-lg">{children}</main>
+          <main class="mx-auto w-full max-w-[72rem] flex-1 px-hsp-lg py-vsp-xl">{children}</main>
 
-          <footer class="border-t border-line bg-surface-sunken">
-            <div class="mx-auto flex w-full max-w-[72rem] flex-col gap-vsp-2xs px-hsp-md py-vsp-md text-micro text-ink-soft">
-              <p class="font-semibold text-ink-soft">{SITE_NAME}</p>
-              <p>
-                A demo site built with{" "}
-                <a href="https://github.com/Takazudo/zudo-front-builder" class="text-brand underline">
-                  zfb
-                </a>{" "}
-                — part of the zudo-sg styleguide monorepo.
-              </p>
-            </div>
-          </footer>
+          <SiteFooter
+            brand={SITE_NAME}
+            tagline="A static Preact + Tailwind v4 demo built with zfb, composed from the shared @zudo-sg/ui component library."
+            groups={FOOTER_GROUPS}
+            copyright={`© ${new Date().getFullYear()} zudo-sg.`}
+          />
         </div>
       </body>
     </html>

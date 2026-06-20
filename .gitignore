@@ -4,6 +4,10 @@ dist
 .zfb
 .zfb-build
 
+# Playwright artifacts
+test-results/
+playwright-report/
+
 # macOS
 .DS_Store
 
