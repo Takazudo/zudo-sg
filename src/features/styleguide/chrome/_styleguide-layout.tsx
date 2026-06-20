@@ -32,9 +32,16 @@
 //                     `pages/lib/_sidebar-with-defaults.tsx` does — an override
 //                     slot is responsible for its own hydration marker (see
 //                     @takazudo/zudo-doc sidebar.d.ts).
-//   tocOverride     → RESERVED for the right-region CodeMirror code panel on
-//                     detail pages (wired in #49). `<></>` (and `hideToc`) when
-//                     absent so the content band fills the freed width.
+//   tocOverride     → the right-region CodeMirror code panel on detail pages
+//                     (#49). `<></>` (and `hideToc`) when absent so the content
+//                     band fills the freed width.
+//   headerOverride  → page-supplied HeaderWithDefaults PLUS SgHeaderToggles
+//                     island (absolute-positioned in the header's right region).
+//
+// SgHeaderToggles is emitted by this layout directly (not the page) because it
+// belongs to the src/ boundary and is styleguide-specific, not host-chrome.
+// It is rendered as a fixed/absolute overlay positioned to sit in the header's
+// right-items row (the CSS lives in the ported sg-chrome.css utilities).
 //
 // The active-item highlight is owned by the root SidebarTree's `useActiveSlug`,
 // which (since #46) also listens to AFTER_NAVIGATE_EVENT for soft-nav — there
@@ -47,6 +54,8 @@ import { settings } from "@/config/settings";
 import { defaultLocale, type Locale } from "@/config/i18n";
 import { navNodes } from "@/styleguide/data/nav-nodes";
 import SidebarTree from "@/components/sidebar-tree";
+import SgHeaderToggles from "./header-toggles";
+import { PanelStateHeadScript, PanelResizersInitScript } from "./panel-scripts";
 
 export interface StyleguideLayoutProps {
   /**
@@ -75,8 +84,7 @@ export interface StyleguideLayoutProps {
   /**
    * Right-region code panel content (detail pages only, #49). When present the
    * TOC slot hosts it; when absent the slot is empty and `hideToc` frees the
-   * width. Reserved now so the detail-page layout (#48) and the code panel
-   * (#49) can flow it through without changing this contract.
+   * width.
    */
   codePanel?: VNode | null;
   children: JSX.Element | JSX.Element[];
@@ -107,23 +115,58 @@ export function StyleguideLayout({
     children: <SidebarTree nodes={navNodes} currentSlug={activeSlug} />,
   }) as unknown as VNode;
 
-  // The right-region (DocLayout's TOC slot) is reserved for the detail-page
-  // code panel (#49). Empty fragment until then so `hideToc` lets the content
-  // band fill the full width on the catalog + token routes.
+  // The right-region (DocLayout's TOC slot) hosts the detail-page code panel
+  // (#49). Empty fragment when absent so `hideToc` lets the content band fill
+  // the full width on the catalog + token routes.
   const tocOverride: VNode = showCodePanel ? (codePanel as VNode) : <></>;
+
+  // SgHeaderToggles island — rendered as a sibling to the page-supplied header
+  // in the headerOverride slot. Positioned via CSS (.sg-header-toggles) to sit
+  // in the header's right region (see ported sg-chrome.css). The page-supplied
+  // `header` element (HeaderWithDefaults) renders the <header> shell; the
+  // SgHeaderToggles island floats over it so the toggled code panel + token
+  // panel are accessible from every component route.
+  const headerToggles = Island({
+    when: "load",
+    children: <SgHeaderToggles showCodePanel={showCodePanel} />,
+  }) as unknown as VNode;
+
+  // Composed header: the page-supplied HeaderWithDefaults + styleguide toggles.
+  const composedHeader = (
+    <>
+      {header}
+      {headerToggles}
+    </>
+  );
+
+  // Panel scripts: PanelStateHeadScript runs in <head> (passed via head slot
+  // extension); PanelResizersInitScript runs at body-end (appended to bodyEnd).
+  const composedHead = (
+    <>
+      {head}
+      <PanelStateHeadScript />
+    </>
+  );
+
+  const composedBodyEnd = (
+    <>
+      {bodyEnd}
+      <PanelResizersInitScript />
+    </>
+  );
 
   return (
     <DocLayoutWithDefaults
       title={title}
-      head={head}
+      head={composedHead}
       lang={lang}
       noindex={settings.noindex}
       hideToc={!showCodePanel}
-      headerOverride={header}
+      headerOverride={composedHeader}
       sidebarOverride={sidebarOverride}
       tocOverride={tocOverride}
       footerOverride={footer}
-      bodyEndComponents={bodyEnd}
+      bodyEndComponents={composedBodyEnd}
     >
       {children}
     </DocLayoutWithDefaults>

@@ -46,6 +46,17 @@ function readInlineVars(): Array<readonly [string, string]> {
 function syncIframe(iframe: HTMLIFrameElement): void {
   const pairs = readInlineVars();
   if (pairs.length > 0) sendApplyCssVars(iframe, pairs);
+  // Seed lastBroadcastNames so that subsequent broadcast() calls can correctly
+  // compute the diff (removed = names that existed last time but are now gone).
+  // Without this, an initial sync bypasses the shared name list and the first
+  // broadcast after a token reset (removing inline vars) sees no "removed"
+  // names to clear — the iframe retains stale overrides. (#48 latent reset bug)
+  const names = pairs.map(([n]) => n);
+  if (names.length > 0) {
+    const current = new Set(lastBroadcastNames);
+    for (const n of names) current.add(n);
+    lastBroadcastNames = [...current];
+  }
 }
 
 function broadcast(): void {

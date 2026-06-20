@@ -49,3 +49,79 @@ test("getting-started docs page returns 200", async ({ page }) => {
   const heading = page.locator("h1").first();
   await expect(heading).toBeVisible();
 });
+
+// ── Styleguide /components routes ────────────────────────────────────────────
+// Wave 2 (#49): smoke checks for the component catalog, a detail page,
+// the token playground, and at least one preview iframe load.
+
+test("/components catalog renders and includes the filter island marker", async ({ page }) => {
+  const response = await page.goto("/components");
+  expect(response?.status()).toBe(200);
+
+  // The page heading should be visible (server-rendered).
+  const heading = page.locator("h1").first();
+  await expect(heading).toBeVisible();
+
+  // The SSR catalog grid should be present (filter island hangs off it).
+  const catalog = page.locator("[data-sg-catalog]");
+  await expect(catalog).toBeAttached();
+
+  // At least one component card should be present.
+  const firstCard = page.locator("[data-sg-card]").first();
+  await expect(firstCard).toBeAttached();
+});
+
+test("/components/<slug> detail page renders with code panel aside", async ({ page }) => {
+  // Navigate to the catalog first to find a valid story slug via a card link.
+  await page.goto("/components");
+  const firstCard = page.locator("[data-sg-card]").first();
+  await expect(firstCard).toBeAttached();
+
+  // Extract the href to navigate to the first detail page.
+  const href = await firstCard.getAttribute("href");
+  expect(href).toBeTruthy();
+
+  const response = await page.goto(href!);
+  expect(response?.status()).toBe(200);
+
+  // The story title h1 should be visible.
+  const heading = page.locator("h1").first();
+  await expect(heading).toBeVisible();
+
+  // The #sg-code-panel aside should be present in the SSR output.
+  const codePanel = page.locator("#sg-code-panel");
+  await expect(codePanel).toBeAttached();
+});
+
+test("/components/<slug> detail page preview iframe loads", async ({ page }) => {
+  // Navigate to the catalog first to find a valid slug.
+  await page.goto("/components");
+  const firstCard = page.locator("[data-sg-card]").first();
+  const href = await firstCard.getAttribute("href");
+  expect(href).toBeTruthy();
+
+  await page.goto(href!);
+
+  // Wait for at least one preview iframe to appear (VariantFrame is
+  // `when="visible"` — it hydrates on viewport intersection).
+  const iframe = page.locator('iframe[src*="/components/preview"]').first();
+  await expect(iframe).toBeAttached({ timeout: 15_000 });
+});
+
+test("/components/tokens renders design-token playground", async ({ page }) => {
+  const response = await page.goto("/components/tokens");
+  expect(response?.status()).toBe(200);
+
+  // The page heading should be visible.
+  const heading = page.locator("h1").first();
+  await expect(heading).toBeVisible();
+
+  // The SSR token-grid root should be present (TokenPlayground island
+  // delegates click events against it).
+  const tokensRoot = page.locator("[data-sg-tokens-root]");
+  await expect(tokensRoot).toBeAttached();
+
+  // At least one token swatch (color section) should be rendered SSR.
+  const firstToken = page.locator("[data-sg-token]").first();
+  await expect(firstToken).toBeAttached();
+});

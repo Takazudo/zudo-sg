@@ -3,12 +3,13 @@
 // Component catalog landing — `/components`.
 //
 // Lists all discovered components grouped by category. Each card links to the
-// component's detail page at `/components/<slug>`. This page is static
-// (server-rendered, no search island yet — later wave).
+// component's detail page at `/components/<slug>`. The CatalogFilter island
+// provides live search + category filtering on top of the SSR markup.
 //
 // Data flow:
 //   getCategoryGroups()  [from src/styleguide/data/registry]
-//   → category-grouped cards (SSR, no-JS)
+//   → category-grouped cards (SSR, no-JS, with data-sg-* attributes)
+//   → CatalogFilter island (filters by toggling `hidden` on cards)
 //   → StyleguideLayout (the section shell: docs header/footer/sidebar reused,
 //     sidebar fed the styleguide nav tree). The Overview leaf (slug "") is the
 //     active highlight on this landing route.
@@ -19,12 +20,14 @@
 // itself under `pages/` — composes them and passes them into the `src/`-side
 // `StyleguideLayout` shell as props, so the shell never imports `pages/*`.
 
-import type { JSX } from "preact";
+import type { JSX, VNode } from "preact";
+import { Island } from "@takazudo/zfb";
 import { settings } from "@/config/settings";
 import { defaultLocale } from "@/config/i18n";
 import { withBase } from "@/utils/base";
 import { getCategoryGroups, OVERVIEW_SLUG } from "@/styleguide/data/registry";
 import { StyleguideLayout } from "@/features/styleguide/chrome/_styleguide-layout";
+import CatalogFilter from "@/features/styleguide/search/catalog-filter";
 import { FooterWithDefaults } from "../lib/_footer-with-defaults";
 import { HeaderWithDefaults } from "../lib/_header-with-defaults";
 import { HeadWithDefaults } from "../lib/_head-with-defaults";
@@ -38,6 +41,14 @@ export default function ComponentsIndexPage(): JSX.Element {
   const groups = getCategoryGroups();
   const total = groups.reduce((n, g) => n + g.stories.length, 0);
   const currentPath = withBase("/components");
+
+  // Category list in display order (for the CatalogFilter chip row).
+  const categories = groups.map((g) => g.category);
+
+  const filterIsland = Island({
+    when: "load",
+    children: <CatalogFilter categories={categories} total={total} />,
+  }) as unknown as VNode;
 
   return (
     <StyleguideLayout
@@ -58,9 +69,11 @@ export default function ComponentsIndexPage(): JSX.Element {
           </p>
         </header>
 
-        <div>
+        {filterIsland}
+
+        <div data-sg-catalog>
           {groups.map((group) => (
-            <section class="mb-vsp-xl">
+            <section class="mb-vsp-xl" data-sg-section data-category={group.category}>
               <h2 class="mb-vsp-sm text-title font-semibold">
                 {group.category}
               </h2>
@@ -69,6 +82,16 @@ export default function ComponentsIndexPage(): JSX.Element {
                   <a
                     href={withBase(`/components/${story.slug}`)}
                     class="block rounded-md border border-line bg-surface p-hsp-md transition-colors hover:border-accent"
+                    data-sg-card
+                    data-name={story.meta.title.toLowerCase()}
+                    data-category={group.category}
+                    data-keywords={[
+                      story.meta.title,
+                      story.meta.description ?? "",
+                      story.meta.category ?? "",
+                    ]
+                      .join(" ")
+                      .toLowerCase()}
                   >
                     <h3 class="font-semibold text-fg">{story.meta.title}</h3>
                     <p class="mt-vsp-2xs text-small text-muted">
@@ -83,6 +106,9 @@ export default function ComponentsIndexPage(): JSX.Element {
               </div>
             </section>
           ))}
+          <p class="text-muted text-small" data-sg-empty hidden>
+            No components match your search.
+          </p>
         </div>
       </div>
     </StyleguideLayout>
