@@ -40,6 +40,20 @@ export default function PreviewRoute(): JSX.Element {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="robots" content="noindex" />
         <title>Preview</title>
+        {/* DEV-ONLY: the zfb dev server injects /__zfb/livereload.js into every
+            served document, including this iframe route. Each preview iframe
+            would then open a permanent EventSource to /__zfb/reload; a detail
+            page with 5+ variant iframes exhausts the browser's 6-per-host
+            HTTP/1.1 connection cap, which stalls the next soft-nav fetch (the
+            client-router navigation silently hangs). Stub the livereload SSE
+            inside the iframe so it never holds a connection. No-op in
+            production — livereload.js is not injected into the static build. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "(function(){try{var R=window.EventSource;if(!R)return;window.EventSource=function(u,o){if(typeof u==='string'&&u.indexOf('__zfb/reload')!==-1){return{close:function(){},addEventListener:function(){},removeEventListener:function(){},onmessage:null,onerror:null,onopen:null,readyState:2};}return new R(u,o);};window.EventSource.prototype=R.prototype;}catch(e){}})();",
+          }}
+        />
       </head>
       <body class="bg-paper">{app}</body>
     </html>

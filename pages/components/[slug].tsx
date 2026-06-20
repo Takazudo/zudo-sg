@@ -28,6 +28,7 @@ import { settings } from "@/config/settings";
 import { defaultLocale } from "@/config/i18n";
 import { withBase } from "@/utils/base";
 import { getAllSlugs, getStoryBySlug } from "@/styleguide/data/registry";
+import { navNodes } from "@/styleguide/data/nav-nodes";
 import { StyleguideLayout } from "@/features/styleguide/chrome/_styleguide-layout";
 import VariantFrame from "@/features/styleguide/preview/variant-frame";
 import CodePanel from "@/features/styleguide/code-panel/code-panel";
@@ -63,7 +64,14 @@ export default function StoryDetailPage(
   // shell's `title` prop below is the pre-composed `<title>` value.
   const pageTitle = entry ? entry.meta.title : "Not found";
   const head = <HeadWithDefaults title={pageTitle} />;
-  const header = <HeaderWithDefaults lang={locale} currentPath={currentPath} />;
+  const header = (
+    <HeaderWithDefaults
+      lang={locale}
+      currentPath={currentPath}
+      sidebarNodesOverride={navNodes}
+      currentSlug={slug}
+    />
+  );
   const footer = <FooterWithDefaults lang={locale} />;
   const bodyEnd = <BodyEndIslands basePath={settings.base ?? "/"} />;
 

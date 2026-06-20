@@ -26,6 +26,7 @@ import { settings } from "@/config/settings";
 import { defaultLocale } from "@/config/i18n";
 import { withBase } from "@/utils/base";
 import { getCategoryGroups, OVERVIEW_SLUG } from "@/styleguide/data/registry";
+import { navNodes } from "@/styleguide/data/nav-nodes";
 import { StyleguideLayout } from "@/features/styleguide/chrome/_styleguide-layout";
 import CatalogFilter from "@/features/styleguide/search/catalog-filter";
 import { FooterWithDefaults } from "../lib/_footer-with-defaults";
@@ -56,7 +57,14 @@ export default function ComponentsIndexPage(): JSX.Element {
       activeSlug={OVERVIEW_SLUG}
       lang={locale}
       head={<HeadWithDefaults title={`Components — ${settings.siteName}`} />}
-      header={<HeaderWithDefaults lang={locale} currentPath={currentPath} />}
+      header={
+        <HeaderWithDefaults
+          lang={locale}
+          currentPath={currentPath}
+          sidebarNodesOverride={navNodes}
+          currentSlug={OVERVIEW_SLUG}
+        />
+      }
       footer={<FooterWithDefaults lang={locale} />}
       bodyEnd={<BodyEndIslands basePath={settings.base ?? "/"} />}
     >
