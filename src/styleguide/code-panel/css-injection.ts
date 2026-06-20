@@ -19,7 +19,9 @@ function injectInto(iframe: HTMLIFrameElement, cssKey: string, css: string): voi
   const doc = iframe.contentDocument;
   if (!doc) return;
   const id = `sg-injected-${cssKey}`;
-  let style = doc.querySelector<HTMLStyleElement>(`style[${INJECTED_STYLE_ATTR}="${cssKey}"]`);
+  let style = doc.querySelector<HTMLStyleElement>(
+    `style[${INJECTED_STYLE_ATTR}="${CSS.escape(cssKey)}"]`,
+  );
   if (!style) {
     style = doc.createElement("style");
     style.setAttribute(INJECTED_STYLE_ATTR, cssKey);

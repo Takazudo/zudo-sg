@@ -44,15 +44,9 @@ importers:
       '@takazudo/zudo-doc':
         specifier: 0.2.15
         version: 0.2.15(@takazudo/zdtp@0.2.3(preact@10.29.2))(@takazudo/zfb-runtime@0.1.0-next.53(@takazudo/zfb@0.1.0-next.53))(@takazudo/zfb@0.1.0-next.53)(@takazudo/zudo-doc-history-server@0.2.15)(preact@10.29.2)(shiki@4.2.0)
-      '@takazudo/zudo-doc-history-server':
-        specifier: 0.2.15
-        version: 0.2.15
       '@zudo-sg/ui':
         specifier: workspace:*
         version: link:packages/ui
-      diff:
-        specifier: ^8.0.3
-        version: 8.0.4
       gray-matter:
         specifier: ^4.0.0
         version: 4.0.3
@@ -1334,10 +1328,6 @@ packages:
 
   devlop@1.1.0:
     resolution: {integrity: sha512-RWmIqhcFf1lRYBvNmr7qTNuyCt/7/ns2jbpp1+PalgE/rDQcBT0fioSMUpJ93irlUhC5hrg4cYqe6U+0ImW0rA==}
-
-  diff@8.0.4:
-    resolution: {integrity: sha512-DPi0FmjiSU5EvQV0++GFDOJ9ASQUVFh5kD+OzOnYdi7n3Wpm9hWWGfB/O2blfHcMVTL5WkQXSnRiK9makhrcnw==}
-    engines: {node: '>=0.3.1'}
 
   dom-accessibility-api@0.5.16:
     resolution: {integrity: sha512-X7BJ2yElsnOJ30pZF4uIIDfBEVgF4XEBxL9Bxhy6dnrm5hkzqmsWHGTiHqRiITNhMyFLyAiWndIJP7Z1NTteDg==}
@@ -2982,7 +2972,8 @@ snapshots:
       chalk: 5.6.2
       glob: 10.5.0
 
-  '@takazudo/zudo-doc-history-server@0.2.15': {}
+  '@takazudo/zudo-doc-history-server@0.2.15':
+    optional: true
 
   '@takazudo/zudo-doc@0.2.15(@takazudo/zdtp@0.2.3(preact@10.29.2))(@takazudo/zfb-runtime@0.1.0-next.53(@takazudo/zfb@0.1.0-next.53))(@takazudo/zfb@0.1.0-next.53)(@takazudo/zudo-doc-history-server@0.2.15)(preact@10.29.2)(shiki@4.2.0)':
     dependencies:
@@ -3596,8 +3587,6 @@ snapshots:
   devlop@1.1.0:
     dependencies:
       dequal: 2.0.3
-
-  diff@8.0.4: {}
 
   dom-accessibility-api@0.5.16: {}
 

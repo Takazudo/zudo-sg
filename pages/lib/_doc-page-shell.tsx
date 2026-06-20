@@ -93,24 +93,12 @@ export interface DocPageShellProps {
   autoIndexChildren?: NavNode[];
 
   /**
-   * Auto-index branch slot: the build-time date block (DocMetainfoArea), or
-   * null to omit it. Threaded in so the shell stays oblivious to which routes
-   * render it.
-   */
-  metainfoSlot?: VNode | null;
-
-  /**
    * Entry branch slot: the content header (h1 + meta + tags + description +
    * frontmatter preview), built per route (carries isFallback).
    */
   contentHeaderSlot?: VNode;
   /** Entry branch slot: the rendered MDX `<Content />`. */
   contentSlot?: VNode;
-  /**
-   * Entry branch slot: the document-utilities area (DocHistoryArea), or null
-   * to omit it. Hidden on versioned pages (#1916 #5).
-   */
-  docHistorySlot?: VNode | null;
 }
 
 /**
@@ -142,10 +130,8 @@ export function DocPageShell(props: DocPageShellProps): JSX.Element {
     versionBannerLabels,
     autoIndexLabel,
     autoIndexChildren,
-    metainfoSlot,
     contentHeaderSlot,
     contentSlot,
-    docHistorySlot,
   } = props;
 
   // TOC overrides: mount the package Toc/MobileToc with the host-resolved
@@ -229,10 +215,6 @@ export function DocPageShell(props: DocPageShellProps): JSX.Element {
         <>
           <h1 class="text-heading font-bold mb-vsp-xs">{autoIndexLabel}</h1>
 
-          {/* Build-time date block — chrome parity (#1461). Threaded in via
-              metainfoSlot so each route controls whether it renders. */}
-          {metainfoSlot}
-
           {description && (
             <p class="mb-vsp-lg text-title text-muted">{description}</p>
           )}
@@ -246,15 +228,8 @@ export function DocPageShell(props: DocPageShellProps): JSX.Element {
 
           {contentSlot}
 
-          {/* Prev / Next pagination — placed before the document utilities
-              section to match the Astro reference order: content → pager →
-              view-source / history. Fixes #1535. */}
+          {/* Prev / Next pagination, after the MDX content. Fixes #1535. */}
           <DocPager prev={prev} next={next} locale={locale} />
-
-          {/* Document utilities (revision history + view-source link).
-              Threaded in via docHistorySlot; null on versioned pages
-              until versioned history is supported (#1916 #5). */}
-          {docHistorySlot}
         </>
       )}
     </DocLayoutWithDefaults>

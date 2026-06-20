@@ -14,8 +14,8 @@
 // `options` carries `{ docsDir, locales, base }` from the matching entry
 // in `zfb.config.ts`.
 //
-// Inline functions are not supported by zfb's plugin runtime; see the
-// sibling `doc-history-plugin.mjs` for the rationale.
+// Inline functions are not supported by zfb's plugin runtime — plugins must
+// be standalone modules referenced from `zfb.config.ts` by `name`.
 
 /** @import { ZfbBuildHookContext, ZfbDevMiddlewareContext, ZfbPlugin } from "@takazudo/zfb/plugins" */
 /** @import { SearchIndexBuildOptions, SearchIndexConfig } from "@takazudo/zudo-doc/integrations/search-index" */

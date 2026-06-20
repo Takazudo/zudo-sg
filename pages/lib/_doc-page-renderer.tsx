@@ -13,11 +13,9 @@
 // delegates here. Route-specific behavior is parameterized:
 //   - `version` present → versioned chrome: versioned canonical URL, version
 //     banner, version-aware switcher, auto-index child hrefs kept as the
-//     pre-remapped versioned hrefs from paths() (#1916 #2), and doc history
-//     hidden until versioned history is supported (#1916 #5).
+//     pre-remapped versioned hrefs from paths() (#1916 #2).
 //   - `version` absent → latest chrome: docsUrl canonical, child hrefs fall
-//     back to the nav node's own docsUrl, doc history rendered for listed
-//     entries via `docHistoryContentDir`.
+//     back to the nav node's own docsUrl.
 
 import { settings } from "@/config/settings";
 import type { VersionConfig } from "@/config/settings";
@@ -33,8 +31,6 @@ import type { JSX } from "preact";
 // `pages/_mdx-components.ts` for the full list and rationale.
 import { createMdxComponents } from "../_mdx-components";
 import type { DocPageBaseProps } from "./doc-page-props";
-import { DocHistoryArea } from "./_doc-history-area";
-import { DocMetainfoArea } from "./_doc-metainfo-area";
 import { buildInlineVersionSwitcher } from "./_inline-version-switcher";
 import { DocContentHeader } from "./_doc-content-header";
 import { DocPageShell } from "./_doc-page-shell";
@@ -45,15 +41,8 @@ export interface RenderDocPageOptions {
   /** Version config when rendering a versioned route; undefined = latest. */
   version?: VersionConfig;
   /** True when this page falls back to the base EN collection (locale
-   *  routes). Drives the fallback notice + history-area hint. */
+   *  routes). Drives the fallback notice. */
   isFallback?: boolean;
-  /**
-   * Content directory for the doc-history view-source link (e.g. the active
-   * locale's dir, or the base docsDir for EN/fallback pages). Latest routes
-   * pass it; versioned routes omit it — doc history is hidden on versioned
-   * pages regardless (#1916 #5).
-   */
-  docHistoryContentDir?: string;
 }
 
 export function renderDocPage(
@@ -149,14 +138,6 @@ export function renderDocPage(
       versionBannerLabels={versionBannerLabels}
       autoIndexLabel={props.kind === "autoIndex" ? props.autoIndex.label : undefined}
       autoIndexChildren={autoIndexChildren}
-      metainfoSlot={
-        // Versioned gate mirrors DocContentHeader: the doc-history-meta
-        // manifest is built from latest dirs only, so a bare versioned slug
-        // would surface the LATEST page's Created/Updated/Author.
-        !version && props.kind === "autoIndex" ? (
-          <DocMetainfoArea slug={slug} locale={locale} isFallback={isFallback} />
-        ) : null
-      }
       contentHeaderSlot={
         props.kind === "entry" ? (
           <DocContentHeader
@@ -170,22 +151,6 @@ export function renderDocPage(
       }
       contentSlot={
         props.kind === "entry" ? <props.entry.Content components={components} /> : undefined
-      }
-      docHistorySlot={
-        // #1916 #5: doc-history hidden on versioned pages until versioned
-        // history is supported.
-        !version &&
-        opts.docHistoryContentDir !== undefined &&
-        props.kind === "entry" &&
-        !props.entry.data.unlisted ? (
-          <DocHistoryArea
-            slug={slug}
-            locale={locale}
-            entrySlug={props.entry.slug}
-            contentDir={opts.docHistoryContentDir}
-            isFallback={isFallback}
-          />
-        ) : null
       }
     />
   );

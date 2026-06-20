@@ -61,18 +61,6 @@ const integrationPlugins = [
         },
       ]
     : []),
-  ...(settings.docHistory
-    ? [
-        {
-          name: "./plugins/doc-history-plugin.mjs",
-          options: {
-            docsDir: settings.docsDir,
-            locales: localeRecord,
-            base: settings.base,
-          },
-        },
-      ]
-    : []),
   {
     name: "./plugins/search-index-plugin.mjs",
     options: {

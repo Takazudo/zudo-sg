@@ -45,6 +45,11 @@ export function StyleguideLayout({
   codePanel,
   children,
 }: StyleguideLayoutProps): JSX.Element {
+  // `Island()` returns zfb's deliberately-opaque `IslandElement` shape (so
+  // consumers never type-infer through the internal VNode), which isn't
+  // structurally assignable to Preact's `VNode`. The `as unknown as VNode`
+  // launder at this boundary is the codebase-wide idiom for rendering an
+  // Island result as a Preact child — see pages/lib/_body-end-islands.tsx.
   const tokenBootstrap = Island({
     when: "load",
     children: <DesignTokenPanelBootstrap />,

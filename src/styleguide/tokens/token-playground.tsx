@@ -42,6 +42,11 @@ export default function TokenPlayground(): JSX.Element {
   const [mode, setMode] = useState<CopyMode>("value");
   const [toast, setToast] = useState<string | null>(null);
   const toastTimer = useRef<number | undefined>(undefined);
+  // Read `mode` through a ref inside the delegated click handler so the global
+  // listener can register once (`[]` deps) instead of being torn down and
+  // re-added on every mode toggle.
+  const modeRef = useRef(mode);
+  modeRef.current = mode;
 
   useEffect(() => {
     function onClick(e: MouseEvent): void {
@@ -54,7 +59,7 @@ export default function TokenPlayground(): JSX.Element {
 
       const reference = `var(${varName})`;
       const resolved = resolveVar(varName) || reference;
-      const text = mode === "var" ? reference : resolved;
+      const text = modeRef.current === "var" ? reference : resolved;
 
       void copyText(text).then((ok) => {
         if (!ok) return;
@@ -71,7 +76,7 @@ export default function TokenPlayground(): JSX.Element {
       root.removeEventListener("click", onClick);
       window.clearTimeout(toastTimer.current);
     };
-  }, [mode]);
+  }, []);
 
   function openTweaker(): void {
     window.dispatchEvent(new CustomEvent("toggle-design-token-panel"));

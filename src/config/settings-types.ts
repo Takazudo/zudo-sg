@@ -47,11 +47,6 @@ export type HeaderRightItem =
   | HeaderRightLinkItem
   | HeaderRightHtmlItem;
 
-export interface BodyFootUtilAreaConfig {
-  docHistory?: boolean;
-  viewSourceLink?: boolean;
-}
-
 export interface ColorModeConfig {
   defaultMode: "light" | "dark";
   lightScheme: string;

@@ -1,7 +1,9 @@
 "use client";
 
-import { useState, useEffect, useRef } from "preact/compat";
+import { useState, useEffect } from "preact/compat";
 import type { JSX } from "preact";
+import { AFTER_NAVIGATE_EVENT } from "@takazudo/zudo-doc/transitions";
+import { useModalDialog } from "@/hooks/use-modal-dialog";
 
 interface ImageData {
   src: string;
@@ -43,7 +45,7 @@ const DIALOG_STYLE = {
 
 export default function ImageEnlarge() {
   const [imgData, setImgData] = useState<ImageData | null>(null);
-  const dialogRef = useRef<HTMLDialogElement>(null);
+  const { dialogRef } = useModalDialog(imgData !== null, () => setImgData(null));
 
   // Eligibility detection: toggle .zd-enlarge-btn[hidden] per image
   useEffect(() => {
@@ -54,7 +56,9 @@ export default function ImageEnlarge() {
     const observedImages = new Set<HTMLImageElement>();
     const sharedResizeObserver = new ResizeObserver((entries) => {
       for (const entry of entries) {
-        evaluateEligibility(entry.target as HTMLImageElement);
+        if (entry.target instanceof HTMLImageElement) {
+          evaluateEligibility(entry.target);
+        }
       }
     });
     let mutationObserver: MutationObserver | null = null;
@@ -126,22 +130,22 @@ export default function ImageEnlarge() {
 
     startObserving();
     window.addEventListener("resize", handleWindowResize);
-    document.addEventListener("DOMContentLoaded", handleAfterSwap);
+    document.addEventListener(AFTER_NAVIGATE_EVENT, handleAfterSwap);
 
     return () => {
       sharedResizeObserver.disconnect();
       observedImages.clear();
       mutationObserver?.disconnect();
       window.removeEventListener("resize", handleWindowResize);
-      document.removeEventListener("DOMContentLoaded", handleAfterSwap);
+      document.removeEventListener(AFTER_NAVIGATE_EVENT, handleAfterSwap);
       clearTimeout(resizeTimer);
     };
   }, []);
 
   useEffect(() => {
     function handleDocumentClick(e: MouseEvent) {
-      const target = e.target as Element;
-      const container = target.closest(".zd-enlargeable");
+      if (!(e.target instanceof Element)) return;
+      const container = e.target.closest(".zd-enlargeable");
       if (!container) return;
       const btn = container.querySelector(".zd-enlarge-btn") as HTMLElement | null;
       // Eligibility gate: only open when the expand button is visible (image is large enough).
@@ -162,46 +166,9 @@ export default function ImageEnlarge() {
     return () => document.removeEventListener("click", handleDocumentClick);
   }, []);
 
-  // Open dialog when imgData is set
-  useEffect(() => {
-    if (!imgData) return;
-    const dialog = dialogRef.current;
-    if (!dialog) return;
-    dialog.showModal();
-  }, [imgData]);
-
-  // Handle cancel event (ESC key)
-  useEffect(() => {
-    const dialog = dialogRef.current;
-    if (!dialog) return;
-    function handleCancel() {
-      setImgData(null);
-    }
-    dialog.addEventListener("cancel", handleCancel);
-    return () => dialog.removeEventListener("cancel", handleCancel);
-  }, []);
-
-  // Reset state when dialog closes
-  useEffect(() => {
-    const dialog = dialogRef.current;
-    if (!dialog) return;
-    function handleClose() {
-      setImgData(null);
-    }
-    dialog.addEventListener("close", handleClose);
-    return () => dialog.removeEventListener("close", handleClose);
-  }, []);
-
-  // Close and reset on ClientRouter navigation
-  useEffect(() => {
-    function handleAfterSwap() {
-      const dialog = dialogRef.current;
-      if (dialog?.open) dialog.close();
-      setImgData(null);
-    }
-    document.addEventListener("DOMContentLoaded", handleAfterSwap);
-    return () => document.removeEventListener("DOMContentLoaded", handleAfterSwap);
-  }, []);
+  // showModal/close sync, native-close → state reset, and the SPA-swap guard
+  // all live in the shared useModalDialog hook (wired above). The backdrop
+  // hit-test below stays here — it is component-specific geometry.
 
   function handleBackdropClick(e: JSX.TargetedMouseEvent<HTMLDialogElement>) {
     const dialog = dialogRef.current;
