@@ -107,14 +107,14 @@ export default function TokensPage(): JSX.Element {
                   data-kind="length"
                   title={`Click to copy ${tok.cssVar}`}
                 >
-                  <span class="w-24 shrink-0 text-left text-small text-ink">
+                  <span class="w-[6rem] shrink-0 text-left text-small text-ink">
                     {tok.label}
                   </span>
-                  <span class="w-20 shrink-0 text-left text-xs text-ink-mute">
+                  <span class="w-[5rem] shrink-0 text-left text-xs text-ink-mute">
                     {tok.default}
                   </span>
                   <span
-                    class="h-3 rounded-sm bg-brand"
+                    class="h-[0.75rem] rounded-sm bg-brand"
                     style={{ width: `var(${tok.cssVar})` }}
                   />
                 </button>
@@ -134,7 +134,7 @@ export default function TokensPage(): JSX.Element {
                   data-kind="length"
                   title={`Click to copy ${tok.cssVar}`}
                 >
-                  <span class="w-24 shrink-0 text-left text-xs text-ink-mute">
+                  <span class="w-[6rem] shrink-0 text-left text-xs text-ink-mute">
                     {tok.label}
                   </span>
                   <span
