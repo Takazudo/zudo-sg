@@ -16,12 +16,11 @@
 // (itself under `pages/`, free to import `pages/lib/*`) composes the slots and
 // passes them into the `src/`-side `StyleguideLayout` shell as props.
 //
-// Code panel (#49): the right-region CodeMirror code panel is NOT wired here —
-// that is Wave #49's scope. The `StyleguideLayout` already exposes a
-// `codePanel` prop (it flows into the DocLayout `tocOverride` slot and flips
-// `hideToc`). We pass `codePanel={null}` now, leaving that seam for #49 to
-// fill with `<aside id="sg-code-panel">…</aside>` framing. See the
-// `>>> #49 SEAM` marker below.
+// Code panel (#49): the right-region CodeMirror code panel is wired here via
+// the `codePanel` prop of StyleguideLayout. It flows into the DocLayout
+// `tocOverride` slot and flips `hideToc` to false. The panel is composed as
+// `<aside id="sg-code-panel">…</aside>` and the CodePanel island is loaded
+// inside it. The `>>> #49 SEAM` marker is now filled.
 
 import type { JSX, VNode } from "preact";
 import { Island } from "@takazudo/zfb";
@@ -31,6 +30,8 @@ import { withBase } from "@/utils/base";
 import { getAllSlugs, getStoryBySlug } from "@/styleguide/data/registry";
 import { StyleguideLayout } from "@/features/styleguide/chrome/_styleguide-layout";
 import VariantFrame from "@/features/styleguide/preview/variant-frame";
+import CodePanel from "@/features/styleguide/code-panel/code-panel";
+import type { CodePanelVariant } from "@/features/styleguide/code-panel/code-panel";
 import { FooterWithDefaults } from "../lib/_footer-with-defaults";
 import { HeaderWithDefaults } from "../lib/_header-with-defaults";
 import { HeadWithDefaults } from "../lib/_head-with-defaults";
@@ -66,12 +67,48 @@ export default function StoryDetailPage(
   const footer = <FooterWithDefaults lang={locale} />;
   const bodyEnd = <BodyEndIslands basePath={settings.base ?? "/"} />;
 
-  // >>> #49 SEAM: the code panel goes in the StyleguideLayout `codePanel` slot
-  // (which the shell flows into the DocLayout `tocOverride` region and uses to
-  // un-hide the right band). Wave #49 composes `<aside id="sg-code-panel">…`
-  // here and passes it as `codePanel={…}`. Until then it stays absent so the
-  // content band fills the full width.
-  const codePanel: VNode | null = null;
+  // >>> #49 SEAM: compose the code panel for the StyleguideLayout `codePanel`
+  // slot (which the shell flows into the DocLayout `tocOverride` region).
+  // The panel is only relevant when we have a valid story entry; "not found"
+  // pages fall through with codePanel=null (content fills full width).
+  let codePanel: VNode | null = null;
+  if (entry) {
+    // Build the variant list for the CodePanel. Each variant uses
+    // Story.source if provided, falling back to meta.usage so there is
+    // always something to show in the source viewer.
+    const panelVariants: CodePanelVariant[] = entry.variants.map((v) => ({
+      exportName: v.exportName,
+      name: v.name,
+      source: v.story.source ?? entry.meta.usage,
+    }));
+
+    const codePanelIsland = Island({
+      when: "load",
+      children: (
+        <CodePanel
+          storyTitle={entry.meta.title}
+          variants={panelVariants}
+        />
+      ),
+    }) as unknown as VNode;
+
+    codePanel = (
+      <aside
+        id="sg-code-panel"
+        class="sg-code-panel"
+        aria-label="Code panel"
+      >
+        <div
+          class="sg-code-panel-resizer"
+          data-sg-code-panel-resizer
+          role="separator"
+          aria-label="Resize code panel"
+          aria-orientation="vertical"
+        />
+        {codePanelIsland}
+      </aside>
+    ) as unknown as VNode;
+  }
 
   if (!entry) {
     return (
@@ -134,7 +171,7 @@ export default function StoryDetailPage(
                 />
               ),
             }) as unknown as VNode;
-            return <div>{frame}</div>;
+            return <div key={v.exportName}>{frame}</div>;
           })}
         </div>
       </div>
