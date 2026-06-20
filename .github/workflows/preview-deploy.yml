@@ -160,13 +160,10 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
+      # Retries through the brief window before a freshly uploaded version
+      # alias becomes resolvable (see scripts/smoke-url.sh).
       - name: Smoke gate — styleguide preview homepage
-        run: |
-          set -euo pipefail
-          PREVIEW_URL="${{ steps.deploy-site.outputs.deploy_url }}"
-          STATUS=$(curl -fsSL -o /dev/null -w '%{http_code}' "$PREVIEW_URL/")
-          [ "$STATUS" = "200" ] || { echo "::error::$PREVIEW_URL/ returned HTTP $STATUS, expected 200"; exit 1; }
-          echo "OK: $PREVIEW_URL/ returned HTTP 200"
+        run: bash scripts/smoke-url.sh "${{ steps.deploy-site.outputs.deploy_url }}/" 200
 
   # ---------------------------------------------------------------------------
   # Job: Deploy demo site preview alias
@@ -224,13 +221,10 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
+      # Retries through the brief window before a freshly uploaded version
+      # alias becomes resolvable (see scripts/smoke-url.sh).
       - name: Smoke gate — demo site preview homepage
-        run: |
-          set -euo pipefail
-          PREVIEW_URL="${{ steps.deploy-demo.outputs.deploy_url }}"
-          STATUS=$(curl -fsSL -o /dev/null -w '%{http_code}' "$PREVIEW_URL/")
-          [ "$STATUS" = "200" ] || { echo "::error::$PREVIEW_URL/ returned HTTP $STATUS, expected 200"; exit 1; }
-          echo "OK: $PREVIEW_URL/ returned HTTP 200"
+        run: bash scripts/smoke-url.sh "${{ steps.deploy-demo.outputs.deploy_url }}/" 200
 
   # ---------------------------------------------------------------------------
   # Job: Post combined preview URLs to PR comment

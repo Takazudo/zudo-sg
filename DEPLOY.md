@@ -38,24 +38,24 @@ Add it as a GitHub Actions secret named `CLOUDFLARE_API_TOKEN`.
 
 ---
 
-## 3. DNS CNAME records
+## 3. DNS records — no manual step
 
-For each custom domain, add a CNAME record in your DNS zone (`takazudomodular.com`):
+**There is no manual DNS step.** Because the `takazudomodular.com` zone is managed by Cloudflare and each `wrangler.toml` declares its custom domain with `custom_domain = true`, `wrangler deploy` (run by CI) creates the DNS record **and** provisions the TLS cert for that hostname automatically on the first deploy — there is nothing to add in the dashboard.
 
-| Name | Type | Target |
+| Worker | Custom domain | Created by |
 |---|---|---|
-| `zudo-sg` | CNAME | `zudo-sg.<your-account-subdomain>.workers.dev` |
-| `zudo-sg-demo-site` | CNAME | `zudo-sg-demo-site.<your-account-subdomain>.workers.dev` |
+| `zudo-sg` | `zudo-sg.takazudomodular.com` | `wrangler deploy` (auto) |
+| `zudo-sg-demo-site` | `zudo-sg-demo-site.takazudomodular.com` | `wrangler deploy` (auto) |
 
-With `custom_domain = true` in `wrangler.toml`, wrangler handles the Workers route binding automatically on first deploy. The CNAME just needs to exist so DNS resolves to Cloudflare.
-
-Alternatively, Cloudflare can manage DNS for the zone — in that case wrangler creates the CNAME record automatically on first deploy.
+The `CLOUDFLARE_API_TOKEN` (§2) must be able to manage the zone's DNS for this auto-provisioning to succeed — the **Edit Cloudflare Workers** template scoped to the account + the `takazudomodular.com` zone covers it (this is what the configured token already has; both sites are live).
 
 ---
 
 ## 4. First deploy
 
-Push to `main` to trigger `main-deploy.yml`. On the very first deploy, wrangler provisions the Workers and creates the custom domain bindings. Subsequent pushes to `main` update both Workers in parallel.
+Push to `main` to trigger `main-deploy.yml`. On the very first deploy, wrangler provisions the Workers, creates the custom domain bindings, and creates the DNS records + TLS certs (§3). Subsequent pushes to `main` update both Workers in parallel.
+
+DNS + cert propagation on that first deploy is not instant (it can take a minute or two before the hostname resolves), so the post-deploy smoke gates retry with backoff via `scripts/smoke-url.sh` instead of failing on the first `curl`. A first deploy is therefore green once provisioning completes, not red on the propagation window.
 
 ---
 
