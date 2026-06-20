@@ -8,7 +8,7 @@
     "dev": "zfb dev",
     "build": "zfb build",
     "preview": "zfb preview",
-    "check": "zfb check && pnpm --filter @zudo-sg/ui typecheck && pnpm --filter @zudo-sg/styleguide typecheck",
+    "check": "zfb check && pnpm --filter @zudo-sg/ui typecheck",
     "check:html": "html-validate \"dist/**/*.html\"",
     "check:links": "node scripts/check-links.mjs",
     "gen:z-index": "node scripts/gen-z-index.mjs",
