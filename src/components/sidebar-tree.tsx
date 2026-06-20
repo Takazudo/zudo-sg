@@ -10,6 +10,12 @@ import { INDENT, BASE_PAD, connectorLeft, ConnectorLines, CategoryLinkIcon } fro
 // BARE ThemeToggle (#2012 E2) — this footer toggle renders inside the
 // SidebarToggle island, so it must NOT bring its own island wrapper.
 import { ThemeToggle } from "@takazudo/zudo-doc/theme-toggle";
+// Soft-nav signal: this host uses ClientRouterBootstrap's client router, which
+// swaps pages by dispatching AFTER_NAVIGATE_EVENT ("zfb:after-swap") instead of
+// reloading. When the swap persists this island's DOM, `DOMContentLoaded` won't
+// fire, so `useActiveSlug` also listens to AFTER_NAVIGATE_EVENT to keep the
+// active-item highlight in sync with the URL.
+import { AFTER_NAVIGATE_EVENT } from "@takazudo/zudo-doc/transitions";
 import { smartBreakToHtml } from "@/utils/smart-break";
 
 function ToggleChevron({ isExpanded, className }: { isExpanded: boolean; className?: string }) {
@@ -81,10 +87,16 @@ function useActiveSlug(nodes: NavNode[], initial?: string): string | undefined {
       if (found !== undefined) setSlug(found);
     };
     update();
-    // zfb's `<ViewTransitions />` does a real page load on every
-    // navigation, so `DOMContentLoaded` is the post-navigate signal.
+    // Two post-navigate signals: `DOMContentLoaded` for full-load navigations,
+    // and AFTER_NAVIGATE_EVENT ("zfb:after-swap") for the client router's
+    // soft-nav swaps that persist this island's DOM (where DOMContentLoaded
+    // never fires and the highlight would otherwise go stale).
     document.addEventListener("DOMContentLoaded", update);
-    return () => document.removeEventListener("DOMContentLoaded", update);
+    document.addEventListener(AFTER_NAVIGATE_EVENT, update);
+    return () => {
+      document.removeEventListener("DOMContentLoaded", update);
+      document.removeEventListener(AFTER_NAVIGATE_EVENT, update);
+    };
   }, [nodes]);
 
   return slug;
