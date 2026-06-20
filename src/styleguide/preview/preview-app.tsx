@@ -73,7 +73,7 @@ function PreviewApp(): JSX.Element {
       window.clearTimeout(t2);
       ro.disconnect();
     };
-  });
+  }, []);
 
   if (!entry || !variantEntry) {
     return (

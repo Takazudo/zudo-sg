@@ -1,4 +1,5 @@
 import type { ComponentChildren, JSX } from "preact";
+import { useId } from "preact/hooks";
 import { cx } from "../lib/cx";
 
 /* Shared field-control surface (input + textarea). */
@@ -45,12 +46,6 @@ export function Textarea({ invalid = false, class: cls, rows, ...rest }: Textare
   );
 }
 
-let fieldSeq = 0;
-function nextId(prefix: string) {
-  fieldSeq += 1;
-  return `${prefix}-${fieldSeq}`;
-}
-
 type FieldProps = {
   label: ComponentChildren;
   /** id wired to the control via htmlFor; auto-generated when omitted. */
@@ -83,7 +78,8 @@ export function Field({
   class: cls,
   children,
 }: FieldProps) {
-  const id = htmlFor ?? nextId("field");
+  const generatedId = useId();
+  const id = htmlFor ?? generatedId;
   const describedById = hint || error ? `${id}-desc` : undefined;
 
   return (
