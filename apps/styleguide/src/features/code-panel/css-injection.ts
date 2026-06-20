@@ -3,7 +3,7 @@
 // The code panel's CSS buffer feeds this: as the user edits CSS, the text is
 // injected (debounced) into a dedicated <style data-sg-injected-css> element
 // inside each same-origin preview iframe's <head>, so the preview restyles
-// without a reload. Same-origin (the iframes are `/sg/preview` on this origin)
+// without a reload. Same-origin (the iframes are `/preview` on this origin)
 // makes `contentDocument` reachable.
 
 const INJECTED_STYLE_ATTR = "data-sg-injected-css";
@@ -11,7 +11,7 @@ const INJECTED_STYLE_ATTR = "data-sg-injected-css";
 function previewIframes(): HTMLIFrameElement[] {
   if (typeof document === "undefined") return [];
   return Array.from(
-    document.querySelectorAll<HTMLIFrameElement>('iframe[src*="/sg/preview"]'),
+    document.querySelectorAll<HTMLIFrameElement>('iframe[src*="/preview"]'),
   );
 }
 
