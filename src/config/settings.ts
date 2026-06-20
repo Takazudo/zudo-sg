@@ -100,6 +100,7 @@ export const settings = {
   } satisfies FooterConfig as FooterConfig | false,
   headerNav: [
     { label: "Getting Started", path: "/docs/getting-started", categoryMatch: "getting-started" },
+    { label: "Components", path: "/components", categoryMatch: "components" },
     { label: "Changelog", path: "/docs/changelog", categoryMatch: "changelog" },
   ] satisfies HeaderNavItem[] as HeaderNavItem[],
   headerRightItems: [
