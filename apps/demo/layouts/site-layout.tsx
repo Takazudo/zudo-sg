@@ -10,15 +10,25 @@ type Props = {
   children: ComponentChildren;
 };
 
-const SITE_NAME = "zudo-sg Demo";
-const TAGLINE = "A demo site for the zudo-sg styleguide, built from @zudo-sg/ui.";
+const SITE_NAME = "Northwind";
+const TAGLINE = "Northwind — a demo marketing site composed entirely from the shared @zudo-sg/ui component library.";
 
+// Single-page landing site: nav targets are in-page section anchors.
 const NAV = [
-  { label: "Home", href: "/" },
-  { label: "About", href: "/about" },
+  { label: "Services", href: "#services" },
+  { label: "About", href: "#about" },
+  { label: "Contact", href: "#contact" },
 ];
 
 const FOOTER_GROUPS = [
+  {
+    heading: "Company",
+    links: [
+      { label: "Services", href: "#services" },
+      { label: "About", href: "#about" },
+      { label: "Contact", href: "#contact" },
+    ],
+  },
   {
     heading: "Project",
     links: [
@@ -31,13 +41,14 @@ const FOOTER_GROUPS = [
     links: [
       { label: "zfb", href: "https://github.com/Takazudo/zudo-front-builder" },
       { label: "Preact", href: "https://preactjs.com/" },
+      { label: "Tailwind v4", href: "https://tailwindcss.com/" },
     ],
   },
 ];
 
 /**
  * Shared page chrome for the demo site: document shell + SiteHeader / SiteFooter
- * from @zudo-sg/ui. Demonstrates the library composing a real layout.
+ * from @zudo-sg/ui. Demonstrates the library composing a real marketing layout.
  */
 export default function SiteLayout({ title, activePath = "/", children }: Props) {
   const pageTitle = title ? `${title} · ${SITE_NAME}` : SITE_NAME;
@@ -54,22 +65,23 @@ export default function SiteLayout({ title, activePath = "/", children }: Props)
         <div class="flex min-h-dvh flex-col">
           <SiteHeader
             brand={SITE_NAME}
+            brandHref="/"
             nav={NAV}
             activePath={activePath}
             action={
-              <Button size="sm" variant="secondary" href="https://zudo-sg.takazudomodular.com/">
-                Styleguide
+              <Button size="sm" href="#contact">
+                Start a project
               </Button>
             }
           />
 
-          <main class="mx-auto w-full max-w-[72rem] flex-1 px-hsp-lg py-vsp-xl">{children}</main>
+          <main class="flex-1">{children}</main>
 
           <SiteFooter
             brand={SITE_NAME}
-            tagline="A static Preact + Tailwind v4 demo built with zfb, composed from the shared @zudo-sg/ui component library."
+            tagline="A static Preact + Tailwind v4 marketing demo built with zfb, composed from the shared @zudo-sg/ui component library."
             groups={FOOTER_GROUPS}
-            copyright={`© ${new Date().getFullYear()} zudo-sg.`}
+            copyright={`© ${new Date().getFullYear()} Northwind. A demo site for the zudo-sg styleguide.`}
           />
         </div>
       </body>
