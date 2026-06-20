@@ -23,12 +23,24 @@
 
 import type { JSX } from "preact";
 
-const RESTORE_SCRIPT = `(function(){try{
-  var r=document.documentElement, ls=localStorage;
-  var cw=ls.getItem('sg-code-panel-width'); if(cw) r.style.setProperty('--sg-code-panel-w', cw+'px');
-  if(ls.getItem('sg-sidebar-hidden')==='1') r.setAttribute('data-sg-sidebar-hidden','');
-  if(ls.getItem('sg-code-panel-hidden')==='1') r.setAttribute('data-sg-code-panel-hidden','');
-}catch(e){}})();`;
+// Restores the persisted panel state onto <html>. Runs once before first paint
+// AND re-runs on every client-router soft-navigation (`zfb:after-swap`): zfb's
+// router preserves only DocLayout's whitelisted <html> attrs (data-sidebar-hidden,
+// data-theme, style) across a swap, so the styleguide-private `data-sg-*` hidden
+// attrs are dropped each navigation and must be re-applied — otherwise a hidden
+// sidebar/code panel reappears until a full reload. The listener binds to the
+// persistent `document` (survives swaps), mirroring RESIZER_SCRIPT below. The
+// branches set AND clear so the result is idempotent regardless of prior attrs.
+const RESTORE_SCRIPT = `(function(){
+  function restore(){try{
+    var r=document.documentElement, ls=localStorage;
+    var cw=ls.getItem('sg-code-panel-width'); if(cw) r.style.setProperty('--sg-code-panel-w', cw+'px');
+    if(ls.getItem('sg-sidebar-hidden')==='1') r.setAttribute('data-sg-sidebar-hidden',''); else r.removeAttribute('data-sg-sidebar-hidden');
+    if(ls.getItem('sg-code-panel-hidden')==='1') r.setAttribute('data-sg-code-panel-hidden',''); else r.removeAttribute('data-sg-code-panel-hidden');
+  }catch(e){}}
+  restore();
+  document.addEventListener('zfb:after-swap', restore);
+})();`;
 
 const RESIZER_SCRIPT = `(function(){
   if(window.__sgResizersInstalled) return;
