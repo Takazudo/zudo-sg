@@ -37,30 +37,31 @@
 @source "../../packages/ui/src/**/*.{tsx,ts,jsx,js}";
 
 /* ============================================================================
- * Styleguide catalog chrome — 3-region shell
+ * Styleguide catalog chrome — slot CONTENT styling.
  *
- * Selector/var/attr names must stay in sync with
- * src/styleguide/chrome/panel-contract.ts (once ported in a later sub-issue).
+ * The 3-region shell itself (the <html> document, the fixed `#desktop-sidebar`
+ * aside, its `--zd-sidebar-w` width var + drag-resizer, the content band) is
+ * owned by zudo-doc's DocLayout — the styleguide renders THROUGH
+ * DocLayoutWithDefaults. These rules style only what fills each slot:
+ *   • headerOverride  → `.sg-header` (brand + nav + toggles + theme toggle)
+ *   • sidebarOverride → `.sg-sidebar-nav` (story-category tree)
+ *   • tocOverride     → `#sg-code-panel` (right-region code panel)
+ *
+ * Selector/var/attr names must stay in sync with src/chrome/panel-contract.ts.
  * ========================================================================== */
 
 :root {
-  --sg-header-h: 3.25rem;
-  --sg-sidebar-w: 17rem;
+  /* Matches DocLayout's fixed header offset (`top-[3.5rem]`) so the sidebar
+   * aligns under the header bar. */
+  --sg-header-h: 3.5rem;
   --sg-code-panel-w: 28rem;
 }
 
-.sg-shell {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  background: var(--color-paper);
-  color: var(--color-ink);
-}
-
+/* ── Header override (fills DocLayout's header region) ── */
 .sg-header {
   position: sticky;
   top: 0;
-  z-index: 30;
+  z-index: 40;
   height: var(--sg-header-h);
   display: flex;
   align-items: center;
@@ -68,46 +69,57 @@
   padding-inline: var(--spacing-hsp-md, 1rem);
   border-bottom: 1px solid var(--color-line);
   background: var(--color-surface);
+  color: var(--color-ink);
 }
 
-.sg-body {
-  flex: 1;
+.sg-header-nav {
   display: flex;
-  align-items: stretch;
-  min-height: 0;
+  align-items: center;
+  gap: var(--spacing-hsp-2xs, 0.25rem);
+}
+.sg-header-nav .sg-nav-link {
+  display: inline-block;
 }
 
-.sg-sidebar {
-  position: relative;
-  flex-shrink: 0;
-  width: var(--sg-sidebar-w);
-  border-right: 1px solid var(--color-line);
-  background: var(--color-surface);
-  overflow-y: auto;
-  max-height: calc(100vh - var(--sg-header-h));
-  position: sticky;
-  top: var(--sg-header-h);
+/* ── Sidebar override (fills DocLayout's #desktop-sidebar aside) ── */
+.sg-sidebar-nav {
+  display: block;
 }
 
-.sg-main {
-  flex: 1;
-  min-width: 0;
-  padding: var(--spacing-vsp-lg, 1.5rem) var(--spacing-hsp-lg, 1.5rem);
+/* When the sidebar is toggled hidden, collapse DocLayout's fixed aside and
+ * reclaim its margin so the content band fills the freed width. */
+:root[data-sg-sidebar-hidden] #desktop-sidebar {
+  display: none;
+}
+@media (min-width: 1024px) {
+  :root[data-sg-sidebar-hidden] .zd-sidebar-content-wrapper {
+    margin-left: 0;
+  }
 }
 
-.sg-code-panel {
+/* ── Code-panel override (fills DocLayout's TOC column, right of main) ── */
+#sg-code-panel {
   position: relative;
   flex-shrink: 0;
   width: var(--sg-code-panel-w);
   border-left: 1px solid var(--color-line);
   background: var(--color-surface);
-  overflow-y: auto;
-  max-height: calc(100vh - var(--sg-header-h));
-  position: sticky;
-  top: var(--sg-header-h);
+  align-self: stretch;
+  margin-block: var(--spacing-vsp-md, 1.5rem);
+  padding-left: var(--spacing-hsp-lg, 1rem);
 }
 
-/* Resizer handles — absolutely positioned grab strips at the panel edges. */
+@media (min-width: 1024px) {
+  #sg-code-panel {
+    position: sticky;
+    top: var(--sg-header-h);
+    max-height: calc(100vh - var(--sg-header-h));
+    overflow-y: auto;
+  }
+}
+
+/* Resizer handle — absolutely positioned grab strip at the code panel's edge.
+ * (The sidebar's own resizer is provided by DocLayout / SidebarResizerInit.) */
 .sg-resizer {
   position: absolute;
   top: 0;
@@ -121,33 +133,25 @@
 .sg-resizer[data-sg-dragging] {
   background: color-mix(in oklch, var(--color-brand) 30%, transparent);
 }
-.sg-sidebar .sg-resizer {
-  right: -5px;
-}
-.sg-code-panel .sg-resizer {
+#sg-code-panel .sg-resizer {
   left: -5px;
 }
 
-/* Visibility toggles. */
-:root[data-sg-sidebar-hidden] .sg-sidebar {
-  display: none;
-}
-:root[data-sg-code-panel-hidden] .sg-code-panel {
+/* Visibility toggle for the code panel. */
+:root[data-sg-code-panel-hidden] #sg-code-panel {
   display: none;
 }
 
-/* Below the lg breakpoint, stack: sidebar + code panel drop to full width. */
-@media (max-width: 1024px) {
-  .sg-sidebar,
-  .sg-code-panel {
-    position: static;
+/* Below the lg breakpoint the DocLayout TOC column stacks under main; keep the
+ * code panel full-width and drop the resizer. */
+@media (max-width: 1023px) {
+  #sg-code-panel {
     width: 100%;
+    position: static;
     max-height: none;
-    border: 0;
-    border-bottom: 1px solid var(--color-line);
-  }
-  .sg-body {
-    flex-direction: column;
+    border-left: 0;
+    border-top: 1px solid var(--color-line);
+    padding-left: 0;
   }
   .sg-resizer {
     display: none;
