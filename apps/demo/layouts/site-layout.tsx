@@ -32,7 +32,7 @@ const FOOTER_GROUPS = [
   {
     heading: "Project",
     links: [
-      { label: "Styleguide", href: "https://zudo-sg.takazudomodular.com/" },
+      { label: "Styleguide", href: "https://zudo-sg-styleguide.takazudomodular.com/" },
       { label: "Repository", href: "https://github.com/Takazudo/zudo-sg" },
     ],
   },

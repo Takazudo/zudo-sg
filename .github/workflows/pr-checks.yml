@@ -3,16 +3,18 @@
 # Triggered on PRs targeting `main` or any `base/**` branch (epic-PR stacks).
 #
 # Jobs (in execution order):
-#   lint-tokens     — pnpm lint:tokens (owned by S2; no-op pass until S2 merges)
-#   typecheck       — pnpm check (zfb check / tsc --noEmit)
-#   unit            — pnpm test:unit (vitest)
-#   build           — pnpm build (zfb build → dist/)
-#   smoke-e2e       — pnpm test:e2e:ci (Playwright smoke, needs build job)
-#   link-check      — pnpm check:links (needs build job)
-#   html-validate   — pnpm check:html (needs build job)
+#   lint-tokens          — pnpm lint:tokens (owned by S2; no-op pass until S2 merges)
+#   typecheck            — pnpm check (zfb check / tsc --noEmit)
+#   unit                 — pnpm test:unit (vitest)
+#   build                — pnpm build (zfb build → dist/)
+#   build-styleguide     — pnpm --filter @zudo-sg/styleguide build + typecheck
+#   smoke-e2e            — pnpm test:e2e:ci (Playwright smoke, needs build job)
+#   link-check           — pnpm check:links (needs build job)
+#   html-validate        — pnpm check:html (needs build job)
 #
 # Node 22 + pnpm via pnpm/action-setup@v4.
-# Build output shared between jobs via actions/cache to avoid re-building.
+# Root build output shared between jobs via actions/cache to avoid re-building.
+# Standalone styleguide build runs as a separate parallel job (its own dist).
 
 name: PR Checks
 
@@ -158,6 +160,38 @@ jobs:
         with:
           path: dist
           key: dist-${{ github.sha }}
+
+  # ---------------------------------------------------------------------------
+  # Job: Build + typecheck the standalone styleguide (apps/styleguide)
+  # Runs in parallel with the root build job (separate dist directory).
+  # ---------------------------------------------------------------------------
+  build-styleguide:
+    name: Build Standalone Styleguide
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck standalone styleguide
+        run: pnpm --filter @zudo-sg/styleguide typecheck
+
+      - name: Build standalone styleguide
+        run: pnpm --filter @zudo-sg/styleguide build
 
   # ---------------------------------------------------------------------------
   # Job: Playwright smoke e2e (T1)
