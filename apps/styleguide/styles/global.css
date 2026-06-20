@@ -1,10 +1,444 @@
-/*
- * apps/styleguide — global styles + Tailwind v4 base.
- *
- * Minimal for now: preflight reset + utility generation only.
- * Full token/safelist/@source wiring (shared tokens from @zudo-sg/ui,
- * semantic color set, @theme block, @layer base rules) lands in sub-issue #2.
- */
-
-@import "tailwindcss/preflight";
+/* Cascade-layer order: zd-preflight is declared lowest-priority so unlayered
+ * Tailwind utilities always win. */
+@layer zd-preflight;
+@import "tailwindcss/preflight" layer(zd-preflight);
 @import "tailwindcss/utilities";
+
+/* Shared tight-token set (spacing, font-sizes, weights, line-heights,
+ * radius, shadows, breakpoints, transition defaults). */
+@import "@zudo-sg/ui/styles/tokens.css";
+
+/* Shared semantic color tokens (ink/paper/surface/line/brand/state,
+ * light + dark via light-dark()). Required so @zudo-sg/ui component
+ * classes (bg-brand, text-ink, border-line, etc.) resolve correctly
+ * inside the styleguide preview iframes. */
+@import "@zudo-sg/ui/styles/colors.css";
+
+/* @takazudo/zudo-doc package safelist — prevents DocLayout chrome
+ * utility classes from being stripped by the Tailwind v4 scanner.
+ * Required; without it the chrome silently breaks. */
+@import "@takazudo/zudo-doc/safelist.css";
+
+/* Content typography rules (.zd-content, admonitions). Keep this import
+ * only while the styleguide renders DocLayout chrome that references these
+ * classes; safe to drop if the styleguide has no MDX prose at all. */
+@import "@takazudo/zudo-doc/content.css";
+
+/* zdtp panel chrome. */
+@import "@takazudo/zdtp/styles.css";
+
+/* Tailwind v4 content sources — explicit globs for environments without a
+ * .git directory (CI, plain build containers, worktree checkouts). */
+@source "src/**/*.{tsx,ts,jsx,js}";
+@source "pages/**/*.{tsx,ts,jsx,js}";
+/* Load-bearing: keeps @zudo-sg/ui component utility classes (used inside
+ * preview iframes) from being stripped by the scanner. Must mirror
+ * apps/demo and root global.css. */
+@source "../../packages/ui/src/**/*.{tsx,ts,jsx,js}";
+
+/* ============================================================================
+ * Styleguide catalog chrome — 3-region shell
+ *
+ * Selector/var/attr names must stay in sync with
+ * src/styleguide/chrome/panel-contract.ts (once ported in a later sub-issue).
+ * ========================================================================== */
+
+:root {
+  --sg-header-h: 3.25rem;
+  --sg-sidebar-w: 17rem;
+  --sg-code-panel-w: 28rem;
+}
+
+.sg-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-paper);
+  color: var(--color-ink);
+}
+
+.sg-header {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  height: var(--sg-header-h);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-hsp-md, 1rem);
+  padding-inline: var(--spacing-hsp-md, 1rem);
+  border-bottom: 1px solid var(--color-line);
+  background: var(--color-surface);
+}
+
+.sg-body {
+  flex: 1;
+  display: flex;
+  align-items: stretch;
+  min-height: 0;
+}
+
+.sg-sidebar {
+  position: relative;
+  flex-shrink: 0;
+  width: var(--sg-sidebar-w);
+  border-right: 1px solid var(--color-line);
+  background: var(--color-surface);
+  overflow-y: auto;
+  max-height: calc(100vh - var(--sg-header-h));
+  position: sticky;
+  top: var(--sg-header-h);
+}
+
+.sg-main {
+  flex: 1;
+  min-width: 0;
+  padding: var(--spacing-vsp-lg, 1.5rem) var(--spacing-hsp-lg, 1.5rem);
+}
+
+.sg-code-panel {
+  position: relative;
+  flex-shrink: 0;
+  width: var(--sg-code-panel-w);
+  border-left: 1px solid var(--color-line);
+  background: var(--color-surface);
+  overflow-y: auto;
+  max-height: calc(100vh - var(--sg-header-h));
+  position: sticky;
+  top: var(--sg-header-h);
+}
+
+/* Resizer handles — absolutely positioned grab strips at the panel edges. */
+.sg-resizer {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 10px;
+  cursor: col-resize;
+  z-index: 5;
+  background: transparent;
+}
+.sg-resizer:hover,
+.sg-resizer[data-sg-dragging] {
+  background: color-mix(in oklch, var(--color-brand) 30%, transparent);
+}
+.sg-sidebar .sg-resizer {
+  right: -5px;
+}
+.sg-code-panel .sg-resizer {
+  left: -5px;
+}
+
+/* Visibility toggles. */
+:root[data-sg-sidebar-hidden] .sg-sidebar {
+  display: none;
+}
+:root[data-sg-code-panel-hidden] .sg-code-panel {
+  display: none;
+}
+
+/* Below the lg breakpoint, stack: sidebar + code panel drop to full width. */
+@media (max-width: 1024px) {
+  .sg-sidebar,
+  .sg-code-panel {
+    position: static;
+    width: 100%;
+    max-height: none;
+    border: 0;
+    border-bottom: 1px solid var(--color-line);
+  }
+  .sg-body {
+    flex-direction: column;
+  }
+  .sg-resizer {
+    display: none;
+  }
+}
+
+.sg-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-hsp-2xs, 0.25rem);
+  padding: var(--spacing-vsp-3xs, 0.2rem) var(--spacing-hsp-xs, 0.5rem);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-sm, 0.25rem);
+  background: var(--color-surface);
+  color: var(--color-ink-mute);
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+.sg-toggle-btn:hover {
+  color: var(--color-ink);
+  border-color: var(--color-line-strong);
+}
+
+.sg-nav-link {
+  display: block;
+  padding: var(--spacing-vsp-3xs, 0.2rem) var(--spacing-hsp-sm, 0.75rem);
+  border-radius: var(--radius-sm, 0.25rem);
+  color: var(--color-ink-soft);
+  font-size: 0.875rem;
+}
+.sg-nav-link:hover {
+  background: var(--color-surface-sunken);
+  color: var(--color-ink);
+}
+.sg-nav-link[aria-current="page"] {
+  background: var(--color-brand);
+  color: var(--color-on-brand);
+}
+
+/* ============================================================================
+ * Styleguide catalog content + interactive affordances
+ * ========================================================================== */
+
+/* --- Copy-to-clipboard button (snippets + code panel) --------------------- */
+.sg-copy-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-hsp-2xs, 0.25rem);
+  padding: var(--spacing-vsp-3xs, 0.2rem) var(--spacing-hsp-xs, 0.5rem);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-sm, 0.25rem);
+  background: var(--color-surface);
+  color: var(--color-ink-mute);
+  font-size: 0.75rem;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    color 0.15s ease,
+    border-color 0.15s ease,
+    background-color 0.15s ease;
+}
+@media (hover: hover) {
+  .sg-copy-btn:hover {
+    color: var(--color-ink);
+    border-color: var(--color-line-strong);
+  }
+}
+.sg-copy-btn:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+.sg-copy-btn[data-copied] {
+  color: var(--color-success);
+  border-color: var(--color-success);
+}
+
+/* --- Usage snippet block (detail page) ------------------------------------ */
+.sg-snippet {
+  position: relative;
+}
+.sg-snippet-actions {
+  position: absolute;
+  top: var(--spacing-vsp-3xs, 0.2rem);
+  right: var(--spacing-hsp-xs, 0.5rem);
+  z-index: 1;
+}
+
+/* --- Landing search + tag filter ------------------------------------------ */
+.sg-filter {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-vsp-sm, 0.75rem);
+  margin-bottom: var(--spacing-vsp-xl, 2rem);
+}
+.sg-filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-hsp-md, 1rem);
+}
+.sg-search-field {
+  display: flex;
+  flex: 1;
+  min-width: 14rem;
+  align-items: center;
+  gap: var(--spacing-hsp-sm, 0.5rem);
+  padding: var(--spacing-vsp-xs, 0.5rem) var(--spacing-hsp-md, 0.75rem);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-lg, 0.5rem);
+  background: var(--color-surface);
+  transition: border-color 0.15s ease;
+}
+.sg-search-field:focus-within {
+  border-color: var(--color-brand);
+}
+.sg-search-input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-ink);
+  font-size: 0.9375rem;
+  outline: none;
+}
+.sg-search-input::placeholder {
+  color: var(--color-ink-mute);
+}
+.sg-search-input::-webkit-search-cancel-button {
+  appearance: none;
+}
+.sg-search-clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  border: 0;
+  border-radius: var(--radius-full, 9999px);
+  background: var(--color-surface-sunken);
+  color: var(--color-ink-mute);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.sg-search-clear:hover {
+  color: var(--color-ink);
+}
+
+/* --- Chips (category filter + token copy-mode) ---------------------------- */
+.sg-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-hsp-xs, 0.5rem);
+}
+.sg-chip {
+  padding: var(--spacing-vsp-3xs, 0.2rem) var(--spacing-hsp-md, 0.75rem);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-full, 9999px);
+  background: var(--color-surface);
+  color: var(--color-ink-soft);
+  font-size: 0.8125rem;
+  cursor: pointer;
+  transition:
+    color 0.15s ease,
+    border-color 0.15s ease,
+    background-color 0.15s ease;
+}
+@media (hover: hover) {
+  .sg-chip:hover {
+    border-color: var(--color-line-strong);
+    color: var(--color-ink);
+  }
+}
+.sg-chip:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+.sg-chip[aria-pressed="true"] {
+  background: var(--color-brand);
+  border-color: var(--color-brand);
+  color: var(--color-on-brand);
+}
+
+/* --- Token playground toolbar + toast ------------------------------------- */
+.sg-token-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-hsp-lg, 1rem);
+  margin-bottom: var(--spacing-vsp-lg, 1.5rem);
+  padding: var(--spacing-vsp-sm, 0.75rem) var(--spacing-hsp-md, 1rem);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-lg, 0.5rem);
+  background: var(--color-surface);
+}
+.sg-token-modes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-hsp-xs, 0.5rem);
+}
+.sg-token-toast {
+  margin-left: auto;
+  padding: var(--spacing-vsp-3xs, 0.2rem) var(--spacing-hsp-sm, 0.75rem);
+  border-radius: var(--radius-sm, 0.25rem);
+  background: var(--color-ink);
+  color: var(--color-paper);
+  font-size: 0.8125rem;
+  opacity: 0;
+  transform: translateY(0.25rem);
+  pointer-events: none;
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease;
+}
+.sg-token-toast[data-visible] {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* --- Token cards (color) + rows (spacing/type) — clickable to copy --------- */
+.sg-token-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-vsp-2xs, 0.4375rem);
+  padding: var(--spacing-hsp-sm, 0.5rem);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-DEFAULT, 0.375rem);
+  background: var(--color-surface);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+@media (hover: hover) {
+  .sg-token-card:hover {
+    border-color: var(--color-brand);
+  }
+}
+.sg-token-card:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+.sg-token-swatch {
+  display: block;
+  width: 100%;
+  height: 3rem;
+  border-radius: var(--radius-sm, 0.25rem);
+  border: 1px solid var(--color-line);
+}
+.sg-token-card-meta {
+  display: flex;
+  flex-direction: column;
+}
+
+.sg-token-row {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-hsp-md, 1rem);
+  padding: var(--spacing-vsp-3xs, 0.2rem) var(--spacing-hsp-sm, 0.5rem);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm, 0.25rem);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+}
+.sg-token-row--baseline {
+  align-items: baseline;
+}
+@media (hover: hover) {
+  .sg-token-row:hover {
+    background: var(--color-surface-sunken);
+    border-color: var(--color-line);
+  }
+}
+.sg-token-row:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sg-copy-btn,
+  .sg-chip,
+  .sg-token-card,
+  .sg-token-row,
+  .sg-token-toast,
+  .sg-search-field {
+    transition: none;
+  }
+}
