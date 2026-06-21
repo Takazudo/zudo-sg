@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "preact/compat";
 import type { JSX } from "preact";
-import { AFTER_NAVIGATE_EVENT } from "@takazudo/zudo-doc/transitions";
 import { useModalDialog } from "@/hooks/use-modal-dialog";
 
 interface ImageData {
@@ -20,15 +19,6 @@ interface ImageData {
 // agree on class string and inline style — otherwise the dist HTML and the
 // post-hydration DOM disagree on size / position and the first interaction
 // flashes. Sourcing both from the same constants closes the drift gap.
-//
-// z-modal / backdrop:z-modal-backdrop are defense-in-depth for the SPA-swap
-// window: if this dialog is still open while the page body is swapped, a native
-// showModal() dialog can lose top-layer promotion and fall back to z-index:auto,
-// flashing behind the header/sidebar. `backdrop:z-modal-backdrop` targets the
-// native `::backdrop` (present for every showModal() dialog even with no backdrop
-// tint). The explicit modal-tier z-index keeps it above all chrome during that
-// window. Intentionally redundant in the normal (top-layer) case — do not remove
-// as "redundant".
 const DIALOG_CLASS =
   "zd-enlarge-dialog z-modal mx-auto max-h-[90vh] max-w-[90vw] overflow-hidden border border-muted bg-surface p-0 backdrop:z-modal-backdrop";
 // Center the modal with `inset: 0; margin: auto` rather than a transform.
@@ -120,24 +110,14 @@ export default function ImageEnlarge() {
       }, 150);
     }
 
-    function handleAfterSwap() {
-      sharedResizeObserver.disconnect();
-      observedImages.clear();
-      mutationObserver?.disconnect();
-      mutationObserver = null;
-      startObserving();
-    }
-
     startObserving();
     window.addEventListener("resize", handleWindowResize);
-    document.addEventListener(AFTER_NAVIGATE_EVENT, handleAfterSwap);
 
     return () => {
       sharedResizeObserver.disconnect();
       observedImages.clear();
       mutationObserver?.disconnect();
       window.removeEventListener("resize", handleWindowResize);
-      document.removeEventListener(AFTER_NAVIGATE_EVENT, handleAfterSwap);
       clearTimeout(resizeTimer);
     };
   }, []);
@@ -166,9 +146,9 @@ export default function ImageEnlarge() {
     return () => document.removeEventListener("click", handleDocumentClick);
   }, []);
 
-  // showModal/close sync, native-close → state reset, and the SPA-swap guard
-  // all live in the shared useModalDialog hook (wired above). The backdrop
-  // hit-test below stays here — it is component-specific geometry.
+  // showModal/close sync and native-close → state reset live in the shared
+  // useModalDialog hook (wired above). The backdrop hit-test below stays here
+  // — it is component-specific geometry.
 
   function handleBackdropClick(e: JSX.TargetedMouseEvent<HTMLDialogElement>) {
     const dialog = dialogRef.current;
