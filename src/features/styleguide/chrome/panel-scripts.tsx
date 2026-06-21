@@ -54,8 +54,18 @@ const RESIZER_SCRIPT = `(function(){
     var r=document.documentElement;
     var dragging=false, focused=false;
     function readCurrentWidth(){
-      var raw=getComputedStyle(r).getPropertyValue('--sg-code-panel-w');
-      return raw ? parseFloat(raw)||MIN_CP : MIN_CP;
+      // Measure the real panel element — always px, unit-agnostic. The CSS var
+      // default is authored in rem (--sg-code-panel-w: 28rem) and getComputedStyle
+      // returns custom-property text UNRESOLVED, so parseFloat on the var would
+      // yield the rem number (28), not pixels, collapsing the panel on first
+      // keyboard use. Fall back to a rem-aware parse only if the element is absent.
+      var panel=document.getElementById('sg-code-panel');
+      var w=panel ? panel.getBoundingClientRect().width : 0;
+      if(w) return w;
+      var raw=getComputedStyle(r).getPropertyValue('--sg-code-panel-w').trim();
+      var n=parseFloat(raw);
+      if(!n) return MIN_CP;
+      return raw.indexOf('rem')>=0 ? n*parseFloat(getComputedStyle(r).fontSize) : n;
     }
     var cachedWidth=readCurrentWidth();
     handle.setAttribute('aria-valuemin', String(MIN_CP));
