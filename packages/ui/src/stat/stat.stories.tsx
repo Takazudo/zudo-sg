@@ -16,6 +16,42 @@ const meta: StoryMeta = {
 
 export default meta;
 
+export const Playground: Story = {
+  name: "Playground",
+  source: `<Stat value={42} label="Active users" hint="last 30 days" />`,
+  controls: [
+    {
+      type: "number",
+      prop: "value",
+      label: "Value",
+      defaultValue: 42,
+      min: 0,
+      max: 100,
+      step: 1,
+      ui: "range",
+    },
+    {
+      type: "text",
+      prop: "label",
+      label: "Label",
+      defaultValue: "Active users",
+    },
+    {
+      type: "text",
+      prop: "hint",
+      label: "Hint",
+      defaultValue: "last 30 days",
+    },
+  ],
+  render: (args = {}) => (
+    <Stat
+      value={args.value as number}
+      label={args.label as string}
+      hint={args.hint as string}
+    />
+  ),
+};
+
 export const Single: Story = {
   name: "Single",
   source: `<Stat value="99.9%" label="Uptime" hint="last 90 days" />`,

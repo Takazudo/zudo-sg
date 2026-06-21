@@ -19,6 +19,50 @@ const meta: StoryMeta = {
 
 export default meta;
 
+export const Playground: Story = {
+  name: "Playground",
+  source: `<Hero
+  eyebrow="zudo-sg"
+  title="A tight component system that scales"
+  lede="Coherent spacing rhythm, consistent type, dark-mode correct."
+  tinted={true}
+/>`,
+  controls: [
+    {
+      type: "text",
+      prop: "eyebrow",
+      label: "Eyebrow",
+      defaultValue: "zudo-sg",
+    },
+    {
+      type: "text",
+      prop: "title",
+      label: "Title",
+      defaultValue: "A tight component system that scales",
+    },
+    {
+      type: "text",
+      prop: "lede",
+      label: "Lede",
+      defaultValue: "Coherent spacing rhythm, consistent type, dark-mode correct.",
+    },
+    {
+      type: "boolean",
+      prop: "tinted",
+      label: "Tinted",
+      defaultValue: true,
+    },
+  ],
+  render: (args = {}) => (
+    <Hero
+      eyebrow={args.eyebrow as string}
+      title={args.title as string}
+      lede={args.lede as string}
+      tinted={args.tinted as boolean}
+    />
+  ),
+};
+
 export const Basic: Story = {
   name: "Basic",
   source: `<Hero
