@@ -31,6 +31,7 @@
 import type { VNode, JSX } from "preact";
 import { Island } from "@takazudo/zfb";
 import { settings } from "@/config/settings";
+import { SidebarResizerInit } from "@takazudo/zudo-doc/sidebar-resizer";
 
 import AiChatModal from "@/components/ai-chat-modal";
 import ClientRouterBootstrap from "@/components/client-router-bootstrap";
@@ -199,6 +200,15 @@ export function BodyEndIslands({
         when: "load",
         children: <DesignTokenPanelBootstrap />,
       }) as unknown as VNode}
+
+      {/* SidebarResizerInit: attach drag handle to #desktop-sidebar on load
+          and on AFTER_NAVIGATE_EVENT (zfb:after-swap under the Strategy B
+          SPA navigation model). Idempotent — safe on every page, including
+          styleguide routes that render this component directly (without the
+          DocBodyEnd wrapper). On doc routes DocBodyEnd also emits this
+          component, but the init script's idempotency guard makes repeated
+          calls safe. */}
+      {settings.sidebarResizer && <SidebarResizerInit />}
     </>
   );
 }
