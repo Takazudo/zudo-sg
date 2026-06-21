@@ -55,10 +55,11 @@ const RESIZER_SCRIPT = `(function(){
     var dragging=false, focused=false;
     function readCurrentWidth(){
       // Measure the real panel element — always px, unit-agnostic. The CSS var
-      // default is authored in rem (--sg-code-panel-w: 28rem) and getComputedStyle
-      // returns custom-property text UNRESOLVED, so parseFloat on the var would
-      // yield the rem number (28), not pixels, collapsing the panel on first
-      // keyboard use. Fall back to a rem-aware parse only if the element is absent.
+      // default is authored as a rem-based clamp (--sg-code-panel-w:
+      // clamp(20rem,35vw,32rem)) and getComputedStyle returns custom-property
+      // text UNRESOLVED, so parseFloat on the var would yield a bogus leading
+      // number, not pixels, collapsing the panel on first keyboard use. Fall
+      // back to a rem-aware parse only if the element is absent.
       var panel=document.getElementById('sg-code-panel');
       var w=panel ? panel.getBoundingClientRect().width : 0;
       if(w) return w;
