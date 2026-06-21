@@ -15,7 +15,6 @@
 // Lifecycle coupling with the mermaid init script:
 //   * Primary trigger: a MutationObserver on the content scope watching for the
 //     `data-mermaid-rendered` attribute appearing (and the `<svg>` child).
-//   * SPA hops: AFTER_NAVIGATE_EVENT re-scans the (swapped) content body.
 //   * Theme/tweak re-render: the init script's `reinitMermaid` REMOVES and
 //     regenerates the `<svg>` (debounced 300ms). The button lives on the
 //     `.mermaid` CONTAINER (which persists), and the dedupe guard is keyed by
@@ -28,7 +27,6 @@
 // image-enlarge.tsx.
 import type { JSX } from "preact";
 import { useState, useEffect, useRef, useCallback } from "preact/compat";
-import { AFTER_NAVIGATE_EVENT } from "@takazudo/zudo-doc/transitions";
 import { useModalDialog } from "@/hooks/use-modal-dialog";
 
 // ---------------------------------------------------------------------------
@@ -45,10 +43,6 @@ import { useModalDialog } from "@/hooks/use-modal-dialog";
 // block for its `position: fixed` descendants, re-anchoring the fixed close
 // button to the dialog corner instead of the viewport. Mirrors image-enlarge.
 //
-// z-modal / backdrop:z-modal-backdrop are defense-in-depth for the SPA-swap
-// window: a still-open showModal() dialog can lose top-layer promotion when the
-// page body is swapped, so the explicit modal-tier z-index keeps it above all
-// chrome. Intentionally redundant in the normal top-layer case.
 // ---------------------------------------------------------------------------
 const DIALOG_CLASS =
   "zd-mermaid-dialog z-modal mx-auto h-[90vh] max-h-[90vh] w-[90vw] max-w-[90vw] overflow-hidden border border-muted bg-surface p-0 backdrop:z-modal-backdrop";
@@ -129,8 +123,7 @@ export default function MermaidEnlarge() {
   const [translate, setTranslate] = useState({ x: 0, y: 0 });
   const [panActive, setPanActive] = useState(false);
 
-  // showModal/close sync, native-close → state reset, and the SPA-swap guard
-  // all live in the shared useModalDialog hook.
+  // showModal/close sync and native-close → state reset live in the shared useModalDialog hook.
   const { dialogRef } = useModalDialog(open !== null, () => setOpen(null));
   const innerRef = useRef<HTMLDivElement>(null);
   // Pointer-drag bookkeeping (refs so the handlers don't re-create on each move).
@@ -206,18 +199,10 @@ export default function MermaidEnlarge() {
       scan();
     }
 
-    function handleAfterNavigate() {
-      mutationObserver?.disconnect();
-      mutationObserver = null;
-      startObserving();
-    }
-
     startObserving();
-    document.addEventListener(AFTER_NAVIGATE_EVENT, handleAfterNavigate);
 
     return () => {
       mutationObserver?.disconnect();
-      document.removeEventListener(AFTER_NAVIGATE_EVENT, handleAfterNavigate);
     };
   }, []);
 
