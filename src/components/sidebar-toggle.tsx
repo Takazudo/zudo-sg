@@ -6,10 +6,6 @@
 // packages/zudo-doc/src/theme-toggle/index.tsx. Type references via
 // the global React namespace still resolve via @types/react.
 import { useState, useEffect } from "preact/hooks";
-// After zudolab/zudo-doc#1335 (E2 task 2 half B) the host components
-// pull lifecycle event names from the v2 transitions module rather
-// than hard-coding `astro:*` literals.
-import { AFTER_NAVIGATE_EVENT } from "@takazudo/zudo-doc/transitions";
 import SidebarTree from "@/components/sidebar-tree";
 import type { NavNode } from "@/utils/docs";
 import type { LocaleLink } from "@/types/locale";
@@ -64,15 +60,6 @@ export default function SidebarToggle({
       document.body.style.overflow = "";
     };
   }, [open]);
-
-  // Close mobile sidebar on View Transition navigation
-  useEffect(() => {
-    function handleSwap() {
-      setOpen(false);
-    }
-    document.addEventListener(AFTER_NAVIGATE_EVENT, handleSwap);
-    return () => document.removeEventListener(AFTER_NAVIGATE_EVENT, handleSwap);
-  }, []);
 
   return (
     <>

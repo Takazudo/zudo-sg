@@ -31,6 +31,8 @@ export default function NotFoundPage(): JSX.Element {
   return (
     <DocLayoutWithDefaults
       title={composeMetaTitle(title)}
+      // Page transitions removed — plain full-page navigation (epic #66 / zudo-doc#2273).
+      enableClientRouter={false}
       head={<HeadWithDefaults title={title} />}
       lang={locale}
       noindex={true}

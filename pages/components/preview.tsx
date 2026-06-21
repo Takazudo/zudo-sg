@@ -44,10 +44,9 @@ export default function PreviewRoute(): JSX.Element {
             served document, including this iframe route. Each preview iframe
             would then open a permanent EventSource to /__zfb/reload; a detail
             page with 5+ variant iframes exhausts the browser's 6-per-host
-            HTTP/1.1 connection cap, which stalls the next soft-nav fetch (the
-            client-router navigation silently hangs). Stub the livereload SSE
-            inside the iframe so it never holds a connection. No-op in
-            production — livereload.js is not injected into the static build. */}
+            HTTP/1.1 connection cap. Stub the livereload SSE inside the iframe
+            so it never holds a connection. No-op in production — livereload.js
+            is not injected into the static build. */}
         <script
           dangerouslySetInnerHTML={{
             __html:

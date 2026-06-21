@@ -3,16 +3,10 @@
  *
  * Imported as a side-effect from the body-end islands helper when
  * settings.designTokenPanel is truthy. The dynamic import is gated there so
- * this module is only bundled
- * when the feature is enabled.
- *
- * Lifecycle adapter: wires zdtp's navigation hooks to zfb's own navigation
- * events via setLifecycleAdapter(). onBeforeSwap maps to zfb:before-preparation
- * and onPageLoad maps to zfb:after-swap so zdtp re-applies persisted token
- * overrides on every soft navigation without depending on Astro events.
+ * this module is only bundled when the feature is enabled.
  */
 
-import { configurePanel, setLifecycleAdapter, type LifecycleAdapter } from "@takazudo/zdtp";
+import { configurePanel } from "@takazudo/zdtp";
 // CSS is pulled via `@import "@takazudo/zdtp/styles.css"` in
 // src/styles/global.css so the panel chrome lands in the main page CSS bundle
 // (not a deferred chunk). Vite library mode strips the source CSS import from
@@ -28,22 +22,4 @@ configurePanel(designTokenPanelConfig);
 // listener picks it up and mounts the panel.
 if (typeof window !== "undefined") {
   (window as { __zdtpReadyClicks?: () => void }).__zdtpReadyClicks?.();
-}
-
-// zfb fires "zfb:before-preparation" (before nav) and "zfb:after-swap" (after nav).
-// Adjust these event names if your zfb version uses different names.
-if (typeof document !== "undefined") {
-  const adapter: LifecycleAdapter = {
-    onBeforeSwap(cb) {
-      const handler = () => cb();
-      document.addEventListener("zfb:before-preparation", handler);
-      return () => document.removeEventListener("zfb:before-preparation", handler);
-    },
-    onPageLoad(cb) {
-      const handler = () => cb();
-      document.addEventListener("zfb:after-swap", handler);
-      return () => document.removeEventListener("zfb:after-swap", handler);
-    },
-  };
-  setLifecycleAdapter(adapter);
 }

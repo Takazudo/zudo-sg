@@ -34,10 +34,8 @@ import { settings } from "@/config/settings";
 import { SidebarResizerInit } from "@takazudo/zudo-doc/sidebar-resizer";
 
 import AiChatModal from "@/components/ai-chat-modal";
-import ClientRouterBootstrap from "@/components/client-router-bootstrap";
 import ImageEnlarge, { ImageEnlargeSsrFallback } from "@/components/image-enlarge";
 import MermaidEnlarge, { MermaidEnlargeSsrFallback } from "@/components/mermaid-enlarge";
-import { PageLoadingOverlay } from "@takazudo/zudo-doc/page-loading";
 
 import DesignTokenPanelBootstrap from "@/components/design-token-panel-bootstrap";
 
@@ -49,8 +47,6 @@ import DesignTokenPanelBootstrap from "@/components/design-token-panel-bootstrap
 // function names by default, but the explicit assignment is a
 // belt-and-braces guard for production minification regressions.
 (AiChatModal as { displayName?: string }).displayName = "AiChatModal";
-(ClientRouterBootstrap as { displayName?: string }).displayName =
-  "ClientRouterBootstrap";
 (ImageEnlarge as { displayName?: string }).displayName = "ImageEnlarge";
 (MermaidEnlarge as { displayName?: string }).displayName = "MermaidEnlarge";
 
@@ -107,16 +103,6 @@ export function BodyEndIslands({
   basePath,
   aiChatBodyLabel = DEFAULT_AI_CHAT_BODY_LABEL,
 }: BodyEndIslandsProps): JSX.Element {
-  // Hydrates first (when="load") so the SPA-router click intercept is
-  // registered as soon as the islands runtime mounts the marker. The
-  // component renders nothing visually — the island bundle's top-level
-  // `import "@takazudo/zfb-runtime/client-router"` is what actually
-  // wires up the router (zudolab/zudo-doc#1524 W7A fix).
-  const clientRouterBootstrap = Island({
-    when: "load",
-    children: <ClientRouterBootstrap />,
-  }) as unknown as VNode;
-
   // Gated on `settings.aiAssistant` (zudolab/zudo-doc#2058): when the AI
   // assistant feature is off, neither the AiChatModal island marker nor the
   // sr-only "AI Assistant" landmark heading should reach the SSG output —
@@ -180,11 +166,6 @@ export function BodyEndIslands({
 
   return (
     <>
-      {/* Pure SSR — no Island wrap. The component emits its overlay div,
-          inline styles, and a small inline script that self-wires
-          zfb:before-preparation / zfb:after-swap listeners at runtime. */}
-      <PageLoadingOverlay />
-      {clientRouterBootstrap}
       {aiAssistant}
       {imageEnlarge}
       {mermaidEnlarge}
@@ -201,13 +182,11 @@ export function BodyEndIslands({
         children: <DesignTokenPanelBootstrap />,
       }) as unknown as VNode}
 
-      {/* SidebarResizerInit: attach drag handle to #desktop-sidebar on load
-          and on AFTER_NAVIGATE_EVENT (zfb:after-swap under the Strategy B
-          SPA navigation model). Idempotent — safe on every page, including
-          styleguide routes that render this component directly (without the
-          DocBodyEnd wrapper). On doc routes DocBodyEnd also emits this
-          component, but the init script's idempotency guard makes repeated
-          calls safe. */}
+      {/* SidebarResizerInit: attach drag handle to #desktop-sidebar on load.
+          Idempotent — safe on every page, including styleguide routes that
+          render this component directly (without the DocBodyEnd wrapper). On
+          doc routes DocBodyEnd also emits this component, but the init
+          script's idempotency guard makes repeated calls safe. */}
       {settings.sidebarResizer && <SidebarResizerInit />}
     </>
   );

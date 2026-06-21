@@ -88,8 +88,8 @@ export function FooterWithDefaults({
 }: FooterWithDefaultsProps): VNode {
   const footer = settings.footer;
 
-  // Locale-keyed persist key: same-locale swaps preserve DOM identity;
-  // cross-locale swaps discard the stale footer and re-render. (#1546)
+  // Locale-keyed persist key: same-locale navigations preserve DOM identity;
+  // cross-locale navigations discard the stale footer and re-render. (#1546)
   const persistKey = `footer-${lang}`;
 
   // When footer is not configured, return the bare shell so the

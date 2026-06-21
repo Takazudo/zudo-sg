@@ -45,8 +45,8 @@
 // and no `.sg-header-toggles` CSS.
 //
 // The active-item highlight is owned by the root SidebarTree's `useActiveSlug`,
-// which (since #46) also listens to AFTER_NAVIGATE_EVENT for soft-nav — there
-// is no separate active-slug-sync script in this layout.
+// which derives the active slug from the URL on each page load — there is no
+// separate active-slug-sync script in this layout.
 
 import type { ComponentChildren, JSX, VNode } from "preact";
 import { Island } from "@takazudo/zfb";
@@ -68,8 +68,8 @@ export interface StyleguideLayoutProps {
   /**
    * Active sidebar slug for the initial SSR highlight. The catalog landing
    * passes "" (the Overview leaf); a story detail page passes its story slug;
-   * the tokens route passes "tokens". `useActiveSlug` re-derives this from the
-   * URL on soft-nav, so this is just the initial value.
+   * the tokens route passes "tokens". `useActiveSlug` re-derives this from
+   * the URL on each page load, so this is just the initial value.
    */
   activeSlug?: string;
   /** Active locale; defaults to the configured defaultLocale. */
@@ -157,6 +157,8 @@ export function StyleguideLayout({
   return (
     <DocLayoutWithDefaults
       title={title}
+      // Page transitions removed — plain full-page navigation (epic #66 / zudo-doc#2273).
+      enableClientRouter={false}
       head={composedHead}
       lang={lang}
       noindex={settings.noindex}

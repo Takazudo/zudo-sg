@@ -293,10 +293,10 @@ export function HeaderWithDefaults(
       />
     ) as unknown as VNode : undefined;
 
-  // Locale-keyed persist key: same-locale swaps preserve the header's
-  // DOM-node identity; cross-locale swaps use a different key and the
-  // router replaces the header entirely (re-rendering locale-specific
-  // SSR content such as the LanguageSwitcher anchors). See #1546 + #1549.
+  // Locale-keyed persist key: same-locale navigations preserve the header's
+  // DOM-node identity; cross-locale navigations use a different key so the
+  // header re-renders with locale-specific SSR content (e.g. LanguageSwitcher
+  // anchors). See #1546 + #1549.
   const persistKey = `header-${lang}`;
 
   // Compute the right-items flags from the host's settings. The v2

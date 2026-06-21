@@ -23,14 +23,6 @@
 
 import type { JSX } from "preact";
 
-// Restores the persisted code-panel state onto <html>. Runs once before first
-// paint AND re-runs on every client-router soft-navigation (`zfb:after-swap`):
-// zfb's router preserves only DocLayout's whitelisted <html> attrs across a
-// swap, so the styleguide-private `data-sg-*` hidden attrs are dropped each
-// navigation and must be re-applied — otherwise a hidden code panel reappears
-// until a full reload. The listener binds to the persistent `document`
-// (survives swaps). The branches set AND clear so the result is idempotent
-// regardless of prior attrs.
 const RESTORE_SCRIPT = `(function(){
   function restore(){try{
     var r=document.documentElement, ls=localStorage;
@@ -38,7 +30,6 @@ const RESTORE_SCRIPT = `(function(){
     if(ls.getItem('sg-code-panel-hidden')==='1') r.setAttribute('data-sg-code-panel-hidden',''); else r.removeAttribute('data-sg-code-panel-hidden');
   }catch(e){}}
   restore();
-  document.addEventListener('zfb:after-swap', restore);
 })();`;
 
 const RESIZER_SCRIPT = `(function(){
@@ -131,7 +122,6 @@ const RESIZER_SCRIPT = `(function(){
     });
   }
   init();
-  document.addEventListener('zfb:after-swap', init);
 })();`;
 
 export function PanelStateHeadScript(): JSX.Element {

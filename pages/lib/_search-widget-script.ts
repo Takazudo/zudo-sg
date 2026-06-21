@@ -9,15 +9,6 @@
 //     index + simple word-match scoring) is used instead. This avoids the
 //     inline-script bundling limitation. Full MiniSearch integration can be
 //     added in a follow-up topic once the bundle pipeline is in place.
-//   - The post-navigation rebinder pulls its event name from
-//     `AFTER_NAVIGATE_EVENT` in
-//     `@takazudo/zudo-doc/transitions` (today: `zfb:after-swap`)
-//     rather than a hard-coded `astro:*` literal. See
-//     zudolab/zudo-doc#1335 (E2 task 2 half B) for the vocabulary
-//     introduction and zudolab/zudo-doc#1523 for the W6B flip from
-//     `DOMContentLoaded` to the Strategy B SPA event name.
-
-import { AFTER_NAVIGATE_EVENT } from "@takazudo/zudo-doc/transitions";
 
 export const SEARCH_WIDGET_SCRIPT = /* javascript */ `(function () {
   if (customElements.get("site-search")) return; // guard double-registration
@@ -147,11 +138,6 @@ export const SEARCH_WIDGET_SCRIPT = /* javascript */ `(function () {
       // without re-querying the DOM (the placeholder node is replaced once
       // search results are rendered).
       this._placeholderHtml = "";
-      // Held so we can remove the document-level after-navigate listener
-      // in disconnectedCallback. zudolab/zudo-doc#1523 — under Strategy B
-      // SPA navigation a non-persisted <site-search> element would leak
-      // one document listener per nav without this hook.
-      this._afterNavHandler = null;
     }
 
     connectedCallback() {
@@ -198,10 +184,10 @@ export const SEARCH_WIDGET_SCRIPT = /* javascript */ `(function () {
       // Close-on-result-click (epic #2148): result links are created dynamically
       // in renderResult(), so use one delegated listener on the results container
       // instead of per-link handlers. We do NOT preventDefault — the link's own
-      // navigation (zfb Strategy-B SPA swap or a plain load) must still proceed;
-      // we only close the <dialog> so it does not linger over the swapped page.
-      // closeDialog() runs synchronously before navigation; the dialog's close
-      // restores documentElement overflow via the existing "close" listener.
+      // navigation must still proceed; we only close the <dialog> so it does not
+      // linger over the newly loaded page. closeDialog() runs synchronously
+      // before navigation; the dialog's close restores documentElement overflow
+      // via the existing "close" listener.
       if (this._results) {
         this._resultsClickHandler = function(e) {
           var t = e.target;
@@ -221,31 +207,12 @@ export const SEARCH_WIDGET_SCRIPT = /* javascript */ `(function () {
         }
       };
       document.addEventListener("keydown", this._keydownHandler);
-
-      // View-Transitions compat: re-run on the v2 after-navigate event.
-      // Stored on the instance so disconnectedCallback can detach it on
-      // body swap when this element is NOT persisted via
-      // data-zfb-transition-persist (zudolab/zudo-doc#1523).
-      this._afterNavHandler = function() {
-        // Backstop for the original bug (epic #2148): if the dialog is somehow
-        // still open after an SPA body swap (e.g. a nav path that bypassed the
-        // result-click handler), close it so it does not linger / flash over the
-        // newly-swapped page. Safe no-op when already closed.
-        if (self._dialog && self._dialog.open) self.closeDialog();
-        var kbdEl2 = self.querySelector("[data-kbd-shortcut]");
-        if (kbdEl2) kbdEl2.textContent = self._shortcut;
-      };
-      document.addEventListener(${JSON.stringify(AFTER_NAVIGATE_EVENT)}, this._afterNavHandler);
     }
 
     disconnectedCallback() {
       if (this._keydownHandler) {
         document.removeEventListener("keydown", this._keydownHandler);
         this._keydownHandler = null;
-      }
-      if (this._afterNavHandler) {
-        document.removeEventListener(${JSON.stringify(AFTER_NAVIGATE_EVENT)}, this._afterNavHandler);
-        this._afterNavHandler = null;
       }
       if (this._resultsClickHandler && this._results) {
         this._results.removeEventListener("click", this._resultsClickHandler);

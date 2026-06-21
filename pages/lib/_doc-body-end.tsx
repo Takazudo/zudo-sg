@@ -18,16 +18,15 @@ import { SidebarResizerInit } from "@takazudo/zudo-doc/sidebar-resizer";
 
 /**
  * The `bodyEndComponents` slot content shared by all four doc-route page
- * components: `BodyEndIslands` (modal overlays, client-router bootstrap,
- * image-enlarge) and the optional `SidebarResizerInit` drag handle.
+ * components: `BodyEndIslands` (modal overlays, image-enlarge) and the
+ * optional `SidebarResizerInit` drag handle.
  */
 export function DocBodyEnd(): JSX.Element {
   return (
     <>
       <BodyEndIslands basePath={settings.base ?? "/"} />
-      {/* SidebarResizerInit: attach drag handle to #desktop-sidebar on load
-          and on AFTER_NAVIGATE_EVENT (zfb:after-swap under the Strategy B
-          SPA navigation model). Idempotent — safe on every page. */}
+      {/* SidebarResizerInit: attach drag handle to #desktop-sidebar on load.
+          Idempotent — safe on every page. */}
       {settings.sidebarResizer && <SidebarResizerInit />}
     </>
   );
