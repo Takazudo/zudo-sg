@@ -112,6 +112,7 @@ export default function StoryDetailPage(
           role="separator"
           aria-label="Resize code panel"
           aria-orientation="vertical"
+          tabindex={0}
         />
         {codePanelIsland}
       </aside>
