@@ -44,12 +44,25 @@ export const Playground: Story = {
       label: "Body",
       defaultValue: "A card surface using the shared semantic tokens.",
     },
+    {
+      type: "boolean",
+      prop: "showFooter",
+      label: "Show footer",
+      defaultValue: false,
+    },
+    {
+      type: "text",
+      prop: "footer",
+      label: "Footer text",
+      defaultValue: "Footer content",
+    },
   ],
   render: (args = {}) => (
     <div class="max-w-[24rem]">
       <Card variant={args.variant as "outlined" | "elevated" | "filled"}>
         <CardTitle>{args.title as string}</CardTitle>
         <CardBody>{args.body as string}</CardBody>
+        {args.showFooter && <CardFooter>{args.footer as string}</CardFooter>}
       </Card>
     </div>
   ),

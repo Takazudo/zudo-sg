@@ -17,7 +17,7 @@ export default meta;
 
 export const Playground: Story = {
   name: "Playground",
-  source: `<Button variant="primary">Click me</Button>`,
+  source: `<Button variant="primary" size="md">Click me</Button>`,
   controls: [
     {
       type: "select",
@@ -40,6 +40,12 @@ export const Playground: Story = {
       defaultValue: false,
     },
     {
+      type: "boolean",
+      prop: "block",
+      label: "Block (full width)",
+      defaultValue: false,
+    },
+    {
       type: "text",
       prop: "children",
       label: "Label",
@@ -52,6 +58,7 @@ export const Playground: Story = {
         variant={args.variant as "primary" | "secondary" | "ghost"}
         size={args.size as "sm" | "md" | "lg"}
         disabled={args.disabled as boolean}
+        block={args.block as boolean}
       >
         {args.children as string}
       </Button>
