@@ -1061,12 +1061,19 @@ dialog.zd-mermaid-dialog::backdrop {
    * Selector/var names stay in sync with
    * src/features/styleguide/chrome/panel-contract.ts. */
   --sg-header-h: 3.5rem;
-  --sg-code-panel-w: 28rem;
+  /* Default code-panel width — responsive clamp matching the reference
+   * styleguide's right code-area frame (issue #60). The resizer
+   * (panel-scripts.tsx) overrides this var per-user at runtime in px, so this
+   * stays the single source of the default width. */
+  --sg-code-panel-w: clamp(20rem, 35vw, 32rem);
 }
 
 /* ── Code panel: right-region layout (fills DocLayout's TOC column) ──
- * Frame VISUALS (border-l / bg-surface) are native utilities on the element;
- * only the positioning / width / sticky / responsive behavior lives here. */
+ * Frame VISUALS: the left bar/gutter is owned here so it is guaranteed to
+ * render (the element carries no native border utility) — a 1px muted divider
+ * + hsp-lg left padding + vsp-md block margin match the reference's right
+ * code-area frame (issue #60). Below lg this swaps for a top divider (see the
+ * max-width:1023px block). */
 #sg-code-panel {
   position: relative;
   flex-shrink: 0;
@@ -1074,6 +1081,7 @@ dialog.zd-mermaid-dialog::backdrop {
   align-self: stretch;
   margin-block: var(--spacing-vsp-md, 1.5rem);
   padding-left: var(--spacing-hsp-lg, 1rem);
+  border-left: 1px solid var(--color-muted);
 }
 
 @media (min-width: 1024px) {
