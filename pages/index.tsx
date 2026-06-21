@@ -60,6 +60,8 @@ export default function IndexPage(): JSX.Element {
   return (
     <DocLayoutWithDefaults
       title={composeMetaTitle(settings.siteName)}
+      // Page transitions removed — plain full-page navigation (epic #66 / zudo-doc#2273).
+      enableClientRouter={false}
       head={<HeadWithDefaults title={settings.siteName} />}
       lang={locale}
       noindex={settings.noindex}

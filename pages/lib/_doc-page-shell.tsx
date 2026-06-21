@@ -162,6 +162,9 @@ export function DocPageShell(props: DocPageShellProps): JSX.Element {
   return (
     <DocLayoutWithDefaults
       title={composeMetaTitle(title)}
+      // Page transitions removed — plain full-page navigation instead of the zfb
+      // ClientRouter SPA soft-swap (epic #66 / zudo-doc#2273).
+      enableClientRouter={false}
       // Plain <meta name="description"> is emitted by DocLayout from this prop —
       // gate it here alongside the og:description gate inside HeadWithDefaults (#2078)
       description={settings.metaTags.description ? description : undefined}

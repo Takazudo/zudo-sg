@@ -6,7 +6,9 @@ allowBuilds:
   esbuild: true
   lefthook: true
 minimumReleaseAgeExclude:
-  # Transitive dep of @takazudo/zudo-doc (we no longer depend on it directly);
-  # too recently published to clear the minimumReleaseAge policy without this allowance.
-  - '@takazudo/zudo-doc-history-server@0.2.15'
-  - '@takazudo/zudo-doc@0.2.15'
+  # First-party @takazudo packages — allowlisted by name so a freshly published
+  # release (e.g. our own zudo-doc) installs without waiting out the
+  # minimumReleaseAge supply-chain window. (history-server is a transitive dep
+  # of zudo-doc.) minimumReleaseAgeExclude matches against package names.
+  - '@takazudo/zudo-doc-history-server'
+  - '@takazudo/zudo-doc'
