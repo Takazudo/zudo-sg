@@ -15,6 +15,49 @@ const meta: StoryMeta = {
 
 export default meta;
 
+export const Playground: Story = {
+  name: "Playground",
+  source: `<PageHeading as="h1" eyebrow="Documentation" description="A coherent set of Preact components.">
+  Build with zudo-sg
+</PageHeading>`,
+  controls: [
+    {
+      type: "select",
+      prop: "as",
+      label: "Level",
+      options: ["h1", "h2"],
+      defaultValue: "h1",
+    },
+    {
+      type: "text",
+      prop: "eyebrow",
+      label: "Eyebrow",
+      defaultValue: "Documentation",
+    },
+    {
+      type: "text",
+      prop: "children",
+      label: "Heading text",
+      defaultValue: "Build with zudo-sg",
+    },
+    {
+      type: "text",
+      prop: "description",
+      label: "Description",
+      defaultValue: "A coherent set of Preact components.",
+    },
+  ],
+  render: (args = {}) => (
+    <PageHeading
+      as={args.as as "h1" | "h2"}
+      eyebrow={args.eyebrow as string}
+      description={args.description as string}
+    >
+      {args.children as string}
+    </PageHeading>
+  ),
+};
+
 export const Page: Story = {
   name: "PageHeading",
   source: `<PageHeading

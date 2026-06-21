@@ -18,14 +18,12 @@ const meta: StoryMeta = {
 
 export default meta;
 
-export const Variants: Story = {
-  name: "Variants",
+export const Playground: Story = {
+  name: "Playground",
   source: `<Card variant="outlined">
-  <CardTitle>outlined</CardTitle>
+  <CardTitle>Card title</CardTitle>
   <CardBody>A card surface using the shared semantic tokens.</CardBody>
-</Card>
-<Card variant="elevated">…</Card>
-<Card variant="filled">…</Card>`,
+</Card>`,
   controls: [
     {
       type: "select",
@@ -34,7 +32,50 @@ export const Variants: Story = {
       options: ["outlined", "elevated", "filled"],
       defaultValue: "outlined",
     },
+    {
+      type: "text",
+      prop: "title",
+      label: "Title",
+      defaultValue: "Card title",
+    },
+    {
+      type: "text",
+      prop: "body",
+      label: "Body",
+      defaultValue: "A card surface using the shared semantic tokens.",
+    },
+    {
+      type: "boolean",
+      prop: "showFooter",
+      label: "Show footer",
+      defaultValue: false,
+    },
+    {
+      type: "text",
+      prop: "footer",
+      label: "Footer text",
+      defaultValue: "Footer content",
+    },
   ],
+  render: (args = {}) => (
+    <div class="max-w-[24rem]">
+      <Card variant={args.variant as "outlined" | "elevated" | "filled"}>
+        <CardTitle>{args.title as string}</CardTitle>
+        <CardBody>{args.body as string}</CardBody>
+        {args.showFooter && <CardFooter>{args.footer as string}</CardFooter>}
+      </Card>
+    </div>
+  ),
+};
+
+export const Variants: Story = {
+  name: "Variants",
+  source: `<Card variant="outlined">
+  <CardTitle>outlined</CardTitle>
+  <CardBody>A card surface using the shared semantic tokens.</CardBody>
+</Card>
+<Card variant="elevated">…</Card>
+<Card variant="filled">…</Card>`,
   render: () => (
     <div class="grid gap-hsp-lg sm:grid-cols-3">
       {(["outlined", "elevated", "filled"] as const).map((variant) => (

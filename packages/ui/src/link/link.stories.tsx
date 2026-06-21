@@ -14,11 +14,9 @@ const meta: StoryMeta = {
 
 export default meta;
 
-export const Variants: Story = {
-  name: "Variants",
-  source: `<Link href="/docs">inline default link</Link>
-<Link href="/about" variant="subtle">Subtle nav link</Link>
-<Link href="/start" variant="standalone">Get started</Link>`,
+export const Playground: Story = {
+  name: "Playground",
+  source: `<Link href="/docs" variant="default">Link text</Link>`,
   controls: [
     {
       type: "select",
@@ -27,7 +25,37 @@ export const Variants: Story = {
       options: ["default", "subtle", "standalone"],
       defaultValue: "default",
     },
+    {
+      type: "boolean",
+      prop: "external",
+      label: "External",
+      defaultValue: false,
+    },
+    {
+      type: "text",
+      prop: "children",
+      label: "Text",
+      defaultValue: "Link text",
+    },
   ],
+  render: (args = {}) => (
+    <p class="text-base text-ink">
+      <Link
+        href="/docs"
+        variant={args.variant as "default" | "subtle" | "standalone"}
+        external={args.external as boolean}
+      >
+        {args.children as string}
+      </Link>
+    </p>
+  ),
+};
+
+export const Variants: Story = {
+  name: "Variants",
+  source: `<Link href="/docs">inline default link</Link>
+<Link href="/about" variant="subtle">Subtle nav link</Link>
+<Link href="/start" variant="standalone">Get started</Link>`,
   render: () => (
     <p class="flex flex-col gap-vsp-xs text-base text-ink">
       Read the <Link href="/docs">inline default link</Link> in a sentence.

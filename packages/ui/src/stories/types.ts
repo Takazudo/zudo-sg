@@ -56,8 +56,11 @@ export interface StoryMeta {
  * One renderable variant. `render` returns the preview node; `name` labels it.
  *
  * `controls` is an OPTIONAL, declarative description of the knobs the catalog
- * may expose for live editing. It is metadata only — the catalog decides
- * whether/how to render controls. A story renders fine with no controls.
+ * exposes for live editing. The catalog seeds each control's `defaultValue`
+ * into the render args and pushes live edits over the `sg:updateProps` channel,
+ * so `render(args)` re-renders with the tweaked props. A control-bearing
+ * variant should render a SINGLE arg-driven instance (not a multi-variant
+ * showcase) so the knobs visibly drive the preview.
  *
  * `source` is the OPTIONAL exact JSX string for this variant. When present the
  * catalog shows it verbatim (the contract's "explicit source" path). When
@@ -68,9 +71,15 @@ export interface StoryMeta {
 export interface Story {
   /** Variant label, e.g. "Primary". */
   name: string;
-  /** Returns the preview node. Must be pure + synchronous. */
-  render: () => ComponentChildren;
-  /** Optional live-control descriptors (metadata only). */
+  /**
+   * Returns the preview node. Must be pure + synchronous.
+   *
+   * Receives the merged render args — control defaults overlaid with any live
+   * overrides from the controls panel. The parameter is optional/defaulted so
+   * non-control variants (which ignore `args`) still render with no arguments.
+   */
+  render: (args?: Record<string, unknown>) => ComponentChildren;
+  /** Optional live-control descriptors that drive `render(args)`. */
   controls?: StoryControl[];
   /** Optional verbatim JSX source string for the code panel. */
   source?: string;
@@ -96,6 +105,27 @@ export type StoryControl =
       type: "text";
       prop: string;
       label: string;
+      defaultValue: string;
+    }
+  | {
+      type: "number";
+      prop: string;
+      label: string;
+      defaultValue: number;
+      min?: number;
+      max?: number;
+      step?: number;
+      /**
+       * Editor widget. `range` (default) renders a slider with a numeric
+       * readout when min/max are present; `input` renders a plain numeric box.
+       */
+      ui?: "range" | "input";
+    }
+  | {
+      type: "color";
+      prop: string;
+      label: string;
+      /** CSS color string, e.g. "#2563eb". */
       defaultValue: string;
     };
 

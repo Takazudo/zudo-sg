@@ -16,13 +16,9 @@ export default meta;
 
 const tones = ["neutral", "brand", "success", "danger", "accent"] as const;
 
-export const Soft: Story = {
-  name: "Soft",
-  source: `<Badge tone="neutral">neutral</Badge>
-<Badge tone="brand">brand</Badge>
-<Badge tone="success">success</Badge>
-<Badge tone="danger">danger</Badge>
-<Badge tone="accent">accent</Badge>`,
+export const Playground: Story = {
+  name: "Playground",
+  source: `<Badge tone="neutral" variant="soft">Badge</Badge>`,
   controls: [
     {
       type: "select",
@@ -31,7 +27,39 @@ export const Soft: Story = {
       options: [...tones],
       defaultValue: "neutral",
     },
+    {
+      type: "select",
+      prop: "variant",
+      label: "Fill",
+      options: ["soft", "solid", "outline"],
+      defaultValue: "soft",
+    },
+    {
+      type: "text",
+      prop: "children",
+      label: "Label",
+      defaultValue: "Badge",
+    },
   ],
+  render: (args = {}) => (
+    <div class="flex flex-wrap items-center gap-hsp-sm">
+      <Badge
+        tone={args.tone as (typeof tones)[number]}
+        variant={args.variant as "soft" | "solid" | "outline"}
+      >
+        {args.children as string}
+      </Badge>
+    </div>
+  ),
+};
+
+export const Soft: Story = {
+  name: "Soft",
+  source: `<Badge tone="neutral">neutral</Badge>
+<Badge tone="brand">brand</Badge>
+<Badge tone="success">success</Badge>
+<Badge tone="danger">danger</Badge>
+<Badge tone="accent">accent</Badge>`,
   render: () => (
     <div class="flex flex-wrap items-center gap-hsp-sm">
       {tones.map((tone) => (
