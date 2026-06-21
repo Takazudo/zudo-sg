@@ -25,10 +25,12 @@ interface Viewport {
   width: string;
 }
 
+// Order + widths mirror the reference styleguide: Mobile (320px) / Tablet /
+// Full. Mobile is the narrowest, listed first.
 const VIEWPORTS: Viewport[] = [
-  { id: "full", label: "Full", width: "100%" },
+  { id: "mobile", label: "Mobile", width: "320px" },
   { id: "tablet", label: "Tablet", width: "768px" },
-  { id: "mobile", label: "Mobile", width: "360px" },
+  { id: "full", label: "Full", width: "100%" },
 ];
 
 export interface VariantFrameProps {
@@ -45,7 +47,10 @@ function VariantFrame(props: VariantFrameProps): JSX.Element {
   const { slug, exportName, name, controls } = props;
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [height, setHeight] = useState(180);
-  const [viewport, setViewport] = useState<Viewport>(VIEWPORTS[0]);
+  // Default to Full width; the toggle is ordered Mobile / Tablet / Full.
+  const [viewport, setViewport] = useState<Viewport>(
+    VIEWPORTS.find((v) => v.id === "full") ?? VIEWPORTS[0],
+  );
 
   const src = useMemo(() => {
     // Preview route nests under /components in this host (it was `/preview`
@@ -125,67 +130,184 @@ function VariantFrame(props: VariantFrameProps): JSX.Element {
       </div>
       {controls && controls.length > 0 && (
         <div class="border-t border-line px-hsp-md py-vsp-xs">
-          <ControlsSummary controls={controls} onChange={sendProps} />
+          <ControlsPanel controls={controls} onChange={sendProps} />
         </div>
       )}
     </section>
   );
 }
 
+/** Turn a control's default into the value its `useState` should hold. */
+function seedState(controls: StoryControl[]): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const c of controls) out[c.prop] = c.defaultValue;
+  return out;
+}
+
 /**
- * Read-only display of a variant's declared controls. Renders the knobs and
- * forwards changes over the update channel.
+ * Coerce a raw DOM string from a number control into a safe Number: parse,
+ * clamp to [min, max], and fall back to the declared default when the parse
+ * yields NaN. (DOM input values are always strings.)
  */
-function ControlsSummary({
+function coerceNumber(
+  raw: string,
+  control: Extract<StoryControl, { type: "number" }>,
+): number {
+  const n = Number(raw);
+  if (Number.isNaN(n)) return control.defaultValue;
+  let v = n;
+  if (control.min !== undefined) v = Math.max(control.min, v);
+  if (control.max !== undefined) v = Math.min(control.max, v);
+  return v;
+}
+
+/**
+ * Live controls for one variant. Holds per-control state seeded from defaults,
+ * renders a controlled input per control type, and posts the FULL current prop
+ * set to the iframe on every change (and on Reset).
+ */
+function ControlsPanel({
   controls,
   onChange,
 }: {
   controls: StoryControl[];
   onChange: (props: Record<string, unknown>) => void;
 }): JSX.Element {
+  const [values, setValues] = useState<Record<string, unknown>>(() =>
+    seedState(controls),
+  );
+  const [open, setOpen] = useState(true);
+
+  function apply(next: Record<string, unknown>): void {
+    setValues(next);
+    onChange(next);
+  }
+
+  function set(prop: string, value: unknown): void {
+    apply({ ...values, [prop]: value });
+  }
+
+  // Reset restores the panel state AND posts the full default prop set so the
+  // preview returns to defaults — not just the panel UI.
+  function reset(): void {
+    apply(seedState(controls));
+  }
+
   return (
     <div class="flex flex-col gap-vsp-2xs">
-      <p class="text-xs uppercase tracking-wide text-ink-mute">Controls</p>
-      <div class="flex flex-wrap gap-hsp-md">
-        {controls.map((control) => (
-          <label class="flex items-center gap-hsp-2xs text-small text-ink">
-            <span class="text-ink-mute">{control.label}</span>
-            {control.type === "select" && (
-              <select
-                class="border border-line rounded-sm bg-surface px-hsp-2xs py-vsp-3xs text-small"
-                onChange={(e) =>
-                  onChange({ [control.prop]: (e.target as HTMLSelectElement).value })
-                }
-              >
-                {control.options.map((opt) => (
-                  <option value={opt} selected={opt === control.defaultValue}>
-                    {opt}
-                  </option>
-                ))}
-              </select>
-            )}
-            {control.type === "boolean" && (
-              <input
-                type="checkbox"
-                checked={control.defaultValue}
-                onChange={(e) =>
-                  onChange({ [control.prop]: (e.target as HTMLInputElement).checked })
-                }
-              />
-            )}
-            {control.type === "text" && (
-              <input
-                type="text"
-                value={control.defaultValue}
-                class="border border-line rounded-sm bg-surface px-hsp-2xs py-vsp-3xs text-small"
-                onInput={(e) =>
-                  onChange({ [control.prop]: (e.target as HTMLInputElement).value })
-                }
-              />
-            )}
-          </label>
-        ))}
+      <div class="flex items-center justify-between gap-hsp-md">
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          aria-expanded={open}
+          class="flex items-center gap-hsp-2xs text-xs uppercase tracking-wide text-ink-mute hover:text-ink"
+        >
+          <span aria-hidden="true">{open ? "▼" : "▶"}</span>
+          Controls
+        </button>
+        {open && (
+          <button
+            type="button"
+            onClick={reset}
+            class="text-xs rounded-sm border border-line px-hsp-xs py-vsp-3xs text-ink-mute hover:text-ink hover:border-line-strong transition-colors"
+          >
+            Reset
+          </button>
+        )}
       </div>
+
+      {open && (
+        <div class="flex flex-wrap gap-hsp-md">
+          {controls.map((control) => (
+            <label class="flex items-center gap-hsp-2xs text-small text-ink">
+              <span class="text-ink-mute">{control.label}</span>
+
+              {control.type === "select" && (
+                <select
+                  class="border border-line rounded-sm bg-surface px-hsp-2xs py-vsp-3xs text-small"
+                  value={values[control.prop] as string}
+                  onChange={(e) =>
+                    set(control.prop, (e.target as HTMLSelectElement).value)
+                  }
+                >
+                  {control.options.map((opt) => (
+                    <option value={opt}>{opt}</option>
+                  ))}
+                </select>
+              )}
+
+              {control.type === "boolean" && (
+                <input
+                  type="checkbox"
+                  checked={values[control.prop] as boolean}
+                  onChange={(e) =>
+                    set(control.prop, (e.target as HTMLInputElement).checked)
+                  }
+                />
+              )}
+
+              {control.type === "text" && (
+                <input
+                  type="text"
+                  value={values[control.prop] as string}
+                  class="border border-line rounded-sm bg-surface px-hsp-2xs py-vsp-3xs text-small"
+                  onInput={(e) =>
+                    set(control.prop, (e.target as HTMLInputElement).value)
+                  }
+                />
+              )}
+
+              {control.type === "number" &&
+                (control.ui === "input" ? (
+                  <input
+                    type="number"
+                    value={values[control.prop] as number}
+                    min={control.min}
+                    max={control.max}
+                    step={control.step}
+                    class="w-[5rem] border border-line rounded-sm bg-surface px-hsp-2xs py-vsp-3xs text-small"
+                    onInput={(e) =>
+                      set(
+                        control.prop,
+                        coerceNumber((e.target as HTMLInputElement).value, control),
+                      )
+                    }
+                  />
+                ) : (
+                  <span class="flex items-center gap-hsp-2xs">
+                    <input
+                      type="range"
+                      value={values[control.prop] as number}
+                      min={control.min}
+                      max={control.max}
+                      step={control.step}
+                      onInput={(e) =>
+                        set(
+                          control.prop,
+                          coerceNumber((e.target as HTMLInputElement).value, control),
+                        )
+                      }
+                    />
+                    <span class="text-ink-mute tabular-nums w-[2.5rem] text-right">
+                      {String(values[control.prop])}
+                    </span>
+                  </span>
+                ))}
+
+              {control.type === "color" && (
+                <input
+                  type="color"
+                  value={values[control.prop] as string}
+                  class="h-[1.5rem] w-[2.5rem] border border-line rounded-sm bg-surface"
+                  onInput={(e) =>
+                    set(control.prop, (e.target as HTMLInputElement).value)
+                  }
+                />
+              )}
+            </label>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

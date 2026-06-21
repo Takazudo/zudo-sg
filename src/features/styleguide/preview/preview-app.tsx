@@ -18,6 +18,7 @@
 
 import type { JSX } from "preact";
 import { useEffect, useMemo, useState } from "preact/hooks";
+import type { StoryControl } from "@zudo-sg/ui";
 import { installIframeReceiver } from "@takazudo/zudo-doc/theme";
 import { getStoryBySlug } from "@/styleguide/data/registry";
 import { MSG_HEIGHT, isUpdatePropsMessage } from "./messages";
@@ -28,12 +29,20 @@ function readParams(): { slug: string; variant: string } {
   return { slug: p.get("slug") ?? "", variant: p.get("variant") ?? "" };
 }
 
+/** Seed an args object from each control's declared default. */
+function defaultsFromControls(
+  controls: StoryControl[] | undefined,
+): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const c of controls ?? []) out[c.prop] = c.defaultValue;
+  return out;
+}
+
 function PreviewApp(): JSX.Element {
   const [{ slug, variant }] = useState(readParams);
-  // Live prop overrides pushed from the parent's controls panel. The starter
-  // stories' `render()` ignore props (controls are metadata-only), so this is
-  // infrastructure for render-arg binding — kept wired so the channel exists.
-  const [, setOverrides] = useState<Record<string, unknown>>({});
+  // Live prop overrides pushed from the parent's controls panel. Read on every
+  // render and merged into the story's render args (see `merged` below).
+  const [overrides, setOverrides] = useState<Record<string, unknown>>({});
 
   const entry = useMemo(() => getStoryBySlug(slug), [slug]);
   const variantEntry = useMemo(
@@ -45,11 +54,17 @@ function PreviewApp(): JSX.Element {
   useEffect(() => installIframeReceiver(window), []);
 
   // Accept live prop updates from the parent (controls panel).
+  //
+  // Trust model: this preview iframe is same-origin with its parent
+  // (`sandbox="allow-same-origin allow-scripts"`), so `window.parent` is a
+  // same-origin window we can compare against. Accept ONLY messages whose
+  // source is the parent and whose payload is a well-formed `sg:updateProps`
+  // envelope; ignore everything else.
   useEffect(() => {
     function onMessage(e: MessageEvent): void {
-      if (isUpdatePropsMessage(e.data)) {
-        setOverrides((prev) => ({ ...prev, ...e.data.props }));
-      }
+      if (e.source !== window.parent) return;
+      if (!isUpdatePropsMessage(e.data)) return;
+      setOverrides((prev) => ({ ...prev, ...e.data.props }));
     }
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
@@ -81,9 +96,20 @@ function PreviewApp(): JSX.Element {
     );
   }
 
+  // Explicit precedence: control defaults < the variant's own static args <
+  // live overrides from the controls panel. (Starter variants declare no
+  // static args, so `variantArgs` is empty for now — kept in the merge so a
+  // variant CAN pin args that the panel overlays.)
+  const variantArgs: Record<string, unknown> = {};
+  const merged = {
+    ...defaultsFromControls(variantEntry.story.controls),
+    ...variantArgs,
+    ...overrides,
+  };
+
   return (
     <div class="p-hsp-md" data-sg-variant-root>
-      {variantEntry.story.render()}
+      {variantEntry.story.render(merged)}
     </div>
   );
 }

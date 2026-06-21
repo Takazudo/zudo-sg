@@ -15,11 +15,9 @@ const meta: StoryMeta = {
 
 export default meta;
 
-export const Variants: Story = {
-  name: "Variants",
-  source: `<Button variant="primary">Primary</Button>
-<Button variant="secondary">Secondary</Button>
-<Button variant="ghost">Ghost</Button>`,
+export const Playground: Story = {
+  name: "Playground",
+  source: `<Button variant="primary">Click me</Button>`,
   controls: [
     {
       type: "select",
@@ -28,7 +26,44 @@ export const Variants: Story = {
       options: ["primary", "secondary", "ghost"],
       defaultValue: "primary",
     },
+    {
+      type: "select",
+      prop: "size",
+      label: "Size",
+      options: ["sm", "md", "lg"],
+      defaultValue: "md",
+    },
+    {
+      type: "boolean",
+      prop: "disabled",
+      label: "Disabled",
+      defaultValue: false,
+    },
+    {
+      type: "text",
+      prop: "children",
+      label: "Label",
+      defaultValue: "Click me",
+    },
   ],
+  render: (args = {}) => (
+    <div class="flex flex-wrap items-center gap-hsp-md">
+      <Button
+        variant={args.variant as "primary" | "secondary" | "ghost"}
+        size={args.size as "sm" | "md" | "lg"}
+        disabled={args.disabled as boolean}
+      >
+        {args.children as string}
+      </Button>
+    </div>
+  ),
+};
+
+export const Variants: Story = {
+  name: "Variants",
+  source: `<Button variant="primary">Primary</Button>
+<Button variant="secondary">Secondary</Button>
+<Button variant="ghost">Ghost</Button>`,
   render: () => (
     <div class="flex flex-wrap items-center gap-hsp-md">
       <Button variant="primary">Primary</Button>
@@ -43,15 +78,6 @@ export const Sizes: Story = {
   source: `<Button size="sm">Small</Button>
 <Button size="md">Medium</Button>
 <Button size="lg">Large</Button>`,
-  controls: [
-    {
-      type: "select",
-      prop: "size",
-      label: "Size",
-      options: ["sm", "md", "lg"],
-      defaultValue: "md",
-    },
-  ],
   render: () => (
     <div class="flex flex-wrap items-center gap-hsp-md">
       <Button size="sm">Small</Button>
