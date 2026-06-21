@@ -64,12 +64,6 @@ export default function DesktopSidebarToggle() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // The SPA-navigation flash (a collapsed sidebar briefly painting open on
-  // every soft swap) is handled upstream: doc-layout mounts
-  // <ClientRouter preserveHtmlAttrs={["data-sidebar-hidden", ...]} /> so
-  // zfb-runtime (>= 0.1.0-next.52) re-applies the runtime attribute across the
-  // swap before paint. No host-side capture/restore guard is needed.
-
   return (
     <button
       type="button"
@@ -77,7 +71,6 @@ export default function DesktopSidebarToggle() {
       className="zd-desktop-sidebar-toggle hidden lg:flex fixed bottom-vsp-xl z-sidebar items-center justify-center w-[1.5rem] h-[3rem] bg-surface border border-muted border-l-0 rounded-r-DEFAULT text-muted cursor-pointer transition-[left,color] duration-200 ease-in-out hover:text-fg"
       aria-label={visible ? 'Hide sidebar' : 'Show sidebar'}
       aria-pressed={visible}
-      data-zfb-transition-persist="desktop-sidebar-toggle"
     >
       <svg
         xmlns="http://www.w3.org/2000/svg"
