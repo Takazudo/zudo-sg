@@ -23,4 +23,3 @@ configurePanel(designTokenPanelConfig);
 if (typeof window !== "undefined") {
   (window as { __zdtpReadyClicks?: () => void }).__zdtpReadyClicks?.();
 }
-
