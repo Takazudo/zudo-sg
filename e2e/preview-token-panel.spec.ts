@@ -232,7 +232,7 @@ test("preview panel: overrides reach iframe :root; host <html> is unchanged", as
 // Test 2: doc "Tokens" panel does NOT change the preview iframe
 // ---------------------------------------------------------------------------
 
-test("doc Tokens panel: dispatching toggle-design-token-panel does not change preview iframe", async ({
+test("doc Tokens panel: dispatching toggle-my-doc-tweak opens the real (non-empty) panel and does not change preview iframe", async ({
   page,
 }) => {
   await gotoFirstDetailPage(page);
@@ -241,14 +241,40 @@ test("doc Tokens panel: dispatching toggle-design-token-panel does not change pr
   // Capture the iframe's baseline --color-brand value.
   const beforeBrand = await getIframeRootVar(frame, "--color-brand");
 
-  // Open the DOC token panel (dispatches toggle-design-token-panel).
+  // Open the DOC token panel via its explicit toggle channel.
   // The doc panel has NO applySink — it writes to the host :root only.
+  //
+  // CRITICAL: the channel is "toggle-my-doc-tweak", NOT the reserved
+  // "toggle-design-token-panel". In @takazudo/zdtp 0.3.0 the reserved event is
+  // bound only to the framework's empty-tabs default instance, so dispatching it
+  // mounts an EMPTY shell rather than this project's real 4-tab panel. Routing
+  // the doc-chrome trigger to "toggle-my-doc-tweak" is the host fix
+  // (Takazudo/zudo-sg#84/#85).
   await page.evaluate(() => {
-    window.dispatchEvent(new CustomEvent("toggle-design-token-panel"));
+    window.dispatchEvent(new CustomEvent("toggle-my-doc-tweak"));
   });
-  await expect(page.locator(".tokenpanel-shell").first()).toBeVisible({
+  const docPanel = page.locator(".tokenpanel-shell").first();
+  await expect(docPanel).toBeVisible({
     timeout: 10_000,
   });
+
+  // REGRESSION GUARD (#85): the doc-chrome panel must open with a NON-EMPTY
+  // body — i.e. its real tabs are present. The original defect mounted the
+  // framework's empty-tabs default instead, so the shell had no tab controls.
+  // Assert all four doc-panel tabs (Color / Font / Spacing / Size) render,
+  // panel-scoped so an unrelated SSR token-row label can't satisfy the match.
+  await expect(
+    docPanel.getByRole("tab", { name: "Color", exact: true }),
+  ).toBeVisible();
+  await expect(
+    docPanel.getByRole("tab", { name: "Font", exact: true }),
+  ).toBeVisible();
+  await expect(
+    docPanel.getByRole("tab", { name: "Spacing", exact: true }),
+  ).toBeVisible();
+  await expect(
+    docPanel.getByRole("tab", { name: "Size", exact: true }),
+  ).toBeVisible();
 
   // Opening the doc panel must not have changed --color-brand on the iframe.
   expect(await getIframeRootVar(frame, "--color-brand")).toBe(beforeBrand);

@@ -173,12 +173,16 @@ export function BodyEndIslands({
       {mermaidEnlarge}
 
       {/* zdtp doc-chrome panel bootstrap: hydrates on load so configurePanel()
-          runs early and the toggle-design-token-panel listener is live before
-          the user clicks the header trigger. The inline script is the
+          runs early and the toggle-my-doc-tweak listener is live before the user
+          clicks the header Design Tokens icon. The inline script is the
           pre-hydration shim that queues the first click (zudolab/zudo-doc#1627
-          Part B). Guard names: __zdtpToggleShimInstalled / __zdtpReadyClicks. */}
+          Part B). Listens on "toggle-my-doc-tweak" — the doc-chrome panel's
+          explicit toggle channel — NOT the reserved "toggle-design-token-panel"
+          (which zdtp 0.3.0 binds only to its empty default; see
+          Takazudo/zudo-sg#84/#85). Guard names: __zdtpToggleShimInstalled /
+          __zdtpReadyClicks. */}
       <script
-        dangerouslySetInnerHTML={{ __html: "(function(){\nif(window.__zdtpToggleShimInstalled)return;\nwindow.__zdtpToggleShimInstalled=true;\nvar pending=false;\nfunction shim(){pending=true;}\nwindow.addEventListener('toggle-design-token-panel',shim);\nwindow.__zdtpReadyClicks=function(){\nwindow.removeEventListener('toggle-design-token-panel',shim);\ndelete window.__zdtpReadyClicks;\nif(pending){pending=false;window.dispatchEvent(new CustomEvent('toggle-design-token-panel'));}\n};\n})();" }}
+        dangerouslySetInnerHTML={{ __html: "(function(){\nif(window.__zdtpToggleShimInstalled)return;\nwindow.__zdtpToggleShimInstalled=true;\nvar pending=false;\nfunction shim(){pending=true;}\nwindow.addEventListener('toggle-my-doc-tweak',shim);\nwindow.__zdtpReadyClicks=function(){\nwindow.removeEventListener('toggle-my-doc-tweak',shim);\ndelete window.__zdtpReadyClicks;\nif(pending){pending=false;window.dispatchEvent(new CustomEvent('toggle-my-doc-tweak'));}\n};\n})();" }}
       />
       {Island({
         when: "load",

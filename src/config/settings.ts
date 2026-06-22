@@ -103,11 +103,18 @@ export const settings = {
     { label: "Components", path: "/components", categoryMatch: "components" },
     { label: "Changelog", path: "/docs/changelog", categoryMatch: "changelog" },
   ] satisfies HeaderNavItem[] as HeaderNavItem[],
+  // NOTE: the framework's native `{ type: "trigger", trigger: "design-token-panel" }`
+  // is intentionally NOT listed here. In @takazudo/zdtp 0.3.0 that trigger
+  // dispatches the RESERVED "toggle-design-token-panel" event, which is bound
+  // only to the framework's empty-tabs default instance — so it opens an EMPTY
+  // panel, not this project's real 4-tab panel. Instead, a project-rendered
+  // Design Tokens icon (dispatching "toggle-my-doc-tweak") is injected into the
+  // header right region by `pages/lib/_header-with-defaults.tsx`. See
+  // Takazudo/zudo-sg#84/#85.
   headerRightItems: [
     { type: "component", component: "github-link" },
     { type: "component", component: "theme-toggle" },
     { type: "component", component: "search" },
     { type: "component", component: "language-switcher" },
-    { type: "trigger", trigger: "design-token-panel" },
   ] satisfies HeaderRightItem[] as HeaderRightItem[],
 };
