@@ -990,14 +990,22 @@ dialog.zd-mermaid-dialog::backdrop {
   display: none;
 }
 
-/* Below the lg breakpoint the DocLayout TOC column stacks under main; keep the
- * code panel full-width, swap its left border for a top divider (using the
- * native muted token), and drop the resizer. */
+/* Below the lg breakpoint the framework .zd-doc-content-band stays an
+ * unconditional flex row — it never wraps on its own. Force a column stack
+ * when the code panel is present so it lands below the preview, then keep the
+ * panel full-width, swap its left border for a top divider, and drop the
+ * resizer. */
 @media (max-width: 1023px) {
+  .zd-doc-content-band:has(#sg-code-panel) {
+    flex-direction: column;
+    gap: 0;
+    align-items: stretch;
+  }
   #sg-code-panel {
     width: 100%;
     position: static;
     max-height: none;
+    min-height: 24rem;
     border-left: 0;
     border-top: 1px solid var(--color-muted);
     padding-left: 0;
