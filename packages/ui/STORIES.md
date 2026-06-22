@@ -60,6 +60,38 @@ work**. A host that wants a manual toggle pins the scheme with
 `:root[data-theme="light"|"dark"]` (overrides already in `colors.css`); no
 component markup changes.
 
+#### Three-tier color system
+
+Colors follow the **three-tier strategy** (zudo-css-wisdom: *Three-Tier Color
+Strategy*) — the same shape as zudo-doc's raw `--zd-0..15` palette feeding its
+semantic `--color-*` tokens:
+
+| Tier | What | Where |
+|---|---|---|
+| **1 — Palette** | Raw oklch values, named `--palette-{family}-{step}` (families `cool`/`warm`/`brand`/`accent`/`success`/`danger`, numeric steps light→dark) | `styles/colors.css` (top `:root` block) |
+| **2 — Semantic** | Roles → palette: every `--color-*` token is a `light-dark()` pair of `var(--palette-…)` refs | `styles/colors.css` (`@theme`) |
+| **3 — Component** | Scoped overrides — rarely needed under Tailwind utilities | per-component |
+
+**The palette is raw and is NEVER referenced directly by components.** Components
+bind only to the semantic `--color-*` Tailwind utilities (`bg-brand`,
+`text-ink`, `border-line`, …). The palette lives in a plain `:root` block (**not
+`@theme`**) on purpose: a `@theme` entry would make Tailwind emit
+`bg-palette-*`/`text-palette-*` utilities, letting a component bypass the
+semantic layer — plain `:root` vars still resolve through `var()` inside the
+`@theme` semantic declarations, so no palette utility is ever generated.
+
+Both tiers live in **`colors.css`** — the Tier-1 palette is inlined at the top
+of that file, the Tier-2 `@theme` block follows. It is deliberately **not** split
+into a sibling `palette.css`: the **single consumer import contract** requires
+every consumer to do exactly one `@import "@zudo-sg/ui/styles/colors.css"`, and
+the consumer Tailwind/Lightning pipeline inlines that package import's contents
+but leaves a *nested* relative `@import "./palette.css"` as a literal, misplaced
+`@import` that the browser then ignores — silently dropping the palette. Inlining
+keeps both tiers in the one bundled file. There is no separate `palette.css`
+export, and consumers must not add one. Changing the brand color, or swapping the
+whole palette, is a one-file edit in `colors.css` (the palette block, or a remap
+of the Tier-2 pointers) — component CSS never changes.
+
 ---
 
 ## 2. File location & discovery glob
