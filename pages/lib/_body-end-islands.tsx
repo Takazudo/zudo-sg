@@ -38,6 +38,7 @@ import ImageEnlarge, { ImageEnlargeSsrFallback } from "@/components/image-enlarg
 import MermaidEnlarge, { MermaidEnlargeSsrFallback } from "@/components/mermaid-enlarge";
 
 import DesignTokenPanelBootstrap from "@/components/design-token-panel-bootstrap";
+import PreviewTokenPanelBootstrap from "@/components/preview-token-panel-bootstrap";
 
 // Set explicit `displayName` on each default-exported island so zfb's
 // `captureComponentName` produces a stable marker even after the SSR
@@ -51,6 +52,7 @@ import DesignTokenPanelBootstrap from "@/components/design-token-panel-bootstrap
 (MermaidEnlarge as { displayName?: string }).displayName = "MermaidEnlarge";
 
 (DesignTokenPanelBootstrap as { displayName?: string }).displayName = "DesignTokenPanelBootstrap";
+(PreviewTokenPanelBootstrap as { displayName?: string }).displayName = "PreviewTokenPanelBootstrap";
 
 /**
  * Default sr-only label rendered as the AiChatModal SSR fallback. This
@@ -170,16 +172,30 @@ export function BodyEndIslands({
       {imageEnlarge}
       {mermaidEnlarge}
 
-      {/* zdtp panel bootstrap: hydrates on load so configurePanel() runs early
-          and the toggle-design-token-panel listener is live before the user
-          clicks the header trigger. The inline script is the pre-hydration
-          shim that queues the first click (zudolab/zudo-doc#1627 Part B). */}
+      {/* zdtp doc-chrome panel bootstrap: hydrates on load so configurePanel()
+          runs early and the toggle-design-token-panel listener is live before
+          the user clicks the header trigger. The inline script is the
+          pre-hydration shim that queues the first click (zudolab/zudo-doc#1627
+          Part B). Guard names: __zdtpToggleShimInstalled / __zdtpReadyClicks. */}
       <script
         dangerouslySetInnerHTML={{ __html: "(function(){\nif(window.__zdtpToggleShimInstalled)return;\nwindow.__zdtpToggleShimInstalled=true;\nvar pending=false;\nfunction shim(){pending=true;}\nwindow.addEventListener('toggle-design-token-panel',shim);\nwindow.__zdtpReadyClicks=function(){\nwindow.removeEventListener('toggle-design-token-panel',shim);\ndelete window.__zdtpReadyClicks;\nif(pending){pending=false;window.dispatchEvent(new CustomEvent('toggle-design-token-panel'));}\n};\n})();" }}
       />
       {Island({
         when: "load",
         children: <DesignTokenPanelBootstrap />,
+      }) as unknown as VNode}
+
+      {/* zdtp preview panel bootstrap: hydrates on load so configurePanel() runs
+          early for the 2nd (preview-iframe) instance. Guard names are DISTINCT
+          from the doc-chrome panel (__zdtpPreviewToggleShimInstalled /
+          __zdtpPreviewReadyClicks) so both panels hydrate independently without
+          cross-talk. Listens on "toggle-preview-token-panel". */}
+      <script
+        dangerouslySetInnerHTML={{ __html: "(function(){\nif(window.__zdtpPreviewToggleShimInstalled)return;\nwindow.__zdtpPreviewToggleShimInstalled=true;\nvar pending=false;\nfunction shim(){pending=true;}\nwindow.addEventListener('toggle-preview-token-panel',shim);\nwindow.__zdtpPreviewReadyClicks=function(){\nwindow.removeEventListener('toggle-preview-token-panel',shim);\ndelete window.__zdtpPreviewReadyClicks;\nif(pending){pending=false;window.dispatchEvent(new CustomEvent('toggle-preview-token-panel'));}\n};\n})();" }}
+      />
+      {Island({
+        when: "load",
+        children: <PreviewTokenPanelBootstrap />,
       }) as unknown as VNode}
 
       {/* SidebarResizerInit: attach drag handle to #desktop-sidebar on load.
