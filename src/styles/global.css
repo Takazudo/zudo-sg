@@ -1005,7 +1005,10 @@ dialog.zd-mermaid-dialog::backdrop {
     width: 100%;
     position: static;
     max-height: none;
+    /* Floor for the flex-1 min-h-0 Live-CSS CodeMirror editor — without a
+     * fixed ancestor height the editor collapses to ~0 in column flow. */
     min-height: 24rem;
+    margin-block-start: 0; /* cancel base margin-block so the border-top divider sits flush */
     border-left: 0;
     border-top: 1px solid var(--color-muted);
     padding-left: 0;
