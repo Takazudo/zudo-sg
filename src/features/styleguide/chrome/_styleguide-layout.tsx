@@ -36,13 +36,23 @@
 //                     (#49). `<></>` (and `hideToc`) when absent so the content
 //                     band fills the freed width.
 //   headerOverride  → page-supplied HeaderWithDefaults PLUS the SgHeaderToggles
-//                     island, rendered as inline siblings in the slot.
+//                     island, composed so the styleguide token icons read as
+//                     part of the header's right region (not a strip below).
 //
 // SgHeaderToggles is emitted by this layout directly (not the page) because it
-// belongs to the src/ boundary and is styleguide-specific, not host-chrome.
-// It renders inline (a `flex` row of bordered pill buttons via Tailwind
-// utilities — see header-toggles.tsx); there is no absolute/overlay positioning
-// and no `.sg-header-toggles` CSS.
+// belongs to the src/ boundary and is styleguide-specific, not host-chrome. It
+// holds the styleguide-only token icons: the Preview tokens icon (and the Code
+// panel toggle on detail pages). The site-wide Design Tokens icon is injected
+// into the framework header right region by HeaderWithDefaults — so styleguide
+// pages show two token icons (Design Tokens + Preview tokens) and regular docs
+// pages show one (Takazudo/zudo-sg#84/#85).
+//
+// Placement: the framework `<Header>` is a self-contained sticky `<header>` with
+// no host-island slot in its right region, so SgHeaderToggles is composed as a
+// sibling and overlaid into the header band by the `.sg-header-toggles` CSS
+// block in global.css (a sticky, height-collapsed bar pulled up over the header
+// row and right-aligned). This makes the Preview tokens icon read as a header
+// right-region icon rather than an in-flow strip below the sticky header.
 //
 // The active-item highlight is owned by the root SidebarTree's `useActiveSlug`,
 // which derives the active slug from the URL on each page load — there is no
@@ -121,21 +131,32 @@ export function StyleguideLayout({
   // the full width on the catalog + token routes.
   const tocOverride: VNode = showCodePanel ? (codePanel as VNode) : <></>;
 
-  // SgHeaderToggles island — rendered inline as a sibling after the
-  // page-supplied header in the headerOverride slot (no positioning CSS; it is
-  // a `flex` row of bordered pill buttons — see header-toggles.tsx). Exposes the
-  // code panel + token panel toggles from every component route.
-  const headerToggles = Island({
-    when: "load",
-    children: <SgHeaderToggles showCodePanel={showCodePanel} />,
-  }) as unknown as VNode;
+  // SgHeaderToggles island — composed as a sibling after the page-supplied
+  // header in the headerOverride slot, then overlaid into the header band by the
+  // `.sg-header-toggles` CSS block (see global.css). Exposes the styleguide
+  // Preview tokens icon + the code-panel toggle (detail pages) from every
+  // component route. The `.sg-header-toggles` wrapper is the overlay hook.
+  const headerToggles = (
+    <div class="sg-header-toggles">
+      {
+        Island({
+          when: "load",
+          children: <SgHeaderToggles showCodePanel={showCodePanel} />,
+        }) as unknown as VNode
+      }
+    </div>
+  );
 
   // Composed header: the page-supplied HeaderWithDefaults + styleguide toggles.
+  // The `.sg-header-region` wrapper is the positioning context + overlay scope:
+  // its CSS (global.css) reserves right padding inside the framework header for
+  // the overlaid styleguide token icons and pins `.sg-header-toggles` into that
+  // reserved slot, so they read as header right-region icons.
   const composedHeader = (
-    <>
+    <div class="sg-header-region">
       {header}
       {headerToggles}
-    </>
+    </div>
   );
 
   // Panel scripts: PanelStateHeadScript runs in <head> (passed via head slot

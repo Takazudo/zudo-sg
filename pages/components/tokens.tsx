@@ -7,9 +7,10 @@
 // the interactivity on top via event delegation:
 //   - click any token to copy its RESOLVED value (hex / rem) or its
 //     `var(--token)` reference (toggle in the toolbar),
-//   - open the existing zdtp tweaker (dispatches `toggle-design-token-panel`)
-//     to edit tokens live — because the swatches are painted with `var(--…)`,
-//     edits there restyle this page in real time.
+//   - open the existing zdtp tweaker (dispatches `toggle-my-doc-tweak`, the
+//     doc-chrome panel's explicit toggle channel) to edit tokens live — because
+//     the swatches are painted with `var(--…)`, edits there restyle this page in
+//     real time.
 //
 // Token data: imports from ROOT `src/config/design-tokens-manifest.ts` (the
 // superset) rather than the styleguide's own manifest. Color tokens are
