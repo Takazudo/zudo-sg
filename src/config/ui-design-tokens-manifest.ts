@@ -27,8 +27,8 @@ const FONT_WEIGHT_OPTIONS = [
  * Stored as read-only text rows because light-dark() expressions cannot
  * be driven by a single-axis slider.
  *
- * Coverage: ink (3), paper (1), surface (2), line (2), brand (3), accent (1),
- * success (2), danger (2), focus (1) = 17 tokens total.
+ * Coverage: ink (3), paper (1), surface (2), line (2), brand (4), accent (1),
+ * success (2), danger (2), focus (1) = 18 tokens total.
  */
 export const UI_COLOR_TOKENS: readonly TokenDef[] = [
   // --- Ink (foreground text) ---
@@ -144,6 +144,18 @@ export const UI_COLOR_TOKENS: readonly TokenDef[] = [
     label: "color-brand-soft",
     group: "brand",
     default: "light-dark(oklch(0.96 0.03 200), oklch(0.30 0.05 200))",
+    step: 1,
+    unit: "",
+    control: "text",
+  },
+  {
+    // Foreground token for branded surfaces (consumed via `text-on-brand`).
+    // Flat value (not light-dark()) — source: packages/ui/styles/colors.css.
+    id: "ui-color-on-brand",
+    cssVar: "--color-on-brand",
+    label: "color-on-brand",
+    group: "brand",
+    default: "oklch(0.99 0.004 90)",
     step: 1,
     unit: "",
     control: "text",
