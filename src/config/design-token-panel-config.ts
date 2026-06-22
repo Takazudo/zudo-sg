@@ -279,6 +279,14 @@ export const designTokenPanelConfig: PanelConfig = {
   storagePrefix: "my-doc-tweak",
   consoleNamespace: "myDoc",
   modalClassPrefix: "my-doc-design-token-panel-modal",
+  // Explicit toggle channel. zdtp 0.3.0 binds the RESERVED default event
+  // ("toggle-design-token-panel") only to the framework's empty-tabs default
+  // instance, so a real prefixed panel left on the default channel never opens
+  // (the empty shell mounts instead). Binding this panel to a prefix-derived
+  // event ("toggle-my-doc-tweak") means the doc-chrome triggers that dispatch
+  // it open THIS 4-tab panel. The preview panel uses its own distinct channel
+  // ("toggle-preview-token-panel"). See epic Takazudo/zudo-sg#84.
+  toggleEvent: "toggle-my-doc-tweak",
   // Must match DESIGN_TOKEN_SCHEMA in @takazudo/zudo-doc/theme so that
   // exported JSON files remain importable across panel versions.
   schemaId: DESIGN_TOKEN_SCHEMA,

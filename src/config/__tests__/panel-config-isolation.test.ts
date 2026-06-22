@@ -83,12 +83,17 @@ describe("panel config isolation", () => {
     );
   });
 
-  it("toggleEvent values are distinct (doc panel uses default, preview panel is explicit)", () => {
-    // The doc panel has no toggleEvent override (uses the default
-    // "toggle-design-token-panel" channel via zdtp's toggleEventName logic).
-    expect(designTokenPanelConfig.toggleEvent).toBeUndefined();
+  it("toggleEvent values are distinct (both panels use explicit, non-reserved channels)", () => {
+    // The doc panel binds to an explicit prefix-derived channel rather than the
+    // RESERVED default ("toggle-design-token-panel"), which zdtp 0.3.0 wires
+    // only to its empty-tabs default instance — leaving a real prefixed panel
+    // on that channel orphaned (Takazudo/zudo-sg#84/#85).
+    expect(designTokenPanelConfig.toggleEvent).toBe("toggle-my-doc-tweak");
     expect(previewTokenPanelConfig.toggleEvent).toBe(
       "toggle-preview-token-panel",
+    );
+    expect(designTokenPanelConfig.toggleEvent).not.toBe(
+      previewTokenPanelConfig.toggleEvent,
     );
   });
 
