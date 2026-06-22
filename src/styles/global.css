@@ -939,6 +939,62 @@ dialog.zd-mermaid-dialog::backdrop {
    * (panel-scripts.tsx) overrides this var per-user at runtime in px, so this
    * stays the single source of the default width. */
   --sg-code-panel-w: clamp(20rem, 35vw, 32rem);
+  /* Horizontal slot reserved at the header's right edge for the overlaid
+   * styleguide token icons (Preview tokens [+ Code toggle on detail pages]).
+   * The framework `<Header>` has no host-island slot in its right region, so
+   * these icons are composed as a sibling and overlaid into the header band by
+   * `.sg-header-toggles` below; this var both pads the framework header so its
+   * own right cluster (incl. the site-wide Design Tokens icon) clears the
+   * overlay AND sizes the overlay's right-anchored slot. Single source of
+   * truth — tune here if the icon count/spacing changes. (#84/#85) */
+  --sg-header-toggles-slot: 4.5rem;
+}
+
+/* ── Styleguide header: overlay the Preview tokens (+ Code) icons into the
+ * framework header's right region ──
+ * The framework `<Header>` is a self-contained sticky `<header>` exposing no
+ * host-island slot in its right cluster, so `SgHeaderToggles` is composed as a
+ * sibling (see _styleguide-layout.tsx) and pulled up over the header row here.
+ * `.sg-header-region` reserves a right slot inside the framework header so its
+ * native right cluster (theme/search/github/Design Tokens) shifts left and the
+ * overlay sits flush to its left without overlapping; `.sg-header-toggles` is a
+ * sticky, height-matched, right-anchored bar that tracks the viewport top
+ * exactly like the header. This makes the icons read as header right-region
+ * controls, not an in-flow strip below the sticky header. (#84/#85)
+ *
+ * Ownership: this `.sg-header-*` selector block is owned by the doc-chrome
+ * header sub-issue. It does NOT touch the code-panel layout selectors
+ * (`#sg-code-panel`, `.zd-doc-content-band`, the max-width:1023px block). */
+.sg-header-region {
+  display: contents;
+}
+/* Reserve the overlay slot inside the framework header's own right padding so
+ * its native right cluster clears the overlaid styleguide icons. Targets the
+ * framework header element (data-header) only within a styleguide page. */
+.sg-header-region > [data-header] {
+  padding-right: calc(
+    var(--spacing-hsp-lg, 1rem) + var(--sg-header-toggles-slot)
+  );
+}
+.sg-header-toggles {
+  position: sticky;
+  top: 0;
+  /* Pull the bar up so it overlays the just-rendered sticky header row instead
+   * of stacking below it. */
+  margin-top: calc(-1 * var(--sg-header-h));
+  height: var(--sg-header-h);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  /* Sit flush against the framework right cluster, inside the reserved slot. */
+  padding-right: var(--spacing-hsp-lg, 1rem);
+  /* Above the header band (z-toolbar = 20) so the icons are clickable. */
+  z-index: calc(var(--z-index-toolbar, 20) + 1);
+  /* Let header-band clicks fall through everywhere except the buttons. */
+  pointer-events: none;
+}
+.sg-header-toggles > * {
+  pointer-events: auto;
 }
 
 /* ── Code panel: right-region layout (fills DocLayout's TOC column) ──
