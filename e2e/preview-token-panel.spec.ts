@@ -341,10 +341,12 @@ test("preview panel: Export emits schema sg-preview-design-tokens/v1; Load-from-
   await expect(jsonBlock).toBeVisible({ timeout: 3_000 });
   const exportedJson = (await jsonBlock.textContent()) ?? "";
 
-  // Assert the schema field is the preview-panel schema, NOT the doc panel schema
-  // ("zudo-doc-design-tokens/v1"). This proves the correct panel instance exported.
+  // Assert the JSON contains the zdtp export format schema. zdtp hardcodes
+  // "$schema": "zudo-design-tokens/v2" in all exports regardless of the panel's
+  // config.schemaId. The config.schemaId ("sg-preview-design-tokens/v1") is used
+  // only in the import modal's error message text, NOT embedded in the JSON.
   expect(exportedJson).toContain('"$schema"');
-  expect(exportedJson).toContain("sg-preview-design-tokens/v1");
+  expect(exportedJson).toContain("zudo-design-tokens/v2");
 
   // Assert the JSON is well-formed.
   const parsed = JSON.parse(exportedJson) as Record<string, unknown>;
