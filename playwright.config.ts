@@ -27,5 +27,10 @@ export default defineConfig({
       testMatch: "smoke.spec.ts",
       use: { baseURL: `http://localhost:${SMOKE_PORT}` },
     },
+    {
+      name: "preview-token-panel",
+      testMatch: "preview-token-panel.spec.ts",
+      use: { baseURL: `http://localhost:${SMOKE_PORT}` },
+    },
   ],
 });
