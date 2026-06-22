@@ -101,13 +101,19 @@ async function openPreviewPanel(page: Page): Promise<void> {
  * required for Reset to correctly clear those vars.
  */
 async function setPanelRadiusMd(page: Page, pxValue: string): Promise<void> {
-  // Click the "Size" tab.
-  const sizeTab = page.locator('[role="tab"]', { hasText: "Size" });
+  // Scope all lookups to the (single, open) preview panel shell. A bare
+  // [role="tab"] + hasText:"Size" locator also matches an unrelated SSR
+  // "Sizes" chrome tab elsewhere on the detail page (strict-mode violation),
+  // so scope to the panel and match the tab name exactly.
+  const panel = page.locator(".tokenpanel-shell").first();
+
+  // Click the panel's "Size" tab (exact — excludes the page-chrome "Sizes" tab).
+  const sizeTab = panel.getByRole("tab", { name: "Size", exact: true });
   await expect(sizeTab).toBeVisible({ timeout: 5_000 });
   await sizeTab.click();
 
-  // The --radius-md input has aria-label "--radius-md value".
-  const radiusInput = page.getByLabel("--radius-md value");
+  // The --radius-md input has aria-label "--radius-md value" (preview panel only).
+  const radiusInput = panel.getByLabel("--radius-md value");
   await expect(radiusInput).toBeVisible({ timeout: 3_000 });
 
   // fill() dispatches a native input event which triggers Preact's onChange.
@@ -197,6 +203,13 @@ test("preview panel: overrides reach iframe :root; host <html> is unchanged", as
   const brandOverride = BRAND_SENTINEL;
   const radiusOverride = "20px";
 
+  // Capture the host <html> baseline BEFORE applying. The host :root legitimately
+  // defines base @zudo-sg/ui tokens (src/styles/global.css aliases them onto the
+  // doc chrome), so these are NOT empty — the correct isolation assertion is that
+  // the preview override does not CHANGE the host value, not that it equals "".
+  const hostBrandBefore = await getHostRootVar(page, "--color-brand");
+  const hostRadiusBefore = await getHostRootVar(page, "--radius-md");
+
   await applyVarsToFirstIframe(page, [
     ["--color-brand", brandOverride],
     ["--radius-md", radiusOverride],
@@ -206,12 +219,13 @@ test("preview panel: overrides reach iframe :root; host <html> is unchanged", as
   expect(await getIframeRootVar(frame, "--color-brand")).toBe(brandOverride);
   expect(await getIframeRootVar(frame, "--radius-md")).toBe(radiusOverride);
 
-  // Assert host <html> does NOT carry the preview overrides.
-  // The preview panel's applySink routes writes to iframes only, not to the
-  // host :root. The doc chrome uses --zd-* tokens; --color-brand and
-  // --radius-md are @zudo-sg/ui tokens that live only in the iframe.
-  expect(await getHostRootVar(page, "--color-brand")).toBe("");
-  expect(await getHostRootVar(page, "--radius-md")).toBe("");
+  // Assert host <html> is UNCHANGED by the preview override — the applySink
+  // routes writes to iframes only, never to the host :root.
+  expect(await getHostRootVar(page, "--color-brand")).toBe(hostBrandBefore);
+  expect(await getHostRootVar(page, "--radius-md")).toBe(hostRadiusBefore);
+  // …and specifically never picked up the iframe sentinel values.
+  expect(await getHostRootVar(page, "--color-brand")).not.toBe(brandOverride);
+  expect(await getHostRootVar(page, "--radius-md")).not.toBe(radiusOverride);
 });
 
 // ---------------------------------------------------------------------------
@@ -315,7 +329,7 @@ test("preview panel: Export emits schema sg-preview-design-tokens/v1; Load-from-
   page,
 }) => {
   await gotoFirstDetailPage(page);
-  await waitForFirstPreviewFrame(page);
+  const frame = await waitForFirstPreviewFrame(page);
 
   // Open the preview panel.
   await openPreviewPanel(page);
@@ -381,18 +395,26 @@ test("preview panel: Export emits schema sg-preview-design-tokens/v1; Load-from-
   const textarea = importModal.locator("textarea").first();
   await textarea.fill(exportedJson);
 
-  // Click the primary action button inside the import modal (not "Close").
-  // The import modal renders [role="button"] elements; the confirm button is
-  // the first one that is NOT the Close button.
-  const loadConfirmBtn = importModal
-    .locator('[role="button"]')
-    .filter({ hasNotText: /close/i })
-    .first();
+  // Click the "Load" confirm button inside the import modal.
+  const loadConfirmBtn = importModal.getByRole("button", {
+    name: "Load",
+    exact: true,
+  });
   await expect(loadConfirmBtn).toBeVisible({ timeout: 3_000 });
   await loadConfirmBtn.click();
 
-  // A successful import closes the modal and re-applies the loaded state via
-  // the sink. Assert the modal closed (no error / schema-mismatch abort).
+  // zdtp's import modal does NOT auto-close on success — it renders a "Loaded."
+  // status and leaves the modal open with Load/Close buttons. Assert that
+  // success status (a schema mismatch would instead surface an error and abort).
+  await expect(importModal.getByText(/loaded/i)).toBeVisible({ timeout: 5_000 });
+
+  // The real round-trip assertion: the loaded state is re-applied via the sink,
+  // so the iframe's --radius-md is restored to 20px (it was cleared by Reset above).
+  await page.waitForTimeout(250);
+  expect(await getIframeRootVar(frame, "--radius-md")).toBe("20px");
+
+  // Dismiss the modal.
+  await importModal.getByRole("button", { name: "Close", exact: true }).click();
   await expect(importModal).not.toBeVisible({ timeout: 5_000 });
 });
 
