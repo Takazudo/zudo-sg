@@ -12,3 +12,4 @@ minimumReleaseAgeExclude:
   # of zudo-doc.) minimumReleaseAgeExclude matches against package names.
   - '@takazudo/zudo-doc-history-server'
   - '@takazudo/zudo-doc'
+  - '@takazudo/zdtp'

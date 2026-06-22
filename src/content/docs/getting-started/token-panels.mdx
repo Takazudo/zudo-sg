@@ -1,0 +1,65 @@
+---
+title: Design Token Panels
+description: How to use the two live token-tweaking panels — the doc-chrome panel and the preview panel.
+sidebar_position: 3
+---
+
+The styleguide ships two independent design-token panels. Each one edits a different layer and persists its own settings separately. Understanding which panel does what is key to using them effectively.
+
+## Quick orientation
+
+| | Doc-chrome panel | Preview panel |
+|---|---|---|
+| **Button label** | "Tokens" (header) | "Preview tokens" (header), "Preview tokens →" (/components/tokens toolbar) |
+| **What it edits** | The documentation site's own UI | The `@zudo-sg/ui` component tokens inside preview iframes |
+| **Where applied** | Host `<html>` `:root` | Preview iframes only |
+| **localStorage prefix** | `my-doc-tweak` | `sg-preview-tweak` |
+| **Console namespace** | `window.myDoc` | `window.sgPreview` |
+| **Toggle event** | `toggle-design-token-panel` | `toggle-preview-token-panel` |
+
+## Doc-chrome panel ("Tokens")
+
+Click the **Tokens** button in the header to open this panel.
+
+The doc-chrome panel edits the `--zd-*` CSS custom properties that control the documentation site's own look — background color, text color, spacing scale, sidebar width, and so on. Every change is written as inline CSS variables onto the host `<html>` element (`:root`), so the effect is visible immediately across the entire page.
+
+Use this panel when you want to adjust or export the documentation site's design tokens.
+
+<Note>
+  Changes in this panel affect only the docs chrome — they do not reach the component previews in the iframes.
+</Note>
+
+## Preview panel ("Preview tokens")
+
+Click the **Preview tokens** button in the header (or the "Preview tokens →" button on the `/components/tokens` toolbar) to open this panel.
+
+The preview panel edits the `@zudo-sg/ui` design tokens — `--color-*`, `--spacing-*`, `--font-*`, `--radius-*`, `--shadow-*`. Instead of writing to the host `:root`, every change is sent directly into each registered preview iframe's `:root` via zudo-doc's theme bridge.
+
+**Why iframes only?** In `src/styles/global.css` the `@zudo-sg/ui` target tokens are aliased onto the doc chrome. Writing them to the host `:root` would corrupt the documentation site's appearance, so the panel deliberately routes all writes into the iframes and leaves the host untouched.
+
+**Late-mounted iframes** are handled automatically: the registry replays the currently-active overrides into any iframe that loads after the panel has already applied changes. You will see the same token state regardless of which component page you navigate to.
+
+<Note>
+  Changes in this panel affect only the component previews in the iframes — the documentation chrome is left untouched.
+</Note>
+
+## Shared panel actions
+
+Both panels expose three utility actions in their footer:
+
+- **Export** — downloads a JSON blob of the current overrides for this panel. You can copy it and share it, or archive it as a token snapshot.
+- **Reset** — clears all overrides for that panel only. The doc-chrome Reset reverts the docs site to stylesheet defaults; the preview Reset reverts the iframes to their own stylesheet defaults. Neither Reset touches the other panel.
+- **Load from JSON** — paste an exported blob into the dialog to restore a saved token set. The dialog shows a "Loaded." status message on success and stays open so you can verify before closing.
+
+<Tip>
+  Use Export / Load from JSON to hand off a token snapshot to a teammate or to record a design exploration.
+</Tip>
+
+<Warning title="Preview panel: Color tab not yet in Export / Load">
+  In the preview panel, the **Spacing**, **Font**, and **Size** tabs round-trip
+  fully through Export / Load from JSON. The **Color** tab currently applies and
+  resets live, but its values are **not yet captured by Export / Load** — a known
+  limitation of the underlying token panel's serializer for this panel's color
+  tab. Color snapshots are tracked separately and will round-trip once that gap
+  is resolved.
+</Warning>

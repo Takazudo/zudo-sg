@@ -82,6 +82,10 @@ export default function TokenPlayground(): JSX.Element {
     window.dispatchEvent(new CustomEvent("toggle-design-token-panel"));
   }
 
+  function openPreviewTweaker(): void {
+    window.dispatchEvent(new CustomEvent("toggle-preview-token-panel"));
+  }
+
   return (
     <div class="sg-token-toolbar">
       <div class="sg-token-modes" role="group" aria-label="Copy format">
@@ -115,6 +119,13 @@ export default function TokenPlayground(): JSX.Element {
         onClick={openTweaker}
       >
         Tweak tokens live →
+      </button>
+      <button
+        type="button"
+        class="inline-flex items-center gap-hsp-2xs px-hsp-xs py-vsp-3xs border border-muted rounded text-small text-muted hover:text-fg transition-colors cursor-pointer"
+        onClick={openPreviewTweaker}
+      >
+        Preview tokens →
       </button>
 
       <div

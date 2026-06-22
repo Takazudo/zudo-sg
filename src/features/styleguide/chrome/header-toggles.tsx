@@ -24,6 +24,10 @@ function openTokenPanel(): void {
   window.dispatchEvent(new CustomEvent("toggle-design-token-panel"));
 }
 
+function openPreviewTokenPanel(): void {
+  window.dispatchEvent(new CustomEvent("toggle-preview-token-panel"));
+}
+
 export default function SgHeaderToggles({
   showCodePanel = false,
 }: HeaderTogglesProps): JSX.Element {
@@ -60,6 +64,14 @@ export default function SgHeaderToggles({
         title="Open design-token tweaker"
       >
         Tokens
+      </button>
+      <button
+        type="button"
+        class={tokenToggleClass}
+        onClick={openPreviewTokenPanel}
+        title="Open preview token tweaker"
+      >
+        Preview tokens
       </button>
     </div>
   );
