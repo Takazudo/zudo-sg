@@ -47,9 +47,9 @@
  *
  * NOTE: this file does NOT @import "tailwindcss" — import it AFTER the
  * preflight + utilities imports in the consumer's global.css, alongside
- * ./tokens.css, so Tailwind generates bg-*/text-*/border-* utilities from it.
+ * ./tokens.css, so Tailwind generates bg-* / text-* / border-* utilities from it.
  * The Tier-1 palette below is a plain :root block (NOT @theme) on purpose, so
- * Tailwind generates NO bg-palette-*/text-palette-* utilities — that would let
+ * Tailwind generates NO bg-palette-* / text-palette-* utilities — that would let
  * a component bind a raw color and bypass the semantic layer. Plain :root vars
  * still resolve through var() inside the @theme block (custom-property
  * resolution is lazy + order-independent), so the semantic tokens read them
@@ -61,7 +61,7 @@
  *
  * The raw material of the color system: every concrete oklch value, named by
  * hue family + lightness rung. Plain :root custom properties (NOT @theme) so
- * NO bg-palette-*/text-palette-* utility is generated. Only the Tier-2
+ * NO bg-palette-* / text-palette-* utility is generated. Only the Tier-2
  * --color-* declarations further down may read these; components NEVER do.
  *
  * Families map to oklch hue:
