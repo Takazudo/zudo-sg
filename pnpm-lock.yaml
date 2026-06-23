@@ -30,8 +30,8 @@ importers:
         specifier: ^4.0.0
         version: 4.2.0
       '@takazudo/zdtp':
-        specifier: 0.3.0
-        version: 0.3.0(preact@10.29.2)
+        specifier: 0.3.2
+        version: 0.3.2(preact@10.29.2)
       '@takazudo/zfb':
         specifier: 0.1.0-next.53
         version: 0.1.0-next.53
@@ -43,7 +43,7 @@ importers:
         version: 0.1.0-next.53(@takazudo/zfb@0.1.0-next.53)
       '@takazudo/zudo-doc':
         specifier: 0.2.18
-        version: 0.2.18(@takazudo/zdtp@0.3.0(preact@10.29.2))(@takazudo/zfb-runtime@0.1.0-next.53(@takazudo/zfb@0.1.0-next.53))(@takazudo/zfb@0.1.0-next.53)(@takazudo/zudo-doc-history-server@0.2.15)(preact@10.29.2)(shiki@4.2.0)
+        version: 0.2.18(@takazudo/zdtp@0.3.2(preact@10.29.2))(@takazudo/zfb-runtime@0.1.0-next.53(@takazudo/zfb@0.1.0-next.53))(@takazudo/zfb@0.1.0-next.53)(@takazudo/zudo-doc-history-server@0.2.15)(preact@10.29.2)(shiki@4.2.0)
       '@zudo-sg/ui':
         specifier: workspace:*
         version: link:packages/ui
@@ -726,8 +726,8 @@ packages:
     peerDependencies:
       vite: ^5.2.0 || ^6 || ^7 || ^8
 
-  '@takazudo/zdtp@0.3.0':
-    resolution: {integrity: sha512-vx3aCmRh/tD+KuWwZRbHAqZMa9LKGyQ7dvqIwwOxvSmHLCg5iVmX/t0aZqb8zPIWrZNC/AxEMAb5XFSgfWdKuw==}
+  '@takazudo/zdtp@0.3.2':
+    resolution: {integrity: sha512-XrbkYVlCX7TdIQ3SEzXbA/u4wHfbbgM8xxqkEBo+tNhUOySAlRW9Y44KsZtNea/tYso92XySjVcebIuIy09BvQ==}
     engines: {node: '>=22.0.0', pnpm: '>=10.0.0'}
     hasBin: true
     peerDependencies:
@@ -2932,7 +2932,7 @@ snapshots:
       tailwindcss: 4.3.1
       vite: 8.0.16(@types/node@22.19.21)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)
 
-  '@takazudo/zdtp@0.3.0(preact@10.29.2)':
+  '@takazudo/zdtp@0.3.2(preact@10.29.2)':
     dependencies:
       culori: 4.0.2
       preact: 10.29.2
@@ -2975,14 +2975,14 @@ snapshots:
   '@takazudo/zudo-doc-history-server@0.2.15':
     optional: true
 
-  '@takazudo/zudo-doc@0.2.18(@takazudo/zdtp@0.3.0(preact@10.29.2))(@takazudo/zfb-runtime@0.1.0-next.53(@takazudo/zfb@0.1.0-next.53))(@takazudo/zfb@0.1.0-next.53)(@takazudo/zudo-doc-history-server@0.2.15)(preact@10.29.2)(shiki@4.2.0)':
+  '@takazudo/zudo-doc@0.2.18(@takazudo/zdtp@0.3.2(preact@10.29.2))(@takazudo/zfb-runtime@0.1.0-next.53(@takazudo/zfb@0.1.0-next.53))(@takazudo/zfb@0.1.0-next.53)(@takazudo/zudo-doc-history-server@0.2.15)(preact@10.29.2)(shiki@4.2.0)':
     dependencies:
       '@takazudo/zfb': 0.1.0-next.53
       '@takazudo/zfb-runtime': 0.1.0-next.53(@takazudo/zfb@0.1.0-next.53)
       gray-matter: 4.0.3
       preact: 10.29.2
     optionalDependencies:
-      '@takazudo/zdtp': 0.3.0(preact@10.29.2)
+      '@takazudo/zdtp': 0.3.2(preact@10.29.2)
       '@takazudo/zudo-doc-history-server': 0.2.15
       shiki: 4.2.0
 
