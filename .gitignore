@@ -25,6 +25,16 @@ pnpm-debug.log*
 # Cloudflare Wrangler
 .wrangler/
 
+# Generated Claude Code resource docs (regenerated on every zfb dev/build by
+# the claudeResources integration — see src/integrations/claude-resources/).
+# Tracking them only churns the tree whenever the generator output changes
+# (e.g. frontmatter quoting). Matches upstream zudo-doc's .gitignore.
+src/content/docs/claude/
+src/content/docs/claude-md/
+src/content/docs/claude-commands/
+src/content/docs/claude-skills/
+src/content/docs/claude-agents/
+
 # Generated doc-lookup skill
 .claude/skills/zudo-sg-wisdom/SKILL.md
 .claude/skills/zudo-sg-wisdom/docs
