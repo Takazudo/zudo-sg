@@ -96,9 +96,12 @@ function tierFromGroup(
 //
 //   - "Palette" tier: the Tier-1 --palette-* colors as { kind: "color" }
 //     swatches (built inline below — TokenDef has no "color" control, mirroring
-//     the doc panel's buildPaletteTier). GenericTab renders color items through
-//     zdtp's OKLCH-capable picker, and editing one pushes --palette-* to the
-//     preview iframes, cascading into every semantic --color-* that reads it.
+//     the doc panel's buildPaletteTier). Each item opts into format: "oklch"
+//     (zdtp >= 0.3.3, the #372 fix) so GenericTab routes it through the OKLCH
+//     ColorPicker — faithfully displaying and editing the oklch() palette values
+//     with no lossy hex round-trip — instead of the default native
+//     <input type="color">. Editing one pushes --palette-* to the preview
+//     iframes, cascading into every semantic --color-* that reads it.
 //   - "Ink"/"Surface"/… tiers: the Tier-2 semantic tokens as text rows
 //     (light-dark() expressions, which a single-axis slider can't drive).
 // ---------------------------------------------------------------------------
@@ -111,6 +114,11 @@ const PALETTE_TIER_ID = "ui-palette";
  * option, so the toTierItem path can't express these — same approach as the
  * doc panel's `buildPaletteTier()`. Source data: UI_PALETTE_COLORS, which is
  * cross-checked against packages/ui/styles/colors.css.
+ *
+ * `format: "oklch"` (zdtp >= 0.3.3) opts each swatch into the OKLCH ColorPicker
+ * so the oklch() defaults render and edit losslessly. Omitting it would fall
+ * back to a native <input type="color"> that hex-approximates the value and
+ * emits hex on commit — the exact regression tracked upstream as #372.
  */
 function buildPaletteTier(): TierConfig {
   const items: TierItem[] = UI_PALETTE_COLORS.map(({ name, value }) => ({
@@ -118,7 +126,7 @@ function buildPaletteTier(): TierConfig {
     cssVar: `--palette-${name}`,
     label: `palette-${name}`,
     default: value,
-    type: { kind: "color" as const },
+    type: { kind: "color" as const, format: "oklch" as const },
   }));
   return {
     id: PALETTE_TIER_ID,
