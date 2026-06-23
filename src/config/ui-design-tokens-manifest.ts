@@ -20,6 +20,74 @@ const FONT_WEIGHT_OPTIONS = [
 ] as const;
 
 /**
+ * Tier-1 raw palette colors from `packages/ui/styles/colors.css` (the `:root`
+ * `--palette-{family}-{step}` block). This is the raw material beneath the
+ * semantic `--color-*` tokens in UI_COLOR_TOKENS below — same three-tier
+ * model the doc-chrome panel exposes via its 16-rung `--zd-*` palette.
+ *
+ * Source of truth: packages/ui/styles/colors.css. Do NOT hand-edit values
+ * here; verify them byte-for-byte against that file.
+ *
+ * These are plain name/value descriptors (NOT `TokenDef`) because zdtp's
+ * `TokenDef.control` has no `"color"` option — the preview panel builds them
+ * into `{ kind: "color" }` TierItems inline, mirroring the doc panel's
+ * `buildPaletteTier()`. Rendered as a "Palette" swatch tier in the preview
+ * panel's Color tab; editing a swatch pushes `--palette-*` to the preview
+ * iframes via the sink, cascading into every semantic token that references it.
+ *
+ * Coverage: white(1) + cool(11) + warm(4) + brand(6) + accent(2) +
+ * success(4) + danger(4) = 32 colors.
+ */
+export interface UiPaletteColor {
+  /** Palette key without the `--palette-` prefix, e.g. "cool-700". */
+  name: string;
+  /** Raw oklch value, copied byte-for-byte from colors.css. */
+  value: string;
+}
+
+export const UI_PALETTE_COLORS: readonly UiPaletteColor[] = [
+  // ── Pure white ──
+  { name: "white", value: "oklch(1 0 0)" },
+  // ── Cool neutral (hue ~264) ──
+  { name: "cool-50", value: "oklch(0.93 0.01 264)" },
+  { name: "cool-100", value: "oklch(0.72 0.015 264)" },
+  { name: "cool-200", value: "oklch(0.58 0.015 264)" },
+  { name: "cool-250", value: "oklch(0.58 0.012 264)" },
+  { name: "cool-300", value: "oklch(0.44 0.02 264)" },
+  { name: "cool-400", value: "oklch(0.42 0.016 264)" },
+  { name: "cool-500", value: "oklch(0.32 0.014 264)" },
+  { name: "cool-600", value: "oklch(0.25 0.014 264)" },
+  { name: "cool-700", value: "oklch(0.21 0.03 264)" },
+  { name: "cool-750", value: "oklch(0.21 0.012 264)" },
+  { name: "cool-800", value: "oklch(0.17 0.01 264)" },
+  // ── Warm neutral (hue ~90) ──
+  { name: "warm-50", value: "oklch(0.99 0.004 90)" },
+  { name: "warm-100", value: "oklch(0.97 0.006 90)" },
+  { name: "warm-200", value: "oklch(0.91 0.008 90)" },
+  { name: "warm-300", value: "oklch(0.83 0.01 90)" },
+  // ── Brand / cyan (hue ~200) ──
+  { name: "brand-100", value: "oklch(0.96 0.03 200)" },
+  { name: "brand-300", value: "oklch(0.82 0.11 200)" },
+  { name: "brand-400", value: "oklch(0.74 0.12 200)" },
+  { name: "brand-600", value: "oklch(0.52 0.13 200)" },
+  { name: "brand-700", value: "oklch(0.44 0.13 200)" },
+  { name: "brand-800", value: "oklch(0.30 0.05 200)" },
+  // ── Accent / amber (hue ~55) ──
+  { name: "accent-300", value: "oklch(0.78 0.14 55)" },
+  { name: "accent-500", value: "oklch(0.70 0.16 55)" },
+  // ── Success / green (hue ~155) ──
+  { name: "success-100", value: "oklch(0.95 0.04 155)" },
+  { name: "success-300", value: "oklch(0.74 0.14 155)" },
+  { name: "success-600", value: "oklch(0.55 0.14 155)" },
+  { name: "success-800", value: "oklch(0.30 0.05 155)" },
+  // ── Danger / red (hue ~25) ──
+  { name: "danger-100", value: "oklch(0.95 0.04 25)" },
+  { name: "danger-300", value: "oklch(0.72 0.16 25)" },
+  { name: "danger-600", value: "oklch(0.55 0.18 25)" },
+  { name: "danger-800", value: "oklch(0.30 0.06 25)" },
+];
+
+/**
  * Color tokens from `packages/ui/styles/colors.css`.
  *
  * All values use light-dark() for dual-scheme support. Defaults here are

@@ -22,14 +22,19 @@
  * UI_SIZE_TOKENS from `ui-design-tokens-manifest.ts`. These cover the tokens
  * defined in `packages/ui/styles/tokens.css` and `colors.css`.
  *
- * No color cluster (no palette/semantic zdtp ColorTab) is configured for this
- * panel because UI color tokens are expressed as full CSS `light-dark()`
- * expressions and are better tweaked as free-text rows rather than a palette
- * slider. They are placed in a generic "Color" tab using `GenericTab` tiers.
+ * The Color tab is a generic "Color" tab (`GenericTab`, non-reserved id) — not
+ * the dedicated zdtp `ColorTab` cluster, whose flat-indexed-palette +
+ * single-index-semantics + scheme-switch model does not fit @zudo-sg/ui's
+ * family-named palette and `light-dark()` semantics. Inside it:
+ *   - a "Palette" tier surfaces the Tier-1 `--palette-*` colors as
+ *     `{ kind: "color" }` swatches (see buildPaletteTier below);
+ *   - the Tier-2 semantic `--color-*` tokens are free-text rows because a
+ *     single-axis slider can't drive a `light-dark()` expression.
  */
 
 import type { PanelConfig, TabConfig, TierConfig, TierItem, TokenDef } from "@takazudo/zdtp";
 import {
+  UI_PALETTE_COLORS,
   UI_COLOR_TOKENS,
   UI_SPACING_TOKENS,
   UI_FONT_TOKENS,
@@ -83,15 +88,50 @@ function tierFromGroup(
 
 // ---------------------------------------------------------------------------
 // Color tab — use a non-reserved id ("ui-color") so zdtp routes this to
-// GenericTab rather than the dedicated ColorTab which requires `colorExtras`
-// (palette + semantic cluster). All UI color tokens are text-input rows
-// (light-dark() expressions) and render correctly through GenericTab.
+// GenericTab rather than the dedicated ColorTab. The dedicated ColorTab's
+// cluster model assumes a flat indexed palette (--zd-0..15) with single-index
+// semantic references and a scheme-switch system — which does not fit
+// @zudo-sg/ui's family-named palette (--palette-cool-700, …) and light-dark()
+// semantics. So we stay on GenericTab and express the layers as ordinary tiers:
+//
+//   - "Palette" tier: the Tier-1 --palette-* colors as { kind: "color" }
+//     swatches (built inline below — TokenDef has no "color" control, mirroring
+//     the doc panel's buildPaletteTier). GenericTab renders color items through
+//     zdtp's OKLCH-capable picker, and editing one pushes --palette-* to the
+//     preview iframes, cascading into every semantic --color-* that reads it.
+//   - "Ink"/"Surface"/… tiers: the Tier-2 semantic tokens as text rows
+//     (light-dark() expressions, which a single-axis slider can't drive).
 // ---------------------------------------------------------------------------
+
+const PALETTE_TIER_ID = "ui-palette";
+
+/**
+ * Tier-1 palette swatches. Built inline as direct TierItems with
+ * `type: { kind: "color" }` because zdtp's `TokenDef.control` has no "color"
+ * option, so the toTierItem path can't express these — same approach as the
+ * doc panel's `buildPaletteTier()`. Source data: UI_PALETTE_COLORS, which is
+ * cross-checked against packages/ui/styles/colors.css.
+ */
+function buildPaletteTier(): TierConfig {
+  const items: TierItem[] = UI_PALETTE_COLORS.map(({ name, value }) => ({
+    id: `palette-${name}`,
+    cssVar: `--palette-${name}`,
+    label: `palette-${name}`,
+    default: value,
+    type: { kind: "color" as const },
+  }));
+  return {
+    id: PALETTE_TIER_ID,
+    label: "Palette",
+    items,
+  };
+}
 
 const COLOR_TAB: TabConfig = {
   id: "ui-color",
   label: "Color",
   tiers: [
+    buildPaletteTier(),
     tierFromGroup(UI_COLOR_TOKENS, "ink", "Ink"),
     tierFromGroup(UI_COLOR_TOKENS, "surface", "Surface"),
     tierFromGroup(UI_COLOR_TOKENS, "line", "Line"),
