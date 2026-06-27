@@ -52,7 +52,7 @@ const integrationPlugins = [
   ...(settings.claudeResources
     ? [
         {
-          name: "./plugins/claude-resources-plugin.mjs",
+          name: "@takazudo/zudo-doc/plugins/claude-resources",
           options: {
             claudeDir: settings.claudeResources.claudeDir,
             projectRoot: settings.claudeResources.projectRoot,
