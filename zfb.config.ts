@@ -72,7 +72,7 @@ const integrationPlugins = [
   ...(settings.llmsTxt
     ? [
         {
-          name: "./plugins/llms-txt-plugin.mjs",
+          name: "@takazudo/zudo-doc/plugins/llms-txt",
           options: {
             siteName: settings.siteName,
             siteDescription: settings.siteDescription,
