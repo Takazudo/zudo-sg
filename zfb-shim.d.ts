@@ -22,6 +22,14 @@ declare module "zfb/config" {
   /** JSX framework runtime. */
   export type Framework = "preact" | "react";
 
+  /**
+   * Project output mode. Added in zfb next.62+.
+   * - `"static"` — pure-static (SSG-only); errors on detected SSR routes.
+   * - `"hybrid"` — may host SSR routes; V8-on regardless of detection.
+   * - `"auto"` — detection-driven (default).
+   */
+  export type OutputMode = "static" | "hybrid" | "auto";
+
   /** A content collection registered with the zfb engine. */
   export interface CollectionDef {
     /** Identifier used at the call site (e.g. `"docs"`). */
@@ -34,11 +42,39 @@ declare module "zfb/config" {
      * `z.toJSONSchema()` at the boundary.
      */
     schema?: Record<string, unknown>;
+    /**
+     * Optional include globs (Astro-style, evaluated relative to `path`).
+     * When set and non-empty, an entry is kept only if at least one
+     * pattern matches. When omitted or empty, no include-filtering happens.
+     */
+    include?: string[];
+    /**
+     * Optional exclude globs. An entry is dropped if any pattern matches
+     * its relative path. Evaluated AFTER `include`.
+     */
+    exclude?: string[];
+    /**
+     * Optional suffix to strip from each kept entry's slug + module
+     * specifier (e.g. `".en"` for multi-locale layouts).
+     */
+    idStripSuffix?: string;
   }
 
   /** Tailwind options; absent = defaults. */
   export interface TailwindConfig {
     enabled?: boolean;
+  }
+
+  /**
+   * Prefetch options. Added in zfb next.62+.
+   * Mirrors `PrefetchConfig` in crates/zfb/src/config.rs.
+   */
+  export interface PrefetchConfig {
+    /**
+     * When `true`, emits a meta tag that disables the client-router's
+     * prefetch wiring entirely. Default: `false`.
+     */
+    disabled?: boolean;
   }
 
   /** User-supplied plugin configuration entry. */
@@ -80,9 +116,20 @@ declare module "zfb/config" {
     publicDir?: string;
     host?: string;
     port?: number;
+    /**
+     * Host header values the dev/preview server accepts when bound to a
+     * non-localhost interface. Mirrors `Config::allowed_hosts`.
+     * Added in zfb next.54+.
+     */
+    allowedHosts?: string[];
     framework?: Framework;
     collections?: CollectionDef[];
     tailwind?: TailwindConfig;
+    /**
+     * Prefetch options. When `disabled: true`, suppresses all client-router
+     * prefetch wiring. Mirrors `Config::prefetch`. Added in zfb next.62+.
+     */
+    prefetch?: PrefetchConfig;
     /**
      * Bundler options. `bundle.exclude` keeps project-relative globs out of
      * the esbuild graph — used here to skip `packages/md-plugins/__fixtures__/**`
@@ -107,6 +154,13 @@ declare module "zfb/config" {
      * (Takazudo/zudo-front-builder#154).
      */
     base?: string;
+    /**
+     * Canonical origin URL for the site (e.g. `"https://example.com"`).
+     * Emitted as `globalThis.__zfb.site` for layouts to construct canonical
+     * `<link>` tags and OpenGraph metadata. Distinct from `base`.
+     * Mirrors `Config::site`. Added in zfb next.54+.
+     */
+    site?: string;
     /**
      * Configures the syntect-based syntax highlighter shipped with zfb.
      * Mirrors `CodeHighlightConfig` / `code_highlight` in crates/zfb/src/config.rs
@@ -166,8 +220,48 @@ declare module "zfb/config" {
       toc?: Record<string, unknown>;
       externalLinks?: Record<string, unknown>;
       cjkFriendly?: boolean;
+      /** Convert soft line breaks to `<br>` (remark-breaks parity). Added in zfb next.54+. */
+      hardBreaks?: boolean;
       features?: Record<string, boolean | Record<string, unknown>>;
     };
+    /**
+     * Extra absolute filesystem paths watched by the dev server in addition
+     * to the project-root tree. Mirrors `Config::extra_watch_paths`.
+     * Added in zfb next.54+.
+     */
+    extraWatchPaths?: string[];
+    /**
+     * Whether `zfb build` writes the post-build route manifest to
+     * `<outDir>/__zfb/routes.json`. Default: emit (`true`).
+     * Mirrors `Config::emit_routes_manifest`. Added in zfb next.54+.
+     */
+    emitRoutesManifest?: boolean;
+    /**
+     * Maximum seconds a single plugin lifecycle hook may run.
+     * Mirrors `Config::plugin_hook_timeout_secs`. Added in zfb next.54+.
+     */
+    pluginHookTimeoutSecs?: number;
+    /**
+     * Whether `copy_public_dir` copies `public/` under the `base` sub-path
+     * segment (`true`, default) or flat to `dist/` root (`false`).
+     * Mirrors `Config::copy_public_with_base`. Added in zfb next.54+.
+     */
+    copyPublicWithBase?: boolean;
+    /**
+     * Project output mode. Drives the V8-mode decision:
+     * - `"static"` — errors on detected SSR routes.
+     * - `"hybrid"` — V8-on regardless of detection.
+     * - `"auto"` (default) — detection-driven.
+     * Mirrors `Config::output`. Added in zfb next.62+.
+     */
+    output?: OutputMode;
+    /**
+     * Config presets to merge before validation. Each preset is a partial
+     * `ZfbConfig`-shaped object; arrays are prepended, scalars act as
+     * defaults (main config is authoritative).
+     * Mirrors `Config::presets`. Added in zfb next.62+.
+     */
+    presets?: Partial<ZfbConfig>[];
   }
 
   /**
@@ -175,4 +269,14 @@ declare module "zfb/config" {
    * against `ZfbConfig`. Use as the default export of `zfb.config.ts`.
    */
   export function defineConfig(config: ZfbConfig): ZfbConfig;
+
+  /**
+   * Preset authoring helper: stamps each plugin entry with `source_package`
+   * so the Rust loader can attribute plugin contributions back to the preset.
+   * Added in zfb next.62+.
+   */
+  export function definePreset(
+    sourcePackage: string,
+    config: Partial<ZfbConfig>,
+  ): Partial<ZfbConfig>;
 }
