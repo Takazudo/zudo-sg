@@ -52,7 +52,7 @@ const integrationPlugins = [
   ...(settings.claudeResources
     ? [
         {
-          name: "./plugins/claude-resources-plugin.mjs",
+          name: "@takazudo/zudo-doc/plugins/claude-resources",
           options: {
             claudeDir: settings.claudeResources.claudeDir,
             projectRoot: settings.claudeResources.projectRoot,
@@ -62,7 +62,7 @@ const integrationPlugins = [
       ]
     : []),
   {
-    name: "./plugins/search-index-plugin.mjs",
+    name: "@takazudo/zudo-doc/plugins/search-index",
     options: {
       docsDir: settings.docsDir,
       locales: localeRecord,
@@ -72,7 +72,7 @@ const integrationPlugins = [
   ...(settings.llmsTxt
     ? [
         {
-          name: "./plugins/llms-txt-plugin.mjs",
+          name: "@takazudo/zudo-doc/plugins/llms-txt",
           options: {
             siteName: settings.siteName,
             siteDescription: settings.siteDescription,

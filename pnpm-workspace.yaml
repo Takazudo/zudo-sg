@@ -13,3 +13,14 @@ minimumReleaseAgeExclude:
   - '@takazudo/zudo-doc-history-server'
   - '@takazudo/zudo-doc'
   - '@takazudo/zdtp'
+  # zfb next-channel packages: just-shipped next.68 may be within the
+  # release-age window; exclude so the freshly published prerelease installs.
+  - '@takazudo/zfb'
+  - '@takazudo/zfb-runtime'
+  - '@takazudo/zfb-adapter-cloudflare'
+  # zfb platform-specific native binaries (optionalDependencies of zfb)
+  - '@takazudo/zfb-darwin-arm64'
+  - '@takazudo/zfb-darwin-x64'
+  - '@takazudo/zfb-linux-arm64-gnu'
+  - '@takazudo/zfb-linux-x64-gnu'
+  - '@takazudo/zfb-win32-x64-msvc'
