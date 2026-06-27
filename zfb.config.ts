@@ -62,7 +62,7 @@ const integrationPlugins = [
       ]
     : []),
   {
-    name: "./plugins/search-index-plugin.mjs",
+    name: "@takazudo/zudo-doc/plugins/search-index",
     options: {
       docsDir: settings.docsDir,
       locales: localeRecord,
