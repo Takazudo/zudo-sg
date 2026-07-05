@@ -44,6 +44,7 @@ import {
   applyPreviewVars,
   clearPreviewVars,
 } from "@/features/styleguide/token-tweak/preview-iframe-registry";
+import { applyEndpoint, applyRouting } from "virtual:zdtp-apply-config";
 
 // ---------------------------------------------------------------------------
 // Helpers — reuse the same toTierItem / tierFromGroup pattern as the doc panel.
@@ -218,4 +219,12 @@ export const previewTokenPanelConfig: PanelConfig = {
     apply: applyPreviewVars,
     clear: clearPreviewVars,
   },
+  // Apply pipeline (zdtp README §3) — persists browser tweaks to CSS source.
+  // Both fields resolve to `undefined` outside `zfb dev`; see
+  // plugins/zdtp-apply-proxy-plugin.mjs for the endpoint/routing wiring and
+  // the "palette"-only scope (Tailwind v4 `@theme`-scoped tokens — spacing,
+  // font, radius, shadow, semantic color — aren't reachable by this pipeline
+  // today; see that file's header comment for the tracked follow-ups).
+  applyEndpoint,
+  applyRouting,
 };
