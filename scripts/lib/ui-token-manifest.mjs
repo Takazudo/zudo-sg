@@ -39,7 +39,7 @@ function idOf(cssVar) {
 }
 
 /**
- * `--font-size-xs--line-height` gets the compact "font-size-xs / lh" label
+ * `--text-xs--line-height` gets the compact "text-xs / lh" label
  * (matches the hand-written manifest) instead of the verbose raw suffix.
  */
 function labelOf(cssVar) {
@@ -127,19 +127,19 @@ export const SPACING_SPECS = [
 
 /** Font sizes, paired line-heights, weights, line-heights, families. */
 export const FONT_SPECS = [
-  { cssVar: "--font-size-xs", group: "font-size", step: 0.05, unit: "rem" },
-  { cssVar: "--font-size-sm", group: "font-size", step: 0.05, unit: "rem" },
-  { cssVar: "--font-size-base", group: "font-size", step: 0.05, unit: "rem" },
-  { cssVar: "--font-size-lg", group: "font-size", step: 0.05, unit: "rem" },
-  { cssVar: "--font-size-xl", group: "font-size", step: 0.05, unit: "rem" },
-  { cssVar: "--font-size-2xl", group: "font-size", step: 0.05, unit: "rem" },
+  { cssVar: "--text-xs", group: "font-size", step: 0.05, unit: "rem" },
+  { cssVar: "--text-sm", group: "font-size", step: 0.05, unit: "rem" },
+  { cssVar: "--text-base", group: "font-size", step: 0.05, unit: "rem" },
+  { cssVar: "--text-lg", group: "font-size", step: 0.05, unit: "rem" },
+  { cssVar: "--text-xl", group: "font-size", step: 0.05, unit: "rem" },
+  { cssVar: "--text-2xl", group: "font-size", step: 0.05, unit: "rem" },
 
-  { cssVar: "--font-size-xs--line-height", group: "font-size-lh", step: 0.05, unit: "" },
-  { cssVar: "--font-size-sm--line-height", group: "font-size-lh", step: 0.05, unit: "" },
-  { cssVar: "--font-size-base--line-height", group: "font-size-lh", step: 0.05, unit: "" },
-  { cssVar: "--font-size-lg--line-height", group: "font-size-lh", step: 0.05, unit: "" },
-  { cssVar: "--font-size-xl--line-height", group: "font-size-lh", step: 0.05, unit: "" },
-  { cssVar: "--font-size-2xl--line-height", group: "font-size-lh", step: 0.05, unit: "" },
+  { cssVar: "--text-xs--line-height", group: "font-size-lh", step: 0.05, unit: "" },
+  { cssVar: "--text-sm--line-height", group: "font-size-lh", step: 0.05, unit: "" },
+  { cssVar: "--text-base--line-height", group: "font-size-lh", step: 0.05, unit: "" },
+  { cssVar: "--text-lg--line-height", group: "font-size-lh", step: 0.05, unit: "" },
+  { cssVar: "--text-xl--line-height", group: "font-size-lh", step: 0.05, unit: "" },
+  { cssVar: "--text-2xl--line-height", group: "font-size-lh", step: 0.05, unit: "" },
 
   {
     cssVar: "--font-weight-normal",

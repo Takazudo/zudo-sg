@@ -245,13 +245,10 @@ const COLOR_TAB: TabConfig = {
 // Font tab
 // ---------------------------------------------------------------------------
 
-const FONT_SCALE_TIER_ID = "font-scale";
-
 const FONT_TAB: TabConfig = {
   id: "font",
   label: "Font",
   tiers: [
-    tierFromGroup(FONT_TOKENS, FONT_SCALE_TIER_ID, "Scale"),
     tierFromGroup(FONT_TOKENS, "font-size", "Font size"),
     tierFromGroup(FONT_TOKENS, "line-height", "Line height"),
     tierFromGroup(FONT_TOKENS, "font-weight", "Font weight"),
