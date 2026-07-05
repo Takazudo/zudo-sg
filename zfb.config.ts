@@ -1,96 +1,34 @@
-import { z } from "zod";
-import { defineConfig } from "zfb/config";
+import { defineConfig } from "@takazudo/zfb/config";
+import { zudoDocPreset } from "@takazudo/zudo-doc/preset";
 import { settings } from "./src/config/settings";
 import { buildDocsSchema } from "./src/config/docs-schema";
+import { translations } from "./src/config/i18n";
+import { colorSchemes } from "./src/config/color-schemes";
 
-const docsSchema = buildDocsSchema();
+// Admonitions recipe: register the :::name directive vocabulary
+// (note/tip/info/warning/danger/caution/details) → components.
+const directiveVocabulary = {
+  note: "Note",
+  tip: "Tip",
+  info: "Info",
+  warning: "Warning",
+  danger: "Danger",
+  caution: "Caution",
+  details: "Details", // collapsible — routes to DetailsWrapper
+};
 
-const docsSchemaJson = z.toJSONSchema(docsSchema) as Record<string, unknown>;
-
-interface CollectionEntryShape {
-  name: string;
-  path: string;
-  schema: Record<string, unknown>;
-}
-
-const collections: CollectionEntryShape[] = [];
-
-collections.push({ name: "docs", path: settings.docsDir, schema: docsSchemaJson });
-
-for (const [code, config] of Object.entries(settings.locales)) {
-  collections.push({ name: `docs-${code}`, path: config.dir, schema: docsSchemaJson });
-}
-
-if (settings.versions) {
-  for (const version of settings.versions) {
-    collections.push({
-      name: `docs-v-${version.slug}`,
-      path: version.docsDir,
-      schema: docsSchemaJson,
-    });
-    if (version.locales) {
-      for (const [code, config] of Object.entries(version.locales)) {
-        collections.push({
-          name: `docs-v-${version.slug}-${code}`,
-          path: config.dir,
-          schema: docsSchemaJson,
-        });
-      }
-    }
-  }
-}
-
-const localeArray = Object.entries(settings.locales).map(([code, locale]) => ({
-  code,
-  dir: locale.dir,
-}));
-const localeRecord = Object.fromEntries(
-  Object.entries(settings.locales).map(([code, locale]) => [code, { dir: locale.dir }]),
-);
-
-const integrationPlugins = [
-  ...(settings.claudeResources
-    ? [
-        {
-          name: "@takazudo/zudo-doc/plugins/claude-resources",
-          options: {
-            claudeDir: settings.claudeResources.claudeDir,
-            projectRoot: settings.claudeResources.projectRoot,
-            docsDir: settings.docsDir,
-          },
-        },
-      ]
-    : []),
-  {
-    name: "@takazudo/zudo-doc/plugins/search-index",
-    options: {
-      docsDir: settings.docsDir,
-      locales: localeRecord,
-      base: settings.base,
-    },
-  },
-  ...(settings.llmsTxt
-    ? [
-        {
-          name: "@takazudo/zudo-doc/plugins/llms-txt",
-          options: {
-            siteName: settings.siteName,
-            siteDescription: settings.siteDescription,
-            base: settings.base,
-            siteUrl: settings.siteUrl,
-            defaultLocaleDir: settings.docsDir,
-            locales: localeArray,
-          },
-        },
-      ]
-    : []),
-  {
-    name: "./plugins/copy-public-plugin.mjs",
-    options: {
-      publicDir: "public",
-    },
-  },
-];
+// `translations` + `colorSchemes` are only consumed when
+// `settings.packageOwnedRoutes` is on (#113): they ride into the
+// `virtual:zudo-doc-route-context` module so the package-owned doc/404/versions
+// routes render with the host's real UI strings and `--zd-*` palette instead of
+// the neutral fallback. The preset warns at build time if either is missing.
+const preset = zudoDocPreset({
+  settings,
+  buildDocsSchema,
+  directiveVocabulary,
+  translations,
+  colorSchemes,
+});
 
 export default defineConfig({
   framework: "preact",
@@ -98,62 +36,45 @@ export default defineConfig({
   // CLAUDE.md and the Tauri dev wrappers assume 4321.
   port: 4321,
   tailwind: { enabled: true },
-  collections,
-  stripMdExt: true,
-  resolveMarkdownLinks: {
-    enabled: true,
-    dirs: [
-      { dir: settings.docsDir, routePrefix: "/docs/" },
-      ...Object.entries(settings.locales).map(([code, locale]) => ({
-        dir: locale.dir,
-        routePrefix: `/${code}/docs/`,
-      })),
-      // Versioned collections: each version's EN dir + per-locale dirs.
-      ...(settings.versions
-        ? settings.versions.flatMap((version) => [
-            { dir: version.docsDir, routePrefix: `/v/${version.slug}/docs/` },
-            ...Object.entries(version.locales ?? {}).map(([code, locale]) => ({
-              dir: locale.dir,
-              routePrefix: `/v/${version.slug}/${code}/docs/`,
-            })),
-          ])
-        : []),
-    ],
-    onBrokenLinks: "warn",
-  },
   base: settings.base,
-  trailingSlash: settings.trailingSlash,
-  markdown: {
-    features: {
-      // Former-Core features (were always-on before zfb next.12).
-      // imageEnlarge was a former-Core feature but was hard-removed in zfb
-      // next.18 — it is now re-implemented via an MDX p-override.
-      // Admonitions recipe: register the :::name directive vocabulary
-      // (note/tip/info/warning/danger/caution/details) → components.
-      directives: {
-        note: "Note",
-        tip: "Tip",
-        info: "Info",
-        warning: "Warning",
-        danger: "Danger",
-        caution: "Caution",
-        details: "Details", // collapsible — routes to DetailsWrapper
-      },
-      mermaid: true,
-      headingMarkerToc: true,
-      // Safe opt-in features.
-      githubAlerts: true,
-      readingTime: true,
-      codeEnrichment: {},
-      codeTabs: true,
-      imageDimensions: {},
-      // warn-only link validation — failOnBroken: false never fails the build.
-      linkValidation: { failOnBroken: false },
-      // Heading-ID (anchor) strategy — single source of truth in
-      // settings.headingIdStrategy, also mirrored by the host TOC builder
-      // (pages/lib/_extract-headings.ts) so TOC anchors match rendered ids.
-      headingIds: { strategy: settings.headingIdStrategy },
+  // Collections, markdown.features, codeHighlight, resolveMarkdownLinks,
+  // stripMdExt, trailingSlash, and the package plugin descriptors (search
+  // index, llms.txt, claude-resources) — see node_modules/@takazudo/zudo-doc
+  // /dist/preset.d.ts for the full fragment this spreads in.
+  ...preset,
+  // Per-component docs (#119): an OPTIONAL MDX file co-located with each
+  // component (`packages/ui/src/<name>/<name>.mdx`) rendered inline as a
+  // section on the host-owned `/components/<slug>` detail page (NOT its own
+  // route — nothing maps this collection into `resolveMarkdownLinks.dirs`, so
+  // zfb generates no page for it). The collection is rooted at the SAME glob
+  // root the #103 story codegen walks (`packages/ui/src/<name>/`), keeping doc
+  // discovery co-located with story discovery. `include: ["*/*.mdx"]` scopes it
+  // to one-level-deep `.mdx` files, ignoring `.tsx`/`.stories.tsx`/`__tests__`.
+  // Slug shape is `<name>/<name>` (path relative to the collection root, minus
+  // `.mdx`); the detail page derives it from the story entry's dir.
+  collections: [
+    ...preset.collections,
+    {
+      name: "componentDocs",
+      path: "packages/ui/src",
+      include: ["*/*.mdx"],
     },
-  },
-  plugins: integrationPlugins,
+  ],
+  plugins: [
+    ...preset.plugins,
+    // Project-specific workaround, not part of the preset — see
+    // plugins/copy-public-plugin.mjs for why zfb build needs this.
+    {
+      name: "./plugins/copy-public-plugin.mjs",
+      options: {
+        publicDir: "public",
+      },
+    },
+    // Wires the preview design-token panel's Apply button to a same-origin
+    // dev-only endpoint that persists tweaks into packages/ui/styles/colors.css
+    // — see plugins/zdtp-apply-proxy-plugin.mjs for the full pipeline + scope.
+    {
+      name: "./plugins/zdtp-apply-proxy-plugin.mjs",
+    },
+  ],
 });

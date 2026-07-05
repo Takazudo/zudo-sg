@@ -12,7 +12,8 @@ compatibility_date = "2024-12-01"
 
 # workers_dev = false prevents serving on *.workers.dev production route.
 # preview_urls = true enables version-preview URLs for staging (used by
-# preview-deploy.yml / pr-checks.yml via `wrangler versions upload`).
+# preview-deploy.yml via `wrangler versions upload`; pr-checks.yml builds and
+# checks PRs but does not deploy).
 preview_urls = true
 workers_dev = false
 

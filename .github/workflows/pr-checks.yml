@@ -3,17 +3,23 @@
 # Triggered on PRs targeting `main` or any `base/**` branch (epic-PR stacks).
 #
 # Jobs (in execution order):
-#   lint-tokens          — pnpm lint:tokens (owned by S2; no-op pass until S2 merges)
-#   typecheck            — pnpm check (zfb check / tsc --noEmit)
+#   lint-tokens          — pnpm lint:tokens
+#   codegen-drift        — pnpm check:z-index, pnpm check:sg-registry, pnpm check:token-manifest
+#   typecheck            — pnpm check (zfb check / tsc --noEmit + demo typecheck)
 #   unit                 — pnpm test:unit (vitest)
 #   build                — pnpm build (zfb build → dist/)
-#   build-demo           — pnpm --filter @zudo-sg/demo build (apps/demo)
-#   smoke-e2e            — pnpm test:e2e:ci (Playwright smoke, needs build job)
-#   link-check           — pnpm check:links (needs build job)
-#   html-validate        — pnpm check:html (needs build job)
+#   build-demo           — pnpm --filter @zudo-sg/demo build (apps/demo), then
+#                          pnpm check:links:demo against apps/demo/dist
+#   smoke-e2e            — pnpm test:e2e:ci (Playwright: styleguide + demo smoke
+#                          projects, needs build + build-demo)
+#   dist-checks          — pnpm check:links + pnpm check:html against dist/
+#                          (needs build job; merged into one job since both
+#                          only need the same dist/ cache restore)
 #
-# Node 22 + pnpm via pnpm/action-setup@v4.
-# Root build output shared between jobs via actions/cache to avoid re-building.
+# Node 22 + pnpm via the shared .github/actions/setup composite action (pnpm
+# version comes from the packageManager field in package.json).
+# Root and demo build output shared between jobs via actions/cache to avoid
+# re-building.
 
 name: PR Checks
 
@@ -30,15 +36,9 @@ concurrency:
 permissions:
   contents: read
 
-env:
-  PNPM_VERSION: "11.5.2"
-  NODE_VERSION: "22"
-
 jobs:
   # ---------------------------------------------------------------------------
   # Job: Design token lint
-  # Owned by S2. On the bare scaffold (before S2 merges) lint:tokens is a
-  # no-op pass. Once S2 merges, this job enforces the token lint rules.
   # ---------------------------------------------------------------------------
   lint-tokens:
     name: Design Token Lint
@@ -46,27 +46,39 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: "pnpm"
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Setup
+        uses: ./.github/actions/setup
 
       - name: Design token lint
-        # lint:tokens is defined by S2. Until S2 merges, this step passes
-        # because the script either does not exist (pnpm exits 0 with a warning
-        # on missing optional scripts via the || true fallback) or is a no-op.
-        run: pnpm run lint:tokens || echo "lint:tokens not yet defined (S2 pending) — OK"
+        run: pnpm run lint:tokens
+
+  # ---------------------------------------------------------------------------
+  # Job: Codegen drift check
+  # Verifies generated files are in sync with their source of truth — fails if
+  # someone hand-edits a generated block or forgets to re-run the generator
+  # after adding/removing a source (z-index tier / story file / token manifest).
+  # ---------------------------------------------------------------------------
+  codegen-drift:
+    name: Codegen Drift Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: Check z-index codegen
+        run: pnpm check:z-index
+
+      - name: Check sg-registry codegen
+        run: pnpm check:sg-registry
+
+      - name: Check token manifest codegen
+        run: pnpm check:token-manifest
 
   # ---------------------------------------------------------------------------
   # Job: TypeScript typecheck
@@ -77,21 +89,10 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: "pnpm"
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Setup
+        uses: ./.github/actions/setup
 
       - name: Type check
         run: pnpm check
@@ -105,29 +106,17 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: "pnpm"
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Setup
+        uses: ./.github/actions/setup
 
       - name: Run unit tests
         run: pnpm test:unit
 
   # ---------------------------------------------------------------------------
   # Job: Build
-  # Produces dist/ and caches it for downstream jobs (smoke-e2e, link-check,
-  # html-validate).
+  # Produces dist/ and caches it for downstream jobs (smoke-e2e, dist-checks).
   # ---------------------------------------------------------------------------
   build:
     name: Build
@@ -135,21 +124,10 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: "pnpm"
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Setup
+        uses: ./.github/actions/setup
 
       - name: Build site
         run: pnpm build
@@ -163,7 +141,9 @@ jobs:
   # ---------------------------------------------------------------------------
   # Job: Build Demo Site
   # Builds apps/demo (@zudo-sg/demo) independently so demo-breaking changes are
-  # caught on every PR rather than only on production deploy.
+  # caught on every PR rather than only on production deploy. Also link-checks
+  # the demo build — its footer/nav hard-code cross-site URLs that nothing else
+  # validates — and caches the dist for the smoke-e2e job's demo-smoke project.
   # ---------------------------------------------------------------------------
   build-demo:
     name: Build Demo Site
@@ -171,57 +151,53 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: "pnpm"
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Setup
+        uses: ./.github/actions/setup
 
       - name: Build demo site
         run: pnpm --filter @zudo-sg/demo build
 
+      - name: Cache demo dist
+        uses: actions/cache/save@v4
+        with:
+          path: apps/demo/dist
+          key: demo-dist-${{ github.sha }}
+
+      - name: Check demo links
+        run: pnpm check:links:demo
+
   # ---------------------------------------------------------------------------
   # Job: Playwright smoke e2e (T1)
-  # Runs a single smoke spec against the pre-built dist/. Requires build job.
+  # Runs the styleguide smoke specs plus the demo-smoke project. playwright.config.ts
+  # declares one webServer per dist (styleguide + demo) and Playwright starts both
+  # regardless of --project filtering, so this job needs both build jobs' output.
   # ---------------------------------------------------------------------------
   smoke-e2e:
     name: Smoke E2E
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    needs: build
+    needs: [build, build-demo]
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: "pnpm"
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Setup
+        uses: ./.github/actions/setup
 
       - name: Restore dist cache
         uses: actions/cache/restore@v4
         with:
           path: dist
           key: dist-${{ github.sha }}
+          fail-on-cache-miss: true
+
+      - name: Restore demo dist cache
+        uses: actions/cache/restore@v4
+        with:
+          path: apps/demo/dist
+          key: demo-dist-${{ github.sha }}
           fail-on-cache-miss: true
 
       - name: Install Playwright browsers
@@ -239,31 +215,21 @@ jobs:
           retention-days: 7
 
   # ---------------------------------------------------------------------------
-  # Job: Internal link check
-  # Scans dist/ HTML for broken internal links. Requires build job.
+  # Job: Dist checks (link check + HTML validation)
+  # Both only need the build job's dist/ cache restore, so they're merged into
+  # one job to avoid a second redundant checkout/install.
   # ---------------------------------------------------------------------------
-  link-check:
-    name: Link Check
+  dist-checks:
+    name: Dist Checks
     runs-on: ubuntu-latest
     timeout-minutes: 10
     needs: build
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: "pnpm"
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Setup
+        uses: ./.github/actions/setup
 
       - name: Restore dist cache
         uses: actions/cache/restore@v4
@@ -274,40 +240,6 @@ jobs:
 
       - name: Check links
         run: pnpm check:links
-
-  # ---------------------------------------------------------------------------
-  # Job: HTML validation
-  # Validates built HTML against html-validate rules. Requires build job.
-  # ---------------------------------------------------------------------------
-  html-validate:
-    name: HTML Validate
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    needs: build
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: "pnpm"
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Restore dist cache
-        uses: actions/cache/restore@v4
-        with:
-          path: dist
-          key: dist-${{ github.sha }}
-          fail-on-cache-miss: true
 
       - name: HTML validate
         run: pnpm check:html

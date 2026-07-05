@@ -2,8 +2,9 @@
  * @zudo-sg/ui — story-authoring contract (shared types)
  *
  * These types define the shape every `*.stories.tsx` module must satisfy so the
- * S6 styleguide catalog can discover and render stories via a single eager
- * `import.meta.glob('./packages/ui/**\/*.stories.tsx', { eager: true })`.
+ * S6 styleguide catalog can discover and render stories. Discovery itself is
+ * codegen (`scripts/gen-sg-registry.mjs`), not `import.meta.glob` — see
+ * STORIES.md §2.
  *
  * The full prose contract — glob root, file location, source-extraction rules,
  * browser/MSW rules — lives in packages/ui/STORIES.md. Keep this file and that
@@ -55,6 +56,15 @@ export interface StoryMeta {
 /**
  * One renderable variant. `render` returns the preview node; `name` labels it.
  *
+ * Generic over the driving component's props `P` so a variant's `controls`
+ * (see `StoryControl<P>` below) are checked against real prop names — and,
+ * where the prop's own type is informative (e.g. a string-literal union),
+ * against real prop values too. `P` defaults to `Record<string, unknown>`, so
+ * the bare `Story` name is a compatible alias for variants that have no
+ * controls to check (or whose `render` composes more than one component's
+ * props) — migrating a file to `Story<SomeProps>` is opt-in, one file at a
+ * time.
+ *
  * `controls` is an OPTIONAL, declarative description of the knobs the catalog
  * exposes for live editing. The catalog seeds each control's `defaultValue`
  * into the render args and pushes live edits over the `sg:updateProps` channel,
@@ -68,66 +78,85 @@ export interface StoryMeta {
  * "Source extraction"). Co-locating `source` is recommended for variants whose
  * `render` body is non-obvious.
  */
-export interface Story {
+export interface Story<P = Record<string, unknown>> {
   /** Variant label, e.g. "Primary". */
   name: string;
   /**
    * Returns the preview node. Must be pure + synchronous.
    *
    * Receives the merged render args — control defaults overlaid with any live
-   * overrides from the controls panel. The parameter is optional/defaulted so
-   * non-control variants (which ignore `args`) still render with no arguments.
+   * overrides from the controls panel — typed as a partial `P` so `args.foo`
+   * reads as `foo`'s real prop type with no `as` cast. The parameter is
+   * optional/defaulted so non-control variants (which ignore `args`) still
+   * render with no arguments.
    */
-  render: (args?: Record<string, unknown>) => ComponentChildren;
+  render: (args?: Partial<P>) => ComponentChildren;
   /** Optional live-control descriptors that drive `render(args)`. */
-  controls?: StoryControl[];
+  controls?: StoryControl<P>[];
   /** Optional verbatim JSX source string for the code panel. */
   source?: string;
 }
 
-/** A single live-control descriptor. Discriminated by `type`. */
-export type StoryControl =
-  | {
-      type: "select";
-      /** Prop name this control drives, e.g. "variant". */
-      prop: string;
-      label: string;
-      options: string[];
-      defaultValue: string;
-    }
-  | {
-      type: "boolean";
-      prop: string;
-      label: string;
-      defaultValue: boolean;
-    }
-  | {
-      type: "text";
-      prop: string;
-      label: string;
-      defaultValue: string;
-    }
-  | {
-      type: "number";
-      prop: string;
-      label: string;
-      defaultValue: number;
-      min?: number;
-      max?: number;
-      step?: number;
-      /**
-       * Editor widget. `range` (default) renders a slider with a numeric
-       * readout when min/max are present; `input` renders a plain numeric box.
-       */
-      ui?: "range" | "input";
-    }
-  | {
-      type: "color";
-      prop: string;
-      label: string;
-      /** CSS color string, e.g. "#2563eb". */
-      defaultValue: string;
-    };
+/** Narrows to `T` when it's a string, else falls back to plain `string` (e.g. under the untyped `Record<string, unknown>` default). */
+type StringPropValue<T> = T extends string ? T : string;
+/** Same fallback shape as `StringPropValue`, for boolean-valued props. */
+type BooleanPropValue<T> = T extends boolean ? T : boolean;
+/** Same fallback shape as `StringPropValue`, for number-valued props. */
+type NumberPropValue<T> = T extends number ? T : number;
+
+/**
+ * A single live-control descriptor, discriminated by `type` and keyed to a
+ * real prop of `P` (`prop: keyof P & string` — renaming that prop breaks every
+ * control naming it). `defaultValue` (and `options`, for `select`) narrow to
+ * that prop's own value type where `P` is informative — e.g. a `select` on a
+ * prop typed as a string-literal union restricts `options`/`defaultValue` to
+ * that union — so a value only a former version of the prop accepted also
+ * fails to typecheck.
+ */
+export type StoryControl<P = Record<string, unknown>> = {
+  [K in keyof P & string]:
+    | {
+        type: "select";
+        /** Prop name this control drives, e.g. "variant". */
+        prop: K;
+        label: string;
+        options: StringPropValue<NonNullable<P[K]>>[];
+        defaultValue: StringPropValue<NonNullable<P[K]>>;
+      }
+    | {
+        type: "boolean";
+        prop: K;
+        label: string;
+        defaultValue: BooleanPropValue<NonNullable<P[K]>>;
+      }
+    | {
+        type: "text";
+        prop: K;
+        label: string;
+        defaultValue: StringPropValue<NonNullable<P[K]>>;
+      }
+    | {
+        type: "number";
+        prop: K;
+        label: string;
+        defaultValue: NumberPropValue<NonNullable<P[K]>>;
+        min?: number;
+        max?: number;
+        step?: number;
+        /**
+         * Editor widget. `range` (default) renders a slider with a numeric
+         * readout when min/max are present; `input` renders a plain numeric box.
+         */
+        ui?: "range" | "input";
+      }
+    | {
+        type: "color";
+        prop: K;
+        label: string;
+        /** CSS color string, e.g. "#2563eb". */
+        defaultValue: StringPropValue<NonNullable<P[K]>>;
+      };
+}[keyof P & string];
 
 /**
  * The shape `import.meta.glob` yields per module: a default `meta` plus an
@@ -140,10 +169,11 @@ export interface StoryModule {
 }
 
 /**
- * Authoring helper — identity function that pins a value to `Story` so editors
- * autocomplete `name`/`render`/`controls`/`source`. Using it is optional; a
- * plain object literal that satisfies `Story` is equally valid.
+ * Authoring helper — identity function that pins a value to `Story<P>` so
+ * editors autocomplete `name`/`render`/`controls`/`source` (and check
+ * `controls` against `P`). Using it is optional; a plain object literal that
+ * satisfies `Story<P>` is equally valid.
  */
-export function defineStory(story: Story): Story {
+export function defineStory<P = Record<string, unknown>>(story: Story<P>): Story<P> {
   return story;
 }

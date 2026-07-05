@@ -6,11 +6,15 @@
  * this module is only bundled when the feature is enabled.
  */
 
-import { configurePanel } from "@takazudo/zdtp";
-// CSS is pulled via `@import "@takazudo/zdtp/styles.css"` in
-// src/styles/global.css so the panel chrome lands in the main page CSS bundle
-// (not a deferred chunk). Vite library mode strips the source CSS import from
-// the emitted JS, so the explicit CSS-side import is the required pull point.
+import {
+  configurePanel,
+  enableAutoload,
+  disableAutoload,
+} from "@takazudo/zdtp";
+// zdtp 0.4.x self-injects its stylesheet at mount time (an inline <style>
+// element written to <head> — see zdtp CHANGELOG 0.4.3 "Other Changes"). No
+// consumer-side CSS import is required; global.css's former mid-file
+// `@import "@takazudo/zdtp/styles.css"` was removed for #117.
 import { designTokenPanelConfig } from "@/config/design-token-panel-config";
 
 configurePanel(designTokenPanelConfig);
@@ -22,4 +26,19 @@ configurePanel(designTokenPanelConfig);
 // listener picks it up and mounts the panel.
 if (typeof window !== "undefined") {
   (window as { __zdtpReadyClicks?: () => void }).__zdtpReadyClicks?.();
+
+  // zdtp's root (non-Astro) entry point does not auto-install
+  // `window[consoleNamespace]` helpers the way its Astro host-adapter does
+  // (zdtp README §10) — that wiring lives in astro/host-adapter.ts, which this
+  // project's zfb-based host doesn't use. Wire the owner-autoload pair (0.4.2)
+  // by hand so `window.sgDoc.enableAutoload()` / `.disableAutoload()` work
+  // from devtools, matching the documented console-API contract (which also
+  // says the object should be MERGED into, not overwritten).
+  const w = window as unknown as Record<string, Record<string, unknown> | undefined>;
+  const ns = designTokenPanelConfig.consoleNamespace;
+  w[ns] = {
+    ...w[ns],
+    enableAutoload: () => enableAutoload(designTokenPanelConfig),
+    disableAutoload: () => disableAutoload(designTokenPanelConfig),
+  };
 }

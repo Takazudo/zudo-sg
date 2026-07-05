@@ -22,18 +22,13 @@
 
 import type { JSX, VNode } from "preact";
 import { Island } from "@takazudo/zfb";
-import { settings } from "@/config/settings";
 import { defaultLocale } from "@/config/i18n";
 import { withBase } from "@/utils/base";
 import { getCategoryGroups, OVERVIEW_SLUG } from "@/styleguide/data/registry";
-import { navNodes } from "@/styleguide/data/nav-nodes";
 import { StyleguideLayout } from "@/features/styleguide/chrome/_styleguide-layout";
 import CatalogFilter from "@/features/styleguide/search/catalog-filter";
-import { FooterWithDefaults } from "../lib/_footer-with-defaults";
-import { HeaderWithDefaults } from "../lib/_header-with-defaults";
-import { HeadWithDefaults } from "../lib/_head-with-defaults";
 import { composeMetaTitle } from "../lib/_compose-meta-title";
-import { BodyEndIslands } from "../lib/_body-end-islands";
+import { buildStyleguideChrome } from "../lib/_styleguide-chrome";
 
 export const frontmatter = { title: "Components" };
 
@@ -51,22 +46,19 @@ export default function ComponentsIndexPage(): JSX.Element {
     children: <CatalogFilter categories={categories} total={total} />,
   }) as unknown as VNode;
 
+  const chrome = buildStyleguideChrome({
+    lang: locale,
+    pageTitle: "Components",
+    currentPath,
+    activeSlug: OVERVIEW_SLUG,
+  });
+
   return (
     <StyleguideLayout
       title={composeMetaTitle("Components")}
       activeSlug={OVERVIEW_SLUG}
       lang={locale}
-      head={<HeadWithDefaults title="Components" />}
-      header={
-        <HeaderWithDefaults
-          lang={locale}
-          currentPath={currentPath}
-          sidebarNodesOverride={navNodes}
-          currentSlug={OVERVIEW_SLUG}
-        />
-      }
-      footer={<FooterWithDefaults lang={locale} />}
-      bodyEnd={<BodyEndIslands basePath={settings.base ?? "/"} />}
+      {...chrome}
     >
       <div class="mx-auto max-w-[64rem]">
         <header class="mb-vsp-lg">
@@ -82,7 +74,7 @@ export default function ComponentsIndexPage(): JSX.Element {
         <div data-sg-catalog>
           {groups.map((group) => (
             <section class="mb-vsp-xl" data-sg-section data-category={group.category}>
-              <h2 class="mb-vsp-sm text-title font-semibold">
+              <h2 class="mb-vsp-sm text-heading font-semibold">
                 {group.category}
               </h2>
               <div class="grid grid-cols-1 gap-hsp-md sm:grid-cols-2 lg:grid-cols-3">

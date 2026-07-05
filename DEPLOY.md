@@ -21,6 +21,10 @@ Find your account ID in the Cloudflare dashboard (right sidebar on the Workers o
 npx wrangler@4.85.0 whoami
 ```
 
+> The version above (and in §5) is a local-shell copy for convenience. The
+> source of truth is the `WRANGLER_VERSION` env var in `main-deploy.yml` and
+> `preview-deploy.yml` — bump all three together.
+
 Add it as a GitHub Actions secret named `CLOUDFLARE_ACCOUNT_ID`.
 
 ---
@@ -68,6 +72,9 @@ npx wrangler@4.85.0 deploy --dry-run --config wrangler.toml
 # Validate demo site config
 npx wrangler@4.85.0 deploy --dry-run --config apps/demo/wrangler.toml
 ```
+
+> See the note on the pinned version in §1 — keep this in step with
+> `WRANGLER_VERSION` in the workflows.
 
 `--dry-run` validates the config and reports what would be deployed without sending anything to Cloudflare. It does not require credentials. If wrangler prompts for auth even with `--dry-run`, validate the TOML syntax instead:
 

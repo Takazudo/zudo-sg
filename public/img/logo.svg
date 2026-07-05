@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="zudo sg">
+  <title>zudo sg</title>
+  <!-- Home-hero logo mark: a single-color SILHOUETTE of the brand mark
+       (public/favicon.svg) — a rounded "token tile" with a knocked-out z.
+       Consumed by pages/index.tsx as a CSS mask over a `bg-fg` box, so the
+       fill color follows the active theme (near-white on dark, near-black on
+       light). Only coverage matters here, so shapes are opaque white on a
+       transparent ground — that reads identically whether the browser treats
+       the mask as alpha or luminance. The z is removed via the internal
+       <mask> (white shows, black hides) rather than an even-odd hole so the
+       three overlapping z strokes compose cleanly. -->
+  <defs>
+    <mask id="z-cut" maskUnits="userSpaceOnUse" x="0" y="0" width="100" height="100">
+      <rect x="0" y="0" width="100" height="100" fill="#fff"/>
+      <path
+        d="M28 30H72V42H28Z M28 58H72V70H28Z M60 42L72 42L40 58L28 58Z"
+        fill="#000"/>
+    </mask>
+  </defs>
+  <rect x="6" y="6" width="88" height="88" rx="22" fill="#fff" mask="url(#z-cut)"/>
+</svg>

@@ -54,8 +54,16 @@ export function detectLocaleFromPath(path: string): Locale {
   return defaultLocale;
 }
 
-/** UI string translations */
-const translations: Record<string, Record<string, string>> = {
+/**
+ * UI string translations.
+ *
+ * Exported so `zfb.config.ts` can hand it to `zudoDocPreset({ translations })`:
+ * under `packageOwnedRoutes`, the injected doc/404/versions routes reconstruct
+ * their i18n from this table (rides into `virtual:zudo-doc-route-context`). Omit
+ * it and the package `t()` falls back to raw keys ("toc.title", …) on those
+ * routes. The host `t()` below still reads the same const directly.
+ */
+export const translations: Record<string, Record<string, string>> = {
   en: {
     "nav.gettingStarted": "Getting Started",
     "nav.learn": "Learn",

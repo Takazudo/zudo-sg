@@ -86,7 +86,16 @@ export default function CodePanel({
         )}
         {active && (
           <div class="mt-vsp-xs">
-            <SourceEditor value={active.source} language="tsx" editable={false} />
+            {/* key remounts SourceEditor per variant: it creates its CodeMirror
+                view once and never diffs `value` (see source-editor.tsx), so
+                without a key switching tabs kept showing the first variant's
+                source (#105). */}
+            <SourceEditor
+              key={active.exportName}
+              value={active.source}
+              language="tsx"
+              editable={false}
+            />
           </div>
         )}
       </div>

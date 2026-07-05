@@ -4,7 +4,8 @@
 # Builds both sites and deploys each to a Cloudflare Workers preview alias
 # so the preview URL is predictable (e.g. preview-zudo-sg.<acct>.workers.dev).
 #
-# This is separate from PR preview deploys (handled by pr-checks.yml).
+# This is the only workflow that deploys preview aliases — pr-checks.yml
+# builds and checks every PR but does not deploy.
 # Both sites are fully static — no SSR adapter, no .assetsignore needed.
 
 name: Preview Deploy
@@ -24,6 +25,11 @@ permissions:
   pull-requests: write
   statuses: write
 
+env:
+  # Pin lives here — see DEPLOY.md §5 for the local dry-run commands, which
+  # must be bumped in step with this value.
+  WRANGLER_VERSION: "4.85.0"
+
 jobs:
   # ---------------------------------------------------------------------------
   # Job: Build the root styleguide site
@@ -34,21 +40,11 @@ jobs:
     timeout-minutes: 15
 
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4
-        with:
-          dest: ~/setup-pnpm-${{ github.job }}
-
-      - name: Setup Node.js
-        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
-        with:
-          node-version: 22
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Setup
+        uses: ./.github/actions/setup
 
       - name: Build site
         run: pnpm build
@@ -72,21 +68,11 @@ jobs:
     timeout-minutes: 15
 
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4
-        with:
-          dest: ~/setup-pnpm-${{ github.job }}
-
-      - name: Setup Node.js
-        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
-        with:
-          node-version: 22
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Setup
+        uses: ./.github/actions/setup
 
       - name: Build demo site
         run: pnpm --filter @zudo-sg/demo build
@@ -143,7 +129,7 @@ jobs:
         run: |
           SLUG="${{ steps.branch.outputs.slug }}"
           DEPLOY_LOG=$(mktemp)
-          npx wrangler@4.85.0 versions upload \
+          npx wrangler@${{ env.WRANGLER_VERSION }} versions upload \
             --config wrangler.toml \
             --preview-alias="$SLUG" \
             --message="Preview: ${SLUG} @ ${GITHUB_SHA:0:7}" \
@@ -204,7 +190,7 @@ jobs:
         run: |
           SLUG="${{ steps.branch.outputs.slug }}"
           DEPLOY_LOG=$(mktemp)
-          npx wrangler@4.85.0 versions upload \
+          npx wrangler@${{ env.WRANGLER_VERSION }} versions upload \
             --config apps/demo/wrangler.toml \
             --preview-alias="$SLUG" \
             --message="Preview demo: ${SLUG} @ ${GITHUB_SHA:0:7}" \

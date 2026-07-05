@@ -1,9 +1,11 @@
 import { defineConfig } from "@playwright/test";
 
-// Single smoke fixture — serves the pre-built dist/ from the repo root.
-// Port 4700 is reserved for this project's smoke fixture to avoid collisions
-// with zudo-doc fixtures (4500–4504) and the dev server (4321).
+// Two smoke fixtures — each serves a pre-built dist/ output.
+// Port 4700 is reserved for the styleguide host's smoke fixture, 4701 for the
+// demo site's, to avoid collisions with zudo-doc fixtures (4500–4504) and the
+// dev server (4321).
 const SMOKE_PORT = 4700;
+const DEMO_SMOKE_PORT = 4701;
 
 export default defineConfig({
   testDir: "./e2e",
@@ -14,13 +16,27 @@ export default defineConfig({
   use: {
     baseURL: `http://localhost:${SMOKE_PORT}`,
   },
-  webServer: {
-    // Requires `pnpm build` to have run first (dist/ must exist).
-    command: `pnpm exec zfb preview --port ${SMOKE_PORT}`,
-    url: `http://localhost:${SMOKE_PORT}/`,
-    reuseExistingServer: !process.env.CI,
-    timeout: 60_000,
-  },
+  // Note: all entries here start for every test run regardless of which
+  // --project is selected (Playwright starts webServer globally, not
+  // per-project) — so both dist/ and apps/demo/dist must exist before
+  // running any project in this config.
+  webServer: [
+    {
+      // Requires `pnpm build` to have run first (dist/ must exist).
+      command: `pnpm exec zfb preview --port ${SMOKE_PORT}`,
+      url: `http://localhost:${SMOKE_PORT}/`,
+      reuseExistingServer: !process.env.CI,
+      timeout: 60_000,
+    },
+    {
+      // Requires `pnpm --filter @zudo-sg/demo build` to have run first
+      // (apps/demo/dist must exist).
+      command: `pnpm --filter @zudo-sg/demo exec zfb preview --port ${DEMO_SMOKE_PORT}`,
+      url: `http://localhost:${DEMO_SMOKE_PORT}/`,
+      reuseExistingServer: !process.env.CI,
+      timeout: 60_000,
+    },
+  ],
   projects: [
     {
       name: "smoke",
@@ -31,6 +47,11 @@ export default defineConfig({
       name: "preview-token-panel",
       testMatch: "preview-token-panel.spec.ts",
       use: { baseURL: `http://localhost:${SMOKE_PORT}` },
+    },
+    {
+      name: "demo-smoke",
+      testMatch: "demo-smoke.spec.ts",
+      use: { baseURL: `http://localhost:${DEMO_SMOKE_PORT}` },
     },
   ],
 });

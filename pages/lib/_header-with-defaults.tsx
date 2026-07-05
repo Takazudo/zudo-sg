@@ -316,43 +316,11 @@ export function HeaderWithDefaults(
     },
   );
 
-  // Design Tokens icon — injected into the framework header's right region on
-  // EVERY docs page (maintainer decision: Design Tokens reachable site-wide).
-  //
-  // Why a project-rendered `html` right-item instead of the framework's native
-  // `{ type: "trigger", trigger: "design-token-panel" }`: that native trigger
-  // dispatches the RESERVED "toggle-design-token-panel" event, which in
-  // @takazudo/zdtp 0.3.0 is bound only to the framework's empty-tabs default
-  // instance — so it opens an EMPTY panel, not this project's real 4-tab panel.
-  // This button dispatches "toggle-my-doc-tweak" (the doc-chrome panel's
-  // explicit toggle channel — see design-token-panel-config.ts), opening the
-  // real panel. It is gated on `settings.designTokenPanel` to match the feature
-  // flag the removed native trigger was gated on. The button is a plain inline-
-  // onclick control (no Preact island) — exactly like the framework's own
-  // TriggerButton; the DesignTokenPanelBootstrap island (body-end) is what
-  // listens for the event. Styled to match the framework chrome icons
-  // (search / theme toggle / github): same `text-muted hover:text-fg`
-  // treatment and a 20×20 feather-stroke SVG. See Takazudo/zudo-sg#84/#85.
-  if (settings.designTokenPanel) {
-    headerRightItems.push({
-      type: "html",
-      html:
-        '<button id="my-doc-tweak-trigger" type="button" ' +
-        'class="flex items-center justify-center text-muted transition-colors hover:text-fg cursor-pointer" ' +
-        'aria-label="Open design tokens panel" title="Design tokens" ' +
-        "onclick=\"window.dispatchEvent(new CustomEvent('toggle-my-doc-tweak'))\">" +
-        '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" ' +
-        'fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" ' +
-        'stroke-linejoin="round" aria-hidden="true">' +
-        '<line x1="4" y1="6" x2="20" y2="6"></line>' +
-        '<line x1="4" y1="12" x2="20" y2="12"></line>' +
-        '<line x1="4" y1="18" x2="20" y2="18"></line>' +
-        '<circle cx="9" cy="6" r="2.4" fill="currentColor" stroke="none"></circle>' +
-        '<circle cx="15" cy="12" r="2.4" fill="currentColor" stroke="none"></circle>' +
-        '<circle cx="8" cy="18" r="2.4" fill="currentColor" stroke="none"></circle>' +
-        "</svg></button>",
-    });
-  }
+  // Design Tokens icon note: the project-rendered `{ type: "html" }` right-item
+  // (button#sg-doc-tweak-trigger, dispatching "toggle-sg-doc-tweak") now lives in
+  // `settings.headerRightItems` (#113) so it renders on the package-owned doc
+  // routes too, not just this host wrapper's pages. `filterHeaderRightItems`
+  // above passes html items through untouched, so nothing extra is needed here.
 
   const githubRepoUrl = buildGitHubRepoUrl();
   const githubLabel = t("header.github", lang);

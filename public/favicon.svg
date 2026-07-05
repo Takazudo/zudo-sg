@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="zudo sg">
+  <title>zudo sg</title>
+  <!-- Brand mark: warm-amber "token tile" with a knocked-out z (zudo initial).
+       Amber hue (~65) matches the site's OKLCH accent tokens (p5 light /
+       p12 dark). Fixed brand values — not theme tokens — so the mark is stable
+       across color modes. Mirrored by public/img/logo.svg (mono silhouette)
+       and the rasterized favicon-16/32.png + favicon.ico. -->
+  <defs>
+    <linearGradient id="amber" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#e59b3a"/>
+      <stop offset="1" stop-color="#c9761d"/>
+    </linearGradient>
+  </defs>
+  <rect x="6" y="6" width="88" height="88" rx="22" fill="url(#amber)"/>
+  <path
+    d="M28 30H72V42H28Z M28 58H72V70H28Z M60 42L72 42L40 58L28 58Z"
+    fill="#fbf6ee"/>
+</svg>

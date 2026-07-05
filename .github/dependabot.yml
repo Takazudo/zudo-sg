@@ -1,0 +1,20 @@
+version: 2
+
+updates:
+  # Third-party npm/pnpm deps across the workspace (root + packages/* + apps/*).
+  # @takazudo/* is excluded — first-party releases go through the
+  # /dev-bump-zudo-deps flow, not automated PRs.
+  - package-ecosystem: "npm"
+    directories:
+      - "/"
+      - "/packages/*"
+      - "/apps/*"
+    schedule:
+      interval: "weekly"
+    ignore:
+      - dependency-name: "@takazudo/*"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"

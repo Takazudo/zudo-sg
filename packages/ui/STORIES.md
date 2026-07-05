@@ -94,40 +94,36 @@ of the Tier-2 pointers) — component CSS never changes.
 
 ---
 
-## 2. File location & discovery glob
+## 2. File location & discovery mechanism
 
 - **Co-locate** each story file with its component: `src/<component>/<name>.stories.tsx`.
 - **Naming:** always `*.stories.tsx` (the `.stories` infix is the discovery key).
-- **Discovery glob (registry lives at the repo root):**
+- **Discovery is codegen, not `import.meta.glob`.** zfb does not statically
+  inline `import.meta.glob` — the literal call survives into the shared client
+  islands bundle and throws in the browser (`import.meta.glob` is undefined
+  there). So the catalog cannot use a runtime glob at all. Instead,
+  [`scripts/gen-sg-registry.mjs`](../../scripts/gen-sg-registry.mjs) (repo
+  root) globs `packages/ui/src/*/*.stories.tsx` **on the filesystem at codegen
+  time** and regenerates two explicit-import lists from what it finds:
 
-  ```ts
-  const modules = import.meta.glob("./packages/ui/**/*.stories.tsx", { eager: true });
-  ```
+  - `src/styleguide/data/sg-registry.ts` (repo root) — the catalog's
+    path→module registry.
+  - the `GENERATED:SG_REGISTRY_BEGIN`…`END` block in
+    [`src/stories/__tests__/story-modules.ts`](./src/stories/__tests__/story-modules.ts)
+    — the shared `STORY_MODULES` registry imported by `contract.test.ts` and
+    `source-drift.test.ts`.
 
-  > **Why the repo root, not inside `packages/ui`?** zfb supports eager
-  > `import.meta.glob` but **forbids `../` parent-relative glob patterns**. A
-  > registry that lived inside `packages/ui` would need `../` to escape, which is
-  > rejected. So the registry module must live at the **repo root** and use the
-  > root-relative `./packages/ui/**/*.stories.tsx` pattern. Co-locating the
-  > story files (rule above) is what makes this single glob find them all.
+  Both generated blocks are byte-identical in shape to what a real
+  `import.meta.glob({ eager: true })` would have produced, just computed ahead
+  of time instead of at runtime.
 
-- `{ eager: true }` is required: the catalog reads `meta` + every named export at
-  registration time (no lazy/dynamic import dance).
-
-Current story files (one per component group):
-
-```
-src/button/button.stories.tsx
-src/link/link.stories.tsx
-src/heading/heading.stories.tsx
-src/badge/badge.stories.tsx
-src/card/card.stories.tsx
-src/stat/stat.stories.tsx
-src/site-header/site-header.stories.tsx
-src/hero/hero.stories.tsx
-src/footer/footer.stories.tsx
-src/form/form.stories.tsx
-```
+- **After adding, renaming, or removing a story file**, run
+  `pnpm gen:sg-registry` from the repo root and commit the regenerated files.
+  `pnpm check:sg-registry` (wired into CI and `scripts/run-b4push.sh`) fails
+  the build if the generated blocks drift from what's on disk — forgetting to
+  regenerate is a build failure, not a silently-missing catalog entry.
+- **Never hand-edit** between the `GENERATED:SG_REGISTRY_BEGIN`/`END` markers
+  in either generated file; the next `pnpm gen:sg-registry` run overwrites it.
 
 ---
 
@@ -136,7 +132,7 @@ src/form/form.stories.tsx
 Every `*.stories.tsx` exports **exactly**:
 
 - a **default export** `meta: StoryMeta`, and
-- **one or more named exports**, each a `Story`.
+- **one or more named exports**, each a `Story<P>` (below).
 
 Nothing else should be exported. The registry treats `default` as the meta and
 **every other own enumerable export** as a story. (Matches the `StoryModule`
@@ -169,10 +165,19 @@ Adding a category means editing `StoryCategory` in `src/stories/types.ts` (so th
 catalog and the authors share one list). The catalog should render categories in
 the union's declared order.
 
-### Named exports — `Story`
+### Named exports — `Story<P>`
+
+`Story` is **generic over the driving component's props** — `Story<ButtonProps>`,
+`Story<CardProps>`, etc. — so a variant's `controls` (see §4) are checked
+against the component's real props: `prop` must name an actual key of `P`, and
+where `P` is informative (e.g. a prop typed as a string-literal union),
+`options`/`defaultValue` are restricted to that union too. `P` defaults to
+`Record<string, unknown>`, so the bare `Story` name still works — reach for it
+when a variant has no `controls` to check, or its `render` composes more than
+one component's props (no single `P` fits).
 
 ```ts
-export const Variants: Story = {
+export const Variants: Story<ButtonProps> = {
   name: "Variants",                 // variant label shown above the preview
   render: () => (<div>…</div>),      // pure, synchronous; returns the preview node
   controls: [                       // optional; metadata only (see §4)
@@ -183,16 +188,24 @@ export const Variants: Story = {
 };
 ```
 
-| field      | type             | required | meaning |
-|------------|------------------|----------|---------|
-| `name`     | `string`         | yes      | Variant label. Unique within the file. |
-| `render`   | `() => VNode`    | yes      | **Pure, synchronous.** Returns the preview node. No effects, no async, no data fetching. |
-| `controls` | `StoryControl[]` | no       | Declarative knob descriptors. Metadata only — see §4. |
-| `source`   | `string`         | no       | Verbatim JSX for the code panel — see §5. |
+| field      | type                | required | meaning |
+|------------|---------------------|----------|---------|
+| `name`     | `string`            | yes      | Variant label. Unique within the file. |
+| `render`   | `(args?: Partial<P>) => VNode` | yes | **Pure, synchronous.** Returns the preview node. `args` is the merged control values, typed to `P` — no `as` cast needed. No effects, no async, no data fetching. |
+| `controls` | `StoryControl<P>[]` | no       | Declarative knob descriptors, keyed to real props of `P`. Metadata only — see §4. |
+| `source`   | `string`            | no       | Verbatim JSX for the code panel — see §5. |
+
+If the component's `Props` type isn't exported, derive it inline rather than
+widening the component's public surface just for story typing:
+`type ButtonProps = Parameters<typeof Button>[0];`. For a `render` that
+composes more than one component into one scene (e.g. `Card` +
+`CardTitle`/`CardBody`/`CardFooter`), define a small scene-specific args type
+instead of forcing a single component's `Props` — see `card.stories.tsx` →
+`Playground`.
 
 The optional `defineStory(story)` identity helper (exported from the package)
 just pins the type for editor autocomplete; a plain object literal that
-satisfies `Story` is equally valid.
+satisfies `Story<P>` is equally valid.
 
 ---
 
@@ -203,7 +216,7 @@ them. The catalog decides whether and how to render live controls. A story with
 no `controls` renders fine — it's a static preview. This keeps story authoring
 trivial and pushes interactivity entirely into the catalog (S6's call).
 
-`StoryControl` is a discriminated union on `type`:
+`StoryControl<P>` is a discriminated union on `type`:
 
 ```ts
 { type: "select",  prop: "variant", label: "Variant", options: ["primary","ghost"], defaultValue: "primary" }
@@ -211,7 +224,13 @@ trivial and pushes interactivity entirely into the catalog (S6's call).
 { type: "text",    prop: "label",   label: "Label", defaultValue: "Click me" }
 ```
 
-- `prop` names the component prop the control is intended to drive.
+- `prop` is typed `keyof P & string` — it must name a **real** prop of the
+  component the `Story<P>` is parameterized over. Rename or remove that prop
+  and every control naming it fails to typecheck.
+- `defaultValue` (and `options`, for `select`) narrow to that prop's own value
+  type where `P` is informative — e.g. `variant`'s `select` control above only
+  accepts values from `ButtonVariant`, so a typo or a since-removed variant
+  name fails to typecheck too.
 - If the catalog implements live controls, it is responsible for re-invoking
   `render` (or re-rendering the component) with the chosen values — the contract
   does not prescribe a binding mechanism, only the descriptor shape. Treat
@@ -269,8 +288,95 @@ When adding a component, ship its story in the same change:
 - [ ] `src/<component>/<component>.stories.tsx` exists (co-located).
 - [ ] Default export is a `StoryMeta` with `title`, `category` (from the closed
       set), `description`, `usage`.
-- [ ] At least one named `Story` export with `name` + pure synchronous `render`.
+- [ ] At least one named `Story<P>` export (`P` = the component's props) with
+      `name` + pure synchronous `render`.
 - [ ] `source` set on any non-trivial variant.
-- [ ] `controls` added where live editing is meaningful (optional).
+- [ ] `controls` added where live editing is meaningful (optional); `prop`
+      names a real key of `P`.
 - [ ] Component uses only semantic token utilities (passes `pnpm lint:tokens`).
+- [ ] _(Optional)_ `src/<component>/<component>.mdx` docs file, if the component
+      needs guidelines / do-don't / a11y notes beyond `description` + `usage`
+      (see §8).
 - [ ] `pnpm check` (typecheck) and `pnpm test:unit` pass.
+
+---
+
+## 8. Scaffolding a new component
+
+`pnpm new:component <name> --category <Category>` (repo root) generates the
+whole checklist above in one command:
+
+```
+pnpm new:component demo-widget --category Layout
+```
+
+- `<name>` must be kebab-case and not already exist under `packages/ui/src/`.
+- `<Category>` must be one of the `StoryCategory` union members (§3):
+  `Actions`, `Typography`, `Layout`, `Data Display`, `Forms`, `Navigation`.
+
+It creates, following the existing house pattern (variant union + `Record`
+class map + `class?` passthrough + the shared focus-visible outline classes):
+
+- `packages/ui/src/<name>/<name>.tsx` — typed-props component skeleton.
+- `packages/ui/src/<name>/<name>.stories.tsx` — `StoryMeta` + a typed
+  `Story<Props>` `Playground` variant with a controls skeleton (§3/§4).
+- `packages/ui/src/<name>/__tests__/<name>.test.tsx` — a starter test suite.
+- The barrel export in `packages/ui/src/index.ts`, inserted alphabetically
+  into the matching `// ── <Category> ──` section.
+- A `gen:sg-registry` run, so the component is registered in the S6 catalog
+  immediately (§2) — no separate step needed.
+
+The generated files typecheck, pass `lint:tokens`, and pass the story-authoring
+contract test as-is (the two placeholder `variant`s exist so nothing is
+half-typed). Fill in the `TODO`s — the real markup, variant classes, and
+description — then run `pnpm check` and `pnpm test:unit` before shipping.
+
+The scaffolder's own logic (name/category validation, templates, and the
+barrel-insertion algorithm) lives in `scripts/lib/component-scaffold.mjs` and
+is unit-tested in `scripts/__tests__/component-scaffold.test.ts`; the CLI
+entry point is `scripts/new-component.mjs`.
+
+## 9. Per-component docs (optional MDX)
+
+`meta.description` (one sentence) and `meta.usage` (one snippet) cover the quick
+reference. When a component needs more — usage guidelines, do/don't, variant
+intent, accessibility notes — ship an **optional** co-located MDX doc:
+
+```
+src/<component>/<component>.mdx      # e.g. src/button/button.mdx
+```
+
+- **Optional and co-located.** Same directory + base name as the component and
+  its story (`button.tsx`, `button.stories.tsx`, `button.mdx`). A component with
+  no `.mdx` renders no extra section on its detail page — nothing else to do.
+- **How it renders.** The doc is a
+  [`componentDocs`](../../zfb.config.ts) content collection rooted at
+  `packages/ui/src` (`include: ["*/*.mdx"]`), so zfb's Rust pipeline compiles it
+  at build time. The host detail page (`pages/components/[slug].tsx`) looks up
+  the entry by deriving its slug from the story path
+  ([`src/styleguide/data/component-docs.ts`](../../src/styleguide/data/component-docs.ts))
+  and renders `<entry.Content>` inside a `.zd-content` wrapper. Discovery is
+  therefore keyed off the **same** `packages/ui/src/<name>/` root the
+  `gen-sg-registry` codegen walks — no separate registration, no codegen change.
+- **Authoring.** Start headings at `##` (the page title is already the `<h1>`).
+  The shared doc typography (`.zd-content`), fenced code-block highlighting, and
+  the admonition directives all work exactly as in a regular doc page:
+
+  ```md
+  ---
+  title: Button
+  ---
+
+  ## Guidelines
+
+  Prose, lists, and fenced code blocks render with the site's doc styles.
+
+  :::tip
+  Admonitions (`:::note` / `:::tip` / `:::info` / `:::warning` / `:::danger` /
+  `:::caution`) and the `<Note title="…">` JSX form both render.
+  :::
+  ```
+
+- **Not a route.** The collection is intentionally absent from
+  `resolveMarkdownLinks.dirs`, so these files never get their own URL — they
+  only ever render inline on the component detail page.

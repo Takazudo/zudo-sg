@@ -33,24 +33,26 @@ import { Island } from "@takazudo/zfb";
 import { settings } from "@/config/settings";
 import { SidebarResizerInit } from "@takazudo/zudo-doc/sidebar-resizer";
 
-import AiChatModal from "@/components/ai-chat-modal";
-import ImageEnlarge, { ImageEnlargeSsrFallback } from "@/components/image-enlarge";
-import MermaidEnlarge, { MermaidEnlargeSsrFallback } from "@/components/mermaid-enlarge";
+// #113: adopt the package enlarge/ai-chat islands directly (the former
+// src/components/{image-enlarge,mermaid-enlarge,ai-chat-modal} forks were
+// redundant drift — identical shapes — and collided with the package islands
+// once packageOwnedRoutes pulled the package chrome into the scan graph). The
+// package components pin their own `displayName` internally, so no manual
+// marker assignment is needed here. Mirrors the sibling zudo-doc showcase.
+import { AiChatModal } from "@takazudo/zudo-doc/ai-chat-modal";
+import { ImageEnlarge, ImageEnlargeSsrFallback } from "@takazudo/zudo-doc/image-enlarge";
+import { MermaidEnlarge, MermaidEnlargeSsrFallback } from "@takazudo/zudo-doc/mermaid-enlarge";
 
 import DesignTokenPanelBootstrap from "@/components/design-token-panel-bootstrap";
 import PreviewTokenPanelBootstrap from "@/components/preview-token-panel-bootstrap";
 
-// Set explicit `displayName` on each default-exported island so zfb's
+// Set explicit `displayName` on each host-defined island so zfb's
 // `captureComponentName` produces a stable marker even after the SSR
 // pipeline runs the components through a function-name-rewriting layer.
 // The marker must match the third-arg literal that zfb's scanner records
 // for the same source-level identifier (zfb PR #150). esbuild preserves
 // function names by default, but the explicit assignment is a
 // belt-and-braces guard for production minification regressions.
-(AiChatModal as { displayName?: string }).displayName = "AiChatModal";
-(ImageEnlarge as { displayName?: string }).displayName = "ImageEnlarge";
-(MermaidEnlarge as { displayName?: string }).displayName = "MermaidEnlarge";
-
 (DesignTokenPanelBootstrap as { displayName?: string }).displayName = "DesignTokenPanelBootstrap";
 (PreviewTokenPanelBootstrap as { displayName?: string }).displayName = "PreviewTokenPanelBootstrap";
 
@@ -173,16 +175,26 @@ export function BodyEndIslands({
       {mermaidEnlarge}
 
       {/* zdtp doc-chrome panel bootstrap: hydrates on load so configurePanel()
-          runs early and the toggle-my-doc-tweak listener is live before the user
+          runs early and the toggle-sg-doc-tweak listener is live before the user
           clicks the header Design Tokens icon. The inline script is the
           pre-hydration shim that queues the first click (zudolab/zudo-doc#1627
-          Part B). Listens on "toggle-my-doc-tweak" — the doc-chrome panel's
+          Part B). Listens on "toggle-sg-doc-tweak" — the doc-chrome panel's
           explicit toggle channel — NOT the reserved "toggle-design-token-panel"
           (which zdtp 0.3.0 binds only to its empty default; see
           Takazudo/zudo-sg#84/#85). Guard names: __zdtpToggleShimInstalled /
-          __zdtpReadyClicks. */}
+          __zdtpReadyClicks.
+
+          Re-verified against zdtp 0.4.3 (#117): this shim is NOT the "0.3.0
+          default-instance" toggleEvent workaround (that one is the explicit
+          `toggleEvent: "toggle-sg-doc-tweak"` choice in
+          design-token-panel-config.ts, fixed upstream in 0.3.2 but still
+          required here since two simultaneous instances still need distinct
+          channels). This shim solves a SEPARATE, still-current problem: the
+          `<Island when="load">` bootstrap below doesn't hydrate (and register
+          zdtp's own toggle listener) until the window "load" event, so a click
+          on the header icon before then would otherwise be lost. Kept as-is. */}
       <script
-        dangerouslySetInnerHTML={{ __html: "(function(){\nif(window.__zdtpToggleShimInstalled)return;\nwindow.__zdtpToggleShimInstalled=true;\nvar pending=false;\nfunction shim(){pending=true;}\nwindow.addEventListener('toggle-my-doc-tweak',shim);\nwindow.__zdtpReadyClicks=function(){\nwindow.removeEventListener('toggle-my-doc-tweak',shim);\ndelete window.__zdtpReadyClicks;\nif(pending){pending=false;window.dispatchEvent(new CustomEvent('toggle-my-doc-tweak'));}\n};\n})();" }}
+        dangerouslySetInnerHTML={{ __html: "(function(){\nif(window.__zdtpToggleShimInstalled)return;\nwindow.__zdtpToggleShimInstalled=true;\nvar pending=false;\nfunction shim(){pending=true;}\nwindow.addEventListener('toggle-sg-doc-tweak',shim);\nwindow.__zdtpReadyClicks=function(){\nwindow.removeEventListener('toggle-sg-doc-tweak',shim);\ndelete window.__zdtpReadyClicks;\nif(pending){pending=false;window.dispatchEvent(new CustomEvent('toggle-sg-doc-tweak'));}\n};\n})();" }}
       />
       {Island({
         when: "load",
@@ -193,7 +205,9 @@ export function BodyEndIslands({
           early for the 2nd (preview-iframe) instance. Guard names are DISTINCT
           from the doc-chrome panel (__zdtpPreviewToggleShimInstalled /
           __zdtpPreviewReadyClicks) so both panels hydrate independently without
-          cross-talk. Listens on "toggle-preview-token-panel". */}
+          cross-talk. Listens on "toggle-preview-token-panel". Re-verified
+          against zdtp 0.4.3 alongside the doc-chrome shim above (#117) — kept
+          for the same pre-hydration click-queue reason. */}
       <script
         dangerouslySetInnerHTML={{ __html: "(function(){\nif(window.__zdtpPreviewToggleShimInstalled)return;\nwindow.__zdtpPreviewToggleShimInstalled=true;\nvar pending=false;\nfunction shim(){pending=true;}\nwindow.addEventListener('toggle-preview-token-panel',shim);\nwindow.__zdtpPreviewReadyClicks=function(){\nwindow.removeEventListener('toggle-preview-token-panel',shim);\ndelete window.__zdtpPreviewReadyClicks;\nif(pending){pending=false;window.dispatchEvent(new CustomEvent('toggle-preview-token-panel'));}\n};\n})();" }}
       />

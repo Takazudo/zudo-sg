@@ -1,7 +1,23 @@
 import type { StoryMeta, Story } from "../stories/types";
-import { Card, CardTitle, CardBody, CardFooter } from "./card";
+import { Card, CardTitle, CardBody, CardFooter, type CardVariant } from "./card";
 import { Badge } from "../badge/badge";
 import { Link } from "../link/link";
+
+// CardProps isn't exported (Card is consumed via its component signature
+// elsewhere), so derive it from the function itself rather than widening the
+// component's public surface just for story typing.
+type CardProps = Parameters<typeof Card>[0];
+
+// The Playground composes Card + CardTitle/CardBody/CardFooter into one scene,
+// so its controls drive a scene-specific arg shape rather than Card's own
+// props 1:1 — only `variant` maps onto a real CardProps key.
+type CardPlaygroundProps = {
+  variant: CardVariant;
+  title: string;
+  body: string;
+  showFooter: boolean;
+  footer: string;
+};
 
 const meta: StoryMeta = {
   title: "Card",
@@ -18,7 +34,7 @@ const meta: StoryMeta = {
 
 export default meta;
 
-export const Playground: Story = {
+export const Playground: Story<CardPlaygroundProps> = {
   name: "Playground",
   source: `<Card variant="outlined">
   <CardTitle>Card title</CardTitle>
@@ -59,16 +75,16 @@ export const Playground: Story = {
   ],
   render: (args = {}) => (
     <div class="max-w-[24rem]">
-      <Card variant={args.variant as "outlined" | "elevated" | "filled"}>
-        <CardTitle>{args.title as string}</CardTitle>
-        <CardBody>{args.body as string}</CardBody>
-        {args.showFooter && <CardFooter>{args.footer as string}</CardFooter>}
+      <Card variant={args.variant}>
+        <CardTitle>{args.title}</CardTitle>
+        <CardBody>{args.body}</CardBody>
+        {args.showFooter && <CardFooter>{args.footer}</CardFooter>}
       </Card>
     </div>
   ),
 };
 
-export const Variants: Story = {
+export const Variants: Story<CardProps> = {
   name: "Variants",
   source: `<Card variant="outlined">
   <CardTitle>outlined</CardTitle>
@@ -88,7 +104,7 @@ export const Variants: Story = {
   ),
 };
 
-export const WithFooter: Story = {
+export const WithFooter: Story<CardProps> = {
   name: "With footer",
   source: `<Card variant="elevated">
   <div class="flex items-center justify-between gap-hsp-md">
@@ -120,7 +136,7 @@ export const WithFooter: Story = {
   ),
 };
 
-export const Linked: Story = {
+export const Linked: Story<CardProps> = {
   name: "Linked (whole card)",
   source: `<Card href="/articles/tokens" variant="outlined">
   <Badge tone="brand">Guide</Badge>

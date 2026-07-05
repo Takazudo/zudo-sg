@@ -6,10 +6,11 @@
  * After these imports, only project-defined tokens exist; `p-4` or `bg-gray-500`
  * cause build errors at the CSS level.
  *
- * Shared tokens (spacing, typography, radius, shadows, breakpoints) AND the
- * semantic color set come from @zudo-sg/ui — the single source of truth for the
- * whole monorepo. This file adds only demo-specific extras: optional semantic
- * text-size aliases and the demo's z-index tiers.
+ * Shared tokens (spacing, typography — both the abstract Tier 1 scale and
+ * the semantic Tier 2 aliases —, radius, shadows, breakpoints) AND the
+ * semantic color set come from @zudo-sg/ui — the single source of truth for
+ * the whole monorepo. This file adds only demo-specific extras: the demo's
+ * z-index tiers.
  */
 
 @import "tailwindcss/preflight";
@@ -36,21 +37,6 @@
 
 @theme {
   /* ========================================
-   * Semantic text aliases — maps the shared abstract scale (xs–2xl)
-   * to semantic names used in this site's components.
-   *
-   * These are Tailwind @theme entries so `text-display`, `text-body`,
-   * etc. work as utility classes alongside `text-2xl`, `text-base`.
-   * ======================================== */
-
-  --text-micro:   var(--font-size-xs);     /* 12px — fine print, labels */
-  --text-small:   var(--font-size-sm);     /* 14px — secondary text */
-  --text-body:    var(--font-size-base);   /* 16px — body copy */
-  --text-heading: var(--font-size-lg);     /* 20px — card headings */
-  --text-title:   var(--font-size-xl);     /* 28px — section headings */
-  --text-display: var(--font-size-2xl);    /* 40px — hero display */
-
-  /* ========================================
    * Z-index — semantic steps for the demo layout
    * ======================================== */
 
@@ -75,8 +61,8 @@
     margin: 0;
     min-height: 100dvh;
     font-family: var(--font-sans);
-    font-size: var(--font-size-base);
-    line-height: var(--font-size-base--line-height);
+    font-size: var(--text-base);
+    line-height: var(--text-base--line-height);
     background: var(--color-paper);
     color: var(--color-ink);
     -webkit-font-smoothing: antialiased;

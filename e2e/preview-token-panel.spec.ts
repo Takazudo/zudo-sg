@@ -24,12 +24,12 @@ import { expect, test, type Page, type FrameLocator } from "@playwright/test";
 //   unreliable. Tests that verify Reset must drive the panel via UI so the
 //   registry tracks the overrides.
 //
-//   window.sgPreview methods (installed by zdtp host adapter):
-//     - showDesignPanel(): async, forces panel module lazy-load, then opens
-//     - hideDesignPanel(): async, forces panel module lazy-load, then closes
-//     - toggleDesignPanel(): async, forces panel module lazy-load, then toggles
-//   For tests we dispatch the CustomEvent directly (synchronous, always wired)
-//   to prove the toggle event channel is correctly bound.
+//   window.sgPreview: zdtp's root (non-Astro) API doesn't auto-install these
+//   the way its Astro host adapter does, so preview-token-panel-bootstrap.ts
+//   wires window.sgPreview.enableAutoload() / .disableAutoload() by hand
+//   (#117) — there is no show/hide/toggleDesignPanel on this namespace. For
+//   tests we dispatch the CustomEvent directly (synchronous, always wired) to
+//   prove the toggle event channel is correctly bound.
 //
 // All five assertion groups required by issue #80 (H6) are present.
 // ---------------------------------------------------------------------------
@@ -75,11 +75,9 @@ async function waitForFirstPreviewFrame(page: Page): Promise<FrameLocator> {
  *
  * The CustomEvent path is always available (registered by the preview-panel
  * bootstrap island). This also verifies the "toggle-preview-token-panel"
- * event channel is correctly wired.
- *
- * Alternative: `window.sgPreview.toggleDesignPanel()` — an async method
- * installed by the zdtp host adapter that also forces the panel module to
- * lazy-load. Both paths end with the same mounted panel.
+ * event channel is correctly wired. (There is no `window.sgPreview.toggleDesignPanel()`
+ * alternative — zdtp's root API doesn't install one for non-Astro hosts; see
+ * the file-header note.)
  */
 async function openPreviewPanel(page: Page): Promise<void> {
   await page.evaluate(() => {
@@ -232,7 +230,7 @@ test("preview panel: overrides reach iframe :root; host <html> is unchanged", as
 // Test 2: doc "Tokens" panel does NOT change the preview iframe
 // ---------------------------------------------------------------------------
 
-test("doc Tokens panel: dispatching toggle-my-doc-tweak opens the real (non-empty) panel and does not change preview iframe", async ({
+test("doc Tokens panel: dispatching toggle-sg-doc-tweak opens the real (non-empty) panel and does not change preview iframe", async ({
   page,
 }) => {
   await gotoFirstDetailPage(page);
@@ -244,14 +242,14 @@ test("doc Tokens panel: dispatching toggle-my-doc-tweak opens the real (non-empt
   // Open the DOC token panel via its explicit toggle channel.
   // The doc panel has NO applySink — it writes to the host :root only.
   //
-  // CRITICAL: the channel is "toggle-my-doc-tweak", NOT the reserved
+  // CRITICAL: the channel is "toggle-sg-doc-tweak", NOT the reserved
   // "toggle-design-token-panel". In @takazudo/zdtp 0.3.0 the reserved event is
   // bound only to the framework's empty-tabs default instance, so dispatching it
   // mounts an EMPTY shell rather than this project's real 4-tab panel. Routing
-  // the doc-chrome trigger to "toggle-my-doc-tweak" is the host fix
-  // (Takazudo/zudo-sg#84/#85).
+  // the doc-chrome trigger to "toggle-sg-doc-tweak" is the host fix
+  // (Takazudo/zudo-sg#84/#85; renamed from "toggle-my-doc-tweak" in #117).
   await page.evaluate(() => {
-    window.dispatchEvent(new CustomEvent("toggle-my-doc-tweak"));
+    window.dispatchEvent(new CustomEvent("toggle-sg-doc-tweak"));
   });
   const docPanel = page.locator(".tokenpanel-shell").first();
   await expect(docPanel).toBeVisible({

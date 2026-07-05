@@ -1,6 +1,9 @@
 import type { StoryMeta, Story } from "../stories/types";
 import { SiteFooter } from "./footer";
 
+// SiteFooterProps isn't exported; derive it from the component itself.
+type SiteFooterProps = Parameters<typeof SiteFooter>[0];
+
 const meta: StoryMeta = {
   title: "SiteFooter",
   category: "Navigation",
@@ -44,7 +47,51 @@ const groups = [
   },
 ];
 
-export const Default: Story = {
+export const Playground: Story = {
+  name: "Playground",
+  source: `<SiteFooter
+  brand="zudo-sg"
+  tagline="A tight component system."
+  groups={groups}
+  copyright="© 2026 zudo-sg."
+/>`,
+  controls: [
+    {
+      type: "text",
+      prop: "brand",
+      label: "Brand",
+      defaultValue: "zudo-sg",
+    },
+    {
+      type: "text",
+      prop: "tagline",
+      label: "Tagline",
+      defaultValue: "A tight component system.",
+    },
+    {
+      type: "boolean",
+      prop: "showGroups",
+      label: "Show link groups",
+      defaultValue: true,
+    },
+    {
+      type: "text",
+      prop: "copyright",
+      label: "Copyright",
+      defaultValue: "© 2026 zudo-sg.",
+    },
+  ],
+  render: (args = {}) => (
+    <SiteFooter
+      brand={args.brand as string}
+      tagline={args.tagline as string}
+      groups={args.showGroups ? groups : undefined}
+      copyright={args.copyright as string}
+    />
+  ),
+};
+
+export const Default: Story<SiteFooterProps> = {
   name: "Default",
   source: `<SiteFooter
   brand="zudo-sg"
@@ -62,7 +109,7 @@ export const Default: Story = {
   ),
 };
 
-export const Minimal: Story = {
+export const Minimal: Story<SiteFooterProps> = {
   name: "Minimal (no groups)",
   source: `<SiteFooter
   brand="zudo-sg"

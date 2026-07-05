@@ -80,35 +80,27 @@ Only show sections that have entries. **Wait for user confirmation before procee
 
 If this is a **major** version bump, ask the user whether they want to archive the current docs as a versioned snapshot (i.e. run with `--snapshot`). Explain that this copies the current docs to a versioned directory for the old version.
 
-## Run version-bump.sh
+## Update package.json and changelog
 
-Run the existing version bump script to update package.json and create changelog entry files:
+This repo has **no `scripts/version-bump.sh`** and **no JA locale** (`locales: {}` in
+`src/config/settings.ts`, no `docs-ja` directory) — do these two updates directly instead of
+running a wrapper script:
 
-```bash
-./scripts/version-bump.sh {NEW_VERSION}
-# Or with snapshot for major bumps:
-./scripts/version-bump.sh {NEW_VERSION} --snapshot
-```
-
-This script:
-
-1. Updates `version` in `package.json`
-2. Creates `src/content/docs/changelog/{NEW_VERSION}.mdx` (EN)
-3. Creates `src/content/docs-ja/changelog/{NEW_VERSION}.mdx` (JA)
-4. With `--snapshot`: copies current docs to versioned directories and prints settings.ts entry to add
+1. Update the `version` field in `package.json` to `{NEW_VERSION}`.
+2. Update `src/content/docs/changelog/index.mdx` (the **only** changelog page — there is no
+   per-version file, everything lives in this one file as dated `##` sections):
+   - Rename the current `## Unreleased` heading to `## {NEW_VERSION}` and add a
+     `Released: {YYYY-MM-DD}` line under it.
+   - Insert a fresh, empty `## Unreleased` section above it (with an `- Initial release`-style
+     placeholder bullet) so future changes have somewhere to land.
 
 ## Fill in changelog content
 
-After the script creates the template files, **replace the placeholder content** with the actual categorized changes from the commit analysis.
-
-### English changelog (`src/content/docs/changelog/{NEW_VERSION}.mdx`)
+Replace the section you just renamed with the actual categorized changes from the commit
+analysis:
 
 ```mdx
----
-title: {NEW_VERSION}
-description: Release notes for {NEW_VERSION}.
-sidebar_position: {value from script}
----
+## {NEW_VERSION}
 
 Released: {YYYY-MM-DD}
 
@@ -129,37 +121,9 @@ Released: {YYYY-MM-DD}
 - Description (commit-hash)
 ```
 
-### Japanese changelog (`src/content/docs-ja/changelog/{NEW_VERSION}.mdx`)
-
-```mdx
----
-title: {NEW_VERSION}
-description: {NEW_VERSION}のリリースノート。
-sidebar_position: {value from script}
----
-
-リリース日: {YYYY-MM-DD}
-
-### 破壊的変更
-
-- Description (commit-hash)
-
-### 機能
-
-- Description (commit-hash)
-
-### バグ修正
-
-- Description (commit-hash)
-
-### その他の変更
-
-- Description (commit-hash)
-```
-
 Rules:
 
-- Only include sections that have entries
+- Only include sub-sections that have entries
 - Use today's date for the release date
 - Each entry should be the commit subject with the short hash in parentheses
 
@@ -178,7 +142,7 @@ If anything fails, fix the issue and re-run. Do not proceed with committing unti
 Stage and commit **all** version bump changes — include any files modified by b4push formatting fixes:
 
 ```bash
-git add package.json src/content/docs/changelog/{NEW_VERSION}.mdx src/content/docs-ja/changelog/{NEW_VERSION}.mdx
+git add package.json src/content/docs/changelog/index.mdx
 # Also stage any other modified files (e.g. formatting fixes from b4push)
 git diff --name-only | xargs git add
 git commit -m "chore: Bump version to v{NEW_VERSION}"
@@ -207,10 +171,16 @@ git tag v{NEW_VERSION}
 git push --tags
 ```
 
-After pushing the tag, create a GitHub release. Use `awk` to strip only the YAML frontmatter (first `---` to second `---`) from the changelog file:
+After pushing the tag, create a GitHub release. `index.mdx` holds every version as its own
+`## {version}` section, so extract just the `## {NEW_VERSION}` section (from that heading up to
+the next `##` heading or end of file):
 
 ```bash
-NOTES=$(awk 'BEGIN{f=0} /^---$/{f++; next} f>=2' src/content/docs/changelog/{NEW_VERSION}.mdx)
+NOTES=$(awk -v ver="## {NEW_VERSION}" '
+  $0 == ver { f=1; next }
+  f && /^## / { exit }
+  f
+' src/content/docs/changelog/index.mdx)
 gh release create v{NEW_VERSION} --title "v{NEW_VERSION}" --notes "$NOTES"
 ```
 
@@ -237,7 +207,7 @@ Package is marked as private — skipping npm publish.
 Report the summary:
 
 - Version bumped: `{OLD_VERSION}` → `{NEW_VERSION}`
-- Changelog created (EN + JA)
+- Changelog updated (`src/content/docs/changelog/index.mdx`)
 - Git tag: `v{NEW_VERSION}`
 - GitHub release: link to the release
 - npm publish status (published / skipped for private package)

@@ -14,6 +14,7 @@ import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import type { StoryControl } from "@zudo-sg/ui";
 import { withBase } from "@/utils/base";
 import { MSG_UPDATE_PROPS, isHeightMessage } from "./messages";
+import { PREVIEW_ROUTE_PATH } from "./route";
 import {
   registerPreviewIframe,
   unregisterPreviewIframe,
@@ -53,11 +54,10 @@ function VariantFrame(props: VariantFrameProps): JSX.Element {
   );
 
   const src = useMemo(() => {
-    // Preview route nests under /components in this host (it was `/preview`
-    // in the standalone styleguide). The code-panel CSS-injection feature
-    // (#49) selects these iframes via `iframe[src*="/components/preview"]`, so
-    // this path and that selector MUST stay in agreement.
-    const base = withBase("/components/preview");
+    // PREVIEW_ROUTE_PATH is shared with css-injection.ts's iframe selector
+    // (see ./route.ts) — keep them in agreement by importing the constant,
+    // not by re-typing the literal (#48, #105).
+    const base = withBase(PREVIEW_ROUTE_PATH);
     return `${base}?slug=${encodeURIComponent(slug)}&variant=${encodeURIComponent(exportName)}`;
   }, [slug, exportName]);
 

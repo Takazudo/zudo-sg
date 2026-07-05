@@ -7,7 +7,7 @@
  * panel config (`design-token-panel-config.ts`):
  *
  *  - Distinct `storagePrefix` ("sg-preview-tweak") so localStorage keys never
- *    collide with the doc-chrome panel ("my-doc-tweak").
+ *    collide with the doc-chrome panel ("sg-doc-tweak").
  *  - Distinct `consoleNamespace` ("sgPreview") so `window.sgPreview.*` commands
  *    target only this instance.
  *  - Distinct `modalClassPrefix` ("sg-preview-design-token-panel-modal") for
@@ -22,14 +22,13 @@
  * UI_SIZE_TOKENS from `ui-design-tokens-manifest.ts`. These cover the tokens
  * defined in `packages/ui/styles/tokens.css` and `colors.css`.
  *
- * The Color tab is a generic "Color" tab (`GenericTab`, non-reserved id) — not
- * the dedicated zdtp `ColorTab` cluster, whose flat-indexed-palette +
- * single-index-semantics + scheme-switch model does not fit @zudo-sg/ui's
- * family-named palette and `light-dark()` semantics. Inside it:
- *   - a "Palette" tier surfaces the Tier-1 `--palette-*` colors as
- *     `{ kind: "color" }` swatches (see buildPaletteTier below);
- *   - the Tier-2 semantic `--color-*` tokens are free-text rows because a
- *     single-axis slider can't drive a `light-dark()` expression.
+ * The Tier-1 `--palette-*` families live in their own reserved `palette` tab
+ * (zdtp 0.4.0 — see PALETTE_TAB below), not inside Color. The Color tab stays
+ * a generic "Color" tab (`GenericTab`, non-reserved id) — not the dedicated
+ * zdtp `ColorTab` cluster, whose single-index-semantics + scheme-switch model
+ * does not fit @zudo-sg/ui's `light-dark()` semantic tokens. Inside it, the
+ * Tier-2 semantic `--color-*` tokens are free-text rows because a single-axis
+ * slider can't drive a `light-dark()` expression.
  */
 
 import type { PanelConfig, TabConfig, TierConfig, TierItem, TokenDef } from "@takazudo/zdtp";
@@ -44,6 +43,7 @@ import {
   applyPreviewVars,
   clearPreviewVars,
 } from "@/features/styleguide/token-tweak/preview-iframe-registry";
+import { applyEndpoint, applyRouting } from "virtual:zdtp-apply-config";
 
 // ---------------------------------------------------------------------------
 // Helpers — reuse the same toTierItem / tierFromGroup pattern as the doc panel.
@@ -87,59 +87,83 @@ function tierFromGroup(
 }
 
 // ---------------------------------------------------------------------------
+// Palette tab — zdtp 0.4.0's reserved `palette` tab (joins color/font/spacing/
+// size). It dispatches to PaletteTab, NOT GenericTab, and expects each group
+// of `--palette-{family}-{step}` steps as its own TierConfig (the tier's
+// `label` becomes the group heading; dragging its OKLCH L/C/H curve re-derives
+// every step in that ONE tier and commits the whole group in a single write).
+// A flat single-tier dump (the pre-0.4.0 GenericTab layout this replaces)
+// would put every family on one shared curve, which is wrong — cool/warm/
+// brand/accent/success/danger are independent scales. The tab also gets a
+// WCAG contrast-checker ("Check" mode) over the whole flattened palette for
+// free, with no extra config.
+//
+// Per the reserved-tab contract, this TabConfig MUST omit `colorExtras`
+// (colorExtras + multiple `{ kind: "color" }` tiers only combine safely on
+// the 'color'/'color-secondary' cluster tabs).
+// ---------------------------------------------------------------------------
+
+/**
+ * Split a `UI_PALETTE_COLORS` name (e.g. "cool-700") into its family
+ * ("cool") and step ("700"). Names with no numeric step (e.g. "white") are
+ * their own single-item family.
+ */
+function splitPaletteName(name: string): { family: string; step: string | null } {
+  const match = /^(.+)-(\d+)$/.exec(name);
+  if (!match) return { family: name, step: null };
+  const [, family, step] = match;
+  return { family: family ?? name, step: step ?? null };
+}
+
+/**
+ * Group `UI_PALETTE_COLORS` into one TierConfig per family, in first-seen
+ * order, each item opting into `format: "oklch"` (zdtp >= 0.3.3) so the panel
+ * edits the oklch() defaults losslessly instead of hex-approximating them
+ * through a native `<input type="color">` (the regression tracked upstream
+ * as #372).
+ */
+function buildPaletteTiers(): TierConfig[] {
+  const families = new Map<string, TierItem[]>();
+  for (const { name, value } of UI_PALETTE_COLORS) {
+    const { family } = splitPaletteName(name);
+    const items = families.get(family) ?? [];
+    items.push({
+      id: `palette-${name}`,
+      cssVar: `--palette-${name}`,
+      label: `palette-${name}`,
+      default: value,
+      type: { kind: "color" as const, format: "oklch" as const },
+    });
+    families.set(family, items);
+  }
+  return Array.from(families.entries()).map(([family, items]) => ({
+    id: `palette-${family}`,
+    label: family.charAt(0).toUpperCase() + family.slice(1),
+    items,
+  }));
+}
+
+const PALETTE_TAB: TabConfig = {
+  id: "palette",
+  label: "Palette",
+  tiers: buildPaletteTiers(),
+};
+
+// ---------------------------------------------------------------------------
 // Color tab — use a non-reserved id ("ui-color") so zdtp routes this to
 // GenericTab rather than the dedicated ColorTab. The dedicated ColorTab's
 // cluster model assumes a flat indexed palette (--zd-0..15) with single-index
 // semantic references and a scheme-switch system — which does not fit
-// @zudo-sg/ui's family-named palette (--palette-cool-700, …) and light-dark()
-// semantics. So we stay on GenericTab and express the layers as ordinary tiers:
-//
-//   - "Palette" tier: the Tier-1 --palette-* colors as { kind: "color" }
-//     swatches (built inline below — TokenDef has no "color" control, mirroring
-//     the doc panel's buildPaletteTier). Each item opts into format: "oklch"
-//     (zdtp >= 0.3.3, the #372 fix) so GenericTab routes it through the OKLCH
-//     ColorPicker — faithfully displaying and editing the oklch() palette values
-//     with no lossy hex round-trip — instead of the default native
-//     <input type="color">. Editing one pushes --palette-* to the preview
-//     iframes, cascading into every semantic --color-* that reads it.
-//   - "Ink"/"Surface"/… tiers: the Tier-2 semantic tokens as text rows
-//     (light-dark() expressions, which a single-axis slider can't drive).
+// @zudo-sg/ui's light-dark() semantics (the family-named palette itself now
+// lives in PALETTE_TAB above). So we stay on GenericTab for the Tier-2
+// semantic tokens: "Ink"/"Surface"/… tiers as text rows (light-dark()
+// expressions, which a single-axis slider can't drive).
 // ---------------------------------------------------------------------------
-
-const PALETTE_TIER_ID = "ui-palette";
-
-/**
- * Tier-1 palette swatches. Built inline as direct TierItems with
- * `type: { kind: "color" }` because zdtp's `TokenDef.control` has no "color"
- * option, so the toTierItem path can't express these — same approach as the
- * doc panel's `buildPaletteTier()`. Source data: UI_PALETTE_COLORS, which is
- * cross-checked against packages/ui/styles/colors.css.
- *
- * `format: "oklch"` (zdtp >= 0.3.3) opts each swatch into the OKLCH ColorPicker
- * so the oklch() defaults render and edit losslessly. Omitting it would fall
- * back to a native <input type="color"> that hex-approximates the value and
- * emits hex on commit — the exact regression tracked upstream as #372.
- */
-function buildPaletteTier(): TierConfig {
-  const items: TierItem[] = UI_PALETTE_COLORS.map(({ name, value }) => ({
-    id: `palette-${name}`,
-    cssVar: `--palette-${name}`,
-    label: `palette-${name}`,
-    default: value,
-    type: { kind: "color" as const, format: "oklch" as const },
-  }));
-  return {
-    id: PALETTE_TIER_ID,
-    label: "Palette",
-    items,
-  };
-}
 
 const COLOR_TAB: TabConfig = {
   id: "ui-color",
   label: "Color",
   tiers: [
-    buildPaletteTier(),
     tierFromGroup(UI_COLOR_TOKENS, "ink", "Ink"),
     tierFromGroup(UI_COLOR_TOKENS, "surface", "Surface"),
     tierFromGroup(UI_COLOR_TOKENS, "line", "Line"),
@@ -195,7 +219,7 @@ const SIZE_TAB: TabConfig = {
 // ---------------------------------------------------------------------------
 
 export const previewTokenPanelConfig: PanelConfig = {
-  // Distinct from the doc-chrome panel ("my-doc-tweak") — prevents localStorage
+  // Distinct from the doc-chrome panel ("sg-doc-tweak") — prevents localStorage
   // key collisions when both panels are active on the same page.
   storagePrefix: "sg-preview-tweak",
   consoleNamespace: "sgPreview",
@@ -209,7 +233,17 @@ export const previewTokenPanelConfig: PanelConfig = {
   // (the doc-chrome event) will NOT open this panel, and dispatching this event
   // will NOT open the doc-chrome panel.
   toggleEvent: "toggle-preview-token-panel",
-  tabs: [COLOR_TAB, SPACING_TAB, FONT_TAB, SIZE_TAB],
+  tabs: [COLOR_TAB, PALETTE_TAB, SPACING_TAB, FONT_TAB, SIZE_TAB],
+  // Left empty deliberately: `colorPresets` only feeds the "Scheme…" dropdown
+  // rendered by the reserved 'color'/'color-secondary' ColorTab (verified
+  // against zdtp 0.4.3's ColorTab source — the preset map is merged with
+  // `colorExtras.colorSchemes` there and nowhere else). This panel has neither
+  // tab: COLOR_TAB above is a non-reserved GenericTab (no colorExtras, per its
+  // own header comment) and PALETTE_TAB is the new reserved 'palette' tab,
+  // which has no scheme/preset concept of its own. A light/dark brand-preset
+  // switcher for this panel would need a real colorExtras cluster, which does
+  // not fit @zudo-sg/ui's family palette + light-dark() tokens — see the
+  // header comment above.
   colorPresets: {},
   // Routes CSS-var writes to the preview iframes via the sink/relay API rather
   // than writing to the host document `:root`. This is the key wiring that lets
@@ -218,4 +252,12 @@ export const previewTokenPanelConfig: PanelConfig = {
     apply: applyPreviewVars,
     clear: clearPreviewVars,
   },
+  // Apply pipeline (zdtp README §3) — persists browser tweaks to CSS source.
+  // Both fields resolve to `undefined` outside `zfb dev`; see
+  // plugins/zdtp-apply-proxy-plugin.mjs for the endpoint/routing wiring and
+  // the "palette"-only scope (Tailwind v4 `@theme`-scoped tokens — spacing,
+  // font, radius, shadow, semantic color — aren't reachable by this pipeline
+  // today; see that file's header comment for the tracked follow-ups).
+  applyEndpoint,
+  applyRouting,
 };

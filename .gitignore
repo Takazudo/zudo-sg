@@ -3,10 +3,16 @@ node_modules
 dist
 .zfb
 .zfb-build
+# Route-injection staging dir written by @takazudo/zudo-doc/plugins/routes
+# (packageOwnedRoutes) at build time.
+.zudo-doc
 
 # Playwright artifacts
 test-results/
 playwright-report/
+
+# contrast:audit output (JSON report, not committed — see issue #116)
+contrast-audit-out/
 
 # macOS
 .DS_Store
@@ -41,3 +47,6 @@ src/content/docs/claude-agents/
 
 # git worktrees (local only)
 worktrees/
+
+# zfb dev/build writes a transient Tailwind entry into src/styles/
+src/styles/zfb-tailwind-entry-*.css
