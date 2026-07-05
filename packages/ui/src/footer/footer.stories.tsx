@@ -1,6 +1,9 @@
 import type { StoryMeta, Story } from "../stories/types";
 import { SiteFooter } from "./footer";
 
+// SiteFooterProps isn't exported; derive it from the component itself.
+type SiteFooterProps = Parameters<typeof SiteFooter>[0];
+
 const meta: StoryMeta = {
   title: "SiteFooter",
   category: "Navigation",
@@ -88,7 +91,7 @@ export const Playground: Story = {
   ),
 };
 
-export const Default: Story = {
+export const Default: Story<SiteFooterProps> = {
   name: "Default",
   source: `<SiteFooter
   brand="zudo-sg"
@@ -106,7 +109,7 @@ export const Default: Story = {
   ),
 };
 
-export const Minimal: Story = {
+export const Minimal: Story<SiteFooterProps> = {
   name: "Minimal (no groups)",
   source: `<SiteFooter
   brand="zudo-sg"

@@ -2,6 +2,9 @@ import type { StoryMeta, Story } from "../stories/types";
 import { SiteHeader } from "./site-header";
 import { Button } from "../button/button";
 
+// SiteHeaderProps isn't exported; derive it from the component itself.
+type SiteHeaderProps = Parameters<typeof SiteHeader>[0];
+
 const meta: StoryMeta = {
   title: "SiteHeader",
   category: "Navigation",
@@ -72,7 +75,7 @@ export const Playground: Story = {
   ),
 };
 
-export const Default: Story = {
+export const Default: Story<SiteHeaderProps> = {
   name: "Default",
   source: `<SiteHeader brand="zudo-sg" nav={nav} activePath="/docs" />`,
   // Non-sticky inside the catalog cell so it does not overlay the page.
@@ -81,7 +84,7 @@ export const Default: Story = {
   ),
 };
 
-export const WithAction: Story = {
+export const WithAction: Story<SiteHeaderProps> = {
   name: "With action",
   source: `<SiteHeader
   brand="zudo-sg"

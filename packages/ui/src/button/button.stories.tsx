@@ -1,5 +1,11 @@
 import type { StoryMeta, Story } from "../stories/types";
-import { Button } from "./button";
+import { Button, type ButtonProps } from "./button";
+
+// The Playground always renders a plain <button> (no `href` control), so its
+// controls are checked against the button branch of the polymorphic
+// ButtonProps union — the anchor branch has no native `disabled` attribute,
+// which would otherwise drop "disabled" from `keyof ButtonProps`.
+type ButtonPlaygroundProps = Extract<ButtonProps, { href?: undefined }>;
 
 const meta: StoryMeta = {
   title: "Button",
@@ -15,7 +21,7 @@ const meta: StoryMeta = {
 
 export default meta;
 
-export const Playground: Story = {
+export const Playground: Story<ButtonPlaygroundProps> = {
   name: "Playground",
   source: `<Button variant="primary" size="md">Click me</Button>`,
   controls: [
@@ -55,18 +61,18 @@ export const Playground: Story = {
   render: (args = {}) => (
     <div class="flex flex-wrap items-center gap-hsp-md">
       <Button
-        variant={args.variant as "primary" | "secondary" | "ghost"}
-        size={args.size as "sm" | "md" | "lg"}
-        disabled={args.disabled as boolean}
-        block={args.block as boolean}
+        variant={args.variant}
+        size={args.size}
+        disabled={args.disabled}
+        block={args.block}
       >
-        {args.children as string}
+        {args.children}
       </Button>
     </div>
   ),
 };
 
-export const Variants: Story = {
+export const Variants: Story<ButtonProps> = {
   name: "Variants",
   source: `<Button variant="primary">Primary</Button>
 <Button variant="secondary">Secondary</Button>
@@ -80,7 +86,7 @@ export const Variants: Story = {
   ),
 };
 
-export const Sizes: Story = {
+export const Sizes: Story<ButtonProps> = {
   name: "Sizes",
   source: `<Button size="sm">Small</Button>
 <Button size="md">Medium</Button>
@@ -94,7 +100,7 @@ export const Sizes: Story = {
   ),
 };
 
-export const AsLink: Story = {
+export const AsLink: Story<ButtonProps> = {
   name: "As link",
   source: `<Button href="/docs" variant="primary">Read the docs</Button>
 <Button href="https://example.com" variant="secondary">External</Button>`,
@@ -110,7 +116,7 @@ export const AsLink: Story = {
   ),
 };
 
-export const Disabled: Story = {
+export const Disabled: Story<ButtonProps> = {
   name: "Disabled",
   source: `<Button disabled>Primary</Button>
 <Button variant="secondary" disabled>Secondary</Button>
@@ -128,7 +134,7 @@ export const Disabled: Story = {
   ),
 };
 
-export const Block: Story = {
+export const Block: Story<ButtonProps> = {
   name: "Block",
   source: `<Button block>Full width</Button>
 <Button variant="secondary" block>Full width</Button>`,

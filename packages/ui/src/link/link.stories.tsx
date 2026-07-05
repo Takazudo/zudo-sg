@@ -1,5 +1,5 @@
 import type { StoryMeta, Story } from "../stories/types";
-import { Link } from "./link";
+import { Link, type LinkProps } from "./link";
 
 const meta: StoryMeta = {
   title: "Link",
@@ -14,7 +14,7 @@ const meta: StoryMeta = {
 
 export default meta;
 
-export const Playground: Story = {
+export const Playground: Story<LinkProps> = {
   name: "Playground",
   source: `<Link href="/docs" variant="default">Link text</Link>`,
   controls: [
@@ -40,18 +40,14 @@ export const Playground: Story = {
   ],
   render: (args = {}) => (
     <p class="text-base text-ink">
-      <Link
-        href="/docs"
-        variant={args.variant as "default" | "subtle" | "standalone"}
-        external={args.external as boolean}
-      >
-        {args.children as string}
+      <Link href="/docs" variant={args.variant} external={args.external}>
+        {args.children}
       </Link>
     </p>
   ),
 };
 
-export const Variants: Story = {
+export const Variants: Story<LinkProps> = {
   name: "Variants",
   source: `<Link href="/docs">inline default link</Link>
 <Link href="/about" variant="subtle">Subtle nav link</Link>
@@ -69,7 +65,7 @@ export const Variants: Story = {
   ),
 };
 
-export const External: Story = {
+export const External: Story<LinkProps> = {
   name: "External",
   source: `<Link href="https://example.com" external>external site</Link>`,
   render: () => (

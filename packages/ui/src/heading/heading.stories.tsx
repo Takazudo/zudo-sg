@@ -2,6 +2,10 @@ import type { StoryMeta, Story } from "../stories/types";
 import { PageHeading, SectionHeading } from "./heading";
 import { Link } from "../link/link";
 
+// Neither Props type is exported; derive them from the components themselves.
+type PageHeadingProps = Parameters<typeof PageHeading>[0];
+type SectionHeadingProps = Parameters<typeof SectionHeading>[0];
+
 const meta: StoryMeta = {
   title: "Headings",
   category: "Typography",
@@ -15,7 +19,7 @@ const meta: StoryMeta = {
 
 export default meta;
 
-export const Playground: Story = {
+export const Playground: Story<PageHeadingProps> = {
   name: "Playground",
   source: `<PageHeading as="h1" eyebrow="Documentation" description="A coherent set of Preact components.">
   Build with zudo-sg
@@ -48,17 +52,13 @@ export const Playground: Story = {
     },
   ],
   render: (args = {}) => (
-    <PageHeading
-      as={args.as as "h1" | "h2"}
-      eyebrow={args.eyebrow as string}
-      description={args.description as string}
-    >
-      {args.children as string}
+    <PageHeading as={args.as} eyebrow={args.eyebrow} description={args.description}>
+      {args.children}
     </PageHeading>
   ),
 };
 
-export const Page: Story = {
+export const Page: Story<PageHeadingProps> = {
   name: "PageHeading",
   source: `<PageHeading
   eyebrow="Documentation"
@@ -76,7 +76,7 @@ export const Page: Story = {
   ),
 };
 
-export const Section: Story = {
+export const Section: Story<SectionHeadingProps> = {
   name: "SectionHeading",
   source: `<SectionHeading description="Everything you need to assemble a marketing page.">
   Components
@@ -88,7 +88,7 @@ export const Section: Story = {
   ),
 };
 
-export const SectionWithAction: Story = {
+export const SectionWithAction: Story<SectionHeadingProps> = {
   name: "SectionHeading with action",
   source: `<SectionHeading
   description="The most recently published entries."

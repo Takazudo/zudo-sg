@@ -1,5 +1,5 @@
 import type { StoryMeta, Story } from "../stories/types";
-import { Badge } from "./badge";
+import { Badge, type BadgeProps } from "./badge";
 
 const meta: StoryMeta = {
   title: "Badge",
@@ -16,7 +16,7 @@ export default meta;
 
 const tones = ["neutral", "brand", "success", "danger", "accent"] as const;
 
-export const Playground: Story = {
+export const Playground: Story<BadgeProps> = {
   name: "Playground",
   source: `<Badge tone="neutral" variant="soft">Badge</Badge>`,
   controls: [
@@ -43,17 +43,14 @@ export const Playground: Story = {
   ],
   render: (args = {}) => (
     <div class="flex flex-wrap items-center gap-hsp-sm">
-      <Badge
-        tone={args.tone as (typeof tones)[number]}
-        variant={args.variant as "soft" | "solid" | "outline"}
-      >
-        {args.children as string}
+      <Badge tone={args.tone} variant={args.variant}>
+        {args.children}
       </Badge>
     </div>
   ),
 };
 
-export const Soft: Story = {
+export const Soft: Story<BadgeProps> = {
   name: "Soft",
   source: `<Badge tone="neutral">neutral</Badge>
 <Badge tone="brand">brand</Badge>
@@ -71,7 +68,7 @@ export const Soft: Story = {
   ),
 };
 
-export const Solid: Story = {
+export const Solid: Story<BadgeProps> = {
   name: "Solid",
   source: `<Badge tone="brand" variant="solid">brand</Badge>
 <Badge tone="success" variant="solid">success</Badge>
@@ -87,7 +84,7 @@ export const Solid: Story = {
   ),
 };
 
-export const Outline: Story = {
+export const Outline: Story<BadgeProps> = {
   name: "Outline",
   source: `<Badge tone="brand" variant="outline">brand</Badge>
 <Badge tone="success" variant="outline">success</Badge>

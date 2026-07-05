@@ -132,7 +132,7 @@ of the Tier-2 pointers) — component CSS never changes.
 Every `*.stories.tsx` exports **exactly**:
 
 - a **default export** `meta: StoryMeta`, and
-- **one or more named exports**, each a `Story`.
+- **one or more named exports**, each a `Story<P>` (below).
 
 Nothing else should be exported. The registry treats `default` as the meta and
 **every other own enumerable export** as a story. (Matches the `StoryModule`
@@ -165,10 +165,19 @@ Adding a category means editing `StoryCategory` in `src/stories/types.ts` (so th
 catalog and the authors share one list). The catalog should render categories in
 the union's declared order.
 
-### Named exports — `Story`
+### Named exports — `Story<P>`
+
+`Story` is **generic over the driving component's props** — `Story<ButtonProps>`,
+`Story<CardProps>`, etc. — so a variant's `controls` (see §4) are checked
+against the component's real props: `prop` must name an actual key of `P`, and
+where `P` is informative (e.g. a prop typed as a string-literal union),
+`options`/`defaultValue` are restricted to that union too. `P` defaults to
+`Record<string, unknown>`, so the bare `Story` name still works — reach for it
+when a variant has no `controls` to check, or its `render` composes more than
+one component's props (no single `P` fits).
 
 ```ts
-export const Variants: Story = {
+export const Variants: Story<ButtonProps> = {
   name: "Variants",                 // variant label shown above the preview
   render: () => (<div>…</div>),      // pure, synchronous; returns the preview node
   controls: [                       // optional; metadata only (see §4)
@@ -179,16 +188,24 @@ export const Variants: Story = {
 };
 ```
 
-| field      | type             | required | meaning |
-|------------|------------------|----------|---------|
-| `name`     | `string`         | yes      | Variant label. Unique within the file. |
-| `render`   | `() => VNode`    | yes      | **Pure, synchronous.** Returns the preview node. No effects, no async, no data fetching. |
-| `controls` | `StoryControl[]` | no       | Declarative knob descriptors. Metadata only — see §4. |
-| `source`   | `string`         | no       | Verbatim JSX for the code panel — see §5. |
+| field      | type                | required | meaning |
+|------------|---------------------|----------|---------|
+| `name`     | `string`            | yes      | Variant label. Unique within the file. |
+| `render`   | `(args?: Partial<P>) => VNode` | yes | **Pure, synchronous.** Returns the preview node. `args` is the merged control values, typed to `P` — no `as` cast needed. No effects, no async, no data fetching. |
+| `controls` | `StoryControl<P>[]` | no       | Declarative knob descriptors, keyed to real props of `P`. Metadata only — see §4. |
+| `source`   | `string`            | no       | Verbatim JSX for the code panel — see §5. |
+
+If the component's `Props` type isn't exported, derive it inline rather than
+widening the component's public surface just for story typing:
+`type ButtonProps = Parameters<typeof Button>[0];`. For a `render` that
+composes more than one component into one scene (e.g. `Card` +
+`CardTitle`/`CardBody`/`CardFooter`), define a small scene-specific args type
+instead of forcing a single component's `Props` — see `card.stories.tsx` →
+`Playground`.
 
 The optional `defineStory(story)` identity helper (exported from the package)
 just pins the type for editor autocomplete; a plain object literal that
-satisfies `Story` is equally valid.
+satisfies `Story<P>` is equally valid.
 
 ---
 
@@ -199,7 +216,7 @@ them. The catalog decides whether and how to render live controls. A story with
 no `controls` renders fine — it's a static preview. This keeps story authoring
 trivial and pushes interactivity entirely into the catalog (S6's call).
 
-`StoryControl` is a discriminated union on `type`:
+`StoryControl<P>` is a discriminated union on `type`:
 
 ```ts
 { type: "select",  prop: "variant", label: "Variant", options: ["primary","ghost"], defaultValue: "primary" }
@@ -207,7 +224,13 @@ trivial and pushes interactivity entirely into the catalog (S6's call).
 { type: "text",    prop: "label",   label: "Label", defaultValue: "Click me" }
 ```
 
-- `prop` names the component prop the control is intended to drive.
+- `prop` is typed `keyof P & string` — it must name a **real** prop of the
+  component the `Story<P>` is parameterized over. Rename or remove that prop
+  and every control naming it fails to typecheck.
+- `defaultValue` (and `options`, for `select`) narrow to that prop's own value
+  type where `P` is informative — e.g. `variant`'s `select` control above only
+  accepts values from `ButtonVariant`, so a typo or a since-removed variant
+  name fails to typecheck too.
 - If the catalog implements live controls, it is responsible for re-invoking
   `render` (or re-rendering the component) with the chosen values — the contract
   does not prescribe a binding mechanism, only the descriptor shape. Treat
@@ -265,8 +288,10 @@ When adding a component, ship its story in the same change:
 - [ ] `src/<component>/<component>.stories.tsx` exists (co-located).
 - [ ] Default export is a `StoryMeta` with `title`, `category` (from the closed
       set), `description`, `usage`.
-- [ ] At least one named `Story` export with `name` + pure synchronous `render`.
+- [ ] At least one named `Story<P>` export (`P` = the component's props) with
+      `name` + pure synchronous `render`.
 - [ ] `source` set on any non-trivial variant.
-- [ ] `controls` added where live editing is meaningful (optional).
+- [ ] `controls` added where live editing is meaningful (optional); `prop`
+      names a real key of `P`.
 - [ ] Component uses only semantic token utilities (passes `pnpm lint:tokens`).
 - [ ] `pnpm check` (typecheck) and `pnpm test:unit` pass.
