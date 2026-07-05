@@ -2,6 +2,8 @@ import { defineConfig } from "@takazudo/zfb/config";
 import { zudoDocPreset } from "@takazudo/zudo-doc/preset";
 import { settings } from "./src/config/settings";
 import { buildDocsSchema } from "./src/config/docs-schema";
+import { translations } from "./src/config/i18n";
+import { colorSchemes } from "./src/config/color-schemes";
 
 // Admonitions recipe: register the :::name directive vocabulary
 // (note/tip/info/warning/danger/caution/details) → components.
@@ -15,7 +17,18 @@ const directiveVocabulary = {
   details: "Details", // collapsible — routes to DetailsWrapper
 };
 
-const preset = zudoDocPreset({ settings, buildDocsSchema, directiveVocabulary });
+// `translations` + `colorSchemes` are only consumed when
+// `settings.packageOwnedRoutes` is on (#113): they ride into the
+// `virtual:zudo-doc-route-context` module so the package-owned doc/404/versions
+// routes render with the host's real UI strings and `--zd-*` palette instead of
+// the neutral fallback. The preset warns at build time if either is missing.
+const preset = zudoDocPreset({
+  settings,
+  buildDocsSchema,
+  directiveVocabulary,
+  translations,
+  colorSchemes,
+});
 
 export default defineConfig({
   framework: "preact",
