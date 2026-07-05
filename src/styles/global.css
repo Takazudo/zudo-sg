@@ -903,5 +903,14 @@ dialog.zd-mermaid-dialog::backdrop {
 
 /* Styleguide catalog — feature CSS, split into its own file beside the
  * feature code (issue #122). See that file's header for what is/isn't
- * duplicated here. */
+ * duplicated here.
+ *
+ * Placed LAST, not with the top-level @imports, ON PURPOSE: zfb/Lightning
+ * inlines this import at BUILD time (the shipped dist CSS contains these rules,
+ * not a runtime `@import` — verified), so its position controls the inlined
+ * cascade order. Keeping it here preserves the intended "feature styles after
+ * base" precedence. Do NOT hoist it to the top import block to satisfy the
+ * "@import must precede rules" CSS rule — that would flip the inlined cascade.
+ * The clean fix (valid position + explicit cascade) is a dedicated @layer;
+ * tracked as a follow-up rather than done on the release. */
 @import "../features/styleguide/styles.css";
