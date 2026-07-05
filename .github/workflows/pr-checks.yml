@@ -3,8 +3,8 @@
 # Triggered on PRs targeting `main` or any `base/**` branch (epic-PR stacks).
 #
 # Jobs (in execution order):
-#   lint-tokens          — pnpm lint:tokens (owned by S2; no-op pass until S2 merges)
-#   typecheck            — pnpm check (zfb check / tsc --noEmit)
+#   lint-tokens          — pnpm lint:tokens
+#   typecheck            — pnpm check (zfb check / tsc --noEmit + demo typecheck) and pnpm check:z-index
 #   unit                 — pnpm test:unit (vitest)
 #   build                — pnpm build (zfb build → dist/)
 #   build-demo           — pnpm --filter @zudo-sg/demo build (apps/demo)
@@ -37,8 +37,6 @@ env:
 jobs:
   # ---------------------------------------------------------------------------
   # Job: Design token lint
-  # Owned by S2. On the bare scaffold (before S2 merges) lint:tokens is a
-  # no-op pass. Once S2 merges, this job enforces the token lint rules.
   # ---------------------------------------------------------------------------
   lint-tokens:
     name: Design Token Lint
@@ -63,10 +61,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Design token lint
-        # lint:tokens is defined by S2. Until S2 merges, this step passes
-        # because the script either does not exist (pnpm exits 0 with a warning
-        # on missing optional scripts via the || true fallback) or is a no-op.
-        run: pnpm run lint:tokens || echo "lint:tokens not yet defined (S2 pending) — OK"
+        run: pnpm run lint:tokens
 
   # ---------------------------------------------------------------------------
   # Job: TypeScript typecheck
@@ -95,6 +90,9 @@ jobs:
 
       - name: Type check
         run: pnpm check
+
+      - name: Z-index generated block check
+        run: pnpm check:z-index
 
   # ---------------------------------------------------------------------------
   # Job: Unit tests (vitest)

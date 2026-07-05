@@ -5,30 +5,49 @@ set -euo pipefail
 #
 # Step order (cheap → expensive):
 #   1. Format check (mdx)
-#   2. Design token lint (lint:tokens — owned by S2; no-op pass when absent)
-#   3. Type checking (zfb check / tsc --noEmit)
-#   4. Unit tests (test:unit)
-#   5. Build (zfb build)
-#   6. Link check (check:links)
-#   7. HTML validation (check:html)
-#   8. Playwright smoke e2e (test:e2e)
-#   9. Manual interactive smoke (operator-driven)
+#   2. Design token lint (lint:tokens)
+#   3. Z-index generated block check (check:z-index)
+#   4. Type checking (zfb check / tsc --noEmit)
+#   5. Unit tests (test:unit)
+#   6. Build (zfb build)
+#   7. Link check (check:links)
+#   8. HTML validation (check:html)
+#   9. Playwright smoke e2e (test:e2e)
+#   10. Manual interactive smoke (operator-driven; auto-skipped when stdin is
+#       not a TTY, e.g. CI or agent-driven runs)
 #
 # Env overrides for non-interactive use:
-#   B4PUSH_SKIP_HTML_VALIDATE=1  — skip HTML validation (step 7)
-#   B4PUSH_SKIP_E2E=1            — skip Playwright smoke (step 8)
-#   B4PUSH_SKIP_MANUAL_SMOKE=1   — skip the manual interactive smoke (step 9)
+#   B4PUSH_SKIP_HTML_VALIDATE=1  — skip HTML validation (step 8)
+#   B4PUSH_SKIP_E2E=1            — skip Playwright smoke (step 9)
+#   B4PUSH_SKIP_MANUAL_SMOKE=1   — force-skip the manual interactive smoke
+#                                  (step 10) even in an interactive shell
 
 START_TIME=$(date +%s)
 FAILURES=()
-TOTAL_STEPS=9
+
+# Single source of truth for step names — TOTAL_STEPS and each step's label
+# are derived from this list instead of a hand-maintained counter, so adding
+# or removing a step never needs a second edit to stay in sync.
+STEPS=(
+  "Format check (mdx)"
+  "Design token lint (lint:tokens)"
+  "Z-index generated block check (check:z-index)"
+  "Type checking (zfb check)"
+  "Unit tests (test:unit)"
+  "Build (zfb build)"
+  "Link check (check:links)"
+  "HTML validation (html-validate)"
+  "Playwright smoke e2e (test:e2e)"
+  "Manual interactive smoke"
+)
+TOTAL_STEPS=${#STEPS[@]}
 CURRENT_STEP=0
 
 step() {
   CURRENT_STEP=$((CURRENT_STEP + 1))
   echo ""
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-  echo "▶ Step $CURRENT_STEP/$TOTAL_STEPS: $1"
+  echo "▶ Step $CURRENT_STEP/$TOTAL_STEPS: ${STEPS[$((CURRENT_STEP - 1))]}"
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 }
 
@@ -41,7 +60,7 @@ ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 # ── Step 1: Format check (mdx) ────────────────────────
 # Verify MDX/markdown files are formatted. The lefthook pre-commit hook
 # auto-formats on commit; this step catches drifts from direct edits.
-step "Format check (mdx)"
+step
 if (cd "$ROOT_DIR" && pnpm dlx @takazudo/mdx-formatter --check .); then
   pass "Format check passed"
 else
@@ -49,22 +68,25 @@ else
 fi
 
 # ── Step 2: Design token lint ─────────────────────────
-# lint:tokens is owned by S2. On the bare scaffold (before S2 merges) this
-# script may not exist yet. Degrade gracefully: pass if absent, enforce once
-# S2 lands and adds the script + token files.
-step "Design token lint (lint:tokens)"
-LINT_TOKENS_OUTPUT="$(cd "$ROOT_DIR" && pnpm run lint:tokens 2>&1)" && LINT_TOKENS_EXIT=0 || LINT_TOKENS_EXIT=$?
-if [ "$LINT_TOKENS_EXIT" -eq 0 ]; then
+step
+if (cd "$ROOT_DIR" && pnpm run lint:tokens); then
   pass "Design token lint passed"
-elif echo "$LINT_TOKENS_OUTPUT" | grep -q "Missing script: lint:tokens\|Command not found: lint:tokens\|is not defined"; then
-  skip "lint:tokens script not yet present (S2 pending) — OK on bare scaffold"
 else
-  echo "$LINT_TOKENS_OUTPUT"
   fail "Design token lint"
 fi
 
-# ── Step 3: Type checking ─────────────────────────────
-step "Type checking (zfb check)"
+# ── Step 3: Z-index generated block check ─────────────
+# Catches hand-edits to the generated block in src/styles/global.css that
+# have drifted from src/config/z-index-tokens.ts (the source of truth).
+step
+if (cd "$ROOT_DIR" && pnpm run check:z-index); then
+  pass "Z-index generated block check passed"
+else
+  fail "Z-index generated block check"
+fi
+
+# ── Step 4: Type checking ─────────────────────────────
+step
 if (cd "$ROOT_DIR" && pnpm check); then
   pass "Type checking passed"
 elif (cd "$ROOT_DIR" && pnpm exec tsc --noEmit); then
@@ -73,32 +95,32 @@ else
   fail "Type checking"
 fi
 
-# ── Step 4: Unit tests ────────────────────────────────
-step "Unit tests (test:unit)"
+# ── Step 5: Unit tests ────────────────────────────────
+step
 if (cd "$ROOT_DIR" && pnpm test:unit); then
   pass "Unit tests passed"
 else
   fail "Unit tests"
 fi
 
-# ── Step 5: Build ─────────────────────────────────────
-step "Build (zfb build)"
+# ── Step 6: Build ─────────────────────────────────────
+step
 if (cd "$ROOT_DIR" && pnpm build); then
   pass "Build passed"
 else
   fail "Build"
 fi
 
-# ── Step 6: Link check ────────────────────────────────
-step "Link check (check:links)"
+# ── Step 7: Link check ────────────────────────────────
+step
 if (cd "$ROOT_DIR" && pnpm check:links); then
   pass "Link check passed"
 else
   fail "Link check"
 fi
 
-# ── Step 7: HTML validation ───────────────────────────
-step "HTML validation (html-validate)"
+# ── Step 8: HTML validation ───────────────────────────
+step
 if [[ "${B4PUSH_SKIP_HTML_VALIDATE:-}" == "1" ]]; then
   skip "HTML validation (B4PUSH_SKIP_HTML_VALIDATE=1)"
 else
@@ -109,12 +131,12 @@ else
   fi
 fi
 
-# ── Step 8: Playwright smoke e2e ──────────────────────
+# ── Step 9: Playwright smoke e2e ──────────────────────
 # Runs a single smoke fixture against the pre-built dist/ to verify the built
 # site renders and has no console errors. Excluded from CI b4push (CI runs E2E
 # in the pr-checks e2e job instead) but included in local b4push for fast
 # pre-push confidence.
-step "Playwright smoke e2e (test:e2e)"
+step
 if [[ "${B4PUSH_SKIP_E2E:-}" == "1" ]]; then
   skip "Playwright smoke (B4PUSH_SKIP_E2E=1)"
 else
@@ -125,10 +147,14 @@ else
   fi
 fi
 
-# ── Step 9: Manual interactive smoke ─────────────────
-step "Manual interactive smoke"
+# ── Step 10: Manual interactive smoke ─────────────────
+# Auto-skipped when stdin is not a TTY (CI, agent-driven runs, `... | bash`)
+# so b4push never blocks on a prompt nobody can answer.
+step
 if [[ "${B4PUSH_SKIP_MANUAL_SMOKE:-}" == "1" ]]; then
   skip "Manual smoke (B4PUSH_SKIP_MANUAL_SMOKE=1)"
+elif [ ! -t 0 ]; then
+  skip "Manual smoke (non-interactive, no TTY on stdin)"
 else
   cat <<'MANUAL'
 Run `pnpm preview` in another terminal and exercise:
