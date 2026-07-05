@@ -1,9 +1,14 @@
-# Shared checkout + pnpm + Node.js + install boilerplate, used by every
-# pr-checks.yml job and the build-site/build-demo jobs in main-deploy.yml and
+# Shared pnpm + Node.js + install boilerplate, used by every pr-checks.yml
+# job and the build-site/build-demo jobs in main-deploy.yml and
 # preview-deploy.yml. pnpm version comes from the `packageManager` field in
 # package.json (no separate PNPM_VERSION to keep in sync).
+#
+# Does NOT check out the repo — a local action (`./.github/actions/setup`)
+# can only be resolved once the workspace already has the repo checked out,
+# so `actions/checkout` must stay as an explicit step before this one in
+# every caller.
 name: Setup
-description: Checkout, pnpm, Node.js, and pnpm install.
+description: pnpm, Node.js, and pnpm install.
 
 inputs:
   node-version:
@@ -14,9 +19,6 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Checkout
-      uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
-
     - name: Setup pnpm
       uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4
       with:
