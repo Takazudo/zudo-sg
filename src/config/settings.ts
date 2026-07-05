@@ -65,6 +65,10 @@ export const settings = {
   math: false,
   cjkFriendly: true as boolean,
   onBrokenMarkdownLinks: "warn" as "warn" | "error" | "ignore",
+  // zudo-doc 2.x defaults packageOwnedRoutes to true; this repo still
+  // hand-wires its doc routes in pages/lib/ (migration tracked in #113), so
+  // stay off until that migration lands.
+  packageOwnedRoutes: false as boolean,
   aiAssistant: false as boolean,
   aiChatDemoMode: false as boolean,
   aiChatAllowedOrigins: [] as string[],
