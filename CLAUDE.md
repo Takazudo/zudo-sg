@@ -8,7 +8,7 @@ Documentation site built with [zudo-doc](https://github.com/zudolab/zudo-doc) �
 - **MDX** — content format
 - **Tailwind CSS v4** — via `@tailwindcss/vite`
 - **Preact** — for interactive islands only (with compat mode for React API)
-- **syntect** — built-in code highlighting, run by zfb's Rust pipeline at build time (single fixed theme: `base16-ocean-dark`)
+- **syntect** — built-in code highlighting, run by zfb's Rust pipeline at build time (dual-theme: `base16-ocean.light` / `base16-ocean.dark`, matching the site's light/dark mode)
 
 ## Commands
 
@@ -19,17 +19,26 @@ Documentation site built with [zudo-doc](https://github.com/zudolab/zudo-doc) �
 ## Key Directories
 
 ```
+pages/                    # File-based routing (host-owned: /, /components/*, /docs/versions)
+│                         # zudo-doc's package injects the rest (docs, 404, robots, sitemap)
 src/
-├── components/          # JSX + Preact components
-│   └── admonitions/     # Note, Tip, Info, Warning, Danger
-├── config/              # Settings, color schemes
+├── components/           # JSX + Preact components
+│   └── content/          # MDX content components (admonitions, code-group, ...)
+├── config/               # Settings, color schemes, design token manifests
 ├── content/
-│   └── docs/            # MDX content
-├── layouts/             # JSX layouts
-├── pages/               # File-based routing
+│   └── docs/             # MDX content
+├── features/
+│   └── styleguide/       # /components catalog: chrome, preview, code-panel, search, token-tweak
+├── styleguide/
+│   └── data/             # Codegen-backed component registry + nav nodes (#103)
 └── styles/
-    └── global.css       # Design tokens & Tailwind config
+    └── global.css        # Design tokens & Tailwind config
 ```
+
+There is no `src/pages/` or `src/layouts/` — routing lives in the root `pages/`
+directory, and page-level chrome (header, footer, doc-route shells) is owned
+by `@takazudo/zudo-doc`'s package-injected routes (`packageOwnedRoutes`,
+see `src/config/settings.ts`).
 
 ## Content Conventions
 
@@ -41,8 +50,10 @@ src/
 
 ### Admonitions
 
-Available in all MDX files without imports: `<Note>`, `<Tip>`, `<Info>`, `<Warning>`, `<Danger>`
-Each accepts an optional `title` prop.
+Available in all MDX files without imports: `<Note>`, `<Tip>`, `<Info>`, `<Warning>`, `<Danger>`,
+`<Caution>`, `<Details>` (via `:::name` directives, registered in `zfb.config.ts`) — plus
+`<Important>` from GitHub-style `[!IMPORTANT]` blockquote alerts. Each accepts an optional
+`title` prop; `Details` renders as a collapsible section.
 
 ### Headings
 
@@ -51,7 +62,11 @@ Do NOT use h1 (`#`) in doc content — the page title from frontmatter is render
 ## Components
 
 - Default to **server-rendered JSX components** (`.tsx`) — zero JS, server-rendered
-- Use **Preact islands** (`client:load`) only when client-side interactivity is needed
+- Use **Preact islands** only when client-side interactivity is needed: mark the component
+  module `"use client"` and mount it via zfb's `<Island ssrFallback={...}>` wrapper
+  (`when: "load"` or `"idle"`) — see `pages/lib/_body-end-islands.tsx` for the pattern.
+  There is no `client:load`-style directive; that was an Astro-era convention this project
+  no longer uses.
 
 ## Monorepo Structure
 
@@ -61,12 +76,17 @@ This is a pnpm workspace monorepo:
 - **`packages/ui`** (`@zudo-sg/ui`) — shared Preact component library
 - **`apps/demo`** (`@zudo-sg/demo`) — static demo site (Tailwind v4, no SSR)
 
+`@zudo-sg/ui` is consumed from **source** — its `exports` map points at `./src/*`
+directly and it has no `build` script, so edits are picked up by consumers immediately;
+there is no dist step to run.
+
 To build all packages: `pnpm install && pnpm build` (root only; apps/demo builds with `pnpm --filter @zudo-sg/demo build`).
 
 ## Enabled Features
 
-- **search** — Full-text search via Pagefind
-- **sidebarFilter** — Real-time sidebar filtering
+- **search** — Full-text search via MiniSearch (`pages/lib/_search-widget.tsx`); the
+  sidebar also has its own real-time filter input, implemented directly in
+  `src/components/sidebar-tree.tsx` (not a separate toggleable feature)
 - **imageEnlarge** — Click-to-enlarge images
 - **claudeResources** — Auto-generated docs for Claude Code resources
 - **claudeSkills** — Ships zudo-doc-design-system, zudo-doc-translate, zudo-doc-version-bump skills
