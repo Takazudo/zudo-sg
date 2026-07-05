@@ -133,7 +133,7 @@ jobs:
         run: pnpm build
 
       - name: Cache dist
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: dist
           key: dist-${{ github.sha }}
@@ -160,7 +160,7 @@ jobs:
         run: pnpm --filter @zudo-sg/demo build
 
       - name: Cache demo dist
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: apps/demo/dist
           key: demo-dist-${{ github.sha }}
@@ -187,14 +187,14 @@ jobs:
         uses: ./.github/actions/setup
 
       - name: Restore dist cache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: dist
           key: dist-${{ github.sha }}
           fail-on-cache-miss: true
 
       - name: Restore demo dist cache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: apps/demo/dist
           key: demo-dist-${{ github.sha }}
@@ -232,7 +232,7 @@ jobs:
         uses: ./.github/actions/setup
 
       - name: Restore dist cache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: dist
           key: dist-${{ github.sha }}
