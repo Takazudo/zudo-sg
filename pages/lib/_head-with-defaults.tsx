@@ -137,7 +137,12 @@ export function HeadWithDefaults({
           clamp() width. Mirrors the sibling sidebar-toggle restore
           script emitted from the page's afterSidebar slot. */}
       {settings.sidebarResizer && <script dangerouslySetInnerHTML={{ __html: SIDEBAR_RESIZER_RESTORE_SCRIPT }} />}
-      {/* favicon set — withBase() handles the configured base path prefix */}
+      {/* favicon set — withBase() handles the configured base path prefix.
+          SVG first (modern browsers pick it and scale crisply); the .ico + PNG
+          entries are legacy fallbacks. The package-owned routes' head
+          (createHeadWithDefaults) emits the same .ico/16/32 set, so all three
+          raster/ico assets ship in public/ to keep every route 404-free. */}
+      <link rel="icon" type="image/svg+xml" href={withBase("/favicon.svg")} />
       <link rel="icon" href={withBase("/favicon.ico")} sizes="any" />
       <link rel="icon" type="image/png" sizes="32x32" href={withBase("/favicon-32x32.png")} />
       <link rel="icon" type="image/png" sizes="16x16" href={withBase("/favicon-16x16.png")} />

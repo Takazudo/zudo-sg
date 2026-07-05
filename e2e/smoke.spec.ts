@@ -3,27 +3,28 @@ import { expect, test } from "@playwright/test";
 // T1 smoke: verify the built site renders without JS errors.
 // Intentionally minimal — a single page load that confirms:
 //   1. The root page returns HTTP 200 and visible content.
-//   2. No JavaScript runtime errors (console.error from missing favicon/img
-//      files on the scaffold are 404 resource errors, not JS errors; we filter
-//      those to avoid false failures until public assets ship).
-//   3. A docs content page returns 200.
+//   2. No JavaScript runtime errors.
+//   3. No failed (>= 400) same-origin resource requests — the home hero masks
+//      /img/logo.svg and the <head> links the favicon set, so a missing brand
+//      asset surfaces here (#123).
+//   4. A docs content page returns 200.
 // Deeper interactive flows belong in dedicated T1 specs added later.
 
-// Scaffold has no favicons/logo yet. Filter known 404 resource warnings so
-// the smoke test does not fail on scaffold-level missing static assets.
-// Remove this filter once real favicon + logo assets are added.
-function isScaffoldResourceError(msg: string): boolean {
-  return (
-    msg.includes("/favicon") ||
-    msg.includes("/img/logo.svg") ||
-    msg.includes("404 (Not Found)")
-  );
-}
-
-test("home page renders without JavaScript errors", async ({ page }) => {
+test("home page renders without JS errors or failed asset requests", async ({ page }) => {
   const jsErrors: string[] = [];
   page.on("pageerror", (err) => {
     jsErrors.push(err.message);
+  });
+
+  // 404 detection (#123): real favicon + logo assets now ship in public/, so any
+  // >= 400 response is a genuine regression (a missing asset), not scaffold
+  // noise. This replaces the former unused isScaffoldResourceError() filter,
+  // which silently tolerated every 404. The home route exercises both the
+  // favicon links (<head>) and the /img/logo.svg CSS mask (hero), so removing
+  // or renaming either asset fails this test.
+  const failedResponses: string[] = [];
+  page.on("response", (res) => {
+    if (res.status() >= 400) failedResponses.push(`${res.status()} ${res.url()}`);
   });
 
   const response = await page.goto("/");
@@ -35,8 +36,10 @@ test("home page renders without JavaScript errors", async ({ page }) => {
   const bodyText = await page.textContent("body");
   expect(bodyText?.length).toBeGreaterThan(50);
 
-  // No uncaught JavaScript errors (distinct from 404 resource warnings)
+  // No uncaught JavaScript errors.
   expect(jsErrors).toEqual([]);
+  // No missing static assets (favicon set + hero logo mask).
+  expect(failedResponses).toEqual([]);
 });
 
 test("getting-started docs page returns 200", async ({ page }) => {
