@@ -59,7 +59,7 @@ async function findHtmlFiles(dir) {
 
 // Extract internal href values from <a> tags and src values from <script>/<img>
 // tags. Skips <link rel=...> meta elements (favicons, stylesheets — not
-// navigational content), external URLs, fragments, mailto, data URIs.
+// navigational content), external URLs, fragments, mailto/tel, data URIs.
 function extractInternalLinks(html) {
   const links = [];
 
@@ -75,11 +75,13 @@ function extractInternalLinks(html) {
     let m;
     while ((m = re.exec(stripped)) !== null) {
       const href = m[1];
-      // Skip external, mailto, data, fragments, and dynamic values
+      // Skip external, mailto, tel, data, fragments, and dynamic values.
+      // (apps/demo's contact section links a "tel:" phone number.)
       if (
         href.startsWith("http") ||
         href.startsWith("//") ||
         href.startsWith("mailto:") ||
+        href.startsWith("tel:") ||
         href.startsWith("data:") ||
         href.startsWith("#") ||
         href.includes("{{") ||
