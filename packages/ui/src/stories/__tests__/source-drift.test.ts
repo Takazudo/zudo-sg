@@ -38,7 +38,9 @@ describe("story source vs. render drift", () => {
         // is wider than renderToString's `VNode` param only because it also
         // covers primitives/`undefined`, which no story here returns.
         const html = renderToString(story.render(defaultArgs(story)) as VNode);
-        expect(html).toMatchSnapshot();
+        // Snapshot `source` alongside `html`: snapshotting html alone would
+        // miss drift introduced by editing `source` without touching render.
+        expect({ source: story.source, html }).toMatchSnapshot();
       });
     }
   }
