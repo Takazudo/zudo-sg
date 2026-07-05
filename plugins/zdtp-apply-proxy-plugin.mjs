@@ -38,8 +38,8 @@
 //   tier in colors.css — lives inside a Tailwind v4 `@theme` block (required
 //   there for utility-class generation) and is therefore NOT reachable by
 //   this pipeline as shipped. Tracked upstream at
-//   Takazudo/zudo-design-token-panel#<TODO> and as a follow-up here at
-//   Takazudo/zudo-sg#<TODO> (making those tokens apply-writable needs a
+//   Takazudo/zudo-design-token-panel#496 and as a follow-up here at
+//   Takazudo/zudo-sg#130 (making those tokens apply-writable needs a
 //   `:root`-alias + `@theme: var(...)` indirection layer across the whole
 //   shared token file — a deliberate, reviewable change to the Wave 1-4
 //   token architecture, out of scope for this wiring task).

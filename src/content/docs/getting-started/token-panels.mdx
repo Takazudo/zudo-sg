@@ -59,6 +59,8 @@ This only works today for the preview panel's **Color → Palette** swatches (th
 
 How it's wired, for anyone extending this: `plugins/zdtp-apply-proxy-plugin.mjs` registers a same-origin `zfb dev` `devMiddleware` handler (no separate process, no port, no CORS) at `/__zdtp/apply`, backed by `@takazudo/zdtp/server`'s `createApplyHandler`. The prefix → file routing map lives in `zdtp-panel-routing.json` at the repo root, and the endpoint/routing values are injected into `src/config/preview-token-panel-config.ts` via a `virtual:zdtp-apply-config` module that resolves to `undefined` outside of `zfb dev` — a production build never sees the endpoint path or the routing map.
 
+The `@theme` gap is tracked upstream at [Takazudo/zudo-design-token-panel#496](https://github.com/Takazudo/zudo-design-token-panel/issues/496) and, on this repo, as a scoped follow-up at [Takazudo/zudo-sg#130](https://github.com/Takazudo/zudo-sg/issues/130).
+
 ## Shared panel actions
 
 Both panels expose three utility actions in their footer:
