@@ -1,0 +1,66 @@
+---
+title: Card
+---
+
+## Guidelines
+
+A card groups related content and, optionally, its actions into a single
+surface. Reach for it when a list of items each need a bit of structure (title,
+body, a footer action) rather than for arbitrary page section framing.
+
+### Variant intent
+
+- **Outlined** — the default. A hairline border separates the card from the
+  page without adding visual weight. Best on plain backgrounds.
+- **Elevated** — a soft shadow lifts the card off the page. Use when cards sit
+  on a busy or tinted background where a border alone reads weakly.
+- **Filled** — a sunken fill instead of a border. Best for cards nested inside
+  an already-bordered container, where another border would double up.
+
+<Tip>
+Set `href` to make the whole card a single click target. It swaps the `<div>`
+for an `<a>` and adds the hover-lift affordance, so the entire surface — not
+just a link inside it — is clickable.
+</Tip>
+
+## Composition
+
+Compose the slots in order: `CardTitle`, then `CardBody`, then an optional
+`CardFooter`. The footer is separated by a top hairline and is the place for
+actions or metadata.
+
+```tsx
+import { Card, CardTitle, CardBody, CardFooter } from "@zudo-sg/ui";
+import { Button } from "@zudo-sg/ui";
+
+<Card variant="elevated">
+  <CardTitle>Weekly digest</CardTitle>
+  <CardBody>A summary of everything that changed this week.</CardBody>
+  <CardFooter>
+    <Button variant="secondary" size="sm">Read</Button>
+  </CardFooter>
+</Card>
+```
+
+## Do / Don't
+
+- Do keep one idea per card — a title, a short body, at most a couple of
+  actions.
+- Do use `CardTitle` so the surface exposes a real `<h3>` to the accessibility
+  tree.
+- Don't nest an interactive `href` card inside another link or button — nested
+  interactive controls are invalid and confuse assistive tech.
+
+<Warning>
+When `href` is set the card becomes a link, so anything interactive inside it
+(a button, a second link) is nested inside an `<a>`. Keep an interactive card's
+body to plain content, or drop `href` and put the link in the footer instead.
+</Warning>
+
+## Accessibility
+
+- `CardTitle` renders an `<h3>`; make sure the surrounding heading levels stay
+  ordered (a card in an `<h2>` section reads correctly as `<h3>`).
+- A link card gets the same offset `:focus-visible` outline as the other
+  interactive components, so keyboard focus is always visible against every
+  surface variant.

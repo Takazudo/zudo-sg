@@ -24,9 +24,15 @@
 
 import type { JSX, VNode } from "preact";
 import { Island } from "@takazudo/zfb";
+import { getEntry } from "zfb/content";
 import { defaultLocale } from "@/config/i18n";
 import { withBase } from "@/utils/base";
 import { getAllSlugs, getStoryBySlug } from "@/styleguide/data/registry";
+import {
+  COMPONENT_DOCS_COLLECTION,
+  componentDocSlug,
+} from "@/styleguide/data/component-docs";
+import { componentDocMdxComponents } from "@/components/content/component-doc-mdx-components";
 import { StyleguideLayout } from "@/features/styleguide/chrome/_styleguide-layout";
 import VariantFrame from "@/features/styleguide/preview/variant-frame";
 import CodePanel from "@/features/styleguide/code-panel/code-panel";
@@ -123,6 +129,13 @@ export default function StoryDetailPage(
     );
   }
 
+  // Per-component docs (#119): render the OPTIONAL co-located MDX doc
+  // (`packages/ui/src/<name>/<name>.mdx`) as a trailing section. `getEntry`
+  // returns undefined when the component ships no doc file, so a component
+  // without docs renders no extra section (acceptance criterion).
+  const docSlug = componentDocSlug(entry.path);
+  const doc = docSlug ? getEntry(COMPONENT_DOCS_COLLECTION, docSlug) : undefined;
+
   return (
     <StyleguideLayout
       title={composeMetaTitle(entry.meta.title)}
@@ -167,6 +180,17 @@ export default function StoryDetailPage(
             return <div key={v.exportName}>{frame}</div>;
           })}
         </div>
+
+        {doc && (
+          <section class="mt-vsp-xl border-t border-line pt-vsp-xl">
+            {/* `.zd-content` supplies the shared prose typography (headings,
+                lists, code blocks) via zudo-doc's content.css; the components
+                map adds the admonition tags. */}
+            <div class="zd-content">
+              <doc.Content components={componentDocMdxComponents} />
+            </div>
+          </section>
+        )}
       </div>
     </StyleguideLayout>
   );

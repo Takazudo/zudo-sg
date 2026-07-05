@@ -1,0 +1,59 @@
+---
+title: Button
+---
+
+## Guidelines
+
+Use a button for an action the user performs on the current page — submitting a
+form, opening a dialog, triggering a mutation. When the control navigates to a
+different URL, set `href` so it renders a real `<a>`: it keeps the button look
+while restoring link semantics (right-click, open-in-new-tab, middle-click).
+
+### Variant intent
+
+- **Primary** — the single most important action in a view. Aim for one primary
+  per section; competing primaries dilute the call to action.
+- **Secondary** — supporting actions that sit next to a primary (Cancel, Back).
+- **Ghost** — low-emphasis actions in dense UI (toolbars, table rows) where a
+  filled button would be visually noisy.
+
+<Tip>
+Pick the variant by importance, not by color preference. The three variants map
+to an emphasis hierarchy, so a page reads correctly even before you look at the
+palette.
+</Tip>
+
+## Do / Don't
+
+- Do keep labels short and action-first: "Save changes", not "Click here to
+  save your changes now".
+- Do use `href` for navigation and the default `<button>` for in-page actions.
+- Don't stack two primary buttons side by side — the user can't tell which one
+  the page wants them to pick.
+
+<Warning>
+`block` stretches the button to fill its container's inline axis. Reserve it for
+narrow, single-column contexts (mobile form footers, cards). A full-width button
+in a wide desktop layout reads as a banner, not a control.
+</Warning>
+
+## Accessibility
+
+- The rendered `<button>` defaults to `type="button"`, so dropping one inside a
+  `<form>` never submits by accident — set `type="submit"` explicitly on the
+  submit control.
+- Disabled state comes through the native `disabled` attribute (and the matching
+  `aria-disabled` styling hook), so the control is correctly removed from the
+  tab order.
+- The focus ring is a `:focus-visible` outline offset from the control, meeting
+  the non-text-contrast requirement against every surface token.
+
+```tsx
+import { Button } from "@zudo-sg/ui";
+
+// In-page action — semantic <button type="button">
+<Button variant="primary" onClick={save}>Save changes</Button>
+
+// Navigation — renders <a href="…"> with the same visual variant
+<Button variant="secondary" href="/docs">Read the docs</Button>
+```
