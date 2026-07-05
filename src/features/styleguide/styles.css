@@ -1,0 +1,411 @@
+/* ============================================================================
+ * Styleguide catalog — feature CSS
+ *
+ * Split out of src/styles/global.css (issue #122) so the feature's CSS lives
+ * beside its code, same as any other feature directory. Imported by
+ * src/styles/global.css. Includes: #sg-code-panel layout / sticky / resizer /
+ * responsive, [data-sg-*-hidden] toggle rules, and the full .sg-* feature
+ * class family.
+ *
+ * NOT duplicated here (root's global.css already provides these): @imports,
+ * @source directives, @theme native-chrome bridge (--color-surface/muted/
+ * accent/overlay, --spacing-icon-* are re-asserted in root's @theme;
+ * --text-* semantic aliases are inherited from the shared
+ * @zudo-sg/ui/styles/tokens.css import; z-index scale is generated there).
+ * ========================================================================== */
+
+:root {
+  /* Header height — referenced by the native header and the code panel's sticky
+   * offset. Matches DocLayout's fixed header offset (`top-[3.5rem]`).
+   * Selector/var names stay in sync with
+   * src/features/styleguide/chrome/panel-contract.ts. */
+  --sg-header-h: 3.5rem;
+  /* Default code-panel width — responsive clamp matching the reference
+   * styleguide's right code-area frame (issue #60). The resizer
+   * (panel-scripts.tsx) overrides this var per-user at runtime in px, so this
+   * stays the single source of the default width. */
+  --sg-code-panel-w: clamp(20rem, 35vw, 32rem);
+  /* Horizontal slot reserved at the header's right edge for the overlaid
+   * styleguide token icons (Preview tokens [+ Code toggle on detail pages]).
+   * The framework `<Header>` has no host-island slot in its right region, so
+   * these icons are composed as a sibling and overlaid into the header band by
+   * `.sg-header-toggles` below; this var both pads the framework header so its
+   * own right cluster (incl. the site-wide Design Tokens icon) clears the
+   * overlay AND sizes the overlay's right-anchored slot. Single source of
+   * truth — tune here if the icon count/spacing changes. (#84/#85) */
+  --sg-header-toggles-slot: 4.5rem;
+  /* Code-panel resizer grab-strip width — no shared spacing rung matches
+   * 10px, so this stays a dedicated local constant. The strip is centered
+   * over the panel's 1px left border via the calc() below (left = -half
+   * width). */
+  --sg-code-panel-resizer-w: 0.625rem; /* 10px */
+}
+
+/* ── Styleguide header: overlay the Preview tokens (+ Code) icons into the
+ * framework header's right region ──
+ * The framework `<Header>` is a self-contained sticky `<header>` exposing no
+ * host-island slot in its right cluster, so `SgHeaderToggles` is composed as a
+ * sibling (see _styleguide-layout.tsx) and pulled up over the header row here.
+ * `.sg-header-region` reserves a right slot inside the framework header so its
+ * native right cluster (theme/search/github/Design Tokens) shifts left and the
+ * overlay sits flush to its left without overlapping; `.sg-header-toggles` is a
+ * sticky, height-matched, right-anchored bar that tracks the viewport top
+ * exactly like the header. This makes the icons read as header right-region
+ * controls, not an in-flow strip below the sticky header. (#84/#85)
+ *
+ * Ownership: this `.sg-header-*` selector block is owned by the doc-chrome
+ * header sub-issue. It does NOT touch the code-panel layout selectors
+ * (`#sg-code-panel`, `.zd-doc-content-band`, the max-width:1023px block). */
+.sg-header-region {
+  display: contents;
+}
+/* Reserve the overlay slot inside the framework header's own right padding so
+ * its native right cluster clears the overlaid styleguide icons. Targets the
+ * framework header element (data-header) only within a styleguide page. */
+.sg-header-region > [data-header] {
+  padding-right: calc(var(--spacing-hsp-lg) + var(--sg-header-toggles-slot));
+}
+.sg-header-toggles {
+  position: sticky;
+  top: 0;
+  /* Pull the bar up so it overlays the just-rendered sticky header row instead
+   * of stacking below it. */
+  margin-top: calc(-1 * var(--sg-header-h));
+  height: var(--sg-header-h);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  /* Sit flush against the framework right cluster, inside the reserved slot. */
+  padding-right: var(--spacing-hsp-lg);
+  /* Above the header band (z-toolbar = 20) so the icons are clickable. */
+  z-index: calc(var(--z-index-toolbar) + 1);
+  /* Let header-band clicks fall through everywhere except the buttons. */
+  pointer-events: none;
+}
+.sg-header-toggles > * {
+  pointer-events: auto;
+}
+
+/* ── Code panel: right-region layout (fills DocLayout's TOC column) ──
+ * Frame VISUALS: the left bar/gutter is owned here so it is guaranteed to
+ * render (the element carries no native border utility) — a 1px muted divider
+ * + hsp-lg left padding + vsp-md block margin match the reference's right
+ * code-area frame (issue #60). Below lg this swaps for a top divider (see the
+ * max-width:1023px block). */
+#sg-code-panel {
+  position: relative;
+  flex-shrink: 0;
+  width: var(--sg-code-panel-w);
+  align-self: stretch;
+  margin-block: var(--spacing-vsp-md);
+  padding-left: var(--spacing-hsp-lg);
+  border-left: 1px solid var(--color-muted);
+}
+
+@media (min-width: 1024px) {
+  #sg-code-panel {
+    position: sticky;
+    top: var(--sg-header-h);
+    max-height: calc(100vh - var(--sg-header-h));
+    overflow-y: auto;
+  }
+}
+
+/* Resizer handle — absolutely positioned grab strip at the code panel's edge,
+ * targeted by its data-attr (the drag wiring in panel-scripts.tsx uses the same
+ * attribute). Hover/drag tint uses the native accent token (→ --zd-accent).
+ * (The sidebar's own resizer is provided by DocLayout / SidebarResizerInit.) */
+#sg-code-panel [data-sg-code-panel-resizer] {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(var(--sg-code-panel-resizer-w) / -2);
+  width: var(--sg-code-panel-resizer-w);
+  cursor: col-resize;
+  z-index: var(--z-index-local-1);
+  background: transparent;
+}
+#sg-code-panel [data-sg-code-panel-resizer]:hover,
+#sg-code-panel [data-sg-code-panel-resizer][data-sg-dragging] {
+  background: color-mix(in oklch, var(--color-accent) 30%, transparent);
+}
+
+/* Visibility toggle for the code panel. */
+:root[data-sg-code-panel-hidden] #sg-code-panel {
+  display: none;
+}
+
+/* Below the lg breakpoint the framework .zd-doc-content-band stays an
+ * unconditional flex row — it never wraps on its own. Force a column stack
+ * when the code panel is present so it lands below the preview, then keep the
+ * panel full-width, swap its left border for a top divider, and drop the
+ * resizer. */
+@media (max-width: 1023px) {
+  .zd-doc-content-band:has(#sg-code-panel) {
+    flex-direction: column;
+    gap: 0;
+    align-items: stretch;
+  }
+  #sg-code-panel {
+    width: 100%;
+    position: static;
+    max-height: none;
+    /* Floor for the flex-1 min-h-0 Live-CSS CodeMirror editor — without a
+     * fixed ancestor height the editor collapses to ~0 in column flow. */
+    min-height: 24rem;
+    margin-block-start: 0; /* cancel base margin-block so the border-top divider sits flush */
+    border-left: 0;
+    border-top: 1px solid var(--color-muted);
+    padding-left: 0;
+  }
+  #sg-code-panel [data-sg-code-panel-resizer] {
+    display: none;
+  }
+}
+
+/* ============================================================================
+ * Styleguide catalog content + interactive affordances
+ * ========================================================================== */
+
+/* --- Copy-to-clipboard button (snippets + code panel) --------------------- */
+.sg-copy-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-hsp-2xs);
+  padding: var(--spacing-vsp-3xs) var(--spacing-hsp-xs);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-ink-mute);
+  font-size: var(--text-micro);
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    color 0.15s ease,
+    border-color 0.15s ease,
+    background-color 0.15s ease;
+}
+@media (hover: hover) {
+  .sg-copy-btn:hover {
+    color: var(--color-ink);
+    border-color: var(--color-line-strong);
+  }
+}
+.sg-copy-btn:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+.sg-copy-btn[data-copied] {
+  color: var(--color-success);
+  border-color: var(--color-success);
+}
+
+/* --- Usage snippet block (detail page) ------------------------------------ */
+
+/* --- Landing search + tag filter ------------------------------------------ */
+.sg-filter {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-vsp-sm);
+  margin-bottom: var(--spacing-vsp-xl);
+}
+.sg-filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-hsp-md);
+}
+.sg-search-field {
+  display: flex;
+  flex: 1;
+  min-width: 14rem;
+  align-items: center;
+  gap: var(--spacing-hsp-sm);
+  padding: var(--spacing-vsp-xs) var(--spacing-hsp-md);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  transition: border-color 0.15s ease;
+}
+.sg-search-field:focus-within {
+  border-color: var(--color-brand);
+}
+.sg-search-input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-ink);
+  font-size: var(--text-small);
+  outline: none;
+}
+.sg-search-input::placeholder {
+  color: var(--color-ink-mute);
+}
+.sg-search-input::-webkit-search-cancel-button {
+  appearance: none;
+}
+.sg-search-clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--spacing-icon-md);
+  height: var(--spacing-icon-md);
+  border: 0;
+  border-radius: var(--radius-full);
+  background: var(--color-surface-sunken);
+  color: var(--color-ink-mute);
+  font-size: var(--text-small);
+  line-height: 1;
+  cursor: pointer;
+}
+.sg-search-clear:hover {
+  color: var(--color-ink);
+}
+
+/* --- Chips (category filter + token copy-mode) ---------------------------- */
+.sg-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-hsp-xs);
+}
+.sg-chip {
+  padding: var(--spacing-vsp-3xs) var(--spacing-hsp-md);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+  color: var(--color-ink-soft);
+  font-size: var(--text-caption);
+  cursor: pointer;
+  transition:
+    color 0.15s ease,
+    border-color 0.15s ease,
+    background-color 0.15s ease;
+}
+@media (hover: hover) {
+  .sg-chip:hover {
+    border-color: var(--color-line-strong);
+    color: var(--color-ink);
+  }
+}
+.sg-chip:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+.sg-chip[aria-pressed="true"] {
+  background: var(--color-brand);
+  border-color: var(--color-brand);
+  color: var(--color-on-brand);
+}
+
+/* --- Token playground toolbar + toast ------------------------------------- */
+.sg-token-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-hsp-lg);
+  margin-bottom: var(--spacing-vsp-lg);
+  padding: var(--spacing-vsp-sm) var(--spacing-hsp-md);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+.sg-token-modes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-hsp-xs);
+}
+.sg-token-toast {
+  margin-left: auto;
+  padding: var(--spacing-vsp-3xs) var(--spacing-hsp-sm);
+  border-radius: var(--radius-sm);
+  background: var(--color-ink);
+  color: var(--color-paper);
+  font-size: var(--text-caption);
+  opacity: 0;
+  transform: translateY(var(--spacing-vsp-3xs));
+  pointer-events: none;
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease;
+}
+.sg-token-toast[data-visible] {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* --- Token cards (color) + rows (spacing/type) — clickable to copy --------- */
+.sg-token-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-vsp-2xs);
+  padding: var(--spacing-hsp-sm);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-DEFAULT);
+  background: var(--color-surface);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+@media (hover: hover) {
+  .sg-token-card:hover {
+    border-color: var(--color-brand);
+  }
+}
+.sg-token-card:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+.sg-token-swatch {
+  display: block;
+  width: 100%;
+  height: 3rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-line);
+}
+.sg-token-card-meta {
+  display: flex;
+  flex-direction: column;
+}
+
+.sg-token-row {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-hsp-md);
+  padding: var(--spacing-vsp-3xs) var(--spacing-hsp-sm);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+}
+.sg-token-row--baseline {
+  align-items: baseline;
+}
+@media (hover: hover) {
+  .sg-token-row:hover {
+    background: var(--color-surface-sunken);
+    border-color: var(--color-line);
+  }
+}
+.sg-token-row:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sg-copy-btn,
+  .sg-chip,
+  .sg-token-card,
+  .sg-token-row,
+  .sg-token-toast,
+  .sg-search-field {
+    transition: none;
+  }
+}
