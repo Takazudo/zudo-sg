@@ -33,24 +33,26 @@ import { Island } from "@takazudo/zfb";
 import { settings } from "@/config/settings";
 import { SidebarResizerInit } from "@takazudo/zudo-doc/sidebar-resizer";
 
-import AiChatModal from "@/components/ai-chat-modal";
-import ImageEnlarge, { ImageEnlargeSsrFallback } from "@/components/image-enlarge";
-import MermaidEnlarge, { MermaidEnlargeSsrFallback } from "@/components/mermaid-enlarge";
+// #113: adopt the package enlarge/ai-chat islands directly (the former
+// src/components/{image-enlarge,mermaid-enlarge,ai-chat-modal} forks were
+// redundant drift — identical shapes — and collided with the package islands
+// once packageOwnedRoutes pulled the package chrome into the scan graph). The
+// package components pin their own `displayName` internally, so no manual
+// marker assignment is needed here. Mirrors the sibling zudo-doc showcase.
+import { AiChatModal } from "@takazudo/zudo-doc/ai-chat-modal";
+import { ImageEnlarge, ImageEnlargeSsrFallback } from "@takazudo/zudo-doc/image-enlarge";
+import { MermaidEnlarge, MermaidEnlargeSsrFallback } from "@takazudo/zudo-doc/mermaid-enlarge";
 
 import DesignTokenPanelBootstrap from "@/components/design-token-panel-bootstrap";
 import PreviewTokenPanelBootstrap from "@/components/preview-token-panel-bootstrap";
 
-// Set explicit `displayName` on each default-exported island so zfb's
+// Set explicit `displayName` on each host-defined island so zfb's
 // `captureComponentName` produces a stable marker even after the SSR
 // pipeline runs the components through a function-name-rewriting layer.
 // The marker must match the third-arg literal that zfb's scanner records
 // for the same source-level identifier (zfb PR #150). esbuild preserves
 // function names by default, but the explicit assignment is a
 // belt-and-braces guard for production minification regressions.
-(AiChatModal as { displayName?: string }).displayName = "AiChatModal";
-(ImageEnlarge as { displayName?: string }).displayName = "ImageEnlarge";
-(MermaidEnlarge as { displayName?: string }).displayName = "MermaidEnlarge";
-
 (DesignTokenPanelBootstrap as { displayName?: string }).displayName = "DesignTokenPanelBootstrap";
 (PreviewTokenPanelBootstrap as { displayName?: string }).displayName = "PreviewTokenPanelBootstrap";
 

@@ -3,6 +3,9 @@ node_modules
 dist
 .zfb
 .zfb-build
+# Route-injection staging dir written by @takazudo/zudo-doc/plugins/routes
+# (packageOwnedRoutes) at build time.
+.zudo-doc
 
 # Playwright artifacts
 test-results/

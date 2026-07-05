@@ -40,6 +40,7 @@
     "@takazudo/zfb-runtime": "0.1.0-next.76",
     "@takazudo/zudo-doc": "2.5.1",
     "@zudo-sg/ui": "workspace:*",
+    "diff": "^8.0.4",
     "gray-matter": "^4.0.0",
     "katex": "^0.16.38",
     "mermaid": "^11.12.3",
