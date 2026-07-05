@@ -41,8 +41,8 @@ describe("Hero", () => {
     const inner = () => container.querySelector("section > div");
     expect(inner()?.className).not.toContain("lg:grid-cols-2");
 
-    rerender(<Hero title="Welcome" media={<img src="/x.png" alt="" />} />);
-    expect(screen.getByRole("img")).toBeInTheDocument();
+    rerender(<Hero title="Welcome" media={<img src="/x.png" alt="Product screenshot" />} />);
+    expect(screen.getByRole("img", { name: "Product screenshot" })).toBeInTheDocument();
     expect(inner()?.className).toContain("lg:grid-cols-2");
   });
 
