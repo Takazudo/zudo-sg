@@ -47,3 +47,6 @@ src/content/docs/claude-agents/
 
 # git worktrees (local only)
 worktrees/
+
+# zfb dev/build writes a transient Tailwind entry into src/styles/
+src/styles/zfb-tailwind-entry-*.css
