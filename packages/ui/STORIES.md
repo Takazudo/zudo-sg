@@ -295,3 +295,40 @@ When adding a component, ship its story in the same change:
       names a real key of `P`.
 - [ ] Component uses only semantic token utilities (passes `pnpm lint:tokens`).
 - [ ] `pnpm check` (typecheck) and `pnpm test:unit` pass.
+
+---
+
+## 8. Scaffolding a new component
+
+`pnpm new:component <name> --category <Category>` (repo root) generates the
+whole checklist above in one command:
+
+```
+pnpm new:component demo-widget --category Layout
+```
+
+- `<name>` must be kebab-case and not already exist under `packages/ui/src/`.
+- `<Category>` must be one of the `StoryCategory` union members (§3):
+  `Actions`, `Typography`, `Layout`, `Data Display`, `Forms`, `Navigation`.
+
+It creates, following the existing house pattern (variant union + `Record`
+class map + `class?` passthrough + the shared focus-visible outline classes):
+
+- `packages/ui/src/<name>/<name>.tsx` — typed-props component skeleton.
+- `packages/ui/src/<name>/<name>.stories.tsx` — `StoryMeta` + a typed
+  `Story<Props>` `Playground` variant with a controls skeleton (§3/§4).
+- `packages/ui/src/<name>/__tests__/<name>.test.tsx` — a starter test suite.
+- The barrel export in `packages/ui/src/index.ts`, inserted alphabetically
+  into the matching `// ── <Category> ──` section.
+- A `gen:sg-registry` run, so the component is registered in the S6 catalog
+  immediately (§2) — no separate step needed.
+
+The generated files typecheck, pass `lint:tokens`, and pass the story-authoring
+contract test as-is (the two placeholder `variant`s exist so nothing is
+half-typed). Fill in the `TODO`s — the real markup, variant classes, and
+description — then run `pnpm check` and `pnpm test:unit` before shipping.
+
+The scaffolder's own logic (name/category validation, templates, and the
+barrel-insertion algorithm) lives in `scripts/lib/component-scaffold.mjs` and
+is unit-tested in `scripts/__tests__/component-scaffold.test.ts`; the CLI
+entry point is `scripts/new-component.mjs`.
