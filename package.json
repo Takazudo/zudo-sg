@@ -16,6 +16,7 @@
     "check:z-index": "node scripts/gen-z-index.mjs --check",
     "gen:sg-registry": "node scripts/gen-sg-registry.mjs",
     "check:sg-registry": "node scripts/gen-sg-registry.mjs --check",
+    "new:component": "node scripts/new-component.mjs",
     "gen:token-manifest": "node scripts/gen-token-manifest.mjs",
     "check:token-manifest": "node scripts/gen-token-manifest.mjs --check",
     "contrast:audit": "tsx scripts/contrast-audit.ts",
