@@ -12,10 +12,12 @@
 #                          pnpm check:links:demo against apps/demo/dist
 #   smoke-e2e            — pnpm test:e2e:ci (Playwright: styleguide + demo smoke
 #                          projects, needs build + build-demo)
-#   link-check           — pnpm check:links (needs build job)
-#   html-validate        — pnpm check:html (needs build job)
+#   dist-checks          — pnpm check:links + pnpm check:html against dist/
+#                          (needs build job; merged into one job since both
+#                          only need the same dist/ cache restore)
 #
-# Node 22 + pnpm via pnpm/action-setup@v4.
+# Node 22 + pnpm via the shared .github/actions/setup composite action (pnpm
+# version comes from the packageManager field in package.json).
 # Root and demo build output shared between jobs via actions/cache to avoid
 # re-building.
 
@@ -34,10 +36,6 @@ concurrency:
 permissions:
   contents: read
 
-env:
-  PNPM_VERSION: "11.5.2"
-  NODE_VERSION: "22"
-
 jobs:
   # ---------------------------------------------------------------------------
   # Job: Design token lint
@@ -48,21 +46,10 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: "pnpm"
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Setup
+        uses: ./.github/actions/setup
 
       - name: Design token lint
         run: pnpm run lint:tokens
@@ -79,21 +66,10 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: "pnpm"
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Setup
+        uses: ./.github/actions/setup
 
       - name: Check z-index codegen
         run: pnpm check:z-index
@@ -113,21 +89,10 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: "pnpm"
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Setup
+        uses: ./.github/actions/setup
 
       - name: Type check
         run: pnpm check
@@ -141,29 +106,17 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: "pnpm"
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Setup
+        uses: ./.github/actions/setup
 
       - name: Run unit tests
         run: pnpm test:unit
 
   # ---------------------------------------------------------------------------
   # Job: Build
-  # Produces dist/ and caches it for downstream jobs (smoke-e2e, link-check,
-  # html-validate).
+  # Produces dist/ and caches it for downstream jobs (smoke-e2e, dist-checks).
   # ---------------------------------------------------------------------------
   build:
     name: Build
@@ -171,21 +124,10 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: "pnpm"
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Setup
+        uses: ./.github/actions/setup
 
       - name: Build site
         run: pnpm build
@@ -209,21 +151,10 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: "pnpm"
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Setup
+        uses: ./.github/actions/setup
 
       - name: Build demo site
         run: pnpm --filter @zudo-sg/demo build
@@ -250,21 +181,10 @@ jobs:
     needs: [build, build-demo]
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: "pnpm"
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Setup
+        uses: ./.github/actions/setup
 
       - name: Restore dist cache
         uses: actions/cache/restore@v4
@@ -295,31 +215,21 @@ jobs:
           retention-days: 7
 
   # ---------------------------------------------------------------------------
-  # Job: Internal link check
-  # Scans dist/ HTML for broken internal links. Requires build job.
+  # Job: Dist checks (link check + HTML validation)
+  # Both only need the build job's dist/ cache restore, so they're merged into
+  # one job to avoid a second redundant checkout/install.
   # ---------------------------------------------------------------------------
-  link-check:
-    name: Link Check
+  dist-checks:
+    name: Dist Checks
     runs-on: ubuntu-latest
     timeout-minutes: 10
     needs: build
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: "pnpm"
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Setup
+        uses: ./.github/actions/setup
 
       - name: Restore dist cache
         uses: actions/cache/restore@v4
@@ -330,40 +240,6 @@ jobs:
 
       - name: Check links
         run: pnpm check:links
-
-  # ---------------------------------------------------------------------------
-  # Job: HTML validation
-  # Validates built HTML against html-validate rules. Requires build job.
-  # ---------------------------------------------------------------------------
-  html-validate:
-    name: HTML Validate
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    needs: build
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: "pnpm"
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Restore dist cache
-        uses: actions/cache/restore@v4
-        with:
-          path: dist
-          key: dist-${{ github.sha }}
-          fail-on-cache-miss: true
 
       - name: HTML validate
         run: pnpm check:html
