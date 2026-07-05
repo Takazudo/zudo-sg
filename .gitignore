@@ -11,6 +11,9 @@ dist
 test-results/
 playwright-report/
 
+# contrast:audit output (JSON report, not committed — see issue #116)
+contrast-audit-out/
+
 # macOS
 .DS_Store
 
