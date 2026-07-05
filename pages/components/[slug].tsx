@@ -24,20 +24,15 @@
 
 import type { JSX, VNode } from "preact";
 import { Island } from "@takazudo/zfb";
-import { settings } from "@/config/settings";
 import { defaultLocale } from "@/config/i18n";
 import { withBase } from "@/utils/base";
 import { getAllSlugs, getStoryBySlug } from "@/styleguide/data/registry";
-import { navNodes } from "@/styleguide/data/nav-nodes";
 import { StyleguideLayout } from "@/features/styleguide/chrome/_styleguide-layout";
 import VariantFrame from "@/features/styleguide/preview/variant-frame";
 import CodePanel from "@/features/styleguide/code-panel/code-panel";
 import type { CodePanelVariant } from "@/features/styleguide/code-panel/code-panel";
-import { FooterWithDefaults } from "../lib/_footer-with-defaults";
-import { HeaderWithDefaults } from "../lib/_header-with-defaults";
-import { HeadWithDefaults } from "../lib/_head-with-defaults";
 import { composeMetaTitle } from "../lib/_compose-meta-title";
-import { BodyEndIslands } from "../lib/_body-end-islands";
+import { buildStyleguideChrome } from "../lib/_styleguide-chrome";
 
 export const frontmatter = { title: "Component" };
 
@@ -63,17 +58,12 @@ export default function StoryDetailPage(
   // an og:title ("Button | Zudo Sg") matching the `<title>` element. The
   // shell's `title` prop below is the pre-composed `<title>` value.
   const pageTitle = entry ? entry.meta.title : "Not found";
-  const head = <HeadWithDefaults title={pageTitle} />;
-  const header = (
-    <HeaderWithDefaults
-      lang={locale}
-      currentPath={currentPath}
-      sidebarNodesOverride={navNodes}
-      currentSlug={slug}
-    />
-  );
-  const footer = <FooterWithDefaults lang={locale} />;
-  const bodyEnd = <BodyEndIslands basePath={settings.base ?? "/"} />;
+  const chrome = buildStyleguideChrome({
+    lang: locale,
+    pageTitle,
+    currentPath,
+    activeSlug: slug,
+  });
 
   // >>> #49 SEAM: compose the code panel for the StyleguideLayout `codePanel`
   // slot (which the shell flows into the DocLayout `tocOverride` region).
@@ -125,10 +115,7 @@ export default function StoryDetailPage(
         title={composeMetaTitle("Not found")}
         activeSlug={slug}
         lang={locale}
-        head={head}
-        header={header}
-        footer={footer}
-        bodyEnd={bodyEnd}
+        {...chrome}
         codePanel={codePanel}
       >
         <p class="text-ink-soft">Story not found: {slug}</p>
@@ -141,10 +128,7 @@ export default function StoryDetailPage(
       title={composeMetaTitle(entry.meta.title)}
       activeSlug={slug}
       lang={locale}
-      head={head}
-      header={header}
-      footer={footer}
-      bodyEnd={bodyEnd}
+      {...chrome}
       codePanel={codePanel}
     >
       <div class="mx-auto max-w-[56rem]">

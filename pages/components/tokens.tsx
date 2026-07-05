@@ -23,20 +23,15 @@
 
 import type { JSX, VNode } from "preact";
 import { Island } from "@takazudo/zfb";
-import { settings } from "@/config/settings";
 import { defaultLocale } from "@/config/i18n";
 import { withBase } from "@/utils/base";
 import { TOKENS_SLUG } from "@/styleguide/data/registry";
-import { navNodes } from "@/styleguide/data/nav-nodes";
 import { StyleguideLayout } from "@/features/styleguide/chrome/_styleguide-layout";
 import TokenPlayground from "@/features/styleguide/token-tweak/token-playground";
 import { SPACING_TOKENS, FONT_TOKENS } from "@/config/design-tokens-manifest";
 import { UI_COLOR_TOKENS } from "@/config/ui-design-tokens-manifest";
-import { FooterWithDefaults } from "../lib/_footer-with-defaults";
-import { HeaderWithDefaults } from "../lib/_header-with-defaults";
-import { HeadWithDefaults } from "../lib/_head-with-defaults";
 import { composeMetaTitle } from "../lib/_compose-meta-title";
-import { BodyEndIslands } from "../lib/_body-end-islands";
+import { buildStyleguideChrome } from "../lib/_styleguide-chrome";
 
 export const frontmatter = { title: "Design Tokens" };
 
@@ -59,22 +54,19 @@ export default function TokensPage(): JSX.Element {
     children: <TokenPlayground />,
   }) as unknown as VNode;
 
+  const chrome = buildStyleguideChrome({
+    lang: locale,
+    pageTitle: "Design Tokens",
+    currentPath,
+    activeSlug: TOKENS_SLUG,
+  });
+
   return (
     <StyleguideLayout
       title={composeMetaTitle("Design Tokens")}
       activeSlug={TOKENS_SLUG}
       lang={locale}
-      head={<HeadWithDefaults title="Design Tokens" />}
-      header={
-        <HeaderWithDefaults
-          lang={locale}
-          currentPath={currentPath}
-          sidebarNodesOverride={navNodes}
-          currentSlug={TOKENS_SLUG}
-        />
-      }
-      footer={<FooterWithDefaults lang={locale} />}
-      bodyEnd={<BodyEndIslands basePath={settings.base ?? "/"} />}
+      {...chrome}
     >
       <div class="mx-auto max-w-[64rem]">
         <header class="mb-vsp-lg">
