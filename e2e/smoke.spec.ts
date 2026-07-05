@@ -107,6 +107,14 @@ test("/components/<slug> code panel updates when switching variant tabs", async 
   // The read-only source view is the FIRST CodeMirror instance in the panel
   // (the editable Live CSS buffer is the second).
   const sourceCode = codePanel.locator(".cm-content").first();
+
+  // Select tabs by name rather than assuming a default: variants render in
+  // export-name order, which for an ES module namespace is alphabetical (so the
+  // initially-selected tab is "As link", not "Playground"). This test targets
+  // #105 — that switching tabs actually re-renders the source — so it explicitly
+  // drives the switch between two tabs with distinct source. (Default-tab
+  // ordering itself is tracked separately, see #128.)
+  await codePanel.getByRole("tab", { name: "Playground" }).click();
   await expect(sourceCode).toContainText('size="md"', { timeout: 15_000 });
 
   await codePanel.getByRole("tab", { name: "Variants" }).click();
