@@ -14,7 +14,7 @@
 //      (e.g. `#1f6f8b`) or the `var(--color-brand)` reference, since designers
 //      want one and engineers the other.
 //   3. LIVE TWEAK — a button opens the existing zdtp design-token panel via the
-//      same "toggle-my-doc-tweak" event the header Design Tokens icon
+//      same "toggle-sg-doc-tweak" event the header Design Tokens icon
 //      dispatches; edits there propagate to every preview iframe via the
 //      token-tweak bridge, and — because the swatches use `var(--…)` inline —
 //      this page's swatches update live too.
@@ -80,10 +80,10 @@ export default function TokenPlayground(): JSX.Element {
   }, []);
 
   function openTweaker(): void {
-    // "toggle-my-doc-tweak" is the doc-chrome panel's explicit toggle channel.
+    // "toggle-sg-doc-tweak" is the doc-chrome panel's explicit toggle channel.
     // The reserved "toggle-design-token-panel" would open zdtp 0.3.0's empty
     // default instead of this project's real 4-tab panel (Takazudo/zudo-sg#84).
-    window.dispatchEvent(new CustomEvent("toggle-my-doc-tweak"));
+    window.dispatchEvent(new CustomEvent("toggle-sg-doc-tweak"));
   }
 
   function openPreviewTweaker(): void {

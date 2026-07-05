@@ -13,9 +13,9 @@ The styleguide ships two independent design-token panels. Each one edits a diffe
 | **Header control** | **Design Tokens** icon (sliders glyph) — shown on **every** docs page | **Preview tokens** icon (stacked-frames glyph) — shown on styleguide/component pages; also a "Preview tokens →" button on the `/components/tokens` toolbar |
 | **What it edits** | The documentation site's own UI | The `@zudo-sg/ui` component tokens inside preview iframes |
 | **Where applied** | Host `<html>` `:root` | Preview iframes only |
-| **localStorage prefix** | `my-doc-tweak` | `sg-preview-tweak` |
-| **Console namespace** | `window.myDoc` | `window.sgPreview` |
-| **Toggle event** | `toggle-my-doc-tweak` | `toggle-preview-token-panel` |
+| **localStorage prefix** | `sg-doc-tweak` | `sg-preview-tweak` |
+| **Console namespace** | `window.sgDoc` | `window.sgPreview` |
+| **Toggle event** | `toggle-sg-doc-tweak` | `toggle-preview-token-panel` |
 
 The header carries the two panels as a matched pair of icons in its right region: the **Design Tokens** icon is available site-wide (every docs page), while the **Preview tokens** icon appears only on the styleguide/component pages where preview iframes exist. So styleguide pages show two token icons and regular docs pages show one.
 
@@ -49,7 +49,7 @@ The preview panel edits the `@zudo-sg/ui` design tokens — `--color-*`, `--spac
 
 Both panel footers also have an **Apply** button, next to Export / Reset / Load from JSON. Unlike the other three actions (which are entirely localStorage/JSON round-trips), Apply POSTs the current tweak diff to a dev-only endpoint that rewrites the value directly into the project's CSS source — the change survives a hard reload with `localStorage` cleared, and shows up as an ordinary `git diff`.
 
-This only works today for the preview panel's **Color → Palette** swatches (the `--palette-*` tokens), and only when running under `pnpm dev` (`zfb dev`). Everything else needed to make the loop feel "complete" is deliberately scoped out for now — see the caveats below.
+This only works today for the preview panel's **Palette** tab swatches (the `--palette-*` tokens), and only when running under `pnpm dev` (`zfb dev`). Everything else needed to make the loop feel "complete" is deliberately scoped out for now — see the caveats below.
 
 <Warning title="Apply is Palette-only; other tabs will 400">
   The apply endpoint only knows how to route `--palette-*` tokens into `packages/ui/styles/colors.css`. Every other manifest token — **Spacing**, **Font**, **Size**, and the semantic **Ink / Surface / Line / Brand / State** rows in the Color tab — lives inside a Tailwind v4 `@theme { ... }` block, and the underlying `@takazudo/zdtp` apply pipeline only rewrites a plain top-level `:root { ... }` block; it does not scan `@theme` blocks at all. Routing those tokens would either silently no-op (`unknownCssVars`) or need a `@theme: var(--editable-name)` indirection layer across the whole shared token file — a deliberate, separately-reviewed change to the token architecture, not a wiring fix.

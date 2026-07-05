@@ -868,7 +868,6 @@ dialog.zd-mermaid-dialog::backdrop {
   height: calc(var(--spacing-icon-md) * 2);
 }
 
-@import "@takazudo/zdtp/styles.css";
 /* ========================================
  * Doc History Diff Viewer (side-by-side)
  * ======================================== */

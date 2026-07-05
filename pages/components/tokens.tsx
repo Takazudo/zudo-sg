@@ -7,7 +7,7 @@
 // the interactivity on top via event delegation:
 //   - click any token to copy its RESOLVED value (hex / rem) or its
 //     `var(--token)` reference (toggle in the toolbar),
-//   - open the existing zdtp tweaker (dispatches `toggle-my-doc-tweak`, the
+//   - open the existing zdtp tweaker (dispatches `toggle-sg-doc-tweak`, the
 //     doc-chrome panel's explicit toggle channel) to edit tokens live — because
 //     the swatches are painted with `var(--…)`, edits there restyle this page in
 //     real time.
