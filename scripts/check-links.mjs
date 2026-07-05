@@ -2,11 +2,15 @@
 /**
  * check-links.mjs — Post-build internal link checker.
  *
- * Scans dist/**\/*.html for href and src attributes pointing to internal paths
- * and verifies each target file exists in dist/. Reports broken links and exits
- * non-zero if any are found (unless suppressed by .check-links-allowlist).
+ * Scans <dist>/**\/*.html for href and src attributes pointing to internal
+ * paths and verifies each target file exists in <dist>. Reports broken links
+ * and exits non-zero if any are found (unless suppressed by
+ * .check-links-allowlist).
  *
- * Usage: node scripts/check-links.mjs [--allowlist=<file>]
+ * Usage: node scripts/check-links.mjs [--allowlist=<file>] [--dist=<dir>]
+ *
+ * --dist defaults to the root `dist/` (the styleguide host build). Pass
+ * --dist=apps/demo/dist to check the demo site's build instead.
  */
 
 import { readFile, readdir, access, stat } from "node:fs/promises";
@@ -15,10 +19,11 @@ import { fileURLToPath } from "node:url";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const ROOT_DIR = resolve(__dirname, "..");
-const DIST_DIR = join(ROOT_DIR, "dist");
 
 // Parse CLI flags
 const args = process.argv.slice(2);
+const distFlag = args.find((a) => a.startsWith("--dist="));
+const DIST_DIR = distFlag ? resolve(ROOT_DIR, distFlag.split("=")[1]) : join(ROOT_DIR, "dist");
 const allowlistFlag = args.find((a) => a.startsWith("--allowlist="));
 const allowlistPath = allowlistFlag
   ? join(ROOT_DIR, allowlistFlag.split("=")[1])
@@ -119,15 +124,17 @@ async function resolveDistPath(href) {
 }
 
 async function main() {
-  // Check dist/ exists
+  const relDist = relative(ROOT_DIR, DIST_DIR);
+
+  // Check the target dist dir exists
   if (!(await pathExists(DIST_DIR))) {
-    console.error("❌ dist/ not found — run `pnpm build` first.");
+    console.error(`❌ ${relDist}/ not found — run the build first.`);
     process.exit(1);
   }
 
   const allowlist = await loadAllowlist(allowlistPath);
   const htmlFiles = await findHtmlFiles(DIST_DIR);
-  console.log(`Checking ${htmlFiles.length} HTML files in dist/...`);
+  console.log(`Checking ${htmlFiles.length} HTML files in ${relDist}/...`);
 
   const broken = [];
 

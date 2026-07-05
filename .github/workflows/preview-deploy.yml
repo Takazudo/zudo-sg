@@ -4,7 +4,8 @@
 # Builds both sites and deploys each to a Cloudflare Workers preview alias
 # so the preview URL is predictable (e.g. preview-zudo-sg.<acct>.workers.dev).
 #
-# This is separate from PR preview deploys (handled by pr-checks.yml).
+# This is the only workflow that deploys preview aliases — pr-checks.yml
+# builds and checks every PR but does not deploy.
 # Both sites are fully static — no SSR adapter, no .assetsignore needed.
 
 name: Preview Deploy

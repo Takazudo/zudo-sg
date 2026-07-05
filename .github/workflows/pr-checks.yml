@@ -7,13 +7,16 @@
 #   typecheck            — pnpm check (zfb check / tsc --noEmit)
 #   unit                 — pnpm test:unit (vitest)
 #   build                — pnpm build (zfb build → dist/)
-#   build-demo           — pnpm --filter @zudo-sg/demo build (apps/demo)
-#   smoke-e2e            — pnpm test:e2e:ci (Playwright smoke, needs build job)
+#   build-demo           — pnpm --filter @zudo-sg/demo build (apps/demo), then
+#                          pnpm check:links:demo against apps/demo/dist
+#   smoke-e2e            — pnpm test:e2e:ci (Playwright: styleguide + demo smoke
+#                          projects, needs build + build-demo)
 #   link-check           — pnpm check:links (needs build job)
 #   html-validate        — pnpm check:html (needs build job)
 #
 # Node 22 + pnpm via pnpm/action-setup@v4.
-# Root build output shared between jobs via actions/cache to avoid re-building.
+# Root and demo build output shared between jobs via actions/cache to avoid
+# re-building.
 
 name: PR Checks
 
@@ -163,7 +166,9 @@ jobs:
   # ---------------------------------------------------------------------------
   # Job: Build Demo Site
   # Builds apps/demo (@zudo-sg/demo) independently so demo-breaking changes are
-  # caught on every PR rather than only on production deploy.
+  # caught on every PR rather than only on production deploy. Also link-checks
+  # the demo build — its footer/nav hard-code cross-site URLs that nothing else
+  # validates — and caches the dist for the smoke-e2e job's demo-smoke project.
   # ---------------------------------------------------------------------------
   build-demo:
     name: Build Demo Site
@@ -190,15 +195,26 @@ jobs:
       - name: Build demo site
         run: pnpm --filter @zudo-sg/demo build
 
+      - name: Cache demo dist
+        uses: actions/cache/save@v4
+        with:
+          path: apps/demo/dist
+          key: demo-dist-${{ github.sha }}
+
+      - name: Check demo links
+        run: pnpm check:links:demo
+
   # ---------------------------------------------------------------------------
   # Job: Playwright smoke e2e (T1)
-  # Runs a single smoke spec against the pre-built dist/. Requires build job.
+  # Runs the styleguide smoke specs plus the demo-smoke project. playwright.config.ts
+  # declares one webServer per dist (styleguide + demo) and Playwright starts both
+  # regardless of --project filtering, so this job needs both build jobs' output.
   # ---------------------------------------------------------------------------
   smoke-e2e:
     name: Smoke E2E
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    needs: build
+    needs: [build, build-demo]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -222,6 +238,13 @@ jobs:
         with:
           path: dist
           key: dist-${{ github.sha }}
+          fail-on-cache-miss: true
+
+      - name: Restore demo dist cache
+        uses: actions/cache/restore@v4
+        with:
+          path: apps/demo/dist
+          key: demo-dist-${{ github.sha }}
           fail-on-cache-miss: true
 
       - name: Install Playwright browsers

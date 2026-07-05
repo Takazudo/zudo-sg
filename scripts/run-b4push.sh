@@ -9,19 +9,20 @@ set -euo pipefail
 #   3. Type checking (zfb check / tsc --noEmit)
 #   4. Unit tests (test:unit)
 #   5. Build (zfb build)
-#   6. Link check (check:links)
-#   7. HTML validation (check:html)
-#   8. Playwright smoke e2e (test:e2e)
-#   9. Manual interactive smoke (operator-driven)
+#   6. Build demo (apps/demo — needed by the demo-smoke e2e project)
+#   7. Link check (check:links)
+#   8. HTML validation (check:html)
+#   9. Playwright smoke e2e (test:e2e — styleguide + demo-smoke projects)
+#   10. Manual interactive smoke (operator-driven)
 #
 # Env overrides for non-interactive use:
-#   B4PUSH_SKIP_HTML_VALIDATE=1  — skip HTML validation (step 7)
-#   B4PUSH_SKIP_E2E=1            — skip Playwright smoke (step 8)
-#   B4PUSH_SKIP_MANUAL_SMOKE=1   — skip the manual interactive smoke (step 9)
+#   B4PUSH_SKIP_HTML_VALIDATE=1  — skip HTML validation (step 8)
+#   B4PUSH_SKIP_E2E=1            — skip Playwright smoke (step 9)
+#   B4PUSH_SKIP_MANUAL_SMOKE=1   — skip the manual interactive smoke (step 10)
 
 START_TIME=$(date +%s)
 FAILURES=()
-TOTAL_STEPS=9
+TOTAL_STEPS=10
 CURRENT_STEP=0
 
 step() {
@@ -89,15 +90,25 @@ else
   fail "Build"
 fi
 
-# ── Step 6: Link check ────────────────────────────────
+# ── Step 6: Build demo ────────────────────────────────
+# apps/demo/dist is needed by check:links:demo (step 7) and by the
+# demo-smoke Playwright project (step 9's webServer).
+step "Build demo (apps/demo)"
+if (cd "$ROOT_DIR" && pnpm --filter @zudo-sg/demo build); then
+  pass "Build demo passed"
+else
+  fail "Build demo"
+fi
+
+# ── Step 7: Link check ────────────────────────────────
 step "Link check (check:links)"
-if (cd "$ROOT_DIR" && pnpm check:links); then
+if (cd "$ROOT_DIR" && pnpm check:links && pnpm check:links:demo); then
   pass "Link check passed"
 else
   fail "Link check"
 fi
 
-# ── Step 7: HTML validation ───────────────────────────
+# ── Step 8: HTML validation ───────────────────────────
 step "HTML validation (html-validate)"
 if [[ "${B4PUSH_SKIP_HTML_VALIDATE:-}" == "1" ]]; then
   skip "HTML validation (B4PUSH_SKIP_HTML_VALIDATE=1)"
@@ -109,11 +120,11 @@ else
   fi
 fi
 
-# ── Step 8: Playwright smoke e2e ──────────────────────
-# Runs a single smoke fixture against the pre-built dist/ to verify the built
-# site renders and has no console errors. Excluded from CI b4push (CI runs E2E
-# in the pr-checks e2e job instead) but included in local b4push for fast
-# pre-push confidence.
+# ── Step 9: Playwright smoke e2e ──────────────────────
+# Runs the styleguide + demo smoke fixtures against the pre-built dist/ and
+# apps/demo/dist to verify both sites render and have no console errors.
+# Excluded from CI b4push (CI runs E2E in the pr-checks smoke-e2e job instead)
+# but included in local b4push for fast pre-push confidence.
 step "Playwright smoke e2e (test:e2e)"
 if [[ "${B4PUSH_SKIP_E2E:-}" == "1" ]]; then
   skip "Playwright smoke (B4PUSH_SKIP_E2E=1)"
@@ -125,7 +136,7 @@ else
   fi
 fi
 
-# ── Step 9: Manual interactive smoke ─────────────────
+# ── Step 10: Manual interactive smoke ────────────────
 step "Manual interactive smoke"
 if [[ "${B4PUSH_SKIP_MANUAL_SMOKE:-}" == "1" ]]; then
   skip "Manual smoke (B4PUSH_SKIP_MANUAL_SMOKE=1)"
