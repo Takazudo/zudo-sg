@@ -11,6 +11,7 @@
     "check": "zfb check && pnpm --filter @zudo-sg/ui typecheck && pnpm --filter @zudo-sg/demo typecheck",
     "check:html": "html-validate \"dist/**/*.html\"",
     "check:links": "node scripts/check-links.mjs",
+    "check:links:demo": "node scripts/check-links.mjs --dist=apps/demo/dist",
     "gen:z-index": "node scripts/gen-z-index.mjs",
     "check:z-index": "node scripts/gen-z-index.mjs --check",
     "gen:sg-registry": "node scripts/gen-sg-registry.mjs",

@@ -21,7 +21,7 @@ router) is covered by T0 unit tests today, with L4 E2E coverage added in T1.
 | Tier | Status | What runs |
 |------|--------|-----------|
 | T0 | Active | typecheck + unit tests — inner loop, constant feedback |
-| T1 | Active | PR CI gate: lint-tokens + typecheck + unit + build + smoke-e2e + link-check + html-validate |
+| T1 | Active | PR CI gate: lint-tokens + typecheck + unit + build + build-demo + smoke-e2e + link-check + html-validate |
 | T2 | Not needed | T1 budget is well under 10 min; no split needed |
 | T3 | Deferred to release | see below |
 | T4 | Local b4push only | convenience pre-push pass (not enforcement) |
@@ -60,10 +60,11 @@ Steps in `scripts/run-b4push.sh`:
 3. Type checking — `pnpm check`
 4. Unit tests — `pnpm test:unit`
 5. Build — `pnpm build`
-6. Link check — `pnpm check:links`
-7. HTML validation — `pnpm check:html`
-8. Playwright smoke e2e — `pnpm test:e2e`
-9. Manual interactive smoke (operator-driven)
+6. Build demo — `pnpm --filter @zudo-sg/demo build`
+7. Link check — `pnpm check:links` + `pnpm check:links:demo`
+8. HTML validation — `pnpm check:html`
+9. Playwright smoke e2e — `pnpm test:e2e` (styleguide + demo-smoke projects)
+10. Manual interactive smoke (operator-driven)
 
 ### T1 — CI gate (authoritative)
 
@@ -74,19 +75,24 @@ the single source of truth for pass/fail. Jobs mirror the b4push steps:
 - **typecheck** — `pnpm check`
 - **unit** — `pnpm test:unit`
 - **build** — `pnpm build` (produces and caches `dist/`)
-- **smoke-e2e** — `pnpm test:e2e:ci` (Playwright, Chromium only)
+- **build-demo** — `pnpm --filter @zudo-sg/demo build` (produces and caches
+  `apps/demo/dist`), then `pnpm check:links:demo` against it
+- **smoke-e2e** — `pnpm test:e2e:ci` (Playwright, Chromium only; styleguide +
+  demo-smoke projects, needs `build` and `build-demo`)
 - **link-check** — `pnpm check:links`
 - **html-validate** — `pnpm check:html`
 
 ### Individual checks
 
 ```bash
-pnpm check          # typecheck
-pnpm test:unit      # unit tests (vitest)
-pnpm build          # build site → dist/
-pnpm check:links    # broken internal link check (needs dist/)
-pnpm check:html     # HTML validation (needs dist/)
-pnpm test:e2e       # Playwright smoke (needs dist/)
+pnpm check              # typecheck
+pnpm test:unit          # unit tests (vitest)
+pnpm build              # build site → dist/
+pnpm --filter @zudo-sg/demo build  # build demo site → apps/demo/dist/
+pnpm check:links        # broken internal link check (needs dist/)
+pnpm check:links:demo   # broken internal link check for the demo (needs apps/demo/dist/)
+pnpm check:html         # HTML validation (needs dist/)
+pnpm test:e2e           # Playwright smoke (needs dist/ and apps/demo/dist/)
 ```
 
 ---
@@ -139,5 +145,5 @@ for the concrete T3 implementation pattern.
 ## Adding Tests
 
 - **Logic / data transforms** → add to `src/**/__tests__/` as `*.test.ts`, picked up by vitest automatically.
-- **New E2E flows** → add `*.spec.ts` to `e2e/`. Keep them in the smoke fixture (single port 4700 server).
+- **New E2E flows** → add `*.spec.ts` to `e2e/`. Styleguide flows go in the port-4700 smoke fixture; demo flows go in the port-4701 demo-smoke fixture (see `playwright.config.ts`).
 - **Visual regression** → use `/verify-ui` skill ad-hoc; do not add L5 specs to CI until T3 is set up.
