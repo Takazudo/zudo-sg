@@ -31,11 +31,12 @@ import { settings } from "@/config/settings";
 import { BodyEndIslands } from "./_body-end-islands";
 
 // The package chrome calls the BodyEndIslands slot as a bare component; bind the
-// `basePath` prop here (only consumed by the aiAssistant-gated modal, off in
-// this project) so the slot is prop-shape-agnostic.
-const BodyEndIslandsBound = (props: Record<string, unknown>) =>
-  BodyEndIslands({ basePath: settings.base ?? "/", ...props });
+// host `basePath` here (only consumed by the aiAssistant-gated modal, off in
+// this project). `basePath` is a host-owned value the package can't supply, so
+// it wins over anything spread from `props`.
+const BodyEndIslandsBound: ChromeHostBindings["BodyEndIslands"] = (props) =>
+  BodyEndIslands({ ...props, basePath: settings.base ?? "/" });
 
 export const chromeBindings: ChromeHostBindings = {
-  BodyEndIslands: BodyEndIslandsBound as ChromeHostBindings["BodyEndIslands"],
+  BodyEndIslands: BodyEndIslandsBound,
 };
