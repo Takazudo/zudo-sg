@@ -4,7 +4,7 @@
 #
 # Jobs (in execution order):
 #   lint-tokens          — pnpm lint:tokens
-#   codegen-drift        — pnpm check:z-index, pnpm check:sg-registry
+#   codegen-drift        — pnpm check:z-index, pnpm check:sg-registry, pnpm check:token-manifest
 #   typecheck            — pnpm check (zfb check / tsc --noEmit + demo typecheck)
 #   unit                 — pnpm test:unit (vitest)
 #   build                — pnpm build (zfb build → dist/)
@@ -71,7 +71,7 @@ jobs:
   # Job: Codegen drift check
   # Verifies generated files are in sync with their source of truth — fails if
   # someone hand-edits a generated block or forgets to re-run the generator
-  # after adding/removing a source (z-index tier / story file).
+  # after adding/removing a source (z-index tier / story file / token manifest).
   # ---------------------------------------------------------------------------
   codegen-drift:
     name: Codegen Drift Check
@@ -100,6 +100,9 @@ jobs:
 
       - name: Check sg-registry codegen
         run: pnpm check:sg-registry
+
+      - name: Check token manifest codegen
+        run: pnpm check:token-manifest
 
   # ---------------------------------------------------------------------------
   # Job: TypeScript typecheck
