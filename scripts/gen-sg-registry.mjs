@@ -5,8 +5,8 @@
 // single source of truth — the `*.stories.tsx` files that actually exist under
 // packages/ui/src/*/*.stories.tsx:
 //   - src/styleguide/data/sg-registry.ts               (the catalog registry)
-//   - packages/ui/src/stories/__tests__/contract.test.ts (the contract test's
-//     import list)
+//   - packages/ui/src/stories/__tests__/story-modules.ts (the shared STORY_MODULES
+//     registry imported by contract.test.ts and source-drift.test.ts)
 //
 // WHY CODEGEN (NOT import.meta.glob): zfb does not statically inline
 // import.meta.glob — the literal call survives into the shared client islands
@@ -38,9 +38,9 @@ const ROOT = resolve(__dirname, "..");
 
 const UI_SRC_DIR = resolve(ROOT, "packages/ui/src");
 const REGISTRY_PATH = resolve(ROOT, "src/styleguide/data/sg-registry.ts");
-const CONTRACT_TEST_PATH = resolve(
+const STORY_MODULES_PATH = resolve(
   ROOT,
-  "packages/ui/src/stories/__tests__/contract.test.ts",
+  "packages/ui/src/stories/__tests__/story-modules.ts",
 );
 
 const BEGIN_MARKER = "GENERATED:SG_REGISTRY_BEGIN";
@@ -115,17 +115,18 @@ function buildRegistryBlock(entries) {
 }
 
 /**
- * Build the generated block for contract.test.ts: one `import * as <name>`
- * per story (relative, extensionless) and the `STORY_MODULES` map.
+ * Build the generated block for story-modules.ts: one `import * as <name>` per
+ * story (relative, extensionless) and the exported `STORY_MODULES` map shared
+ * by contract.test.ts and source-drift.test.ts.
  */
-function buildContractBlock(entries) {
+function buildStoryModulesBlock(entries) {
   const lines = [];
   lines.push(`// ${BEGIN_MARKER} — do not hand-edit; run \`pnpm gen:sg-registry\`.`);
   for (const e of entries) {
     lines.push(`import * as ${e.importName} from "../../${e.relDirStem}.stories";`);
   }
   lines.push(``);
-  lines.push(`const STORY_MODULES: Record<string, StoryModule> = {`);
+  lines.push(`export const STORY_MODULES: Record<string, StoryModule> = {`);
   for (const e of entries) {
     lines.push(
       `  "${e.relDirStem}.stories.tsx": ${e.importName} as unknown as StoryModule,`,
@@ -167,16 +168,16 @@ function main() {
     REGISTRY_PATH,
   );
 
-  const contractSrc = readFileSync(CONTRACT_TEST_PATH, "utf8");
-  const nextContract = replaceBlock(
-    contractSrc,
-    buildContractBlock(entries),
-    CONTRACT_TEST_PATH,
+  const storyModulesSrc = readFileSync(STORY_MODULES_PATH, "utf8");
+  const nextStoryModules = replaceBlock(
+    storyModulesSrc,
+    buildStoryModulesBlock(entries),
+    STORY_MODULES_PATH,
   );
 
   const targets = [
     { path: REGISTRY_PATH, before: registrySrc, after: nextRegistry },
-    { path: CONTRACT_TEST_PATH, before: contractSrc, after: nextContract },
+    { path: STORY_MODULES_PATH, before: storyModulesSrc, after: nextStoryModules },
   ];
 
   if (check) {

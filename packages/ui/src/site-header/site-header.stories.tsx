@@ -25,6 +25,53 @@ const nav = [
   { label: "Pricing", href: "/pricing" },
 ];
 
+export const Playground: Story = {
+  name: "Playground",
+  source: `<SiteHeader
+  brand="zudo-sg"
+  nav={nav}
+  activePath="/docs"
+  action={<Button size="sm" href="/start">Get started</Button>}
+/>`,
+  controls: [
+    {
+      type: "text",
+      prop: "brand",
+      label: "Brand",
+      defaultValue: "zudo-sg",
+    },
+    {
+      type: "select",
+      prop: "activePath",
+      label: "Active path",
+      options: nav.map((item) => item.href),
+      defaultValue: "/docs",
+    },
+    {
+      type: "boolean",
+      prop: "showAction",
+      label: "Show action",
+      defaultValue: true,
+    },
+  ],
+  // Non-sticky inside the catalog cell so it does not overlay the page.
+  render: (args = {}) => (
+    <SiteHeader
+      brand={args.brand as string}
+      nav={nav}
+      activePath={args.activePath as string}
+      sticky={false}
+      action={
+        args.showAction ? (
+          <Button size="sm" href="/start">
+            Get started
+          </Button>
+        ) : undefined
+      }
+    />
+  ),
+};
+
 export const Default: Story = {
   name: "Default",
   source: `<SiteHeader brand="zudo-sg" nav={nav} activePath="/docs" />`,

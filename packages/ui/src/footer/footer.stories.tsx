@@ -44,6 +44,50 @@ const groups = [
   },
 ];
 
+export const Playground: Story = {
+  name: "Playground",
+  source: `<SiteFooter
+  brand="zudo-sg"
+  tagline="A tight component system."
+  groups={groups}
+  copyright="© 2026 zudo-sg."
+/>`,
+  controls: [
+    {
+      type: "text",
+      prop: "brand",
+      label: "Brand",
+      defaultValue: "zudo-sg",
+    },
+    {
+      type: "text",
+      prop: "tagline",
+      label: "Tagline",
+      defaultValue: "A tight component system.",
+    },
+    {
+      type: "boolean",
+      prop: "showGroups",
+      label: "Show link groups",
+      defaultValue: true,
+    },
+    {
+      type: "text",
+      prop: "copyright",
+      label: "Copyright",
+      defaultValue: "© 2026 zudo-sg.",
+    },
+  ],
+  render: (args = {}) => (
+    <SiteFooter
+      brand={args.brand as string}
+      tagline={args.tagline as string}
+      groups={args.showGroups ? groups : undefined}
+      copyright={args.copyright as string}
+    />
+  ),
+};
+
 export const Default: Story = {
   name: "Default",
   source: `<SiteFooter

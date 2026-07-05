@@ -109,8 +109,9 @@ of the Tier-2 pointers) — component CSS never changes.
   - `src/styleguide/data/sg-registry.ts` (repo root) — the catalog's
     path→module registry.
   - the `GENERATED:SG_REGISTRY_BEGIN`…`END` block in
-    [`src/stories/__tests__/contract.test.ts`](./src/stories/__tests__/contract.test.ts)
-    — the contract test's import list.
+    [`src/stories/__tests__/story-modules.ts`](./src/stories/__tests__/story-modules.ts)
+    — the shared `STORY_MODULES` registry imported by `contract.test.ts` and
+    `source-drift.test.ts`.
 
   Both generated blocks are byte-identical in shape to what a real
   `import.meta.glob({ eager: true })` would have produced, just computed ahead
