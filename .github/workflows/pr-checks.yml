@@ -4,6 +4,7 @@
 #
 # Jobs (in execution order):
 #   lint-tokens          — pnpm lint:tokens (owned by S2; no-op pass until S2 merges)
+#   token-manifest       — pnpm check:token-manifest (ui-design-tokens-manifest.ts drift)
 #   typecheck            — pnpm check (zfb check / tsc --noEmit)
 #   unit                 — pnpm test:unit (vitest)
 #   build                — pnpm build (zfb build → dist/)
@@ -67,6 +68,37 @@ jobs:
         # because the script either does not exist (pnpm exits 0 with a warning
         # on missing optional scripts via the || true fallback) or is a no-op.
         run: pnpm run lint:tokens || echo "lint:tokens not yet defined (S2 pending) — OK"
+
+  # ---------------------------------------------------------------------------
+  # Job: Token manifest drift check
+  # src/config/ui-design-tokens-manifest.ts is generated from
+  # packages/ui/styles/{tokens,colors}.css by scripts/gen-token-manifest.mjs.
+  # Fails if the committed manifest doesn't match what the CSS regenerates.
+  # ---------------------------------------------------------------------------
+  token-manifest:
+    name: Token Manifest Drift
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check token manifest
+        run: pnpm check:token-manifest
 
   # ---------------------------------------------------------------------------
   # Job: TypeScript typecheck

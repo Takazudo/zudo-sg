@@ -6,22 +6,23 @@ set -euo pipefail
 # Step order (cheap → expensive):
 #   1. Format check (mdx)
 #   2. Design token lint (lint:tokens — owned by S2; no-op pass when absent)
-#   3. Type checking (zfb check / tsc --noEmit)
-#   4. Unit tests (test:unit)
-#   5. Build (zfb build)
-#   6. Link check (check:links)
-#   7. HTML validation (check:html)
-#   8. Playwright smoke e2e (test:e2e)
-#   9. Manual interactive smoke (operator-driven)
+#   3. Token manifest drift check (check:token-manifest)
+#   4. Type checking (zfb check / tsc --noEmit)
+#   5. Unit tests (test:unit)
+#   6. Build (zfb build)
+#   7. Link check (check:links)
+#   8. HTML validation (check:html)
+#   9. Playwright smoke e2e (test:e2e)
+#  10. Manual interactive smoke (operator-driven)
 #
 # Env overrides for non-interactive use:
-#   B4PUSH_SKIP_HTML_VALIDATE=1  — skip HTML validation (step 7)
-#   B4PUSH_SKIP_E2E=1            — skip Playwright smoke (step 8)
-#   B4PUSH_SKIP_MANUAL_SMOKE=1   — skip the manual interactive smoke (step 9)
+#   B4PUSH_SKIP_HTML_VALIDATE=1  — skip HTML validation (step 8)
+#   B4PUSH_SKIP_E2E=1            — skip Playwright smoke (step 9)
+#   B4PUSH_SKIP_MANUAL_SMOKE=1   — skip the manual interactive smoke (step 10)
 
 START_TIME=$(date +%s)
 FAILURES=()
-TOTAL_STEPS=9
+TOTAL_STEPS=10
 CURRENT_STEP=0
 
 step() {
@@ -63,7 +64,17 @@ else
   fail "Design token lint"
 fi
 
-# ── Step 3: Type checking ─────────────────────────────
+# ── Step 3: Token manifest drift check ────────────────
+# src/config/ui-design-tokens-manifest.ts is generated from
+# packages/ui/styles/{tokens,colors}.css by scripts/gen-token-manifest.mjs.
+step "Token manifest drift check (check:token-manifest)"
+if (cd "$ROOT_DIR" && pnpm run check:token-manifest); then
+  pass "Token manifest drift check passed"
+else
+  fail "Token manifest drift check"
+fi
+
+# ── Step 4: Type checking ─────────────────────────────
 step "Type checking (zfb check)"
 if (cd "$ROOT_DIR" && pnpm check); then
   pass "Type checking passed"
@@ -73,7 +84,7 @@ else
   fail "Type checking"
 fi
 
-# ── Step 4: Unit tests ────────────────────────────────
+# ── Step 5: Unit tests ────────────────────────────────
 step "Unit tests (test:unit)"
 if (cd "$ROOT_DIR" && pnpm test:unit); then
   pass "Unit tests passed"
@@ -81,7 +92,7 @@ else
   fail "Unit tests"
 fi
 
-# ── Step 5: Build ─────────────────────────────────────
+# ── Step 6: Build ─────────────────────────────────────
 step "Build (zfb build)"
 if (cd "$ROOT_DIR" && pnpm build); then
   pass "Build passed"
@@ -89,7 +100,7 @@ else
   fail "Build"
 fi
 
-# ── Step 6: Link check ────────────────────────────────
+# ── Step 7: Link check ────────────────────────────────
 step "Link check (check:links)"
 if (cd "$ROOT_DIR" && pnpm check:links); then
   pass "Link check passed"
@@ -97,7 +108,7 @@ else
   fail "Link check"
 fi
 
-# ── Step 7: HTML validation ───────────────────────────
+# ── Step 8: HTML validation ───────────────────────────
 step "HTML validation (html-validate)"
 if [[ "${B4PUSH_SKIP_HTML_VALIDATE:-}" == "1" ]]; then
   skip "HTML validation (B4PUSH_SKIP_HTML_VALIDATE=1)"
@@ -109,7 +120,7 @@ else
   fi
 fi
 
-# ── Step 8: Playwright smoke e2e ──────────────────────
+# ── Step 9: Playwright smoke e2e ──────────────────────
 # Runs a single smoke fixture against the pre-built dist/ to verify the built
 # site renders and has no console errors. Excluded from CI b4push (CI runs E2E
 # in the pr-checks e2e job instead) but included in local b4push for fast
@@ -125,7 +136,7 @@ else
   fi
 fi
 
-# ── Step 9: Manual interactive smoke ─────────────────
+# ── Step 10: Manual interactive smoke ─────────────────
 step "Manual interactive smoke"
 if [[ "${B4PUSH_SKIP_MANUAL_SMOKE:-}" == "1" ]]; then
   skip "Manual smoke (B4PUSH_SKIP_MANUAL_SMOKE=1)"

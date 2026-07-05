@@ -13,9 +13,10 @@
 //     real time.
 //
 // Token data: imports from ROOT `src/config/design-tokens-manifest.ts` (the
-// superset) rather than the styleguide's own manifest. Color tokens are
-// defined inline here (the root manifest has an empty COLOR_TOKENS array
-// because color is cluster-driven; the semantic color list is known only here).
+// superset) rather than the styleguide's own manifest. Color tokens come from
+// `UI_COLOR_TOKENS` in `@/config/ui-design-tokens-manifest` — the generated
+// manifest for `@zudo-sg/ui`'s semantic `--color-*` tokens (the root manifest
+// has an empty COLOR_TOKENS array because color is cluster-driven there).
 //
 // See src/features/styleguide/token-tweak/token-playground.tsx for the
 // SSR ↔ island contract (`data-sg-tokens-root`, `data-sg-token`, `data-var`).
@@ -30,6 +31,7 @@ import { navNodes } from "@/styleguide/data/nav-nodes";
 import { StyleguideLayout } from "@/features/styleguide/chrome/_styleguide-layout";
 import TokenPlayground from "@/features/styleguide/token-tweak/token-playground";
 import { SPACING_TOKENS, FONT_TOKENS } from "@/config/design-tokens-manifest";
+import { UI_COLOR_TOKENS } from "@/config/ui-design-tokens-manifest";
 import { FooterWithDefaults } from "../lib/_footer-with-defaults";
 import { HeaderWithDefaults } from "../lib/_header-with-defaults";
 import { HeadWithDefaults } from "../lib/_head-with-defaults";
@@ -38,29 +40,15 @@ import { BodyEndIslands } from "../lib/_body-end-islands";
 
 export const frontmatter = { title: "Design Tokens" };
 
-// Semantic color tokens from `@zudo-sg/ui` (packages/ui/styles/colors.css).
-// Listed here for the swatch grid; each `var` resolves via the imported tokens.
-// (Root manifest has an empty COLOR_TOKENS — color is cluster-driven in zdtp.)
-const COLOR_TOKENS: Array<{ name: string; varName: string }> = [
-  { name: "ink", varName: "--color-ink" },
-  { name: "ink-soft", varName: "--color-ink-soft" },
-  { name: "ink-mute", varName: "--color-ink-mute" },
-  { name: "on-brand", varName: "--color-on-brand" },
-  { name: "paper", varName: "--color-paper" },
-  { name: "surface", varName: "--color-surface" },
-  { name: "surface-sunken", varName: "--color-surface-sunken" },
-  { name: "line", varName: "--color-line" },
-  { name: "line-strong", varName: "--color-line-strong" },
-  { name: "brand", varName: "--color-brand" },
-  { name: "brand-soft", varName: "--color-brand-soft" },
-  { name: "brand-strong", varName: "--color-brand-strong" },
-  { name: "accent", varName: "--color-accent" },
-  { name: "success", varName: "--color-success" },
-  { name: "success-soft", varName: "--color-success-soft" },
-  { name: "danger", varName: "--color-danger" },
-  { name: "danger-soft", varName: "--color-danger-soft" },
-  { name: "focus", varName: "--color-focus" },
-];
+// Swatch grid rows, derived from UI_COLOR_TOKENS (generated from
+// packages/ui/styles/colors.css — see src/config/ui-design-tokens-manifest.ts).
+// `label` is always "color-<name>"; strip the prefix for the short swatch name.
+const COLOR_TOKENS: Array<{ name: string; varName: string }> = UI_COLOR_TOKENS.map(
+  (tok) => ({
+    name: tok.label.replace(/^color-/, ""),
+    varName: tok.cssVar,
+  }),
+);
 
 export default function TokensPage(): JSX.Element {
   const locale = defaultLocale;
