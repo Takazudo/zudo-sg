@@ -56,11 +56,11 @@ describe("buildUiTokenManifest", () => {
     });
 
     const fontSizeLh = manifest.fontTokens.find(
-      (t) => t.cssVar === "--font-size-xs--line-height",
+      (t) => t.cssVar === "--text-xs--line-height",
     );
     expect(fontSizeLh).toMatchObject({
-      id: "ui-font-size-xs--line-height",
-      label: "font-size-xs / lh",
+      id: "ui-text-xs--line-height",
+      label: "text-xs / lh",
     });
 
     const colorInk = manifest.colorTokens.find((t) => t.cssVar === "--color-ink");

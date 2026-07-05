@@ -11,7 +11,9 @@
  *
  * What is shared:
  *   - Spacing axes: hsp (horizontal) / vsp (vertical)
- *   - Typography: 6 font sizes xs–2xl with paired line-heights, 3 weights
+ *   - Typography: 6 abstract font sizes xs–2xl with paired line-heights
+ *     (Tier 1), plus the semantic aliases micro/caption/small/body/heading/
+ *     display that reference them (Tier 2), 3 weights
  *   - Radius: sm / md / lg / full
  *   - Shadows: card / raised / overlay
  *   - Breakpoints: sm / lg / xl
@@ -21,8 +23,11 @@
  *   - Colors: root uses --zd-* palette (zudo-doc injection); demo uses
  *     standalone oklch literals. Each consumer defines its own color tokens.
  *   - Z-index: semantic tiers differ between root and demo.
- *   - Semantic text aliases: root uses --text-micro, --text-caption etc.;
- *     demo maps the same abstract scale to --text-body, --text-display etc.
+ *
+ * --text-body / --text-caption / --text-small are an external API contract:
+ * @takazudo/zudo-doc's content.css renders doc prose via var(--text-body),
+ * var(--text-caption), var(--text-small). These names and pixel values must
+ * survive any future rework of this file.
  *
  * Values are sized for a compact documentation / UI context.
  * Seeded from: $HOME/repos/myoss/zudo-doc/src/styles/global.css (root baseline)
@@ -65,30 +70,45 @@
   --spacing-vsp-2xl: 3.5rem;     /* 56px — page-level gap */
 
   /* ========================================
-   * Typography — 6 font sizes with paired line-heights
+   * Typography — Tier 1 abstract scale + Tier 2 semantic aliases
    *
-   * Abstract names (xs → 2xl) rather than semantic names (caption, body…)
-   * so any element that needs a given size can use the token without
-   * forcing a misleading role name. The role comes from context.
-   *
-   * Each font-size token is paired with an optimal line-height via the
-   * --font-size-*--line-height convention. `text-base` sets both
+   * Tier 1: 6 abstract font sizes (xs → 2xl) with paired line-heights, in
+   * the --text-* namespace (Tailwind v4 generates text-* font-size utilities
+   * from --text-*, not --font-size-*). Abstract names rather than semantic
+   * names (caption, body…) so any element that needs a given size can use
+   * the token without forcing a misleading role name. The role comes from
+   * context. Each font-size token is paired with an optimal line-height via
+   * the --text-*--line-height convention. `text-base` sets both
    * font-size: 1rem and line-height: 1.75 in one utility class.
+   *
+   * Tier 2: semantic aliases (micro/caption/small/body/heading/display),
+   * each a var() reference onto a Tier 1 rung. --text-body / --text-caption
+   * / --text-small are consumed by @takazudo/zudo-doc's content.css for doc
+   * prose — see the file header note above.
    * ======================================== */
 
-  /* Font sizes (xs → 2xl, 6 steps) */
-  --font-size-xs:   0.75rem;   /* 12px */
-  --font-size-xs--line-height: 1.5;
-  --font-size-sm:   0.875rem;  /* 14px */
-  --font-size-sm--line-height: 1.5;
-  --font-size-base: 1rem;      /* 16px */
-  --font-size-base--line-height: 1.75;
-  --font-size-lg:   1.25rem;   /* 20px */
-  --font-size-lg--line-height: 1.5;
-  --font-size-xl:   1.75rem;   /* 28px */
-  --font-size-xl--line-height: 1.25;
-  --font-size-2xl:  2.5rem;    /* 40px */
-  --font-size-2xl--line-height: 1.1;
+  /* Tier 1 — abstract font sizes (xs → 2xl, 6 steps) */
+  --text-xs:   0.75rem;   /* 12px */
+  --text-xs--line-height: 1.5;
+  --text-sm:   0.875rem;  /* 14px */
+  --text-sm--line-height: 1.5;
+  --text-base: 1rem;      /* 16px */
+  --text-base--line-height: 1.75;
+  --text-lg:   1.25rem;   /* 20px */
+  --text-lg--line-height: 1.5;
+  --text-xl:   1.75rem;   /* 28px */
+  --text-xl--line-height: 1.25;
+  --text-2xl:  2.5rem;    /* 40px */
+  --text-2xl--line-height: 1.1;
+
+  /* Tier 2 — semantic aliases (no paired line-heights; content.css / host
+     prose rules own line-height for these) */
+  --text-micro:   var(--text-xs);   /* 12px */
+  --text-caption: var(--text-sm);   /* 14px */
+  --text-small:   var(--text-base); /* 16px */
+  --text-body:    var(--text-lg);   /* 20px */
+  --text-heading: var(--text-xl);   /* 28px */
+  --text-display: var(--text-2xl);  /* 40px */
 
   /* Font weights (3 steps + semibold) */
   --font-weight-normal:   400;

@@ -24,9 +24,10 @@
 // ROOT host's own token manifest, sourced from src/styles/global.css). It was
 // evaluated for the same treatment and left hand-maintained on purpose:
 //   - Its font-size aliases (--text-micro, --text-body, ...) are themselves
-//     `var(--text-scale-*)` references defined in a separate `:root` block,
-//     so a faithful generator would need to resolve custom-property
-//     indirection across two blocks, not just read a literal value.
+//     `var(--text-lg)`-style references onto the shared abstract scale in
+//     @zudo-sg/ui/styles/tokens.css, so a faithful generator would need to
+//     resolve custom-property indirection across two files, not just read a
+//     literal value.
 //   - Its SPACING_TOKENS mixes tokens from THREE different sources: the
 //     shared @zudo-sg/ui tokens.css (hsp/vsp, re-declared nowhere in
 //     global.css — they're only *imported*), root-specific @theme overrides

@@ -11,8 +11,8 @@
  * the consumer serde and tests. `design-token-panel-config.ts` partitions the
  * flat arrays by the `group` field into the new zdtp `TabConfig.tiers` shape.
  * `TokenDef.advanced` was dropped upstream (zdtp 8abb1e4) — items previously
- * gated behind an "Advanced" disclosure now live in their own tier ("Scale —
- * advanced") so the tier acts as the disclosure container.
+ * gated behind an "Advanced" disclosure now live in their own tier, so the
+ * tier itself acts as the disclosure container.
  */
 import type { TokenDef } from "@takazudo/zdtp";
 
@@ -68,10 +68,10 @@ export const SPACING_TOKENS: readonly TokenDef[] = [
 /**
  * Font tokens from `global.css`.
  *
- * Tier 2 semantic tokens (sizes, line-heights, weights, families) are exposed
- * as primary tiers; Tier 1 abstract scale (`--text-scale-*`) lives in its own
- * `font-scale` tier so designers who tweak the scale see the tokens that the
- * semantic sizes resolve from.
+ * Tier 2 semantic tokens (sizes, line-heights, weights, families) are
+ * exposed here. The Tier 1 abstract scale (`--text-xs..2xl`) is defined in
+ * the shared `packages/ui/styles/tokens.css` and surfaced separately via the
+ * preview/UI token panel — this root panel shows the semantic Tier 2 only.
  *
  * (Note: `TokenDef.advanced` was dropped upstream in zdtp 8abb1e4. The
  * progressive-disclosure container is now the tier itself; the
@@ -79,21 +79,17 @@ export const SPACING_TOKENS: readonly TokenDef[] = [
  * section under the Font tab.)
  *
  * Defaults here mirror `global.css` resolved rem values (`--text-body` →
- * `1.2rem`) so serde and the flat-`TokenManifest` generator template have a
- * concrete number. The tier-based main panel (`design-token-panel-config.ts`)
- * promotes the `font-size` group to a *reference* tier pointing at
- * `font-scale`, overriding these defaults to the referenced scale id so the
- * panel reflects the `var(--text-scale-*)` wiring the CSS already encodes.
+ * `1.25rem`, resolving via the shared abstract scale in tokens.css) so serde
+ * and the flat-`TokenManifest` generator template have a concrete number.
  */
 export const FONT_TOKENS: readonly TokenDef[] = [
   // --- Font sizes (Tier 2 semantic) ---
   { id: "text-micro",      cssVar: "--text-micro",      label: "text-micro",      group: "font-size", default: "0.75rem",  step: 0.05, unit: "rem" },
   { id: "text-caption",    cssVar: "--text-caption",    label: "text-caption",    group: "font-size", default: "0.875rem", step: 0.05, unit: "rem" },
   { id: "text-small",      cssVar: "--text-small",      label: "text-small",      group: "font-size", default: "1rem",     step: 0.05, unit: "rem" },
-  { id: "text-body",       cssVar: "--text-body",       label: "text-body",       group: "font-size", default: "1.2rem",   step: 0.05, unit: "rem" },
-  { id: "text-title", cssVar: "--text-title", label: "text-title", group: "font-size", default: "1.4rem",   step: 0.05, unit: "rem" },
-  { id: "text-heading",    cssVar: "--text-heading",    label: "text-heading",    group: "font-size", default: "3rem",     step: 0.05, unit: "rem" },
-  { id: "text-display",    cssVar: "--text-display",    label: "text-display",    group: "font-size", default: "3.75rem",  step: 0.05, unit: "rem" },
+  { id: "text-body",       cssVar: "--text-body",       label: "text-body",       group: "font-size", default: "1.25rem",  step: 0.05, unit: "rem" },
+  { id: "text-heading",    cssVar: "--text-heading",    label: "text-heading",    group: "font-size", default: "1.75rem",  step: 0.05, unit: "rem" },
+  { id: "text-display",    cssVar: "--text-display",    label: "text-display",    group: "font-size", default: "2.5rem",   step: 0.05, unit: "rem" },
 
   // --- Line heights (unitless) ---
   { id: "leading-tight",   cssVar: "--leading-tight",   label: "leading-tight",   group: "line-height", default: "1.25",  step: 0.05, unit: "" },
@@ -110,16 +106,6 @@ export const FONT_TOKENS: readonly TokenDef[] = [
   // --- Font families (text input) ---
   { id: "font-sans", cssVar: "--font-sans", label: "font-sans", group: "font-family", default: "system-ui, sans-serif",    step: 1, unit: "", control: "text" },
   { id: "font-mono", cssVar: "--font-mono", label: "font-mono", group: "font-family", default: "ui-monospace, monospace",  step: 1, unit: "", control: "text" },
-
-  // --- Tier 1 abstract scale (was "Advanced" disclosure in v1 of the panel;
-  //     now lives in its own font-scale tier). ---
-  { id: "text-scale-2xs", cssVar: "--text-scale-2xs", label: "text-scale-2xs", group: "font-scale", default: "0.75rem",  step: 0.05, unit: "rem" },
-  { id: "text-scale-xs",  cssVar: "--text-scale-xs",  label: "text-scale-xs",  group: "font-scale", default: "0.875rem", step: 0.05, unit: "rem" },
-  { id: "text-scale-sm",  cssVar: "--text-scale-sm",  label: "text-scale-sm",  group: "font-scale", default: "1rem",     step: 0.05, unit: "rem" },
-  { id: "text-scale-md",  cssVar: "--text-scale-md",  label: "text-scale-md",  group: "font-scale", default: "1.2rem",   step: 0.05, unit: "rem" },
-  { id: "text-scale-lg",  cssVar: "--text-scale-lg",  label: "text-scale-lg",  group: "font-scale", default: "1.4rem",   step: 0.05, unit: "rem" },
-  { id: "text-scale-xl",  cssVar: "--text-scale-xl",  label: "text-scale-xl",  group: "font-scale", default: "3rem",     step: 0.05, unit: "rem" },
-  { id: "text-scale-2xl", cssVar: "--text-scale-2xl", label: "text-scale-2xl", group: "font-scale", default: "3.75rem",  step: 0.05, unit: "rem" },
 ];
 
 /**

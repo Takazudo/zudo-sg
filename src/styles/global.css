@@ -181,21 +181,6 @@
   --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
 
   /* ========================================
-   * Typography — Tier 2 semantic aliases (root-specific)
-   *
-   * These semantic names (--text-micro, --text-caption, etc.) reference the
-   * Tier 1 abstract scale in :root below. The Tier 1 scale is NOT for direct
-   * component use; always use semantic aliases here.
-   * ======================================== */
-  --text-micro:   var(--text-scale-2xs);  /* 12px — compact labels, color swatch annotations */
-  --text-caption: var(--text-scale-xs);   /* 14px — labels, timestamps */
-  --text-small:   var(--text-scale-sm);   /* 16px — secondary text, nav items */
-  --text-body:    var(--text-scale-md);   /* 19.2px — paragraphs, default */
-  --text-title:   var(--text-scale-lg);   /* 22.4px — card titles, section labels */
-  --text-heading: var(--text-scale-xl);   /* 48px — page headings */
-  --text-display: var(--text-scale-2xl);  /* 60px — hero text */
-
-  /* ========================================
    * Line height — snug step (shared file omits --leading-snug; add here)
    * ======================================== */
   --leading-snug: 1.375;
@@ -249,16 +234,6 @@
 :root {
   /* Default responsive range; sidebar-resizer.ts allows 192–448px for explicit resizing */
   --zd-sidebar-w: clamp(14rem, 20vw, 22rem);
-
-  /* ── Tier 1: Abstract font-size scale (raw values — NOT for direct component use) ── */
-  /* Used only as a source of truth for Tier 2 semantic tokens above. */
-  --text-scale-2xs: 0.75rem;    /* 12px */
-  --text-scale-xs:  0.875rem;   /* 14px */
-  --text-scale-sm:  1rem;       /* 16px */
-  --text-scale-md:  1.2rem;     /* 19.2px */
-  --text-scale-lg:  1.4rem;     /* 22.4px */
-  --text-scale-xl:  3rem;       /* 48px */
-  --text-scale-2xl: 3.75rem;    /* 60px */
 }
 
 /* ========================================
@@ -923,8 +898,10 @@ dialog.zd-mermaid-dialog::backdrop {
  * [data-sg-*-hidden] toggle rules, and the full .sg-* feature class family.
  *
  * NOT ported (root already has these): @imports, @source directives, @theme
- * native-chrome bridge (--color-surface/muted/accent/overlay, --spacing-icon-*,
- * --text-small, z-index scale are all re-asserted in root's @theme above).
+ * native-chrome bridge (--color-surface/muted/accent/overlay, --spacing-icon-*
+ * are re-asserted in root's @theme above; --text-small is a Tier 2 semantic
+ * alias inherited from the shared @zudo-sg/ui/styles/tokens.css import;
+ * z-index scale is generated above).
  * ========================================================================== */
 
 :root {

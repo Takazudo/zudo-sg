@@ -74,7 +74,7 @@ export default function ComponentsIndexPage(): JSX.Element {
         <div data-sg-catalog>
           {groups.map((group) => (
             <section class="mb-vsp-xl" data-sg-section data-category={group.category}>
-              <h2 class="mb-vsp-sm text-title font-semibold">
+              <h2 class="mb-vsp-sm text-heading font-semibold">
                 {group.category}
               </h2>
               <div class="grid grid-cols-1 gap-hsp-md sm:grid-cols-2 lg:grid-cols-3">
