@@ -52,5 +52,11 @@ export default defineConfig({
         publicDir: "public",
       },
     },
+    // Wires the preview design-token panel's Apply button to a same-origin
+    // dev-only endpoint that persists tweaks into packages/ui/styles/colors.css
+    // — see plugins/zdtp-apply-proxy-plugin.mjs for the full pipeline + scope.
+    {
+      name: "./plugins/zdtp-apply-proxy-plugin.mjs",
+    },
   ],
 });

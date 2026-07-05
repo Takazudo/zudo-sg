@@ -5,6 +5,9 @@ export default defineConfig({
   resolve: {
     alias: {
       "@/": resolve(__dirname, "src") + "/",
+      // zfb-only virtual module (see vitest-stubs/zdtp-apply-config.ts) —
+      // plain Vite has no resolver for a "virtual:" specifier.
+      "virtual:zdtp-apply-config": resolve(__dirname, "vitest-stubs/zdtp-apply-config.ts"),
       // React → Preact compat aliases (mirrors production zfb/vite build).
       // Most-specific keys first so `react/jsx-runtime` is not swallowed by `react`.
       "react/jsx-runtime": "preact/jsx-runtime",
@@ -18,6 +21,7 @@ export default defineConfig({
     include: [
       "src/**/__tests__/**/*.test.ts",
       "scripts/__tests__/**/*.test.ts",
+      "plugins/__tests__/**/*.test.ts",
       // @zudo-sg/ui component DOM tests (Testing Library + happy-dom).
       "packages/ui/src/**/__tests__/**/*.test.{ts,tsx}",
     ],
