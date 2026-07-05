@@ -94,40 +94,35 @@ of the Tier-2 pointers) — component CSS never changes.
 
 ---
 
-## 2. File location & discovery glob
+## 2. File location & discovery mechanism
 
 - **Co-locate** each story file with its component: `src/<component>/<name>.stories.tsx`.
 - **Naming:** always `*.stories.tsx` (the `.stories` infix is the discovery key).
-- **Discovery glob (registry lives at the repo root):**
+- **Discovery is codegen, not `import.meta.glob`.** zfb does not statically
+  inline `import.meta.glob` — the literal call survives into the shared client
+  islands bundle and throws in the browser (`import.meta.glob` is undefined
+  there). So the catalog cannot use a runtime glob at all. Instead,
+  [`scripts/gen-sg-registry.mjs`](../../scripts/gen-sg-registry.mjs) (repo
+  root) globs `packages/ui/src/*/*.stories.tsx` **on the filesystem at codegen
+  time** and regenerates two explicit-import lists from what it finds:
 
-  ```ts
-  const modules = import.meta.glob("./packages/ui/**/*.stories.tsx", { eager: true });
-  ```
+  - `src/styleguide/data/sg-registry.ts` (repo root) — the catalog's
+    path→module registry.
+  - the `GENERATED:SG_REGISTRY_BEGIN`…`END` block in
+    [`src/stories/__tests__/contract.test.ts`](./src/stories/__tests__/contract.test.ts)
+    — the contract test's import list.
 
-  > **Why the repo root, not inside `packages/ui`?** zfb supports eager
-  > `import.meta.glob` but **forbids `../` parent-relative glob patterns**. A
-  > registry that lived inside `packages/ui` would need `../` to escape, which is
-  > rejected. So the registry module must live at the **repo root** and use the
-  > root-relative `./packages/ui/**/*.stories.tsx` pattern. Co-locating the
-  > story files (rule above) is what makes this single glob find them all.
+  Both generated blocks are byte-identical in shape to what a real
+  `import.meta.glob({ eager: true })` would have produced, just computed ahead
+  of time instead of at runtime.
 
-- `{ eager: true }` is required: the catalog reads `meta` + every named export at
-  registration time (no lazy/dynamic import dance).
-
-Current story files (one per component group):
-
-```
-src/button/button.stories.tsx
-src/link/link.stories.tsx
-src/heading/heading.stories.tsx
-src/badge/badge.stories.tsx
-src/card/card.stories.tsx
-src/stat/stat.stories.tsx
-src/site-header/site-header.stories.tsx
-src/hero/hero.stories.tsx
-src/footer/footer.stories.tsx
-src/form/form.stories.tsx
-```
+- **After adding, renaming, or removing a story file**, run
+  `pnpm gen:sg-registry` from the repo root and commit the regenerated files.
+  `pnpm check:sg-registry` (wired into CI and `scripts/run-b4push.sh`) fails
+  the build if the generated blocks drift from what's on disk — forgetting to
+  regenerate is a build failure, not a silently-missing catalog entry.
+- **Never hand-edit** between the `GENERATED:SG_REGISTRY_BEGIN`/`END` markers
+  in either generated file; the next `pnpm gen:sg-registry` run overwrites it.
 
 ---
 

@@ -13,6 +13,8 @@
     "check:links": "node scripts/check-links.mjs",
     "gen:z-index": "node scripts/gen-z-index.mjs",
     "check:z-index": "node scripts/gen-z-index.mjs --check",
+    "gen:sg-registry": "node scripts/gen-sg-registry.mjs",
+    "check:sg-registry": "node scripts/gen-sg-registry.mjs --check",
     "setup:doc-skill": "bash scripts/setup-doc-skill.sh",
     "lint:tokens": "node $(realpath node_modules/@takazudo/zudo-design-token-lint/dist/cli.js)",
     "test:unit": "vitest run",
