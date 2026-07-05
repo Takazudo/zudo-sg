@@ -3,8 +3,48 @@ title: Changelog
 sidebar_position: 99
 ---
 
-# Changelog
+## v0.1.0 — 2026-07-06
 
-## Unreleased
+First release. The **Styleguide Uplift** turns zudo-sg into an easy-to-manage,
+easy-to-use Storybook alternative: every hand-maintained list is now codegen'd
+with drift gates, the platform is on zudo-doc 2.x, and browser token tweaks can
+persist back to CSS source.
 
-- Initial release
+### Platform
+
+- Migrated to **zudo-doc 2.x** package-owned routes via `zudoDocPreset()`;
+  retired the hand-wired `pages/lib/` shells and deleted the 283-line
+  `zfb-shim.d.ts`. Code highlighting is now dual-theme (light + dark) syntect.
+
+### Codegen & quality gates
+
+- **Story registry** (`gen-sg-registry`), **UI token manifest**
+  (`gen-token-manifest`, from CSS truth), and the existing z-index block are all
+  generated with `--check` drift gates, unified into one `codegen-drift` CI job
+  and the local `b4push` gate.
+- Repaired decorative CI gates: `lint-tokens` can now fail, `check:z-index` is
+  wired, and `apps/demo` is typechecked. Added a CI setup composite action,
+  hoisted the wrangler version, and added Dependabot.
+
+### Design tokens & theming
+
+- **zdtp apply pipeline**: the preview token panel's *Apply* now persists Palette
+  tweaks to `packages/ui/styles/colors.css` (dev-only, same-origin, no sidecar).
+- Migrated color schemes from hex to **OKLCH** with an advisory WCAG contrast
+  audit. Adopted zdtp 0.4.x (palette tab, colorPresets, owner autoload).
+- Unified typography onto the Tailwind v4 `--text-*` namespace (one abstract
+  Tier-1 scale + one Tier-2 semantic map), fixing silently-dead `text-*`
+  utilities. Tokenized `.sg-*` literals and split the styleguide CSS out of the
+  `global.css` monolith.
+
+### Authoring UX
+
+- `pnpm new:component` scaffolder, type-linked story controls (`Story<Props>`),
+  a source-vs-render drift guard, and optional per-component MDX docs on the
+  component detail page.
+
+### Docs & polish
+
+- Designed + shipped a favicon + logo (restoring smoke-test 404 detection),
+  backfilled unit tests, trued up `CLAUDE.md` and the bundled skills, and removed
+  vestigial pagefind (search is MiniSearch).
