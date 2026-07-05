@@ -294,4 +294,54 @@ When adding a component, ship its story in the same change:
 - [ ] `controls` added where live editing is meaningful (optional); `prop`
       names a real key of `P`.
 - [ ] Component uses only semantic token utilities (passes `pnpm lint:tokens`).
+- [ ] _(Optional)_ `src/<component>/<component>.mdx` docs file, if the component
+      needs guidelines / do-don't / a11y notes beyond `description` + `usage`
+      (see §8).
 - [ ] `pnpm check` (typecheck) and `pnpm test:unit` pass.
+
+---
+
+## 8. Per-component docs (optional MDX)
+
+`meta.description` (one sentence) and `meta.usage` (one snippet) cover the quick
+reference. When a component needs more — usage guidelines, do/don't, variant
+intent, accessibility notes — ship an **optional** co-located MDX doc:
+
+```
+src/<component>/<component>.mdx      # e.g. src/button/button.mdx
+```
+
+- **Optional and co-located.** Same directory + base name as the component and
+  its story (`button.tsx`, `button.stories.tsx`, `button.mdx`). A component with
+  no `.mdx` renders no extra section on its detail page — nothing else to do.
+- **How it renders.** The doc is a
+  [`componentDocs`](../../zfb.config.ts) content collection rooted at
+  `packages/ui/src` (`include: ["*/*.mdx"]`), so zfb's Rust pipeline compiles it
+  at build time. The host detail page (`pages/components/[slug].tsx`) looks up
+  the entry by deriving its slug from the story path
+  ([`src/styleguide/data/component-docs.ts`](../../src/styleguide/data/component-docs.ts))
+  and renders `<entry.Content>` inside a `.zd-content` wrapper. Discovery is
+  therefore keyed off the **same** `packages/ui/src/<name>/` root the
+  `gen-sg-registry` codegen walks — no separate registration, no codegen change.
+- **Authoring.** Start headings at `##` (the page title is already the `<h1>`).
+  The shared doc typography (`.zd-content`), fenced code-block highlighting, and
+  the admonition directives all work exactly as in a regular doc page:
+
+  ```md
+  ---
+  title: Button
+  ---
+
+  ## Guidelines
+
+  Prose, lists, and fenced code blocks render with the site's doc styles.
+
+  :::tip
+  Admonitions (`:::note` / `:::tip` / `:::info` / `:::warning` / `:::danger` /
+  `:::caution`) and the `<Note title="…">` JSX form both render.
+  :::
+  ```
+
+- **Not a route.** The collection is intentionally absent from
+  `resolveMarkdownLinks.dirs`, so these files never get their own URL — they
+  only ever render inline on the component detail page.
