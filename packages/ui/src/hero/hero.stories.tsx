@@ -3,6 +3,9 @@ import { Hero } from "./hero";
 import { Button } from "../button/button";
 import { Stat, StatGroup } from "../stat/stat";
 
+// HeroProps isn't exported; derive it from the component itself.
+type HeroProps = Parameters<typeof Hero>[0];
+
 const meta: StoryMeta = {
   title: "Hero",
   category: "Layout",
@@ -19,7 +22,7 @@ const meta: StoryMeta = {
 
 export default meta;
 
-export const Playground: Story = {
+export const Playground: Story<HeroProps> = {
   name: "Playground",
   source: `<Hero
   eyebrow="zudo-sg"
@@ -54,16 +57,11 @@ export const Playground: Story = {
     },
   ],
   render: (args = {}) => (
-    <Hero
-      eyebrow={args.eyebrow as string}
-      title={args.title as string}
-      lede={args.lede as string}
-      tinted={args.tinted as boolean}
-    />
+    <Hero eyebrow={args.eyebrow} title={args.title} lede={args.lede} tinted={args.tinted} />
   ),
 };
 
-export const Basic: Story = {
+export const Basic: Story<HeroProps> = {
   name: "Basic",
   source: `<Hero
   eyebrow="zudo-sg"
@@ -93,7 +91,7 @@ export const Basic: Story = {
   ),
 };
 
-export const WithMedia: Story = {
+export const WithMedia: Story<HeroProps> = {
   name: "With media panel",
   source: `<Hero
   eyebrow="Platform"
@@ -131,7 +129,7 @@ export const WithMedia: Story = {
   ),
 };
 
-export const Plain: Story = {
+export const Plain: Story<HeroProps> = {
   name: "Plain (untinted)",
   source: `<Hero
   tinted={false}

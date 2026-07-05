@@ -1,6 +1,10 @@
 import type { StoryMeta, Story } from "../stories/types";
 import { Stat, StatGroup } from "./stat";
 
+// Neither Props type is exported; derive them from the components themselves.
+type StatProps = Parameters<typeof Stat>[0];
+type StatGroupProps = Parameters<typeof StatGroup>[0];
+
 const meta: StoryMeta = {
   title: "Stat",
   category: "Data Display",
@@ -16,7 +20,7 @@ const meta: StoryMeta = {
 
 export default meta;
 
-export const Playground: Story = {
+export const Playground: Story<StatProps> = {
   name: "Playground",
   source: `<Stat value={42} label="Active users" hint="last 30 days" />`,
   controls: [
@@ -43,22 +47,16 @@ export const Playground: Story = {
       defaultValue: "last 30 days",
     },
   ],
-  render: (args = {}) => (
-    <Stat
-      value={args.value as number}
-      label={args.label as string}
-      hint={args.hint as string}
-    />
-  ),
+  render: (args = {}) => <Stat value={args.value} label={args.label} hint={args.hint} />,
 };
 
-export const Single: Story = {
+export const Single: Story<StatProps> = {
   name: "Single",
   source: `<Stat value="99.9%" label="Uptime" hint="last 90 days" />`,
   render: () => <Stat value="99.9%" label="Uptime" hint="last 90 days" />,
 };
 
-export const Group: Story = {
+export const Group: Story<StatGroupProps> = {
   name: "Group",
   source: `<StatGroup>
   <Stat value="99.9%" label="Uptime" />
@@ -76,7 +74,7 @@ export const Group: Story = {
   ),
 };
 
-export const Divided: Story = {
+export const Divided: Story<StatGroupProps> = {
   name: "Divided",
   source: `<StatGroup divided>
   <Stat value="99.9%" label="Uptime" />
