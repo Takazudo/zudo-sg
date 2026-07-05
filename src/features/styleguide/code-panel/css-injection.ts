@@ -3,19 +3,24 @@
 // The code panel's CSS buffer feeds this: as the user edits CSS, the text is
 // injected (debounced) into a dedicated <style data-sg-injected-css> element
 // inside each same-origin preview iframe's <head>, so the preview restyles
-// without a reload. Same-origin (the iframes are `/components/preview` on this
+// without a reload. Same-origin (the iframes are PREVIEW_ROUTE_PATH on this
 // origin) makes `contentDocument` reachable.
 //
-// SELECTOR NOTE (#48 fix): the iframe src uses `/components/preview` (the new
-// VariantFrame route), NOT the standalone `/preview`. The selector MUST match
-// `src*="/components/preview"` or live CSS injection silently no-ops.
+// SELECTOR NOTE (#48 fix, #105 hardening): the selector matches
+// PREVIEW_ROUTE_PATH — the SAME constant VariantFrame imports to build each
+// iframe's `src` (../preview/route.ts). A shared import keeps the two in
+// agreement structurally instead of by comment; __tests__/css-injection.test.ts
+// drives the real selector against a VariantFrame-shaped src as a regression
+// guard.
+
+import { PREVIEW_ROUTE_PATH } from "../preview/route";
 
 const INJECTED_STYLE_ATTR = "data-sg-injected-css";
 
 function previewIframes(): HTMLIFrameElement[] {
   if (typeof document === "undefined") return [];
   return Array.from(
-    document.querySelectorAll<HTMLIFrameElement>('iframe[src*="/components/preview"]'),
+    document.querySelectorAll<HTMLIFrameElement>(`iframe[src*="${PREVIEW_ROUTE_PATH}"]`),
   );
 }
 

@@ -48,7 +48,10 @@ export default function SourceEditor({
     // initial config only. They are intentionally omitted from the deps — the
     // editor owns its buffer thereafter, and re-running this effect would
     // destroy/recreate the CodeMirror view (losing cursor/scroll) on every
-    // prop change.
+    // prop change. Callers that swap to an unrelated `value` (e.g. the code
+    // panel's per-variant source view) must pass a `key` that changes with the
+    // identity, so Preact remounts this component instead of leaving stale
+    // content displayed (#105).
   }, []);
 
   return (

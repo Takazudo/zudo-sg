@@ -2,10 +2,11 @@
 // layout's localStorage keys, CSS custom-property names, and data-attributes.
 //
 // Pure constants + DOM helpers; safe to import from both SSR (constants only)
-// and client islands. The inline head/body scripts (panel-state-head-script,
-// resizer-init-script in panel-scripts.tsx) hard-code the SAME literal strings
-// because an inline <script> cannot import this module — keep them in sync if
-// you rename here.
+// and client islands. The inline head/body scripts (PanelStateHeadScript,
+// PanelResizersInitScript, built in panel-scripts-source.ts) interpolate
+// these constants into their template strings at SSR/build time — an inline
+// <script> cannot import this module at runtime, but the builder module can
+// (#105) — so renaming a constant here flows through automatically.
 //
 // The styleguide renders THROUGH zudo-doc's DocLayout, which owns the desktop
 // sidebar (`#desktop-sidebar`). Two consequences:

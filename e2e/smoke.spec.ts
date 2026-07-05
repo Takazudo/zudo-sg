@@ -93,6 +93,28 @@ test("/components/<slug> detail page renders with code panel aside", async ({ pa
   await expect(codePanel).toBeAttached();
 });
 
+test("/components/<slug> code panel updates when switching variant tabs", async ({ page }) => {
+  // Regression test for #105: SourceEditor created its CodeMirror view once
+  // and never diffed `value`, so switching variant tabs kept showing the
+  // first variant's source. Button has two variants (Playground, Variants)
+  // with distinct `source` text — a stable target for this check.
+  const response = await page.goto("/components/button");
+  expect(response?.status()).toBe(200);
+
+  const codePanel = page.locator("#sg-code-panel");
+  await expect(codePanel).toBeAttached();
+
+  // The read-only source view is the FIRST CodeMirror instance in the panel
+  // (the editable Live CSS buffer is the second).
+  const sourceCode = codePanel.locator(".cm-content").first();
+  await expect(sourceCode).toContainText('size="md"', { timeout: 15_000 });
+
+  await codePanel.getByRole("tab", { name: "Variants" }).click();
+
+  await expect(sourceCode).toContainText("Secondary", { timeout: 15_000 });
+  await expect(sourceCode).not.toContainText('size="md"');
+});
+
 test("/components/<slug> detail page preview iframe loads", async ({ page }) => {
   // Navigate to the catalog first to find a valid slug.
   await page.goto("/components");
