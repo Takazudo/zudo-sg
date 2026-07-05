@@ -6,7 +6,7 @@ set -euo pipefail
 # Step order (cheap → expensive):
 #   1. Format check (mdx)
 #   2. Design token lint (lint:tokens)
-#   3. Z-index generated block check (check:z-index)
+#   3. Codegen drift check (check:z-index, check:sg-registry)
 #   4. Type checking (zfb check / tsc --noEmit)
 #   5. Unit tests (test:unit)
 #   6. Build (zfb build)
@@ -31,7 +31,7 @@ FAILURES=()
 STEPS=(
   "Format check (mdx)"
   "Design token lint (lint:tokens)"
-  "Z-index generated block check (check:z-index)"
+  "Codegen drift check (check:z-index, check:sg-registry)"
   "Type checking (zfb check)"
   "Unit tests (test:unit)"
   "Build (zfb build)"
@@ -75,14 +75,16 @@ else
   fail "Design token lint"
 fi
 
-# ── Step 3: Z-index generated block check ─────────────
-# Catches hand-edits to the generated block in src/styles/global.css that
-# have drifted from src/config/z-index-tokens.ts (the source of truth).
+# ── Step 3: Codegen drift check ───────────────────────
+# Verifies generated files are in sync with their source of truth: the z-index
+# block in src/styles/global.css (from src/config/z-index-tokens.ts) and the
+# story registry (from packages/ui/src/*/*.stories.tsx). Catches a hand-edited
+# generated block or a forgotten `pnpm gen:*` re-run before it reaches CI.
 step
-if (cd "$ROOT_DIR" && pnpm run check:z-index); then
-  pass "Z-index generated block check passed"
+if (cd "$ROOT_DIR" && pnpm run check:z-index && pnpm run check:sg-registry); then
+  pass "Codegen drift check passed"
 else
-  fail "Z-index generated block check"
+  fail "Codegen drift check"
 fi
 
 # ── Step 4: Type checking ─────────────────────────────

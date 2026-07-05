@@ -4,7 +4,8 @@
 #
 # Jobs (in execution order):
 #   lint-tokens          — pnpm lint:tokens
-#   typecheck            — pnpm check (zfb check / tsc --noEmit + demo typecheck) and pnpm check:z-index
+#   codegen-drift        — pnpm check:z-index, pnpm check:sg-registry
+#   typecheck            — pnpm check (zfb check / tsc --noEmit + demo typecheck)
 #   unit                 — pnpm test:unit (vitest)
 #   build                — pnpm build (zfb build → dist/)
 #   build-demo           — pnpm --filter @zudo-sg/demo build (apps/demo)
@@ -64,6 +65,40 @@ jobs:
         run: pnpm run lint:tokens
 
   # ---------------------------------------------------------------------------
+  # Job: Codegen drift check
+  # Verifies generated files are in sync with their source of truth — fails if
+  # someone hand-edits a generated block or forgets to re-run the generator
+  # after adding/removing a source (z-index tier / story file).
+  # ---------------------------------------------------------------------------
+  codegen-drift:
+    name: Codegen Drift Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check z-index codegen
+        run: pnpm check:z-index
+
+      - name: Check sg-registry codegen
+        run: pnpm check:sg-registry
+
+  # ---------------------------------------------------------------------------
   # Job: TypeScript typecheck
   # ---------------------------------------------------------------------------
   typecheck:
@@ -90,9 +125,6 @@ jobs:
 
       - name: Type check
         run: pnpm check
-
-      - name: Z-index generated block check
-        run: pnpm check:z-index
 
   # ---------------------------------------------------------------------------
   # Job: Unit tests (vitest)

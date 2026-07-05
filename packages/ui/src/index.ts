@@ -5,8 +5,8 @@
 // app's Vite/zfb pipeline transpiles these .tsx files. See STORIES.md.
 //
 // Stories are NOT re-exported here: the catalog discovers `*.stories.tsx` via
-// `import.meta.glob` (see STORIES.md), so keeping them out of the barrel avoids
-// pulling story render trees into app bundles.
+// generated explicit imports (see STORIES.md), so keeping them out of the
+// barrel avoids pulling story render trees into app bundles.
 
 // ── Actions ──────────────────────────────────────────────────────────────
 export { Button } from "./button/button";

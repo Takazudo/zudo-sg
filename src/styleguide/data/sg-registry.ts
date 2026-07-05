@@ -1,11 +1,18 @@
 // Styleguide story registry — the single story-discovery point.
 //
+// GENERATED FILE — the block below is codegen'd by `scripts/gen-sg-registry.mjs`
+// from the `*.stories.tsx` files under packages/ui/src/*/*.stories.tsx. Never
+// hand-edit between the markers; run `pnpm gen:sg-registry` after adding or
+// removing a story file and commit the result. `pnpm check:sg-registry` fails
+// CI on drift.
+//
 // DISCOVERY MECHANISM: explicit static imports (NOT import.meta.glob).
 // zfb does not statically inline import.meta.glob — the literal call survives
 // into the shared client islands bundle, and in the browser `import.meta.glob`
 // is undefined → `.glob is not a function`. Explicit static imports produce a
 // real, statically-bundled object that works identically in SSR and client
-// builds. With only 10 story files this is trivial to maintain by hand.
+// builds. The generator globs the filesystem at codegen time, so this list
+// never drifts from what's actually on disk.
 //
 // WHY PACKAGE PATH IMPORTS (NOT RELATIVE):
 // zfb creates a shadow copy of the project root during bundling, so relative
@@ -19,6 +26,7 @@
 // (`./ui/src/<name>/<name>.stories.tsx`) matching the pattern the root registry
 // uses, so the registry.ts logic is a direct port without key-shape changes.
 
+// GENERATED:SG_REGISTRY_BEGIN — do not hand-edit; run `pnpm gen:sg-registry`.
 import type { StoryModule } from "@zudo-sg/ui";
 
 import * as badge from "@zudo-sg/ui/src/badge/badge.stories.tsx";
@@ -49,3 +57,4 @@ export const storyModules: Record<string, StoryModule> = {
   "./ui/src/site-header/site-header.stories.tsx": siteHeader as unknown as StoryModule,
   "./ui/src/stat/stat.stories.tsx": stat as unknown as StoryModule,
 };
+// GENERATED:SG_REGISTRY_END

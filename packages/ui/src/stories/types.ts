@@ -2,8 +2,9 @@
  * @zudo-sg/ui — story-authoring contract (shared types)
  *
  * These types define the shape every `*.stories.tsx` module must satisfy so the
- * S6 styleguide catalog can discover and render stories via a single eager
- * `import.meta.glob('./packages/ui/**\/*.stories.tsx', { eager: true })`.
+ * S6 styleguide catalog can discover and render stories. Discovery itself is
+ * codegen (`scripts/gen-sg-registry.mjs`), not `import.meta.glob` — see
+ * STORIES.md §2.
  *
  * The full prose contract — glob root, file location, source-extraction rules,
  * browser/MSW rules — lives in packages/ui/STORIES.md. Keep this file and that
