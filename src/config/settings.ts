@@ -122,7 +122,7 @@ export const settings = {
   // only to the framework's empty-tabs default instance — so it opens an EMPTY
   // panel, not this project's real 4-tab panel. Instead a project-rendered
   // Design Tokens icon (the `type: "html"` item below) dispatches
-  // "toggle-my-doc-tweak" — the doc-chrome panel's explicit toggle channel (see
+  // "toggle-sg-doc-tweak" — the doc-chrome panel's explicit toggle channel (see
   // design-token-panel-config.ts). The DesignTokenPanelBootstrap island
   // (body-end) listens for it. See Takazudo/zudo-sg#84/#85.
   //
@@ -139,10 +139,10 @@ export const settings = {
     {
       type: "html",
       html:
-        '<button id="my-doc-tweak-trigger" type="button" ' +
+        '<button id="sg-doc-tweak-trigger" type="button" ' +
         'class="flex items-center justify-center text-muted transition-colors hover:text-fg cursor-pointer" ' +
         'aria-label="Open design tokens panel" title="Design tokens" ' +
-        "onclick=\"window.dispatchEvent(new CustomEvent('toggle-my-doc-tweak'))\">" +
+        "onclick=\"window.dispatchEvent(new CustomEvent('toggle-sg-doc-tweak'))\">" +
         '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" ' +
         'fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" ' +
         'stroke-linejoin="round" aria-hidden="true">' +

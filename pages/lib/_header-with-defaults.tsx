@@ -317,7 +317,7 @@ export function HeaderWithDefaults(
   );
 
   // Design Tokens icon note: the project-rendered `{ type: "html" }` right-item
-  // (button#my-doc-tweak-trigger, dispatching "toggle-my-doc-tweak") now lives in
+  // (button#sg-doc-tweak-trigger, dispatching "toggle-sg-doc-tweak") now lives in
   // `settings.headerRightItems` (#113) so it renders on the package-owned doc
   // routes too, not just this host wrapper's pages. `filterHeaderRightItems`
   // above passes html items through untouched, so nothing extra is needed here.

@@ -7,7 +7,7 @@
 //
 // The Design Tokens trigger is NO LONGER rendered here: it now lives in the
 // root header (site-wide) as a project-rendered icon dispatching
-// "toggle-my-doc-tweak" (see pages/lib/_header-with-defaults.tsx). This island
+// "toggle-sg-doc-tweak" (see pages/lib/_header-with-defaults.tsx). This island
 // only adds the styleguide-only Preview tokens icon (and the code-panel toggle
 // on detail pages), so styleguide pages show exactly two token icons
 // (Design Tokens from the root header + Preview tokens here) while regular docs
