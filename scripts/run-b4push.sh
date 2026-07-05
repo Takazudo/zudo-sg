@@ -86,11 +86,12 @@ else
 fi
 
 # ── Step 4: Type checking ─────────────────────────────
+# No bare-tsc fallback here: `pnpm check` is a chain (root zfb check + ui
+# typecheck + demo typecheck) and a root-only `tsc --noEmit` would silently
+# mask a ui/demo-only failure, since the root tsconfig excludes both.
 step
 if (cd "$ROOT_DIR" && pnpm check); then
   pass "Type checking passed"
-elif (cd "$ROOT_DIR" && pnpm exec tsc --noEmit); then
-  pass "Type checking passed (tsc --noEmit fallback)"
 else
   fail "Type checking"
 fi
