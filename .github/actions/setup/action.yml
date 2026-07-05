@@ -1,0 +1,32 @@
+# Shared checkout + pnpm + Node.js + install boilerplate, used by every
+# pr-checks.yml job and the build-site/build-demo jobs in main-deploy.yml and
+# preview-deploy.yml. pnpm version comes from the `packageManager` field in
+# package.json (no separate PNPM_VERSION to keep in sync).
+name: Setup
+description: Checkout, pnpm, Node.js, and pnpm install.
+
+inputs:
+  node-version:
+    description: Node.js version to install
+    required: false
+    default: "22"
+
+runs:
+  using: composite
+  steps:
+    - name: Checkout
+      uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+
+    - name: Setup pnpm
+      uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4
+      with:
+        dest: ~/setup-pnpm-${{ github.job }}
+
+    - name: Setup Node.js
+      uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+      with:
+        node-version: ${{ inputs.node-version }}
+
+    - name: Install dependencies
+      shell: bash
+      run: pnpm install --frozen-lockfile

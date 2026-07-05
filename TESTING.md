@@ -21,7 +21,7 @@ router) is covered by T0 unit tests today, with L4 E2E coverage added in T1.
 | Tier | Status | What runs |
 |------|--------|-----------|
 | T0 | Active | typecheck + unit tests — inner loop, constant feedback |
-| T1 | Active | PR CI gate: lint-tokens + typecheck + unit + build + build-demo + smoke-e2e + link-check + html-validate |
+| T1 | Active | PR CI gate: lint-tokens + codegen-drift + typecheck + unit + build + build-demo + smoke-e2e + dist-checks |
 | T2 | Not needed | T1 budget is well under 10 min; no split needed |
 | T3 | Deferred to release | see below |
 | T4 | Local b4push only | convenience pre-push pass (not enforcement) |
@@ -72,6 +72,8 @@ The `pr-checks.yml` workflow runs on every PR targeting `main` or `base/**` and 
 the single source of truth for pass/fail. Jobs mirror the b4push steps:
 
 - **lint-tokens** — `pnpm lint:tokens` (no-op until S2)
+- **codegen-drift** — `pnpm check:z-index` + `pnpm check:sg-registry` +
+  `pnpm check:token-manifest`
 - **typecheck** — `pnpm check`
 - **unit** — `pnpm test:unit`
 - **build** — `pnpm build` (produces and caches `dist/`)
@@ -79,8 +81,8 @@ the single source of truth for pass/fail. Jobs mirror the b4push steps:
   `apps/demo/dist`), then `pnpm check:links:demo` against it
 - **smoke-e2e** — `pnpm test:e2e:ci` (Playwright, Chromium only; styleguide +
   demo-smoke projects, needs `build` and `build-demo`)
-- **link-check** — `pnpm check:links`
-- **html-validate** — `pnpm check:html`
+- **dist-checks** — `pnpm check:links` + `pnpm check:html` against `dist/`
+  (needs `build`; merged into one job so both checks share a single install)
 
 ### Individual checks
 
