@@ -60,8 +60,7 @@ export function VersionsPageView({ locale }: { locale: string }): JSX.Element {
   return (
     <DocLayoutWithDefaults
       title={composeMetaTitle(pageTitle)}
-      // Page transitions removed — plain full-page navigation (epic #66 / zudo-doc#2273).
-      enableClientRouter={false}
+      enableClientRouter={settings.dynamicPageTransition}
       head={<HeadWithDefaults title={pageTitle} />}
       lang={locale}
       noindex={settings.noindex}

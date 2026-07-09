@@ -32,6 +32,7 @@ import type { VNode, JSX } from "preact";
 import { Island } from "@takazudo/zfb";
 import { settings } from "@/config/settings";
 import { SidebarResizerInit } from "@takazudo/zudo-doc/sidebar-resizer";
+import { PageLoadingOverlay } from "@takazudo/zudo-doc/page-loading";
 
 // #113: adopt the package enlarge/ai-chat islands directly (the former
 // src/components/{image-enlarge,mermaid-enlarge,ai-chat-modal} forks were
@@ -170,6 +171,7 @@ export function BodyEndIslands({
 
   return (
     <>
+      {settings.dynamicPageTransition ? <PageLoadingOverlay /> : null}
       {aiAssistant}
       {imageEnlarge}
       {mermaidEnlarge}

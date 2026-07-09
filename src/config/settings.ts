@@ -71,6 +71,7 @@ export const settings = {
   // host-owned (zfb's route injection yields to a host page stub at the same
   // pattern — "Decision 6"). See docs/adr/route-injection-seam.md in zudo-doc.
   packageOwnedRoutes: true as boolean,
+  dynamicPageTransition: true as boolean,
   // Host-callables channel for the injected routes: a module exporting
   // `chromeBindings: ChromeHostBindings`. Only the BodyEndIslands slot is
   // overridden (the two zdtp token panels + image/mermaid enlarge); every other
