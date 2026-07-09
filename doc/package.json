@@ -9,10 +9,13 @@
   },
   "scripts": {
     "dev": "zfb dev",
+    "prebuild": "pnpm gen:doc-history-meta",
     "build": "zfb build",
     "preview": "zfb preview",
+    "precheck": "pnpm gen:doc-history-meta",
     "check": "zfb check",
     "check:html": "html-validate \"dist/**/*.html\"",
+    "gen:doc-history-meta": "node -e \"const fs = require('node:fs'); fs.mkdirSync('.zfb', { recursive: true }); fs.writeFileSync('.zfb/doc-history-meta.json', '{}\\\\n');\"",
     "gen:z-index": "gen-z-index",
     "check:z-index": "gen-z-index --check",
     "setup:doc-skill": "bash scripts/setup-doc-skill.sh",

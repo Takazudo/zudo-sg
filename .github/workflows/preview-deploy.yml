@@ -1,12 +1,12 @@
 # Preview deployment for the `preview` and `expreview/**` branches.
 #
 # Triggered on pushes to `preview` and `expreview/**` branches.
-# Builds both sites and deploys each to a Cloudflare Workers preview alias
+# Builds all sites and deploys each to a Cloudflare Workers preview alias
 # so the preview URL is predictable (e.g. preview-zudo-sg.<acct>.workers.dev).
 #
 # This is the only workflow that deploys preview aliases — pr-checks.yml
 # builds and checks every PR but does not deploy.
-# Both sites are fully static — no SSR adapter, no .assetsignore needed.
+# All sites are fully static — no SSR adapter, no .assetsignore needed.
 
 name: Preview Deploy
 
@@ -85,6 +85,34 @@ jobs:
         with:
           name: demo-dist
           path: ${{ runner.temp }}/demo-dist.tar
+          retention-days: 1
+
+  # ---------------------------------------------------------------------------
+  # Job: Build the documentation site (doc)
+  # ---------------------------------------------------------------------------
+  build-doc:
+    name: Build Documentation Site
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: Build doc site
+        run: pnpm build:doc
+
+      - name: Archive doc build output
+        run: tar -cf "$RUNNER_TEMP/doc-dist.tar" -C doc/dist .
+
+      - name: Upload doc build output
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
+        with:
+          name: doc-dist
+          path: ${{ runner.temp }}/doc-dist.tar
           retention-days: 1
 
   # ---------------------------------------------------------------------------
@@ -213,11 +241,72 @@ jobs:
         run: bash scripts/smoke-url.sh "${{ steps.deploy-demo.outputs.deploy_url }}/" 200
 
   # ---------------------------------------------------------------------------
+  # Job: Deploy documentation site preview alias
+  # ---------------------------------------------------------------------------
+  deploy-doc:
+    name: Deploy Documentation Site Preview
+    needs: [build-doc]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      deploy_url: ${{ steps.deploy-doc.outputs.deploy_url }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+
+      - name: Download doc build output
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: doc-dist
+          path: ${{ runner.temp }}
+
+      - name: Extract doc build output
+        run: mkdir -p doc/dist && tar -xf "$RUNNER_TEMP/doc-dist.tar" -C doc/dist
+
+      - name: Determine branch slug
+        id: branch
+        run: |
+          BRANCH_NAME="${{ github.ref_name }}"
+          BRANCH_SLUG=$(echo "$BRANCH_NAME" \
+            | tr '[:upper:]' '[:lower:]' \
+            | sed 's/[^a-z0-9]/-/g; s/-\{2,\}/-/g; s/^-//; s/-$//')
+          echo "slug=$BRANCH_SLUG" >> "$GITHUB_OUTPUT"
+          echo "Branch slug: $BRANCH_SLUG"
+
+      - name: Deploy doc site preview alias
+        id: deploy-doc
+        run: |
+          SLUG="${{ steps.branch.outputs.slug }}"
+          DEPLOY_LOG=$(mktemp)
+          npx wrangler@${{ env.WRANGLER_VERSION }} versions upload \
+            --config doc/wrangler.toml \
+            --preview-alias="$SLUG" \
+            --message="Preview doc: ${SLUG} @ ${GITHUB_SHA:0:7}" \
+            2>&1 | tee "$DEPLOY_LOG"
+
+          DEPLOY_URL=$(grep -oE "https://${SLUG}-[a-z0-9.-]+\.workers\.dev" "$DEPLOY_LOG" | head -1)
+          if [ -z "$DEPLOY_URL" ]; then
+            echo "::error::Failed to parse alias preview URL for slug '$SLUG' from wrangler output"
+            exit 1
+          fi
+          echo "deploy_url=$DEPLOY_URL" >> "$GITHUB_OUTPUT"
+          echo "Doc site preview URL: $DEPLOY_URL"
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      # Retries through the brief window before a freshly uploaded version
+      # alias becomes resolvable (see scripts/smoke-url.sh).
+      - name: Smoke gate — doc site preview homepage
+        run: bash scripts/smoke-url.sh "${{ steps.deploy-doc.outputs.deploy_url }}/" 200
+
+  # ---------------------------------------------------------------------------
   # Job: Post combined preview URLs to PR comment
   # ---------------------------------------------------------------------------
   comment-pr:
     name: Comment Preview URLs on PR
-    needs: [deploy-site, deploy-demo]
+    needs: [deploy-site, deploy-demo, deploy-doc]
     if: success()
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -228,6 +317,7 @@ jobs:
         env:
           SITE_DEPLOY_URL: ${{ needs.deploy-site.outputs.deploy_url }}
           DEMO_DEPLOY_URL: ${{ needs.deploy-demo.outputs.deploy_url }}
+          DOC_DEPLOY_URL: ${{ needs.deploy-doc.outputs.deploy_url }}
         with:
           script: |
             const branch = context.ref.replace('refs/heads/', '');
@@ -246,6 +336,7 @@ jobs:
             const pr = prs[0];
             const siteUrl = process.env.SITE_DEPLOY_URL;
             const demoUrl = process.env.DEMO_DEPLOY_URL;
+            const docUrl = process.env.DOC_DEPLOY_URL;
             const shortSha = context.sha.substring(0, 7);
             const marker = '<!-- cf-preview-branch -->';
 
@@ -259,6 +350,7 @@ jobs:
               `|---|---|`,
               `| Styleguide | ${siteUrl} |`,
               `| Demo | ${demoUrl} |`,
+              `| Docs | ${docUrl} |`,
               '',
               `Built from \`${branch}\` @ \`${shortSha}\``,
             ].join('\n');

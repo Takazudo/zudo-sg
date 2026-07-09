@@ -8,8 +8,9 @@ One-time setup required before the CI workflows can deploy to Cloudflare Workers
 |---|---|---|
 | `zudo-sg` | `zudo-sg.takazudomodular.com` | `wrangler.toml` |
 | `zudo-sg-demo-site` | `zudo-sg-demo-site.takazudomodular.com` | `apps/demo/wrangler.toml` |
+| `zudo-sg-doc` | `zudo-sg-doc.takazudomodular.com` | `doc/wrangler.toml` |
 
-Both sites are fully static (no SSR). If an SSR route (`prerender = false`) is added later, wire `@takazudo/zfb-adapter-cloudflare` in the relevant `zfb.config.ts`, add `main = "./dist/_worker.js"` and `compatibility_flags = ["nodejs_compat"]` to the corresponding `wrangler.toml`, and add the `.assetsignore` write step before the `wrangler deploy` call in the workflow (see reference in `zudo-doc`'s `main-deploy.yml`).
+All three sites are fully static (no SSR). If an SSR route (`prerender = false`) is added later, wire `@takazudo/zfb-adapter-cloudflare` in the relevant `zfb.config.ts`, add `main = "./dist/_worker.js"` and `compatibility_flags = ["nodejs_compat"]` to the corresponding `wrangler.toml`, and add the `.assetsignore` write step before the `wrangler deploy` call in the workflow (see reference in `zudo-doc`'s `main-deploy.yml`).
 
 ---
 
@@ -23,7 +24,8 @@ npx wrangler@4.85.0 whoami
 
 > The version above (and in §5) is a local-shell copy for convenience. The
 > source of truth is the `WRANGLER_VERSION` env var in `main-deploy.yml` and
-> `preview-deploy.yml` — bump all three together.
+> `preview-deploy.yml` — bump the workflow env vars and every local command
+> example in this file together.
 
 Add it as a GitHub Actions secret named `CLOUDFLARE_ACCOUNT_ID`.
 
@@ -35,7 +37,7 @@ Create a Cloudflare API token with the **Workers Scripts:Edit** permission:
 
 1. Go to https://dash.cloudflare.com/profile/api-tokens
 2. Click **Create Token** → use the **Edit Cloudflare Workers** template
-3. Scope it to your account (or restrict to the two Workers if preferred)
+3. Scope it to your account (or restrict to the three Workers if preferred)
 4. Copy the token value
 
 Add it as a GitHub Actions secret named `CLOUDFLARE_API_TOKEN`.
@@ -50,14 +52,15 @@ Add it as a GitHub Actions secret named `CLOUDFLARE_API_TOKEN`.
 |---|---|---|
 | `zudo-sg` | `zudo-sg.takazudomodular.com` | `wrangler deploy` (auto) |
 | `zudo-sg-demo-site` | `zudo-sg-demo-site.takazudomodular.com` | `wrangler deploy` (auto) |
+| `zudo-sg-doc` | `zudo-sg-doc.takazudomodular.com` | `wrangler deploy` (auto) |
 
-The `CLOUDFLARE_API_TOKEN` (§2) must be able to manage the zone's DNS for this auto-provisioning to succeed — the **Edit Cloudflare Workers** template scoped to the account + the `takazudomodular.com` zone covers it (this is what the configured token already has; both sites are live).
+The `CLOUDFLARE_API_TOKEN` (§2) must be able to manage the zone's DNS for this auto-provisioning to succeed — the **Edit Cloudflare Workers** template scoped to the account + the `takazudomodular.com` zone covers it (this is what the configured token already has for the existing deployments; the doc Worker uses the same permission shape).
 
 ---
 
 ## 4. First deploy
 
-Push to `main` to trigger `main-deploy.yml`. On the very first deploy, wrangler provisions the Workers, creates the custom domain bindings, and creates the DNS records + TLS certs (§3). Subsequent pushes to `main` update both Workers in parallel.
+Push to `main` to trigger `main-deploy.yml`. On the very first deploy, wrangler provisions the Workers, creates the custom domain bindings, and creates the DNS records + TLS certs (§3). Subsequent pushes to `main` update all three Workers in parallel.
 
 DNS + cert propagation on that first deploy is not instant (it can take a minute or two before the hostname resolves), so the post-deploy smoke gates retry with backoff via `scripts/smoke-url.sh` instead of failing on the first `curl`. A first deploy is therefore green once provisioning completes, not red on the propagation window.
 
@@ -71,6 +74,9 @@ npx wrangler@4.85.0 deploy --dry-run --config wrangler.toml
 
 # Validate demo site config
 npx wrangler@4.85.0 deploy --dry-run --config apps/demo/wrangler.toml
+
+# Validate doc site config
+npx wrangler@4.85.0 deploy --dry-run --config doc/wrangler.toml
 ```
 
 > See the note on the pinned version in §1 — keep this in step with
@@ -89,4 +95,4 @@ console.log(content);
 "
 ```
 
-Both configs are intentionally minimal (no `main`, no `nodejs_compat`) because both sites are static.
+All configs are intentionally minimal (no `main`, no `nodejs_compat`) because all three sites are static.
