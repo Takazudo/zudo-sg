@@ -104,9 +104,10 @@ function tierFromGroup(
 // ---------------------------------------------------------------------------
 
 /**
- * Split a `UI_PALETTE_COLORS` name (e.g. "cool-700") into its family
- * ("cool") and step ("700"). Names with no numeric step (e.g. "white") are
- * their own single-item family.
+ * Split a `UI_PALETTE_COLORS` name (e.g. "cool-8" or "white-0") into its
+ * family ("cool"/"white") and numeric step ("8"/"0"). Names with no numeric
+ * step are kept as single-item families for defensive compatibility, but the
+ * committed @zudo-sg/ui palette is fully indexed.
  */
 function splitPaletteName(name: string): { family: string; step: string | null } {
   const match = /^(.+)-(\d+)$/.exec(name);
