@@ -28,21 +28,14 @@
 // enters the shipped bundle.
 //
 // SCOPE — only the "palette" prefix is routed today:
-//   zdtp's apply pipeline rewrites values only inside the FIRST top-level
-//   `:root { ... }` block of the target CSS file (see
-//   node_modules/@takazudo/zdtp/dist/apply/apply-token-overrides.d.ts) — it
-//   does not scan `@theme { ... }` blocks at all. `--palette-*` is declared
-//   in a plain `:root` block in packages/ui/styles/colors.css, so it's
-//   reachable. Every other manifest token — `--spacing-*` / `--font-*` /
-//   `--radius-*` / `--shadow-*` in tokens.css, and the semantic `--color-*`
-//   tier in colors.css — lives inside a Tailwind v4 `@theme` block (required
-//   there for utility-class generation) and is therefore NOT reachable by
-//   this pipeline as shipped. Tracked upstream at
-//   Takazudo/zudo-design-token-panel#496 and as a follow-up here at
-//   Takazudo/zudo-sg#130 (making those tokens apply-writable needs a
-//   `:root`-alias + `@theme: var(...)` indirection layer across the whole
-//   shared token file — a deliberate, reviewable change to the Wave 1-4
-//   token architecture, out of scope for this wiring task).
+//   zdtp 0.4.5 can rewrite the first top-level `:root { ... }` block and the
+//   first top-level `@theme { ... }` block of the target CSS file (see
+//   node_modules/@takazudo/zdtp/dist/apply/apply-token-overrides.d.ts).
+//   This host still routes only `--palette-*` to packages/ui/styles/colors.css.
+//   Extending routing to `--spacing-*` / `--font-*` / `--radius-*` /
+//   `--shadow-*` in tokens.css and semantic `--color-*` rows in colors.css is
+//   tracked separately at Takazudo/zudo-sg#130 because it changes which shared
+//   token families are apply-writable and needs its own review.
 //
 // Practical corollary: the panel POSTs every currently-dirty token across
 // ALL tabs in one Apply request (see zdtp's `buildApplyOverrides`); if any

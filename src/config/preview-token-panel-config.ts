@@ -25,10 +25,10 @@
  * The Tier-1 `--palette-*` families live in their own reserved `palette` tab
  * (zdtp 0.4.0 — see PALETTE_TAB below), not inside Color. The Color tab stays
  * a generic "Color" tab (`GenericTab`, non-reserved id) — not the dedicated
- * zdtp `ColorTab` cluster, whose single-index-semantics + scheme-switch model
- * does not fit @zudo-sg/ui's `light-dark()` semantic tokens. Inside it, the
- * Tier-2 semantic `--color-*` tokens are free-text rows because a single-axis
- * slider can't drive a `light-dark()` expression.
+ * zdtp `ColorTab` cluster, whose ramp-reference semantic model is designed for
+ * a doc-chrome `--palette-*` + `--zd-*` color scheme. @zudo-sg/ui owns a
+ * family-named palette plus `light-dark()` semantic tokens, so its Tier-2
+ * `--color-*` tokens stay free-text rows.
  */
 
 import type { PanelConfig, TabConfig, TierConfig, TierItem, TokenDef } from "@takazudo/zdtp";
@@ -152,12 +152,11 @@ const PALETTE_TAB: TabConfig = {
 // ---------------------------------------------------------------------------
 // Color tab — use a non-reserved id ("ui-color") so zdtp routes this to
 // GenericTab rather than the dedicated ColorTab. The dedicated ColorTab's
-// cluster model assumes a flat indexed palette (--zd-0..15) with single-index
-// semantic references and a scheme-switch system — which does not fit
-// @zudo-sg/ui's light-dark() semantics (the family-named palette itself now
-// lives in PALETTE_TAB above). So we stay on GenericTab for the Tier-2
-// semantic tokens: "Ink"/"Surface"/… tiers as text rows (light-dark()
-// expressions, which a single-axis slider can't drive).
+// cluster model assumes a doc-chrome ramp scheme (`--palette-*` feeding
+// `--zd-*` roles), which does not fit @zudo-sg/ui's light-dark() semantics
+// (the family-named palette itself lives in PALETTE_TAB above). So we stay on
+// GenericTab for the Tier-2 semantic tokens: "Ink"/"Surface"/… tiers as text
+// rows.
 // ---------------------------------------------------------------------------
 
 const COLOR_TAB: TabConfig = {
@@ -225,19 +224,20 @@ export const previewTokenPanelConfig: PanelConfig = {
   consoleNamespace: "sgPreview",
   modalClassPrefix: "sg-preview-design-token-panel-modal",
   // Schema for this panel's exported JSON. Using a distinct value from the
-  // doc-chrome panel ("zudo-doc-design-tokens/v1") so preview exports are not
+  // doc-chrome panel ("zudo-design-tokens/v3") so preview exports are not
   // accidentally imported into the doc-chrome panel and vice-versa.
   schemaId: "sg-preview-design-tokens/v1",
   exportFilenameBase: "sg-preview-design-tokens",
-  // Distinct toggle-event channel — dispatching "toggle-design-token-panel"
-  // (the doc-chrome event) will NOT open this panel, and dispatching this event
-  // will NOT open the doc-chrome panel.
+  // Distinct toggle-event channel — dispatching the reserved
+  // "toggle-design-token-panel" event or the doc-chrome "toggle-sg-doc-tweak"
+  // event will NOT open this panel, and dispatching this event will NOT open
+  // the doc-chrome panel.
   toggleEvent: "toggle-preview-token-panel",
   tabs: [COLOR_TAB, PALETTE_TAB, SPACING_TAB, FONT_TAB, SIZE_TAB],
   // Left empty deliberately: `colorPresets` only feeds the "Scheme…" dropdown
   // rendered by the reserved 'color'/'color-secondary' ColorTab (verified
-  // against zdtp 0.4.3's ColorTab source — the preset map is merged with
-  // `colorExtras.colorSchemes` there and nowhere else). This panel has neither
+  // against zdtp 0.4.5's ColorTab source — the preset map is merged with
+  // `colorExtras` there and nowhere else). This panel has neither
   // tab: COLOR_TAB above is a non-reserved GenericTab (no colorExtras, per its
   // own header comment) and PALETTE_TAB is the new reserved 'palette' tab,
   // which has no scheme/preset concept of its own. A light/dark brand-preset
@@ -255,9 +255,9 @@ export const previewTokenPanelConfig: PanelConfig = {
   // Apply pipeline (zdtp README §3) — persists browser tweaks to CSS source.
   // Both fields resolve to `undefined` outside `zfb dev`; see
   // plugins/zdtp-apply-proxy-plugin.mjs for the endpoint/routing wiring and
-  // the "palette"-only scope (Tailwind v4 `@theme`-scoped tokens — spacing,
-  // font, radius, shadow, semantic color — aren't reachable by this pipeline
-  // today; see that file's header comment for the tracked follow-ups).
+  // the "palette"-only scope. zdtp can rewrite top-level `@theme` blocks, but
+  // this repo has not routed spacing/font/radius/shadow/semantic color prefixes
+  // yet; see that file's header comment for the tracked follow-up.
   applyEndpoint,
   applyRouting,
 };

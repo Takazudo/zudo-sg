@@ -71,7 +71,7 @@ function hexToOklchString(hex) {
  * Process file content: replace all quoted 6-digit hex literals with oklch.
  *
  * Matches ONLY `"#rrggbb"` (inside double quotes) — this skips:
- *   - Bare integers (palette indices like `background: 9`)
+ *   - Bare integers from legacy palette-index fields
  *   - GitHub issue refs in comments (#116, #101, etc. — not inside "")
  *   - 3-digit or 8-digit hex variants
  *

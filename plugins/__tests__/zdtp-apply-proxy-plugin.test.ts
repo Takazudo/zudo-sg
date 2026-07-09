@@ -48,9 +48,9 @@ function runSetup(command: "dev" | "build") {
 
 // Mirrors the shape of packages/ui/styles/colors.css: a plain `:root` block
 // holding the Tier-1 palette, plus a Tailwind v4 `@theme` block for the
-// Tier-2 semantic tokens — the exact structure that makes "palette" apply-
-// writable and "color" (the @theme tier) NOT, per the plugin's header
-// comment.
+// Tier-2 semantic tokens. Production routing keeps "palette" writable and
+// leaves "color" unrouted; a focused test below routes "color" explicitly to
+// verify zdtp's @theme rewrite path.
 const COLORS_CSS_FIXTURE = `:root {
   --palette-white: oklch(1 0 0);
   --palette-cool-700: oklch(0.21 0.03 264);   /* ink (light) */
@@ -159,12 +159,11 @@ describe("createDevMiddlewareHandler", () => {
     expect(readColorsCss()).toBe(before);
   });
 
-  it("documents the @theme gap: a routed prefix whose var lives outside :root is 'unknown', not written", async () => {
+  it("rewrites a routed @theme var when that prefix is explicitly routed", async () => {
     // "color" IS routed here (unlike production config) specifically to
-    // isolate the @theme-vs-:root behaviour from the "unrouted prefix" case
+    // isolate @theme rewriting from the "unrouted prefix" case
     // above: --color-ink resolves to a file+prefix match, but the var itself
-    // lives in the file's `@theme` block, which applyTokenOverrides never
-    // scans (see node_modules/@takazudo/zdtp/dist/apply/apply-token-overrides.d.ts).
+    // lives in the file's `@theme` block.
     const handler = createDevMiddlewareHandler({
       rootDir: sandbox,
       writeRoot: sandbox,
@@ -177,8 +176,8 @@ describe("createDevMiddlewareHandler", () => {
     expect(res.status).toBe(200);
     const payload = JSON.parse(res.body ?? "{}");
     expect(payload.ok).toBe(true);
-    expect(payload.unknownCssVars).toContain("--color-ink");
-    expect(readColorsCss()).toBe(before);
+    expect(payload.updated?.[0]?.changed).toContain("--color-ink");
+    expect(readColorsCss()).toContain("--color-ink: red;");
   });
 
   it("rejects a routing entry whose path escapes the write-root (invalid token path)", async () => {
@@ -200,7 +199,7 @@ describe("createDevMiddlewareHandler", () => {
     expect(readColorsCss()).toBe(before);
   });
 
-  it("fails a write to a file with no top-level :root block (failed write)", async () => {
+  it("rewrites a file with only a top-level @theme block", async () => {
     const handler = createDevMiddlewareHandler({
       rootDir: sandbox,
       writeRoot: sandbox,
@@ -210,11 +209,13 @@ describe("createDevMiddlewareHandler", () => {
 
     const res = await post(handler, { tokens: { "--spacing-hsp-2xs": "0.25rem" } });
 
-    expect(res.status).toBe(409);
+    expect(res.status).toBe(200);
     const payload = JSON.parse(res.body ?? "{}");
-    expect(payload.ok).toBe(false);
-    expect(String(payload.error)).toContain("No top-level :root { ... } block");
-    expect(readFileSync(join(sandbox, "tokens.css"), "utf-8")).toBe(before);
+    expect(payload.ok).toBe(true);
+    expect(payload.updated?.[0]?.changed).toContain("--spacing-hsp-2xs");
+    const after = readFileSync(join(sandbox, "tokens.css"), "utf-8");
+    expect(after).toContain("--spacing-hsp-2xs: 0.25rem;");
+    expect(after).not.toBe(before);
   });
 
   it("rejects non-POST methods without touching the apply pipeline", async () => {

@@ -138,14 +138,14 @@ export const WithFooter: Story<CardProps> = {
 
 export const Linked: Story<CardProps> = {
   name: "Linked (whole card)",
-  source: `<Card href="/articles/tokens" variant="outlined">
+  source: `<Card href="/docs/getting-started/token-panels" variant="outlined">
   <Badge tone="brand">Guide</Badge>
   <CardTitle>Designing with tight tokens</CardTitle>
   <CardBody>How a constrained token set keeps a UI coherent as it grows.</CardBody>
 </Card>`,
   render: () => (
     <div class="max-w-[24rem]">
-      <Card href="/articles/tokens" variant="outlined">
+      <Card href="/docs/getting-started/token-panels" variant="outlined">
         <Badge tone="brand">Guide</Badge>
         <CardTitle>Designing with tight tokens</CardTitle>
         <CardBody>How a constrained token set keeps a UI coherent as it grows.</CardBody>

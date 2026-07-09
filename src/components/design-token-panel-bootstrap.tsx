@@ -1,9 +1,8 @@
 "use client";
 
-// Side-effect import — running this module in the browser triggers
-// configurePanel(designTokenPanelConfig) which mounts the zdtp panel and
-// registers the `toggle-sg-doc-tweak` window listener (the doc-chrome panel's
-// explicit toggle channel — see design-token-panel-config.ts).
+// Side-effect import — running this module in the browser bootstraps the
+// doc-chrome zdtp panel, including the `toggle-sg-doc-tweak` listener and
+// mode-scoped color defaults.
 import "@/lib/design-token-panel-bootstrap";
 
 import type { JSX } from "preact";

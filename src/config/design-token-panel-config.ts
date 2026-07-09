@@ -1,14 +1,17 @@
 /**
  * zdtp (zudo-design-token-panel) PanelConfig for this project.
  *
- * This config object is the single source of truth passed to
- * `configurePanel(designTokenPanelConfig)` in the bootstrap module.
+ * The doc-chrome color model is ramp-native (`ColorScheme = { ramps, map }`).
+ * The panel exposes it through two tabs:
  *
- * Type notes:
- * - zdtp's `ColorScheme.shikiTheme` has been optional since zdtp 0.2.3
- *   (Takazudo/zudo-design-token-panel#342) — this project's local `colorSchemes`
- *   map (whose `ColorScheme.shikiTheme` is also optional) is assignable to
- *   `colorExtras.colorSchemes` directly, with no normalization wrapper or cast.
+ * - Palette tab (`palette`): the shared base/accent/state ramps emitted as
+ *   `--palette-*` custom properties.
+ * - Color tab (`color`): base roles plus the 23 semantic `--zd-*` roles,
+ *   expressed as grouped references into the Palette tab's ramp tiers.
+ *
+ * The color cluster is scheme-less (`colorExtras.colorSchemes = {}`): the
+ * editable source of truth is the ramp/semantic tier model, not a legacy
+ * 16-slot scheme preset registry.
  */
 
 import type {
@@ -17,7 +20,6 @@ import type {
   TierConfig,
   TierItem,
   ColorClusterExtras,
-  ColorScheme as ZdtpColorScheme,
   TokenDef,
 } from "@takazudo/zdtp";
 import {
@@ -25,95 +27,21 @@ import {
   FONT_TOKENS,
   SIZE_TOKENS,
 } from "./design-tokens-manifest";
+import {
+  getActiveScheme,
+  STATE_ROLES,
+  buildSemanticTierItems,
+  type ColorScheme,
+} from "./color-scheme-utils";
 import { colorSchemes } from "./color-schemes";
-import { SEMANTIC_DEFAULTS, SEMANTIC_CSS_NAMES } from "./color-scheme-utils";
 import { settings } from "./settings";
-import { DESIGN_TOKEN_SCHEMA } from "@takazudo/zudo-doc/theme";
 
-/**
- * Base-role fallback indices. Background defaults to palette index 0,
- * foreground to 15, cursor to 6, selection to 0/15.
- */
-const BASE_DEFAULTS = {
-  background: 0,
-  foreground: 15,
-  cursor: 6,
-  selectionBg: 0,
-  selectionFg: 15,
-} as const;
-
-/**
- * Fallback Shiki theme used when a color scheme's `shikiTheme` field is absent.
- */
 const DEFAULT_SHIKI_THEME = "github-dark";
-
-/**
- * A few extra doc-chrome schemes surfaced in the Color tab's "Scheme…"
- * dropdown alongside `colorExtras.colorSchemes` (see `PanelConfig.colorPresets`,
- * zdtp README §7.5) — same p0-p15 index convention documented above
- * `color-scheme-utils.ts`'s `SEMANTIC_DEFAULTS`. `semantic` is omitted: these
- * are dropdown-only extras, not this project's active schemes, so they don't
- * need the mermaid/chat/imageOverlay overrides `colorSchemes` (in
- * `color-schemes.ts`) carries for its own CSS output.
- */
-const COLOR_PRESETS: Record<string, ZdtpColorScheme> = {
-  Slate: {
-    background: 9,
-    foreground: 11,
-    cursor: 6,
-    selectionBg: 10,
-    selectionFg: 11,
-    palette: [
-      "oklch(0.20 0.02 250)", "oklch(0.62 0.19 25)", "oklch(0.68 0.14 155)", "oklch(0.78 0.13 85)",
-      "oklch(0.66 0.12 235)", "oklch(0.62 0.16 275)", "oklch(0.66 0.03 240)", "oklch(0.55 0.02 240)",
-      "oklch(0.52 0.02 240)", "oklch(0.16 0.015 250)", "oklch(0.24 0.015 250)", "oklch(0.92 0.005 250)",
-      "oklch(0.70 0.14 280)", "oklch(0.72 0.10 300)", "oklch(0.68 0.15 270)", "oklch(0.78 0.008 250)",
-    ],
-    shikiTheme: "github-dark",
-  },
-  Amber: {
-    background: 9,
-    foreground: 11,
-    cursor: 6,
-    selectionBg: 11,
-    selectionFg: 10,
-    palette: [
-      "oklch(0.30 0.02 60)", "oklch(0.55 0.19 25)", "oklch(0.48 0.11 145)", "oklch(0.55 0.15 70)",
-      "oklch(0.52 0.13 250)", "oklch(0.55 0.15 45)", "oklch(0.68 0.04 60)", "oklch(0.55 0.04 60)",
-      "oklch(0.55 0.02 60)", "oklch(0.97 0.01 80)", "oklch(0.93 0.015 75)", "oklch(0.28 0.01 60)",
-      "oklch(0.60 0.14 40)", "oklch(0.62 0.10 320)", "oklch(0.50 0.15 45)", "oklch(0.42 0.01 60)",
-    ],
-    shikiTheme: "github-light",
-  },
-};
-
-/**
- * Initial palette taken from the configured active scheme.
- */
-function getInitialPalette(): readonly string[] {
-  const scheme = colorSchemes[settings.colorScheme];
-  if (!scheme) {
-    throw new Error(
-      `Unknown color scheme: "${settings.colorScheme}". Available: ${Object.keys(colorSchemes).join(", ")}`,
-    );
-  }
-  return scheme.palette;
-}
 
 // ---------------------------------------------------------------------------
 // Helpers — partition flat manifest arrays into TabConfig.tiers by group.
 // ---------------------------------------------------------------------------
 
-/**
- * Convert a flat `TokenDef` to a `TierItem` (the zdtp tier-model shape).
- *
- * The mapping rules:
- *  - `control: "select"` → `type: { kind: 'select', options }`
- *  - `control: "text"`   → `type: { kind: 'text' }`
- *  - (default slider)    → `type: { kind: 'length', step, unit }`
- *
- * `pill` and `readonly` pass through unchanged.
- */
 function toTierItem(t: TokenDef): TierItem {
   let kind;
   if (t.control === "select") {
@@ -139,9 +67,6 @@ function toTierItem(t: TokenDef): TierItem {
   return item;
 }
 
-/**
- * Build a tier from the subset of `tokens` whose `group` matches `groupId`.
- */
 function tierFromGroup(
   tokens: readonly TokenDef[],
   groupId: string,
@@ -157,89 +82,110 @@ function tierFromGroup(
 }
 
 // ---------------------------------------------------------------------------
-// Color tab — palette and semantic tiers + colorExtras for cluster metadata.
+// Palette tab — three ramp tiers (base / accent / state), OKLCH curve editor.
 // ---------------------------------------------------------------------------
 
-const PALETTE_TIER_ID = "palette";
+function buildRampTiers(): TierConfig[] {
+  const { ramps } = getActiveScheme();
 
-function buildPaletteTier(): TierConfig {
-  const initial = getInitialPalette();
-  const items: TierItem[] = [];
-  for (let i = 0; i < 16; i++) {
-    items.push({
-      id: `p${i}`,
-      cssVar: `--zd-${i}`,
-      label: `p${i}`,
-      default: initial[i] ?? "#808080",
-      type: { kind: "color" },
-    });
-  }
-  return {
-    id: PALETTE_TIER_ID,
-    label: "Palette",
-    items,
+  const baseTier: TierConfig = {
+    id: "base",
+    label: "Base",
+    items: ramps.base.map((color, i): TierItem => ({
+      id: `base-${i}`,
+      cssVar: `--palette-base-${i}`,
+      label: String(i),
+      default: color,
+      type: { kind: "color", format: "oklch" },
+    })),
   };
+
+  const accentTier: TierConfig = {
+    id: "accent",
+    label: "Accent",
+    items: ramps.accent.map((color, i): TierItem => ({
+      id: `accent-${i}`,
+      cssVar: `--palette-accent-${i}`,
+      label: String(i),
+      default: color,
+      type: { kind: "color", format: "oklch" },
+    })),
+  };
+
+  const stateTier: TierConfig = {
+    id: "state",
+    label: "State",
+    items: STATE_ROLES.map((role): TierItem => ({
+      id: `state-${role}`,
+      cssVar: `--palette-state-${role}`,
+      label: role,
+      default: ramps.state[role],
+      type: { kind: "color", format: "oklch" },
+    })),
+  };
+
+  return [baseTier, accentTier, stateTier];
 }
 
-function buildSemanticTier(): TierConfig {
-  const items: TierItem[] = [];
-  for (const [key, cssVar] of Object.entries(SEMANTIC_CSS_NAMES)) {
-    const idx = SEMANTIC_DEFAULTS[key];
-    if (idx === undefined) continue;
-    items.push({
-      id: key,
-      cssVar,
-      label: key,
-      default: `p${idx}`,
-      type: { kind: "color" },
-    });
-  }
+const PALETTE_TAB: TabConfig = {
+  id: "palette",
+  label: "Palette",
+  tiers: buildRampTiers(),
+};
+
+// ---------------------------------------------------------------------------
+// Color tab — mode-scoped semantic tier referencing the Palette tab.
+// ---------------------------------------------------------------------------
+
+type PanelMode = "light" | "dark";
+
+function schemeForMode(mode: PanelMode): ColorScheme {
+  const cm = settings.colorMode;
+  if (!cm) return getActiveScheme();
+  const name = mode === "dark" ? cm.darkScheme : cm.lightScheme;
+  return colorSchemes[name] ?? getActiveScheme();
+}
+
+function buildSemanticTier(mode: PanelMode): TierConfig {
   return {
     id: "semantic",
     label: "Semantic",
-    items,
-    referencesTier: PALETTE_TIER_ID,
+    semantic: true,
+    referencesRamps: [
+      { tab: "palette", tier: "base" },
+      { tab: "palette", tier: "accent" },
+      { tab: "palette", tier: "state" },
+    ],
+    items: buildSemanticTierItems(schemeForMode(mode)),
   };
 }
 
-const COLOR_EXTRAS: ColorClusterExtras = {
-  // Zudo Sg-scoped identifiers — avoids localStorage collisions across the
-  // owner's multiple zudo-doc sites (each of which would otherwise default to
-  // the same template placeholder values).
-  id: "sg-doc",
-  label: "Doc Chrome",
-  baseRoles: {
-    background: "--zd-bg",
-    foreground: "--zd-fg",
-    cursor: "--zd-cursor",
-    selectionBg: "--zd-sel-bg",
-    selectionFg: "--zd-sel-fg",
-  },
-  baseDefaults: BASE_DEFAULTS,
-  defaultShikiTheme: DEFAULT_SHIKI_THEME,
-  // `colorSchemes`'s `shikiTheme` is optional in both the local and zdtp
-  // `ColorScheme` types (see the file-header note), so this is a direct,
-  // type-checked assignment — no normalization wrapper needed.
-  colorSchemes,
-  panelSettings: {
-    colorScheme: settings.colorScheme,
-    // colorMode: strip off respectPrefersColorScheme (not in zdtp's shape).
-    colorMode: settings.colorMode
-      ? {
-          defaultMode: settings.colorMode.defaultMode,
-          lightScheme: settings.colorMode.lightScheme,
-          darkScheme: settings.colorMode.darkScheme,
-        }
-      : false,
-  },
-};
+function buildColorExtras(mode: PanelMode): ColorClusterExtras {
+  const cm = settings.colorMode;
+  const lightScheme = cm ? cm.lightScheme : settings.colorScheme;
+  const darkScheme = cm ? cm.darkScheme : settings.colorScheme;
+  return {
+    id: "sg-doc",
+    label: "Doc Chrome",
+    baseRoles: {},
+    baseDefaults: {},
+    defaultShikiTheme: DEFAULT_SHIKI_THEME,
+    colorSchemes: {},
+    panelSettings: {
+      colorScheme: settings.colorScheme,
+      colorMode: { defaultMode: mode, lightScheme, darkScheme },
+    },
+  };
+}
 
-const COLOR_TAB: TabConfig = {
-  id: "color",
-  label: "Color",
-  tiers: [buildPaletteTier(), buildSemanticTier()],
-  colorExtras: COLOR_EXTRAS,
-};
+function buildColorTab(mode: PanelMode): TabConfig {
+  return {
+    id: "color",
+    label: "Color",
+    tiers: [buildSemanticTier(mode)],
+    colorExtras: buildColorExtras(mode),
+  };
+}
 
 // ---------------------------------------------------------------------------
 // Font tab
@@ -284,27 +230,27 @@ const SIZE_TAB: TabConfig = {
   ],
 };
 
-export const designTokenPanelConfig: PanelConfig = {
-  // Zudo Sg-scoped identifiers (renamed from the template placeholders
-  // "my-doc-tweak"/"myDoc"/"my-doc-*") — avoids localStorage collisions across
-  // the owner's multiple zudo-doc sites. This is a one-time reset: anyone with
-  // overrides saved under the old "my-doc-tweak-*" keys starts fresh under
-  // "sg-doc-tweak-*" (the old keys are simply orphaned, not migrated).
-  storagePrefix: "sg-doc-tweak",
-  consoleNamespace: "sgDoc",
-  modalClassPrefix: "sg-doc-design-token-panel-modal",
-  // Explicit toggle channel. zdtp 0.3.0 binds the RESERVED default event
-  // ("toggle-design-token-panel") only to the framework's empty-tabs default
-  // instance, so a real prefixed panel left on the default channel never opens
-  // (the empty shell mounts instead). Binding this panel to a prefix-derived
-  // event ("toggle-sg-doc-tweak") means the doc-chrome triggers that dispatch
-  // it open THIS 4-tab panel. The preview panel uses its own distinct channel
-  // ("toggle-preview-token-panel"). See epic Takazudo/zudo-sg#84.
-  toggleEvent: "toggle-sg-doc-tweak",
-  // Must match DESIGN_TOKEN_SCHEMA in @takazudo/zudo-doc/theme so that
-  // exported JSON files remain importable across panel versions.
-  schemaId: DESIGN_TOKEN_SCHEMA,
-  exportFilenameBase: "sg-doc-design-tokens",
-  tabs: [COLOR_TAB, FONT_TAB, SPACING_TAB, SIZE_TAB],
-  colorPresets: COLOR_PRESETS,
-};
+function detectInitialMode(): PanelMode {
+  if (typeof document !== "undefined") {
+    const attr = document.documentElement.getAttribute("data-theme");
+    if (attr === "light" || attr === "dark") return attr;
+  }
+  const cm = settings.colorMode;
+  return cm ? cm.defaultMode : "light";
+}
+
+export function buildDesignTokenPanelConfig(mode: PanelMode): PanelConfig {
+  return {
+    storagePrefix: "sg-doc-tweak",
+    consoleNamespace: "sgDoc",
+    modalClassPrefix: "sg-doc-design-token-panel-modal",
+    toggleEvent: "toggle-sg-doc-tweak",
+    schemaId: "zudo-design-tokens/v3",
+    exportFilenameBase: "sg-doc-design-tokens",
+    tabs: [PALETTE_TAB, buildColorTab(mode), FONT_TAB, SPACING_TAB, SIZE_TAB],
+  };
+}
+
+export const designTokenPanelConfig: PanelConfig = buildDesignTokenPanelConfig(
+  detectInitialMode(),
+);

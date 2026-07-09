@@ -52,14 +52,14 @@ Both panel footers also have an **Apply** button, next to Export / Reset / Load 
 This only works today for the preview panel's **Palette** tab swatches (the `--palette-*` tokens), and only when running under `pnpm dev` (`zfb dev`). Everything else needed to make the loop feel "complete" is deliberately scoped out for now — see the caveats below.
 
 <Warning title="Apply is Palette-only; other tabs will 400">
-  The apply endpoint only knows how to route `--palette-*` tokens into `packages/ui/styles/colors.css`. Every other manifest token — **Spacing**, **Font**, **Size**, and the semantic **Ink / Surface / Line / Brand / State** rows in the Color tab — lives inside a Tailwind v4 `@theme { ... }` block, and the underlying `@takazudo/zdtp` apply pipeline only rewrites a plain top-level `:root { ... }` block; it does not scan `@theme` blocks at all. Routing those tokens would either silently no-op (`unknownCssVars`) or need a `@theme: var(--editable-name)` indirection layer across the whole shared token file — a deliberate, separately-reviewed change to the token architecture, not a wiring fix.
+  The apply endpoint only routes `--palette-*` tokens into `packages/ui/styles/colors.css` today. `@takazudo/zdtp` can rewrite top-level `@theme { ... }` blocks, but this repo has not opted the **Spacing**, **Font**, **Size**, or semantic **Ink / Surface / Line / Brand / State** prefixes into the routing map yet. Making those token families apply-writable is a deliberate, separately-reviewed change to the token architecture, not a wiring fix.
 
   Apply sends **every currently-tweaked token across every tab in one request** — so if you have dirtied a Spacing or Font value in the same panel session, Apply will fail with "Unsupported cssVar prefix" even though the Palette part of your diff is fine. Reset the other tabs (or avoid touching them) before clicking Apply.
 </Warning>
 
 How it's wired, for anyone extending this: `plugins/zdtp-apply-proxy-plugin.mjs` registers a same-origin `zfb dev` `devMiddleware` handler (no separate process, no port, no CORS) at `/__zdtp/apply`, backed by `@takazudo/zdtp/server`'s `createApplyHandler`. The prefix → file routing map lives in `zdtp-panel-routing.json` at the repo root, and the endpoint/routing values are injected into `src/config/preview-token-panel-config.ts` via a `virtual:zdtp-apply-config` module that resolves to `undefined` outside of `zfb dev` — a production build never sees the endpoint path or the routing map.
 
-The `@theme` gap is tracked upstream at [Takazudo/zudo-design-token-panel#496](https://github.com/Takazudo/zudo-design-token-panel/issues/496) and, on this repo, as a scoped follow-up at [Takazudo/zudo-sg#130](https://github.com/Takazudo/zudo-sg/issues/130).
+Broader apply routing is tracked on this repo as [Takazudo/zudo-sg#130](https://github.com/Takazudo/zudo-sg/issues/130).
 
 ## Shared panel actions
 

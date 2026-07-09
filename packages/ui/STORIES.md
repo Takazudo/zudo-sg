@@ -63,8 +63,8 @@ component markup changes.
 #### Three-tier color system
 
 Colors follow the **three-tier strategy** (zudo-css-wisdom: *Three-Tier Color
-Strategy*) — the same shape as zudo-doc's raw `--zd-0..15` palette feeding its
-semantic `--color-*` tokens:
+Strategy*) — the same shape as zudo-doc's `--palette-*` ramps feeding semantic
+roles:
 
 | Tier | What | Where |
 |---|---|---|
