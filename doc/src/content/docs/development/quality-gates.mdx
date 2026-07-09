@@ -1,0 +1,64 @@
+---
+title: Quality Gates
+sidebar_position: 2
+description: The local and CI checks that protect generated data, tokens, builds, links, and tests.
+---
+
+## Inner loop
+
+Run focused checks while changing code:
+
+```sh
+pnpm check
+pnpm test:unit
+```
+
+`pnpm check` typechecks the root host, `@zudo-sg/ui`, and the demo app. `pnpm test:unit` runs Vitest unit tests.
+
+For docs-only work, use the filtered docs checks:
+
+```sh
+pnpm --filter @zudo-sg/doc check
+pnpm --filter @zudo-sg/doc build
+node scripts/check-links.mjs --dist=doc/dist
+```
+
+## Generated-data drift
+
+Generated files are checked in, but their source of truth lives elsewhere:
+
+- `pnpm check:z-index` verifies the generated z-index block from `src/config/z-index-tokens.ts`.
+- `pnpm check:sg-registry` verifies the styleguide story registries generated from `packages/ui/src/*/*.stories.tsx`.
+- `pnpm check:token-manifest` verifies the UI token manifest generated from `packages/ui/styles/tokens.css` and `packages/ui/styles/colors.css`.
+
+When a source file changes, run the matching generator before committing:
+
+```sh
+pnpm gen:z-index
+pnpm gen:sg-registry
+pnpm gen:token-manifest
+```
+
+## Token and accessibility gates
+
+`pnpm lint:tokens` enforces the tight-token strategy so components keep using approved semantic token utilities. `pnpm contrast:audit` checks configured color relationships for contrast regressions.
+
+Story files are also covered by unit tests in `packages/ui/src/stories/__tests__`, including module-shape and source-drift checks.
+
+## Pre-push gate
+
+The local pre-push command is:
+
+```sh
+pnpm b4push
+```
+
+It runs formatting checks for MDX, token lint, codegen drift checks, typecheck, unit tests, root build, demo build, link checks, HTML validation, Playwright smoke tests, and a final manual interactive smoke prompt.
+
+Use the full gate before pushing broad changes. For documentation-only changes, the required focused checks are usually the docs build, docs check, link check against `doc/dist`, and `git diff --check`.
+
+## CI gate
+
+Pull requests target `main` or `base/**` branches. CI mirrors the b4push shape with separate jobs for token lint, codegen drift, typecheck, unit tests, root build, demo build, smoke E2E, and dist checks.
+
+Scheduled rich CI is intentionally deferred until after public release. Visual and platform-specific checks are run ad hoc instead of as standing nightly infrastructure.

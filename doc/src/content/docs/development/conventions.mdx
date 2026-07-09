@@ -1,0 +1,43 @@
+---
+title: Conventions
+sidebar_position: 1
+description: Coding and content conventions for zudo-sg contributors.
+---
+
+## Rendering model
+
+Default to server-rendered JSX components. They produce HTML at build time, keep the client bundle small, and match the zfb static-site model.
+
+Use Preact islands only when a feature needs client-side interactivity. Island modules must opt in with `"use client"` and be mounted through zfb's `<Island>` wrapper with a loading mode such as `load` or `idle`. Do not use Astro-style `client:load` directives in this project.
+
+## Component authoring
+
+Shared UI components live under `packages/ui/src/<component>/`. Use kebab-case component directory names and co-locate the component, story, tests, and optional component MDX docs.
+
+When a component is added or renamed:
+
+- keep exports in `packages/ui/src/index.ts` sorted into the existing category sections;
+- add or update `*.stories.tsx` for catalog coverage;
+- run `pnpm gen:sg-registry` when story files change;
+- keep component markup on semantic token utilities.
+
+`pnpm new:component <name> --category <Category>` scaffolds the house pattern when you are starting a new component.
+
+## Content conventions
+
+Documentation pages live in `doc/src/content/docs`. Every page needs frontmatter with `title` and `sidebar_position`; add `description` when it improves page metadata or search snippets.
+
+Use these rules for MDX docs:
+
+- Do not put `#` h1 headings in the body. The frontmatter title renders the h1.
+- Start body sections at `##`.
+- Use relative links for internal docs links and include `.mdx` or `.md` extensions.
+- Use kebab-case filenames and directory names.
+- Keep category `index.mdx` pages short: one or two sentences plus `<CategoryNav />`.
+- Use directive admonitions such as `:::note` without imports.
+
+## Navigation conventions
+
+Top-level documentation categories are reflected in `doc/src/config/settings.ts` through `headerNav`. Each item should point to a top-level docs directory and use a single directory name for `categoryMatch`, such as `getting-started`, `architecture`, or `development`.
+
+Do not add generated Claude-resource docs under `doc/src/content/docs/claude*` by hand. Those resources are generated and are not part of this content rewrite.
