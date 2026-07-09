@@ -42,17 +42,15 @@ export function VersionsPageView({ locale }: { locale: string }): JSX.Element {
     docsCol: t("version.page.docs", locale),
   };
 
-  // Latest docs href — points to the default docs entry point
-  const latestHref = withBase(`${prefix}/docs/getting-started`);
+  // Latest docs href — points to the root component catalog.
+  const latestHref = withBase(`${prefix}/components`);
 
   // Past version entries from settings
   const versions: VersionPageEntry[] = settings.versions
     ? settings.versions.map((v) => ({
         slug: v.slug,
         label: v.label ?? v.slug,
-        // Version prefix comes BEFORE the locale — the only routed shape is
-        // pages/v/[version]/{locale}/docs/...; /{locale}/v/... has no route.
-        docsHref: withBase(`/v/${v.slug}${prefix}/docs/getting-started/`),
+        docsHref: withBase(`${prefix}/components`),
         banner: v.banner as "unmaintained" | "unreleased" | undefined,
       }))
     : [];

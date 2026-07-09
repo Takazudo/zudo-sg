@@ -83,6 +83,7 @@ export function navHref(
   lang: Locale | undefined,
   currentVersion: string | undefined,
 ): string {
+  if (isExternal(path)) return path;
   const isNonDefaultLocale = lang != null && lang !== defaultLocale;
   const versionPrefix = currentVersion ? `/v/${currentVersion}` : "";
   return withBase(

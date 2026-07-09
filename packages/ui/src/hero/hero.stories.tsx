@@ -69,7 +69,7 @@ export const Basic: Story<HeroProps> = {
   lede="Coherent spacing rhythm, consistent type, dark-mode correct…"
   actions={
     <>
-      <Button href="/docs/getting-started">Get started</Button>
+      <Button href="/docs/guide">Get started</Button>
       <Button variant="secondary" href="/docs">Read the docs</Button>
     </>
   }
@@ -81,7 +81,7 @@ export const Basic: Story<HeroProps> = {
       lede="Coherent spacing rhythm, consistent type, dark-mode correct via the token system — drop in and build."
       actions={
         <>
-          <Button href="/docs/getting-started">Get started</Button>
+          <Button href="/docs/guide">Get started</Button>
           <Button variant="secondary" href="/docs">
             Read the docs
           </Button>
@@ -97,7 +97,7 @@ export const WithMedia: Story<HeroProps> = {
   eyebrow="Platform"
   title="Everything you measure, in one view"
   lede="Track uptime, latency, and traffic across every environment…"
-  actions={<Button href="/docs/getting-started">Start free</Button>}
+  actions={<Button href="/docs/guide">Start free</Button>}
   media={
     <div class="rounded-lg bg-surface p-hsp-xl shadow-card">
       <StatGroup>
@@ -114,7 +114,7 @@ export const WithMedia: Story<HeroProps> = {
       eyebrow="Platform"
       title="Everything you measure, in one view"
       lede="Track uptime, latency, and traffic across every environment without leaving the dashboard."
-      actions={<Button href="/docs/getting-started">Start free</Button>}
+      actions={<Button href="/docs/guide">Start free</Button>}
       media={
         <div class="rounded-lg bg-surface p-hsp-xl shadow-card">
           <StatGroup>
@@ -135,14 +135,14 @@ export const Plain: Story<HeroProps> = {
   tinted={false}
   title="Untinted hero"
   lede="The same layout on a plain surface background."
-  actions={<Button href="/docs/getting-started">Get started</Button>}
+  actions={<Button href="/docs/guide">Get started</Button>}
 />`,
   render: () => (
     <Hero
       tinted={false}
       title="Untinted hero"
       lede="The same layout on a plain surface background."
-      actions={<Button href="/docs/getting-started">Get started</Button>}
+      actions={<Button href="/docs/guide">Get started</Button>}
     />
   ),
 };

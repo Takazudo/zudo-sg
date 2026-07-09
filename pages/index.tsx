@@ -97,7 +97,7 @@ export default function IndexPage(): JSX.Element {
               {overview && (
                 <>
                   <a href={overview} class="text-fg underline hover:text-accent">
-                    {t("nav.overview", locale)}
+                    {ctaNav.label}
                   </a>
                   <span class="text-muted">/</span>
                 </>
