@@ -117,14 +117,11 @@ export const settings = {
     { label: "Changelog", path: "/docs/changelog", categoryMatch: "changelog" },
   ] satisfies HeaderNavItem[] as HeaderNavItem[],
   // NOTE: the framework's native `{ type: "trigger", trigger: "design-token-panel" }`
-  // is intentionally NOT listed here. In @takazudo/zdtp 0.3.0 that trigger
-  // dispatches the RESERVED "toggle-design-token-panel" event, which is bound
-  // only to the framework's empty-tabs default instance — so it opens an EMPTY
-  // panel, not this project's real 4-tab panel. Instead a project-rendered
-  // Design Tokens icon (the `type: "html"` item below) dispatches
-  // "toggle-sg-doc-tweak" — the doc-chrome panel's explicit toggle channel (see
-  // design-token-panel-config.ts). The DesignTokenPanelBootstrap island
-  // (body-end) listens for it. See Takazudo/zudo-sg#84/#85.
+  // is intentionally NOT listed here. This site mounts two zdtp instances, so a
+  // project-rendered Design Tokens icon (the `type: "html"` item below)
+  // dispatches "toggle-sg-doc-tweak" — the doc-chrome panel's explicit toggle
+  // channel (see design-token-panel-config.ts). The DesignTokenPanelBootstrap
+  // island (body-end) listens for it. See Takazudo/zudo-sg#84/#85.
   //
   // #113: the icon MOVED here from `pages/lib/_header-with-defaults.tsx` so it
   // renders on the package-owned doc routes too — settings.headerRightItems is

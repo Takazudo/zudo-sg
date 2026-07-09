@@ -25,12 +25,13 @@ const FONT_WEIGHT_OPTIONS = [
  * Tier-1 raw palette colors from `packages/ui/styles/colors.css` (the `:root`
  * `--palette-{family}-{step}` block). This is the raw material beneath the
  * semantic `--color-*` tokens in UI_COLOR_TOKENS below — same three-tier
- * model the doc-chrome panel exposes via its 16-rung `--zd-*` palette.
+ * model the doc-chrome panel exposes via `--palette-*` ramps and `--zd-*`
+ * semantic roles.
  *
  * These are plain name/value descriptors (NOT `TokenDef`) because zdtp's
  * `TokenDef.control` has no `"color"` option — the preview panel builds them
  * into `{ kind: "color" }` TierItems inline, mirroring the doc panel's
- * `buildPaletteTier()`. Rendered as a "Palette" swatch tier in the preview
+ * ramp tiers. Rendered as a "Palette" swatch tier in the preview
  * panel's Color tab; editing a swatch pushes `--palette-*` to the preview
  * iframes via the sink, cascading into every semantic token that references it.
  *

@@ -154,7 +154,7 @@ export const SIZE_TOKENS: readonly TokenDef[] = [
  * Color tokens — kept as an empty array for back-compat with the consumer
  * serde, which historically iterated `COLOR_TOKENS` symmetric with the other
  * three arrays. Color is cluster-driven in zudo-doc and is constructed in
- * `design-token-panel-config.ts` from `colorSchemes` + `SEMANTIC_*` —
+ * `design-token-panel-config.ts` from ramp-native `colorSchemes` —
  * not from this array.
  */
 export const COLOR_TOKENS: readonly TokenDef[] = [];

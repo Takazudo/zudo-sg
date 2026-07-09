@@ -2,7 +2,7 @@
 /** @jsxImportSource preact */
 // og:title / og:description / color-scheme head injection for the zfb doc pages.
 //
-// Why this wrapper exists: the v2 `<DocLayout>` shell exposes a `head` slot
+// Why this wrapper exists: the package `<DocLayout>` shell exposes a `head` slot
 // but intentionally does NOT emit og:* meta or mount `<ColorSchemeProvider>` —
 // that is the host's responsibility.
 //
@@ -31,8 +31,8 @@ import ColorSchemeProvider from "@takazudo/zudo-doc/theme/color-scheme-provider"
 import { composeMetaTitle } from "./_compose-meta-title";
 import { withBase, absoluteUrl } from "@/utils/base";
 import { settings } from "@/config/settings";
-// W3B (#1730): cssText + colorMode are precomputed here — the v2
-// ColorSchemeProvider no longer reaches into the host config tree.
+// cssText + colorMode are precomputed here; ColorSchemeProvider receives the
+// ramp-native CSS block and does not reach into the host config tree.
 import {
   generateCssCustomProperties,
   generateLightDarkCssProperties,
@@ -91,8 +91,8 @@ export function HeadWithDefaults({
       ? absoluteUrl(withBase(metaTags.ogImage))
       : undefined;
 
-  // Resolve the palette CSS body once per page render (the v2 component
-  // is pure SSR — no caching needed).
+  // Resolve the color-scheme CSS body once per page render. The provider is
+  // pure SSR, so no caching is needed here.
   const colorMode = settings.colorMode ? settings.colorMode : null;
   const cssText = colorMode
     ? generateLightDarkCssProperties()
