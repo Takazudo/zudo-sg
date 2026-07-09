@@ -99,7 +99,8 @@ export const settings = {
   footer: false as FooterConfig | false,
   headerNav: [
     { label: "Getting Started", path: "/docs/getting-started", categoryMatch: "getting-started" },
-    { label: "Claude", path: "/docs/claude", categoryMatch: "claude" },
+    { label: "Architecture", path: "/docs/architecture", categoryMatch: "architecture" },
+    { label: "Development", path: "/docs/development", categoryMatch: "development" },
   ] satisfies HeaderNavItem[] as HeaderNavItem[],
   headerRightItems: [
     { type: "component", component: "github-link" },

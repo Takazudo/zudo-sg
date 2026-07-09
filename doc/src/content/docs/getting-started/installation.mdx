@@ -1,27 +1,69 @@
 ---
 title: Installation
 sidebar_position: 2
+description: Clone the repository, install dependencies, and run the styleguide, docs, and demo workspaces.
 ---
 
 ## Requirements
 
-- Node.js 18 or later
-- pnpm (recommended), npm, yarn, or bun
+- Node.js 22.12.0 or later.
+- pnpm 11.5.2, matching the workspace `packageManager` field.
+- Git access to the repository.
 
-## Create a New Project
+## Clone and install
 
-Run the scaffolding tool to create a new project:
-
-```sh
-pnpm create zudo-doc doc
-```
-
-## Start the Dev Server
+Clone the existing zudo-sg repository and install the workspace dependencies from the root:
 
 ```sh
-cd doc
+git clone https://github.com/Takazudo/zudo-sg.git
+cd zudo-sg
 pnpm install
-pnpm dev
 ```
 
-Open [http://localhost:4323](http://localhost:4323) to view your docs.
+This is not a scaffolding flow. You work inside the monorepo because the styleguide host, shared UI package, demo app, and docs site are developed together.
+
+## Run the styleguide host
+
+The root package owns the styleguide host at `https://zudo-sg.takazudomodular.com/`.
+
+```sh
+pnpm dev
+pnpm build
+pnpm check
+```
+
+`pnpm dev` starts the zfb development server for the root styleguide host. `pnpm build` emits the static `dist/` output, and `pnpm check` typechecks the host plus the workspace packages included by the root command.
+
+## Run the documentation site
+
+The `/doc` package is this project documentation site.
+
+```sh
+pnpm --filter @zudo-sg/doc dev
+pnpm --filter @zudo-sg/doc build
+pnpm --filter @zudo-sg/doc check
+```
+
+Use the filtered commands when you are changing docs content or validating the docs site in isolation.
+
+## Run the demo app
+
+The demo app consumes `@zudo-sg/ui` from the workspace and builds as a static site:
+
+```sh
+pnpm --filter @zudo-sg/demo dev
+pnpm --filter @zudo-sg/demo build
+pnpm --filter @zudo-sg/demo typecheck
+```
+
+## Workspace map
+
+The directories you will touch most often are:
+
+- `src/`: root styleguide host components, config, styles, and catalog data.
+- `pages/`: host-owned routes such as `/`, `/components/*`, and `/docs/versions`.
+- `packages/ui/`: shared Preact components, stories, MDX component docs, and UI token CSS.
+- `apps/demo/`: standalone static demo site.
+- `doc/`: this documentation site.
+
+Read [Monorepo Layout](../architecture/monorepo-layout.mdx) for the ownership model behind those directories.

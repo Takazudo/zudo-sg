@@ -1,0 +1,53 @@
+---
+title: Deploy
+sidebar_position: 3
+description: The Cloudflare Workers deployment model for the styleguide, demo, and documentation sites.
+---
+
+## Public sites
+
+zudo-sg deploys static builds to Cloudflare Workers. The intended public topology is:
+
+| Site | Worker | Domain | Build output |
+| --- | --- | --- | --- |
+| Styleguide host | `zudo-sg` | `https://zudo-sg.takazudomodular.com/` | `dist/` |
+| Demo app | `zudo-sg-demo-site` | `https://zudo-sg-demo-site.takazudomodular.com/` | `apps/demo/dist/` |
+| Documentation site | `zudo-sg-doc` | `https://zudo-sg-doc.takazudomodular.com/` | `doc/dist/` |
+
+All three sites are static. They do not need an SSR worker entrypoint while every route can be prerendered.
+
+## Cloudflare setup
+
+Deployment needs two GitHub Actions secrets:
+
+- `CLOUDFLARE_ACCOUNT_ID`
+- `CLOUDFLARE_API_TOKEN`
+
+The API token needs Workers edit access and enough zone permission for custom domain provisioning. Because the `takazudomodular.com` zone is managed in Cloudflare and the Workers configs use `custom_domain = true`, `wrangler deploy` can create the DNS records and TLS certificates during the first deploy.
+
+## CI flow
+
+Main-branch deployment builds the static sites, deploys the Workers, and runs smoke checks against the custom domains. First deploys can need a short DNS and certificate propagation window, so smoke checks use retry behavior instead of assuming the first request will resolve.
+
+Preview deployment uses Worker version preview URLs where configured. PR checks build and validate artifacts but do not publish production deployments.
+
+## Local validation
+
+Use build and link checks before relying on deployment:
+
+```sh
+pnpm build
+pnpm --filter @zudo-sg/demo build
+pnpm --filter @zudo-sg/doc build
+pnpm check:links
+pnpm check:links:demo
+node scripts/check-links.mjs --dist=doc/dist
+```
+
+For docs-only changes, the filtered docs build and the link check against `doc/dist` are the relevant deploy-safety checks.
+
+## Static Worker config shape
+
+Static Workers use an assets directory and a 404 fallback. They intentionally omit `main` and `nodejs_compat` while the site has no SSR routes.
+
+If a future site adds a non-prerendered route, wire the Cloudflare adapter in that site's `zfb.config.ts`, add a worker entrypoint to the matching Wrangler config, and add the assets-ignore step before deploy.
