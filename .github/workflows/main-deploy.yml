@@ -1,12 +1,14 @@
-# Production deployment workflow for the zudo-sg styleguide host + demo site.
+# Production deployment workflow for the zudo-sg styleguide host, demo site,
+# and documentation site.
 #
 # Triggered on every push to `main`. The pipeline:
-#   1. Builds both static sites in parallel (root + apps/demo)
+#   1. Builds all static sites in parallel (root + apps/demo + doc)
 #   2. Deploys root site to Worker `zudo-sg` (zudo-sg.takazudomodular.com)
 #   3. Deploys demo site to Worker `zudo-sg-demo-site` (zudo-sg-demo-site.takazudomodular.com)
-#   4. Per-subdomain smoke gates for each deployed site
+#   4. Deploys doc site to Worker `zudo-sg-doc` (zudo-sg-doc.takazudomodular.com)
+#   5. Per-subdomain smoke gates for each deployed site
 #
-# Both sites are fully static (no SSR adapter). Neither generates
+# All sites are fully static (no SSR adapter). None generates
 # _worker.js or _zfb_inner.mjs, so no .assetsignore step is needed.
 # If an SSR route is added to any site in future, add the .assetsignore
 # write step before the corresponding wrangler deploy call (see DEPLOY.md).
@@ -95,6 +97,34 @@ jobs:
           retention-days: 1
 
   # ---------------------------------------------------------------------------
+  # Job: Build the documentation site (doc)
+  # ---------------------------------------------------------------------------
+  build-doc:
+    name: Build Documentation Site
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: Build doc site
+        run: pnpm build:doc
+
+      - name: Archive doc build output
+        run: tar -cf "$RUNNER_TEMP/doc-dist.tar" -C doc/dist .
+
+      - name: Upload doc build output
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
+        with:
+          name: doc-dist
+          path: ${{ runner.temp }}/doc-dist.tar
+          retention-days: 1
+
+  # ---------------------------------------------------------------------------
   # Job: Deploy root styleguide site to Cloudflare Workers (zudo-sg)
   # ---------------------------------------------------------------------------
   deploy-site:
@@ -166,3 +196,39 @@ jobs:
       - name: Smoke gate — demo site homepage
         run: bash scripts/smoke-url.sh "https://zudo-sg-demo-site.takazudomodular.com/" 200
 
+  # ---------------------------------------------------------------------------
+  # Job: Deploy documentation site to Cloudflare Workers (zudo-sg-doc)
+  # ---------------------------------------------------------------------------
+  deploy-doc:
+    name: Deploy Documentation Site to Cloudflare Workers
+    needs: [build-doc]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        # wrangler reads doc/wrangler.toml at deploy time.
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+
+      - name: Download doc build output
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: doc-dist
+          path: ${{ runner.temp }}
+
+      - name: Extract doc build output
+        run: mkdir -p doc/dist && tar -xf "$RUNNER_TEMP/doc-dist.tar" -C doc/dist
+
+      - name: Deploy to Cloudflare Workers
+        run: npx wrangler@${{ env.WRANGLER_VERSION }} deploy --config doc/wrangler.toml
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      # Retries through the first-deploy DNS/cert propagation window (see
+      # scripts/smoke-url.sh).
+      - name: Smoke gate — doc site homepage
+        run: bash scripts/smoke-url.sh "https://zudo-sg-doc.takazudomodular.com/" 200
+
+      - name: Smoke gate — doc site 404 page
+        run: bash scripts/smoke-url.sh "https://zudo-sg-doc.takazudomodular.com/this-page-does-not-exist" 404
