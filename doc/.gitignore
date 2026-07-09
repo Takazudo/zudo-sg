@@ -23,6 +23,13 @@ pnpm-debug.log*
 # zudo-doc build artifact (routes-src/ staged here at build time)
 .zudo-doc/
 
+# Generated Claude Code resource docs (regenerated on every zfb dev/build).
+src/content/docs/claude/
+src/content/docs/claude-md/
+src/content/docs/claude-commands/
+src/content/docs/claude-skills/
+src/content/docs/claude-agents/
+
 # Generated doc-lookup skill
 .claude/skills/doc-wisdom/SKILL.md
 .claude/skills/doc-wisdom/docs
