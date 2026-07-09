@@ -206,6 +206,11 @@ describe("panel config isolation", () => {
     );
     const totalItems = paletteTab?.tiers.reduce((n, t) => n + t.items.length, 0);
     expect(totalItems).toBe(32);
+    const whiteTier = paletteTab?.tiers.find((t) => t.id === "palette-white");
+    expect(whiteTier?.items.map((item) => item.id)).toEqual(["palette-white-0"]);
+    expect(whiteTier?.items.map((item) => item.cssVar)).toEqual([
+      "--palette-white-0",
+    ]);
     // Every item opts into the lossless OKLCH color picker (zdtp >= 0.3.3).
     for (const tier of paletteTab?.tiers ?? []) {
       for (const item of tier.items) {

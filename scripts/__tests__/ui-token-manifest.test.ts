@@ -68,7 +68,7 @@ describe("buildUiTokenManifest", () => {
       id: "ui-color-ink",
       label: "color-ink",
       control: "text",
-      default: "light-dark(var(--palette-cool-700), var(--palette-cool-50))",
+      default: "light-dark(var(--palette-cool-8), var(--palette-cool-0))",
     });
   });
 
@@ -113,8 +113,8 @@ describe("buildUiTokenManifest", () => {
 
   it("throws when a palette color referenced by the spec is missing", () => {
     expect(() =>
-      buildPaletteColors(parseCssCustomProperties(`:root { --palette-white: oklch(1 0 0); }`)),
-    ).toThrow(/--palette-cool-50/);
+      buildPaletteColors(parseCssCustomProperties(`:root { --palette-white-0: oklch(1 0 0); }`)),
+    ).toThrow(/--palette-cool-0/);
   });
 });
 
