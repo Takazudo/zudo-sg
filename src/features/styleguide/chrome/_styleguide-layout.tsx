@@ -178,8 +178,7 @@ export function StyleguideLayout({
   return (
     <DocLayoutWithDefaults
       title={title}
-      // Page transitions removed — plain full-page navigation (epic #66 / zudo-doc#2273).
-      enableClientRouter={false}
+      enableClientRouter={settings.dynamicPageTransition}
       head={composedHead}
       lang={lang}
       noindex={settings.noindex}

@@ -91,6 +91,7 @@ To build all packages: `pnpm install && pnpm build` (root only; apps/demo builds
 - **claudeResources** — Auto-generated docs for Claude Code resources
 - **claudeSkills** — Ships zudo-doc-design-system, zudo-doc-translate, zudo-doc-version-bump skills
 - **designTokenPanel** — Interactive tabbed panel for tweaking spacing, font, size, and color tokens
+- **dynamicPageTransition** — SPA client-router page swaps with View Transitions and page-loading overlay
 - **sidebarResizer** — Draggable sidebar width
 - **sidebarToggle** — Show/hide desktop sidebar
 - **versioning** — Multi-version documentation support
