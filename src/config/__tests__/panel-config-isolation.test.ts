@@ -10,7 +10,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 // Mock the preview-iframe-registry so the preview config module can import
-// without pulling in @takazudo/zudo-doc/theme (which relies on browser APIs).
+// without pulling in browser-side preview bridge code.
 vi.mock(
   "@/features/styleguide/token-tweak/preview-iframe-registry",
   () => ({
@@ -18,13 +18,6 @@ vi.mock(
     clearPreviewVars: vi.fn(),
   }),
 );
-
-// Mock @takazudo/zudo-doc/theme to expose DESIGN_TOKEN_SCHEMA without
-// dragging in zfb island machinery (which expects a React package in the
-// vitest environment).
-vi.mock("@takazudo/zudo-doc/theme", () => ({
-  DESIGN_TOKEN_SCHEMA: "zudo-doc-design-tokens/v1",
-}));
 
 // Mock @takazudo/zdtp — the configurePanel call happens in bootstrap modules,
 // not in config modules, so only the types/exports we directly use are needed.
@@ -34,21 +27,51 @@ vi.mock("@takazudo/zdtp", () => ({}));
 // additional zfb-dependent modules during config module evaluation.
 vi.mock("@/config/settings", () => ({
   settings: {
-    colorScheme: "default",
-    colorMode: false,
+    colorScheme: "Default Dark",
+    colorMode: {
+      defaultMode: "dark",
+      lightScheme: "Default Light",
+      darkScheme: "Default Dark",
+    },
   },
 }));
 vi.mock("@/config/color-schemes", () => ({
   colorSchemes: {
-    default: {
-      palette: Array(16).fill("#808080"),
-      shikiTheme: "github-dark",
-    },
+    "Default Light": { map: { semantic: {} } },
+    "Default Dark": { map: { semantic: {} } },
   },
 }));
 vi.mock("@/config/color-scheme-utils", () => ({
-  SEMANTIC_DEFAULTS: {},
-  SEMANTIC_CSS_NAMES: {},
+  STATE_ROLES: ["danger", "success", "warning", "info"],
+  getActiveScheme: () => ({
+    ramps: {
+      base: ["#f8f8f8", "#bbb", "#777", "#333", "#111"],
+      accent: ["#da9", "#b75", "#753"],
+      state: {
+        danger: "#d33",
+        success: "#3a5",
+        warning: "#c80",
+        info: "#38c",
+      },
+    },
+    map: { semantic: {} },
+  }),
+  buildSemanticTierItems: () => [
+    {
+      id: "bg",
+      cssVar: "--zd-bg",
+      label: "bg",
+      default: "base:base-4",
+      type: { kind: "color", format: "oklch" },
+    },
+    {
+      id: "accent",
+      cssVar: "--zd-accent",
+      label: "accent",
+      default: "accent:accent-1",
+      type: { kind: "color", format: "oklch" },
+    },
+  ],
 }));
 
 // Mock the zfb-only virtual module (registered by
@@ -93,9 +116,9 @@ describe("panel config isolation", () => {
 
   it("toggleEvent values are distinct (both panels use explicit, non-reserved channels)", () => {
     // The doc panel binds to an explicit prefix-derived channel rather than the
-    // RESERVED default ("toggle-design-token-panel"), which zdtp 0.3.0 wires
-    // only to its empty-tabs default instance — leaving a real prefixed panel
-    // on that channel orphaned (Takazudo/zudo-sg#84/#85).
+    // RESERVED default ("toggle-design-token-panel"). The explicit channel is
+    // still required because this site mounts two zdtp instances on one page
+    // and must keep their toggles isolated (Takazudo/zudo-sg#84/#85).
     expect(designTokenPanelConfig.toggleEvent).toBe("toggle-sg-doc-tweak");
     expect(previewTokenPanelConfig.toggleEvent).toBe(
       "toggle-preview-token-panel",
@@ -119,8 +142,42 @@ describe("panel config isolation", () => {
     }
   });
 
-  it("doc panel curates colorPresets (Scheme… dropdown extras)", () => {
-    expect(Object.keys(designTokenPanelConfig.colorPresets ?? {}).length).toBeGreaterThan(0);
+  it("doc panel exposes ramp palette tiers and semantic ramp references", () => {
+    expect(designTokenPanelConfig.colorPresets).toBeUndefined();
+
+    const paletteTab = designTokenPanelConfig.tabs.find((t) => t.id === "palette");
+    expect(paletteTab).toBeDefined();
+    expect(paletteTab?.colorExtras).toBeUndefined();
+    expect(paletteTab?.tiers.map((t) => t.id)).toEqual(["base", "accent", "state"]);
+    expect(paletteTab?.tiers[0]?.items.map((item) => item.id)).toEqual([
+      "base-0",
+      "base-1",
+      "base-2",
+      "base-3",
+      "base-4",
+    ]);
+    expect(paletteTab?.tiers[1]?.items.map((item) => item.id)).toEqual([
+      "accent-0",
+      "accent-1",
+      "accent-2",
+    ]);
+    expect(paletteTab?.tiers[2]?.items.map((item) => item.id)).toEqual([
+      "state-danger",
+      "state-success",
+      "state-warning",
+      "state-info",
+    ]);
+
+    const colorTab = designTokenPanelConfig.tabs.find((t) => t.id === "color");
+    const semanticTier = colorTab?.tiers.find((t) => t.id === "semantic");
+    expect(semanticTier?.semantic).toBe(true);
+    expect(semanticTier?.referencesRamps).toEqual([
+      { tab: "palette", tier: "base" },
+      { tab: "palette", tier: "accent" },
+      { tab: "palette", tier: "state" },
+    ]);
+    expect(colorTab?.colorExtras?.colorSchemes).toEqual({});
+    expect(colorTab?.colorExtras?.baseRoles).toEqual({});
   });
 
   it("preview panel has a reserved 'palette' tab grouping families, separate from the 'ui-color' tab", () => {
@@ -149,6 +206,11 @@ describe("panel config isolation", () => {
     );
     const totalItems = paletteTab?.tiers.reduce((n, t) => n + t.items.length, 0);
     expect(totalItems).toBe(32);
+    const whiteTier = paletteTab?.tiers.find((t) => t.id === "palette-white");
+    expect(whiteTier?.items.map((item) => item.id)).toEqual(["palette-white-0"]);
+    expect(whiteTier?.items.map((item) => item.cssVar)).toEqual([
+      "--palette-white-0",
+    ]);
     // Every item opts into the lossless OKLCH color picker (zdtp >= 0.3.3).
     for (const tier of paletteTab?.tiers ?? []) {
       for (const item of tier.items) {
@@ -161,7 +223,7 @@ describe("panel config isolation", () => {
   });
 
   it("schemaId values are distinct (export JSON round-trips stay separate)", () => {
-    expect(designTokenPanelConfig.schemaId).toBe("zudo-doc-design-tokens/v1");
+    expect(designTokenPanelConfig.schemaId).toBe("zudo-design-tokens/v3");
     expect(previewTokenPanelConfig.schemaId).toBe(
       "sg-preview-design-tokens/v1",
     );

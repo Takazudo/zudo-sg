@@ -57,10 +57,10 @@
  */
 
 /* ========================================
- * Tier 1 — raw color palette (--palette-{family}-{step})
+ * Tier 1 — raw color palette (--palette-{group}-{n})
  *
  * The raw material of the color system: every concrete oklch value, named by
- * hue family + lightness rung. Plain :root custom properties (NOT @theme) so
+ * group + 0-based lightness index. Plain :root custom properties (NOT @theme) so
  * NO bg-palette-* / text-palette-* utility is generated. Only the Tier-2
  * --color-* declarations further down may read these; components NEVER do.
  *
@@ -71,56 +71,56 @@
  *   accent  ~55   accent (amber)
  *   success ~155  success (green)
  *   danger  ~25   danger (red)
- * Numeric steps run light → dark (Tailwind-like). A few rungs share lightness
- * but differ in chroma (e.g. cool-700 vs cool-750); kept distinct on purpose
+ * Numeric indexes run light → dark within each group. A few rungs share lightness
+ * but differ in chroma (e.g. cool-8 vs cool-9); kept distinct on purpose
  * so every Tier-2 token resolves byte-for-byte to its original literal.
  * ======================================== */
 :root {
   /* ── Pure white (hue-independent) — lightest raised surface ── */
-  --palette-white: oklch(1 0 0);
+  --palette-white-0: oklch(1 0 0);
 
   /* ── Cool neutral (hue ~264) — ink text (light) + surfaces/lines (dark) ── */
-  --palette-cool-50:  oklch(0.93 0.01 264);   /* ink (dark) */
-  --palette-cool-100: oklch(0.72 0.015 264);  /* ink-soft (dark) */
-  --palette-cool-200: oklch(0.58 0.015 264);  /* ink-mute (light) */
-  --palette-cool-250: oklch(0.58 0.012 264);  /* ink-mute (dark) */
-  --palette-cool-300: oklch(0.44 0.02 264);   /* ink-soft (light) */
-  --palette-cool-400: oklch(0.42 0.016 264);  /* line-strong (dark) */
-  --palette-cool-500: oklch(0.32 0.014 264);  /* line (dark) */
-  --palette-cool-600: oklch(0.25 0.014 264);  /* surface-sunken (dark) */
-  --palette-cool-700: oklch(0.21 0.03 264);   /* ink (light) */
-  --palette-cool-750: oklch(0.21 0.012 264);  /* surface (dark) */
-  --palette-cool-800: oklch(0.17 0.01 264);   /* paper (dark) */
+  --palette-cool-0:  oklch(0.93 0.01 264);   /* ink (dark) */
+  --palette-cool-1:  oklch(0.72 0.015 264);  /* ink-soft (dark) */
+  --palette-cool-2:  oklch(0.58 0.015 264);  /* ink-mute (light) */
+  --palette-cool-3:  oklch(0.58 0.012 264);  /* ink-mute (dark) */
+  --palette-cool-4:  oklch(0.44 0.02 264);   /* ink-soft (light) */
+  --palette-cool-5:  oklch(0.42 0.016 264);  /* line-strong (dark) */
+  --palette-cool-6:  oklch(0.32 0.014 264);  /* line (dark) */
+  --palette-cool-7:  oklch(0.25 0.014 264);  /* surface-sunken (dark) */
+  --palette-cool-8:  oklch(0.21 0.03 264);   /* ink (light) */
+  --palette-cool-9:  oklch(0.21 0.012 264);  /* surface (dark) */
+  --palette-cool-10: oklch(0.17 0.01 264);   /* paper (dark) */
 
   /* ── Warm neutral (hue ~90) — light surfaces / lines / on-brand ── */
-  --palette-warm-50:  oklch(0.99 0.004 90);   /* paper (light) / on-brand */
-  --palette-warm-100: oklch(0.97 0.006 90);   /* surface-sunken (light) */
-  --palette-warm-200: oklch(0.91 0.008 90);   /* line (light) */
-  --palette-warm-300: oklch(0.83 0.01 90);    /* line-strong (light) */
+  --palette-warm-0: oklch(0.99 0.004 90);   /* paper (light) / on-brand */
+  --palette-warm-1: oklch(0.97 0.006 90);   /* surface-sunken (light) */
+  --palette-warm-2: oklch(0.91 0.008 90);   /* line (light) */
+  --palette-warm-3: oklch(0.83 0.01 90);    /* line-strong (light) */
 
   /* ── Brand / cyan (hue ~200) — primary action / link / focus ── */
-  --palette-brand-100: oklch(0.96 0.03 200);  /* brand-soft (light) */
-  --palette-brand-300: oklch(0.82 0.11 200);  /* brand-strong (dark) */
-  --palette-brand-400: oklch(0.74 0.12 200);  /* brand (dark) / focus (dark) */
-  --palette-brand-600: oklch(0.52 0.13 200);  /* brand (light) / focus (light) */
-  --palette-brand-700: oklch(0.44 0.13 200);  /* brand-strong (light) */
-  --palette-brand-800: oklch(0.30 0.05 200);  /* brand-soft (dark) */
+  --palette-brand-0: oklch(0.96 0.03 200);  /* brand-soft (light) */
+  --palette-brand-1: oklch(0.82 0.11 200);  /* brand-strong (dark) */
+  --palette-brand-2: oklch(0.74 0.12 200);  /* brand (dark) / focus (dark) */
+  --palette-brand-3: oklch(0.52 0.13 200);  /* brand (light) / focus (light) */
+  --palette-brand-4: oklch(0.44 0.13 200);  /* brand-strong (light) */
+  --palette-brand-5: oklch(0.30 0.05 200);  /* brand-soft (dark) */
 
   /* ── Accent / amber (hue ~55) ── */
-  --palette-accent-300: oklch(0.78 0.14 55);  /* accent (dark) */
-  --palette-accent-500: oklch(0.70 0.16 55);  /* accent (light) */
+  --palette-accent-0: oklch(0.78 0.14 55);  /* accent (dark) */
+  --palette-accent-1: oklch(0.70 0.16 55);  /* accent (light) */
 
   /* ── Success / green (hue ~155) ── */
-  --palette-success-100: oklch(0.95 0.04 155); /* success-soft (light) */
-  --palette-success-300: oklch(0.74 0.14 155); /* success (dark) */
-  --palette-success-600: oklch(0.55 0.14 155); /* success (light) */
-  --palette-success-800: oklch(0.30 0.05 155); /* success-soft (dark) */
+  --palette-success-0: oklch(0.95 0.04 155); /* success-soft (light) */
+  --palette-success-1: oklch(0.74 0.14 155); /* success (dark) */
+  --palette-success-2: oklch(0.55 0.14 155); /* success (light) */
+  --palette-success-3: oklch(0.30 0.05 155); /* success-soft (dark) */
 
   /* ── Danger / red (hue ~25) ── */
-  --palette-danger-100: oklch(0.95 0.04 25);  /* danger-soft (light) */
-  --palette-danger-300: oklch(0.72 0.16 25);  /* danger (dark) */
-  --palette-danger-600: oklch(0.55 0.18 25);  /* danger (light) */
-  --palette-danger-800: oklch(0.30 0.06 25);  /* danger-soft (dark) */
+  --palette-danger-0: oklch(0.95 0.04 25);  /* danger-soft (light) */
+  --palette-danger-1: oklch(0.72 0.16 25);  /* danger (dark) */
+  --palette-danger-2: oklch(0.55 0.18 25);  /* danger (light) */
+  --palette-danger-3: oklch(0.30 0.06 25);  /* danger-soft (dark) */
 
   /* light-dark() requires color-scheme to be declared. */
   color-scheme: light dark;
@@ -130,51 +130,51 @@
   /* ========================================
    * Ink (foreground text) — off-black in light, off-white in dark.
    * ======================================== */
-  --color-ink:      light-dark(var(--palette-cool-700), var(--palette-cool-50));
-  --color-ink-soft: light-dark(var(--palette-cool-300), var(--palette-cool-100));
-  --color-ink-mute: light-dark(var(--palette-cool-200), var(--palette-cool-250));
+  --color-ink:      light-dark(var(--palette-cool-8), var(--palette-cool-0));
+  --color-ink-soft: light-dark(var(--palette-cool-4), var(--palette-cool-1));
+  --color-ink-mute: light-dark(var(--palette-cool-2), var(--palette-cool-3));
 
   /* On-brand foreground — text/icons that sit on a filled brand surface.
      Near-white in both schemes (brand stays dark enough behind it), so this is
      scheme-independent — a direct palette ref, NOT a light-dark() pair. */
-  --color-on-brand: var(--palette-warm-50);
+  --color-on-brand: var(--palette-warm-0);
 
   /* ========================================
    * Surfaces — page paper, raised surface, sunken surface.
    * Dark surfaces are dark gray (not #000) and step lighter as they raise,
    * matching the light scheme's sunken→paper→surface ordering inverted.
    * ======================================== */
-  --color-paper:          light-dark(var(--palette-warm-50),  var(--palette-cool-800));
-  --color-surface:        light-dark(var(--palette-white),    var(--palette-cool-750));
-  --color-surface-sunken: light-dark(var(--palette-warm-100), var(--palette-cool-600));
+  --color-paper:          light-dark(var(--palette-warm-0),  var(--palette-cool-10));
+  --color-surface:        light-dark(var(--palette-white-0), var(--palette-cool-9));
+  --color-surface-sunken: light-dark(var(--palette-warm-1),  var(--palette-cool-7));
 
   /* Lines / borders / dividers. */
-  --color-line:        light-dark(var(--palette-warm-200), var(--palette-cool-500));
-  --color-line-strong: light-dark(var(--palette-warm-300), var(--palette-cool-400));
+  --color-line:        light-dark(var(--palette-warm-2), var(--palette-cool-6));
+  --color-line-strong: light-dark(var(--palette-warm-3), var(--palette-cool-5));
 
   /* ========================================
    * Brand — primary action / link hue. Lighter + slightly less chroma in dark.
    * ======================================== */
-  --color-brand:        light-dark(var(--palette-brand-600), var(--palette-brand-400));
-  --color-brand-strong: light-dark(var(--palette-brand-700), var(--palette-brand-300));
-  --color-brand-soft:   light-dark(var(--palette-brand-100), var(--palette-brand-800));
+  --color-brand:        light-dark(var(--palette-brand-3), var(--palette-brand-2));
+  --color-brand-strong: light-dark(var(--palette-brand-4), var(--palette-brand-1));
+  --color-brand-soft:   light-dark(var(--palette-brand-0), var(--palette-brand-5));
 
   /* ========================================
    * State — accent / success / danger, each with a soft tint companion.
    * Soft tints invert (pale in light, deep-muted in dark) so they read as the
    * same role without glowing on a dark surface.
    * ======================================== */
-  --color-accent:       light-dark(var(--palette-accent-500), var(--palette-accent-300));
+  --color-accent:       light-dark(var(--palette-accent-1), var(--palette-accent-0));
 
-  --color-success:      light-dark(var(--palette-success-600), var(--palette-success-300));
-  --color-success-soft: light-dark(var(--palette-success-100), var(--palette-success-800));
+  --color-success:      light-dark(var(--palette-success-2), var(--palette-success-1));
+  --color-success-soft: light-dark(var(--palette-success-0), var(--palette-success-3));
 
-  --color-danger:       light-dark(var(--palette-danger-600), var(--palette-danger-300));
-  --color-danger-soft:  light-dark(var(--palette-danger-100), var(--palette-danger-800));
+  --color-danger:       light-dark(var(--palette-danger-2), var(--palette-danger-1));
+  --color-danger-soft:  light-dark(var(--palette-danger-0), var(--palette-danger-3));
 
   /* Focus ring — shared by all interactive components. Resolves identically to
      --color-brand, so it reuses the same brand palette rungs. */
-  --color-focus: light-dark(var(--palette-brand-600), var(--palette-brand-400));
+  --color-focus: light-dark(var(--palette-brand-3), var(--palette-brand-2));
 }
 
 /* ========================================

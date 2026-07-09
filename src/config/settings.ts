@@ -71,6 +71,7 @@ export const settings = {
   // host-owned (zfb's route injection yields to a host page stub at the same
   // pattern — "Decision 6"). See docs/adr/route-injection-seam.md in zudo-doc.
   packageOwnedRoutes: true as boolean,
+  dynamicPageTransition: true as boolean,
   // Host-callables channel for the injected routes: a module exporting
   // `chromeBindings: ChromeHostBindings`. Only the BodyEndIslands slot is
   // overridden (the two zdtp token panels + image/mermaid enlarge); every other
@@ -91,40 +92,31 @@ export const settings = {
   imageEnlarge: true as boolean,
   htmlPreview: undefined as HtmlPreviewConfig | undefined,
   versions: [] satisfies VersionConfig[] as VersionConfig[] | false,
-  claudeResources: {
-    claudeDir: ".claude",
-  } as { claudeDir: string; projectRoot?: string } | false,
-  defaultLocaleOnlyPrefixes: [
-    "/docs/claude-md/",
-    "/docs/claude-skills/",
-    "/docs/claude-agents/",
-    "/docs/claude-commands/",
-  ] as string[],
+  claudeResources: false as { claudeDir: string; projectRoot?: string } | false,
+  defaultLocaleOnlyPrefixes: [] as string[],
   footer: {
     links: [
       {
         title: "Docs",
         items: [
-          { label: "Getting Started", href: "/docs/getting-started" },
+          { label: "Guide", href: "/docs/guide" },
+          { label: "Doc site", href: "https://zudo-sg-doc.takazudomodular.com" },
         ],
       },
     ],
     copyright: "Copyright © 2026 Your Name. Built with zudo-doc.",
   } satisfies FooterConfig as FooterConfig | false,
   headerNav: [
-    { label: "Getting Started", path: "/docs/getting-started", categoryMatch: "getting-started" },
+    { label: "Guide", path: "/docs/guide", categoryMatch: "guide" },
     { label: "Components", path: "/components", categoryMatch: "components" },
-    { label: "Changelog", path: "/docs/changelog", categoryMatch: "changelog" },
+    { label: "Doc", path: "https://zudo-sg-doc.takazudomodular.com" },
   ] satisfies HeaderNavItem[] as HeaderNavItem[],
   // NOTE: the framework's native `{ type: "trigger", trigger: "design-token-panel" }`
-  // is intentionally NOT listed here. In @takazudo/zdtp 0.3.0 that trigger
-  // dispatches the RESERVED "toggle-design-token-panel" event, which is bound
-  // only to the framework's empty-tabs default instance — so it opens an EMPTY
-  // panel, not this project's real 4-tab panel. Instead a project-rendered
-  // Design Tokens icon (the `type: "html"` item below) dispatches
-  // "toggle-sg-doc-tweak" — the doc-chrome panel's explicit toggle channel (see
-  // design-token-panel-config.ts). The DesignTokenPanelBootstrap island
-  // (body-end) listens for it. See Takazudo/zudo-sg#84/#85.
+  // is intentionally NOT listed here. This site mounts two zdtp instances, so a
+  // project-rendered Design Tokens icon (the `type: "html"` item below)
+  // dispatches "toggle-sg-doc-tweak" — the doc-chrome panel's explicit toggle
+  // channel (see design-token-panel-config.ts). The DesignTokenPanelBootstrap
+  // island (body-end) listens for it. See Takazudo/zudo-sg#84/#85.
   //
   // #113: the icon MOVED here from `pages/lib/_header-with-defaults.tsx` so it
   // renders on the package-owned doc routes too — settings.headerRightItems is

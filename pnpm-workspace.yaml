@@ -2,6 +2,7 @@ packages:
   - "."
   - "packages/*"
   - "apps/*"
+  - "doc"
 allowBuilds:
   esbuild: true
   lefthook: true

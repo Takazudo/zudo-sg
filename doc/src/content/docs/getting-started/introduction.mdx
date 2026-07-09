@@ -1,0 +1,29 @@
+---
+title: Introduction
+sidebar_position: 1
+description: What zudo-sg is, what it produces, and where each public site lives.
+---
+
+## What zudo-sg is
+
+zudo-sg is a style-guide framework built on [zudo-doc](https://github.com/Takazudo/zudo-doc). It combines a zfb static site, Tailwind CSS v4, Preact components, and a shared component package into a workspace for designing, documenting, and testing a target website UI system.
+
+The styleguide site is the product surface. This documentation site explains the project: how the workspace is arranged, how component stories become catalog pages, how design tokens are managed, and which checks keep the system stable.
+
+:::note[Styleguide vs. docs]
+The public styleguide at `https://zudo-sg.takazudomodular.com/` is where the UI system is inspected and tuned. The docs site at `https://zudo-sg-doc.takazudomodular.com/` is the operating guide for contributors.
+:::
+
+## The workspace outputs
+
+The monorepo produces three main artifacts from one shared UI source:
+
+- Root styleguide host: the zudo-doc based catalog deployed at `https://zudo-sg.takazudomodular.com/`.
+- `packages/ui`: the shared Preact component library and design-token source of truth, consumed directly from source.
+- `apps/demo`: a static demo site deployed at `https://zudo-sg-demo-site.takazudomodular.com/`.
+
+The `/doc` workspace is a separate zudo-doc site for project documentation. It documents the framework without being the styleguide itself.
+
+## What to read next
+
+Use [Installation](./installation.mdx) to get the workspace running. Then read [Monorepo Layout](../architecture/monorepo-layout.mdx), [Component Catalog Pipeline](../architecture/component-catalog-pipeline.mdx), and [Quality Gates](../development/quality-gates.mdx) to understand how changes move from source files to checked output.

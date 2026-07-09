@@ -26,7 +26,7 @@ src/
 │   └── content/          # MDX content components (admonitions, code-group, ...)
 ├── config/               # Settings, color schemes, design token manifests
 ├── content/
-│   └── docs/             # MDX content
+│   └── docs/             # Slim root guide content
 ├── features/
 │   └── styleguide/       # /components catalog: chrome, preview, code-panel, search, token-tweak
 ├── styleguide/
@@ -39,6 +39,11 @@ There is no `src/pages/` or `src/layouts/` — routing lives in the root `pages/
 directory, and page-level chrome (header, footer, doc-route shells) is owned
 by `@takazudo/zudo-doc`'s package-injected routes (`packageOwnedRoutes`,
 see `src/config/settings.ts`).
+
+Root `/docs` is intentionally slim and currently contains the root Guide. The
+full documentation site lives in `doc/` and is deployed separately at
+`https://zudo-sg-doc.takazudomodular.com/`; root nav/footer entries link there
+instead of duplicating that content.
 
 ## Content Conventions
 
@@ -72,7 +77,9 @@ Do NOT use h1 (`#`) in doc content — the page title from frontmatter is render
 
 This is a pnpm workspace monorepo:
 
-- **Root (`.`)** — the zudo-doc styleguide host
+- **Root (`.`)** — the zudo-doc styleguide host and component catalog
+- **`doc/`** (`@zudo-sg/doc`) — the full docs workspace; owns Claude resource
+  generation and doc-lookup skill setup
 - **`packages/ui`** (`@zudo-sg/ui`) — shared Preact component library
 - **`apps/demo`** (`@zudo-sg/demo`) — static demo site (Tailwind v4, no SSR)
 
@@ -88,14 +95,14 @@ To build all packages: `pnpm install && pnpm build` (root only; apps/demo builds
   sidebar also has its own real-time filter input, implemented directly in
   `src/components/sidebar-tree.tsx` (not a separate toggleable feature)
 - **imageEnlarge** — Click-to-enlarge images
-- **claudeResources** — Auto-generated docs for Claude Code resources
-- **claudeSkills** — Ships zudo-doc-design-system, zudo-doc-translate, zudo-doc-version-bump skills
+- **claudeResources** — Moved to the `doc/` workspace
+- **claudeSkills** — The `doc/` workspace ships zudo-doc-design-system, zudo-doc-translate, zudo-doc-version-bump skills
 - **designTokenPanel** — Interactive tabbed panel for tweaking spacing, font, size, and color tokens
+- **dynamicPageTransition** — SPA client-router page swaps with View Transitions and page-loading overlay
 - **sidebarResizer** — Draggable sidebar width
 - **sidebarToggle** — Show/hide desktop sidebar
 - **versioning** — Multi-version documentation support
 - **llmsTxt** — Generates llms.txt for LLM consumption
-- **skillSymlinker** — Links doc content into Claude Code skill via `pnpm setup:doc-skill`
+- **skillSymlinker** — Moved to the `doc/` workspace (`pnpm --filter @zudo-sg/doc setup:doc-skill`)
 - **footerNavGroup** — Footer navigation link groups
 - **footerCopyright** — Footer copyright notice
-- **changelog** — Changelog page at `/docs/changelog`

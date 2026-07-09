@@ -5,11 +5,13 @@
 # Jobs (in execution order):
 #   lint-tokens          — pnpm lint:tokens
 #   codegen-drift        — pnpm check:z-index, pnpm check:sg-registry, pnpm check:token-manifest
-#   typecheck            — pnpm check (zfb check / tsc --noEmit + demo typecheck)
+#   typecheck            — pnpm check (zfb check / tsc --noEmit + demo/doc typecheck)
 #   unit                 — pnpm test:unit (vitest)
 #   build                — pnpm build (zfb build → dist/)
 #   build-demo           — pnpm --filter @zudo-sg/demo build (apps/demo), then
 #                          pnpm check:links:demo against apps/demo/dist
+#   build-doc            — pnpm build:doc (doc), then pnpm check:links:doc
+#                          against doc/dist
 #   smoke-e2e            — pnpm test:e2e:ci (Playwright: styleguide + demo smoke
 #                          projects, needs build + build-demo)
 #   dist-checks          — pnpm check:links + pnpm check:html against dist/
@@ -167,6 +169,28 @@ jobs:
 
       - name: Check demo links
         run: pnpm check:links:demo
+
+  # ---------------------------------------------------------------------------
+  # Job: Build Documentation Site
+  # Builds doc (@zudo-sg/doc) independently so doc-breaking changes are caught
+  # on every PR. Also link-checks doc/dist.
+  # ---------------------------------------------------------------------------
+  build-doc:
+    name: Build Documentation Site
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: Build doc site
+        run: pnpm build:doc
+
+      - name: Check doc links
+        run: pnpm check:links:doc
 
   # ---------------------------------------------------------------------------
   # Job: Playwright smoke e2e (T1)

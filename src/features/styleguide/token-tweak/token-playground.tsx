@@ -81,8 +81,8 @@ export default function TokenPlayground(): JSX.Element {
 
   function openTweaker(): void {
     // "toggle-sg-doc-tweak" is the doc-chrome panel's explicit toggle channel.
-    // The reserved "toggle-design-token-panel" would open zdtp 0.3.0's empty
-    // default instead of this project's real 4-tab panel (Takazudo/zudo-sg#84).
+    // The reserved "toggle-design-token-panel" is intentionally avoided so the
+    // doc-chrome and preview zdtp instances stay isolated (Takazudo/zudo-sg#84).
     window.dispatchEvent(new CustomEvent("toggle-sg-doc-tweak"));
   }
 

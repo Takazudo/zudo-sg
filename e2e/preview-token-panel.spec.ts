@@ -243,11 +243,9 @@ test("doc Tokens panel: dispatching toggle-sg-doc-tweak opens the real (non-empt
   // The doc panel has NO applySink — it writes to the host :root only.
   //
   // CRITICAL: the channel is "toggle-sg-doc-tweak", NOT the reserved
-  // "toggle-design-token-panel". In @takazudo/zdtp 0.3.0 the reserved event is
-  // bound only to the framework's empty-tabs default instance, so dispatching it
-  // mounts an EMPTY shell rather than this project's real 4-tab panel. Routing
-  // the doc-chrome trigger to "toggle-sg-doc-tweak" is the host fix
-  // (Takazudo/zudo-sg#84/#85; renamed from "toggle-my-doc-tweak" in #117).
+  // "toggle-design-token-panel". This site mounts two zdtp instances, so the
+  // doc panel must stay on its explicit event and not accidentally fall back
+  // to the reserved default (Takazudo/zudo-sg#84/#85).
   await page.evaluate(() => {
     window.dispatchEvent(new CustomEvent("toggle-sg-doc-tweak"));
   });
@@ -309,7 +307,7 @@ test("preview panel: Reset clears preview overrides; host chrome state is untouc
   // Write a doc-chrome inline override to the host :root so we can verify it
   // survives the preview panel Reset.
   await page.evaluate(() => {
-    document.documentElement.style.setProperty("--zd-0", "#aabbcc");
+    document.documentElement.style.setProperty("--zd-bg", "#aabbcc");
   });
 
   // Open the preview panel and apply an override via the Size tab UI.
@@ -342,14 +340,14 @@ test("preview panel: Reset clears preview overrides; host chrome state is untouc
   expect(await getIframeRootVar(frame, "--radius-md")).not.toBe("20px");
 
   // Host :root doc-chrome override must survive the preview panel Reset.
-  expect(await getHostRootVar(page, "--zd-0")).toBe("#aabbcc");
+  expect(await getHostRootVar(page, "--zd-bg")).toBe("#aabbcc");
 });
 
 // ---------------------------------------------------------------------------
-// Test 4: Export emits sg-preview-design-tokens/v1 JSON; Load-from-JSON restores it
+// Test 4: Export emits zdtp JSON; Load-from-JSON restores it
 // ---------------------------------------------------------------------------
 
-test("preview panel: Export emits schema sg-preview-design-tokens/v1; Load-from-JSON restores overrides", async ({
+test("preview panel: Export emits zdtp schema; Load-from-JSON restores overrides", async ({
   page,
 }) => {
   await gotoFirstDetailPage(page);
@@ -379,10 +377,10 @@ test("preview panel: Export emits schema sg-preview-design-tokens/v1; Load-from-
   await expect(jsonBlock).toBeVisible({ timeout: 3_000 });
   const exportedJson = (await jsonBlock.textContent()) ?? "";
 
-  // Assert the JSON contains the zdtp export format schema. zdtp hardcodes
-  // "$schema": "zudo-design-tokens/v2" in all exports regardless of the panel's
-  // config.schemaId. The config.schemaId ("sg-preview-design-tokens/v1") is used
-  // only in the import modal's error message text, NOT embedded in the JSON.
+  // Assert the JSON contains zdtp's export format schema. zdtp 0.4.5 emits v2
+  // for this preview panel because it has no ramp-reference color cluster; it
+  // opportunistically emits v3 when object-valued color leaves are present.
+  // config.schemaId is display-only import-modal text, not the JSON schema.
   expect(exportedJson).toContain('"$schema"');
   expect(exportedJson).toContain("zudo-design-tokens/v2");
 

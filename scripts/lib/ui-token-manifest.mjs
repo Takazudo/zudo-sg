@@ -65,14 +65,14 @@ const FONT_WEIGHT_OPTIONS = [
  * accent, success, danger) purely for readability; has no functional effect.
  */
 export const PALETTE_NAMES = [
-  "white",
-  "cool-50", "cool-100", "cool-200", "cool-250", "cool-300", "cool-400",
-  "cool-500", "cool-600", "cool-700", "cool-750", "cool-800",
-  "warm-50", "warm-100", "warm-200", "warm-300",
-  "brand-100", "brand-300", "brand-400", "brand-600", "brand-700", "brand-800",
-  "accent-300", "accent-500",
-  "success-100", "success-300", "success-600", "success-800",
-  "danger-100", "danger-300", "danger-600", "danger-800",
+  "white-0",
+  "cool-0", "cool-1", "cool-2", "cool-3", "cool-4", "cool-5",
+  "cool-6", "cool-7", "cool-8", "cool-9", "cool-10",
+  "warm-0", "warm-1", "warm-2", "warm-3",
+  "brand-0", "brand-1", "brand-2", "brand-3", "brand-4", "brand-5",
+  "accent-0", "accent-1",
+  "success-0", "success-1", "success-2", "success-3",
+  "danger-0", "danger-1", "danger-2", "danger-3",
 ];
 
 /**
@@ -350,19 +350,20 @@ const FONT_WEIGHT_OPTIONS = [
  * Tier-1 raw palette colors from \`packages/ui/styles/colors.css\` (the \`:root\`
  * \`--palette-{family}-{step}\` block). This is the raw material beneath the
  * semantic \`--color-*\` tokens in UI_COLOR_TOKENS below — same three-tier
- * model the doc-chrome panel exposes via its 16-rung \`--zd-*\` palette.
+ * model the doc-chrome panel exposes via \`--palette-*\` ramps and \`--zd-*\`
+ * semantic roles.
  *
  * These are plain name/value descriptors (NOT \`TokenDef\`) because zdtp's
  * \`TokenDef.control\` has no \`"color"\` option — the preview panel builds them
  * into \`{ kind: "color" }\` TierItems inline, mirroring the doc panel's
- * \`buildPaletteTier()\`. Rendered as a "Palette" swatch tier in the preview
+ * ramp tiers. Rendered as a "Palette" swatch tier in the preview
  * panel's Color tab; editing a swatch pushes \`--palette-*\` to the preview
  * iframes via the sink, cascading into every semantic token that references it.
  *
  * Coverage: ${manifest.paletteColors.length} colors.
  */
 export interface UiPaletteColor {
-  /** Palette key without the \`--palette-\` prefix, e.g. "cool-700". */
+  /** Palette key without the \`--palette-\` prefix, e.g. "cool-8". */
   name: string;
   /** Raw oklch value, from colors.css. */
   value: string;

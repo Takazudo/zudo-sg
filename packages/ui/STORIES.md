@@ -63,12 +63,12 @@ component markup changes.
 #### Three-tier color system
 
 Colors follow the **three-tier strategy** (zudo-css-wisdom: *Three-Tier Color
-Strategy*) — the same shape as zudo-doc's raw `--zd-0..15` palette feeding its
-semantic `--color-*` tokens:
+Strategy*) — the same shape as zudo-doc's `--palette-*` ramps feeding semantic
+roles:
 
 | Tier | What | Where |
 |---|---|---|
-| **1 — Palette** | Raw oklch values, named `--palette-{family}-{step}` (families `cool`/`warm`/`brand`/`accent`/`success`/`danger`, numeric steps light→dark) | `styles/colors.css` (top `:root` block) |
+| **1 — Palette** | Raw oklch values, named `--palette-{group}-{n}` (groups `white`/`cool`/`warm`/`brand`/`accent`/`success`/`danger`, 0-based indexes light→dark within each group) | `styles/colors.css` (top `:root` block) |
 | **2 — Semantic** | Roles → palette: every `--color-*` token is a `light-dark()` pair of `var(--palette-…)` refs | `styles/colors.css` (`@theme`) |
 | **3 — Component** | Scoped overrides — rarely needed under Tailwind utilities | per-component |
 

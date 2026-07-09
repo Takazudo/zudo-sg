@@ -29,6 +29,21 @@ const preset = zudoDocPreset({
   translations,
   colorSchemes,
 });
+const resolveMarkdownLinks = preset.resolveMarkdownLinks
+  ? {
+      ...preset.resolveMarkdownLinks,
+      // The root build runs from the monorepo root and zfb validates workspace
+      // MDX files it sees. Register the standalone doc workspace as a link
+      // resolution source so its required relative .mdx links do not warn
+      // during the root styleguide build. This only affects markdown-link
+      // validation/rewrite; the root site's page routes still come from the
+      // root `docs` collection below.
+      dirs: [
+        ...preset.resolveMarkdownLinks.dirs,
+        { dir: "doc/src/content/docs", routePrefix: "/docs/" },
+      ],
+    }
+  : preset.resolveMarkdownLinks;
 
 export default defineConfig({
   framework: "preact",
@@ -60,6 +75,7 @@ export default defineConfig({
       include: ["*/*.mdx"],
     },
   ],
+  resolveMarkdownLinks,
   plugins: [
     ...preset.plugins,
     // Project-specific workaround, not part of the preset — see

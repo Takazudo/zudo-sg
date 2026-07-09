@@ -1,0 +1,62 @@
+---
+title: Design Tokens
+sidebar_position: 3
+description: The doc-chrome and UI token systems, the three-tier color strategy, and how token panel edits flow back to CSS.
+---
+
+## Two token worlds
+
+zudo-sg has two related token systems:
+
+- Doc chrome tokens control the root styleguide and zudo-doc shell: navigation, docs pages, code blocks, sidebars, and styleguide chrome.
+- UI package tokens control target-site components exported by `@zudo-sg/ui`.
+
+Keep those worlds separate. A styleguide chrome color scheme is not automatically the same as the target website palette, even though both can be edited from zdtp-powered panels.
+
+## UI package token contract
+
+Consumers import the shared UI token CSS after Tailwind preflight and utilities:
+
+```css
+@import "tailwindcss/preflight";
+@import "tailwindcss/utilities";
+@import "@zudo-sg/ui/styles/tokens.css";
+@import "@zudo-sg/ui/styles/colors.css";
+```
+
+`tokens.css` defines spacing, typography, radius, shadow, and related non-color tokens. `colors.css` defines the UI package color system. Components use semantic utilities such as `bg-brand`, `text-ink`, `border-line`, and `bg-surface-sunken`; they do not reach into raw palette variables.
+
+## Three-tier color strategy
+
+The UI package follows the [Three-Tier Color Strategy](https://zudo-css-wisdom.takazudomodular.com/docs/styling/color/three-tier-color-strategy/):
+
+| Tier | Purpose | Source |
+| --- | --- | --- |
+| Palette | Raw OKLCH values named `--palette-{group}-{n}` | `packages/ui/styles/colors.css` |
+| Semantic | `--color-*` roles that point to palette values with `light-dark()` | `packages/ui/styles/colors.css` |
+| Component | Scoped overrides when a component truly needs them | component code or CSS |
+
+Palette groups include `white`, `cool`, `warm`, `brand`, `accent`, `success`, and `danger`, with numeric steps ordered from light to dark inside each group.
+
+:::note[No palette utilities]
+Palette variables live in plain `:root`, not Tailwind `@theme`, so Tailwind does not generate `bg-palette-*` or `text-palette-*` utilities. Components must bind to semantic `--color-*` roles instead.
+:::
+
+## Doc chrome color model
+
+The zudo-doc 3.x chrome uses a ramp-native model for its own color schemes. It exposes palette ramps and semantic `--zd-*` roles through the root design-token panel. That model is for the documentation and styleguide shell, not for target-site UI components.
+
+The preview token panel is a second panel instance for `@zudo-sg/ui`. It has separate storage keys, event names, and an apply sink that writes preview values into registered styleguide iframes instead of the host document root.
+
+## Apply-to-source pipeline
+
+The zdtp panels can preview token changes in the browser. During local development, the apply pipeline can persist supported edits back to CSS source through the zdtp apply proxy wiring.
+
+For UI package tokens, the generated manifest comes from `packages/ui/styles/tokens.css` and `packages/ui/styles/colors.css`. If those CSS files change, regenerate the manifest and commit the result:
+
+```sh
+pnpm gen:token-manifest
+pnpm check:token-manifest
+```
+
+The detailed panel operating manual belongs on the styleguide site. This page is the architecture map: CSS files are the source of truth, manifests keep panels in sync, and checks catch drift.

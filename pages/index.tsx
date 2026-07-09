@@ -60,8 +60,7 @@ export default function IndexPage(): JSX.Element {
   return (
     <DocLayoutWithDefaults
       title={composeMetaTitle(settings.siteName)}
-      // Page transitions removed — plain full-page navigation (epic #66 / zudo-doc#2273).
-      enableClientRouter={false}
+      enableClientRouter={settings.dynamicPageTransition}
       head={<HeadWithDefaults title={settings.siteName} />}
       lang={locale}
       noindex={settings.noindex}
@@ -98,7 +97,7 @@ export default function IndexPage(): JSX.Element {
               {overview && (
                 <>
                   <a href={overview} class="text-fg underline hover:text-accent">
-                    {t("nav.overview", locale)}
+                    {ctaNav.label}
                   </a>
                   <span class="text-muted">/</span>
                 </>

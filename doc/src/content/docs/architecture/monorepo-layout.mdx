@@ -1,0 +1,54 @@
+---
+title: Monorepo Layout
+sidebar_position: 1
+description: The workspace areas and how the root styleguide, shared UI package, demo app, and docs site relate.
+---
+
+## Workspace shape
+
+zudo-sg is a pnpm workspace. The root package is the styleguide host, `packages/ui` is the source package every site consumes, `apps/demo` is a static consumer app, and `doc` is the documentation site you are reading now.
+
+```txt
+.
+|-- pages/
+|-- src/
+|-- packages/ui/
+|-- apps/demo/
+`-- doc/
+```
+
+The root host is built with zfb, zudo-doc, MDX, Tailwind CSS v4, and Preact. It owns styleguide-specific pages such as `/`, `/components/*`, and `/docs/versions`; package-injected zudo-doc routes own the general docs chrome, 404, robots, and sitemap behavior.
+
+## Root styleguide host
+
+The root host is deployed as `zudo-sg` at `https://zudo-sg.takazudomodular.com/`. Its key directories are:
+
+- `pages/`: file-based routes owned by the host.
+- `src/components/`: server-rendered JSX components and content components.
+- `src/config/`: settings, color schemes, token manifests, and navigation config.
+- `src/features/styleguide/`: component catalog chrome, previews, code panels, search, and token-tweak UI.
+- `src/styleguide/data/`: generated and hand-authored catalog data.
+- `src/styles/global.css`: root design tokens and Tailwind configuration.
+
+Use server-rendered JSX by default in this host. Add Preact islands only when a feature needs client-side behavior.
+
+## Shared UI package
+
+`packages/ui` publishes `@zudo-sg/ui` inside the workspace. It has no build step: its package exports point directly at source files, so consumers transpile `.ts` and `.tsx` through their own zfb or Vite pipeline.
+
+That source-consumption contract has two important consequences:
+
+- There is no `dist/` output to compile before using UI components.
+- Consumers must scan `packages/ui/src` in Tailwind so component utility classes are emitted.
+
+The package also exports `@zudo-sg/ui/styles/tokens.css` and `@zudo-sg/ui/styles/colors.css`. Those CSS files are the shared token contract for consumers.
+
+## Demo app and docs site
+
+`apps/demo` is a static app deployed at `https://zudo-sg-demo-site.takazudomodular.com/`. It validates that `@zudo-sg/ui` works as a normal website dependency, not only inside the styleguide catalog.
+
+`doc` is a separate zudo-doc site deployed for contributor documentation. It should explain how zudo-sg works; it should not duplicate the styleguide catalog or become the operating manual for every styleguide panel.
+
+## Related pages
+
+Read [Component Catalog Pipeline](./component-catalog-pipeline.mdx) for the story discovery flow and [Design Tokens](./design-tokens.mdx) for the two token systems.
