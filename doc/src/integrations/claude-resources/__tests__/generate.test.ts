@@ -687,7 +687,7 @@ describe("generateClaudeResourcesDocs", () => {
       "",
       "See [wrangler.toml](./wrangler.toml) and [schema](../../schema/photos.sql).",
       "Also a [workflow](../../.github/workflows/deploy.yml) and a [bare](docs/guide.md) link.",
-      "External [site](https://example.com), [anchor](#section), [site-abs](/docs/getting-started), [mail](mailto:x@y.com).",
+      "External [site](https://example.com), [anchor](#section), [site-abs](/docs/architecture), [mail](mailto:x@y.com).",
       "Image: ![diagram](./diagram.png)",
       "",
       "Inline code stays: `[x](./y)`",
@@ -728,7 +728,7 @@ describe("generateClaudeResourcesDocs", () => {
       const rootMdx = genRoot();
       expect(rootMdx).toContain("](https://example.com)");
       expect(rootMdx).toContain("](#section)");
-      expect(rootMdx).toContain("](/docs/getting-started)");
+      expect(rootMdx).toContain("](/docs/architecture)");
       expect(rootMdx).toContain("](mailto:x@y.com)");
     });
 

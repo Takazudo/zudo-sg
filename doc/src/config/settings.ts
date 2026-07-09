@@ -29,6 +29,8 @@ import type {
   MetaTagsConfig,
 } from "./settings-types";
 
+const docsCategoryPath = (category: string): string => `/docs/${category}`;
+
 export const settings = {
   colorScheme: "Default Dark",
   colorMode: {
@@ -98,9 +100,9 @@ export const settings = {
   ] as string[],
   footer: false as FooterConfig | false,
   headerNav: [
-    { label: "Getting Started", path: "/docs/getting-started", categoryMatch: "getting-started" },
-    { label: "Architecture", path: "/docs/architecture", categoryMatch: "architecture" },
-    { label: "Development", path: "/docs/development", categoryMatch: "development" },
+    { label: "Getting Started", path: docsCategoryPath("getting-started"), categoryMatch: "getting-started" },
+    { label: "Architecture", path: docsCategoryPath("architecture"), categoryMatch: "architecture" },
+    { label: "Development", path: docsCategoryPath("development"), categoryMatch: "development" },
   ] satisfies HeaderNavItem[] as HeaderNavItem[],
   headerRightItems: [
     { type: "component", component: "github-link" },

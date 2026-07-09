@@ -42,10 +42,10 @@ test("home page renders without JS errors or failed asset requests", async ({ pa
   expect(failedResponses).toEqual([]);
 });
 
-test("getting-started docs page returns 200", async ({ page }) => {
+test("guide docs page returns 200", async ({ page }) => {
   // /docs/ has no index.html on the scaffold (trailingSlash: false, no root
   // docs index page). Navigate to the first real docs page instead.
-  const response = await page.goto("/docs/getting-started");
+  const response = await page.goto("/docs/guide");
   expect(response?.status()).toBe(200);
 
   // Confirm a heading is present
