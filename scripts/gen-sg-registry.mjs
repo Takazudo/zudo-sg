@@ -65,9 +65,11 @@ function discoverStories() {
     );
     for (const file of files.sort()) {
       const stem = file.slice(0, -STORIES_SUFFIX.length);
+      const body = readFileSync(resolve(UI_SRC_DIR, dir, file), "utf8");
       entries.push({
         relDirStem: `${dir}/${stem}`,
         importName: camelCase(stem),
+        exportOrder: scanExportOrder(body),
       });
     }
   }
@@ -80,6 +82,21 @@ function discoverStories() {
 /** Kebab-case story stem (e.g. "site-header") → camelCase identifier. */
 function camelCase(kebab) {
   return kebab.replace(/-([a-z0-9])/g, (_, c) => c.toUpperCase());
+}
+
+/**
+ * Named-export declaration order of a `*.stories.tsx` body, in source order.
+ * Only `export const <Name>` lines count — this is exactly the set the runtime
+ * `import * as` namespace surfaces as named exports (minus `export default meta`,
+ * which is not `const`). `export { … }` / `export type` / `export function`
+ * lines are intentionally ignored (all 10 current story files use the uniform
+ * `export const <Name>: Story… = {` pattern; ignoring the others is safe and
+ * future-resilient). The runtime cannot recover this order — an ES-module
+ * namespace enumerates its keys alphabetically per spec — so it must be captured
+ * here at build time and threaded through the registry (see #128 / #174).
+ */
+function scanExportOrder(body) {
+  return [...body.matchAll(/^export const (\w+)/gm)].map((m) => m[1]);
 }
 
 /**
@@ -108,6 +125,23 @@ function buildRegistryBlock(entries) {
     lines.push(
       `  "./ui/src/${e.relDirStem}.stories.tsx": ${e.importName} as unknown as StoryModule,`,
     );
+  }
+  lines.push(`};`);
+  lines.push(``);
+  lines.push(`/**`);
+  lines.push(` * Per-story named-export declaration order (SOURCE order), keyed by the`);
+  lines.push(` * same path as \`storyModules\`. registry.ts sorts each story's variants`);
+  lines.push(` * by this so tabs render in authored order (and the default tab is the`);
+  lines.push(` * first-authored story) instead of the alphabetical key-enumeration order`);
+  lines.push(` * of the \`import * as\` namespace. Captured at codegen time because the`);
+  lines.push(` * runtime namespace cannot recover source order (#128 / #174). Superset:`);
+  lines.push(` * lists every \`export const\`, so registry.ts uses it only to SORT the`);
+  lines.push(` * \`isStory()\`-filtered variants, never to gate membership.`);
+  lines.push(` */`);
+  lines.push(`export const storyExportOrder: Record<string, string[]> = {`);
+  for (const e of entries) {
+    const arr = e.exportOrder.map((n) => JSON.stringify(n)).join(", ");
+    lines.push(`  "./ui/src/${e.relDirStem}.stories.tsx": [${arr}],`);
   }
   lines.push(`};`);
   lines.push(`// ${END_MARKER}`);

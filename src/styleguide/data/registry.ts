@@ -7,7 +7,7 @@
 // page and the preview app can import it freely.
 
 import type { StoryCategory, StoryMeta, Story } from "@zudo-sg/ui";
-import { storyModules } from "./sg-registry";
+import { storyModules, storyExportOrder } from "./sg-registry";
 
 /** Declared category order — mirrors the closed union in @zudo-sg/ui/stories/types. */
 export const CATEGORY_ORDER: StoryCategory[] = [
@@ -39,7 +39,12 @@ export interface StoryEntry {
   /** Glob path key (e.g. `./ui/src/button/button.stories.tsx`). */
   path: string;
   meta: StoryMeta;
-  /** Ordered variants (named exports), in source order. */
+  /**
+   * Variants (named Story exports) in SOURCE order — sorted by the codegen-
+   * emitted `storyExportOrder`, NOT by `Object.entries(mod)` (an ES-module
+   * namespace enumerates keys alphabetically per spec). `variants[0]` is the
+   * first-authored story, which drives the default-selected code-panel tab.
+   */
   variants: VariantEntry[];
 }
 
@@ -91,6 +96,18 @@ function buildEntries(): StoryEntry[] {
       variants.push({ exportName, name: value.name, story: value });
     }
     if (variants.length === 0) continue;
+
+    // `Object.entries(mod)` above enumerates the ES-module namespace's keys
+    // alphabetically, so re-sort into authored source order using the codegen-
+    // emitted list (superset of any `export const` — used only to rank, never
+    // to gate; unknown exports sort to the end). This fixes both tab order and
+    // the default tab (`variants[0]`). See #128 / #174.
+    const order = storyExportOrder[path] ?? [];
+    const rank = (name: string): number => {
+      const i = order.indexOf(name);
+      return i === -1 ? Number.POSITIVE_INFINITY : i;
+    };
+    variants.sort((a, b) => rank(a.exportName) - rank(b.exportName));
 
     let slug = slugify(meta.title);
     // De-dupe defensively (titles are unique-within-category by contract, but

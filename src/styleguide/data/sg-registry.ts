@@ -57,4 +57,27 @@ export const storyModules: Record<string, StoryModule> = {
   "./ui/src/site-header/site-header.stories.tsx": siteHeader as unknown as StoryModule,
   "./ui/src/stat/stat.stories.tsx": stat as unknown as StoryModule,
 };
+
+/**
+ * Per-story named-export declaration order (SOURCE order), keyed by the
+ * same path as `storyModules`. registry.ts sorts each story's variants
+ * by this so tabs render in authored order (and the default tab is the
+ * first-authored story) instead of the alphabetical key-enumeration order
+ * of the `import * as` namespace. Captured at codegen time because the
+ * runtime namespace cannot recover source order (#128 / #174). Superset:
+ * lists every `export const`, so registry.ts uses it only to SORT the
+ * `isStory()`-filtered variants, never to gate membership.
+ */
+export const storyExportOrder: Record<string, string[]> = {
+  "./ui/src/badge/badge.stories.tsx": ["Playground", "Soft", "Solid", "Outline"],
+  "./ui/src/button/button.stories.tsx": ["Playground", "Variants", "Sizes", "AsLink", "Disabled", "Block"],
+  "./ui/src/card/card.stories.tsx": ["Playground", "Variants", "WithFooter", "Linked"],
+  "./ui/src/footer/footer.stories.tsx": ["Playground", "Default", "Minimal"],
+  "./ui/src/form/form.stories.tsx": ["TextField", "Required", "Disabled", "ContactForm"],
+  "./ui/src/heading/heading.stories.tsx": ["Playground", "Page", "Section", "SectionWithAction"],
+  "./ui/src/hero/hero.stories.tsx": ["Playground", "Basic", "WithMedia", "Plain"],
+  "./ui/src/link/link.stories.tsx": ["Playground", "Variants", "External"],
+  "./ui/src/site-header/site-header.stories.tsx": ["Playground", "Default", "WithAction"],
+  "./ui/src/stat/stat.stories.tsx": ["Playground", "Single", "Group", "Divided"],
+};
 // GENERATED:SG_REGISTRY_END
