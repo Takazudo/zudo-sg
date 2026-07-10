@@ -8,7 +8,7 @@ Documentation site built with [zudo-doc](https://github.com/zudolab/zudo-doc) �
 - **MDX** — content format
 - **Tailwind CSS v4** — via `@tailwindcss/vite`
 - **Preact** — for interactive islands only (with compat mode for React API)
-- **syntect** — built-in code highlighting, run by zfb's Rust pipeline at build time (dual-theme: `base16-ocean.light` / `base16-ocean.dark`, matching the site's light/dark mode)
+- **syntect** — built-in code highlighting, run by zfb's Rust pipeline at build time (dual-theme, matching the site's light/dark mode). The themes are WCAG-AA-compliant variants of `base16-ocean` — `Base16 Ocean Light A11y` / `Base16 Ocean Dark A11y`, defined in `src/styles/syntect-themes/*.tmTheme` and wired via `codeHighlight` in `zfb.config.ts` (#169; stock base16-ocean fails AA for most tokens)
 
 ## Commands
 

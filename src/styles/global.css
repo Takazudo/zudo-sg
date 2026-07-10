@@ -385,7 +385,13 @@ pre[class^="syntect-"].word-wrap code {
  * — CSS custom properties only, no `color` declaration — depending on this
  * rule to resolve light-dark(var(--shiki-light), var(--shiki-dark)) to the
  * active theme. Shiki spans have no inline `color`, so the rule applies
- * without needing !important. */
+ * without needing !important.
+ *
+ * Token *legibility* (WCAG-AA contrast) is NOT tuned here — the token hex
+ * values are baked per-span by syntect at build time, so they can only be
+ * fixed at the theme level. The site ships WCAG-AA variants of base16-ocean;
+ * see `codeHighlight` in zfb.config.ts and src/styles/syntect-themes/*.tmTheme
+ * (#169). Do not attempt a per-token contrast fix in this file. */
 [data-theme] .shiki,
 [data-theme] .shiki span,
 [data-theme] pre[class^="syntect-"],
