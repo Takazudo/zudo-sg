@@ -59,15 +59,16 @@ export default defineConfig({
   ...preset,
   // Override the preset's syntect code theme (base16-ocean.light/.dark) with
   // WCAG-AA-compliant variants (#169 / supersedes #133). The stock base16-ocean
-  // palette fails AA for normal text: in light mode 6 of 7 token colors are
-  // <4.5:1 on its #eff1f5 background (only the default-text grey passes), and in
-  // dark mode the comment + red tokens fail on #2b303b. Token colors are baked
-  // per-span inline by syntect at build time, so they can't be remapped in CSS —
-  // the only fix is at the theme level. These two themes are base16-ocean with
-  // ONLY the sub-AA token hues nudged (hue preserved) to >=4.5:1 against each
-  // theme's own background; backgrounds and default text are unchanged. See
-  // src/styles/syntect-themes/*.tmTheme. Referenced by each theme's internal
-  // `name`, not filename.
+  // palette fails AA for normal text: in light mode every accent hue plus the
+  // comment grey is <4.5:1 on its #eff1f5 background (only the #4f5b66
+  // default-text grey passes); in dark mode the comment, red, and brown hues
+  // fail on #2b303b. Token colors are baked per-span inline by syntect at build
+  // time, so they can't be remapped in CSS — the only fix is at the theme level.
+  // These two themes are base16-ocean with ONLY the sub-AA token hues nudged
+  // (hue preserved) to >=4.5:1 against each theme's own background; backgrounds
+  // and default text are unchanged. See src/styles/syntect-themes/*.tmTheme; the
+  // AA invariant is guarded by scripts/__tests__/syntect-theme-contrast.test.ts.
+  // Referenced by each theme's internal `name`, not filename.
   codeHighlight: {
     themesDir: "src/styles/syntect-themes",
     themeLight: "Base16 Ocean Light A11y",

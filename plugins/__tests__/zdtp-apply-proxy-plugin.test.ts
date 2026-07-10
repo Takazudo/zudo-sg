@@ -243,7 +243,11 @@ describe("createDevMiddlewareHandler", () => {
     const res = await handler({ method: "OPTIONS", url: APPLY_PATH, headers: {} });
 
     expect(res.status).toBe(204);
+    // Must advertise OPTIONS itself, not just POST — otherwise a regression of
+    // ALLOWED_METHODS back to "POST" would still pass. 204 carries no body.
     expect(res.headers?.allow).toContain("POST");
+    expect(res.headers?.allow).toContain("OPTIONS");
+    expect(res.body ?? "").toBe("");
     expect(readColorsCss()).toBe(before);
   });
 

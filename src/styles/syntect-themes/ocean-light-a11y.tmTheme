@@ -4,6 +4,8 @@
 <dict>
 	<key>author</key>
 	<string>Template: Chris Kempson, Scheme: Chris Kempson (http://chriskempson.com)</string>
+	<key>comment</key>
+	<string>WCAG-AA a11y variant of base16-ocean.light (zudo-sg #169). Generated from the stock theme by nudging each sub-AA token hue (hue preserved) to >=4.5:1 against the #eff1f5 background; background + default text unchanged. Wired via codeHighlight.themesDir in zfb.config.ts; invariant guarded by scripts/__tests__/syntect-theme-contrast.test.ts.</string>
 	<key>name</key>
 	<string>Base16 Ocean Light A11y</string>
 	<key>semanticClass</key>
