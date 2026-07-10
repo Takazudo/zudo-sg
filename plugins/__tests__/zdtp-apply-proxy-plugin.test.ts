@@ -232,6 +232,21 @@ describe("createDevMiddlewareHandler", () => {
     expect(readColorsCss()).toBe(before);
   });
 
+  it("answers OPTIONS with 204 instead of 405, without touching the apply pipeline", async () => {
+    const handler = createDevMiddlewareHandler({
+      rootDir: sandbox,
+      writeRoot: sandbox,
+      routing: { palette: "colors.css" },
+    });
+    const before = readColorsCss();
+
+    const res = await handler({ method: "OPTIONS", url: APPLY_PATH, headers: {} });
+
+    expect(res.status).toBe(204);
+    expect(res.headers?.allow).toContain("POST");
+    expect(readColorsCss()).toBe(before);
+  });
+
   it("returns 400 for a malformed JSON body", async () => {
     const handler = createDevMiddlewareHandler({
       rootDir: sandbox,
