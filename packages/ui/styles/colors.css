@@ -12,15 +12,17 @@
  *   Tier 1  Palette   — raw oklch values   (the :root --palette-* block below)
  *   Tier 2  Semantic  — roles → palette    (the --color-* @theme block below)
  *   Tier 3  Component — scoped overrides   (rare under Tailwind utilities)
- * Each Tier-2 --color-* is a light-dark() pair of var(--palette-…) refs; it
- * carries NO raw oklch literal. The Tier-1 palette is inlined at the TOP of
- * this file (a plain :root block, immediately below) rather than split into a
- * sibling file: the single consumer contract requires every consumer to do
- * exactly one `@import "@zudo-sg/ui/styles/colors.css"`, and the consumer
- * Tailwind/Lightning pipeline inlines that package import's CONTENTS but leaves
- * a nested relative `@import "./palette.css"` as a literal, misplaced @import
- * the browser then ignores — dropping the palette entirely. Inlining keeps both
- * tiers in the one bundled file, which the issue allows as equally correct.
+ * Most Tier-2 --color-* values are light-dark() pairs of var(--palette-…) refs.
+ * A few light-mode state/action roles carry zudo-doc-style AA-tuned OKLCH
+ * literals because the minimized shared ramps intentionally do not contain
+ * every contrast-adjusted stop. The Tier-1 palette is inlined at the TOP of this
+ * file (a plain :root block, immediately below) rather than split into a sibling
+ * file: the single consumer contract requires every consumer to do exactly one
+ * `@import "@zudo-sg/ui/styles/colors.css"`, and the consumer Tailwind/Lightning
+ * pipeline inlines that package import's CONTENTS but leaves a nested relative
+ * `@import "./palette.css"` as a literal, misplaced @import the browser then
+ * ignores — dropping the palette entirely. Inlining keeps both tiers in the one
+ * bundled file, which the issue allows as equally correct.
  *
  * RULE: the --palette-* values are raw and MUST NOT be referenced by
  * components. Components bind only to the semantic utilities generated from the
@@ -64,63 +66,33 @@
  * NO bg-palette-* / text-palette-* utility is generated. Only the Tier-2
  * --color-* declarations further down may read these; components NEVER do.
  *
- * Families map to oklch hue:
- *   cool    ~264  cool neutral — ink text + dark surfaces/lines
- *   warm    ~90   warm neutral — light surfaces / lines / on-brand
- *   brand   ~200  primary action / link / focus (cyan)
- *   accent  ~55   accent (amber)
- *   success ~155  success (green)
- *   danger  ~25   danger (red)
- * Numeric indexes run light → dark within each group. A few rungs share lightness
- * but differ in chroma (e.g. cool-8 vs cool-9); kept distinct on purpose
- * so every Tier-2 token resolves byte-for-byte to its original literal.
+ * Groups mirror the zudo-doc 3.x ramp-native palette:
+ *   base    5-step grayscale / warm-neutral ramp, light → dark
+ *   accent  3-step amber action ramp, light/hover → dark
+ *   state   single named status colors for danger/success/warning/info
+ *
+ * Component source must never consume these raw vars directly. Components use
+ * the Tier-2 `--color-*` semantic tokens below, which keep the public contract
+ * stable while this raw palette can keep evolving.
  * ======================================== */
 :root {
-  /* ── Pure white (hue-independent) — lightest raised surface ── */
-  --palette-white-0: oklch(1 0 0);
+  /* ── Base grayscale / warm-neutral ramp, light → dark ── */
+  --palette-base-0: oklch(.965 .004 65); /* light bg / dark fg */
+  --palette-base-1: oklch(.705 .008 65); /* muted on dark / line on light */
+  --palette-base-2: oklch(.480 .008 65); /* muted on light / strong line */
+  --palette-base-3: oklch(.300 .006 65); /* soft ink / raised dark surface */
+  --palette-base-4: oklch(.185 .005 65); /* dark bg / light fg */
 
-  /* ── Cool neutral (hue ~264) — ink text (light) + surfaces/lines (dark) ── */
-  --palette-cool-0:  oklch(0.93 0.01 264);   /* ink (dark) */
-  --palette-cool-1:  oklch(0.72 0.015 264);  /* ink-soft (dark) */
-  --palette-cool-2:  oklch(0.58 0.015 264);  /* ink-mute (light) */
-  --palette-cool-3:  oklch(0.58 0.012 264);  /* ink-mute (dark) */
-  --palette-cool-4:  oklch(0.44 0.02 264);   /* ink-soft (light) */
-  --palette-cool-5:  oklch(0.42 0.016 264);  /* line-strong (dark) */
-  --palette-cool-6:  oklch(0.32 0.014 264);  /* line (dark) */
-  --palette-cool-7:  oklch(0.25 0.014 264);  /* surface-sunken (dark) */
-  --palette-cool-8:  oklch(0.21 0.03 264);   /* ink (light) */
-  --palette-cool-9:  oklch(0.21 0.012 264);  /* surface (dark) */
-  --palette-cool-10: oklch(0.17 0.01 264);   /* paper (dark) */
+  /* ── Accent / amber ramp ── */
+  --palette-accent-0: oklch(.755 .130 64); /* dark hover */
+  --palette-accent-1: oklch(.700 .158 62); /* dark accent */
+  --palette-accent-2: oklch(.470 .120 56); /* light accent */
 
-  /* ── Warm neutral (hue ~90) — light surfaces / lines / on-brand ── */
-  --palette-warm-0: oklch(0.99 0.004 90);   /* paper (light) / on-brand */
-  --palette-warm-1: oklch(0.97 0.006 90);   /* surface-sunken (light) */
-  --palette-warm-2: oklch(0.91 0.008 90);   /* line (light) */
-  --palette-warm-3: oklch(0.83 0.01 90);    /* line-strong (light) */
-
-  /* ── Brand / cyan (hue ~200) — primary action / link / focus ── */
-  --palette-brand-0: oklch(0.96 0.03 200);  /* brand-soft (light) */
-  --palette-brand-1: oklch(0.82 0.11 200);  /* brand-strong (dark) */
-  --palette-brand-2: oklch(0.74 0.12 200);  /* brand (dark) / focus (dark) */
-  --palette-brand-3: oklch(0.52 0.13 200);  /* brand (light) / focus (light) */
-  --palette-brand-4: oklch(0.44 0.13 200);  /* brand-strong (light) */
-  --palette-brand-5: oklch(0.30 0.05 200);  /* brand-soft (dark) */
-
-  /* ── Accent / amber (hue ~55) ── */
-  --palette-accent-0: oklch(0.78 0.14 55);  /* accent (dark) */
-  --palette-accent-1: oklch(0.70 0.16 55);  /* accent (light) */
-
-  /* ── Success / green (hue ~155) ── */
-  --palette-success-0: oklch(0.95 0.04 155); /* success-soft (light) */
-  --palette-success-1: oklch(0.74 0.14 155); /* success (dark) */
-  --palette-success-2: oklch(0.55 0.14 155); /* success (light) */
-  --palette-success-3: oklch(0.30 0.05 155); /* success-soft (dark) */
-
-  /* ── Danger / red (hue ~25) ── */
-  --palette-danger-0: oklch(0.95 0.04 25);  /* danger-soft (light) */
-  --palette-danger-1: oklch(0.72 0.16 25);  /* danger (dark) */
-  --palette-danger-2: oklch(0.55 0.18 25);  /* danger (light) */
-  --palette-danger-3: oklch(0.30 0.06 25);  /* danger-soft (dark) */
+  /* ── State colors ── */
+  --palette-state-danger: oklch(.640 .170 25);
+  --palette-state-success: oklch(.680 .145 145);
+  --palette-state-warning: oklch(.760 .135 82);
+  --palette-state-info: oklch(.680 .130 245);
 
   /* light-dark() requires color-scheme to be declared. */
   color-scheme: light dark;
@@ -130,51 +102,50 @@
   /* ========================================
    * Ink (foreground text) — off-black in light, off-white in dark.
    * ======================================== */
-  --color-ink:      light-dark(var(--palette-cool-8), var(--palette-cool-0));
-  --color-ink-soft: light-dark(var(--palette-cool-4), var(--palette-cool-1));
-  --color-ink-mute: light-dark(var(--palette-cool-2), var(--palette-cool-3));
+  --color-ink:      light-dark(var(--palette-base-4), var(--palette-base-0));
+  --color-ink-soft: light-dark(var(--palette-base-3), var(--palette-base-1));
+  --color-ink-mute: light-dark(var(--palette-base-2), var(--palette-base-1));
 
-  /* On-brand foreground — text/icons that sit on a filled brand surface.
-     Near-white in both schemes (brand stays dark enough behind it), so this is
-     scheme-independent — a direct palette ref, NOT a light-dark() pair. */
-  --color-on-brand: var(--palette-warm-0);
+  /* On-brand foreground — text/icons that sit on filled brand/state surfaces.
+     Dark mode fills are bright, so the foreground flips to base-4. */
+  --color-on-brand: light-dark(var(--palette-base-0), var(--palette-base-4));
 
   /* ========================================
    * Surfaces — page paper, raised surface, sunken surface.
    * Dark surfaces are dark gray (not #000) and step lighter as they raise,
    * matching the light scheme's sunken→paper→surface ordering inverted.
    * ======================================== */
-  --color-paper:          light-dark(var(--palette-warm-0),  var(--palette-cool-10));
-  --color-surface:        light-dark(var(--palette-white-0), var(--palette-cool-9));
-  --color-surface-sunken: light-dark(var(--palette-warm-1),  var(--palette-cool-7));
+  --color-paper:          light-dark(var(--palette-base-0), var(--palette-base-4));
+  --color-surface:        light-dark(var(--palette-base-0), var(--palette-base-4));
+  --color-surface-sunken: light-dark(var(--palette-base-0), var(--palette-base-3));
 
   /* Lines / borders / dividers. */
-  --color-line:        light-dark(var(--palette-warm-2), var(--palette-cool-6));
-  --color-line-strong: light-dark(var(--palette-warm-3), var(--palette-cool-5));
+  --color-line:        light-dark(var(--palette-base-1), var(--palette-base-3));
+  --color-line-strong: light-dark(var(--palette-base-2), var(--palette-base-2));
 
   /* ========================================
-   * Brand — primary action / link hue. Lighter + slightly less chroma in dark.
+   * Brand — primary action / link hue. Uses the same amber ramp as zudo-doc.
    * ======================================== */
-  --color-brand:        light-dark(var(--palette-brand-3), var(--palette-brand-2));
-  --color-brand-strong: light-dark(var(--palette-brand-4), var(--palette-brand-1));
-  --color-brand-soft:   light-dark(var(--palette-brand-0), var(--palette-brand-5));
+  --color-brand:        light-dark(var(--palette-accent-2), var(--palette-accent-1));
+  --color-brand-strong: light-dark(oklch(.400 .096 56), var(--palette-accent-0));
+  --color-brand-soft:   light-dark(var(--palette-base-0), var(--palette-base-4));
 
   /* ========================================
-   * State — accent / success / danger, each with a soft tint companion.
-   * Soft tints invert (pale in light, deep-muted in dark) so they read as the
-   * same role without glowing on a dark surface.
+   * State — accent / success / danger, each with a soft companion.
+   * Soft companions collapse onto the base ramp, matching zudo-doc's flatter
+   * grayscale surface model while status text/fills keep contrast-tuned color.
    * ======================================== */
-  --color-accent:       light-dark(var(--palette-accent-1), var(--palette-accent-0));
+  --color-accent:       light-dark(var(--palette-accent-2), var(--palette-accent-1));
 
-  --color-success:      light-dark(var(--palette-success-2), var(--palette-success-1));
-  --color-success-soft: light-dark(var(--palette-success-0), var(--palette-success-3));
+  --color-success:      light-dark(oklch(.470 .140 145), var(--palette-state-success));
+  --color-success-soft: light-dark(var(--palette-base-0), var(--palette-base-4));
 
-  --color-danger:       light-dark(var(--palette-danger-2), var(--palette-danger-1));
-  --color-danger-soft:  light-dark(var(--palette-danger-0), var(--palette-danger-3));
+  --color-danger:       light-dark(oklch(.505 .170 25), var(--palette-state-danger));
+  --color-danger-soft:  light-dark(var(--palette-base-0), var(--palette-base-4));
 
   /* Focus ring — shared by all interactive components. Resolves identically to
      --color-brand, so it reuses the same brand palette rungs. */
-  --color-focus: light-dark(var(--palette-brand-3), var(--palette-brand-2));
+  --color-focus: light-dark(var(--palette-accent-2), var(--palette-accent-1));
 }
 
 /* ========================================

@@ -61,18 +61,13 @@ const FONT_WEIGHT_OPTIONS = [
 
 /**
  * Tier-1 raw palette — every `--palette-*` in colors.css's `:root` block.
- * Order matches the section order in colors.css (white, cool, warm, brand,
- * accent, success, danger) purely for readability; has no functional effect.
+ * Order matches the section order in colors.css (base, accent, state) purely
+ * for readability; has no functional effect.
  */
 export const PALETTE_NAMES = [
-  "white-0",
-  "cool-0", "cool-1", "cool-2", "cool-3", "cool-4", "cool-5",
-  "cool-6", "cool-7", "cool-8", "cool-9", "cool-10",
-  "warm-0", "warm-1", "warm-2", "warm-3",
-  "brand-0", "brand-1", "brand-2", "brand-3", "brand-4", "brand-5",
-  "accent-0", "accent-1",
-  "success-0", "success-1", "success-2", "success-3",
-  "danger-0", "danger-1", "danger-2", "danger-3",
+  "base-0", "base-1", "base-2", "base-3", "base-4",
+  "accent-0", "accent-1", "accent-2",
+  "state-danger", "state-success", "state-warning", "state-info",
 ];
 
 /**
@@ -96,7 +91,7 @@ export const COLOR_SPECS = [
     cssVar: "--color-on-brand",
     group: "brand",
     note:
-      "Foreground token for branded surfaces (consumed via `text-on-brand`). Flat value (not light-dark()).",
+      "Foreground token for filled brand/state surfaces (consumed via `text-on-brand`).",
   },
   { cssVar: "--color-accent", group: "state" },
   { cssVar: "--color-success", group: "state" },
@@ -348,7 +343,7 @@ const FONT_WEIGHT_OPTIONS = [
 
 /**
  * Tier-1 raw palette colors from \`packages/ui/styles/colors.css\` (the \`:root\`
- * \`--palette-{family}-{step}\` block). This is the raw material beneath the
+ * \`--palette-{group}-{step-or-role}\` block). This is the raw material beneath the
  * semantic \`--color-*\` tokens in UI_COLOR_TOKENS below — same three-tier
  * model the doc-chrome panel exposes via \`--palette-*\` ramps and \`--zd-*\`
  * semantic roles.
@@ -363,7 +358,7 @@ const FONT_WEIGHT_OPTIONS = [
  * Coverage: ${manifest.paletteColors.length} colors.
  */
 export interface UiPaletteColor {
-  /** Palette key without the \`--palette-\` prefix, e.g. "cool-8". */
+  /** Palette key without the \`--palette-\` prefix, e.g. "base-4". */
   name: string;
   /** Raw oklch value, from colors.css. */
   value: string;

@@ -68,8 +68,8 @@ roles:
 
 | Tier | What | Where |
 |---|---|---|
-| **1 — Palette** | Raw oklch values, named `--palette-{group}-{n}` (groups `white`/`cool`/`warm`/`brand`/`accent`/`success`/`danger`, 0-based indexes light→dark within each group) | `styles/colors.css` (top `:root` block) |
-| **2 — Semantic** | Roles → palette: every `--color-*` token is a `light-dark()` pair of `var(--palette-…)` refs | `styles/colors.css` (`@theme`) |
+| **1 — Palette** | Raw oklch values, named `--palette-{group}-{step-or-role}` (groups `base`, `accent`, and `state`) | `styles/colors.css` (top `:root` block) |
+| **2 — Semantic** | Roles → palette: `--color-*` tokens are semantic values backed by palette refs, with a few zudo-doc-style AA-tuned light-mode literals | `styles/colors.css` (`@theme`) |
 | **3 — Component** | Scoped overrides — rarely needed under Tailwind utilities | per-component |
 
 **The palette is raw and is NEVER referenced directly by components.** Components

@@ -22,7 +22,7 @@
  * UI_SIZE_TOKENS from `ui-design-tokens-manifest.ts`. These cover the tokens
  * defined in `packages/ui/styles/tokens.css` and `colors.css`.
  *
- * The Tier-1 `--palette-*` families live in their own reserved `palette` tab
+ * The Tier-1 `--palette-*` groups live in their own reserved `palette` tab
  * (zdtp 0.4.0 — see PALETTE_TAB below), not inside Color. The Color tab stays
  * a generic "Color" tab (`GenericTab`, non-reserved id) — not the dedicated
  * zdtp `ColorTab` cluster, whose ramp-reference semantic model is designed for
@@ -89,12 +89,12 @@ function tierFromGroup(
 // ---------------------------------------------------------------------------
 // Palette tab — zdtp 0.4.0's reserved `palette` tab (joins color/font/spacing/
 // size). It dispatches to PaletteTab, NOT GenericTab, and expects each group
-// of `--palette-{family}-{step}` steps as its own TierConfig (the tier's
+// of `--palette-{group}-{step-or-role}` steps as its own TierConfig (the tier's
 // `label` becomes the group heading; dragging its OKLCH L/C/H curve re-derives
 // every step in that ONE tier and commits the whole group in a single write).
 // A flat single-tier dump (the pre-0.4.0 GenericTab layout this replaces)
-// would put every family on one shared curve, which is wrong — cool/warm/
-// brand/accent/success/danger are independent scales. The tab also gets a
+// would put every group on one shared curve, which is wrong — base/accent/state
+// are independent scales. The tab also gets a
 // WCAG contrast-checker ("Check" mode) over the whole flattened palette for
 // free, with no extra config.
 //
@@ -104,12 +104,14 @@ function tierFromGroup(
 // ---------------------------------------------------------------------------
 
 /**
- * Split a `UI_PALETTE_COLORS` name (e.g. "cool-8" or "white-0") into its
- * family ("cool"/"white") and numeric step ("8"/"0"). Names with no numeric
- * step are kept as single-item families for defensive compatibility, but the
- * committed @zudo-sg/ui palette is fully indexed.
+ * Split a `UI_PALETTE_COLORS` name (e.g. "base-4" or "state-danger") into its
+ * group ("base"/"state") and step/role ("4"/"danger"). Names with no
+ * recognized grouping are kept as single-item families for defensive
+ * compatibility, but the committed @zudo-sg/ui palette uses grouped names.
  */
 function splitPaletteName(name: string): { family: string; step: string | null } {
+  const stateMatch = /^state-(.+)$/.exec(name);
+  if (stateMatch) return { family: "state", step: stateMatch[1] ?? null };
   const match = /^(.+)-(\d+)$/.exec(name);
   if (!match) return { family: name, step: null };
   const [, family, step] = match;

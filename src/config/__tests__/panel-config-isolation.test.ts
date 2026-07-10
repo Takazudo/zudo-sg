@@ -188,28 +188,37 @@ describe("panel config isolation", () => {
     // when no cluster is resolved from the tab.
     expect(paletteTab?.colorExtras).toBeUndefined();
 
-    // One TierConfig per --palette-{family}-{step} family (white/cool/warm/
-    // brand/accent/success/danger), matching UI_PALETTE_COLORS in
-    // ui-design-tokens-manifest.ts — NOT one flat 32-item tier, since the
-    // curve editor derives every step in a tier from one shared curve.
+    // One TierConfig per --palette-{group}-{step-or-role} group (base/accent/
+    // state), matching UI_PALETTE_COLORS in ui-design-tokens-manifest.ts —
+    // NOT one flat tier, since the curve editor derives every step in a tier
+    // from one shared curve.
     const tierIds = paletteTab?.tiers.map((t) => t.id).sort();
     expect(tierIds).toEqual(
-      [
-        "palette-accent",
-        "palette-brand",
-        "palette-cool",
-        "palette-danger",
-        "palette-success",
-        "palette-warm",
-        "palette-white",
-      ].sort(),
+      ["palette-accent", "palette-base", "palette-state"].sort(),
     );
     const totalItems = paletteTab?.tiers.reduce((n, t) => n + t.items.length, 0);
-    expect(totalItems).toBe(32);
-    const whiteTier = paletteTab?.tiers.find((t) => t.id === "palette-white");
-    expect(whiteTier?.items.map((item) => item.id)).toEqual(["palette-white-0"]);
-    expect(whiteTier?.items.map((item) => item.cssVar)).toEqual([
-      "--palette-white-0",
+    expect(totalItems).toBe(12);
+    const baseTier = paletteTab?.tiers.find((t) => t.id === "palette-base");
+    expect(baseTier?.items.map((item) => item.id)).toEqual([
+      "palette-base-0",
+      "palette-base-1",
+      "palette-base-2",
+      "palette-base-3",
+      "palette-base-4",
+    ]);
+    expect(baseTier?.items.map((item) => item.cssVar)).toEqual([
+      "--palette-base-0",
+      "--palette-base-1",
+      "--palette-base-2",
+      "--palette-base-3",
+      "--palette-base-4",
+    ]);
+    const stateTier = paletteTab?.tiers.find((t) => t.id === "palette-state");
+    expect(stateTier?.items.map((item) => item.id)).toEqual([
+      "palette-state-danger",
+      "palette-state-success",
+      "palette-state-warning",
+      "palette-state-info",
     ]);
     // Every item opts into the lossless OKLCH color picker (zdtp >= 0.3.3).
     for (const tier of paletteTab?.tiers ?? []) {

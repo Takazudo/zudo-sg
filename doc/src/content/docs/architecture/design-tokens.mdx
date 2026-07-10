@@ -32,11 +32,11 @@ The UI package follows the [Three-Tier Color Strategy](https://zudo-css-wisdom.t
 
 | Tier | Purpose | Source |
 | --- | --- | --- |
-| Palette | Raw OKLCH values named `--palette-{group}-{n}` | `packages/ui/styles/colors.css` |
-| Semantic | `--color-*` roles that point to palette values with `light-dark()` | `packages/ui/styles/colors.css` |
+| Palette | Raw OKLCH values named `--palette-{group}-{step-or-role}` | `packages/ui/styles/colors.css` |
+| Semantic | `--color-*` roles backed by palette refs, with a few zudo-doc-style AA-tuned light-mode literals | `packages/ui/styles/colors.css` |
 | Component | Scoped overrides when a component truly needs them | component code or CSS |
 
-Palette groups include `white`, `cool`, `warm`, `brand`, `accent`, `success`, and `danger`, with numeric steps ordered from light to dark inside each group.
+Palette groups include `base`, `accent`, and `state`. `base` is the grayscale / warm-neutral ramp, `accent` is the amber action ramp, and `state` contains named status colors.
 
 :::note[No palette utilities]
 Palette variables live in plain `:root`, not Tailwind `@theme`, so Tailwind does not generate `bg-palette-*` or `text-palette-*` utilities. Components must bind to semantic `--color-*` roles instead.
