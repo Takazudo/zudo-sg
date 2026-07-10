@@ -10,6 +10,7 @@ import { INDENT, BASE_PAD, connectorLeft, ConnectorLines, CategoryLinkIcon } fro
 // BARE ThemeToggle (#2012 E2) — this footer toggle renders inside the
 // SidebarToggle island, so it must NOT bring its own island wrapper.
 import { ThemeToggle } from "@takazudo/zudo-doc/theme-toggle";
+import { AFTER_NAVIGATE_EVENT, BEFORE_NAVIGATE_EVENT } from "@takazudo/zudo-doc/transitions";
 import { smartBreakToHtml } from "@/utils/smart-break";
 
 function ToggleChevron({ isExpanded, className }: { isExpanded: boolean; className?: string }) {
@@ -70,24 +71,62 @@ function findActiveSlug(nodes: NavNode[], pathname: string): string | undefined 
   return undefined;
 }
 
+function deriveActiveSlugFromUrl(nodes: NavNode[]): string | undefined {
+  if (typeof window === "undefined") return undefined;
+  const pathname = normalizePath(window.location.pathname);
+  return findActiveSlug(nodes, pathname);
+}
+
 /** Track current active slug, updating on View Transition navigations */
 function useActiveSlug(nodes: NavNode[], initial?: string): string | undefined {
-  const [slug, setSlug] = useState(initial);
+  const [slug, setSlug] = useState<string | undefined>(() =>
+    initial !== undefined ? initial : deriveActiveSlugFromUrl(nodes),
+  );
 
   useEffect(() => {
     const update = () => {
-      const pathname = normalizePath(window.location.pathname);
-      const found = findActiveSlug(nodes, pathname);
+      const found = deriveActiveSlugFromUrl(nodes);
       if (found !== undefined) setSlug(found);
     };
     update();
-    document.addEventListener("DOMContentLoaded", update);
-    return () => {
-      document.removeEventListener("DOMContentLoaded", update);
-    };
+    document.addEventListener(AFTER_NAVIGATE_EVENT, update);
+    return () => document.removeEventListener(AFTER_NAVIGATE_EVENT, update);
   }, [nodes]);
 
   return slug;
+}
+
+function useSidebarScrollPreserve() {
+  useEffect(() => {
+    let savedScrollTop = 0;
+    let restoreTimer: ReturnType<typeof setTimeout> | undefined;
+
+    const onBefore = () => {
+      if (restoreTimer !== undefined) {
+        clearTimeout(restoreTimer);
+        restoreTimer = undefined;
+      }
+      const aside = document.querySelector<HTMLElement>("#desktop-sidebar");
+      if (aside) savedScrollTop = aside.scrollTop;
+    };
+
+    const onAfter = () => {
+      const aside = document.querySelector<HTMLElement>("#desktop-sidebar");
+      if (!aside) return;
+      restoreTimer = setTimeout(() => {
+        restoreTimer = undefined;
+        aside.scrollTop = savedScrollTop;
+      }, 50);
+    };
+
+    document.addEventListener(BEFORE_NAVIGATE_EVENT, onBefore);
+    document.addEventListener(AFTER_NAVIGATE_EVENT, onAfter);
+    return () => {
+      document.removeEventListener(BEFORE_NAVIGATE_EVENT, onBefore);
+      document.removeEventListener(AFTER_NAVIGATE_EVENT, onAfter);
+      if (restoreTimer !== undefined) clearTimeout(restoreTimer);
+    };
+  }, []);
 }
 
 function filterTree(nodes: NavNode[], query: string): NavNode[] {
@@ -187,8 +226,9 @@ function SidebarFooter({ links, themeDefaultMode }: { links?: LocaleLink[]; them
   );
 }
 
-export default function SidebarTree({ nodes, currentSlug, rootMenuItems, backToMenuLabel, localeLinks, themeDefaultMode }: SidebarTreeProps) {
+export default function RootSidebarTree({ nodes, currentSlug, rootMenuItems, backToMenuLabel, localeLinks, themeDefaultMode }: SidebarTreeProps) {
   const activeSlug = useActiveSlug(nodes, currentSlug);
+  useSidebarScrollPreserve();
   const [query, setQuery] = useState("");
   const [showingRootMenu, setShowingRootMenu] = useState(false);
   const filterRef = useRef<HTMLInputElement>(null);

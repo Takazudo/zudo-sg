@@ -33,6 +33,7 @@ import { Island } from "@takazudo/zfb";
 import { settings } from "@/config/settings";
 import { SidebarResizerInit } from "@takazudo/zudo-doc/sidebar-resizer";
 import { PageLoadingOverlay } from "@takazudo/zudo-doc/page-loading";
+import { AFTER_NAVIGATE_EVENT, BEFORE_NAVIGATE_EVENT } from "@takazudo/zudo-doc/transitions";
 
 // #113: adopt the package enlarge/ai-chat islands directly (the former
 // src/components/{image-enlarge,mermaid-enlarge,ai-chat-modal} forks were
@@ -44,6 +45,7 @@ import { AiChatModal } from "@takazudo/zudo-doc/ai-chat-modal";
 import { ImageEnlarge, ImageEnlargeSsrFallback } from "@takazudo/zudo-doc/image-enlarge";
 import { MermaidEnlarge, MermaidEnlargeSsrFallback } from "@takazudo/zudo-doc/mermaid-enlarge";
 
+import ClientRouterBootstrap from "@/components/client-router-bootstrap";
 import DesignTokenPanelBootstrap from "@/components/design-token-panel-bootstrap";
 import PreviewTokenPanelBootstrap from "@/components/preview-token-panel-bootstrap";
 
@@ -56,6 +58,8 @@ import PreviewTokenPanelBootstrap from "@/components/preview-token-panel-bootstr
 // belt-and-braces guard for production minification regressions.
 (DesignTokenPanelBootstrap as { displayName?: string }).displayName = "DesignTokenPanelBootstrap";
 (PreviewTokenPanelBootstrap as { displayName?: string }).displayName = "PreviewTokenPanelBootstrap";
+(ClientRouterBootstrap as { displayName?: string }).displayName =
+  "ClientRouterBootstrap";
 
 /**
  * Default sr-only label rendered as the AiChatModal SSR fallback. This
@@ -66,6 +70,35 @@ import PreviewTokenPanelBootstrap from "@/components/preview-token-panel-bootstr
  * localise.
  */
 const DEFAULT_AI_CHAT_BODY_LABEL = "Ask a question about the documentation.";
+
+const SIDEBAR_SCROLL_RESTORE_SCRIPT = `(${function sidebarScrollRestore(
+  beforeEvent: string,
+  afterEvent: string,
+) {
+  const w = window as Window & { __zdSidebarScrollRestoreInstalled?: boolean };
+  if (w.__zdSidebarScrollRestoreInstalled) return;
+  w.__zdSidebarScrollRestoreInstalled = true;
+
+  let savedScrollTop = 0;
+  let restoreTimer: ReturnType<typeof setTimeout> | undefined;
+  const sidebar = () => document.querySelector<HTMLElement>("#desktop-sidebar");
+
+  document.addEventListener(beforeEvent, () => {
+    if (restoreTimer !== undefined) {
+      clearTimeout(restoreTimer);
+      restoreTimer = undefined;
+    }
+    savedScrollTop = sidebar()?.scrollTop ?? 0;
+  });
+
+  document.addEventListener(afterEvent, () => {
+    restoreTimer = setTimeout(() => {
+      restoreTimer = undefined;
+      const aside = sidebar();
+      if (aside) aside.scrollTop = savedScrollTop;
+    }, 50);
+  });
+}.toString()})(${JSON.stringify(BEFORE_NAVIGATE_EVENT)},${JSON.stringify(AFTER_NAVIGATE_EVENT)});`;
 
 /** Props for {@link BodyEndIslands}. */
 export interface BodyEndIslandsProps {
@@ -171,7 +204,18 @@ export function BodyEndIslands({
 
   return (
     <>
-      {settings.dynamicPageTransition ? <PageLoadingOverlay /> : null}
+      {settings.dynamicPageTransition ? (
+        <>
+          <PageLoadingOverlay />
+          <script dangerouslySetInnerHTML={{ __html: SIDEBAR_SCROLL_RESTORE_SCRIPT }} />
+          {
+            Island({
+              when: "load",
+              children: <ClientRouterBootstrap />,
+            }) as unknown as VNode
+          }
+        </>
+      ) : null}
       {aiAssistant}
       {imageEnlarge}
       {mermaidEnlarge}
