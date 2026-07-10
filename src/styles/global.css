@@ -64,37 +64,31 @@
 /* ========================================
  * Styleguide catalog — feature CSS import (#122, #167)
  *
- * Grouped here with the other @imports because CSS requires @import to
- * precede all non-import rules; it used to sit after every rule at the
- * bottom of this file, which is invalid (tolerated only because zfb/Lightning
- * inlines @imports at build time regardless of source position — see #167
- * for the fix).
+ * Grouped with the other @imports because CSS requires @import to precede
+ * all non-import rules — it used to sit after every rule at the bottom of
+ * this file, which is invalid (tolerated only because zfb/Lightning inlines
+ * @imports at build time regardless of source position; see #167 for the fix).
  *
- * Deliberately kept UNLAYERED rather than wrapped in e.g. `layer(sg-feature)`:
- * `tailwindcss/utilities` above MUST stay unlayered too — that's a hard
- * requirement from @takazudo/zudo-doc/content.css's own "Consumer contract"
- * (its flow-space fix depends on unlayered `mt-*` utilities beating the
- * zd-flow layer, see the file header comment and zudolab/zudo-doc#2082/#2109).
- * Cascade layers always outrank specificity: an unlayered rule beats a
- * layered one regardless of layer order or selector specificity, so wrapping
- * this import in ANY layer would make it permanently lose to
- * `tailwindcss/utilities`'s generated classes — flipping the two places the
- * feature CSS overrides framework chrome: `.sg-header-region > [data-header]`
- * (padding-right, vs. the header's `px-hsp-lg` utility — which Tailwind v4
- * compiles to the logical `padding-inline` shorthand, a "corresponding
- * property" pair with `padding-right` per the CSS Logical Properties spec)
- * and `.zd-doc-content-band:has(#sg-code-panel)` (gap, vs. the content
- * band's `gap-[clamp(...)]` utility). Both feature selectors carry higher
- * specificity than the single-class utility they override — the attribute
- * selector and the `:has(#sg-code-panel)` ID argument each add specificity a
- * plain utility class can't match — AND this import still comes after
- * `tailwindcss/utilities` in source order (moved up INTO the top import
- * block, not above it), so the override holds whichever of the two the UA
- * uses to break the tie. This file's own body rules below share no
- * selector+property pair with the feature CSS either (the only shared class,
- * `.zd-doc-content-band`, is touched for different properties — max-width
- * transition here vs. flex-direction/gap there), so relocating the import
- * above them changes nothing there.
+ * Deliberately kept UNLAYERED, not wrapped in e.g. `layer(sg-feature)`:
+ * `tailwindcss/utilities` above MUST stay unlayered too — that's required by
+ * @takazudo/zudo-doc/content.css's own "Consumer contract" (its flow-space
+ * fix needs unlayered `mt-*` utilities to beat the zd-flow layer; see the
+ * file header comment and zudolab/zudo-doc#2082/#2109). An unlayered rule
+ * always beats a layered one regardless of specificity, so layering this
+ * import would make it permanently lose to `tailwindcss/utilities` — flipping
+ * two framework overrides: `.sg-header-region > [data-header]` (padding-right,
+ * vs. the header's `px-hsp-lg` utility — Tailwind v4 compiles that to the
+ * logical `padding-inline` shorthand, a "corresponding property" pair with
+ * `padding-right`) and `.zd-doc-content-band:has(#sg-code-panel)` (gap, vs.
+ * the content band's `gap-[clamp(...)]` utility). Both feature selectors
+ * carry higher specificity than the single-class utility they override (the
+ * attribute selector and the `:has(#sg-code-panel)` ID argument), and this
+ * import still comes after `tailwindcss/utilities` in source order — moved
+ * up INTO the top import block, not above it — so the override holds either
+ * way. This file's own body rules below share no selector+property pair with
+ * the feature CSS (the only shared class, `.zd-doc-content-band`, is touched
+ * for different properties there — max-width transition vs. flex-direction/
+ * gap here), so relocating the import above them changes nothing.
  * ======================================== */
 @import "../features/styleguide/styles.css";
 
