@@ -62,6 +62,37 @@
 @import "@takazudo/zudo-doc/page-loading.css";
 
 /* ========================================
+ * Styleguide catalog — feature CSS import (#122, #167)
+ *
+ * Grouped with the other @imports because CSS requires @import to precede
+ * all non-import rules — it used to sit after every rule at the bottom of
+ * this file, which is invalid (tolerated only because zfb/Lightning inlines
+ * @imports at build time regardless of source position; see #167 for the fix).
+ *
+ * Deliberately kept UNLAYERED, not wrapped in e.g. `layer(sg-feature)`:
+ * `tailwindcss/utilities` above MUST stay unlayered too — that's required by
+ * @takazudo/zudo-doc/content.css's own "Consumer contract" (its flow-space
+ * fix needs unlayered `mt-*` utilities to beat the zd-flow layer; see the
+ * file header comment and zudolab/zudo-doc#2082/#2109). An unlayered rule
+ * always beats a layered one regardless of specificity, so layering this
+ * import would make it permanently lose to `tailwindcss/utilities` — flipping
+ * two framework overrides: `.sg-header-region > [data-header]` (padding-right,
+ * vs. the header's `px-hsp-lg` utility — Tailwind v4 compiles that to the
+ * logical `padding-inline` shorthand, a "corresponding property" pair with
+ * `padding-right`) and `.zd-doc-content-band:has(#sg-code-panel)` (gap, vs.
+ * the content band's `gap-[clamp(...)]` utility). Both feature selectors
+ * carry higher specificity than the single-class utility they override (the
+ * attribute selector and the `:has(#sg-code-panel)` ID argument), and this
+ * import still comes after `tailwindcss/utilities` in source order — moved
+ * up INTO the top import block, not above it — so the override holds either
+ * way. This file's own body rules below share no selector+property pair with
+ * the feature CSS (the only shared class, `.zd-doc-content-band`, is touched
+ * for different properties there — max-width transition vs. flex-direction/
+ * gap here), so relocating the import above them changes nothing.
+ * ======================================== */
+@import "../features/styleguide/styles.css";
+
+/* ========================================
  * Tailwind v4 content sources
  *
  * Without a `.git` directory in the project root Tailwind v4's content
@@ -354,7 +385,13 @@ pre[class^="syntect-"].word-wrap code {
  * — CSS custom properties only, no `color` declaration — depending on this
  * rule to resolve light-dark(var(--shiki-light), var(--shiki-dark)) to the
  * active theme. Shiki spans have no inline `color`, so the rule applies
- * without needing !important. */
+ * without needing !important.
+ *
+ * Token *legibility* (WCAG-AA contrast) is NOT tuned here — the token hex
+ * values are baked per-span by syntect at build time, so they can only be
+ * fixed at the theme level. The site ships WCAG-AA variants of base16-ocean;
+ * see `codeHighlight` in zfb.config.ts and src/styles/syntect-themes/*.tmTheme
+ * (#169). Do not attempt a per-token contrast fix in this file. */
 [data-theme] .shiki,
 [data-theme] .shiki span,
 [data-theme] pre[class^="syntect-"],
@@ -1004,17 +1041,3 @@ dialog.zd-mermaid-dialog::backdrop {
 .diff-line-empty {
   background-color: color-mix(in oklch, var(--color-muted) 8%, transparent);
 }
-
-/* Styleguide catalog — feature CSS, split into its own file beside the
- * feature code (issue #122). See that file's header for what is/isn't
- * duplicated here.
- *
- * Placed LAST, not with the top-level @imports, ON PURPOSE: zfb/Lightning
- * inlines this import at BUILD time (the shipped dist CSS contains these rules,
- * not a runtime `@import` — verified), so its position controls the inlined
- * cascade order. Keeping it here preserves the intended "feature styles after
- * base" precedence. Do NOT hoist it to the top import block to satisfy the
- * "@import must precede rules" CSS rule — that would flip the inlined cascade.
- * The clean fix (valid position + explicit cascade) is a dedicated @layer;
- * tracked as a follow-up rather than done on the release. */
-@import "../features/styleguide/styles.css";

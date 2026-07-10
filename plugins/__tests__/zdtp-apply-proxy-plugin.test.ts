@@ -232,6 +232,25 @@ describe("createDevMiddlewareHandler", () => {
     expect(readColorsCss()).toBe(before);
   });
 
+  it("answers OPTIONS with 204 instead of 405, without touching the apply pipeline", async () => {
+    const handler = createDevMiddlewareHandler({
+      rootDir: sandbox,
+      writeRoot: sandbox,
+      routing: { palette: "colors.css" },
+    });
+    const before = readColorsCss();
+
+    const res = await handler({ method: "OPTIONS", url: APPLY_PATH, headers: {} });
+
+    expect(res.status).toBe(204);
+    // Must advertise OPTIONS itself, not just POST — otherwise a regression of
+    // ALLOWED_METHODS back to "POST" would still pass. 204 carries no body.
+    expect(res.headers?.allow).toContain("POST");
+    expect(res.headers?.allow).toContain("OPTIONS");
+    expect(res.body ?? "").toBe("");
+    expect(readColorsCss()).toBe(before);
+  });
+
   it("returns 400 for a malformed JSON body", async () => {
     const handler = createDevMiddlewareHandler({
       rootDir: sandbox,
