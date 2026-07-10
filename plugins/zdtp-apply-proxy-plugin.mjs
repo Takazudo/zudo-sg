@@ -101,6 +101,17 @@ export async function fromFetchResponse(res) {
 export function createDevMiddlewareHandler({ rootDir, writeRoot, routing }) {
   const applyHandler = createApplyHandler({ rootDir, writeRoot, routing });
   return async function handleApplyRequest(zfbReq) {
+    if (zfbReq.method === "OPTIONS") {
+      // Benign capability probe, not a real request — no write happens for
+      // OPTIONS, so answering it doesn't grant anything beyond what POST
+      // already allows. zdtp's own reference `/apply` protocol documents
+      // "OPTIONS /apply — CORS preflight" as part of the endpoint contract
+      // (node_modules/@takazudo/zdtp README §4); this same-origin devMiddleware
+      // skips zdtp's CORS allow-list layer entirely, so there's no Origin to
+      // check here — just acknowledge POST is the supported method instead of
+      // 405ing a request the real Apply POST never depended on succeeding.
+      return { status: 204, headers: { allow: "POST, OPTIONS" } };
+    }
     if (zfbReq.method !== "POST") {
       return { status: 405, headers: { allow: "POST" }, body: "Method Not Allowed" };
     }
