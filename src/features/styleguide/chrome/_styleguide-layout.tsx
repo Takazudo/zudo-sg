@@ -183,6 +183,7 @@ export function StyleguideLayout({
       lang={lang}
       noindex={settings.noindex}
       hideToc={!showCodePanel}
+      sidebarPersistKey={`sidebar-${lang}-components`}
       headerOverride={composedHeader}
       sidebarOverride={sidebarOverride}
       tocOverride={tocOverride}

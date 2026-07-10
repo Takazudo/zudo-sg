@@ -1,4 +1,32 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
+
+async function clickAndWaitForSwap(page: Page, selector: string): Promise<boolean> {
+  const swapPromise = page.evaluate(() => {
+    return new Promise<boolean>((resolve) => {
+      const timeout = window.setTimeout(() => resolve(false), 10_000);
+      document.addEventListener(
+        "zfb:after-swap",
+        () => {
+          window.clearTimeout(timeout);
+          resolve(true);
+        },
+        { once: true },
+      );
+    });
+  });
+
+  await page.evaluate((targetSelector) => {
+    const target = document.querySelector<HTMLElement>(targetSelector);
+    if (!target) throw new Error(`Missing navigation target: ${targetSelector}`);
+    target.click();
+  }, selector);
+
+  try {
+    return await swapPromise;
+  } catch {
+    return false;
+  }
+}
 
 // T1 smoke: verify the built site renders without JS errors.
 // Intentionally minimal — a single page load that confirms:
@@ -157,4 +185,90 @@ test("/components/tokens renders design-token playground", async ({ page }) => {
   // At least one token swatch (color section) should be rendered SSR.
   const firstToken = page.locator("[data-sg-token]").first();
   await expect(firstToken).toBeAttached();
+});
+
+test("styleguide sidebar preserves DOM identity and scroll across page transitions", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 320 });
+
+  const response = await page.goto("/components", {
+    waitUntil: "domcontentloaded",
+  });
+  expect(response?.status()).toBe(200);
+  await page.waitForLoadState("networkidle");
+
+  const sidebar = page.locator("#desktop-sidebar[data-zfb-transition-persist]");
+  await expect(sidebar).toBeAttached();
+
+  const scrollInfo = await page.evaluate(() => {
+    const aside = document.querySelector<HTMLElement>("#desktop-sidebar");
+    if (!aside) {
+      return { scrollable: false, scrollTop: -1, scrollHeight: 0, clientHeight: 0 };
+    }
+
+    // Tag the actual DOM node. If zfb persistence is not wired, this property
+    // disappears when the body is swapped.
+    (aside as HTMLElement & { __sidebarPersistMarker__?: string }).__sidebarPersistMarker__ =
+      "styleguide-sidebar";
+
+    const scrollable = aside.scrollHeight > aside.clientHeight;
+    if (scrollable) {
+      aside.scrollTop = Math.min(120, aside.scrollHeight - aside.clientHeight);
+    }
+
+    return {
+      scrollable,
+      scrollTop: aside.scrollTop,
+      scrollHeight: aside.scrollHeight,
+      clientHeight: aside.clientHeight,
+    };
+  });
+
+  expect(
+    scrollInfo.scrollable,
+    `Expected #desktop-sidebar to be scrollable, got scrollHeight=${scrollInfo.scrollHeight}, clientHeight=${scrollInfo.clientHeight}`,
+  ).toBe(true);
+  expect(scrollInfo.scrollTop).toBeGreaterThan(0);
+
+  const targetSelector = '#desktop-sidebar a[href="/components/button"]';
+  await expect(page.locator(targetSelector)).toBeAttached();
+
+  const swapFired = await clickAndWaitForSwap(page, targetSelector);
+  expect(swapFired, "zfb:after-swap should fire for /components navigation").toBe(true);
+
+  await page
+    .locator('#desktop-sidebar a[href="/components/button"][aria-current="page"]')
+    .waitFor({ state: "attached", timeout: 5_000 });
+
+  const postSwap = await page.evaluate(() => {
+    const aside = document.querySelector<HTMLElement>("#desktop-sidebar");
+    const active = document.querySelector<HTMLAnchorElement>(
+      '#desktop-sidebar a[href="/components/button"]',
+    );
+    return {
+      marker: (aside as (HTMLElement & { __sidebarPersistMarker__?: string }) | null)
+        ?.__sidebarPersistMarker__,
+      persistKey: aside?.getAttribute("data-zfb-transition-persist") ?? null,
+      active: active?.getAttribute("aria-current") ?? null,
+    };
+  });
+
+  expect(postSwap.marker, "sidebar DOM node should survive the SPA swap").toBe(
+    "styleguide-sidebar",
+  );
+  expect(postSwap.persistKey).toBe("sidebar-en-components");
+  await expect
+    .poll(
+      () =>
+        page.evaluate(
+          () => document.querySelector<HTMLElement>("#desktop-sidebar")?.scrollTop ?? -1,
+        ),
+      {
+        message: "sidebar scrollTop should be preserved after the SPA swap",
+        timeout: 2_000,
+      },
+    )
+    .toBeGreaterThanOrEqual(scrollInfo.scrollTop - 30);
+  expect(postSwap.active).toBe("page");
 });
