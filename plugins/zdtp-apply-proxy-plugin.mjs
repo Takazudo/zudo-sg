@@ -90,6 +90,11 @@ export async function fromFetchResponse(res) {
   return { status: res.status, headers, body: await res.text(), bodyEncoding: "utf8" };
 }
 
+// The only methods this endpoint ever supports — shared by the OPTIONS and
+// 405 branches below so the advertised `Allow` header can't drift between
+// them.
+const ALLOWED_METHODS = "POST, OPTIONS";
+
 /**
  * Build the devMiddleware handler for the apply endpoint. Extracted from the
  * `devMiddleware` hook so it can be unit-tested directly against temp CSS
@@ -98,11 +103,6 @@ export async function fromFetchResponse(res) {
  * @param {{ rootDir: string, writeRoot: string, routing: ApplyRoutingMap }} options
  * @returns {(zfbReq: ZfbDevMiddlewareRequest) => Promise<ZfbDevMiddlewareResponse>}
  */
-// The only methods this endpoint ever supports — shared by the OPTIONS and
-// 405 branches below so the advertised `Allow` header can't drift between
-// them.
-const ALLOWED_METHODS = "POST, OPTIONS";
-
 export function createDevMiddlewareHandler({ rootDir, writeRoot, routing }) {
   const applyHandler = createApplyHandler({ rootDir, writeRoot, routing });
   return async function handleApplyRequest(zfbReq) {
