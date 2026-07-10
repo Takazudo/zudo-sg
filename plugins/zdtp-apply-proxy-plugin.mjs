@@ -98,6 +98,11 @@ export async function fromFetchResponse(res) {
  * @param {{ rootDir: string, writeRoot: string, routing: ApplyRoutingMap }} options
  * @returns {(zfbReq: ZfbDevMiddlewareRequest) => Promise<ZfbDevMiddlewareResponse>}
  */
+// The only methods this endpoint ever supports — shared by the OPTIONS and
+// 405 branches below so the advertised `Allow` header can't drift between
+// them.
+const ALLOWED_METHODS = "POST, OPTIONS";
+
 export function createDevMiddlewareHandler({ rootDir, writeRoot, routing }) {
   const applyHandler = createApplyHandler({ rootDir, writeRoot, routing });
   return async function handleApplyRequest(zfbReq) {
@@ -106,14 +111,14 @@ export function createDevMiddlewareHandler({ rootDir, writeRoot, routing }) {
       // OPTIONS, so answering it doesn't grant anything beyond what POST
       // already allows. zdtp's own reference `/apply` protocol documents
       // "OPTIONS /apply — CORS preflight" as part of the endpoint contract
-      // (node_modules/@takazudo/zdtp README §4); this same-origin devMiddleware
-      // skips zdtp's CORS allow-list layer entirely, so there's no Origin to
-      // check here — just acknowledge POST is the supported method instead of
-      // 405ing a request the real Apply POST never depended on succeeding.
-      return { status: 204, headers: { allow: "POST, OPTIONS" } };
+      // (node_modules/@takazudo/zdtp README §3.4); this same-origin devMiddleware
+      // skips zdtp's CORS allow-list layer entirely (no Origin to check), so
+      // this just mirrors that contract's success shape instead of 405ing a
+      // request the real Apply POST never depended on succeeding.
+      return { status: 204, headers: { allow: ALLOWED_METHODS } };
     }
     if (zfbReq.method !== "POST") {
-      return { status: 405, headers: { allow: "POST" }, body: "Method Not Allowed" };
+      return { status: 405, headers: { allow: ALLOWED_METHODS }, body: "Method Not Allowed" };
     }
     const res = await applyHandler(toFetchRequest(zfbReq));
     return fromFetchResponse(res);
