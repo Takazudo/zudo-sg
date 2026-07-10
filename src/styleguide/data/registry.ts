@@ -100,12 +100,17 @@ function buildEntries(): StoryEntry[] {
     // `Object.entries(mod)` above enumerates the ES-module namespace's keys
     // alphabetically, so re-sort into authored source order using the codegen-
     // emitted list (superset of any `export const` — used only to rank, never
-    // to gate; unknown exports sort to the end). This fixes both tab order and
-    // the default tab (`variants[0]`). See #128 / #174.
+    // to gate; unknown exports sort to the end, preserving their relative order
+    // via a stable sort). This fixes both tab order and the default tab
+    // (`variants[0]`). See #128 / #174.
+    // Rank unknowns as `order.length` (a FINITE sentinel past every known
+    // index), not Infinity — two unknowns would make `Infinity - Infinity` NaN,
+    // an undefined comparator result. In practice every variant is in the
+    // superset, so this is purely defensive.
     const order = storyExportOrder[path] ?? [];
     const rank = (name: string): number => {
       const i = order.indexOf(name);
-      return i === -1 ? Number.POSITIVE_INFINITY : i;
+      return i === -1 ? order.length : i;
     };
     variants.sort((a, b) => rank(a.exportName) - rank(b.exportName));
 
