@@ -57,6 +57,22 @@ export default defineConfig({
   // index, llms.txt, claude-resources) — see node_modules/@takazudo/zudo-doc
   // /dist/preset.d.ts for the full fragment this spreads in.
   ...preset,
+  // Override the preset's syntect code theme (base16-ocean.light/.dark) with
+  // WCAG-AA-compliant variants (#169 / supersedes #133). The stock base16-ocean
+  // palette fails AA for normal text: in light mode 6 of 7 token colors are
+  // <4.5:1 on its #eff1f5 background (only the default-text grey passes), and in
+  // dark mode the comment + red tokens fail on #2b303b. Token colors are baked
+  // per-span inline by syntect at build time, so they can't be remapped in CSS —
+  // the only fix is at the theme level. These two themes are base16-ocean with
+  // ONLY the sub-AA token hues nudged (hue preserved) to >=4.5:1 against each
+  // theme's own background; backgrounds and default text are unchanged. See
+  // src/styles/syntect-themes/*.tmTheme. Referenced by each theme's internal
+  // `name`, not filename.
+  codeHighlight: {
+    themesDir: "src/styles/syntect-themes",
+    themeLight: "Base16 Ocean Light A11y",
+    themeDark: "Base16 Ocean Dark A11y",
+  },
   // Per-component docs (#119): an OPTIONAL MDX file co-located with each
   // component (`packages/ui/src/<name>/<name>.mdx`) rendered inline as a
   // section on the host-owned `/components/<slug>` detail page (NOT its own
