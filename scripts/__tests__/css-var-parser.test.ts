@@ -23,20 +23,20 @@ describe("parseCssCustomProperties", () => {
   });
 
   it("extracts declarations from a plain :root block", () => {
-    const css = `:root { --palette-cool-8: oklch(0.21 0.03 264); }`;
+    const css = `:root { --palette-base-4: oklch(.185 .005 65); }`;
     const vars = parseCssCustomProperties(css);
-    expect(vars.get("--palette-cool-8")).toBe("oklch(0.21 0.03 264)");
+    expect(vars.get("--palette-base-4")).toBe("oklch(.185 .005 65)");
   });
 
   it("keeps a light-dark() pair intact — commas inside parens are not split", () => {
     const css = `
       @theme {
-        --color-ink: light-dark(var(--palette-cool-8), var(--palette-cool-0));
+        --color-ink: light-dark(var(--palette-base-4), var(--palette-base-0));
       }
     `;
     const vars = parseCssCustomProperties(css);
     expect(vars.get("--color-ink")).toBe(
-      "light-dark(var(--palette-cool-8), var(--palette-cool-0))",
+      "light-dark(var(--palette-base-4), var(--palette-base-0))",
     );
   });
 
@@ -46,13 +46,13 @@ describe("parseCssCustomProperties", () => {
     const css = `
       @theme {
         --shadow-card:
-          0 0.5px 1px  oklch(0.21 0.03 264 / 0.05),
-          0 2px   4px  oklch(0.21 0.03 264 / 0.05);
+          0 0.5px 1px  oklch(.185 .005 65 / 0.05),
+          0 2px   4px  oklch(.185 .005 65 / 0.05);
       }
     `;
     const vars = parseCssCustomProperties(css);
     expect(vars.get("--shadow-card")).toBe(
-      "0 0.5px 1px oklch(0.21 0.03 264 / 0.05), 0 2px 4px oklch(0.21 0.03 264 / 0.05)",
+      "0 0.5px 1px oklch(.185 .005 65 / 0.05), 0 2px 4px oklch(.185 .005 65 / 0.05)",
     );
   });
 
@@ -74,8 +74,8 @@ describe("parseCssCustomProperties", () => {
 
   it("throws when the same custom property has two conflicting values", () => {
     const css = `
-      :root { --palette-cool-8: oklch(0.21 0.03 264); }
-      @theme { --palette-cool-8: oklch(0.99 0 0); }
+      :root { --palette-base-4: oklch(.185 .005 65); }
+      @theme { --palette-base-4: oklch(.965 .004 65); }
     `;
     expect(() => parseCssCustomProperties(css)).toThrow(/declared twice/);
   });

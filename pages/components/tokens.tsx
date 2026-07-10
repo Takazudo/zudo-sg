@@ -29,13 +29,53 @@ import { TOKENS_SLUG } from "@/styleguide/data/registry";
 import { StyleguideLayout } from "@/features/styleguide/chrome/_styleguide-layout";
 import TokenPlayground from "@/features/styleguide/token-tweak/token-playground";
 import { SPACING_TOKENS, FONT_TOKENS } from "@/config/design-tokens-manifest";
-import { UI_COLOR_TOKENS } from "@/config/ui-design-tokens-manifest";
+import {
+  UI_PALETTE_COLORS,
+  UI_COLOR_TOKENS,
+} from "@/config/ui-design-tokens-manifest";
 import { composeMetaTitle } from "../lib/_compose-meta-title";
 import { buildStyleguideChrome } from "../lib/_styleguide-chrome";
 
 export const frontmatter = { title: "Design Tokens" };
 
-// Swatch grid rows, derived from UI_COLOR_TOKENS (generated from
+// Palette swatches, grouped in the same tiers the preview token panel exposes.
+type PaletteGroup = {
+  id: string;
+  label: string;
+  tokens: Array<{ name: string; varName: string }>;
+};
+
+const PALETTE_GROUP_LABELS: Record<string, string> = {
+  base: "Base",
+  accent: "Accent",
+  state: "State",
+};
+
+function paletteGroupOf(name: string): string {
+  if (name.startsWith("state-")) return "state";
+  const match = /^(.+)-\d+$/.exec(name);
+  return match?.[1] ?? name;
+}
+
+const PALETTE_GROUPS: PaletteGroup[] = Array.from(
+  UI_PALETTE_COLORS.reduce((groups, color) => {
+    const group = paletteGroupOf(color.name);
+    const tokens = groups.get(group) ?? [];
+    tokens.push({
+      name: color.name,
+      varName: `--palette-${color.name}`,
+    });
+    groups.set(group, tokens);
+    return groups;
+  }, new Map<string, Array<{ name: string; varName: string }>>()),
+  ([id, tokens]) => ({
+    id,
+    label: PALETTE_GROUP_LABELS[id] ?? id,
+    tokens,
+  }),
+);
+
+// Semantic swatch grid rows, derived from UI_COLOR_TOKENS (generated from
 // packages/ui/styles/colors.css — see src/config/ui-design-tokens-manifest.ts).
 // `label` is always "color-<name>"; strip the prefix for the short swatch name.
 const COLOR_TOKENS: Array<{ name: string; varName: string }> = UI_COLOR_TOKENS.map(
@@ -84,7 +124,51 @@ export default function TokensPage(): JSX.Element {
 
         <div data-sg-tokens-root>
           <section class="mb-vsp-xl">
-            <h2 class="mb-vsp-sm text-lg font-semibold text-ink">Color</h2>
+            <h2 class="mb-vsp-2xs text-lg font-semibold text-ink">Palette</h2>
+            <p class="mb-vsp-sm text-small text-ink-soft">
+              Raw grouped swatches that feed the semantic component tokens.
+            </p>
+            <div class="flex flex-col gap-vsp-md">
+              {PALETTE_GROUPS.map((group) => (
+                <div>
+                  <h3 class="mb-vsp-2xs text-small font-semibold text-ink">
+                    {group.label}
+                  </h3>
+                  <div class="grid grid-cols-2 gap-hsp-md sm:grid-cols-3 lg:grid-cols-4">
+                    {group.tokens.map((tok) => (
+                      <button
+                        type="button"
+                        class="sg-token-card"
+                        data-sg-token
+                        data-var={tok.varName}
+                        data-kind="color"
+                        title={`Click to copy ${tok.varName}`}
+                      >
+                        <span
+                          class="sg-token-swatch"
+                          style={{ background: `var(${tok.varName})` }}
+                        />
+                        <span class="sg-token-card-meta">
+                          <span class="text-small font-medium text-ink">
+                            {tok.name}
+                          </span>
+                          <span class="text-xs text-ink-mute">{tok.varName}</span>
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section class="mb-vsp-xl">
+            <h2 class="mb-vsp-2xs text-lg font-semibold text-ink">
+              Semantic color
+            </h2>
+            <p class="mb-vsp-sm text-small text-ink-soft">
+              Public color tokens consumed by components.
+            </p>
             <div class="grid grid-cols-2 gap-hsp-md sm:grid-cols-3 lg:grid-cols-4">
               {COLOR_TOKENS.map((tok) => (
                 <button

@@ -52,14 +52,14 @@ function runSetup(command: "dev" | "build") {
 // leaves "color" unrouted; a focused test below routes "color" explicitly to
 // verify zdtp's @theme rewrite path.
 const COLORS_CSS_FIXTURE = `:root {
-  --palette-white-0: oklch(1 0 0);
-  --palette-cool-8: oklch(0.21 0.03 264);   /* ink (light) */
+  --palette-base-0: oklch(.965 .004 65);
+  --palette-base-4: oklch(.185 .005 65);   /* ink (light) */
 
   color-scheme: light dark;
 }
 
 @theme {
-  --color-ink: light-dark(var(--palette-cool-8), var(--palette-cool-0));
+  --color-ink: light-dark(var(--palette-base-4), var(--palette-base-0));
 }
 `;
 
@@ -107,7 +107,7 @@ describe("createDevMiddlewareHandler", () => {
     });
 
     const res = await post(handler, {
-      tokens: { "--palette-cool-8": "oklch(0.25 0.03 264)" },
+      tokens: { "--palette-base-4": "oklch(.250 .006 65)" },
     });
 
     expect(res.status).toBe(200);
@@ -115,9 +115,9 @@ describe("createDevMiddlewareHandler", () => {
     expect(payload.ok).toBe(true);
 
     const css = readColorsCss();
-    expect(css).toContain("--palette-cool-8: oklch(0.25 0.03 264);   /* ink (light) */");
+    expect(css).toContain("--palette-base-4: oklch(.250 .006 65);   /* ink (light) */");
     // Everything else is untouched — a minimal, single-declaration diff.
-    expect(css).toContain("--palette-white-0: oklch(1 0 0);");
+    expect(css).toContain("--palette-base-0: oklch(.965 .004 65);");
     expect(css).toContain("color-scheme: light dark;");
     expect(css).toContain("@theme {");
   });
@@ -129,16 +129,16 @@ describe("createDevMiddlewareHandler", () => {
       routing: { palette: "colors.css" },
     });
 
-    await post(handler, { tokens: { "--palette-cool-8": "oklch(0.25 0.03 264)" } });
+    await post(handler, { tokens: { "--palette-base-4": "oklch(.250 .006 65)" } });
     const afterFirst = readColorsCss();
 
     const second = await post(handler, {
-      tokens: { "--palette-cool-8": "oklch(0.25 0.03 264)" },
+      tokens: { "--palette-base-4": "oklch(.250 .006 65)" },
     });
     const payload = JSON.parse(second.body ?? "{}");
 
     expect(payload.ok).toBe(true);
-    expect(payload.unchangedCssVars).toContain("--palette-cool-8");
+    expect(payload.unchangedCssVars).toContain("--palette-base-4");
     expect(readColorsCss()).toBe(afterFirst);
   });
 
@@ -189,7 +189,7 @@ describe("createDevMiddlewareHandler", () => {
     const before = readColorsCss();
 
     const res = await post(handler, {
-      tokens: { "--palette-cool-8": "oklch(0.25 0.03 264)" },
+      tokens: { "--palette-base-4": "oklch(.250 .006 65)" },
     });
 
     expect(res.status).toBe(400);
