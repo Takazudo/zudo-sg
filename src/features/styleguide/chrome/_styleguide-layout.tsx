@@ -64,7 +64,7 @@ import { DocLayoutWithDefaults } from "@takazudo/zudo-doc/doclayout";
 import { settings } from "@/config/settings";
 import { defaultLocale, type Locale } from "@/config/i18n";
 import { navNodes } from "@/styleguide/data/nav-nodes";
-import SidebarTree from "@/components/sidebar-tree";
+import { SidebarTree } from "@takazudo/zudo-doc/sidebar-tree-island";
 import SgHeaderToggles from "./header-toggles";
 import { PanelStateHeadScript, PanelResizersInitScript } from "./panel-scripts";
 
