@@ -92,8 +92,9 @@ To build all packages: `pnpm install && pnpm build` (root only; apps/demo builds
 ## Enabled Features
 
 - **search** — Full-text search via MiniSearch (`pages/lib/_search-widget.tsx`); the
-  sidebar also has its own real-time filter input, implemented directly in
-  `src/components/sidebar-tree.tsx` (not a separate toggleable feature)
+  sidebar also has its own real-time filter input, implemented in the
+  `@takazudo/zudo-doc/sidebar-tree-island` package island (not a separate
+  toggleable feature)
 - **imageEnlarge** — Click-to-enlarge images
 - **claudeResources** — Moved to the `doc/` workspace
 - **claudeSkills** — The `doc/` workspace ships zudo-doc-design-system, zudo-doc-translate, zudo-doc-version-bump skills
