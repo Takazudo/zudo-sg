@@ -31,6 +31,39 @@ Add it as a GitHub Actions secret named `CLOUDFLARE_ACCOUNT_ID`.
 
 ---
 
+## Deploy identity — keeping these files in sync
+
+Each site's Worker name + custom domain (`zudo-sg` / `zudo-sg-demo-site` / `zudo-sg-doc`,
+all under `takazudomodular.com`) is declared once per `wrangler.toml` but repeated in prose
+and CI in several other places. There's no build-time derivation (e.g. generating the smoke
+URLs or the doc table below from `wrangler.toml`) — that's a longer-term option, not something
+this checklist implements. If a Worker name or domain ever changes, update every file below by hand:
+
+- `wrangler.toml`, `apps/demo/wrangler.toml`, `doc/wrangler.toml` — source of truth: `name =`
+  and `[[routes]] pattern = "<name>.takazudomodular.com"`
+- `DEPLOY.md` (this file) — the Sites table (§Sites) and the DNS records table (§3)
+- `.github/workflows/main-deploy.yml` — the header comment (lines 6–8) and every
+  `scripts/smoke-url.sh` URL argument
+- `.github/workflows/preview-deploy.yml` — the header comment's `preview-zudo-sg.<acct>.workers.dev`
+  example (only illustrates the root Worker's preview alias naming, not the demo/doc names)
+- `README.md` — the four-artifact bullet list under "What this is"
+- `CLAUDE.md` (root) — the one-line mention of the doc site's deployed URL
+- `doc/src/content/docs/development/deploy.mdx` — the "Public sites" table, which mirrors
+  this file's Sites table
+
+Intentionally **not** tracked here (found via the same search, out of scope for this checklist):
+
+- `apps/demo/layouts/site-layout.tsx`, `src/config/settings.ts`, `doc/src/config/settings.ts` —
+  these consume a domain for a nav link or `siteUrl` config value; a stale one surfaces as a
+  broken link or wrong canonical URL, not a deploy failure, so they're app code, not deploy config
+- `doc/src/content/docs/architecture/monorepo-layout.mdx`, `doc/src/content/docs/getting-started/installation.mdx`,
+  `doc/src/content/docs/getting-started/introduction.mdx` — narrative prose that mentions a
+  domain in passing, not a mapping table that needs active upkeep
+- `doc/src/content/docs/architecture/design-tokens.mdx` — matches on `takazudomodular.com` but
+  for `zudo-css-wisdom.takazudomodular.com`, an unrelated external site
+
+---
+
 ## 2. API token
 
 Create a Cloudflare API token with the **Workers Scripts:Edit** permission:
