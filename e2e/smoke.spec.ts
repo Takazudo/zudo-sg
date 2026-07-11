@@ -139,12 +139,11 @@ test("/components/<slug> code panel updates when switching variant tabs", async 
   // (the editable Live CSS buffer is the second).
   const sourceCode = codePanel.locator(".cm-content").first();
 
-  // Select tabs by name rather than assuming a default: variants render in
-  // export-name order, which for an ES module namespace is alphabetical (so the
-  // initially-selected tab is "As link", not "Playground"). This test targets
+  // Select tabs by name rather than relying on the default: this test targets
   // #105 — that switching tabs actually re-renders the source — so it explicitly
-  // drives the switch between two tabs with distinct source. (Default-tab
-  // ordering itself is tracked separately, see #128.)
+  // drives the switch between two tabs with distinct source, independent of
+  // which tab is default. (Default-tab ordering is asserted separately in the
+  // next test, per #128 / #174.)
   await codePanel.getByRole("tab", { name: "Playground" }).click();
   await expect(sourceCode).toContainText('size="md"', { timeout: 15_000 });
 
@@ -152,6 +151,27 @@ test("/components/<slug> code panel updates when switching variant tabs", async 
 
   await expect(sourceCode).toContainText("Secondary", { timeout: 15_000 });
   await expect(sourceCode).not.toContainText('size="md"');
+});
+
+test("/components/button defaults its code-panel tab to the first-authored story", async ({
+  page,
+}) => {
+  // #128 / #174: variant tabs render in SOURCE order (not the alphabetical key
+  // enumeration of an ES-module namespace), so the default-selected tab is the
+  // first-authored story. For Button that is "Playground" (source order:
+  // Playground, Variants, Sizes, AsLink, Disabled, Block) — before the fix the
+  // alphabetical order made "As link" the default. Kept separate from the #105
+  // by-name switching test above so that test stays decoupled from default
+  // ordering. This is the durable guard for the ordering itself.
+  const response = await page.goto("/components/button");
+  expect(response?.status()).toBe(200);
+
+  const codePanel = page.locator("#sg-code-panel");
+  await expect(codePanel).toBeAttached();
+
+  await expect(
+    codePanel.getByRole("tab", { selected: true }),
+  ).toHaveAccessibleName("Playground", { timeout: 15_000 });
 });
 
 test("/components/<slug> detail page preview iframe loads", async ({ page }) => {
