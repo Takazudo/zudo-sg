@@ -51,17 +51,17 @@ Its **Palette** tab exposes the raw Tier-1 colors as grouped `base`, `accent`, a
 
 Both panel footers also have an **Apply** button, next to Export / Reset / Load from JSON. Unlike the other three actions (which are entirely localStorage/JSON round-trips), Apply POSTs the current tweak diff to a dev-only endpoint that rewrites the value directly into the project's CSS source — the change survives a hard reload with `localStorage` cleared, and shows up as an ordinary `git diff`.
 
-This only works today for the preview panel's **Palette** tab swatches (the `--palette-*` tokens), and only when running under `pnpm dev` (`zfb dev`). Everything else needed to make the loop feel "complete" is deliberately scoped out for now — see the caveats below.
+This works today for every tab in the preview panel — **Color**, **Palette**, **Spacing**, **Font**, and **Size** — and only when running under `pnpm dev` (`zfb dev`). The doc-chrome panel has no apply endpoint at all. See the caveat below for what's still out of scope.
 
-<Warning title="Apply is Palette-only; other tabs will 400">
-  The apply endpoint only routes `--palette-*` tokens into `packages/ui/styles/colors.css` today. `@takazudo/zdtp` can rewrite top-level `@theme { ... }` blocks, but this repo has not opted the **Spacing**, **Font**, **Size**, or semantic **Ink / Surface / Line / Brand / State** prefixes into the routing map yet. Making those token families apply-writable is a deliberate, separately-reviewed change to the token architecture, not a wiring fix.
+<Warning title="Apply routes every preview-panel tab now; a few internal prefixes still 400">
+  The apply endpoint routes eight prefixes — `palette`, `color`, `spacing`, `text`, `font`, `leading`, `radius`, `shadow` — covering every tab the preview panel exposes: **Color** and **Palette** write into `packages/ui/styles/colors.css`; **Spacing**, **Font**, and **Size** (radius + shadow) write into `packages/ui/styles/tokens.css`. Apply sends **every currently-tweaked token across every tab in one request**, and two prefix pairs land in the same file (palette + color; spacing/text/font/leading/radius/shadow) — `plugins/zdtp-apply-proxy-plugin.mjs`'s same-file coalescing shim splits that single request into one sequential apply call per prefix so both same-file edits survive instead of the second write clobbering the first.
 
-  Apply sends **every currently-tweaked token across every tab in one request** — so if you have dirtied a Spacing or Font value in the same panel session, Apply will fail with "Unsupported cssVar prefix" even though the Palette part of your diff is fine. Reset the other tabs (or avoid touching them) before clicking Apply.
+  The failure window is narrowed, not eliminated: any CSS var whose prefix isn't in the routing map — e.g. `--breakpoint-*`, `--default-transition-*` (Tailwind plumbing, deliberately left out of every tab) — still fails the whole request with "Unsupported cssVar prefix" (400) if it ever reaches the endpoint. None of the tokens the preview panel currently exposes fall into that category, so hitting this 400 through normal panel use shouldn't happen today — but a future token family added to a tab without a matching routing entry would trip it again.
 </Warning>
 
 How it's wired, for anyone extending this: `plugins/zdtp-apply-proxy-plugin.mjs` registers a same-origin `zfb dev` `devMiddleware` handler (no separate process, no port, no CORS) at `/__zdtp/apply`, backed by `@takazudo/zdtp/server`'s `createApplyHandler`. The prefix → file routing map lives in `zdtp-panel-routing.json` at the repo root, and the endpoint/routing values are injected into `src/config/preview-token-panel-config.ts` via a `virtual:zdtp-apply-config` module that resolves to `undefined` outside of `zfb dev` — a production build never sees the endpoint path or the routing map.
 
-Broader apply routing is tracked on this repo as [Takazudo/zudo-sg#130](https://github.com/Takazudo/zudo-sg/issues/130).
+Broader apply routing shipped in [Takazudo/zudo-sg#130](https://github.com/Takazudo/zudo-sg/issues/130) — palette, color, spacing, text, font, leading, radius, and shadow are all apply-writable now.
 
 ## Shared panel actions
 
