@@ -164,6 +164,23 @@ export default function StoryDetailPage(
           </div>
         </section>
 
+        {entry.meta.previewRoute && (
+          // Sanctioned `previewRoute` pattern (STORIES.md §6): a link out to a
+          // REAL page route, not one of the variant preview iframes below —
+          // kept visually distinct (its own bordered callout, not a frame).
+          <section class="mb-vsp-xl rounded-md border border-line bg-surface-sunken p-hsp-md">
+            <h2 class="mb-vsp-2xs text-small font-semibold uppercase tracking-wide text-ink-mute">
+              Live demo
+            </h2>
+            <a
+              href={withBase(entry.meta.previewRoute)}
+              class="text-sm font-medium text-brand underline underline-offset-2"
+            >
+              Open live demo →
+            </a>
+          </section>
+        )}
+
         <div class="flex flex-col gap-vsp-xl">
           {entry.variants.map((v) => {
             const frame = Island({

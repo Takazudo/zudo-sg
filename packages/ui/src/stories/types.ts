@@ -62,6 +62,16 @@ export interface StoryMeta {
    * alphabetical by `title` when omitted.
    */
   order?: number;
+  /**
+   * Optional link to a REAL page route (e.g. "/preview/dialog-with-fetch")
+   * that demos this component live — a separate mechanism from `render` and
+   * from the catalog's own `/components/preview` variant iframe
+   * (`PREVIEW_ROUTE_PATH`). Request mocking (MSW or otherwise) is permitted
+   * only inside the page this points to, never in `render` or component
+   * source. When set, the catalog shows it as a "Live demo" link. See
+   * STORIES.md §6 → "The `previewRoute` escape hatch".
+   */
+  previewRoute?: string;
 }
 
 /**
