@@ -61,6 +61,8 @@ export default defineConfig({
   // preview-demos/dialog-demo.tsx). This is zfb's own documented escape hatch
   // for exactly this case — see the `msw` → `path-to-regexp@6` example in
   // node_modules/@takazudo/zfb's BundleConfig.mainFields doc (zfb #676).
+  // `bundle.external: ["path-to-regexp"]` would scope this narrower, but
+  // mainFields is zfb's *documented* fix for this msw case (#676), so we use it.
   bundle: { mainFields: ["main", "module"] },
   // Collections, markdown.features, codeHighlight, resolveMarkdownLinks,
   // stripMdExt, trailingSlash, and the package plugin descriptors (search

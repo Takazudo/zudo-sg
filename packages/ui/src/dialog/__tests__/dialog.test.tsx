@@ -143,6 +143,69 @@ describe("Dialog", () => {
     await waitFor(() => expect(trigger).toHaveFocus());
   });
 
+  it("does not close on Escape while busy", () => {
+    const onClose = vi.fn();
+    render(
+      <Dialog open busy title="Save" onClose={onClose} onSubmit={vi.fn()} submitLabel="Save" />,
+    );
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("does not close on backdrop click while busy", () => {
+    const onClose = vi.fn();
+    render(
+      <Dialog open busy title="Save" onClose={onClose} onSubmit={vi.fn()} submitLabel="Save" />,
+    );
+    const backdrop = screen.getByRole("dialog").parentElement as HTMLElement;
+    fireEvent.click(backdrop);
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("does not show a stale error from a prior session when reopened", async () => {
+    const onClose = vi.fn();
+    const onSubmit = vi.fn().mockRejectedValue(new Error("Server exploded"));
+
+    // The demo keeps the Dialog permanently mounted, toggling only `open`.
+    const { rerender } = render(
+      <Dialog open title="Save" onClose={onClose} onSubmit={onSubmit} submitLabel="Save" />,
+    );
+
+    // Session 1: submit fails, the error renders.
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Server exploded");
+
+    // Close (dialog stays mounted, `open` goes false).
+    rerender(
+      <Dialog open={false} title="Save" onClose={onClose} onSubmit={onSubmit} submitLabel="Save" />,
+    );
+
+    // Session 2: reopening must NOT surface the previous session's error.
+    rerender(
+      <Dialog open title="Save" onClose={onClose} onSubmit={onSubmit} submitLabel="Save" />,
+    );
+    await waitFor(() => expect(screen.getByRole("dialog")).toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByRole("alert")).not.toBeInTheDocument());
+  });
+
+  it("traps Tab focus within the panel (last wraps to first, first wraps to last)", () => {
+    render(<Dialog open title="Save" onClose={vi.fn()} onSubmit={vi.fn()} submitLabel="Save" />);
+    const close = screen.getByRole("button", { name: "Close" });
+    const save = screen.getByRole("button", { name: "Save" });
+
+    // Tab from the last focusable wraps to the first.
+    save.focus();
+    expect(save).toHaveFocus();
+    fireEvent.keyDown(document, { key: "Tab" });
+    expect(close).toHaveFocus();
+
+    // Shift+Tab from the first focusable wraps to the last.
+    close.focus();
+    expect(close).toHaveFocus();
+    fireEvent.keyDown(document, { key: "Tab", shiftKey: true });
+    expect(save).toHaveFocus();
+  });
+
   it("shows a controlled busy state via the busy prop", () => {
     render(<Dialog open busy title="Save" onClose={vi.fn()} onSubmit={vi.fn()} submitLabel="Save" />);
     expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();

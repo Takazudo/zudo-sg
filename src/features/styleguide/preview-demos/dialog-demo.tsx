@@ -53,8 +53,8 @@ let workerReady: Promise<void> | null = null;
 
 function startWorker(): Promise<void> {
   if (!workerReady) {
-    workerReady = Promise.all([import("msw"), import("msw/browser")]).then(
-      async ([{ http, HttpResponse }, { setupWorker }]) => {
+    workerReady = Promise.all([import("msw"), import("msw/browser")])
+      .then(async ([{ http, HttpResponse }, { setupWorker }]) => {
         // Handler patterns are base-prefixed to match the base-prefixed URLs
         // `fetch` actually requests (see submitSuccess/submitFailure below) —
         // both derived from the same withBase() call so they can't drift apart.
@@ -85,8 +85,17 @@ function startWorker(): Promise<void> {
             `[dialog-demo] MSW registered at unexpected scope "${registration.scope}"; expected it to end with "${PREVIEW_SCOPE}".`,
           );
         }
-      },
-    );
+      })
+      .catch((err: unknown) => {
+        // Re-arm on failure: a rejected init (dynamic import, SW registration,
+        // or the scope assertion above) must NOT pin the module cache at a
+        // permanently rejected promise, which would leave the island stuck at
+        // "error" with no retry for the whole session. Reset the cache so a
+        // later mount/trigger starts fresh. The successful-once guard above is
+        // untouched, so once the worker is up no redundant second start runs.
+        workerReady = null;
+        throw err;
+      });
   }
   return workerReady;
 }
