@@ -43,9 +43,18 @@ function PreviewTokenPanelBootstrap(): JSX.Element | null {
   // (plain `window.*`, no bundler aliases) on the first
   // `toggle-preview-token-panel`.
   if (typeof window !== "undefined") {
-    (
-      window as { __zdtpPreviewLazyLoad?: () => Promise<unknown> }
-    ).__zdtpPreviewLazyLoad = lazyLoadPreviewTokenPanel;
+    const w = window as {
+      __zdtpPreviewLazyLoad?: () => Promise<unknown>;
+      __zdtpPreviewPending?: boolean;
+    };
+    w.__zdtpPreviewLazyLoad = lazyLoadPreviewTokenPanel;
+    // Reconcile with a click buffered before this loader registered — same
+    // pre-hydration race as the doc-chrome instance (#204 review). Latent for
+    // the preview trigger today (its button hydrates in the same island pass),
+    // but fixed here so a scheduling change can't silently drop the first click.
+    if (w.__zdtpPreviewPending) {
+      lazyLoadPreviewTokenPanel();
+    }
   }
   return null;
 }

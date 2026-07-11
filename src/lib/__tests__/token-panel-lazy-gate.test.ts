@@ -46,6 +46,8 @@ interface GateHarness {
   loaderKey: string;
   /** Window key the heavy module calls once it finishes loading, to drain the queued click. */
   readyClicksKey: string;
+  /** Window flag the shim sets when a click is buffered before the loader registers. */
+  pendingKey: string;
 }
 
 const DOC_PANEL: GateHarness = {
@@ -53,6 +55,7 @@ const DOC_PANEL: GateHarness = {
   libSpecifier: "@/lib/design-token-panel-bootstrap",
   loaderKey: "__zdtpLazyLoad",
   readyClicksKey: "__zdtpReadyClicks",
+  pendingKey: "__zdtpPending",
 };
 
 const PREVIEW_PANEL: GateHarness = {
@@ -60,6 +63,7 @@ const PREVIEW_PANEL: GateHarness = {
   libSpecifier: "@/lib/preview-token-panel-bootstrap",
   loaderKey: "__zdtpPreviewLazyLoad",
   readyClicksKey: "__zdtpPreviewReadyClicks",
+  pendingKey: "__zdtpPreviewPending",
 };
 
 type WindowRecord = Record<string, unknown>;
@@ -86,6 +90,7 @@ describe.each([
     vi.resetModules();
     delete (window as unknown as WindowRecord)[harness.loaderKey];
     delete (window as unknown as WindowRecord)[harness.readyClicksKey];
+    delete (window as unknown as WindowRecord)[harness.pendingKey];
   });
 
   afterEach(() => {
@@ -138,6 +143,37 @@ describe.each([
     expect(second).not.toBe(first); // cache was reset -> a fresh import is attempted
     await expect(second).resolves.toEqual({ bootstrapped: true });
     expect(importCount).toBe(2);
+  });
+
+  it("reconciles a click buffered BEFORE the loader registered by kicking the import at hydration (#204)", async () => {
+    let importCount = 0;
+    vi.doMock(harness.libSpecifier, () => {
+      importCount += 1;
+      return { bootstrapped: true };
+    });
+    // A click landed before the island hydrated: the shim set pending but could
+    // not call the not-yet-registered loader.
+    (window as unknown as WindowRecord)[harness.pendingKey] = true;
+
+    // Hydration must both register the loader AND, seeing the buffered click,
+    // fire the import immediately — otherwise the click is dropped until a
+    // second one. (Without the reconciliation, importCount stays 0 here.)
+    await mountAndGetLoader(harness);
+    await vi.waitFor(() => expect(importCount).toBe(1));
+  });
+
+  it("does NOT fire the loader at hydration when no click was buffered", async () => {
+    let importCount = 0;
+    vi.doMock(harness.libSpecifier, () => {
+      importCount += 1;
+      return { bootstrapped: true };
+    });
+
+    // No pending flag: registration must stay byte-cheap — the heavy module is
+    // only imported on an actual toggle, not merely because the island hydrated.
+    await mountAndGetLoader(harness);
+    await Promise.resolve();
+    expect(importCount).toBe(0);
   });
 
   it("does not drain the queued pending click on a failed import, but drains it once a retry succeeds", async () => {

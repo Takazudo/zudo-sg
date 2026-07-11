@@ -241,7 +241,7 @@ export function BodyEndIslands({
           and preview zdtp instances isolated; this shim queues a click that
           happens before the lazy-loaded zdtp registers its own listener. */}
       <script
-        dangerouslySetInnerHTML={{ __html: "(function(){\nif(window.__zdtpToggleShimInstalled)return;\nwindow.__zdtpToggleShimInstalled=true;\nvar pending=false;\nfunction shim(){pending=true;if(window.__zdtpLazyLoad)window.__zdtpLazyLoad();}\nwindow.addEventListener('toggle-sg-doc-tweak',shim);\nwindow.__zdtpReadyClicks=function(){\nwindow.removeEventListener('toggle-sg-doc-tweak',shim);\ndelete window.__zdtpReadyClicks;\nif(pending){pending=false;window.dispatchEvent(new CustomEvent('toggle-sg-doc-tweak'));}\n};\n})();" }}
+        dangerouslySetInnerHTML={{ __html: "(function(){\nif(window.__zdtpToggleShimInstalled)return;\nwindow.__zdtpToggleShimInstalled=true;\nvar pending=false;\nfunction shim(){pending=true;window.__zdtpPending=true;if(window.__zdtpLazyLoad)window.__zdtpLazyLoad();}\nwindow.addEventListener('toggle-sg-doc-tweak',shim);\nwindow.__zdtpReadyClicks=function(){\nwindow.removeEventListener('toggle-sg-doc-tweak',shim);\ndelete window.__zdtpReadyClicks;\nif(pending){pending=false;delete window.__zdtpPending;window.dispatchEvent(new CustomEvent('toggle-sg-doc-tweak'));}\n};\n})();" }}
       />
       {Island({
         when: "load",
@@ -258,7 +258,7 @@ export function BodyEndIslands({
           and, like the doc-chrome shim, queues the first click AND kicks the lazy
           loader once registered (plain window lookup — no bundler alias). */}
       <script
-        dangerouslySetInnerHTML={{ __html: "(function(){\nif(window.__zdtpPreviewToggleShimInstalled)return;\nwindow.__zdtpPreviewToggleShimInstalled=true;\nvar pending=false;\nfunction shim(){pending=true;if(window.__zdtpPreviewLazyLoad)window.__zdtpPreviewLazyLoad();}\nwindow.addEventListener('toggle-preview-token-panel',shim);\nwindow.__zdtpPreviewReadyClicks=function(){\nwindow.removeEventListener('toggle-preview-token-panel',shim);\ndelete window.__zdtpPreviewReadyClicks;\nif(pending){pending=false;window.dispatchEvent(new CustomEvent('toggle-preview-token-panel'));}\n};\n})();" }}
+        dangerouslySetInnerHTML={{ __html: "(function(){\nif(window.__zdtpPreviewToggleShimInstalled)return;\nwindow.__zdtpPreviewToggleShimInstalled=true;\nvar pending=false;\nfunction shim(){pending=true;window.__zdtpPreviewPending=true;if(window.__zdtpPreviewLazyLoad)window.__zdtpPreviewLazyLoad();}\nwindow.addEventListener('toggle-preview-token-panel',shim);\nwindow.__zdtpPreviewReadyClicks=function(){\nwindow.removeEventListener('toggle-preview-token-panel',shim);\ndelete window.__zdtpPreviewReadyClicks;\nif(pending){pending=false;delete window.__zdtpPreviewPending;window.dispatchEvent(new CustomEvent('toggle-preview-token-panel'));}\n};\n})();" }}
       />
       {Island({
         when: "load",

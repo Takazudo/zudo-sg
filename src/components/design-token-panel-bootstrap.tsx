@@ -43,9 +43,20 @@ function DesignTokenPanelBootstrap(): JSX.Element | null {
   // the heavy module. The doc-chrome shim in _body-end-islands.tsx calls this
   // (plain `window.*`, no bundler aliases) on the first `toggle-sg-doc-tweak`.
   if (typeof window !== "undefined") {
-    (
-      window as { __zdtpLazyLoad?: () => Promise<unknown> }
-    ).__zdtpLazyLoad = lazyLoadDesignTokenPanel;
+    const w = window as {
+      __zdtpLazyLoad?: () => Promise<unknown>;
+      __zdtpPending?: boolean;
+    };
+    w.__zdtpLazyLoad = lazyLoadDesignTokenPanel;
+    // Reconcile with a click that landed BEFORE this loader registered: the
+    // doc-chrome trigger is raw server-rendered HTML (settings.ts onclick),
+    // clickable before the island hydrates. The shim buffered that click
+    // (`__zdtpPending`) but could not call the not-yet-registered loader, so
+    // kick it now. Without this, a pre-hydration click would be silently
+    // dropped until a second click (#204 review).
+    if (w.__zdtpPending) {
+      lazyLoadDesignTokenPanel();
+    }
   }
   return null;
 }
