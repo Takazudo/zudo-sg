@@ -30,18 +30,31 @@
 // Never hand-edit either block between its BEGIN/END markers.
 
 import { readFileSync, writeFileSync, readdirSync } from "node:fs";
-import { resolve, dirname, relative } from "node:path";
+import { resolve, dirname, relative, basename } from "node:path";
 import { fileURLToPath } from "node:url";
+import { COMPONENTS_ROOT, UI_PACKAGE_NAME } from "./lib/scaffold-config.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, "..");
 
-const UI_SRC_DIR = resolve(ROOT, "packages/ui/src");
+const UI_SRC_DIR = resolve(ROOT, COMPONENTS_ROOT);
 const REGISTRY_PATH = resolve(ROOT, "src/styleguide/data/sg-registry.ts");
-const STORY_MODULES_PATH = resolve(
-  ROOT,
-  "packages/ui/src/stories/__tests__/story-modules.ts",
-);
+const STORY_MODULES_PATH = resolve(UI_SRC_DIR, "stories/__tests__/story-modules.ts");
+
+// The `@zudo-sg/ui` package's `exports` map (packages/ui/package.json) wildcards
+// its components-root basename ("./src/*": "./src/*") — so the package-scoped
+// import specifier gen-sg-registry.mjs emits for sg-registry.ts is
+// UI_PACKAGE_NAME + that basename, not the full COMPONENTS_ROOT path. A fork
+// that relocates COMPONENTS_ROOT must keep its package.json exports subpath
+// name in sync with this derivation.
+const PACKAGE_STORIES_ROOT = `${UI_PACKAGE_NAME}/${basename(COMPONENTS_ROOT)}`;
+
+// Relative-import prefix from story-modules.ts's directory back up to
+// UI_SRC_DIR (normally "../..") — derived via path.relative rather than
+// hardcoded so it stays correct if COMPONENTS_ROOT moves.
+const RELATIVE_IMPORT_PREFIX = relative(dirname(STORY_MODULES_PATH), UI_SRC_DIR).split(
+  "\\",
+).join("/");
 
 const BEGIN_MARKER = "GENERATED:SG_REGISTRY_BEGIN";
 const END_MARKER = "GENERATED:SG_REGISTRY_END";
@@ -107,11 +120,11 @@ function scanExportOrder(body) {
 function buildRegistryBlock(entries) {
   const lines = [];
   lines.push(`// ${BEGIN_MARKER} — do not hand-edit; run \`pnpm gen:sg-registry\`.`);
-  lines.push(`import type { StoryModule } from "@zudo-sg/ui";`);
+  lines.push(`import type { StoryModule } from "${UI_PACKAGE_NAME}";`);
   lines.push(``);
   for (const e of entries) {
     lines.push(
-      `import * as ${e.importName} from "@zudo-sg/ui/src/${e.relDirStem}.stories.tsx";`,
+      `import * as ${e.importName} from "${PACKAGE_STORIES_ROOT}/${e.relDirStem}.stories.tsx";`,
     );
   }
   lines.push(``);
@@ -157,7 +170,9 @@ function buildStoryModulesBlock(entries) {
   const lines = [];
   lines.push(`// ${BEGIN_MARKER} — do not hand-edit; run \`pnpm gen:sg-registry\`.`);
   for (const e of entries) {
-    lines.push(`import * as ${e.importName} from "../../${e.relDirStem}.stories";`);
+    lines.push(
+      `import * as ${e.importName} from "${RELATIVE_IMPORT_PREFIX}/${e.relDirStem}.stories";`,
+    );
   }
   lines.push(``);
   lines.push(`export const STORY_MODULES: Record<string, StoryModule> = {`);

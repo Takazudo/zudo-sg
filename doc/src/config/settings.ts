@@ -39,7 +39,17 @@ export const settings = {
     darkScheme: "Default Dark",
     respectPrefersColorScheme: true,
   } satisfies ColorModeConfig as ColorModeConfig | false,
+  // --- Branding (#194) ----------------------------------------------------
+  // Site identity fields, kept contiguous (mirrors the root settings.ts
+  // Branding block). This workspace has no twitterCreator (twitterCard is
+  // disabled below) and no copyright (footer is disabled below) — both stay
+  // intentionally absent rather than added as placeholders.
   siteName: "Zudo Sg Docs",
+  // Falsy siteUrl silently omits OGP absolute image URLs and canonical link
+  // tags from build output — see the module-load warning below. Inert here:
+  // siteUrl is set.
+  siteUrl: "https://zudo-sg-doc.takazudomodular.com" as string,
+  // -------------------------------------------------------------------------
   siteDescription: "" as string,
   base: "/",
   trailingSlash: false as boolean,
@@ -47,7 +57,6 @@ export const settings = {
   noindex: false as boolean,
   editUrl: false as string | false,
   githubUrl: false as string | false,
-  siteUrl: "https://zudo-sg-doc.takazudomodular.com" as string,
   metaTags: {
     description: true,
     keywords: false,
@@ -110,3 +119,13 @@ export const settings = {
     { type: "component", component: "search" },
   ] satisfies HeaderRightItem[] as HeaderRightItem[],
 };
+
+// #194: siteUrl backs OGP absolute image URLs and canonical link tags.
+// Warn at module load (i.e. at build time) so a missing value doesn't ship
+// unnoticed. Same guard shape as the root settings.ts; inert today since
+// siteUrl is set above.
+if (!settings.siteUrl) {
+  console.warn(
+    "[settings] siteUrl is not set — OGP meta tags and canonical absolute URLs will be omitted from the build output.",
+  );
+}

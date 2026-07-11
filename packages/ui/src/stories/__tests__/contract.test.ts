@@ -1,15 +1,7 @@
 import { describe, expect, it } from "vitest";
-import type { StoryMeta, Story, StoryCategory } from "../types";
+import { STORY_CATEGORIES } from "../types";
+import type { StoryMeta, Story } from "../types";
 import { STORY_MODULES } from "./story-modules";
-
-const VALID_CATEGORIES: StoryCategory[] = [
-  "Actions",
-  "Typography",
-  "Layout",
-  "Data Display",
-  "Forms",
-  "Navigation",
-];
 
 const entries = Object.entries(STORY_MODULES);
 
@@ -22,7 +14,7 @@ describe("story-authoring contract", () => {
         expect(meta, "missing default meta export").toBeTruthy();
         expect(typeof meta?.title).toBe("string");
         expect(meta?.title.length).toBeGreaterThan(0);
-        expect(VALID_CATEGORIES).toContain(meta?.category);
+        expect(STORY_CATEGORIES).toContain(meta?.category);
         expect(typeof meta?.description).toBe("string");
         expect(meta?.description.length).toBeGreaterThan(0);
         expect(typeof meta?.usage).toBe("string");

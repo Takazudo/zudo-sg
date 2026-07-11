@@ -33,7 +33,7 @@ FAILURES=()
 STEPS=(
   "Format check (mdx)"
   "Design token lint (lint:tokens)"
-  "Codegen drift check (check:z-index, check:sg-registry, check:token-manifest)"
+  "Codegen drift check (check:z-index, check:sg-registry, check:story-categories, check:token-manifest)"
   "Type checking (zfb check)"
   "Unit tests (test:unit)"
   "Build (zfb build)"
@@ -82,11 +82,13 @@ fi
 # ── Step 3: Codegen drift check ───────────────────────
 # Verifies generated files are in sync with their source of truth: the z-index
 # block in src/styles/global.css (from src/config/z-index-tokens.ts), the story
-# registry (from packages/ui/src/*/*.stories.tsx), and the UI token manifest
-# (from packages/ui/styles/{tokens,colors}.css). Catches a hand-edited generated
+# registry (from packages/ui/src/*/*.stories.tsx), the StoryCategory marker
+# blocks in src/styleguide/data/registry.ts and scripts/lib/component-scaffold.mjs
+# (from packages/ui/src/stories/types.ts), and the UI token manifest (from
+# packages/ui/styles/{tokens,colors}.css). Catches a hand-edited generated
 # block or a forgotten `pnpm gen:*` re-run before it reaches CI.
 step
-if (cd "$ROOT_DIR" && pnpm run check:z-index && pnpm run check:sg-registry && pnpm run check:token-manifest); then
+if (cd "$ROOT_DIR" && pnpm run check:z-index && pnpm run check:sg-registry && pnpm run check:story-categories && pnpm run check:token-manifest); then
   pass "Codegen drift check passed"
 else
   fail "Codegen drift check"

@@ -65,7 +65,34 @@ function extractInternalLinks(html) {
 
   // Skip <link> elements entirely (rel=icon, rel=stylesheet, rel=canonical, etc.)
   // They are meta / resource hints, not navigational links.
-  const stripped = html.replace(/<link\s[^>]*>/gi, "");
+  let stripped = html.replace(/<link\s[^>]*>/gi, "");
+
+  // Strip the styleguide code panel (`<aside id="sg-code-panel">…</aside>`,
+  // pages/components/[slug].tsx) before scanning. It SSRs a story's verbatim
+  // JSX source into a plain `<pre><code>` fallback (see
+  // src/features/styleguide/code-panel/source-editor.tsx) whose quote
+  // characters are not escaped by Preact's text-node serialization — so a
+  // fictional `href="…"` shown as displayed source text matches the same
+  // href regex as a real `<a href>` (#174, #192). zfb serializes some
+  // attributes unquoted (`id=sg-code-panel`), so tolerate that, and match
+  // `id` in any attribute position while requiring the exact id value (no
+  // prefix matches, e.g. not `id=sg-code-panel-something`). Assumes code
+  // panels are not nested inside one another.
+  stripped = stripped.replace(
+    /<aside[^>]*\bid=["']?sg-code-panel["']?(?=[\s>])[^>]*>[\s\S]*?<\/aside>/gi,
+    ""
+  );
+
+  // Also strip any `<pre>…</pre>` blocks (displayed source / code samples).
+  // The code panel above is not the only place a story's verbatim source is
+  // SSR'd: component detail pages also render `meta.usage` inside a plain
+  // `<pre><code>` "Usage" snippet (pages/components/[slug].tsx). Same escaping
+  // gap — Preact does not escape quote characters in text nodes, so a fictional
+  // `href="…"` shown as source text matches the href regex like a real
+  // `<a href>`. Real navigational links never live inside `<pre>`, so stripping
+  // all pre blocks closes the whole class of false positives generically (#190
+  // review follow-up to #174/#192).
+  stripped = stripped.replace(/<pre[^>]*>[\s\S]*?<\/pre>/gi, "");
 
   // Match href="..." from <a> tags and src="..." from <script>/<img>
   const reA = /href="([^"]+)"/g;

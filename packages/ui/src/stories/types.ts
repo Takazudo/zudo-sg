@@ -20,14 +20,25 @@
 
 import type { ComponentChildren } from "preact";
 
-/** Top-level grouping in the catalog sidebar. Keep the set small + stable. */
-export type StoryCategory =
-  | "Actions"
-  | "Typography"
-  | "Layout"
-  | "Data Display"
-  | "Forms"
-  | "Navigation";
+/**
+ * Top-level grouping in the catalog sidebar. Keep the set small + stable.
+ *
+ * Single source of truth for every consumer of the category set — codegen
+ * (`scripts/gen-story-categories.mjs`) regex-parses this array literal
+ * straight from this file's source text (no TS import, so plain Node scripts
+ * can read it too) and rewrites the GENERATED:STORY_CATEGORIES marker blocks
+ * in src/styleguide/data/registry.ts and scripts/lib/component-scaffold.mjs.
+ * Add/remove/rename a category here, then run `pnpm gen:story-categories`.
+ */
+export const STORY_CATEGORIES = [
+  "Actions",
+  "Typography",
+  "Layout",
+  "Data Display",
+  "Forms",
+  "Navigation",
+] as const;
+export type StoryCategory = (typeof STORY_CATEGORIES)[number];
 
 /**
  * Per-file metadata. Default-exported from each `*.stories.tsx`.

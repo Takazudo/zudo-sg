@@ -9,19 +9,25 @@
 // reading packages/ui/src/index.ts, writing the generated files, and running
 // scripts/gen-sg-registry.mjs.
 
+import { COMPONENTS_ROOT, UI_PACKAGE_NAME } from "./scaffold-config.mjs";
+
 /**
- * Mirrors `StoryCategory` in packages/ui/src/stories/types.ts. Duplicated
- * here (same tradeoff contract.test.ts makes) because that file exports a
- * type, not a runtime value a plain Node script can import and check
- * against. Keep both lists in sync when the union changes.
+ * Mirrors `StoryCategory` in packages/ui/src/stories/types.ts. This file is a
+ * dependency-free .mjs script (no TS import), so the array body is codegen —
+ * see scripts/gen-story-categories.mjs, which regex-parses STORY_CATEGORIES
+ * out of types.ts and rewrites the marker block below. Run
+ * `pnpm gen:story-categories` after changing the category set in types.ts.
  */
 export const VALID_CATEGORIES = [
+  // GENERATED:STORY_CATEGORIES_BEGIN — do not hand-edit; run pnpm gen:story-categories.
+  // Source of truth: packages/ui/src/stories/types.ts (STORY_CATEGORIES).
   "Actions",
   "Typography",
   "Layout",
   "Data Display",
   "Forms",
   "Navigation",
+  // GENERATED:STORY_CATEGORIES_END
 ];
 
 const KEBAB_NAME_RE = /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/;
@@ -49,7 +55,7 @@ export function assertValidCategory(category) {
 export function assertUnusedName(name, existingNames) {
   if (existingNames.includes(name)) {
     throw new Error(
-      `packages/ui/src/${name}/ already exists — pick a name that isn't in use.`,
+      `${COMPONENTS_ROOT}/${name}/ already exists — pick a name that isn't in use.`,
     );
   }
 }
@@ -117,7 +123,7 @@ export function storiesTemplate({ pascalName, kebabName, category }) {
     `  title: "${pascalName}", // TODO: human-friendly display name, if different`,
     `  category: "${category}",`,
     `  description: "TODO: one-sentence description of ${pascalName}.",`,
-    `  usage: \`import { ${pascalName} } from "@zudo-sg/ui";`,
+    `  usage: \`import { ${pascalName} } from "${UI_PACKAGE_NAME}";`,
     ``,
     `<${pascalName}>Content</${pascalName}>\`,`,
     `};`,

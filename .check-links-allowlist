@@ -7,14 +7,4 @@
 # runtime-generated routes that exist in the served site but not as static files.
 # Delete an entry when the underlying issue is fixed.
 #
-# ----- Broken Links (1 entry) --------------------------------------------
-
-# `/start` is an intentional demo placeholder href in the SiteHeader "Get
-# started" CTA (packages/ui/src/site-header/site-header.stories.tsx), part of
-# that story's fictional-site nav (/features, /pricing, /start). It surfaces
-# here only in the code panel's DISPLAYED SOURCE text — check-links regexes
-# every `href="…"` in the HTML, including inside the shown source snippet — not
-# as a real navigable link. It became the default (SSR'd) variant's source once
-# variant tabs were reordered to source order (#174: Playground now leads,
-# whereas the alphabetical default "Default" had no action slot).
-dist/components/site-header/index.html:/start
+# ----- Broken Links (0 entries) -------------------------------------------
