@@ -80,7 +80,6 @@ export function Dialog({
   const [submitError, setSubmitError] = useState<ComponentChildren>(null);
 
   const panelRef = useRef<HTMLDivElement>(null);
-  const restoreFocusRef = useRef<HTMLElement | null>(null);
   const titleIdRef = useRef<string>("");
   if (!titleIdRef.current) titleIdRef.current = nextDialogId();
   const titleId = titleIdRef.current;
@@ -88,33 +87,67 @@ export function Dialog({
   const isBusy = Boolean(busy) || submitting;
   const shownError = error ?? submitError;
 
-  // Focus management: on open, remember the trigger and move focus into the
-  // dialog; on close, restore focus to the trigger and clear transient state.
+  // Focus management + per-open reset. On open: clear any transient submit state
+  // so every open session starts clean — a late rejection can set submitError
+  // AFTER a close while the dialog stays mounted (the demo keeps <Dialog> mounted
+  // and only toggles `open`), so clearing on close alone would leak a stale error
+  // into the next open. Then remember the trigger and move focus into the panel.
+  // The cleanup restores focus to the trigger, covering BOTH a normal close
+  // (open→false) and an unmount-while-open, and runs exactly once per open
+  // session so focus is never double-restored.
   useEffect(() => {
-    if (open) {
-      restoreFocusRef.current = (document.activeElement as HTMLElement | null) ?? null;
-      const panel = panelRef.current;
-      if (panel) {
-        const first = panel.querySelector<HTMLElement>(FOCUSABLE);
-        (first ?? panel).focus({ preventScroll: true });
-      }
-    } else {
-      restoreFocusRef.current?.focus?.();
-      restoreFocusRef.current = null;
-      setSubmitting(false);
-      setSubmitError(null);
+    if (!open) return;
+    setSubmitError(null);
+    setSubmitting(false);
+    const trigger = (document.activeElement as HTMLElement | null) ?? null;
+    const panel = panelRef.current;
+    if (panel) {
+      const first = panel.querySelector<HTMLElement>(FOCUSABLE);
+      (first ?? panel).focus({ preventScroll: true });
     }
+    return () => {
+      // Guard isConnected: a trigger removed while the dialog was open must not
+      // steal focus to a detached node (or throw) — skip the restore instead.
+      if (trigger?.isConnected) trigger.focus?.();
+    };
   }, [open]);
 
-  // Escape closes.
+  // Key handling while open. Escape closes UNLESS busy — a submit in flight must
+  // not be interrupted, matching the disabled Cancel/Submit buttons. Tab and
+  // Shift+Tab are trapped inside the panel so keyboard focus cannot escape to the
+  // background behind the scrim of this aria-modal dialog.
   useEffect(() => {
     if (!open) return;
     function onKeyDown(e: KeyboardEvent): void {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") {
+        if (!isBusy) onClose();
+        return;
+      }
+      if (e.key !== "Tab") return;
+      const panel = panelRef.current;
+      if (!panel) return;
+      const focusables = Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE));
+      if (focusables.length === 0) {
+        // Nothing focusable (e.g. every action disabled while busy) — pin focus
+        // to the panel instead of letting Tab escape to the background.
+        e.preventDefault();
+        panel.focus({ preventScroll: true });
+        return;
+      }
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      const active = document.activeElement;
+      if (e.shiftKey && (active === first || !panel.contains(active))) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && (active === last || !panel.contains(active))) {
+        e.preventDefault();
+        first.focus();
+      }
     }
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [open, onClose]);
+  }, [open, onClose, isBusy]);
 
   if (!open) return null;
 
@@ -140,6 +173,9 @@ export function Dialog({
     <div
       class="fixed inset-0 z-[50] flex items-center justify-center p-hsp-lg bg-[rgb(0_0_0/0.5)]"
       onClick={(e) => {
+        // A submit in flight must not be closable — same busy contract as the
+        // disabled action buttons and the guarded Escape handler.
+        if (isBusy) return;
         if (!closeOnBackdrop) return;
         if (e.target === e.currentTarget) onClose();
       }}
@@ -165,9 +201,11 @@ export function Dialog({
             type="button"
             aria-label="Close"
             onClick={onClose}
+            disabled={isBusy}
             class={
               "shrink-0 rounded-md p-hsp-2xs text-ink-mute outline-none transition-colors " +
-              "hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+              "hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus " +
+              "disabled:opacity-50 disabled:cursor-not-allowed"
             }
           >
             <span aria-hidden="true">×</span>
