@@ -9,6 +9,10 @@ import { Dialog, type DialogProps } from "./dialog";
 const meta: StoryMeta = {
   title: "Dialog",
   category: "Actions",
+  // Real page route (MSW-eligible) demonstrating the interactive async-submit
+  // flow — the story render() above stays pure/sync. Landed by #215; see
+  // packages/ui/STORIES.md §6 (previewRoute escape hatch).
+  previewRoute: "/preview/dialog",
   description:
     "Modal dialog with a controlled open state, Escape/backdrop close, focus management, and an injectable async submit flow that shows a busy state and recovers from errors.",
   usage: `import { Dialog } from "@zudo-sg/ui";
