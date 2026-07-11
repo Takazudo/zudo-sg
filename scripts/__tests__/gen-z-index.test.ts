@@ -189,4 +189,140 @@ describe("gen-z-index.mjs", () => {
     expect(result.status).toBe(1);
     expect(result.stderr).toContain("parsed to an empty list");
   });
+
+  // Source-shape drift lock: the parser is a regex-based scan over
+  // z-index-tokens.ts, not a real parser, so it must keep working across the
+  // shape variations the real source file (and future edits to it) can take.
+  describe("source-shape drift", () => {
+    it("parses production-shape fields (purpose, kind) alongside name/value", () => {
+      writeTokens(`export const Z_INDEX_TIERS = [
+  { name: "content", value: 0, purpose: "default in-flow content", kind: "global" },
+  { name: "local-1", value: 1, purpose: "child promotion inside an isolated parent", kind: "local" },
+];
+`);
+      writeCss(STALE_CSS);
+
+      const result = run();
+      expect(result.status).toBe(0);
+
+      const css = readCss();
+      expect(css).toContain("--z-index-content: 0;");
+      expect(css).toContain("--z-index-local-1: 1;");
+    });
+
+    it("parses tiers when value appears before name and extra fields are interleaved", () => {
+      writeTokens(`export const Z_INDEX_TIERS = [
+  { value: 20, kind: "global", name: "toolbar", purpose: "sticky top header" },
+];
+`);
+      writeCss(STALE_CSS);
+
+      const result = run();
+      expect(result.status).toBe(0);
+
+      const css = readCss();
+      expect(css).toContain("--z-index-toolbar: 20;");
+    });
+
+    it("parses multi-line Prettier-style object formatting with trailing commas", () => {
+      writeTokens(`export const Z_INDEX_TIERS = [
+  {
+    name: "modal-backdrop",
+    value: 50,
+    purpose: "mobile drawer backdrop, <dialog> ::backdrop",
+    kind: "global",
+  },
+];
+`);
+      writeCss(STALE_CSS);
+
+      const result = run();
+      expect(result.status).toBe(0);
+
+      const css = readCss();
+      expect(css).toContain("--z-index-modal-backdrop: 50;");
+    });
+
+    it("parses negative tier values", () => {
+      writeTokens(`export const Z_INDEX_TIERS = [
+  { name: "behind", value: -1 },
+  { name: "base", value: 0 },
+];
+`);
+      writeCss(STALE_CSS);
+
+      const result = run();
+      expect(result.status).toBe(0);
+
+      const css = readCss();
+      expect(css).toContain("--z-index-behind: -1;");
+      expect(css).toContain("--z-index-base: 0;");
+    });
+
+    it("ignores a brace-object literal inside a // line comment (ghost tier)", () => {
+      writeTokens(`export const Z_INDEX_TIERS = [
+  { name: "base", value: 0 },
+  // { name: "ghost", value: 999 }
+  { name: "toolbar", value: 20 },
+];
+`);
+      writeCss(STALE_CSS);
+
+      const result = run();
+      expect(result.status).toBe(0);
+
+      const css = readCss();
+      expect(css).toContain("--z-index-base: 0;");
+      expect(css).toContain("--z-index-toolbar: 20;");
+      expect(css).not.toContain("--z-index-ghost");
+    });
+
+    it("ignores a brace-object literal inside a /* block comment */ (ghost tier)", () => {
+      writeTokens(`export const Z_INDEX_TIERS = [
+  { name: "base", value: 0 },
+  /* reserved for later: { name: "ghost", value: 999 } */
+  { name: "toolbar", value: 20 },
+];
+`);
+      writeCss(STALE_CSS);
+
+      const result = run();
+      expect(result.status).toBe(0);
+
+      const css = readCss();
+      expect(css).toContain("--z-index-base: 0;");
+      expect(css).toContain("--z-index-toolbar: 20;");
+      expect(css).not.toContain("--z-index-ghost");
+    });
+
+    it("does not treat '//' inside a quoted purpose string as a comment (URL example)", () => {
+      writeTokens(`export const Z_INDEX_TIERS = [
+  { name: "base", value: 0, purpose: "https://example.com/docs", kind: "global" },
+  { name: "toolbar", value: 20 },
+];
+`);
+      writeCss(STALE_CSS);
+
+      const result = run();
+      expect(result.status).toBe(0);
+
+      const css = readCss();
+      expect(css).toContain("--z-index-base: 0;");
+      expect(css).toContain("--z-index-toolbar: 20;");
+    });
+
+    it("fails on a malformed object even after the comment strip (existing malformed-object case still holds)", () => {
+      writeTokens(`export const Z_INDEX_TIERS = [
+  { name: "base", value: 0 },
+  // just a note, no object here
+  { name: "broken" },
+];
+`);
+      writeCss(UP_TO_DATE_CSS);
+
+      const result = run();
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain("Malformed tier object");
+    });
+  });
 });
