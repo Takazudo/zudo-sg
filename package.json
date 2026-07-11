@@ -23,6 +23,8 @@
     "new:component": "node scripts/new-component.mjs",
     "gen:token-manifest": "node scripts/gen-token-manifest.mjs",
     "check:token-manifest": "node scripts/gen-token-manifest.mjs --check",
+    "gen:root-token-manifest": "node scripts/gen-root-token-manifest.mjs",
+    "check:root-token-manifest": "node scripts/gen-root-token-manifest.mjs --check",
     "contrast:audit": "tsx scripts/contrast-audit.ts",
     "lint:tokens": "node $(realpath node_modules/@takazudo/zudo-design-token-lint/dist/cli.js)",
     "test:unit": "vitest run",

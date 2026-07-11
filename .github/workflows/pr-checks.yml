@@ -5,7 +5,8 @@
 # Jobs (in execution order):
 #   lint-tokens          — pnpm lint:tokens
 #   codegen-drift        — pnpm check:z-index, pnpm check:sg-registry,
-#                          pnpm check:story-categories, pnpm check:token-manifest
+#                          pnpm check:story-categories, pnpm check:token-manifest,
+#                          pnpm check:root-token-manifest
 #   typecheck            — pnpm check (zfb check / tsc --noEmit + demo/doc typecheck)
 #   unit                 — pnpm test:unit (vitest)
 #   build                — pnpm build (zfb build → dist/)
@@ -85,6 +86,9 @@ jobs:
 
       - name: Check token manifest codegen
         run: pnpm check:token-manifest
+
+      - name: Check root token manifest codegen
+        run: pnpm check:root-token-manifest
 
   # ---------------------------------------------------------------------------
   # Job: TypeScript typecheck
