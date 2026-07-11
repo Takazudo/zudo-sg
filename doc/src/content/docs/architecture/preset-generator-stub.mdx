@@ -1,0 +1,50 @@
+---
+title: Preset Generator Stub
+sidebar_position: 4
+description: Why src/components/preset-generator.tsx and doc/src/components/preset-generator.tsx are no-op stubs, and the contract a real implementation must satisfy.
+---
+
+## What it is
+
+`src/components/preset-generator.tsx` and `doc/src/components/preset-generator.tsx` are intentional no-op stubs. Both files define the same shape:
+
+```tsx
+function PresetGenerator(): JSX.Element | null {
+  return null;
+}
+PresetGenerator.displayName = "PresetGenerator";
+
+export default PresetGenerator;
+```
+
+`doc/pages/lib/_preset-generator.tsx` imports `PresetGenerator` from `@/components/preset-generator` unconditionally. The stub exists so that import always resolves, even in projects that never wire up a real preset-generator form.
+
+Both stub files carry a `W6A stub` comment marker. W6A is an internal scaffold-wave label shared with the other no-op stubs in this codebase (`desktop-sidebar-toggle`, `doc-history`, `ai-chat-modal`) — it identifies a batch of generated placeholder files, not a separate spec to look up.
+
+## The replacement contract
+
+`doc/pages/lib/_preset-generator.tsx` is the SSR fallback for the real interactive form. It does not implement the form, but its shape describes what a real implementation must satisfy:
+
+- The real component is a client-only Preact island, mounted through zfb's `<Island>` wrapper (`when: "load"`) with an `ssrFallback` that renders static section headings.
+- The fallback declares 8 sections, and its `SECTION_HEADINGS` array fixes their source order:
+  1. Project Name
+  2. Default Language
+  3. Color Scheme Mode
+  4. Color Scheme
+  5. Features
+  6. Header right items
+  7. Markdown Options
+  8. Package Manager
+- The default export's `displayName` must stay `"PresetGenerator"`. zfb's island scanner walks the static import chain from page modules down to this file to register the component in the island manifest; without a stable `displayName`, the scanner cannot connect the SSR fallback to a client-side manifest entry, and hydration never fires for it (the orphan-component problem — the same failure mode the `_body-end-islands.tsx` comments describe for other islands).
+
+Treat this list as the shape the SSR fallback expects, not as authoritative documentation of what the finished showcase form looks like — no such spec exists in this codebase.
+
+## No importable package export
+
+The `doc-history` and `ai-chat-modal` stubs exist because their real implementations ship from `@takazudo/zudo-doc` as importable islands (`@takazudo/zudo-doc/doc-history`, `@takazudo/zudo-doc/ai-chat-modal`) — a project that enables those features overwrites the local stub with a re-export shim pointing at the package.
+
+`preset-generator` has no equivalent. Checking the installed `@takazudo/zudo-doc` package's `exports` map turns up no `./preset-generator` (or similarly named) entry. There is nothing to re-export. An adopter who wants this feature has to author the island from scratch, using `doc/pages/lib/_preset-generator.tsx` as the shape spec described above, then replace both stub files with the real implementation.
+
+## Reference
+
+[zudolab/zudo-doc](https://github.com/zudolab/zudo-doc) is the upstream framework repository. It is the only concrete upstream pointer for this component; it does not currently document a preset-generator island.
