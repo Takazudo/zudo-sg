@@ -16,6 +16,7 @@ import type { StoryModule } from "../types";
 import * as badge from "../../badge/badge.stories";
 import * as button from "../../button/button.stories";
 import * as card from "../../card/card.stories";
+import * as dialog from "../../dialog/dialog.stories";
 import * as footer from "../../footer/footer.stories";
 import * as form from "../../form/form.stories";
 import * as heading from "../../heading/heading.stories";
@@ -28,6 +29,7 @@ export const STORY_MODULES: Record<string, StoryModule> = {
   "badge/badge.stories.tsx": badge as unknown as StoryModule,
   "button/button.stories.tsx": button as unknown as StoryModule,
   "card/card.stories.tsx": card as unknown as StoryModule,
+  "dialog/dialog.stories.tsx": dialog as unknown as StoryModule,
   "footer/footer.stories.tsx": footer as unknown as StoryModule,
   "form/form.stories.tsx": form as unknown as StoryModule,
   "heading/heading.stories.tsx": heading as unknown as StoryModule,

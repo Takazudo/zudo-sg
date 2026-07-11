@@ -52,6 +52,18 @@ export default defineConfig({
   port: 4321,
   tailwind: { enabled: true },
   base: settings.base,
+  // #215: msw's core resolves through path-to-regexp@6, a CJS-main/module-only
+  // package (no `exports` map). esbuild's `--platform=neutral` page/SSR pass
+  // (used for the client island bundle) has an EMPTY main-fields list by
+  // default, so it rejects that dependency ("Main fields must be configured
+  // explicitly when using the neutral platform") the moment any island
+  // transitively imports `msw`/`msw/browser` (src/features/styleguide/
+  // preview-demos/dialog-demo.tsx). This is zfb's own documented escape hatch
+  // for exactly this case — see the `msw` → `path-to-regexp@6` example in
+  // node_modules/@takazudo/zfb's BundleConfig.mainFields doc (zfb #676).
+  // `bundle.external: ["path-to-regexp"]` would scope this narrower, but
+  // mainFields is zfb's *documented* fix for this msw case (#676), so we use it.
+  bundle: { mainFields: ["main", "module"] },
   // Collections, markdown.features, codeHighlight, resolveMarkdownLinks,
   // stripMdExt, trailingSlash, and the package plugin descriptors (search
   // index, llms.txt, claude-resources) — see node_modules/@takazudo/zudo-doc

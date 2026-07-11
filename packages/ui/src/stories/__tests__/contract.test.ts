@@ -21,6 +21,14 @@ describe("story-authoring contract", () => {
         expect(meta?.usage.length).toBeGreaterThan(0);
       });
 
+      it("previewRoute, when present, is a real same-origin page path (STORIES.md §6)", () => {
+        if (meta?.previewRoute === undefined) return;
+        expect(typeof meta.previewRoute).toBe("string");
+        expect(meta.previewRoute.length).toBeGreaterThan(0);
+        expect(meta.previewRoute.startsWith("/")).toBe(true);
+        expect(meta.previewRoute.startsWith("//")).toBe(false);
+      });
+
       it("has at least one named Story export, each well-formed", () => {
         const stories = Object.entries(mod).filter(([name]) => name !== "default");
         expect(stories.length).toBeGreaterThan(0);

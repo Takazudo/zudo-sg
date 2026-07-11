@@ -279,6 +279,53 @@ The catalog renders stories during a **static build** (zfb). Therefore:
   (`sticky={false}`) so it sits inside the catalog cell — the starter
   `site-header.stories.tsx` does this.
 
+### The `previewRoute` escape hatch — real page, not `render`, not the variant iframe
+
+Some components can only be honestly demoed on a real, live-fetching page — a
+flow that hits an endpoint, a dialog wired into a real form submission, a
+widget that genuinely needs mocked network responses to be useful. `render`
+cannot do this (it must stay pure/synchronous/no-MSW, per the rules above).
+
+`previewRoute` is **not** the same mechanism as the catalog's built-in variant
+iframes. Every `Story` the catalog renders is already shown inside an
+isolated `/components/preview` iframe (`PREVIEW_ROUTE_PATH`, wired in
+`src/features/styleguide/preview/route.ts` + `variant-frame.tsx`) — that
+iframe always re-invokes one of THIS file's own `Story.render` functions, for
+the catalog's live-controls/CSS-injection pipeline. `previewRoute` is a
+**different, separate thing**: an optional `StoryMeta` field that names a REAL
+page route the author builds and owns themselves (e.g.
+`pages/preview/<component>.tsx` serving `/preview/<component>`), completely
+outside the `render`/variant-iframe system. When set, the catalog surfaces it
+as a plain, visible "Live demo" link to that page — not an embedded frame.
+
+Rules:
+
+- **`render` stays pure/synchronous/no-MSW, exactly as required above.**
+  Adding a `previewRoute` never changes that — it's an escape hatch alongside
+  `render`, not a way to relax it.
+- **MSW (or any other request mocking) is permitted only inside the page(s)
+  reachable via `previewRoute`, scoped to that route.** It must **never** be
+  imported into any `*.stories.tsx` file or any component source under
+  `packages/ui/src` — mocking lives entirely in the demo page, not the
+  library or the story layer.
+- `previewRoute` must be a real, same-origin page path starting with `/`
+  (e.g. `/preview/dialog-with-fetch`) — not a `//protocol-relative` URL, not
+  a `PREVIEW_ROUTE_PATH` / variant-iframe URL, and not a `render`-produced
+  node.
+
+Minimal `meta` example:
+
+```ts
+const meta: StoryMeta = {
+  title: "DialogWithFetch",
+  category: "Forms",
+  description: "Dialog that loads its content from a live endpoint.",
+  usage: `import { DialogWithFetch } from "@zudo-sg/ui";\n\n<DialogWithFetch />`,
+  previewRoute: "/preview/dialog-with-fetch", // real page; MSW lives here only, never in render()
+};
+export default meta;
+```
+
 ---
 
 ## 7. Authoring checklist
