@@ -27,21 +27,31 @@
 // fields, so no apply wiring data (not even the routing map's file paths)
 // enters the shipped bundle.
 //
-// SCOPE — only the "palette" prefix is routed today:
-//   zdtp 0.4.5 can rewrite the first top-level `:root { ... }` block and the
-//   first top-level `@theme { ... }` block of the target CSS file (see
-//   node_modules/@takazudo/zdtp/dist/apply/apply-token-overrides.d.ts).
-//   This host still routes only `--palette-*` to packages/ui/styles/colors.css.
-//   Extending routing to `--spacing-*` / `--font-*` / `--radius-*` /
-//   `--shadow-*` in tokens.css and semantic `--color-*` rows in colors.css is
-//   tracked separately at Takazudo/zudo-sg#130 because it changes which shared
-//   token families are apply-writable and needs its own review.
+// SCOPE — routed prefixes (zdtp-panel-routing.json):
+//   palette, color                     → packages/ui/styles/colors.css
+//   spacing, text, font, leading,      → packages/ui/styles/tokens.css
+//     radius, shadow
+//   Prefix matching is `--{key}-` startsWith, longest-key-first (zdtp's own
+//   rule): "font" covers --font-weight-*/--font-sans/--font-mono and "text"
+//   covers the --text-* size scale plus its --text-*--line-height pairs, so no
+//   separate key is needed for those. `--breakpoint-*` and
+//   `--default-transition-*` are deliberately LEFT UNROUTED — they are Tailwind
+//   plumbing, not designer-tweakable tokens.
+//   zdtp 0.4.5 rewrites the first top-level `:root { ... }` block and the first
+//   top-level `@theme { ... }` block of the target CSS file (see
+//   node_modules/@takazudo/zdtp/dist/apply/apply-token-overrides.d.ts):
+//   colors.css exposes both (Tier-1 palette in `:root`, Tier-2 `--color-*` in
+//   `@theme`); tokens.css is a single `@theme`.
 //
-// Practical corollary: the panel POSTs every currently-dirty token across
-// ALL tabs in one Apply request (see zdtp's `buildApplyOverrides`); if any
-// dirty token's prefix isn't in the routing map the WHOLE request 400s
-// ("Unsupported cssVar prefix") and nothing is written — so today, Apply
-// only succeeds when the only dirty tokens are Palette swatches.
+// SAME-FILE HAZARD — two routed prefixes now share EACH target file (palette +
+//   color; and six prefixes on tokens.css), and zdtp 0.4.5 clobbers same-file
+//   prefix-groups because its apply handler is read-all-then-write-all. The
+//   `createDevMiddlewareHandler` shim below fixes this by issuing one apply
+//   call per prefix, awaited sequentially; see its inline comment + the
+//   upstream bug-report sub #202. The panel POSTs every currently-dirty token
+//   across ALL tabs in one Apply request (zdtp's `buildApplyOverrides`), so a
+//   single Apply routinely mixes prefixes that land in the same file — exactly
+//   the case the shim exists to make correct.
 
 import { createApplyHandler, loadRoutingFromFile } from "@takazudo/zdtp/server";
 import { resolve } from "node:path";
@@ -76,18 +86,28 @@ export function toFetchRequest(zfbReq) {
 }
 
 /**
+ * Flatten a Fetch API `Headers` into the plain record zfb wants.
+ *
+ * @param {Response} res
+ * @returns {Record<string, string>}
+ */
+function collectHeaders(res) {
+  /** @type {Record<string, string>} */
+  const headers = {};
+  res.headers.forEach((value, key) => {
+    headers[key] = value;
+  });
+  return headers;
+}
+
+/**
  * Convert a standard Fetch API `Response` into a zfb devMiddleware response.
  *
  * @param {Response} res
  * @returns {Promise<ZfbDevMiddlewareResponse>}
  */
 export async function fromFetchResponse(res) {
-  /** @type {Record<string, string>} */
-  const headers = {};
-  res.headers.forEach((value, key) => {
-    headers[key] = value;
-  });
-  return { status: res.status, headers, body: await res.text(), bodyEncoding: "utf8" };
+  return { status: res.status, headers: collectHeaders(res), body: await res.text(), bodyEncoding: "utf8" };
 }
 
 // The only methods this endpoint ever supports — shared by the OPTIONS and
@@ -105,6 +125,36 @@ const ALLOWED_METHODS = "POST, OPTIONS";
  */
 export function createDevMiddlewareHandler({ rootDir, writeRoot, routing }) {
   const applyHandler = createApplyHandler({ rootDir, writeRoot, routing });
+
+  // Routing prefixes sorted longest-key-first — a faithful mirror of the
+  // matcher inside zdtp's route-tokens-to-files, so this shim partitions tokens
+  // EXACTLY the way the handler would internally.
+  //
+  // startsWith coupling caveat: a var is claimed by the first `--{key}-` it
+  // starts with, so a future --text-* var that is NOT meant to be
+  // apply-writable would still match the "text" route and become writable.
+  // Tighten the routing keys (or add an exclusion layer) if that ever matters.
+  const routingPrefixesLongestFirst = Object.keys(routing).sort(
+    (a, b) => b.length - a.length,
+  );
+
+  /**
+   * The routing key that owns `cssVar`, or null if unroutable. Mirrors zdtp's
+   * `--{key}-` startsWith rule (must be strictly longer than the prefix) with
+   * longest-key-first precedence.
+   *
+   * @param {string} cssVar
+   * @returns {string | null}
+   */
+  function matchRoutingPrefix(cssVar) {
+    if (!cssVar.startsWith("--")) return null;
+    for (const key of routingPrefixesLongestFirst) {
+      const prefix = `--${key}-`;
+      if (cssVar.startsWith(prefix) && cssVar.length > prefix.length) return key;
+    }
+    return null;
+  }
+
   return async function handleApplyRequest(zfbReq) {
     if (zfbReq.method === "OPTIONS") {
       // Benign capability probe, not a real request — no write happens for
@@ -120,8 +170,102 @@ export function createDevMiddlewareHandler({ rootDir, writeRoot, routing }) {
     if (zfbReq.method !== "POST") {
       return { status: 405, headers: { allow: ALLOWED_METHODS }, body: "Method Not Allowed" };
     }
-    const res = await applyHandler(toFetchRequest(zfbReq));
-    return fromFetchResponse(res);
+
+    // ── Same-file coalescing shim ──────────────────────────────────────────
+    // WHY: zdtp 0.4.5's createApplyHandler is read-all-then-write-all. It
+    // computes every prefix-group's rewrite from the ORIGINAL on-disk content
+    // and only THEN writes them (see the installed dist: load-routing-*.js
+    // reads all groups via `ot()`, then writes them via `it()`). Two routing
+    // prefixes that resolve to the SAME file (palette + color → colors.css;
+    // spacing/text/font/leading/radius/shadow → tokens.css) each read that same
+    // original, so the second write clobbers the first — only the last group's
+    // edits survive.
+    //
+    // FIX: split the request into one sub-request PER ROUTING PREFIX and call
+    // the handler once per group, awaited SEQUENTIALLY, so each call reads the
+    // on-disk state the previous call just wrote. Grouping by PREFIX (not by
+    // target file) is mandatory: a single handler call carrying two prefixes
+    // that share a file reproduces the clobber INSIDE that one call, because
+    // zdtp re-splits by prefix internally — so batching same-file prefixes back
+    // together would defeat the whole shim.
+    //
+    // Removable once upstream zdtp coalesces same-file prefix-groups by
+    // relativePath (making a single handler call clobber-free). Tracked as the
+    // sibling upstream bug-report sub #202 (issue URL TBD/pending).
+    let parsed;
+    try {
+      parsed = JSON.parse(zfbReq.body ?? "");
+    } catch {
+      // Malformed JSON — hand the original request to zdtp so its own 400
+      // ("Invalid JSON in request body") is returned unchanged.
+      return fromFetchResponse(await applyHandler(toFetchRequest(zfbReq)));
+    }
+    const tokens =
+      parsed && typeof parsed === "object" && !Array.isArray(parsed)
+        ? parsed.tokens
+        : undefined;
+    if (typeof tokens !== "object" || tokens === null || Array.isArray(tokens)) {
+      // Not the { tokens: {...} } shape — pass through for zdtp's own 400.
+      return fromFetchResponse(await applyHandler(toFetchRequest(zfbReq)));
+    }
+
+    // Partition tokens by routing prefix. Any unroutable var → pass the
+    // ORIGINAL request straight through so zdtp emits its single 400
+    // ("Unsupported cssVar prefix", with the `rejected` list) unchanged.
+    /** @type {Map<string, Record<string, unknown>>} */
+    const groupsByPrefix = new Map();
+    for (const [name, value] of Object.entries(tokens)) {
+      const key = matchRoutingPrefix(name);
+      if (key === null) {
+        return fromFetchResponse(await applyHandler(toFetchRequest(zfbReq)));
+      }
+      let group = groupsByPrefix.get(key);
+      if (group === undefined) {
+        group = {};
+        groupsByPrefix.set(key, group);
+      }
+      group[name] = value;
+    }
+
+    // 0 groups (empty tokens map) or a single prefix group are already
+    // clobber-free — behave exactly like the un-shimmed single call. (0 groups
+    // passes through to zdtp's "tokens must contain at least one entry" 400.)
+    if (groupsByPrefix.size <= 1) {
+      return fromFetchResponse(await applyHandler(toFetchRequest(zfbReq)));
+    }
+
+    // Multiple prefixes: one sequential handler call per group, results merged.
+    /** @type {{ ok: true, updated: unknown[], unknownCssVars: unknown[], unchangedCssVars: unknown[], unknownOutsideBlockCssVars: unknown[] }} */
+    const merged = {
+      ok: true,
+      updated: [],
+      unknownCssVars: [],
+      unchangedCssVars: [],
+      unknownOutsideBlockCssVars: [],
+    };
+    for (const groupTokens of groupsByPrefix.values()) {
+      const res = await applyHandler(
+        toFetchRequest({ ...zfbReq, body: JSON.stringify({ tokens: groupTokens }) }),
+      );
+      const body = await res.text();
+      if (res.status !== 200) {
+        // Per-file atomicity only: any earlier prefix groups have already been
+        // written to their files and STAY applied. Acceptable for a dev-only
+        // tool. Return this failing call's error response verbatim.
+        return { status: res.status, headers: collectHeaders(res), body, bodyEncoding: "utf8" };
+      }
+      const json = JSON.parse(body);
+      merged.updated.push(...(json.updated ?? []));
+      merged.unknownCssVars.push(...(json.unknownCssVars ?? []));
+      merged.unchangedCssVars.push(...(json.unchangedCssVars ?? []));
+      merged.unknownOutsideBlockCssVars.push(...(json.unknownOutsideBlockCssVars ?? []));
+    }
+    return {
+      status: 200,
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(merged),
+      bodyEncoding: "utf8",
+    };
   };
 }
 
