@@ -35,6 +35,54 @@ const BEGIN_MARKER = "GENERATED:Z_INDEX_BEGIN";
 const END_MARKER = "GENERATED:Z_INDEX_END";
 
 /**
+ * Strip `//` line comments and `/* ... *\/` block comments from a JS/TS
+ * source fragment, leaving quoted-string contents untouched. Without this,
+ * objectRe below would (a) pick up a brace-object literal written inside a
+ * `//` comment as a real tier (the "ghost tier" bug), and naively stripping
+ * `//...` without string-awareness would corrupt a `purpose` string that
+ * legitimately contains `//` (e.g. a URL).
+ */
+function stripComments(src) {
+  let out = "";
+  let i = 0;
+  const n = src.length;
+  while (i < n) {
+    const ch = src[i];
+    const next = src[i + 1];
+    if (ch === '"' || ch === "'" || ch === "`") {
+      const quote = ch;
+      out += ch;
+      i++;
+      while (i < n) {
+        const c = src[i];
+        out += c;
+        i++;
+        if (c === "\\" && i < n) {
+          out += src[i];
+          i++;
+          continue;
+        }
+        if (c === quote) break;
+      }
+      continue;
+    }
+    if (ch === "/" && next === "/") {
+      while (i < n && src[i] !== "\n") i++;
+      continue;
+    }
+    if (ch === "/" && next === "*") {
+      i += 2;
+      while (i < n && !(src[i] === "*" && src[i + 1] === "/")) i++;
+      i = Math.min(i + 2, n);
+      continue;
+    }
+    out += ch;
+    i++;
+  }
+  return out;
+}
+
+/**
  * Parse the Z_INDEX_TIERS array out of z-index-tokens.ts WITHOUT importing it
  * (this script is a dependency-free .mjs and cannot resolve TypeScript). Reads
  * each `{ name: "...", value: <n>, ... }` object literal. Throws on a malformed
@@ -49,7 +97,7 @@ function parseTiers(src) {
       `Could not locate "export const Z_INDEX_TIERS = [ ... ]" in ${TOKENS_PATH}`,
     );
   }
-  const body = arrayMatch[1];
+  const body = stripComments(arrayMatch[1]);
   const tiers = [];
   // Each tier is a `{ ... }` object literal; iterate top-level braces.
   const objectRe = /\{([\s\S]*?)\}/g;
