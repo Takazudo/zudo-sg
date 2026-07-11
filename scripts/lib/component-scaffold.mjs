@@ -9,6 +9,8 @@
 // reading packages/ui/src/index.ts, writing the generated files, and running
 // scripts/gen-sg-registry.mjs.
 
+import { UI_PACKAGE_NAME } from "./scaffold-config.mjs";
+
 /**
  * Mirrors `StoryCategory` in packages/ui/src/stories/types.ts. Duplicated
  * here (same tradeoff contract.test.ts makes) because that file exports a
@@ -117,7 +119,7 @@ export function storiesTemplate({ pascalName, kebabName, category }) {
     `  title: "${pascalName}", // TODO: human-friendly display name, if different`,
     `  category: "${category}",`,
     `  description: "TODO: one-sentence description of ${pascalName}.",`,
-    `  usage: \`import { ${pascalName} } from "@zudo-sg/ui";`,
+    `  usage: \`import { ${pascalName} } from "${UI_PACKAGE_NAME}";`,
     ``,
     `<${pascalName}>Content</${pascalName}>\`,`,
     `};`,
