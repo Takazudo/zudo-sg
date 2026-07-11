@@ -4,7 +4,8 @@
 #
 # Jobs (in execution order):
 #   lint-tokens          — pnpm lint:tokens
-#   codegen-drift        — pnpm check:z-index, pnpm check:sg-registry, pnpm check:token-manifest
+#   codegen-drift        — pnpm check:z-index, pnpm check:sg-registry,
+#                          pnpm check:story-categories, pnpm check:token-manifest
 #   typecheck            — pnpm check (zfb check / tsc --noEmit + demo/doc typecheck)
 #   unit                 — pnpm test:unit (vitest)
 #   build                — pnpm build (zfb build → dist/)
@@ -78,6 +79,9 @@ jobs:
 
       - name: Check sg-registry codegen
         run: pnpm check:sg-registry
+
+      - name: Check story-categories codegen
+        run: pnpm check:story-categories
 
       - name: Check token manifest codegen
         run: pnpm check:token-manifest
