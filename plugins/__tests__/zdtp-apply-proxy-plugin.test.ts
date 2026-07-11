@@ -3,11 +3,15 @@
 // `devMiddleware(ctx)` builds in plugins/zdtp-apply-proxy-plugin.mjs; we call
 // it directly against a temp CSS fixture and assert the file is rewritten
 // (or correctly left untouched on each documented error path).
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+// Imported straight from zdtp so the same-file tests can drive the RAW,
+// un-shimmed handler (to prove the clobber) alongside the shimmed one, and
+// load the real committed routing map the plugin ships with.
+import { createApplyHandler, loadRoutingFromFile } from "@takazudo/zdtp/server";
 import zdtpApplyProxyPlugin, {
   APPLY_PATH,
   ROUTING_FILE,
@@ -309,5 +313,230 @@ describe("setup() — virtual:zdtp-apply-config dev/build gating", () => {
     expect(source).toContain("applyRouting = undefined");
     expect(source).not.toContain("colors.css");
     expect(source).not.toContain(APPLY_PATH);
+  });
+});
+
+// ── Routing extension + same-file coalescing shim ─────────────────────────
+// These exercise the plugin against the REAL committed zdtp-panel-routing.json
+// (not a hand-written fixture map, which would drift), writing into temp
+// fixtures shaped like the real @theme/:root blocks. The write-root is nested
+// so the real routing map's `packages/ui/styles/*.css` relative paths resolve
+// exactly as they do in the running dev server.
+const REAL_ROUTING = loadRoutingFromFile(join(REPO_ROOT, ROUTING_FILE));
+const STYLES_REL = "packages/ui/styles";
+
+// Shaped like packages/ui/styles/colors.css: Tier-1 palette in a `:root` block,
+// Tier-2 `--color-*` (a light-dark() expression) in the `@theme` block.
+const REAL_COLORS_FIXTURE = `:root {
+  --palette-base-0: oklch(.965 .004 65);
+  --palette-base-4: oklch(.185 .005 65);
+
+  color-scheme: light dark;
+}
+
+@theme {
+  --color-ink: light-dark(var(--palette-base-4), var(--palette-base-0));
+}
+`;
+
+// Shaped like packages/ui/styles/tokens.css: one `@theme` block carrying the
+// spacing/font/shadow families. --shadow-card is deliberately a multi-line,
+// multi-layer value with commas inside oklch() to exercise the value scanner.
+const REAL_TOKENS_FIXTURE = `@theme {
+  --spacing-hsp-md: 0.75rem;
+
+  --font-weight-bold: 700;
+
+  --shadow-card:
+    0 0.5px 1px oklch(.185 .005 65 / 0.05),
+    0 2px 4px oklch(.185 .005 65 / 0.05);
+}
+`;
+
+describe("zdtp-panel-routing.json (committed routing map)", () => {
+  it("routes palette + color to colors.css and the tokens.css families", () => {
+    expect(REAL_ROUTING).toMatchObject({
+      palette: "packages/ui/styles/colors.css",
+      color: "packages/ui/styles/colors.css",
+      spacing: "packages/ui/styles/tokens.css",
+      text: "packages/ui/styles/tokens.css",
+      font: "packages/ui/styles/tokens.css",
+      leading: "packages/ui/styles/tokens.css",
+      radius: "packages/ui/styles/tokens.css",
+      shadow: "packages/ui/styles/tokens.css",
+    });
+  });
+
+  it("does NOT route breakpoint or default-transition prefixes (Tailwind plumbing)", () => {
+    expect(REAL_ROUTING).not.toHaveProperty("breakpoint");
+    expect(REAL_ROUTING).not.toHaveProperty("default-transition");
+  });
+});
+
+describe("createDevMiddlewareHandler — real routing map + same-file shim", () => {
+  const stylesDir = () => join(sandbox, STYLES_REL);
+  const readReal = (file: "colors.css" | "tokens.css") =>
+    readFileSync(join(stylesDir(), file), "utf-8");
+
+  function realHandler() {
+    return createDevMiddlewareHandler({
+      rootDir: sandbox,
+      writeRoot: stylesDir(),
+      routing: REAL_ROUTING,
+    });
+  }
+
+  // Raw, un-shimmed zdtp handler — the same factory the shim wraps. Used to
+  // prove the read-all-then-write-all clobber the shim exists to fix.
+  function rawHandler() {
+    return createApplyHandler({
+      rootDir: sandbox,
+      writeRoot: stylesDir(),
+      routing: REAL_ROUTING,
+    });
+  }
+
+  async function postRaw(
+    handler: ReturnType<typeof createApplyHandler>,
+    tokens: Record<string, string>,
+  ) {
+    const res = await handler(
+      toFetchRequest({
+        method: "POST",
+        url: APPLY_PATH,
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ tokens }),
+      }),
+    );
+    return { status: res.status, json: JSON.parse(await res.text()) };
+  }
+
+  beforeEach(() => {
+    // The module-level beforeEach already created `sandbox`; add the nested
+    // styles dir the real routing paths resolve into.
+    mkdirSync(stylesDir(), { recursive: true });
+    writeFileSync(join(stylesDir(), "colors.css"), REAL_COLORS_FIXTURE);
+    writeFileSync(join(stylesDir(), "tokens.css"), REAL_TOKENS_FIXTURE);
+  });
+
+  it("(a) --spacing-hsp-md override lands in tokens.css's @theme block", async () => {
+    const res = await post(realHandler(), {
+      tokens: { "--spacing-hsp-md": "0.9rem" },
+    });
+    expect(res.status).toBe(200);
+    expect(JSON.parse(res.body ?? "{}").ok).toBe(true);
+    expect(readReal("tokens.css")).toContain("--spacing-hsp-md: 0.9rem;");
+  });
+
+  it("(b) --shadow-card multi-value (commas inside oklch()) round-trips correctly", async () => {
+    const NEW_SHADOW =
+      "0 1px 3px oklch(.185 .005 65 / 0.08), 0 6px 12px oklch(.185 .005 65 / 0.09)";
+    const res = await post(realHandler(), {
+      tokens: { "--shadow-card": NEW_SHADOW },
+    });
+    expect(res.status).toBe(200);
+    expect(JSON.parse(res.body ?? "{}").ok).toBe(true);
+    const css = readReal("tokens.css");
+    // Commas survive, exactly one terminating `;`, no stray split at the comma.
+    expect(css).toContain(`${NEW_SHADOW};`);
+  });
+
+  it("(c) --color-ink light-dark() expression is overwritten with a literal", async () => {
+    expect(readReal("colors.css")).toContain("--color-ink: light-dark(");
+    const res = await post(realHandler(), {
+      tokens: { "--color-ink": "oklch(.3 .01 65)" },
+    });
+    expect(res.status).toBe(200);
+    expect(JSON.parse(res.body ?? "{}").ok).toBe(true);
+    const css = readReal("colors.css");
+    expect(css).toContain("--color-ink: oklch(.3 .01 65);");
+    expect(css).not.toContain("--color-ink: light-dark(");
+  });
+
+  // ── (d) SAME-FILE pairs: bug reproduction (raw) + fix verification (shim) ──
+  // Each pair MUST clobber through the raw handler and land BOTH edits through
+  // the shim — that contrast is what proves the shim actually fixes the bug.
+
+  it("(d) palette + color → colors.css: RAW zdtp handler clobbers (the bug)", async () => {
+    const { status } = await postRaw(rawHandler(), {
+      "--palette-base-4": "oklch(.250 .006 65)",
+      "--color-ink": "red",
+    });
+    expect(status).toBe(200);
+    const css = readReal("colors.css");
+    const hasPalette = css.includes("--palette-base-4: oklch(.250 .006 65);");
+    const hasColor = css.includes("--color-ink: red;");
+    // read-all-then-write-all: both same-file groups read the ORIGINAL, so the
+    // second write clobbers the first — they cannot both survive.
+    expect(hasPalette && hasColor).toBe(false);
+  });
+
+  it("(d) palette + color → colors.css: SHIM lands BOTH edits", async () => {
+    const res = await post(realHandler(), {
+      tokens: {
+        "--palette-base-4": "oklch(.250 .006 65)",
+        "--color-ink": "red",
+      },
+    });
+    expect(res.status).toBe(200);
+    expect(JSON.parse(res.body ?? "{}").ok).toBe(true);
+    const css = readReal("colors.css");
+    expect(css).toContain("--palette-base-4: oklch(.250 .006 65);");
+    expect(css).toContain("--color-ink: red;");
+  });
+
+  it("(d) spacing + font → tokens.css: RAW zdtp handler clobbers (the bug)", async () => {
+    const { status } = await postRaw(rawHandler(), {
+      "--spacing-hsp-md": "0.8rem",
+      "--font-weight-bold": "800",
+    });
+    expect(status).toBe(200);
+    const css = readReal("tokens.css");
+    const hasSpacing = css.includes("--spacing-hsp-md: 0.8rem;");
+    const hasFont = css.includes("--font-weight-bold: 800;");
+    expect(hasSpacing && hasFont).toBe(false);
+  });
+
+  it("(d) spacing + font → tokens.css: SHIM lands BOTH edits", async () => {
+    const res = await post(realHandler(), {
+      tokens: {
+        "--spacing-hsp-md": "0.8rem",
+        "--font-weight-bold": "800",
+      },
+    });
+    expect(res.status).toBe(200);
+    expect(JSON.parse(res.body ?? "{}").ok).toBe(true);
+    const css = readReal("tokens.css");
+    expect(css).toContain("--spacing-hsp-md: 0.8rem;");
+    expect(css).toContain("--font-weight-bold: 800;");
+  });
+
+  it("(e) mixed-file POST (--palette-* + --spacing-*) succeeds and updates both files", async () => {
+    const res = await post(realHandler(), {
+      tokens: {
+        "--palette-base-0": "oklch(.9 .01 65)",
+        "--spacing-hsp-md": "0.7rem",
+      },
+    });
+    expect(res.status).toBe(200);
+    expect(JSON.parse(res.body ?? "{}").ok).toBe(true);
+    expect(readReal("colors.css")).toContain("--palette-base-0: oklch(.9 .01 65);");
+    expect(readReal("tokens.css")).toContain("--spacing-hsp-md: 0.7rem;");
+  });
+
+  it("still returns zdtp's single 400 when the POST carries an unroutable prefix", async () => {
+    const before = readReal("colors.css");
+    const res = await post(realHandler(), {
+      tokens: {
+        "--palette-base-4": "oklch(.250 .006 65)",
+        "--breakpoint-sm": "700px",
+      },
+    });
+    expect(res.status).toBe(400);
+    const payload = JSON.parse(res.body ?? "{}");
+    expect(payload.ok).toBe(false);
+    expect(payload.rejected).toContain("--breakpoint-sm");
+    // Error contract unchanged: nothing is written on rejection.
+    expect(readReal("colors.css")).toBe(before);
   });
 });

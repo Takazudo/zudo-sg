@@ -1,3 +1,10 @@
 {
-  "palette": "packages/ui/styles/colors.css"
+  "palette": "packages/ui/styles/colors.css",
+  "color": "packages/ui/styles/colors.css",
+  "spacing": "packages/ui/styles/tokens.css",
+  "text": "packages/ui/styles/tokens.css",
+  "font": "packages/ui/styles/tokens.css",
+  "leading": "packages/ui/styles/tokens.css",
+  "radius": "packages/ui/styles/tokens.css",
+  "shadow": "packages/ui/styles/tokens.css"
 }
