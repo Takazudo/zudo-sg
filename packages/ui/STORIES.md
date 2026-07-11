@@ -313,6 +313,9 @@ pnpm new:component demo-widget --category Layout
 - `<name>` must be kebab-case and not already exist under `packages/ui/src/`.
 - `<Category>` must be one of the `StoryCategory` union members (§3):
   `Actions`, `Typography`, `Layout`, `Data Display`, `Forms`, `Navigation`.
+- `--skip-barrel` (optional) skips the barrel-export insert step (below) —
+  use it when you want to add the export by hand, e.g. to place it in a
+  non-default position.
 
 It creates, following the existing house pattern (variant union + `Record`
 class map + `class?` passthrough + the shared focus-visible outline classes):
@@ -322,7 +325,8 @@ class map + `class?` passthrough + the shared focus-visible outline classes):
   `Story<Props>` `Playground` variant with a controls skeleton (§3/§4).
 - `packages/ui/src/<name>/__tests__/<name>.test.tsx` — a starter test suite.
 - The barrel export in `packages/ui/src/index.ts`, inserted alphabetically
-  into the matching `// ── <Category> ──` section.
+  into the matching `// ── <Category> ──` section — unless `--skip-barrel`
+  is passed or this project has no barrel-file convention (see below).
 - A `gen:sg-registry` run, so the component is registered in the S6 catalog
   immediately (§2) — no separate step needed.
 
@@ -335,6 +339,25 @@ The scaffolder's own logic (name/category validation, templates, and the
 barrel-insertion algorithm) lives in `scripts/lib/component-scaffold.mjs` and
 is unit-tested in `scripts/__tests__/component-scaffold.test.ts`; the CLI
 entry point is `scripts/new-component.mjs`.
+
+### Configuring the scaffolder (a fork with a different layout)
+
+`scripts/lib/scaffold-config.mjs` is the single source of truth both
+`new-component.mjs` and `gen-sg-registry.mjs` read from:
+
+- `COMPONENTS_ROOT` (default `"packages/ui/src"`) — the directory scanned/
+  written to for `<name>/<name>.{tsx,stories.tsx}`.
+- `BARREL_INDEX` (default `"packages/ui/src/index.ts"`) — the barrel file
+  new-component.mjs inserts an `export { … }` block into. Set to `null` if a
+  project has no barrel-file convention; new-component.mjs then always skips
+  the insert step, same as always passing `--skip-barrel`.
+- `UI_PACKAGE_NAME` (default `"@zudo-sg/ui"`) — the npm package name used in
+  generated `usage` snippets and in the package-scoped import specifiers
+  `gen-sg-registry.mjs` emits into `src/styleguide/data/sg-registry.ts`. If
+  `COMPONENTS_ROOT` moves, keep `packages/ui/package.json`'s `exports` map
+  wildcard (`"./<basename>/*": "./<basename>/*"`) matching the new root's
+  basename — `gen-sg-registry.mjs` derives its package-scoped import root
+  from `UI_PACKAGE_NAME` + that basename.
 
 ## 9. Per-component docs (optional MDX)
 

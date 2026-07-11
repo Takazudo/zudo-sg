@@ -17,6 +17,55 @@ import {
   testTemplate,
   toPascalCase,
 } from "../lib/component-scaffold.mjs";
+import { BARREL_INDEX, COMPONENTS_ROOT, UI_PACKAGE_NAME } from "../lib/scaffold-config.mjs";
+import { parseArgs } from "../new-component.mjs";
+
+describe("scaffold-config", () => {
+  it("exposes the default components root, barrel index, and package name", () => {
+    expect(COMPONENTS_ROOT).toBe("packages/ui/src");
+    expect(BARREL_INDEX).toBe("packages/ui/src/index.ts");
+    expect(UI_PACKAGE_NAME).toBe("@zudo-sg/ui");
+  });
+
+  it("nests BARREL_INDEX under COMPONENTS_ROOT (the barrel lives inside the scanned tree)", () => {
+    expect(BARREL_INDEX).not.toBeNull();
+    expect(BARREL_INDEX?.startsWith(`${COMPONENTS_ROOT}/`)).toBe(true);
+  });
+});
+
+describe("new-component.mjs parseArgs", () => {
+  it("parses name, --category, and defaults --skip-barrel to false", () => {
+    expect(parseArgs(["demo-widget", "--category", "Layout"])).toEqual({
+      name: "demo-widget",
+      category: "Layout",
+      skipBarrel: false,
+    });
+  });
+
+  it("parses --category=<value> form", () => {
+    expect(parseArgs(["demo-widget", "--category=Layout"])).toEqual({
+      name: "demo-widget",
+      category: "Layout",
+      skipBarrel: false,
+    });
+  });
+
+  it("sets skipBarrel when --skip-barrel is passed", () => {
+    expect(parseArgs(["demo-widget", "--category", "Layout", "--skip-barrel"])).toEqual({
+      name: "demo-widget",
+      category: "Layout",
+      skipBarrel: true,
+    });
+  });
+
+  it("parses --skip-barrel regardless of position", () => {
+    expect(parseArgs(["--skip-barrel", "demo-widget", "--category", "Layout"])).toEqual({
+      name: "demo-widget",
+      category: "Layout",
+      skipBarrel: true,
+    });
+  });
+});
 
 describe("toPascalCase", () => {
   it("converts a single-word kebab name", () => {
@@ -83,6 +132,9 @@ describe("storiesTemplate", () => {
     const src = storiesTemplate({ pascalName: "DemoWidget", kebabName: "demo-widget", category: "Layout" });
     expect(src).toContain(`import { DemoWidget, type DemoWidgetProps } from "./demo-widget";`);
     expect(src).toContain('category: "Layout",');
+    // The usage snippet's import specifier is derived from scaffold-config's
+    // UI_PACKAGE_NAME, not hardcoded — see component-scaffold.mjs.
+    expect(src).toContain(`import { DemoWidget } from "${UI_PACKAGE_NAME}";`);
     expect(src).toContain("export const Playground: Story<DemoWidgetProps> = {");
     expect(src).toContain('prop: "variant"');
   });

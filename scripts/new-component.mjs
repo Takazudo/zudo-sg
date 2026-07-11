@@ -37,38 +37,44 @@ import {
   testTemplate,
   toPascalCase,
 } from "./lib/component-scaffold.mjs";
+import { BARREL_INDEX, COMPONENTS_ROOT } from "./lib/scaffold-config.mjs";
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 const ROOT = resolve(__dirname, "..");
-const UI_SRC_DIR = resolve(ROOT, "packages/ui/src");
-const INDEX_PATH = resolve(UI_SRC_DIR, "index.ts");
+const UI_SRC_DIR = resolve(ROOT, COMPONENTS_ROOT);
+const INDEX_PATH = BARREL_INDEX ? resolve(ROOT, BARREL_INDEX) : null;
 const GEN_REGISTRY_SCRIPT = resolve(__dirname, "gen-sg-registry.mjs");
 
-function parseArgs(argv) {
+export function parseArgs(argv) {
   const positional = [];
   let category;
+  let skipBarrel = false;
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === "--category") {
       category = argv[++i];
     } else if (arg.startsWith("--category=")) {
       category = arg.slice("--category=".length);
+    } else if (arg === "--skip-barrel") {
+      skipBarrel = true;
     } else if (!arg.startsWith("--")) {
       positional.push(arg);
     }
   }
-  return { name: positional[0], category };
+  return { name: positional[0], category, skipBarrel };
 }
 
 function printUsage() {
   console.error(
-    `Usage: pnpm new:component <name> --category <Category>\n` +
-      `  <Category> must be one of: ${VALID_CATEGORIES.join(", ")}`,
+    `Usage: pnpm new:component <name> --category <Category> [--skip-barrel]\n` +
+      `  <Category> must be one of: ${VALID_CATEGORIES.join(", ")}\n` +
+      `  --skip-barrel skips inserting the export into ${BARREL_INDEX ?? "the barrel file"}.`,
   );
 }
 
 function main() {
-  const { name, category } = parseArgs(process.argv.slice(2));
+  const { name, category, skipBarrel } = parseArgs(process.argv.slice(2));
 
   if (!name || !category) {
     printUsage();
@@ -105,14 +111,23 @@ function main() {
     testTemplate({ pascalName, kebabName: name }),
   );
 
-  const indexSrc = readFileSync(INDEX_PATH, "utf8");
-  writeFileSync(
-    INDEX_PATH,
-    insertBarrelExport(indexSrc, { pascalName, kebabName: name, category }),
-  );
+  const shouldInsertBarrel = INDEX_PATH !== null && !skipBarrel;
+  if (shouldInsertBarrel) {
+    const indexSrc = readFileSync(INDEX_PATH, "utf8");
+    writeFileSync(
+      INDEX_PATH,
+      insertBarrelExport(indexSrc, { pascalName, kebabName: name, category }),
+    );
+  }
 
-  console.log(`Scaffolded ${pascalName} at packages/ui/src/${name}/`);
-  console.log("Added the barrel export to packages/ui/src/index.ts.");
+  console.log(`Scaffolded ${pascalName} at ${COMPONENTS_ROOT}/${name}/`);
+  if (shouldInsertBarrel) {
+    console.log(`Added the barrel export to ${BARREL_INDEX}.`);
+  } else if (INDEX_PATH === null) {
+    console.log("No BARREL_INDEX configured — skipped the barrel-export step.");
+  } else {
+    console.log("Skipped the barrel-export step (--skip-barrel).");
+  }
 
   // Shell out to `node <gen-sg-registry.mjs>` directly rather than
   // `pnpm gen:sg-registry` so this doesn't depend on pnpm being resolvable
@@ -129,13 +144,25 @@ function main() {
     return 1;
   }
 
+  const steps = [
+    `Fill in the TODOs in ${COMPONENTS_ROOT}/${name}/${name}.tsx and ${name}.stories.tsx.`,
+  ];
+  if (!shouldInsertBarrel && INDEX_PATH !== null) {
+    steps.push(`Add the barrel export to ${BARREL_INDEX} by hand (skipped via --skip-barrel).`);
+  }
+  steps.push(`Run \`pnpm lint:tokens\`, \`pnpm check\`, and \`pnpm test:unit\`.`);
+  steps.push(`\`pnpm build\`, then visit /components/${name} to confirm it renders.`);
+
   console.log(
-    `\nNext steps:\n` +
-      `  1. Fill in the TODOs in packages/ui/src/${name}/${name}.tsx and ${name}.stories.tsx.\n` +
-      `  2. Run \`pnpm lint:tokens\`, \`pnpm check\`, and \`pnpm test:unit\`.\n` +
-      `  3. \`pnpm build\`, then visit /components/${name} to confirm it renders.`,
+    `\nNext steps:\n${steps.map((step, i) => `  ${i + 1}. ${step}`).join("\n")}`,
   );
   return 0;
 }
 
-process.exit(main());
+// Guard so `import { parseArgs } from "./new-component.mjs"` (see
+// scripts/__tests__/component-scaffold.test.ts) doesn't also run the CLI —
+// only run main() when this file is the process entry point.
+const isMainModule = process.argv[1] && resolve(process.argv[1]) === __filename;
+if (isMainModule) {
+  process.exit(main());
+}
