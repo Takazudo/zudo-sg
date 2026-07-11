@@ -38,6 +38,7 @@ authors component variants without adopting this catalog's UI at all.
 | [`src/styleguide/data/`](./src/styleguide/data/) | The registry consumer: `sg-registry.ts` (codegen output), `registry.ts` (category grouping + variant ordering), `nav-nodes.ts`, `component-docs.ts`. | `src/styleguide/data/`. |
 | [`scripts/new-component.mjs`](./scripts/new-component.mjs) + [`scripts/lib/component-scaffold.mjs`](./scripts/lib/component-scaffold.mjs) + [`scripts/lib/scaffold-config.mjs`](./scripts/lib/scaffold-config.mjs) | The `pnpm new:component` scaffolder — generates a component skeleton, stories file, test file, barrel export, and re-runs the registry codegen in one command. | `scripts/new-component.mjs`, `scripts/lib/component-scaffold.mjs`, `scripts/lib/scaffold-config.mjs`. |
 | _(optional)_ [`scripts/gen-token-manifest.mjs`](./scripts/gen-token-manifest.mjs) + [`scripts/lib/ui-token-manifest.mjs`](./scripts/lib/ui-token-manifest.mjs) | Regenerates the shared UI package's design-token manifest (feeding the token-tweak panel) from `packages/ui/styles/tokens.css` / `colors.css` via a real CSS AST parse (postcss), rather than a hand-maintained copy. | `scripts/gen-token-manifest.mjs`, `scripts/lib/ui-token-manifest.mjs`. |
+| _(optional)_ [`scripts/gen-root-token-manifest.mjs`](./scripts/gen-root-token-manifest.mjs) + [`scripts/lib/root-token-manifest.mjs`](./scripts/lib/root-token-manifest.mjs) + [`scripts/lib/css-var-resolver.mjs`](./scripts/lib/css-var-resolver.mjs) | Regenerates the **root host's own** design-token manifest (`src/config/design-tokens-manifest.ts`) from `src/styles/global.css` plus the two shared `@zudo-sg/ui` files it `@import`s, via a cross-file CSS custom-property resolver — needed because the root manifest mixes shared-package tokens, root-specific `@theme` overrides, and `var()` indirection across files, which `gen-token-manifest.mjs`'s single-file parse can't follow (see #208/#209/#210/#211). | `scripts/gen-root-token-manifest.mjs`, `scripts/lib/root-token-manifest.mjs`, `scripts/lib/css-var-resolver.mjs`, `scripts/lib/css-var-parser.mjs`. |
 | _(optional)_ [`scripts/gen-z-index.mjs`](./scripts/gen-z-index.mjs) | Regenerates a Tailwind v4 `@theme` z-index block from a single `Z_INDEX_TIERS` source array, so z-index layers stay centrally defined. See the parsing caveat in §6. | `scripts/gen-z-index.mjs`. |
 
 `src/features/styleguide/*` is **host-owned application code, not part of
@@ -160,13 +161,6 @@ worth checking those for current status before working around them yourself:
   yet for a component that genuinely needs live data (e.g. an async dialog
   flow) beyond "layer interactivity separately." Tracked by the
   [Interactive Story Pattern epic (#212)](https://github.com/Takazudo/zudo-sg/issues/212).
-- **The root host's own token manifest is hand-maintained, not codegen'd.**
-  `scripts/gen-token-manifest.mjs` regenerates the *shared UI package's*
-  token manifest from real CSS, but `src/config/design-tokens-manifest.ts` —
-  the **root host's** manifest, which mixes shared UI tokens, root-specific
-  `@theme` overrides, and at least one non-token `clamp()` value — is still a
-  hand-copy with nothing enforcing it stays correct. Tracked by the
-  [Token Manifest Resolver epic (#208)](https://github.com/Takazudo/zudo-sg/issues/208).
 - **`gen-z-index.mjs` and `gen-story-categories.mjs` parse TypeScript source
   as text, not via import.** Both are dependency-free `.mjs` scripts that
   can't resolve `.ts` imports, so they regex-parse the relevant array literal

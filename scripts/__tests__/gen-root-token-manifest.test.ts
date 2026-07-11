@@ -1,15 +1,16 @@
 // scripts/__tests__/gen-root-token-manifest.test.ts
 //
-// Integration tests for #210's root token-manifest builder — the
-// generate-only counterpart to scripts/__tests__/ui-token-manifest.test.ts,
-// but resolver-backed (#209) across the three real ROOT sources instead of a
-// single-file Map lookup.
+// Integration tests for the root token-manifest builder (#210, wired in as
+// #211) — the resolver-backed (#209) counterpart to
+// scripts/__tests__/ui-token-manifest.test.ts, spanning the three real ROOT
+// sources instead of a single-file Map lookup.
 //
 // Two layers, both against the REAL project CSS (no synthetic fixtures):
 //  - Library level: build/render straight from the real
 //    packages/ui/styles/{tokens,colors}.css + src/styles/global.css content,
 //    asserting the known unit-transform cases (#210's LOCKED spec) and that
-//    the render is idempotent against the committed scratch file.
+//    the render is idempotent against the committed generated manifest
+//    (src/config/design-tokens-manifest.ts).
 //  - CLI level: spawns the real gen-root-token-manifest.mjs (copied, with its
 //    lib/ dependencies, into a temp sandbox — same pattern as
 //    gen-z-index.test.ts) against sandbox CSS files seeded with the REAL
@@ -42,7 +43,7 @@ const GENERATED_MANIFEST_PATH = join(
   PROJECT_ROOT,
   "src",
   "config",
-  "root-token-manifest.generated.ts",
+  "design-tokens-manifest.ts",
 );
 
 function realResolver() {
@@ -160,7 +161,7 @@ describe("buildRootTokenManifest (real CSS sources)", () => {
 });
 
 describe("renderRootTokenManifestFile", () => {
-  it("is idempotent and matches the committed scratch manifest for the real project CSS", () => {
+  it("is idempotent and matches the committed generated manifest for the real project CSS", () => {
     const manifest = buildRootTokenManifest(realResolver());
     const rendered = renderRootTokenManifestFile(manifest);
     const committed = readFileSync(GENERATED_MANIFEST_PATH, "utf8");
@@ -227,14 +228,14 @@ function run(args: string[] = []) {
 }
 
 function readGenerated() {
-  return readFileSync(join(sandbox, "src", "config", "root-token-manifest.generated.ts"), "utf-8");
+  return readFileSync(join(sandbox, "src", "config", "design-tokens-manifest.ts"), "utf-8");
 }
 
 describe("gen-root-token-manifest.mjs CLI", () => {
-  it("writes the scratch manifest with the known unit-transform defaults on first run", () => {
+  it("writes the manifest with the known unit-transform defaults on first run", () => {
     const result = run();
     expect(result.status).toBe(0);
-    expect(result.stdout).toContain("Wrote src/config/root-token-manifest.generated.ts");
+    expect(result.stdout).toContain("Wrote src/config/design-tokens-manifest.ts");
 
     const generated = readGenerated();
     expect(generated).toContain('default: "8px"'); // --radius-lg
@@ -265,7 +266,7 @@ describe("gen-root-token-manifest.mjs CLI", () => {
   it("--check fails and does not write when the committed file has drifted", () => {
     run();
     const stale = readGenerated().replace('"radius-lg"', '"radius-lg-STALE"');
-    writeFileSync(join(sandbox, "src", "config", "root-token-manifest.generated.ts"), stale);
+    writeFileSync(join(sandbox, "src", "config", "design-tokens-manifest.ts"), stale);
 
     const result = run(["--check"]);
     expect(result.status).toBe(1);
@@ -274,7 +275,7 @@ describe("gen-root-token-manifest.mjs CLI", () => {
     expect(readGenerated()).toBe(stale);
   });
 
-  it("--check fails without writing when the scratch file doesn't exist yet", () => {
+  it("--check fails without writing when the generated file doesn't exist yet", () => {
     const result = run(["--check"]);
     expect(result.status).toBe(1);
     expect(result.stderr).toContain("Root token manifest drift detected");

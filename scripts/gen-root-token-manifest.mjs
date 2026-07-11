@@ -1,24 +1,27 @@
 #!/usr/bin/env node
 // scripts/gen-root-token-manifest.mjs
 //
-// Codegen (#210, generate-only): builds
-// src/config/root-token-manifest.generated.ts from the real ROOT source of
-// truth — src/styles/global.css and the two shared @zudo-sg/ui files it
-// @imports — via the css-var-resolver.mjs cross-file resolver (#209),
-// instead of the hand-maintained src/config/design-tokens-manifest.ts that
-// scripts/gen-token-manifest.mjs's own header comment explicitly scoped
-// OUT of that generator's simpler single-file-parse contract.
+// Codegen (#211, wired in): regenerates src/config/design-tokens-manifest.ts
+// — the ROOT host's own token manifest — from the real ROOT source of truth:
+// src/styles/global.css and the two shared @zudo-sg/ui files it @imports, via
+// the css-var-resolver.mjs cross-file resolver (#209). Replaces the hand copy
+// scripts/gen-token-manifest.mjs's own header comment used to scope OUT of
+// that generator's simpler single-file-parse contract (see #208/#210/#211).
 //
-// This script is GENERATE-ONLY: it writes the scratch file above, not the
-// hand file. Nothing consumes root-token-manifest.generated.ts yet — wiring
-// it into design-token-panel-config.ts / the panel / serde is a follow-up
-// sub-issue once the diff report below has been reviewed.
+// design-tokens-manifest.ts is a live consumer target (design-token-panel-config.ts,
+// pages/components/tokens.tsx, @takazudo/zudo-doc's design-token-serde) — same
+// treatment as scripts/gen-token-manifest.mjs / ui-design-tokens-manifest.ts.
 //
 // Usage:
-//   node scripts/gen-root-token-manifest.mjs           # rewrite the scratch manifest
+//   node scripts/gen-root-token-manifest.mjs           # rewrite the manifest
 //   node scripts/gen-root-token-manifest.mjs --check   # verify committed file is
 //                                                        # up to date (exit 1 on
 //                                                        # drift, no write)
+//
+// MAINTENANCE: edit src/styles/global.css / packages/ui/styles/{tokens,colors}.css
+// (the source of truth) or the SPECS tables in scripts/lib/root-token-manifest.mjs,
+// then run `pnpm gen:root-token-manifest` and commit the regenerated manifest.
+// Never hand-edit src/config/design-tokens-manifest.ts.
 
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
@@ -35,7 +38,7 @@ const ROOT = resolve(__dirname, "..");
 const TOKENS_CSS_PATH = resolve(ROOT, "packages/ui/styles/tokens.css");
 const COLORS_CSS_PATH = resolve(ROOT, "packages/ui/styles/colors.css");
 const GLOBAL_CSS_PATH = resolve(ROOT, "src/styles/global.css");
-const MANIFEST_PATH = resolve(ROOT, "src/config/root-token-manifest.generated.ts");
+const MANIFEST_PATH = resolve(ROOT, "src/config/design-tokens-manifest.ts");
 
 function main() {
   const check = process.argv.includes("--check");
@@ -79,9 +82,9 @@ function main() {
     }
     if (current !== next) {
       console.error(
-        "Root token manifest drift detected: src/config/root-token-manifest.generated.ts is out of date.",
+        "Root token manifest drift detected: src/config/design-tokens-manifest.ts is out of date.",
       );
-      console.error("Run `node scripts/gen-root-token-manifest.mjs` and commit the result.");
+      console.error("Run `pnpm gen:root-token-manifest` and commit the result.");
       return 1;
     }
     console.log(`OK — root token manifest is up to date (${tokenCount} entries).`);
@@ -102,7 +105,7 @@ function main() {
   }
   writeFileSync(MANIFEST_PATH, next);
   console.log(
-    `Wrote src/config/root-token-manifest.generated.ts (${tokenCount} entries).`,
+    `Wrote src/config/design-tokens-manifest.ts (${tokenCount} entries).`,
   );
   return 0;
 }
