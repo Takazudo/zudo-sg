@@ -35,20 +35,32 @@ export const settings = {
     darkScheme: "Default Dark",
     respectPrefersColorScheme: true,
   } satisfies ColorModeConfig as ColorModeConfig | false,
+  // --- Branding (#194) ----------------------------------------------------
+  // Site identity fields, kept contiguous. Two more identity fields live
+  // elsewhere in this file (metaTags.twitterCreator, footer.copyright)
+  // because they're typed as part of MetaTagsConfig / FooterConfig —
+  // externally defined by @takazudo/zudo-doc — and can't be physically
+  // relocated here without restructuring those package types. Each carries
+  // a cross-reference comment pointing back to this block.
   siteName: "Zudo Sg",
+  // Falsy siteUrl silently omits OGP absolute image URLs and canonical link
+  // tags from build output — see the module-load warning below.
+  siteUrl: "" as string,
+  // -------------------------------------------------------------------------
   siteDescription: "" as string,
   base: "/",
   trailingSlash: false as boolean,
   noindex: false as boolean,
   editUrl: false as string | false,
   githubUrl: false as string | false,
-  siteUrl: "" as string,
   metaTags: {
     description: true,
     keywords: "",
     ogImage: "/img/ogp.png",
     ogSiteName: true,
     twitterCard: "summary",
+    // Branding identity field (#194) — kept here because MetaTagsConfig is
+    // externally typed by @takazudo/zudo-doc; see the Branding block above.
     twitterCreator: "@Takazudo",
   } satisfies MetaTagsConfig as MetaTagsConfig,
   docsDir: "src/content/docs",
@@ -104,6 +116,8 @@ export const settings = {
         ],
       },
     ],
+    // Branding identity field (#194) — kept here because FooterConfig is
+    // externally typed by @takazudo/zudo-doc; see the Branding block above.
     copyright: "Copyright © 2026 Your Name. Built with zudo-doc.",
   } satisfies FooterConfig as FooterConfig | false,
   headerNav: [
@@ -148,3 +162,12 @@ export const settings = {
     },
   ] satisfies HeaderRightItem[] as HeaderRightItem[],
 };
+
+// #194: siteUrl backs OGP absolute image URLs and canonical link tags.
+// Warn at module load (i.e. at build time) so a missing value doesn't ship
+// unnoticed.
+if (!settings.siteUrl) {
+  console.warn(
+    "[settings] siteUrl is not set — OGP meta tags and canonical absolute URLs will be omitted from the build output.",
+  );
+}
