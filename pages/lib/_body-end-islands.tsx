@@ -220,35 +220,45 @@ export function BodyEndIslands({
       {imageEnlarge}
       {mermaidEnlarge}
 
-      {/* zdtp doc-chrome panel bootstrap: hydrates on load so configurePanel()
-          runs early and the toggle-sg-doc-tweak listener is live before the user
-          clicks the header Design Tokens icon. The inline script is the
-          pre-hydration shim that queues the first click (zudolab/zudo-doc#1627
-          Part B). Listens on "toggle-sg-doc-tweak" — the doc-chrome panel's
+      {/* zdtp doc-chrome panel bootstrap: hydrates on load to register a
+          byte-cheap lazy loader (window.__zdtpLazyLoad) — it does NOT import
+          zdtp at hydration (STOPGAP #206 gate; see
+          src/components/design-token-panel-bootstrap.tsx). The inline script is
+          the pre-hydration shim that queues the first click
+          (zudolab/zudo-doc#1627 Part B) AND kicks the lazy loader once it is
+          registered, so the first `toggle-sg-doc-tweak` both downloads zdtp and
+          is replayed by the bootstrap's `__zdtpReadyClicks` once configurePanel()
+          has run. Listens on "toggle-sg-doc-tweak" — the doc-chrome panel's
           explicit toggle channel — NOT the reserved "toggle-design-token-panel".
           Guard names: __zdtpToggleShimInstalled / __zdtpReadyClicks.
+          The `window.__zdtpLazyLoad` call is a plain window lookup (no bundler
+          alias) because this inline shim is RAW browser code — `@/lib/...`
+          imports would not resolve here; the dynamic import lives in the
+          compiled Bootstrap island module instead.
 
           This shim is separate from the explicit toggleEvent choice in
           design-token-panel-config.ts. The explicit event keeps the doc-chrome
           and preview zdtp instances isolated; this shim queues a click that
-          happens before `<Island when="load">` hydrates and registers zdtp's
-          own listener. */}
+          happens before the lazy-loaded zdtp registers its own listener. */}
       <script
-        dangerouslySetInnerHTML={{ __html: "(function(){\nif(window.__zdtpToggleShimInstalled)return;\nwindow.__zdtpToggleShimInstalled=true;\nvar pending=false;\nfunction shim(){pending=true;}\nwindow.addEventListener('toggle-sg-doc-tweak',shim);\nwindow.__zdtpReadyClicks=function(){\nwindow.removeEventListener('toggle-sg-doc-tweak',shim);\ndelete window.__zdtpReadyClicks;\nif(pending){pending=false;window.dispatchEvent(new CustomEvent('toggle-sg-doc-tweak'));}\n};\n})();" }}
+        dangerouslySetInnerHTML={{ __html: "(function(){\nif(window.__zdtpToggleShimInstalled)return;\nwindow.__zdtpToggleShimInstalled=true;\nvar pending=false;\nfunction shim(){pending=true;if(window.__zdtpLazyLoad)window.__zdtpLazyLoad();}\nwindow.addEventListener('toggle-sg-doc-tweak',shim);\nwindow.__zdtpReadyClicks=function(){\nwindow.removeEventListener('toggle-sg-doc-tweak',shim);\ndelete window.__zdtpReadyClicks;\nif(pending){pending=false;window.dispatchEvent(new CustomEvent('toggle-sg-doc-tweak'));}\n};\n})();" }}
       />
       {Island({
         when: "load",
         children: <DesignTokenPanelBootstrap />,
       }) as unknown as VNode}
 
-      {/* zdtp preview panel bootstrap: hydrates on load so configurePanel() runs
-          early for the 2nd (preview-iframe) instance. Guard names are DISTINCT
-          from the doc-chrome panel (__zdtpPreviewToggleShimInstalled /
-          __zdtpPreviewReadyClicks) so both panels hydrate independently without
-          cross-talk. Listens on "toggle-preview-token-panel" and is kept for
-          the same pre-hydration click-queue reason as the doc-chrome shim. */}
+      {/* zdtp preview panel bootstrap: hydrates on load to register a byte-cheap
+          lazy loader (window.__zdtpPreviewLazyLoad) for the 2nd (preview-iframe)
+          instance — it does NOT import zdtp at hydration (STOPGAP #206 gate; see
+          src/components/preview-token-panel-bootstrap.tsx). Guard names are
+          DISTINCT from the doc-chrome panel (__zdtpPreviewToggleShimInstalled /
+          __zdtpPreviewReadyClicks / __zdtpPreviewLazyLoad) so both panels load
+          independently without cross-talk. Listens on "toggle-preview-token-panel"
+          and, like the doc-chrome shim, queues the first click AND kicks the lazy
+          loader once registered (plain window lookup — no bundler alias). */}
       <script
-        dangerouslySetInnerHTML={{ __html: "(function(){\nif(window.__zdtpPreviewToggleShimInstalled)return;\nwindow.__zdtpPreviewToggleShimInstalled=true;\nvar pending=false;\nfunction shim(){pending=true;}\nwindow.addEventListener('toggle-preview-token-panel',shim);\nwindow.__zdtpPreviewReadyClicks=function(){\nwindow.removeEventListener('toggle-preview-token-panel',shim);\ndelete window.__zdtpPreviewReadyClicks;\nif(pending){pending=false;window.dispatchEvent(new CustomEvent('toggle-preview-token-panel'));}\n};\n})();" }}
+        dangerouslySetInnerHTML={{ __html: "(function(){\nif(window.__zdtpPreviewToggleShimInstalled)return;\nwindow.__zdtpPreviewToggleShimInstalled=true;\nvar pending=false;\nfunction shim(){pending=true;if(window.__zdtpPreviewLazyLoad)window.__zdtpPreviewLazyLoad();}\nwindow.addEventListener('toggle-preview-token-panel',shim);\nwindow.__zdtpPreviewReadyClicks=function(){\nwindow.removeEventListener('toggle-preview-token-panel',shim);\ndelete window.__zdtpPreviewReadyClicks;\nif(pending){pending=false;window.dispatchEvent(new CustomEvent('toggle-preview-token-panel'));}\n};\n})();" }}
       />
       {Island({
         when: "load",
