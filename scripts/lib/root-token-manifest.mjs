@@ -18,26 +18,25 @@
 // the SPECS tables below and are the one thing a human edits when a *new*
 // token needs to appear in the panel.
 //
-// Unit normalization (LOCKED, do not re-litigate — see #210): the hand file
-// this generator reproduces expresses radius/duration tokens in px/ms even
-// though the CSS declares them in rem/s (see the `--radius-lg: 1rem (16px)`
-// vs `0.5rem (8px)` root override, and `--default-transition-duration: 0.15s`
-// vs the hand file's `"150ms"`). `normalizeToUnit()` applies the two
-// canonical transforms this project uses — rem -> px at 16px/rem, s -> ms —
-// driven by each SPECS entry's own target `unit` field, so generated
-// defaults preserve the current hand-file unit SHAPES exactly. Values
-// already expressed in the target unit (or unitless numbers/strings, e.g.
-// line-heights, font-weights, font-family stacks) pass through unchanged.
-// zdtp's panel forwards `default` + `unit` as separate fields — a rem value
-// carrying `unit: "px"` would be silently wrong at render time, not just a
-// cosmetic mismatch, which is why this transform exists at all.
+// Unit normalization (LOCKED, do not re-litigate — see #210): the manifest
+// expresses radius/duration tokens in px/ms even though the CSS declares
+// them in rem/s (see the `--radius-lg: 1rem (16px)` vs `0.5rem (8px)` root
+// override, and `--default-transition-duration: 0.15s` vs the manifest's
+// `"150ms"`). `normalizeToUnit()` applies the two canonical transforms this
+// project uses — rem -> px at 16px/rem, s -> ms — driven by each SPECS
+// entry's own target `unit` field, so generated defaults preserve those
+// established unit SHAPES exactly. Values already expressed in the target
+// unit (or unitless numbers/strings, e.g. line-heights, font-weights,
+// font-family stacks) pass through unchanged. zdtp's panel forwards
+// `default` + `unit` as separate fields — a rem value carrying `unit: "px"`
+// would be silently wrong at render time, not just a cosmetic mismatch,
+// which is why this transform exists at all.
 //
 // --zd-sidebar-w (sidebar-w) is intentionally NOT looked up via the
 // resolver: it's a `clamp(14rem, 20vw, 22rem)` expression, and this
 // generator only dereferences whole-value `var()` chains and literals —
-// clamp() math is out of scope for v1 (see design-tokens-manifest.ts's own
-// comment on this row). SIDEBAR_W_MANUAL_TOKEN carries the same literal by
-// hand, flagged readonly, exactly as the hand file does today.
+// clamp() math is out of scope for v1. SIDEBAR_W_MANUAL_TOKEN carries that
+// literal by hand, flagged readonly, in SPACING_SPECS's place instead.
 //
 // COLOR_TOKENS stays empty in v1: `--zd-surface` and its siblings are
 // injected by ColorSchemeProvider at runtime and have no static CSS
@@ -181,7 +180,7 @@ export const SPACING_SPECS = [
   // Structural zero / 1px hairline — read-only so designers see they exist,
   // but editing them would break utilities that rely on "0 is 0" / the
   // hairline width. id/label keep the full "spacing-" prefix (unlike the
-  // axis-scoped rows above) to match the hand file's existing shape.
+  // axis-scoped rows above) to match the manifest's established shape.
   { cssVar: "--spacing-0", id: "spacing-0", label: "spacing-0", group: "layout", step: 1, unit: "", readonly: true },
   { cssVar: "--spacing-px", id: "spacing-px", label: "spacing-px", group: "layout", step: 1, unit: "px", readonly: true },
 ];
@@ -190,8 +189,7 @@ export const SPACING_SPECS = [
  * `--zd-sidebar-w`: a `clamp(14rem, 20vw, 22rem)` responsive expression, not
  * a single resolvable value — clamp() math is out of scope for this
  * generator (LOCKED per #210). Carried as a manually-flagged readonly
- * literal, exactly matching design-tokens-manifest.ts's existing row, rather
- * than looked up via the resolver.
+ * literal rather than looked up via the resolver.
  */
 export const SIDEBAR_W_MANUAL_TOKEN = {
   id: "sidebar-w",
@@ -387,7 +385,7 @@ function renderTokenDefObject(token, indent) {
 }
 
 /**
- * Render the full `src/config/root-token-manifest.generated.ts` source.
+ * Render the full `src/config/design-tokens-manifest.ts` source.
  *
  * @param {ReturnType<typeof buildRootTokenManifest>} manifest
  */
@@ -397,17 +395,13 @@ export function renderRootTokenManifestFile(manifest) {
   const sizeLines = manifest.sizeTokens.map((t) => renderTokenDefObject(t, 2)).join("\n");
 
   return `/**
- * Design-token manifest for the zudo-sg ROOT host — GENERATE-ONLY scratch
- * output (#210). NOT wired into any consumer yet; the hand-maintained
- * src/config/design-tokens-manifest.ts is still the manifest the panel and
- * serde actually use. This file exists as generator evidence for the
- * follow-up wire-in sub-issue.
+ * Design-token manifest data arrays for the zudo-sg ROOT host — canonical
+ * source of truth for all editable design tokens.
  *
- * GENERATED — do not hand-edit. Run
- * \`node scripts/gen-root-token-manifest.mjs\` after changing
- * packages/ui/styles/tokens.css, packages/ui/styles/colors.css, or
+ * GENERATED — do not hand-edit. Run \`pnpm gen:root-token-manifest\` after
+ * changing packages/ui/styles/tokens.css, packages/ui/styles/colors.css, or
  * src/styles/global.css, then commit the regenerated output.
- * \`node scripts/gen-root-token-manifest.mjs --check\` fails on drift.
+ * \`pnpm check:root-token-manifest\` fails on drift.
  *
  * Source of truth, resolved via scripts/lib/css-var-resolver.mjs (#209) in
  * @import cascade order — this order MUST track global.css's own @import
@@ -420,19 +414,30 @@ export function renderRootTokenManifestFile(manifest) {
  *
  * Only \`default\` values are derived from the CSS. The two LOCKED canonical
  * unit transforms (rem -> px at 16px/rem, s -> ms) are applied per-token so
- * generated defaults preserve the current hand-file unit SHAPES exactly
+ * generated defaults preserve the unit SHAPES its consumers expect
  * (e.g. --radius-lg -> "8px", --default-transition-duration -> "150ms").
  * \`group\`/\`step\`/\`unit\`/\`control\`/\`options\`/\`pill\`/\`readonly\` are
- * presentation metadata with no CSS equivalent and are configured in this
- * script's SPECS tables (scripts/lib/root-token-manifest.mjs).
+ * presentation metadata with no CSS equivalent and are configured in
+ * scripts/lib/root-token-manifest.mjs's SPECS tables — that's the one place
+ * a human edits when a genuinely new token needs to appear in the panel.
  *
  * \`sidebar-w\` (--zd-sidebar-w) is a manually-flagged readonly literal, not
  * derived from CSS — its clamp() expression is out of scope for this
  * generator (see scripts/lib/root-token-manifest.mjs).
  *
- * COLOR_TOKENS is intentionally empty (v1): --zd-surface and its siblings
- * are injected by ColorSchemeProvider at runtime and have no static CSS
- * declaration anywhere in the three source files to resolve.
+ * COLOR_TOKENS is intentionally empty: --zd-surface and its siblings are
+ * injected by ColorSchemeProvider at runtime and have no static CSS
+ * declaration anywhere in the three source files to resolve — color is
+ * cluster-driven in design-token-panel-config.ts instead.
+ *
+ * Imported by:
+ *  - src/config/design-token-panel-config.ts  (groups items into TabConfig.tiers)
+ *  - pages/components/tokens.tsx              (spacing / font-size token rows)
+ *  - @takazudo/zudo-doc/theme (design-token-serde) — cssVar ↔ id lookup for JSON I/O
+ *
+ * \`TokenDef.advanced\` was dropped upstream (zdtp 8abb1e4) — items previously
+ * gated behind an "Advanced" disclosure now live in their own tier, so the
+ * tier itself acts as the disclosure container (see design-token-panel-config.ts).
  */
 import type { TokenDef } from "@takazudo/zdtp";
 
