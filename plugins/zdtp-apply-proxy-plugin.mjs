@@ -235,13 +235,22 @@ export function createDevMiddlewareHandler({ rootDir, writeRoot, routing }) {
     }
 
     // Multiple prefixes: one sequential handler call per group, results merged.
-    /** @type {{ ok: true, updated: unknown[], unknownCssVars: unknown[], unchangedCssVars: unknown[], unknownOutsideBlockCssVars: unknown[] }} */
+    // `updated` entries are coalesced by target file: because this shim splits a
+    // same-file request into one call per prefix, two prefixes writing the same
+    // file would otherwise yield two `updated` rows with an identical `file`.
+    // zdtp's result modal keys rows by `file`, so duplicate `file` values render
+    // as confusingly-partial split sections (and collide as Preact keys). Merge
+    // array-valued fields per file so the response carries one row per file —
+    // matching the shape the un-shimmed single call would have produced. (#200 review)
+    /** @type {Map<string, Record<string, unknown>>} */
+    const updatedByFile = new Map();
+    /** @type {Record<string, unknown>[]} */
+    const updatedOrder = [];
     const merged = {
       ok: true,
-      updated: [],
-      unknownCssVars: [],
-      unchangedCssVars: [],
-      unknownOutsideBlockCssVars: [],
+      unknownCssVars: /** @type {unknown[]} */ ([]),
+      unchangedCssVars: /** @type {unknown[]} */ ([]),
+      unknownOutsideBlockCssVars: /** @type {unknown[]} */ ([]),
     };
     for (const groupTokens of groupsByPrefix.values()) {
       const res = await applyHandler(
@@ -255,7 +264,23 @@ export function createDevMiddlewareHandler({ rootDir, writeRoot, routing }) {
         return { status: res.status, headers: collectHeaders(res), body, bodyEncoding: "utf8" };
       }
       const json = JSON.parse(body);
-      merged.updated.push(...(json.updated ?? []));
+      for (const entry of json.updated ?? []) {
+        const file = entry?.file;
+        const existing = file != null ? updatedByFile.get(file) : undefined;
+        if (!existing) {
+          const clone = { ...entry };
+          if (file != null) updatedByFile.set(file, clone);
+          updatedOrder.push(clone);
+          continue;
+        }
+        // Same file already written by an earlier prefix group: concat every
+        // array-valued field (changed / unchanged / unknown / unknownOutsideBlock).
+        for (const [k, v] of Object.entries(entry)) {
+          if (Array.isArray(v) && Array.isArray(existing[k])) {
+            existing[k] = [...existing[k], ...v];
+          }
+        }
+      }
       merged.unknownCssVars.push(...(json.unknownCssVars ?? []));
       merged.unchangedCssVars.push(...(json.unchangedCssVars ?? []));
       merged.unknownOutsideBlockCssVars.push(...(json.unknownOutsideBlockCssVars ?? []));
@@ -263,7 +288,7 @@ export function createDevMiddlewareHandler({ rootDir, writeRoot, routing }) {
     return {
       status: 200,
       headers: { "content-type": "application/json" },
-      body: JSON.stringify(merged),
+      body: JSON.stringify({ ...merged, updated: updatedOrder }),
       bodyEncoding: "utf8",
     };
   };

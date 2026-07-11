@@ -479,10 +479,24 @@ describe("createDevMiddlewareHandler — real routing map + same-file shim", () 
       },
     });
     expect(res.status).toBe(200);
-    expect(JSON.parse(res.body ?? "{}").ok).toBe(true);
+    const payload = JSON.parse(res.body ?? "{}");
+    expect(payload.ok).toBe(true);
     const css = readReal("colors.css");
     expect(css).toContain("--palette-base-4: oklch(.250 .006 65);");
     expect(css).toContain("--color-ink: red;");
+    // The two same-file prefix calls must be COALESCED into one `updated` row —
+    // zdtp's result modal keys rows by `file`, so a duplicate `file` would render
+    // as split/partial sections (and collide as Preact keys). One row, both vars.
+    const colorRows = (payload.updated ?? []).filter(
+      (u: { file?: string }) => u.file?.endsWith("colors.css"),
+    );
+    expect(colorRows).toHaveLength(1);
+    expect(colorRows[0].changed).toEqual(
+      expect.arrayContaining(["--palette-base-4", "--color-ink"]),
+    );
+    // No file appears twice across the whole `updated` list.
+    const files = (payload.updated ?? []).map((u: { file?: string }) => u.file);
+    expect(new Set(files).size).toBe(files.length);
   });
 
   it("(d) spacing + font → tokens.css: RAW zdtp handler clobbers (the bug)", async () => {
@@ -522,6 +536,31 @@ describe("createDevMiddlewareHandler — real routing map + same-file shim", () 
     expect(JSON.parse(res.body ?? "{}").ok).toBe(true);
     expect(readReal("colors.css")).toContain("--palette-base-0: oklch(.9 .01 65);");
     expect(readReal("tokens.css")).toContain("--spacing-hsp-md: 0.7rem;");
+  });
+
+  it("(f) 3 prefixes → tokens.css coalesce into ONE updated row", async () => {
+    // spacing + font + shadow all route to tokens.css → three sequential prefix
+    // calls, one coalesced `updated` row.
+    const res = await post(realHandler(), {
+      tokens: {
+        "--spacing-hsp-md": "0.8rem",
+        "--font-weight-bold": "800",
+        "--shadow-card": "0 1px 2px oklch(.2 .01 65 / 0.1)",
+      },
+    });
+    expect(res.status).toBe(200);
+    const payload = JSON.parse(res.body ?? "{}");
+    expect(payload.ok).toBe(true);
+    const tokenRows = (payload.updated ?? []).filter(
+      (u: { file?: string }) => u.file?.endsWith("tokens.css"),
+    );
+    expect(tokenRows).toHaveLength(1);
+    expect(tokenRows[0].changed).toEqual(
+      expect.arrayContaining(["--spacing-hsp-md", "--font-weight-bold", "--shadow-card"]),
+    );
+    const css = readReal("tokens.css");
+    expect(css).toContain("--spacing-hsp-md: 0.8rem;");
+    expect(css).toContain("--font-weight-bold: 800;");
   });
 
   it("still returns zdtp's single 400 when the POST carries an unroutable prefix", async () => {
