@@ -372,6 +372,19 @@ function renderTokenDefObject(token, indent) {
   ];
   if (token.control) fields.push(`control: ${jsStringLiteral(token.control)}`);
   if (token.options) {
+    // The generated file declares named option consts (only FONT_WEIGHT_OPTIONS
+    // today) and references them by name to stay DRY. Guard: if a future spec
+    // ever carries a different options set, fail codegen LOUDLY here instead of
+    // silently emitting the wrong FONT_WEIGHT_OPTIONS reference — check:root-
+    // token-manifest re-runs this same renderer, so it could not otherwise catch
+    // the mismatch (#208 review).
+    if (JSON.stringify(token.options) !== JSON.stringify(FONT_WEIGHT_OPTIONS)) {
+      throw new Error(
+        `renderTokenDefObject: token "${token.cssVar}" has an options set that ` +
+          `is not FONT_WEIGHT_OPTIONS. Add a named const for it and map the ` +
+          `reference here before generating.`,
+      );
+    }
     fields.push(`options: FONT_WEIGHT_OPTIONS`);
   }
   if (token.pill) {
