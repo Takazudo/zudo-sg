@@ -41,6 +41,12 @@ const BRIDGE_SOURCE = "zudo-doc-theme-bridge";
 // color value that is unlikely to be a stylesheet default.
 const BRAND_SENTINEL = "oklch(0.50 0.20 29)";
 
+// Sentinel for the Color-tab (ui-color, a non-reserved GenericTab id — see
+// COLOR_TAB in preview-token-panel-config.ts) round-trip assertion in Test 4.
+// Distinct from BRAND_SENTINEL so a stale live-apply value can't accidentally
+// satisfy the Export/Load assertion.
+const COLOR_TAB_SENTINEL = "oklch(0.42 0.18 210)";
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -118,6 +124,32 @@ async function setPanelRadiusMd(page: Page, pxValue: string): Promise<void> {
   await radiusInput.fill(pxValue);
   // Dispatch an extra input event as a safety measure for older Preact builds.
   await radiusInput.dispatchEvent("input");
+
+  // Allow the sink apply to propagate via postMessage.
+  await page.waitForTimeout(150);
+}
+
+/**
+ * Navigate to the "Color" tab in the currently-open panel and set --color-brand
+ * to a specific value using its text input (aria-label: "--color-brand value").
+ *
+ * Mirrors setPanelRadiusMd, but for the Color tab (`ui-color` — a non-reserved
+ * id routed to zdtp's GenericTab, see COLOR_TAB in preview-token-panel-config.ts).
+ * Driving it via the panel UI (not a direct postMessage) populates the
+ * registry's previewOverrides Map, which is what Export actually serializes.
+ */
+async function setPanelColorBrand(page: Page, value: string): Promise<void> {
+  const panel = page.locator(".tokenpanel-shell").first();
+
+  const colorTab = panel.getByRole("tab", { name: "Color", exact: true });
+  await expect(colorTab).toBeVisible({ timeout: 5_000 });
+  await colorTab.click();
+
+  const colorInput = panel.getByLabel("--color-brand value");
+  await expect(colorInput).toBeVisible({ timeout: 3_000 });
+
+  await colorInput.fill(value);
+  await colorInput.dispatchEvent("input");
 
   // Allow the sink apply to propagate via postMessage.
   await page.waitForTimeout(150);
@@ -359,6 +391,12 @@ test("preview panel: Export emits zdtp schema; Load-from-JSON restores overrides
   // Apply a --radius-md override via the panel UI so the state is non-default.
   await setPanelRadiusMd(page, "20");
 
+  // Also dirty a Color-tab (`ui-color`, a non-reserved GenericTab id) token.
+  // Regression coverage for #197: zdtp's serializer previously dropped this
+  // tab from Export/Load even though Apply/Reset worked live — exercising
+  // only the reserved-id Size tab above would not have caught that bug.
+  await setPanelColorBrand(page, COLOR_TAB_SENTINEL);
+
   // Click Export to open the export modal.
   const exportBtn = page
     .locator(".tokenpanel-action-link", { hasText: "Export" })
@@ -383,6 +421,12 @@ test("preview panel: Export emits zdtp schema; Load-from-JSON restores overrides
   // config.schemaId is display-only import-modal text, not the JSON schema.
   expect(exportedJson).toContain('"$schema"');
   expect(exportedJson).toContain("zudo-design-tokens/v2");
+
+  // Regression guard for #197: the Color tab (non-reserved "ui-color" tab id)
+  // must be captured by Export too, not just reserved-id tabs like Size —
+  // this is exactly the tab/token the fixed serializer bug affected.
+  expect(exportedJson).toContain('"ui-color"');
+  expect(exportedJson).toContain("--color-brand");
 
   // Assert the JSON is well-formed.
   const parsed = JSON.parse(exportedJson) as Record<string, unknown>;
@@ -434,6 +478,11 @@ test("preview panel: Export emits zdtp schema; Load-from-JSON restores overrides
   // so the iframe's --radius-md is restored to 20px (it was cleared by Reset above).
   await page.waitForTimeout(250);
   expect(await getIframeRootVar(frame, "--radius-md")).toBe("20px");
+
+  // Same round-trip assertion for the Color tab (#197) — --color-brand must
+  // also be restored, proving the ui-color tab was captured by Export and
+  // correctly re-applied by Load, not just silently ignored.
+  expect(await getIframeRootVar(frame, "--color-brand")).toBe(COLOR_TAB_SENTINEL);
 
   // Dismiss the modal.
   await importModal.getByRole("button", { name: "Close", exact: true }).click();
