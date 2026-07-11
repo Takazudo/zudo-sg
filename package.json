@@ -72,10 +72,16 @@
     "happy-dom": "^16.8.1",
     "html-validate": "^10.0.0",
     "lefthook": "^2.1.9",
+    "msw": "^2.15.0",
     "postcss": "^8.5.15",
     "tailwindcss": "^4.2.0",
     "tsx": "^4.21.0",
     "typescript": "^5.9.0",
     "vitest": "^4.1.9"
+  },
+  "msw": {
+    "workerDirectory": [
+      "public"
+    ]
   }
 }
