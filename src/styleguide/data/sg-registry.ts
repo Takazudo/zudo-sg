@@ -32,6 +32,7 @@ import type { StoryModule } from "@zudo-sg/ui";
 import * as badge from "@zudo-sg/ui/src/badge/badge.stories.tsx";
 import * as button from "@zudo-sg/ui/src/button/button.stories.tsx";
 import * as card from "@zudo-sg/ui/src/card/card.stories.tsx";
+import * as dialog from "@zudo-sg/ui/src/dialog/dialog.stories.tsx";
 import * as footer from "@zudo-sg/ui/src/footer/footer.stories.tsx";
 import * as form from "@zudo-sg/ui/src/form/form.stories.tsx";
 import * as heading from "@zudo-sg/ui/src/heading/heading.stories.tsx";
@@ -49,6 +50,7 @@ export const storyModules: Record<string, StoryModule> = {
   "./ui/src/badge/badge.stories.tsx": badge as unknown as StoryModule,
   "./ui/src/button/button.stories.tsx": button as unknown as StoryModule,
   "./ui/src/card/card.stories.tsx": card as unknown as StoryModule,
+  "./ui/src/dialog/dialog.stories.tsx": dialog as unknown as StoryModule,
   "./ui/src/footer/footer.stories.tsx": footer as unknown as StoryModule,
   "./ui/src/form/form.stories.tsx": form as unknown as StoryModule,
   "./ui/src/heading/heading.stories.tsx": heading as unknown as StoryModule,
@@ -72,6 +74,7 @@ export const storyExportOrder: Record<string, string[]> = {
   "./ui/src/badge/badge.stories.tsx": ["Playground", "Soft", "Solid", "Outline"],
   "./ui/src/button/button.stories.tsx": ["Playground", "Variants", "Sizes", "AsLink", "Disabled", "Block"],
   "./ui/src/card/card.stories.tsx": ["Playground", "Variants", "WithFooter", "Linked"],
+  "./ui/src/dialog/dialog.stories.tsx": ["Playground", "Default", "Busy", "WithError"],
   "./ui/src/footer/footer.stories.tsx": ["Playground", "Default", "Minimal"],
   "./ui/src/form/form.stories.tsx": ["TextField", "Required", "Disabled", "ContactForm"],
   "./ui/src/heading/heading.stories.tsx": ["Playground", "Page", "Section", "SectionWithAction"],

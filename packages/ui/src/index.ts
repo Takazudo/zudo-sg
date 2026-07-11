@@ -12,6 +12,9 @@
 export { Button } from "./button/button";
 export type { ButtonProps, ButtonVariant, ButtonSize } from "./button/button";
 
+export { Dialog } from "./dialog/dialog";
+export type { DialogProps } from "./dialog/dialog";
+
 export { Link } from "./link/link";
 export type { LinkProps, LinkVariant } from "./link/link";
 
