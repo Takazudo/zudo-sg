@@ -149,4 +149,30 @@ describe("check-links.mjs", () => {
     expect(result.status).toBe(0);
     expect(result.stdout).toContain("No broken internal links found");
   });
+
+  it("does not flag an href shown inside the Usage snippet's displayed source (outside the code panel)", () => {
+    // pages/components/[slug].tsx renders meta.usage as verbatim source in a
+    // plain <pre><code> "Usage" section — no sg-code-panel aside around it.
+    writeDistFile(
+      "components/button/index.html",
+      `<div class="sg-snippet"><pre class="overflow-auto"><code>href="/nonexistent"</code></pre></div>`,
+    );
+
+    const result = run();
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("No broken internal links found");
+  });
+
+  it("still flags a real broken <a href> outside a <pre> on a page that also has a Usage snippet", () => {
+    writeDistFile(
+      "components/button/index.html",
+      `<div class="sg-snippet"><pre><code>href="/nonexistent"</code></pre></div>` +
+        `<a href="/missing/">Broken</a>`,
+    );
+
+    const result = run();
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain("/missing/");
+    expect(result.stderr).not.toContain("/nonexistent");
+  });
 });

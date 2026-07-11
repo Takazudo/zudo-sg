@@ -9,7 +9,7 @@
 // reading packages/ui/src/index.ts, writing the generated files, and running
 // scripts/gen-sg-registry.mjs.
 
-import { UI_PACKAGE_NAME } from "./scaffold-config.mjs";
+import { COMPONENTS_ROOT, UI_PACKAGE_NAME } from "./scaffold-config.mjs";
 
 /**
  * Mirrors `StoryCategory` in packages/ui/src/stories/types.ts. This file is a
@@ -55,7 +55,7 @@ export function assertValidCategory(category) {
 export function assertUnusedName(name, existingNames) {
   if (existingNames.includes(name)) {
     throw new Error(
-      `packages/ui/src/${name}/ already exists — pick a name that isn't in use.`,
+      `${COMPONENTS_ROOT}/${name}/ already exists — pick a name that isn't in use.`,
     );
   }
 }

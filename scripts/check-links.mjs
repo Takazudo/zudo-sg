@@ -83,6 +83,17 @@ function extractInternalLinks(html) {
     ""
   );
 
+  // Also strip any `<pre>…</pre>` blocks (displayed source / code samples).
+  // The code panel above is not the only place a story's verbatim source is
+  // SSR'd: component detail pages also render `meta.usage` inside a plain
+  // `<pre><code>` "Usage" snippet (pages/components/[slug].tsx). Same escaping
+  // gap — Preact does not escape quote characters in text nodes, so a fictional
+  // `href="…"` shown as source text matches the href regex like a real
+  // `<a href>`. Real navigational links never live inside `<pre>`, so stripping
+  // all pre blocks closes the whole class of false positives generically (#190
+  // review follow-up to #174/#192).
+  stripped = stripped.replace(/<pre[^>]*>[\s\S]*?<\/pre>/gi, "");
+
   // Match href="..." from <a> tags and src="..." from <script>/<img>
   const reA = /href="([^"]+)"/g;
   const reSrc = /<(?:script|img)\s[^>]*src="([^"]+)"/g;
