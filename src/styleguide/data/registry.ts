@@ -11,12 +11,15 @@ import { storyModules, storyExportOrder } from "./sg-registry";
 
 /** Declared category order — mirrors the closed union in @zudo-sg/ui/stories/types. */
 export const CATEGORY_ORDER: StoryCategory[] = [
+  // GENERATED:STORY_CATEGORIES_BEGIN — do not hand-edit; run pnpm gen:story-categories.
+  // Source of truth: packages/ui/src/stories/types.ts (STORY_CATEGORIES).
   "Actions",
   "Typography",
   "Layout",
   "Data Display",
   "Forms",
   "Navigation",
+  // GENERATED:STORY_CATEGORIES_END
 ];
 
 /**
