@@ -257,10 +257,12 @@ export const previewTokenPanelConfig: PanelConfig = {
   },
   // Apply pipeline (zdtp README §3) — persists browser tweaks to CSS source.
   // Both fields resolve to `undefined` outside `zfb dev`; see
-  // plugins/zdtp-apply-proxy-plugin.mjs for the endpoint/routing wiring and
-  // the "palette"-only scope. zdtp can rewrite top-level `@theme` blocks, but
-  // this repo has not routed spacing/font/radius/shadow/semantic color prefixes
-  // yet; see that file's header comment for the tracked follow-up.
+  // plugins/zdtp-apply-proxy-plugin.mjs for the endpoint/routing wiring. Routed
+  // prefixes: palette + color → colors.css; spacing/text/font/leading/radius/
+  // shadow → tokens.css (both files' top-level `:root`/`@theme` blocks are
+  // rewritable). The plugin's `createDevMiddlewareHandler` splits a mixed Apply
+  // into one sequential zdtp call per prefix so same-file tabs don't clobber
+  // each other — see that file's header comment + the shim's inline note.
   applyEndpoint,
   applyRouting,
 };
