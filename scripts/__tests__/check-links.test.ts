@@ -114,4 +114,39 @@ describe("check-links.mjs", () => {
     const result = run(["--allowlist=custom-allowlist.txt"]);
     expect(result.status).toBe(0);
   });
+
+  it("does not flag an href shown inside the code panel's displayed source", () => {
+    writeDistFile(
+      "components/site-header/index.html",
+      `<aside id=sg-code-panel class="sg-code-panel"><pre><code>href="/nonexistent"</code></pre></aside>`,
+    );
+
+    const result = run();
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("No broken internal links found");
+  });
+
+  it("still flags a real broken <a href> outside the code panel on the same page", () => {
+    writeDistFile(
+      "components/site-header/index.html",
+      `<a href="/missing/">Missing</a>` +
+        `<aside id=sg-code-panel class="sg-code-panel"><pre><code>href="/nonexistent"</code></pre></aside>`,
+    );
+
+    const result = run();
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("/missing/");
+    expect(result.stderr).not.toContain("/nonexistent");
+  });
+
+  it("strips the code panel aside regardless of where the id attribute appears", () => {
+    writeDistFile(
+      "components/site-header/index.html",
+      `<aside class="sg-code-panel" id=sg-code-panel><pre><code>href="/nonexistent"</code></pre></aside>`,
+    );
+
+    const result = run();
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("No broken internal links found");
+  });
 });
