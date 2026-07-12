@@ -68,7 +68,7 @@ roles:
 
 | Tier | What | Where |
 |---|---|---|
-| **1 — Palette** | Raw oklch values, named `--palette-{group}-{step-or-role}` (groups `base`, `accent`, and `state`) | `styles/colors.css` (top `:root` block) |
+| **1 — Palette** | Raw oklch values, named `--palette-{group}-{step-or-role}` (groups `base`, `accent`, `state`, and a `line-*` ramp per business line) | `styles/colors.css` (top `:root` block) |
 | **2 — Semantic** | Roles → palette: `--color-*` tokens are semantic values backed by palette refs, with a few zudo-doc-style AA-tuned light-mode literals | `styles/colors.css` (`@theme`) |
 | **3 — Component** | Scoped overrides — rarely needed under Tailwind utilities | per-component |
 
@@ -92,23 +92,31 @@ export, and consumers must not add one. Changing the brand color, or swapping th
 whole palette, is a one-file edit in `colors.css` (the palette block, or a remap
 of the Tier-2 pointers) — component CSS never changes.
 
+[`TOKEN-MAP.md`](./TOKEN-MAP.md) is a separate, narrower document: a mechanical
+utility-by-utility mapping table used while porting components into this
+package, not part of the contract above. Consult it only when moving an
+existing component's markup in; it is not required reading for authoring a
+new component from scratch.
+
 ---
 
 ## 2. File location & discovery mechanism
 
-Two directory layouts co-exist and are discovered by the same mechanism:
+**Category-nested is now the only layout in use in this repo**:
+`src/<category-slug>/<component>/<name>.stories.tsx` — e.g.
+`src/cards/card/card.stories.tsx`. `<category-slug>` is the lowercase,
+hyphenated form of the component's `StoryCategory` (see §3), e.g.
+`"Data Display"` → `data-display`. A component's own directory name must
+still equal its story stem (`card/card.stories.tsx`, not
+`card/story.stories.tsx`) — one dir per component, same rule as the
+original layout below, just with one more directory level in front of it.
 
-- **One-level (original)**: `src/<component>/<name>.stories.tsx` — e.g.
-  `src/button/button.stories.tsx`. Every component shipped before #224 uses
-  this layout; it is not being migrated as part of #224.
-- **Category-nested (current convention for new components)**:
-  `src/<category-slug>/<component>/<name>.stories.tsx` — e.g.
-  `src/layout/badge-icon/badge-icon.stories.tsx`. `<category-slug>` is the
-  lowercase, hyphenated form of the component's `StoryCategory` (see §3),
-  e.g. `"Data Display"` → `data-display`. A component's own directory name
-  must still equal its story stem (`badge-icon/badge-icon.stories.tsx`, not
-  `badge-icon/story.stories.tsx`) — same one-dir-per-component rule as the
-  original layout, just with one more directory level in front of it.
+The scaffolder and the discovery codegen (below) still also support the
+**original one-level layout** — `src/<component>/<name>.stories.tsx` — for
+forks that prefer a flat convention; every component this repo ships now uses
+the nested form (the flat components that predated it were retired in the
+port to the new component set). `pnpm new:component` defaults to flat and
+only produces the nested layout when passed `--nested` (§8).
 
 Two different categories MAY scaffold a same-named component (e.g.
 `layout/badge/` and `forms/badge/`) — the catalog keys everything off the full
@@ -158,26 +166,27 @@ codegen details below).
 - **Never hand-edit** between the `GENERATED:SG_REGISTRY_BEGIN`/`END` markers
   in either generated file; the next `pnpm gen:sg-registry` run overwrites it.
 
-### The barrel transition rule — new components stay OUT of the barrel
+### The barrel: organized by `StoryCategory`, not by directory
 
-`packages/ui/src/index.ts` (the barrel) is a **one-level-layout artifact**: its
-export names come straight from the original flat components (`Card`, `Hero`,
-`SiteHeader`, …). New, category-nested components being ported in from
-elsewhere may reuse those exact names for unrelated components (a different
-`Card`, a different `Hero`), which would collide if barrel-exported under the
-same identifier.
+`packages/ui/src/index.ts` (the barrel) exports the full current component
+set, grouped into one `// ── <Category> ──` section per `StoryCategory` (§3)
+— not by the on-disk category-nested directory (a directory can span several
+`StoryCategory` values; see §"The `StoryCategory` set" note in the root repo's
+`ADOPTING.md`). This shape replaced an earlier one-level-layout barrel whose
+export names came straight from the original flat components; it was rebuilt
+from scratch once the new component set fully replaced the old one, so there
+was never a need to resolve name collisions incrementally.
 
-**Rule: a component scaffolded into the category-nested layout is never added
-to the barrel.** It's still fully catalog-visible and testable — the registry
-(`sg-registry.ts` / `story-modules.ts`) imports every story via its package
-subpath (`@zudo-sg/ui/src/<category>/<name>/<name>.stories.tsx`), **never**
-via the barrel — but consumers of `@zudo-sg/ui`'s top-level export can't reach
-it yet. This is intentional and temporary: a later "atomic swap" sub-issue
-rebuilds the barrel from scratch once every new component has landed and the
-old ones are retired, resolving the name collisions in one pass instead of
-piecemeal. Until that lands, `pnpm new:component --nested` (§8) never touches
-`packages/ui/src/index.ts`, and hand-adding a nested component's export to the
-barrel is a bug, not a workaround.
+**New rule going forward: `pnpm new:component --nested` (§8) never touches the
+barrel.** A category-nested scaffold is still fully catalog-visible and
+testable the moment it's created — the registry (`sg-registry.ts` /
+`story-modules.ts`) imports every story via its package subpath
+(`@zudo-sg/ui/src/<category>/<name>/<name>.stories.tsx`), **never** via the
+barrel — but it isn't reachable from `@zudo-sg/ui`'s top-level import until
+someone adds it by hand. Add a component to the barrel only when it should
+also be part of the package's public export surface: insert its
+`export { … }` / `export type { … }` pair alphabetically into the matching
+`// ── <Category> ──` section (see `index.ts`'s own header comment).
 
 ---
 
@@ -315,8 +324,8 @@ The catalog shows a code panel per variant. Resolution order:
    Authors who want an exact code panel set `source`.
 
 **Authoring guidance:** set `source` on any variant whose rendered markup is not
-a one-liner. The starter stories follow this (see `button.stories.tsx` →
-`Variants`).
+a one-liner. Most stories in this package follow this (see
+`cta-button.stories.tsx` → `Playground`).
 
 ---
 
@@ -336,9 +345,10 @@ The catalog renders stories during a **static build** (zfb). Therefore:
   SSR-safe representation; the catalog can layer interactivity separately.
 - **Self-contained markup.** A `render` must not depend on ambient page chrome
   (sticky offsets, global providers). Where a component is normally sticky/fixed
-  (e.g. `SiteHeader`), pass the prop that disables it in the story
-  (`sticky={false}`) so it sits inside the catalog cell — the starter
-  `site-header.stories.tsx` does this.
+  (e.g. `SiteHeader`), wrap it in a `render`-local container that neutralizes
+  the effect for the catalog cell (a bounded-height `position: relative` box
+  with `overflow: hidden` contains a `sticky`/`fixed` child without needing a
+  prop on the component itself) — `site-header.stories.tsx` does this.
 
 ### The `previewRoute` escape hatch — real page, not `render`, not the variant iframe
 
@@ -415,8 +425,8 @@ When adding a component, ship its story in the same change:
 whole checklist above in one command, in either directory layout from §2:
 
 ```
-# One-level (only meaningful for the pre-#224 flat components; not used for
-# new components going forward — see the barrel transition rule in §2):
+# One-level (legacy layout — no component in this repo uses it anymore;
+# retained for forks that prefer a flat convention):
 pnpm new:component demo-widget --category Layout
 
 # Category-nested (current convention — packages/ui/src/<category-slug>/<name>/):
@@ -436,7 +446,7 @@ pnpm new:component demo-widget --category Layout --nested
   `<Category>` lowercased with spaces replaced by hyphens (e.g.
   `"Data Display"` → `data-display`). A nested scaffold **never** touches the
   barrel (`packages/ui/src/index.ts`), regardless of `--skip-barrel` — see
-  the transition rule in §2.
+  "The barrel: organized by `StoryCategory`, not by directory" in §2.
 - `--skip-barrel` (optional, flat mode only) skips the barrel-export insert
   step (below) — use it when you want to add the export by hand, e.g. to
   place it in a non-default position. It's a no-op alongside `--nested`
@@ -495,13 +505,13 @@ reference. When a component needs more — usage guidelines, do/don't, variant
 intent, accessibility notes — ship an **optional** co-located MDX doc:
 
 ```
-src/<component>/<component>.mdx      # e.g. src/button/button.mdx
-# or, in the category-nested layout:
+src/<component>/<component>.mdx      # one-level layout (see §2)
+# category-nested layout (current convention — e.g. src/cards/card/card.mdx):
 src/<category-slug>/<component>/<component>.mdx
 ```
 
 - **Optional and co-located.** Same directory + base name as the component and
-  its story (`button.tsx`, `button.stories.tsx`, `button.mdx`). A component with
+  its story (`card.tsx`, `card.stories.tsx`, `card.mdx`). A component with
   no `.mdx` renders no extra section on its detail page — nothing else to do.
 - **How it renders.** The doc is a
   [`componentDocs`](../../zfb.config.ts) content collection rooted at
