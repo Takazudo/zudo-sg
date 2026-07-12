@@ -35,6 +35,14 @@ import * as card from "@zudo-sg/ui/src/card/card.stories.tsx";
 import * as cardsCallout from "@zudo-sg/ui/src/cards/callout/callout.stories.tsx";
 import * as cardsCardGrid from "@zudo-sg/ui/src/cards/card-grid/card-grid.stories.tsx";
 import * as cardsCard from "@zudo-sg/ui/src/cards/card/card.stories.tsx";
+import * as chromeBreadcrumbs from "@zudo-sg/ui/src/chrome/breadcrumbs/breadcrumbs.stories.tsx";
+import * as chromeContextSwitcherEnhancer from "@zudo-sg/ui/src/chrome/context-switcher-enhancer/context-switcher-enhancer.stories.tsx";
+import * as chromeMobileNavEnhancer from "@zudo-sg/ui/src/chrome/mobile-nav-enhancer/mobile-nav-enhancer.stories.tsx";
+import * as chromeNavEnhancer from "@zudo-sg/ui/src/chrome/nav-enhancer/nav-enhancer.stories.tsx";
+import * as chromeSearchToggleEnhancer from "@zudo-sg/ui/src/chrome/search-toggle-enhancer/search-toggle-enhancer.stories.tsx";
+import * as chromeSiteFooter from "@zudo-sg/ui/src/chrome/site-footer/site-footer.stories.tsx";
+import * as chromeSiteHeader from "@zudo-sg/ui/src/chrome/site-header/site-header.stories.tsx";
+import * as chromeSiteNav from "@zudo-sg/ui/src/chrome/site-nav/site-nav.stories.tsx";
 import * as dialog from "@zudo-sg/ui/src/dialog/dialog.stories.tsx";
 import * as footer from "@zudo-sg/ui/src/footer/footer.stories.tsx";
 import * as form from "@zudo-sg/ui/src/form/form.stories.tsx";
@@ -63,6 +71,14 @@ export const storyModules: Record<string, StoryModule> = {
   "./ui/src/cards/callout/callout.stories.tsx": cardsCallout as unknown as StoryModule,
   "./ui/src/cards/card-grid/card-grid.stories.tsx": cardsCardGrid as unknown as StoryModule,
   "./ui/src/cards/card/card.stories.tsx": cardsCard as unknown as StoryModule,
+  "./ui/src/chrome/breadcrumbs/breadcrumbs.stories.tsx": chromeBreadcrumbs as unknown as StoryModule,
+  "./ui/src/chrome/context-switcher-enhancer/context-switcher-enhancer.stories.tsx": chromeContextSwitcherEnhancer as unknown as StoryModule,
+  "./ui/src/chrome/mobile-nav-enhancer/mobile-nav-enhancer.stories.tsx": chromeMobileNavEnhancer as unknown as StoryModule,
+  "./ui/src/chrome/nav-enhancer/nav-enhancer.stories.tsx": chromeNavEnhancer as unknown as StoryModule,
+  "./ui/src/chrome/search-toggle-enhancer/search-toggle-enhancer.stories.tsx": chromeSearchToggleEnhancer as unknown as StoryModule,
+  "./ui/src/chrome/site-footer/site-footer.stories.tsx": chromeSiteFooter as unknown as StoryModule,
+  "./ui/src/chrome/site-header/site-header.stories.tsx": chromeSiteHeader as unknown as StoryModule,
+  "./ui/src/chrome/site-nav/site-nav.stories.tsx": chromeSiteNav as unknown as StoryModule,
   "./ui/src/dialog/dialog.stories.tsx": dialog as unknown as StoryModule,
   "./ui/src/footer/footer.stories.tsx": footer as unknown as StoryModule,
   "./ui/src/form/form.stories.tsx": form as unknown as StoryModule,
@@ -97,6 +113,14 @@ export const storyExportOrder: Record<string, string[]> = {
   "./ui/src/cards/callout/callout.stories.tsx": ["Default", "Tones", "WithoutTitle", "NoteAlias"],
   "./ui/src/cards/card-grid/card-grid.stories.tsx": ["Default"],
   "./ui/src/cards/card/card.stories.tsx": ["Default", "Variants", "Paddings", "BodyOnly"],
+  "./ui/src/chrome/breadcrumbs/breadcrumbs.stories.tsx": ["InSection", "SectionWithoutTopLink", "TopPageRendersNothing"],
+  "./ui/src/chrome/context-switcher-enhancer/context-switcher-enhancer.stories.tsx": ["Default"],
+  "./ui/src/chrome/mobile-nav-enhancer/mobile-nav-enhancer.stories.tsx": ["Default"],
+  "./ui/src/chrome/nav-enhancer/nav-enhancer.stories.tsx": ["Default"],
+  "./ui/src/chrome/search-toggle-enhancer/search-toggle-enhancer.stories.tsx": ["Default"],
+  "./ui/src/chrome/site-footer/site-footer.stories.tsx": ["Default", "FewSections", "ManySections"],
+  "./ui/src/chrome/site-header/site-header.stories.tsx": ["CorporateContext", "LineContext"],
+  "./ui/src/chrome/site-nav/site-nav.stories.tsx": ["Default", "ActiveSection", "SectionWithoutTopLink", "ManySections"],
   "./ui/src/dialog/dialog.stories.tsx": ["Playground", "Default", "Busy", "WithError"],
   "./ui/src/footer/footer.stories.tsx": ["Playground", "Default", "Minimal"],
   "./ui/src/form/form.stories.tsx": ["TextField", "Required", "Disabled", "ContactForm"],
