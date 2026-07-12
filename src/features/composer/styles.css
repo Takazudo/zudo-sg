@@ -745,3 +745,43 @@ html[data-sg-composer-doc] body {
   color: var(--color-muted);
   font-size: var(--text-micro);
 }
+
+/* ── Canvas preview host (issue #251 central integration) ──────────────────
+   The parent-side host for #248's isolated preview iframe. The viewport choice
+   (fluid/desktop/tablet/mobile) sets an inline width on the frame wrapper — it
+   reflows the preview document, NOT the surrounding Composer breakpoint (issue
+   #251 scope item 5). */
+.sg-composer-canvas-host {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.sg-composer-canvas-frame {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  margin-inline: auto;
+}
+
+.sg-composer-preview-iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: var(--color-bg);
+}
+
+.sg-composer-canvas-error {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-hsp-sm);
+  padding: var(--spacing-vsp-2xs) var(--spacing-hsp-md);
+  border-bottom: 1px solid var(--color-muted);
+  background: color-mix(in oklch, var(--color-surface) 92%, transparent);
+  color: var(--color-fg);
+  font-size: var(--text-small);
+}
