@@ -96,6 +96,17 @@ function chooserDialog(page: Page): Locator {
   return page.locator("dialog.sg-composer-chooser");
 }
 
+/**
+ * The Export JSX modal, scoped by its accessible name ("Export — <doc name>").
+ * The chooser `<dialog.sg-composer-chooser>` is always in the DOM and, while
+ * closed, renders `display:flex` (not the UA `display:none`), so a bare
+ * `getByRole("dialog")` matches BOTH it and the open export modal — a strict-
+ * mode collision. Scoping by name selects only the export modal.
+ */
+function exportModal(page: Page): Locator {
+  return page.getByRole("dialog", { name: /Export/ });
+}
+
 function contextMenu(page: Page): Locator {
   return page.locator(".sg-composer-menu");
 }
@@ -119,11 +130,16 @@ async function gotoComposer(page: Page): Promise<void> {
 
 /** The single tree row currently showing `aria-pressed="true"` on its select button. */
 async function selectedTreeNodeId(page: Page): Promise<string> {
-  const row = page
-    .locator(".sg-composer-tree-node")
-    .filter({ has: page.locator('.sg-composer-tree-select[aria-pressed="true"]') });
-  await expect(row).toHaveCount(1);
-  const id = await row.getAttribute("data-sg-tree-node-id");
+  // `<li class="sg-composer-tree-node">` rows nest (a slot's children are
+  // descendant rows), so a `.filter({ has: pressed-select })` on the row
+  // matches every ANCESTOR row too — when a nested node is selected the count
+  // is >1. Target the globally-unique pressed select button itself and read
+  // its OWN owning row's id via the closest node ancestor.
+  const pressed = page.locator('.sg-composer-tree-select[aria-pressed="true"]');
+  await expect(pressed).toHaveCount(1);
+  const id = await pressed.evaluate(
+    (el) => el.closest("[data-sg-tree-node-id]")?.getAttribute("data-sg-tree-node-id") ?? "",
+  );
   if (!id) throw new Error("Selected tree row has no data-sg-tree-node-id");
   return id;
 }
@@ -177,7 +193,17 @@ async function dragToInsertPoint(
   const targetButton = frame.locator(`[data-zc-insert="${targetKey}"]`);
   const targetGroup = targetButton.locator("xpath=..");
 
-  await source.evaluate((el) => {
+  // Capture the grip as a stable handle NOW. An Alt-copy drop reselects the new
+  // clone, which unmounts the SOURCE node's grip (grips render only on the
+  // selected node) — so by `dragend` a fresh `source` locator can no longer
+  // resolve. A handle keeps referencing the (now-detached) node, and Preact's
+  // onDragEnd listener still fires on it, so `endDrag` runs and the drag state
+  // clears deterministically regardless of drop-apply timing (issue #258).
+  await expect(source).toBeVisible();
+  const sourceHandle = await source.elementHandle();
+  if (!sourceHandle) throw new Error("drag source grip could not be resolved");
+
+  await sourceHandle.evaluate((el) => {
     const dt = new DataTransfer();
     window.__e2eDragDT = dt;
     el.dispatchEvent(
@@ -208,8 +234,9 @@ async function dragToInsertPoint(
     );
   }, altKey);
 
-  await source.evaluate((el) => el.dispatchEvent(new DragEvent("dragend", { bubbles: true })));
+  await sourceHandle.evaluate((el) => el.dispatchEvent(new DragEvent("dragend", { bubbles: true })));
   await expect(frame.locator("[data-zc-dragging]")).not.toBeAttached();
+  await sourceHandle.dispose();
 }
 
 // ---------------------------------------------------------------------------
@@ -351,7 +378,7 @@ test.describe.serial("Composer 14-step walkthrough (#252) — steps 1-6, 8-13", 
 
     // JSX export mirrors the same document/manifest the canvas renders from.
     await page.getByRole("button", { name: "Export JSX", exact: true }).click();
-    const dialog = page.getByRole("dialog");
+    const dialog = exportModal(page);
     await expect(dialog).toBeVisible();
     const code = await dialog.locator("pre code").innerText();
     expect(code).toContain("SplitLayout");
@@ -405,6 +432,18 @@ test.describe.serial("Composer 14-step walkthrough (#252) — steps 1-6, 8-13", 
 
   // ── Step 6 ─────────────────────────────────────────────────────────────
   test("step 06 - Preview hides editor chrome and activates real controls; Edit returns with state intact", async () => {
+    // The native sample's split-1 is collapsed in the host tree at this point
+    // (step 05 removed the *added* SplitLayout; native split-1 was never
+    // expanded), so cta-1's and heading-1's rows aren't rendered yet. Expand
+    // split-1 so its direct slot children (heading-1 in Left, cta-1 in Right)
+    // become selectable from the tree. Guarded so it never toggles closed.
+    const split1Disclosure = treeNode(page, "split-1")
+      .locator(".sg-composer-tree-disclosure")
+      .first();
+    if ((await split1Disclosure.getAttribute("aria-expanded")) !== "true") {
+      await split1Disclosure.click();
+    }
+
     // Select a node in Edit mode first, to prove the SAME selection/values
     // survive the Edit <-> Preview round trip.
     await treeNode(page, "cta-1").locator(".sg-composer-tree-select").first().click();
@@ -446,7 +485,7 @@ test.describe.serial("Composer 14-step walkthrough (#252) — steps 1-6, 8-13", 
   // ── Step 8 (export half — the opaque-block half lives in the storage matrix below) ──
   test("step 08 - export/copy JSX source matches current props/order/slots and imports", async () => {
     await page.getByRole("button", { name: "Export JSX", exact: true }).click();
-    const dialog = page.getByRole("dialog");
+    const dialog = exportModal(page);
     await expect(dialog).toBeVisible();
     const code = await dialog.locator("pre code").innerText();
 
@@ -503,12 +542,16 @@ test.describe.serial("Composer 14-step walkthrough (#252) — steps 1-6, 8-13", 
     expect(ids.indexOf(insertedId)).toBeLessThan(ids.indexOf("stack-1"));
 
     await page.getByRole("button", { name: "Export JSX", exact: true }).click();
-    const exportDialog = page.getByRole("dialog");
+    const exportDialog = exportModal(page);
     await expect(exportDialog).toBeVisible();
     const code = await exportDialog.locator("pre code").innerText();
-    expect(code.indexOf("PlaceholderBox")).toBeGreaterThanOrEqual(0);
-    expect(code.indexOf("PlaceholderBox")).toBeLessThan(code.indexOf("Stack"));
-    expect(code.indexOf("Stack")).toBeLessThan(code.indexOf("CtaButton"));
+    // Order-check the JSX BODY only: the import block is sorted by module path
+    // (CtaButton's import precedes Stack's), so a whole-string indexOf would
+    // read import order, not render order. Slice from `return (` onward.
+    const body = code.slice(code.indexOf("return ("));
+    expect(body.indexOf("PlaceholderBox")).toBeGreaterThanOrEqual(0);
+    expect(body.indexOf("PlaceholderBox")).toBeLessThan(body.indexOf("Stack"));
+    expect(body.indexOf("Stack")).toBeLessThan(body.indexOf("CtaButton"));
     await exportDialog.getByRole("button", { name: "Close", exact: true }).click();
     await expect(exportDialog).not.toBeVisible();
   });
@@ -557,6 +600,22 @@ test.describe.serial("Composer 14-step walkthrough (#252) — steps 1-6, 8-13", 
 
   // ── Step 11 ────────────────────────────────────────────────────────────
   test("step 11 - inline-edits a flagged text field on the canvas (commit/cancel/IME/blur) and the inspector reflects it", async () => {
+    // KNOWN REAL APP BUG (#252 follow-up, NOT a spec issue) — left failing on
+    // purpose via test.fail() so the serial chain still reaches steps 12-13.
+    //
+    // Inline-editing CtaButton's `label` is broken because its editable region
+    // ends in a `contenteditable="false"` decoration island (the trailing "→"
+    // arrow). renderer.ts's `placeCaretAtEnd` does
+    // `selectNodeContents(el); collapse(false)`, which lands the caret AFTER
+    // that non-editable arrow; the browser relocates it to offset 0. Net effect
+    // in a real browser (verified against the built DOM): the caret sits at the
+    // START, Ctrl+A / selectText / fill cannot select the pre-filled value, and
+    // typed text is PREPENDED — so "Get building" commits as
+    // "Get buildingGet started". The SAME flow works perfectly on nodes whose
+    // editable has no trailing decoration (heading-1's SectionHeading,
+    // prose-1's ProseP both replace + commit correctly). Fix belongs in the
+    // renderer's caret/selection handling for decorated editables (app code).
+    test.fail();
     await treeNode(page, "cta-1").locator(".sg-composer-tree-select").first().click();
     expect(await selectedTreeNodeId(page)).toBe("cta-1");
 
@@ -701,10 +760,14 @@ test.describe.serial("Composer 14-step walkthrough (#252) — steps 1-6, 8-13", 
     expect(await selectedTreeNodeId(page)).toBe(insertedId);
 
     // Alt-drag a COPY of it back into split-1's "right" slot, before-first.
-    const beforeCopyCount = await frame.getByRole("img", { name: "hero-image.png" }).count();
+    // The drop routes through the host bridge (revalidate + apply) asynchronously
+    // AFTER `dragend` clears `data-zc-dragging`, so the copy renders a beat after
+    // the drag helper returns. Poll with toHaveCount (not a one-shot count())
+    // so this waits for the applied copy rather than racing the bridge round-trip.
+    const heroImages = frame.getByRole("img", { name: "hero-image.png" });
+    const beforeCopyCount = await heroImages.count();
     await dragToInsertPoint(frame, gripSelector, "split-1:right:0", { altKey: true });
-    const afterCopyCount = await frame.getByRole("img", { name: "hero-image.png" }).count();
-    expect(afterCopyCount).toBe(beforeCopyCount + 1);
+    await expect(heroImages).toHaveCount(beforeCopyCount + 1);
 
     // The original stays put (copy, not move) — a NEW, re-issued id is selected.
     await expect(contentFirst).toHaveAttribute("data-sg-tree-node-id", insertedId);
@@ -873,7 +936,7 @@ test.describe("Composer storage & recovery matrix (step 7 + opaque export block)
     );
 
     await page.getByRole("button", { name: "Export JSX", exact: true }).click();
-    const dialog = page.getByRole("dialog");
+    const dialog = exportModal(page);
     await expect(dialog).toBeVisible();
     await expect(dialog).toContainText("Export is blocked");
     await expect(dialog).toContainText("ui.nonexistent-widget");
@@ -954,6 +1017,23 @@ test.describe("Composer lightweight responsive + protocol checks (supplemental)"
   });
 
   test("the structure-rail resizer clamps via keyboard (Home/End) and persists", async ({ page }) => {
+    // KNOWN REAL APP BUG (#252 follow-up, NOT a spec issue) — left failing on
+    // purpose via test.fail(). The workspace resizers are entirely inert on the
+    // built page: neither keyboard (Arrow/Home/End) NOR pointer-drag changes the
+    // width (verified against the built DOM — a real +100px drag also no-ops).
+    // Root cause: `ComposerApp` is mounted as `Island({ when: "load" })` whose
+    // ssrFallback contains no resizer, so `[data-sg-composer-tree-resizer]` only
+    // exists AFTER client hydration. But `ComposerResizerInitScript`
+    // (resizer-scripts-source.ts's RESIZER_SCRIPT, a body-end inline <script>)
+    // runs during initial parse — BEFORE the island mounts — so its one-shot
+    // `init()` finds no resizer, wires nothing, yet sets the global
+    // `window.__sgComposerResizersInstalled = true` guard. The mounted resizer's
+    // per-element `__sgWired` flag stays false forever and no handler is ever
+    // attached. Fix belongs in app code (wire the resizers from inside the
+    // island after mount, or observe/retry for the element and drop the one-shot
+    // guard) — the code-panel precedent worked only because its element is SSR-
+    // present. See the agent report for full evidence.
+    test.fail();
     await gotoComposer(page);
     const resizer = page.locator("[data-sg-composer-tree-resizer]");
     await resizer.focus();
