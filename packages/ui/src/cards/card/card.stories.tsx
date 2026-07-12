@@ -1,4 +1,5 @@
 import type { StoryMeta, Story } from "../../stories/types";
+import { defineComposer } from "../../composer/types";
 import { Card, type CardProps } from "./card";
 
 const meta: StoryMeta = {
@@ -9,6 +10,28 @@ const meta: StoryMeta = {
   usage: `import { Card } from "@zudo-sg/ui/src/cards/card/card";
 
 <Card title="Card heading">Body copy.</Card>`,
+  composer: defineComposer<CardProps>({
+    componentId: "ui.card",
+    version: 1,
+    component: Card,
+    source: {
+      module: "@zudo-sg/ui/src/cards/card/card",
+      exportKind: "named",
+      exportName: "Card",
+    },
+    defaults: { title: "Card heading", variant: "default", padding: "md" },
+    fields: [
+      { kind: "text", prop: "title", label: "Title" },
+      {
+        kind: "select",
+        prop: "variant",
+        label: "Variant",
+        options: ["default", "accent", "muted"],
+      },
+      { kind: "select", prop: "padding", label: "Padding", options: ["sm", "md", "lg"] },
+    ],
+    slots: [{ id: "body", prop: "children", label: "Body", cardinality: "many" }],
+  }),
 };
 
 export default meta;
