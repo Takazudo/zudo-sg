@@ -135,6 +135,90 @@ exports[`story source vs. render drift > card/card.stories.tsx → WithFooter (W
 }
 `;
 
+exports[`story source vs. render drift > cards/callout/callout.stories.tsx → Default (Default (tone=note, with title)) 1`] = `
+{
+  "html": "<div style="max-width:560px;"><div class="border border-border border-l-4 rounded-md px-hsp-lg py-vsp-sm" style="border-left-color:var(--color-accent);background-color:color-mix(in srgb, var(--color-accent) 8%, var(--color-bg));" role="note"><p class="text-caption font-semibold mb-vsp-2xs text-accent">Note</p><div class="text-small text-fg"><p>An accent-tinted callout that highlights a note in the flow of body copy.</p></div></div></div>",
+  "source": "<Callout title="Note">
+  <p>An accent-tinted callout that highlights a note in the flow of body copy.</p>
+</Callout>",
+}
+`;
+
+exports[`story source vs. render drift > cards/callout/callout.stories.tsx → NoteAlias (Note alias) 1`] = `
+{
+  "html": "<div style="max-width:560px;"><div class="border border-border border-l-4 rounded-md px-hsp-lg py-vsp-sm" style="border-left-color:var(--color-accent);background-color:color-mix(in srgb, var(--color-accent) 8%, var(--color-bg));" role="note"><p class="text-caption font-semibold mb-vsp-2xs text-accent">Note</p><div class="text-small text-fg"><p><code>Note</code> is a fixed <code>tone=&quot;note&quot;</code> alias of <code>Callout</code>.</p></div></div></div>",
+  "source": "<Note title="Note">
+  <code>Note</code> is a fixed tone="note" alias of <code>Callout</code>.
+</Note>",
+}
+`;
+
+exports[`story source vs. render drift > cards/callout/callout.stories.tsx → Tones (Tones (note / muted)) 1`] = `
+{
+  "html": "<div class="flex flex-col gap-y-vsp-md" style="max-width:560px;"><div class="border border-border border-l-4 rounded-md px-hsp-lg py-vsp-sm" style="border-left-color:var(--color-accent);background-color:color-mix(in srgb, var(--color-accent) 8%, var(--color-bg));" role="note"><p class="text-caption font-semibold mb-vsp-2xs text-accent">note — accent</p><div class="text-small text-fg"><p>Content worth drawing attention to, with an accent rule and tint.</p></div></div><div class="border border-border border-l-4 rounded-md px-hsp-lg py-vsp-sm" style="border-left-color:var(--color-border);background-color:var(--color-surface);" role="note"><p class="text-caption font-semibold mb-vsp-2xs text-fg">muted — neutral</p><div class="text-small text-fg"><p>A neutral aside, shown with a surface tint and a plain border rule.</p></div></div></div>",
+  "source": "<Callout tone="note" title="note — accent">…</Callout>
+<Callout tone="muted" title="muted — neutral">…</Callout>",
+}
+`;
+
+exports[`story source vs. render drift > cards/callout/callout.stories.tsx → WithoutTitle (Without a title) 1`] = `
+{
+  "html": "<div style="max-width:560px;"><div class="border border-border border-l-4 rounded-md px-hsp-lg py-vsp-sm" style="border-left-color:var(--color-accent);background-color:color-mix(in srgb, var(--color-accent) 8%, var(--color-bg));" role="note"><div class="text-small text-fg"><p>Body copy only, without a title row.</p></div></div></div>",
+  "source": "<Callout tone="note">
+  <p>Body copy only, without a title row.</p>
+</Callout>",
+}
+`;
+
+exports[`story source vs. render drift > cards/card/card.stories.tsx → BodyOnly (Explicit Card.Title (no title prop)) 1`] = `
+{
+  "html": "<div style="max-width:420px;"><div class="rounded-md bg-bg border border-border px-hsp-lg py-vsp-md"><div class="text-small text-fg"><h3 class="text-title font-semibold text-fg mb-vsp-xs">Explicit Card.Title</h3><p>A sample card component. Flat, white/light-gray surfaces with an accent color, using a border rather than a shadow to separate layers.</p></div></div></div>",
+  "source": "<Card>
+  <Card.Title>Explicit Card.Title</Card.Title>
+  <p>Body copy.</p>
+</Card>",
+}
+`;
+
+exports[`story source vs. render drift > cards/card/card.stories.tsx → Default (Default (variant=default, padding=md, with title)) 1`] = `
+{
+  "html": "<div style="max-width:420px;"><div class="rounded-md bg-bg border border-border px-hsp-lg py-vsp-md"><h3 class="text-title font-semibold text-fg mb-vsp-xs">Card heading</h3><div class="text-small text-fg"><p>A sample card component. Flat, white/light-gray surfaces with an accent color, using a border rather than a shadow to separate layers.</p></div></div></div>",
+  "source": "<Card title="Card heading">
+  <p>Body copy.</p>
+</Card>",
+}
+`;
+
+exports[`story source vs. render drift > cards/card/card.stories.tsx → Paddings (Paddings (sm / md / lg)) 1`] = `
+{
+  "html": "<div class="flex flex-col gap-y-vsp-md" style="max-width:420px;"><div class="rounded-md bg-bg border border-border px-hsp-md py-vsp-sm"><h3 class="text-title font-semibold text-fg mb-vsp-xs">padding = sm</h3><div class="text-small text-fg"><p>A sample card component. Flat, white/light-gray surfaces with an accent color, using a border rather than a shadow to separate layers.</p></div></div><div class="rounded-md bg-bg border border-border px-hsp-lg py-vsp-md"><h3 class="text-title font-semibold text-fg mb-vsp-xs">padding = md</h3><div class="text-small text-fg"><p>A sample card component. Flat, white/light-gray surfaces with an accent color, using a border rather than a shadow to separate layers.</p></div></div><div class="rounded-md bg-bg border border-border px-hsp-xl py-vsp-lg"><h3 class="text-title font-semibold text-fg mb-vsp-xs">padding = lg</h3><div class="text-small text-fg"><p>A sample card component. Flat, white/light-gray surfaces with an accent color, using a border rather than a shadow to separate layers.</p></div></div></div>",
+  "source": "<Card padding="sm" title="padding = sm">…</Card>
+<Card padding="md" title="padding = md">…</Card>
+<Card padding="lg" title="padding = lg">…</Card>",
+}
+`;
+
+exports[`story source vs. render drift > cards/card/card.stories.tsx → Variants (Variants (default / muted / accent)) 1`] = `
+{
+  "html": "<div class="flex flex-col gap-y-vsp-md" style="max-width:420px;"><div class="rounded-md bg-bg border border-border px-hsp-lg py-vsp-md"><h3 class="text-title font-semibold text-fg mb-vsp-xs">default — bg + border</h3><div class="text-small text-fg"><p>A sample card component. Flat, white/light-gray surfaces with an accent color, using a border rather than a shadow to separate layers.</p></div></div><div class="rounded-md bg-surface border border-border px-hsp-lg py-vsp-md"><h3 class="text-title font-semibold text-fg mb-vsp-xs">muted — surface tint</h3><div class="text-small text-fg"><p>A sample card component. Flat, white/light-gray surfaces with an accent color, using a border rather than a shadow to separate layers.</p></div></div><div class="rounded-md bg-bg border border-border border-t-2 border-t-accent px-hsp-lg py-vsp-md"><h3 class="text-title font-semibold text-fg mb-vsp-xs">accent — top accent rule</h3><div class="text-small text-fg"><p>A sample card component. Flat, white/light-gray surfaces with an accent color, using a border rather than a shadow to separate layers.</p></div></div></div>",
+  "source": "<Card variant="default" title="default — bg + border">…</Card>
+<Card variant="muted" title="muted — surface tint">…</Card>
+<Card variant="accent" title="accent — top accent rule">…</Card>",
+}
+`;
+
+exports[`story source vs. render drift > cards/card-grid/card-grid.stories.tsx → Default (Default) 1`] = `
+{
+  "html": "<div style="max-width:720px;"><div class="grid grid-cols-[repeat(auto-fit,minmax(18rem,1fr))] gap-x-hsp-md gap-y-vsp-sm"><div class="rounded-md bg-bg border border-border px-hsp-lg py-vsp-md"><h3 class="text-title font-semibold text-fg mb-vsp-xs">Product A</h3><div class="text-small text-fg">Description text.</div></div><div class="rounded-md bg-surface border border-border px-hsp-lg py-vsp-md"><h3 class="text-title font-semibold text-fg mb-vsp-xs">Product B</h3><div class="text-small text-fg">Description text.</div></div><div class="rounded-md bg-bg border border-border border-t-2 border-t-accent px-hsp-lg py-vsp-md"><h3 class="text-title font-semibold text-fg mb-vsp-xs">Product C</h3><div class="text-small text-fg">Description text.</div></div><div class="rounded-md bg-bg border border-border px-hsp-lg py-vsp-md"><h3 class="text-title font-semibold text-fg mb-vsp-xs">Product D</h3><div class="text-small text-fg">Description text.</div></div></div></div>",
+  "source": "<CardGrid>
+  <Card title="Product A">…</Card>
+  <Card title="Product B" variant="muted">…</Card>
+  <Card title="Product C" variant="accent">…</Card>
+  <Card title="Product D">…</Card>
+</CardGrid>",
+}
+`;
+
 exports[`story source vs. render drift > dialog/dialog.stories.tsx → Busy (Busy (submitting)) 1`] = `
 {
   "html": "<div class="relative min-h-[20rem]"><div class="fixed inset-0 z-[50] flex items-center justify-center p-hsp-lg bg-[rgb(0_0_0/0.5)]"><div role="dialog" aria-modal="true" aria-labelledby="zui-dialog-3" aria-busy="true" tabindex="-1" class="flex w-full max-w-[32rem] flex-col gap-vsp-md rounded-lg border border-line bg-surface p-hsp-xl shadow-overlay outline-none"><div class="flex items-start justify-between gap-hsp-md"><h2 id="zui-dialog-3" class="text-lg font-semibold tracking-tight text-ink">Saving changes</h2><button type="button" aria-label="Close" disabled class="shrink-0 rounded-md p-hsp-2xs text-ink-mute outline-none transition-colors hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:opacity-50 disabled:cursor-not-allowed"><span aria-hidden="true">×</span></button></div><div class="text-sm text-ink-soft">Applying your changes…</div><div class="mt-vsp-2xs flex items-center justify-end gap-hsp-md"><button type="button" class="inline-flex items-center justify-center gap-hsp-xs rounded-md font-semibold no-underline whitespace-nowrap cursor-pointer select-none transition-colors outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:opacity-50 disabled:cursor-not-allowed aria-disabled:opacity-50 text-sm px-hsp-lg py-vsp-2xs bg-surface text-ink border border-line hover:border-brand hover:text-brand active:bg-surface-sunken" disabled>Cancel</button><button type="button" class="inline-flex items-center justify-center gap-hsp-xs rounded-md font-semibold no-underline whitespace-nowrap cursor-pointer select-none transition-colors outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:opacity-50 disabled:cursor-not-allowed aria-disabled:opacity-50 text-sm px-hsp-lg py-vsp-2xs bg-brand text-on-brand hover:bg-brand-strong active:bg-brand-strong" disabled aria-busy="true">Save</button></div></div></div></div>",
@@ -389,6 +473,167 @@ exports[`story source vs. render drift > link/link.stories.tsx → Variants (Var
   "source": "<Link href="/docs">inline default link</Link>
 <Link href="/about" variant="subtle">Subtle nav link</Link>
 <Link href="/start" variant="standalone">Get started</Link>",
+}
+`;
+
+exports[`story source vs. render drift > media/placeholder-box/placeholder-box.stories.tsx → AspectRatios (Aspect ratios (16:9 / 4:3 / 1:1)) 1`] = `
+{
+  "html": "<div class="grid gap-x-hsp-md gap-y-vsp-sm" style="max-width:640px;"><span class="flex items-center justify-center border border-border bg-surface text-muted text-caption rounded px-hsp-md py-vsp-sm text-center" style="aspect-ratio:16/9;" role="img" aria-label="16 / 9"><span class="text-muted">[16 / 9]</span></span><span class="flex items-center justify-center border border-border bg-surface text-muted text-caption rounded px-hsp-md py-vsp-sm text-center" style="aspect-ratio:4/3;" role="img" aria-label="4 / 3"><span class="text-muted">[4 / 3]</span></span><span class="flex items-center justify-center border border-border bg-surface text-muted text-caption rounded px-hsp-md py-vsp-sm text-center" style="aspect-ratio:1/1;" role="img" aria-label="1 / 1 (square)"><span class="text-muted">[1 / 1 (square)]</span></span></div>",
+  "source": "<PlaceholderBox label="16 / 9" aspect="16/9" />
+<PlaceholderBox label="4 / 3" aspect="4/3" />
+<PlaceholderBox label="1 / 1 (square)" aspect="1/1" />",
+}
+`;
+
+exports[`story source vs. render drift > media/placeholder-box/placeholder-box.stories.tsx → Default (Default (size=md, label only)) 1`] = `
+{
+  "html": "<div style="max-width:448px;"><span class="flex items-center justify-center border border-border bg-surface text-muted text-caption rounded px-hsp-md py-vsp-sm text-center" style="min-height:var(--spacing-vsp-xl);" role="img" aria-label="hero-image.png"><span class="text-muted">[hero-image.png]</span></span></div>",
+  "source": "<PlaceholderBox label="hero-image.png" />",
+}
+`;
+
+exports[`story source vs. render drift > media/placeholder-box/placeholder-box.stories.tsx → FromMarkdownImg (MDX img compatibility) 1`] = `
+{
+  "html": "<div class="flex flex-col gap-y-vsp-sm" style="max-width:480px;"><span class="flex items-center justify-center border border-border bg-surface text-muted text-caption rounded px-hsp-md py-vsp-sm text-center" style="aspect-ratio:16/9;" role="img" aria-label="Photo of the product"><span class="text-muted">[Photo of the product]</span></span><span class="flex items-center justify-center border border-border bg-surface text-muted text-caption rounded px-hsp-md py-vsp-sm text-center" style="aspect-ratio:4/3;" role="img" aria-label="/img/diagram.svg"><span class="text-muted">[/img/diagram.svg]</span></span><span class="flex items-center justify-center border border-border bg-surface text-muted text-caption rounded px-hsp-md py-vsp-sm text-center" style="aspect-ratio:1/1;" role="img" aria-label="image"><span class="text-muted">[image]</span></span></div>",
+  "source": "{/* alt from ![alt](src) becomes the label */}
+<PlaceholderBox alt="Photo of the product" src="/img/product.png" aspect="16/9" />
+{/* no alt → src becomes the label */}
+<PlaceholderBox src="/img/diagram.svg" aspect="4/3" />
+{/* neither → "image" */}
+<PlaceholderBox aspect="1/1" />",
+}
+`;
+
+exports[`story source vs. render drift > media/placeholder-box/placeholder-box.stories.tsx → Sizes (Size presets (sm / md / lg)) 1`] = `
+{
+  "html": "<div class="flex flex-col gap-y-vsp-sm" style="max-width:320px;"><span class="flex items-center justify-center border border-border bg-surface text-muted text-caption rounded px-hsp-md py-vsp-sm text-center" style="min-height:var(--spacing-vsp-lg);" role="img" aria-label="size = sm"><span class="text-muted">[size = sm]</span></span><span class="flex items-center justify-center border border-border bg-surface text-muted text-caption rounded px-hsp-md py-vsp-sm text-center" style="min-height:var(--spacing-vsp-xl);" role="img" aria-label="size = md"><span class="text-muted">[size = md]</span></span><span class="flex items-center justify-center border border-border bg-surface text-muted text-caption rounded px-hsp-md py-vsp-sm text-center" style="min-height:var(--spacing-vsp-2xl);" role="img" aria-label="size = lg"><span class="text-muted">[size = lg]</span></span></div>",
+  "source": "<PlaceholderBox label="size = sm" size="sm" />
+<PlaceholderBox label="size = md" size="md" />
+<PlaceholderBox label="size = lg" size="lg" />",
+}
+`;
+
+exports[`story source vs. render drift > shared/auto-grid/auto-grid.stories.tsx → Default (Default (auto-fit, min 15rem)) 1`] = `
+{
+  "html": "<div class="grid grid-cols-[repeat(auto-fit,minmax(15rem,1fr))] gap-hsp-md"><div class="rounded-md bg-bg border border-border px-hsp-lg py-vsp-md"><h3 class="text-title font-semibold text-fg mb-vsp-xs">Item A</h3><div class="text-small text-fg">Sample card laid out by AutoGrid.</div></div><div class="rounded-md bg-bg border border-border px-hsp-lg py-vsp-md"><h3 class="text-title font-semibold text-fg mb-vsp-xs">Item B</h3><div class="text-small text-fg">Sample card laid out by AutoGrid.</div></div><div class="rounded-md bg-bg border border-border px-hsp-lg py-vsp-md"><h3 class="text-title font-semibold text-fg mb-vsp-xs">Item C</h3><div class="text-small text-fg">Sample card laid out by AutoGrid.</div></div><div class="rounded-md bg-bg border border-border px-hsp-lg py-vsp-md"><h3 class="text-title font-semibold text-fg mb-vsp-xs">Item D</h3><div class="text-small text-fg">Sample card laid out by AutoGrid.</div></div><div class="rounded-md bg-bg border border-border px-hsp-lg py-vsp-md"><h3 class="text-title font-semibold text-fg mb-vsp-xs">Item E</h3><div class="text-small text-fg">Sample card laid out by AutoGrid.</div></div><div class="rounded-md bg-bg border border-border px-hsp-lg py-vsp-md"><h3 class="text-title font-semibold text-fg mb-vsp-xs">Item F</h3><div class="text-small text-fg">Sample card laid out by AutoGrid.</div></div></div>",
+  "source": "<AutoGrid>
+  <Card title="Item A">…</Card>
+  …
+</AutoGrid>",
+}
+`;
+
+exports[`story source vs. render drift > shared/auto-grid/auto-grid.stories.tsx → Fill (Fill (keeps empty tracks)) 1`] = `
+{
+  "html": "<div class="grid grid-cols-[repeat(auto-fill,minmax(13rem,1fr))] gap-hsp-md"><div class="rounded-md bg-bg border border-border px-hsp-lg py-vsp-md"><h3 class="text-title font-semibold text-fg mb-vsp-xs">Location A</h3><div class="text-small text-fg">Sample.</div></div><div class="rounded-md bg-bg border border-border px-hsp-lg py-vsp-md"><h3 class="text-title font-semibold text-fg mb-vsp-xs">Location B</h3><div class="text-small text-fg">Sample.</div></div><div class="rounded-md bg-bg border border-border px-hsp-lg py-vsp-md"><h3 class="text-title font-semibold text-fg mb-vsp-xs">Location C</h3><div class="text-small text-fg">Sample.</div></div><div class="rounded-md bg-bg border border-border px-hsp-lg py-vsp-md"><h3 class="text-title font-semibold text-fg mb-vsp-xs">Location D</h3><div class="text-small text-fg">Sample.</div></div><div class="rounded-md bg-bg border border-border px-hsp-lg py-vsp-md"><h3 class="text-title font-semibold text-fg mb-vsp-xs">Location E</h3><div class="text-small text-fg">Sample.</div></div><div class="rounded-md bg-bg border border-border px-hsp-lg py-vsp-md"><h3 class="text-title font-semibold text-fg mb-vsp-xs">Location F</h3><div class="text-small text-fg">Sample.</div></div></div>",
+  "source": "<AutoGrid min="13rem" fill>…</AutoGrid>",
+}
+`;
+
+exports[`story source vs. render drift > shared/auto-grid/auto-grid.stories.tsx → WiderTracks (Wider tracks (min 16rem)) 1`] = `
+{
+  "html": "<div class="grid grid-cols-[repeat(auto-fit,minmax(16rem,1fr))] gap-hsp-md"><div class="rounded-md bg-bg border border-border px-hsp-lg py-vsp-md"><h3 class="text-title font-semibold text-fg mb-vsp-xs">Item A</h3><div class="text-small text-fg">Sample.</div></div><div class="rounded-md bg-bg border border-border px-hsp-lg py-vsp-md"><h3 class="text-title font-semibold text-fg mb-vsp-xs">Item B</h3><div class="text-small text-fg">Sample.</div></div><div class="rounded-md bg-bg border border-border px-hsp-lg py-vsp-md"><h3 class="text-title font-semibold text-fg mb-vsp-xs">Item C</h3><div class="text-small text-fg">Sample.</div></div><div class="rounded-md bg-bg border border-border px-hsp-lg py-vsp-md"><h3 class="text-title font-semibold text-fg mb-vsp-xs">Item D</h3><div class="text-small text-fg">Sample.</div></div><div class="rounded-md bg-bg border border-border px-hsp-lg py-vsp-md"><h3 class="text-title font-semibold text-fg mb-vsp-xs">Item E</h3><div class="text-small text-fg">Sample.</div></div><div class="rounded-md bg-bg border border-border px-hsp-lg py-vsp-md"><h3 class="text-title font-semibold text-fg mb-vsp-xs">Item F</h3><div class="text-small text-fg">Sample.</div></div></div>",
+  "source": "<AutoGrid min="16rem">…</AutoGrid>",
+}
+`;
+
+exports[`story source vs. render drift > shared/card-link/card-link.stories.tsx → Default (Card wrapped as a link) 1`] = `
+{
+  "html": "<div class="grid grid-cols-[repeat(auto-fit,minmax(15rem,1fr))] gap-hsp-md"><a href="/products" class="group block h-full no-underline" style="text-decoration:none;color:inherit;"><div class="rounded-md bg-bg border border-border px-hsp-lg py-vsp-md h-full transition-colors group-hover:border-accent"><div class="text-small text-fg"><h3 class="text-title font-semibold text-fg mb-vsp-xs transition-colors group-hover:text-accent">Products</h3><p class="text-small leading-relaxed text-fg">The whole card is clickable.</p></div></div></a><a href="/products" class="group block h-full no-underline" style="text-decoration:none;color:inherit;"><div class="rounded-md bg-bg border border-border px-hsp-lg py-vsp-md h-full transition-colors group-hover:border-accent"><div class="text-small text-fg"><h3 class="text-title font-semibold text-fg mb-vsp-xs transition-colors group-hover:text-accent">Company</h3><p class="text-small leading-relaxed text-fg">The whole card is clickable.</p></div></div></a><a href="/products" class="group block h-full no-underline" style="text-decoration:none;color:inherit;"><div class="rounded-md bg-bg border border-border px-hsp-lg py-vsp-md h-full transition-colors group-hover:border-accent"><div class="text-small text-fg"><h3 class="text-title font-semibold text-fg mb-vsp-xs transition-colors group-hover:text-accent">Investors</h3><p class="text-small leading-relaxed text-fg">The whole card is clickable.</p></div></div></a></div>",
+  "source": "<CardLink href="/products">
+  <Card class="h-full transition-colors group-hover:border-accent">
+    <Card.Title class="transition-colors group-hover:text-accent">Products</Card.Title>
+    <p class="text-small text-fg">The whole card is clickable.</p>
+  </Card>
+</CardLink>",
+}
+`;
+
+exports[`story source vs. render drift > shared/card-link/card-link.stories.tsx → ViewAll (ViewAllLink) 1`] = `
+{
+  "html": "<a href="/news" class="group inline-flex items-center gap-x-hsp-2xs text-caption font-semibold text-accent no-underline transition-colors hover:text-accent-hover">View all news<span aria-hidden="true">→</span></a>",
+  "source": "<ViewAllLink href="/news">View all news</ViewAllLink>",
+}
+`;
+
+exports[`story source vs. render drift > shared/container/container.stories.tsx → Default (Default (~88rem)) 1`] = `
+{
+  "html": "<div class="max-w-[88rem]" style="margin-inline:auto;padding-inline:clamp(var(--spacing-hsp-md), 4vw, var(--spacing-hsp-2xl));"><div class="rounded-md border border-border bg-surface px-hsp-lg py-vsp-md"><p class="text-caption text-muted">Container (~88rem)</p><p class="text-small text-fg">Sample Co. is a demo company. This band shows the container's maximum width — resize the browser to see the inline padding expand and contract fluidly (via clamp()).</p></div></div>",
+  "source": "<Container>
+  <div>Page content…</div>
+</Container>",
+}
+`;
+
+exports[`story source vs. render drift > shared/cta-button/cta-button.stories.tsx → Pair (Primary + secondary pair) 1`] = `
+{
+  "html": "<div class="flex flex-wrap gap-x-hsp-md gap-y-vsp-xs"><a href="/products" class="inline-flex items-center gap-x-hsp-xs rounded-md px-hsp-xl py-vsp-sm text-small font-semibold no-underline transition-colors bg-accent text-bg hover:bg-accent-hover border border-accent hover:border-accent-hover" style="text-decoration:none;color:var(--color-bg);">Browse products<span aria-hidden="true">→</span></a><a href="/company" class="inline-flex items-center gap-x-hsp-xs rounded-md px-hsp-xl py-vsp-sm text-small font-semibold no-underline transition-colors bg-bg text-accent border border-border hover:border-accent hover:bg-surface" style="text-decoration:none;color:var(--color-accent);">Company info<span aria-hidden="true">→</span></a></div>",
+  "source": "<CtaButton href="/products" variant="primary">Browse products</CtaButton>
+<CtaButton href="/company" variant="secondary">Company info</CtaButton>",
+}
+`;
+
+exports[`story source vs. render drift > shared/cta-button/cta-button.stories.tsx → Playground (Playground) 1`] = `
+{
+  "html": "<a href="/products" class="inline-flex items-center gap-x-hsp-xs rounded-md px-hsp-xl py-vsp-sm text-small font-semibold no-underline transition-colors bg-accent text-bg hover:bg-accent-hover border border-accent hover:border-accent-hover" style="text-decoration:none;color:var(--color-bg);">Browse products<span aria-hidden="true">→</span></a>",
+  "source": "<CtaButton href="/products" variant="primary">Browse products</CtaButton>",
+}
+`;
+
+exports[`story source vs. render drift > shared/hero/hero.stories.tsx → Primary (Primary (page hero)) 1`] = `
+{
+  "html": "<section class="w-full" style="background-color:color-mix(in srgb, var(--color-accent) 6%, var(--color-bg));" aria-label="Hero"><div class="max-w-[88rem] py-vsp-2xl" style="margin-inline:auto;padding-inline:clamp(var(--spacing-hsp-md), 4vw, var(--spacing-hsp-2xl));"><p class="text-caption font-semibold uppercase tracking-wide text-accent">Sample Co.</p><h1 class="mt-vsp-sm max-w-[20ch] font-bold leading-tight text-fg" style="font-size:clamp(var(--text-display), 1.6rem + 3.4vw, 4rem);text-wrap:balance;">Build things that last</h1><p class="mt-vsp-md max-w-[44rem] text-title leading-relaxed text-fg" style="text-wrap:pretty;">A demo company combining two imaginary product lines into one storefront.</p><div class="mt-vsp-lg flex flex-wrap gap-x-hsp-md gap-y-vsp-xs"><a href="/products" class="inline-flex items-center gap-x-hsp-xs rounded-md px-hsp-xl py-vsp-sm text-small font-semibold no-underline transition-colors bg-accent text-bg hover:bg-accent-hover border border-accent hover:border-accent-hover" style="text-decoration:none;color:var(--color-bg);">Browse products<span aria-hidden="true">→</span></a><a href="/company" class="inline-flex items-center gap-x-hsp-xs rounded-md px-hsp-xl py-vsp-sm text-small font-semibold no-underline transition-colors bg-bg text-accent border border-border hover:border-accent hover:bg-surface" style="text-decoration:none;color:var(--color-accent);">About us<span aria-hidden="true">→</span></a></div></div></section>",
+  "source": "<Hero
+  variant="primary"
+  eyebrow="Sample Co."
+  heading="Build things that last"
+  lead="A demo company combining two imaginary product lines into one storefront."
+  actions={[
+    { label: "Browse products", href: "/products", variant: "primary" },
+    { label: "About us", href: "/company", variant: "secondary" },
+  ]}
+/>",
+}
+`;
+
+exports[`story source vs. render drift > shared/hero/hero.stories.tsx → Secondary (Secondary (section hero)) 1`] = `
+{
+  "html": "<section class="w-full" style="background-color:color-mix(in srgb, var(--color-accent) 6%, var(--color-bg));" aria-label="Hero"><div class="max-w-[88rem] py-vsp-2xl" style="margin-inline:auto;padding-inline:clamp(var(--spacing-hsp-md), 4vw, var(--spacing-hsp-2xl));"><p class="text-caption font-semibold uppercase tracking-wide text-accent">Sample line</p><h1 class="mt-vsp-sm max-w-[24ch] font-bold leading-tight text-fg" style="font-size:clamp(var(--text-display), 1.6rem + 3.4vw, 3.5rem);text-wrap:balance;">Measure it, make it, support it.</h1><p class="mt-vsp-md max-w-[44rem] text-title leading-relaxed text-fg" style="text-wrap:pretty;">A smaller-scale hero for a section landing page.</p><div class="mt-vsp-lg flex flex-wrap gap-x-hsp-md gap-y-vsp-xs"><a href="/lines/sample" class="inline-flex items-center gap-x-hsp-xs rounded-md px-hsp-xl py-vsp-sm text-small font-semibold no-underline transition-colors bg-accent text-bg hover:bg-accent-hover border border-accent hover:border-accent-hover" style="text-decoration:none;color:var(--color-bg);">View lineup<span aria-hidden="true">→</span></a></div></div></section>",
+  "source": "<Hero
+  variant="secondary"
+  eyebrow="Sample line"
+  heading="Measure it, make it, support it."
+  lead="A smaller-scale hero for a section landing page."
+  actions={[{ label: "View lineup", href: "/lines/sample", variant: "primary" }]}
+/>",
+}
+`;
+
+exports[`story source vs. render drift > shared/section-heading/section-heading.stories.tsx → Default (Heading + intro) 1`] = `
+{
+  "html": "<div><h2 class="text-heading font-bold leading-tight text-fg" style="text-wrap:balance;">Product lines</h2><p class="mt-vsp-sm max-w-[44rem] text-small leading-relaxed text-fg" style="text-wrap:pretty;">We combine trading and manufacturing expertise across four product lines.</p></div>",
+  "source": "<SectionHeading
+  heading="Product lines"
+  intro="We combine trading and manufacturing expertise across four product lines."
+/>",
+}
+`;
+
+exports[`story source vs. render drift > shared/section-heading/section-heading.stories.tsx → HeadingOnly (Heading only) 1`] = `
+{
+  "html": "<div><h2 class="text-heading font-bold leading-tight text-fg" style="text-wrap:balance;">Our strengths</h2></div>",
+  "source": "<SectionHeading heading="Our strengths" />",
+}
+`;
+
+exports[`story source vs. render drift > shared/section-heading/section-heading.stories.tsx → WithEyebrow (With eyebrow) 1`] = `
+{
+  "html": "<div><p class="text-caption font-semibold uppercase tracking-wide text-accent">Sustainability</p><h2 class="mt-vsp-xs text-heading font-bold leading-tight text-fg" style="text-wrap:balance;">Building a sustainable future</h2><p class="mt-vsp-sm max-w-[44rem] text-small leading-relaxed text-fg" style="text-wrap:pretty;">We contribute to environmental, social, and economic sustainability through our business.</p></div>",
+  "source": "<SectionHeading
+  eyebrow="Sustainability"
+  heading="Building a sustainable future"
+  intro="We contribute to environmental, social, and economic sustainability through our business."
+/>",
 }
 `;
 
