@@ -185,3 +185,26 @@ vs @zudo-sg/ui 2px; reference `vsp-xl` = 64px vs @zudo-sg/ui 40px). Ported layou
 shift; verify spacing-sensitive components visually and adjust the axis step
 where the design needs it. A full spacing remap is out of scope for this map
 (color / z-index / text are the renaming surface).
+
+---
+
+## 8. Raw `var(--token)` references (not utility classes)
+
+Some components reference tokens directly in `style={{}}` / arbitrary values
+(e.g. `color-mix(in oklch, var(--color-accent) 8%, transparent)`, a `clamp()`
+on `var(--text-display)`, or `var(--radius-lg)` in a `.stories.tsx`). A raw
+`var()` is NOT caught by the utility-class renames above, so apply the SAME
+remap to the custom-property name:
+
+| Raw ref in reference | @zudo-sg/ui | Note |
+|---|---|---|
+| `var(--color-<name>)` | `var(--color-<name>)` | same — colors are 1:1 by name (accent/bg/border/surface/fg/muted, all observed in `color-mix` tints) |
+| `var(--text-caption)` | `var(--text-micro)` | 12px — same shift-one-rung as §3 |
+| `var(--text-small)` | `var(--text-caption)` | 14px |
+| `var(--text-body)` | `var(--text-small)` | 16px |
+| `var(--text-title|--text-heading|--text-display)` | unchanged | same px |
+| `var(--radius-lg)` | `var(--radius-md)` | 8px — @zudo-sg/ui `--radius-lg` is 16px (see §5) |
+
+No raw `var(--z-index-*)`, `var(--leading-*)`, or `var(--ds-*)` references exist
+in the reference components. (`--color-loading-scrim` appears only in a doc
+comment; the loading-overlay component defers its color to a stylesheet.)
