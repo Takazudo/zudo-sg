@@ -25,6 +25,7 @@
   "ignore": [
     "**/*.test.*",
     "**/*.spec.*",
-    "**/node_modules/**"
+    "**/node_modules/**",
+    "**/_temp-resource/**"
   ]
 }
