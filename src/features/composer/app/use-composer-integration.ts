@@ -89,6 +89,15 @@ export interface ComposerIntegrationApi {
   handlePaste: (target: InsertionTarget) => void;
   /** Duplicate: clone-with-new-ids + insert immediately after the source, then select + reveal it. Refused for opaque nodes. */
   handleDuplicate: (nodeId: string) => void;
+
+  // ── Inline canvas editing (issue #257) ────────────────────────────────────
+  /**
+   * A canvas inline edit that PASSED the host's revision check → route the value
+   * through the controller's EXISTING `updateProps` (no second mutation path).
+   * The inspector, tree, and canvas all read the same document, so they update
+   * live. Field-domain validation stays `updateProps`'s job.
+   */
+  handleCommitInlineEdit: (nodeId: string, fieldKey: string, value: string) => void;
 }
 
 export function useComposerIntegration(
@@ -168,6 +177,12 @@ export function useComposerIntegration(
   const handlePaste = useCallback((target: InsertionTarget) => controller.paste(target), [controller]);
   const handleDuplicate = useCallback((nodeId: string) => controller.duplicate(nodeId), [controller]);
 
+  const handleCommitInlineEdit = useCallback(
+    (nodeId: string, fieldKey: string, value: string) =>
+      controller.updateProps(nodeId, { [fieldKey]: value }),
+    [controller],
+  );
+
   // Keep an escape handler whose identity only changes when what it must close
   // changes, so the keyboard hook does not re-bind on every controller update.
   const openStateRef = useRef({ chooserOpen: chooser.open, exportOpen: exportState.open });
@@ -199,5 +214,6 @@ export function useComposerIntegration(
     handleCut,
     handlePaste,
     handleDuplicate,
+    handleCommitInlineEdit,
   };
 }

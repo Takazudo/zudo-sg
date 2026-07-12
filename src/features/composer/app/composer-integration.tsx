@@ -131,6 +131,7 @@ export function ComposerIntegration(props: ComposerIntegrationProps): JSX.Elemen
             onRequestAdd={api.handleCanvasRequestAdd}
             onRequestNodeMenu={menus.openNodeMenu}
             onRequestInsertMenu={menus.openInsertMenu}
+            onCommitInlineEdit={api.handleCommitInlineEdit}
             createBridge={props.createBridge}
             location={props.previewLocation}
             hostWindow={props.hostWindow}
