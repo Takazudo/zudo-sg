@@ -46,6 +46,15 @@ import * as chromeSiteNav from "@zudo-sg/ui/src/chrome/site-nav/site-nav.stories
 import * as dialog from "@zudo-sg/ui/src/dialog/dialog.stories.tsx";
 import * as footer from "@zudo-sg/ui/src/footer/footer.stories.tsx";
 import * as form from "@zudo-sg/ui/src/form/form.stories.tsx";
+import * as formsContactForm from "@zudo-sg/ui/src/forms/contact-form/contact-form.stories.tsx";
+import * as formsField from "@zudo-sg/ui/src/forms/field/field.stories.tsx";
+import * as formsInput from "@zudo-sg/ui/src/forms/input/input.stories.tsx";
+import * as formsRecruitEntryForm from "@zudo-sg/ui/src/forms/recruit-entry-form/recruit-entry-form.stories.tsx";
+import * as formsReviewRow from "@zudo-sg/ui/src/forms/review-row/review-row.stories.tsx";
+import * as formsSecondaryButton from "@zudo-sg/ui/src/forms/secondary-button/secondary-button.stories.tsx";
+import * as formsSelect from "@zudo-sg/ui/src/forms/select/select.stories.tsx";
+import * as formsSubmitButton from "@zudo-sg/ui/src/forms/submit-button/submit-button.stories.tsx";
+import * as formsTextarea from "@zudo-sg/ui/src/forms/textarea/textarea.stories.tsx";
 import * as heading from "@zudo-sg/ui/src/heading/heading.stories.tsx";
 import * as hero from "@zudo-sg/ui/src/hero/hero.stories.tsx";
 import * as link from "@zudo-sg/ui/src/link/link.stories.tsx";
@@ -84,6 +93,15 @@ export const storyModules: Record<string, StoryModule> = {
   "./ui/src/dialog/dialog.stories.tsx": dialog as unknown as StoryModule,
   "./ui/src/footer/footer.stories.tsx": footer as unknown as StoryModule,
   "./ui/src/form/form.stories.tsx": form as unknown as StoryModule,
+  "./ui/src/forms/contact-form/contact-form.stories.tsx": formsContactForm as unknown as StoryModule,
+  "./ui/src/forms/field/field.stories.tsx": formsField as unknown as StoryModule,
+  "./ui/src/forms/input/input.stories.tsx": formsInput as unknown as StoryModule,
+  "./ui/src/forms/recruit-entry-form/recruit-entry-form.stories.tsx": formsRecruitEntryForm as unknown as StoryModule,
+  "./ui/src/forms/review-row/review-row.stories.tsx": formsReviewRow as unknown as StoryModule,
+  "./ui/src/forms/secondary-button/secondary-button.stories.tsx": formsSecondaryButton as unknown as StoryModule,
+  "./ui/src/forms/select/select.stories.tsx": formsSelect as unknown as StoryModule,
+  "./ui/src/forms/submit-button/submit-button.stories.tsx": formsSubmitButton as unknown as StoryModule,
+  "./ui/src/forms/textarea/textarea.stories.tsx": formsTextarea as unknown as StoryModule,
   "./ui/src/heading/heading.stories.tsx": heading as unknown as StoryModule,
   "./ui/src/hero/hero.stories.tsx": hero as unknown as StoryModule,
   "./ui/src/link/link.stories.tsx": link as unknown as StoryModule,
@@ -128,6 +146,15 @@ export const storyExportOrder: Record<string, string[]> = {
   "./ui/src/dialog/dialog.stories.tsx": ["Playground", "Default", "Busy", "WithError"],
   "./ui/src/footer/footer.stories.tsx": ["Playground", "Default", "Minimal"],
   "./ui/src/form/form.stories.tsx": ["TextField", "Required", "Disabled", "ContactForm"],
+  "./ui/src/forms/contact-form/contact-form.stories.tsx": ["Default"],
+  "./ui/src/forms/field/field.stories.tsx": ["Required", "Optional"],
+  "./ui/src/forms/input/input.stories.tsx": ["Playground"],
+  "./ui/src/forms/recruit-entry-form/recruit-entry-form.stories.tsx": ["NewGraduate", "Career"],
+  "./ui/src/forms/review-row/review-row.stories.tsx": ["Default"],
+  "./ui/src/forms/secondary-button/secondary-button.stories.tsx": ["Default"],
+  "./ui/src/forms/select/select.stories.tsx": ["Default"],
+  "./ui/src/forms/submit-button/submit-button.stories.tsx": ["Default", "Disabled"],
+  "./ui/src/forms/textarea/textarea.stories.tsx": ["Default"],
   "./ui/src/heading/heading.stories.tsx": ["Playground", "Page", "Section", "SectionWithAction"],
   "./ui/src/hero/hero.stories.tsx": ["Playground", "Basic", "WithMedia", "Plain"],
   "./ui/src/link/link.stories.tsx": ["Playground", "Variants", "External"],
