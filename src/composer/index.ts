@@ -61,6 +61,7 @@ export {
   repairSelection,
   cloneSubtreeWithNewIds,
   insertSubtree,
+  moveSubtree,
 } from "./model/commands";
 
 // ── Recovery ─────────────────────────────────────────────────────────────────
