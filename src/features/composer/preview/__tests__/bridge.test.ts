@@ -8,6 +8,7 @@ import {
 } from "../bridge";
 import { COMPOSER_PREVIEW_IFRAME_TITLE } from "../route";
 import {
+  commitInlineEditMessage,
   errorMessage,
   readyMessage,
   requestAddMessage,
@@ -262,6 +263,26 @@ describe("createComposerPreviewBridge — inbound guard", () => {
       2,
     );
     expect(onError).toHaveBeenCalledWith("node threw", true, 2);
+  });
+
+  it("routes commit-inline-edit to onCommitInlineEdit with its documentRevision (issue #257)", () => {
+    const host = fakeHostWindow();
+    const iframe = fakeFrame();
+    const onCommitInlineEdit = vi.fn();
+    createComposerPreviewBridge({
+      frame: iframe.frame,
+      location: LOCATION,
+      hostWindow: host,
+      onCommitInlineEdit,
+    });
+
+    host.deliver({
+      data: commitInlineEditMessage("prose-1", "children", "Edited body copy", 5),
+      origin: ORIGIN,
+      source: iframe.contentWindow,
+    });
+
+    expect(onCommitInlineEdit).toHaveBeenCalledWith("prose-1", "children", "Edited body copy", 5);
   });
 
   it("DROPS messages from a foreign window or a foreign origin", () => {

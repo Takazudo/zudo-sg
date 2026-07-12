@@ -343,6 +343,32 @@ export const errorMessageSchema = z
   })
   .strict();
 
+/**
+ * An inline-editing session on the canvas committed a new value for a flagged
+ * text field (issue #257). Carries the exact `{ nodeId, fieldKey, value }` the
+ * host routes through the controller's EXISTING `updateProps` action — no
+ * second mutation path — plus `documentRevision`: the revision the preview was
+ * showing when the user committed.
+ *
+ * `documentRevision` is what makes a STALE inline edit droppable: the host
+ * compares it against the newest DOCUMENT snapshot it has sent (see
+ * `composer-canvas-host.tsx`). An edit committed against a document the host has
+ * since superseded is dropped with an honest status, never silently applied.
+ * `value` is any string (empty is a legitimate erasure); newlines survive for
+ * a multiline field. Field-domain validation stays the controller's job — this
+ * schema only guards the WIRE shape.
+ */
+export const commitInlineEditMessageSchema = z
+  .object({
+    ...envelope,
+    type: z.literal("commit-inline-edit"),
+    nodeId: z.string().min(1),
+    fieldKey: z.string().min(1),
+    value: z.string(),
+    documentRevision: revisionSchema,
+  })
+  .strict();
+
 /** Append future preview → parent messages here (see the module header). */
 export const PREVIEW_TO_PARENT_MEMBERS = [
   readyMessageSchema,
@@ -351,6 +377,7 @@ export const PREVIEW_TO_PARENT_MEMBERS = [
   requestNodeMenuMessageSchema,
   requestInsertMenuMessageSchema,
   errorMessageSchema,
+  commitInlineEditMessageSchema,
 ] as const;
 
 export const previewToParentSchema = z.discriminatedUnion("type", [...PREVIEW_TO_PARENT_MEMBERS]);
@@ -361,6 +388,7 @@ export type RequestAddMessage = z.infer<typeof requestAddMessageSchema>;
 export type RequestNodeMenuMessage = z.infer<typeof requestNodeMenuMessageSchema>;
 export type RequestInsertMenuMessage = z.infer<typeof requestInsertMenuMessageSchema>;
 export type ErrorMessage = z.infer<typeof errorMessageSchema>;
+export type CommitInlineEditMessage = z.infer<typeof commitInlineEditMessageSchema>;
 export type PreviewToParentMessage = z.infer<typeof previewToParentSchema>;
 
 // ── Structural window/message types ─────────────────────────────────────────
@@ -485,6 +513,15 @@ export function requestInsertMenuMessage(
 
 export function restoreFocusMessage(focusToken: string): RestoreFocusMessage {
   return { ...envelopeValue(), type: "restore-focus", focusToken };
+}
+
+export function commitInlineEditMessage(
+  nodeId: string,
+  fieldKey: string,
+  value: string,
+  documentRevision: number,
+): CommitInlineEditMessage {
+  return { ...envelopeValue(), type: "commit-inline-edit", nodeId, fieldKey, value, documentRevision };
 }
 
 export function errorMessage(

@@ -4,6 +4,7 @@ import {
   COMPOSER_PREVIEW_CHANNEL,
   COMPOSER_PREVIEW_PROTOCOL_VERSION,
   RESERVED_PROP_KEYS,
+  commitInlineEditMessage,
   modeMessage,
   readParentToPreview,
   readPreviewToParent,
@@ -43,6 +44,7 @@ describe("protocol envelope", () => {
       requestNodeMenuMessage(3, "box-1", RECT, "node-menu:box-1"),
       requestInsertMenuMessage(3, { parentId: null, slotId: "root", index: 0 }, RECT, "insert-menu::root:0"),
       restoreFocusMessage("node-menu:box-1"),
+      commitInlineEditMessage("prose-1", "children", "Edited copy", 3),
       errorMessage(null, "boom"),
     ];
     for (const message of messages) {
@@ -285,6 +287,7 @@ describe("readPreviewToParent", () => {
       requestAddMessage(1, target),
       requestNodeMenuMessage(1, "box-1", RECT, "node-menu:box-1"),
       requestInsertMenuMessage(1, target, RECT, "insert-menu:stack-1:content:2"),
+      commitInlineEditMessage("prose-1", "children", "Edited copy", 1),
       errorMessage(1, "component threw", true),
       errorMessage(null, "before the first snapshot", false),
     ];
@@ -440,5 +443,52 @@ describe("readPreviewToParent", () => {
         FROM_IFRAME,
       ),
     ).toEqual({ ok: false, reason: "wrong-origin" });
+  });
+
+  // ── commit-inline-edit (issue #257) ────────────────────────────────────────
+  it("carries { nodeId, fieldKey, value, documentRevision } verbatim on commit-inline-edit", () => {
+    const result = readPreviewToParent(
+      { data: commitInlineEditMessage("prose-1", "children", "Fresh copy", 7), origin: ORIGIN, source: IFRAME },
+      FROM_IFRAME,
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok || result.message.type !== "commit-inline-edit") return;
+    expect(result.message).toMatchObject({
+      nodeId: "prose-1",
+      fieldKey: "children",
+      value: "Fresh copy",
+      documentRevision: 7,
+    });
+  });
+
+  it("accepts an EMPTY value (erasing a field is legitimate)", () => {
+    const result = readPreviewToParent(
+      { data: commitInlineEditMessage("prose-1", "children", "", 2), origin: ORIGIN, source: IFRAME },
+      FROM_IFRAME,
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok || result.message.type !== "commit-inline-edit") return;
+    expect(result.message.value).toBe("");
+  });
+
+  it("preserves newlines in the value (multiline field)", () => {
+    const result = readPreviewToParent(
+      { data: commitInlineEditMessage("prose-1", "children", "line 1\nline 2", 2), origin: ORIGIN, source: IFRAME },
+      FROM_IFRAME,
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok || result.message.type !== "commit-inline-edit") return;
+    expect(result.message.value).toBe("line 1\nline 2");
+  });
+
+  it.each([
+    ["empty nodeId", { ...commitInlineEditMessage("x", "children", "v", 1), nodeId: "" }],
+    ["empty fieldKey", { ...commitInlineEditMessage("prose-1", "x", "v", 1), fieldKey: "" }],
+    ["non-string value", { ...commitInlineEditMessage("prose-1", "children", "v", 1), value: 42 }],
+    ["negative documentRevision", { ...commitInlineEditMessage("prose-1", "children", "v", 1), documentRevision: -1 }],
+    ["extra key", { ...commitInlineEditMessage("prose-1", "children", "v", 1), smuggled: true }],
+  ])("REJECTS a malformed commit-inline-edit (%s)", (_label, data) => {
+    const result = readPreviewToParent({ data, origin: ORIGIN, source: IFRAME }, FROM_IFRAME);
+    expect(result.ok).toBe(false);
   });
 });

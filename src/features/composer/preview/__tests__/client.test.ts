@@ -156,6 +156,24 @@ describe("createPreviewClient", () => {
     for (const post of posts) expect(post.targetOrigin).toBe(ORIGIN);
   });
 
+  it("stamps outbound commit-inline-edit with the revision on screen (documentRevision)", () => {
+    const { client, posts, fromParent } = setup();
+    fromParent(renderMessage(9, SAMPLE_DOCUMENT, EDIT));
+    posts.length = 0;
+
+    client.emitCommitInlineEdit("prose-1", "children", "Edited body copy");
+
+    expect(posts).toHaveLength(1);
+    expect(posts[0]!.message).toMatchObject({
+      type: "commit-inline-edit",
+      nodeId: "prose-1",
+      fieldKey: "children",
+      value: "Edited body copy",
+      documentRevision: 9,
+    });
+    expect(posts[0]!.targetOrigin).toBe(ORIGIN);
+  });
+
   it("routes an inbound restore-focus to onRestoreFocus WITHOUT touching state/onState", () => {
     const { client, onState, onRestoreFocus, fromParent } = setup();
     fromParent(renderMessage(1, SAMPLE_DOCUMENT, EDIT));

@@ -128,6 +128,13 @@ export interface ComposerPreviewBridgeOptions {
   onRequestNodeMenu?: (nodeId: string, rect: SerializedRect, focusToken: string, revision: number) => void;
   /** An insert point's "⋯" was activated inside the iframe (issue #256). */
   onRequestInsertMenu?: (target: InsertionTarget, rect: SerializedRect, focusToken: string, revision: number) => void;
+  /**
+   * An inline-editing session committed a value (issue #257). `documentRevision`
+   * is the revision the preview was showing at commit time — the host validates
+   * it against the newest DOCUMENT snapshot it sent before routing the value
+   * through `updateProps`, dropping a stale edit rather than applying it.
+   */
+  onCommitInlineEdit?: (nodeId: string, fieldKey: string, value: string, documentRevision: number) => void;
   onError?: (message: string, recoverable: boolean, revision: number | null) => void;
   /** A message that failed source/origin/schema validation was DROPPED. */
   onRejected?: (reason: GuardFailure, detail?: string) => void;
@@ -228,6 +235,9 @@ export function createComposerPreviewBridge(
         return;
       case "request-insert-menu":
         options.onRequestInsertMenu?.(message.target, message.rect, message.focusToken, message.revision);
+        return;
+      case "commit-inline-edit":
+        options.onCommitInlineEdit?.(message.nodeId, message.fieldKey, message.value, message.documentRevision);
         return;
       case "error":
         options.onError?.(message.message, message.recoverable, message.revision);

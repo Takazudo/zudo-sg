@@ -40,6 +40,7 @@ export {
   COMPOSER_PREVIEW_CHANNEL,
   COMPOSER_PREVIEW_PROTOCOL_VERSION,
   RESERVED_PROP_KEYS,
+  commitInlineEditMessageSchema,
   compositionDocumentSchema,
   compositionNodeSchema,
   insertionTargetSchema,
@@ -61,6 +62,7 @@ export {
   readPreviewToParent,
 } from "./protocol";
 export type {
+  CommitInlineEditMessage,
   ErrorMessage,
   GuardFailure,
   GuardResult,
