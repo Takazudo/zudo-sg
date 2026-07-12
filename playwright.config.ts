@@ -49,6 +49,13 @@ export default defineConfig({
       use: { baseURL: `http://localhost:${SMOKE_PORT}` },
     },
     {
+      name: "composer",
+      // /composer is built into the root dist/ — same static server as
+      // "smoke" (SMOKE_PORT), not a separate webServer entry.
+      testMatch: "composer.spec.ts",
+      use: { baseURL: `http://localhost:${SMOKE_PORT}` },
+    },
+    {
       name: "demo-smoke",
       // Both demo specs serve from the same built demo dist (DEMO_SMOKE_PORT):
       // the render smoke checks and the SPA-transition regression suite.
