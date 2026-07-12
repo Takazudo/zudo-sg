@@ -153,6 +153,27 @@ async function selectedCanvasNodeId(frame: FrameLocator): Promise<string> {
   return id;
 }
 
+/**
+ * Opens a canvas node's inline editor and returns only once the contenteditable
+ * is genuinely ready for keystrokes.
+ *
+ * The double-click opens the inline session synchronously, but the renderer
+ * places the editable's text node, moves focus into it, and sets the caret in
+ * an async `useLayoutEffect` that runs AFTER a keyed-body REMOUNT (renderer.ts's
+ * inline session). The `data-zc-inline-editing` attribute this `editable`
+ * locator keys on is set at the TOP of that effect — so on a CPU-starved CI
+ * runner the attribute (and thus a bare `toBeVisible()`) can resolve a beat
+ * before `el.focus()` lands. A `Control+A`/`type` fired in that window silently
+ * targets nothing, the field keeps its seed value, and the later commit records
+ * the UNCHANGED text — precisely the #252 step-11 CI flake. Gating on visible
+ * AND focused guarantees subsequent keystrokes reach the live editable.
+ */
+async function openInlineEditor(nodeLocator: Locator, editable: Locator): Promise<void> {
+  await nodeLocator.dblclick();
+  await expect(editable).toBeVisible();
+  await expect(editable).toBeFocused();
+}
+
 interface AddViaChooserOptions {
   /** Clicks whatever "+ Add" affordance should open the chooser for this target. */
   open: () => Promise<void>;
@@ -614,30 +635,39 @@ test.describe.serial("Composer 14-step walkthrough (#252) — steps 1-6, 8-13", 
     const editable = frame.locator("[data-zc-inline-editing]");
     const labelField = page.locator("#sg-composer-inspector").getByLabel("Label");
 
+    // The tree-selection above bridges host→iframe asynchronously; wait for the
+    // CANVAS node to actually reflect it so edit-entry never races a stale
+    // renderer `selectedId` (a click-again entry keys off `selectedId`).
+    await expect(ctaNode).toHaveAttribute("data-zc-selected", "");
+
     // Commit via Enter.
-    await ctaNode.dblclick();
-    await expect(editable).toBeVisible();
+    await openInlineEditor(ctaNode, editable);
     await expect(editable).toHaveAttribute("contenteditable", "plaintext-only");
+    // The layout effect seeds the field with its current value — wait for it so
+    // Control+A selects real content, not an empty field.
+    await expect(editable).toContainText("Get started");
     await page.keyboard.press("Control+A");
     await page.keyboard.type("Get building");
+    // Confirm the keystrokes actually landed BEFORE committing — a raced type
+    // would otherwise commit the unchanged seed value (the #252 step-11 flake).
+    await expect(editable).toContainText("Get building");
     await page.keyboard.press("Enter");
     await expect(frame.locator("[data-zc-inline-editing]")).toHaveCount(0);
     await expect(ctaNode).toContainText("Get building");
     await expect(labelField).toHaveValue("Get building");
 
     // Cancel via Escape.
-    await ctaNode.dblclick();
-    await expect(editable).toBeVisible();
+    await openInlineEditor(ctaNode, editable);
     await page.keyboard.press("Control+A");
     await page.keyboard.type("Should not persist");
+    await expect(editable).toContainText("Should not persist");
     await page.keyboard.press("Escape");
     await expect(frame.locator("[data-zc-inline-editing]")).toHaveCount(0);
     await expect(ctaNode).toContainText("Get building");
     await expect(ctaNode).not.toContainText("Should not persist");
 
     // An IME composition's confirming Enter must NOT commit.
-    await ctaNode.dblclick();
-    await expect(editable).toBeVisible();
+    await openInlineEditor(ctaNode, editable);
     await editable.evaluate((el) => {
       el.dispatchEvent(new Event("compositionstart", { bubbles: true }));
       const ev = new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true });
@@ -651,10 +681,10 @@ test.describe.serial("Composer 14-step walkthrough (#252) — steps 1-6, 8-13", 
     await expect(ctaNode).toContainText("Get building");
 
     // Commit via blur (click outside the iframe entirely).
-    await ctaNode.dblclick();
-    await expect(editable).toBeVisible();
+    await openInlineEditor(ctaNode, editable);
     await page.keyboard.press("Control+A");
     await page.keyboard.type("Get building now");
+    await expect(editable).toContainText("Get building now");
     await page.locator(".sg-composer-toolbar").first().click({ position: { x: 4, y: 4 } });
     await expect(frame.locator("[data-zc-inline-editing]")).toHaveCount(0);
     await expect(ctaNode).toContainText("Get building now");

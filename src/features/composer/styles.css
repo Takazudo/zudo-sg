@@ -36,10 +36,13 @@
 }
 
 /* Composer owns its own document (see pages/composer/index.tsx) — this guard
- * is scoped to it so no other route's <body> is affected. Horizontal overflow
- * here would come from the grid's rail widths at very narrow viewports; the
- * canvas-only collapse below prevents that, but the guard stays as a hard
- * backstop (acceptance: "no body horizontal overflow" at every tested width). */
+ * is scoped to it so no other route's <body> is affected. It hides any stray
+ * horizontal overflow VISUALLY, but note it does NOT keep it out of
+ * `documentElement.scrollWidth`: an `overflow` set on <body> is propagated to
+ * the viewport by the CSS root-overflow-propagation rule, which leaves <body>
+ * itself computing to `overflow: visible` — so it never actually clips its
+ * descendants out of the scrollable extent. The real containment lives on
+ * `.sg-composer-shell` below (a non-root element, so no propagation). */
 html[data-sg-composer-doc] body {
   overflow-x: hidden;
 }
@@ -49,6 +52,18 @@ html[data-sg-composer-doc] body {
   flex-direction: column;
   height: calc(100vh - var(--sg-header-h));
   min-height: 0;
+  /* Hard, EFFECTIVE horizontal-overflow containment (acceptance: "no body
+   * horizontal overflow" at every width — verified via documentElement.
+   * scrollWidth, which the <body> guard above cannot satisfy; see its note).
+   * As a non-root element the shell genuinely clips, so any workspace chrome
+   * that doesn't fully collapse at the narrow seam (e.g. the two resizer
+   * tracks/hit-areas, ~2×0.75rem) can never push the document wider than the
+   * viewport. `clip` (not `hidden`) is deliberate: it keeps `overflow-y`
+   * `visible` instead of forcing it to `auto`, so no phantom vertical scroll
+   * container is created. Desktop is unaffected — the five-track grid is
+   * joint-clamped to fit the viewport and every resizer affordance sits
+   * interior to the shell, far from its clipped edges. */
+  overflow-x: clip;
 }
 
 .sg-composer-toolbar {
