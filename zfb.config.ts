@@ -91,17 +91,23 @@ export default defineConfig({
   // section on the host-owned `/components/<slug>` detail page (NOT its own
   // route — nothing maps this collection into `resolveMarkdownLinks.dirs`, so
   // zfb generates no page for it). The collection is rooted at the SAME glob
-  // root the #103 story codegen walks (`packages/ui/src/<name>/`), keeping doc
-  // discovery co-located with story discovery. `include: ["*/*.mdx"]` scopes it
-  // to one-level-deep `.mdx` files, ignoring `.tsx`/`.stories.tsx`/`__tests__`.
-  // Slug shape is `<name>/<name>` (path relative to the collection root, minus
-  // `.mdx`); the detail page derives it from the story entry's dir.
+  // root the #103/#224 story codegen walks (`packages/ui/src/**/`), keeping
+  // doc discovery co-located with story discovery at ANY depth — both the old
+  // one-level layout (`<name>/<name>.mdx`) and the new category-nested layout
+  // (`<category>/<name>/<name>.mdx`). `include: ["**/*.mdx"]` uses the
+  // globset dialect's `**` (matches zero or more directory components), so it
+  // covers both depths in one pattern while still ignoring `.tsx`/
+  // `.stories.tsx`/`__tests__`. Slug shape is the path relative to the
+  // collection root minus `.mdx` (e.g. `button/button` or
+  // `layout/badge-icon/badge-icon`); the detail page derives it from the
+  // story entry's dir (component-docs.ts's `componentDocSlug`, which is
+  // depth-agnostic string-prefix/suffix stripping — no change needed there).
   collections: [
     ...preset.collections,
     {
       name: "componentDocs",
       path: "packages/ui/src",
-      include: ["*/*.mdx"],
+      include: ["**/*.mdx"],
     },
   ],
   resolveMarkdownLinks,
