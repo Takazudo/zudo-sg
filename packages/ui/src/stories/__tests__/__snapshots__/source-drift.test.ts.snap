@@ -365,6 +365,157 @@ exports[`story source vs. render drift > chrome/site-nav/site-nav.stories.tsx �
 }
 `;
 
+exports[`story source vs. render drift > content/prose-a/prose-a.stories.tsx → Default (Default) 1`] = `
+{
+  "html": "<a class="text-accent underline underline-offset-2 hover:text-accent-hover" href="/docs">Read the docs</a>",
+  "source": "<ProseA href="/docs">Read the docs</ProseA>",
+}
+`;
+
+exports[`story source vs. render drift > content/prose-a/prose-a.stories.tsx → HashLink (Hash link (unstyled)) 1`] = `
+{
+  "html": "<a class="hash-link" href="#section">#</a>",
+  "source": "<ProseA href="#section" class="hash-link">#</ProseA>",
+}
+`;
+
+exports[`story source vs. render drift > content/prose-blockquote/prose-blockquote.stories.tsx → Default (Default) 1`] = `
+{
+  "html": "<blockquote class="text-muted italic border-l-[3px] border-l-border pl-hsp-lg [&amp;_p]:mb-vsp-xs"><p>A quoted passage, set apart from the surrounding body copy.</p></blockquote>",
+  "source": "<ProseBlockquote>
+  <ProseP>A quoted passage, set apart from the surrounding body copy.</ProseP>
+</ProseBlockquote>",
+}
+`;
+
+exports[`story source vs. render drift > content/prose-dl/prose-dl.stories.tsx → Default (Default) 1`] = `
+{
+  "html": "<dl><dt class="font-semibold text-fg mt-vsp-md">hsp</dt><dd class="text-muted mb-vsp-xs pl-hsp-xl">Horizontal spacing token axis.</dd><dt class="font-semibold text-fg mt-vsp-md">vsp</dt><dd class="text-muted mb-vsp-xs pl-hsp-xl">Vertical spacing token axis.</dd></dl>",
+  "source": "<ProseDl>
+  <ProseDt>hsp</ProseDt>
+  <ProseDd>Horizontal spacing token axis.</ProseDd>
+  <ProseDt>vsp</ProseDt>
+  <ProseDd>Vertical spacing token axis.</ProseDd>
+</ProseDl>",
+}
+`;
+
+exports[`story source vs. render drift > content/prose-em/prose-em.stories.tsx → Default (Default) 1`] = `
+{
+  "html": "<em class="italic">emphasized text</em>",
+  "source": "<ProseEm>emphasized text</ProseEm>",
+}
+`;
+
+exports[`story source vs. render drift > content/prose-h2/prose-h2.stories.tsx → Default (Default) 1`] = `
+{
+  "html": "<h2 class="text-title font-bold leading-tight text-fg pb-vsp-2xs border-b-2 border-b-border">Section heading</h2>",
+  "source": "<ProseH2>Section heading</ProseH2>",
+}
+`;
+
+exports[`story source vs. render drift > content/prose-h3/prose-h3.stories.tsx → Default (Default) 1`] = `
+{
+  "html": "<h3 class="text-title font-semibold leading-snug text-fg pl-hsp-sm border-l-[3px] border-l-accent">Subsection heading</h3>",
+  "source": "<ProseH3>Subsection heading</ProseH3>",
+}
+`;
+
+exports[`story source vs. render drift > content/prose-h4/prose-h4.stories.tsx → Default (Default) 1`] = `
+{
+  "html": "<h4 class="text-small font-semibold leading-snug text-fg">Detail heading</h4>",
+  "source": "<ProseH4>Detail heading</ProseH4>",
+}
+`;
+
+exports[`story source vs. render drift > content/prose-h5/prose-h5.stories.tsx → Default (Default) 1`] = `
+{
+  "html": "<h5 class="text-caption font-semibold leading-snug text-muted">Minor heading</h5>",
+  "source": "<ProseH5>Minor heading</ProseH5>",
+}
+`;
+
+exports[`story source vs. render drift > content/prose-h6/prose-h6.stories.tsx → Default (Default) 1`] = `
+{
+  "html": "<h6 class="text-caption font-semibold leading-snug text-muted">Smallest heading</h6>",
+  "source": "<ProseH6>Smallest heading</ProseH6>",
+}
+`;
+
+exports[`story source vs. render drift > content/prose-li/prose-li.stories.tsx → Default (Default) 1`] = `
+{
+  "html": "<ul class="list-disc pl-hsp-xl"><li class="marker:text-muted mb-vsp-xs [&amp;>ul]:mt-vsp-xs [&amp;>ul]:mb-0 [&amp;>ol]:mt-vsp-xs [&amp;>ol]:mb-0">Item one</li><li class="marker:text-muted mb-vsp-xs [&amp;>ul]:mt-vsp-xs [&amp;>ul]:mb-0 [&amp;>ol]:mt-vsp-xs [&amp;>ol]:mb-0">Item two<ul class="list-disc pl-hsp-xl"><li class="marker:text-muted mb-vsp-xs [&amp;>ul]:mt-vsp-xs [&amp;>ul]:mb-0 [&amp;>ol]:mt-vsp-xs [&amp;>ol]:mb-0">Nested item</li></ul></li></ul>",
+  "source": "<ProseUl>
+  <ProseLi>Item one</ProseLi>
+  <ProseLi>
+    Item two
+    <ProseUl>
+      <ProseLi>Nested item</ProseLi>
+    </ProseUl>
+  </ProseLi>
+</ProseUl>",
+}
+`;
+
+exports[`story source vs. render drift > content/prose-ol/prose-ol.stories.tsx → Default (Default) 1`] = `
+{
+  "html": "<ol class="list-decimal pl-hsp-xl"><li class="marker:text-muted mb-vsp-xs [&amp;>ul]:mt-vsp-xs [&amp;>ul]:mb-0 [&amp;>ol]:mt-vsp-xs [&amp;>ol]:mb-0">Step one</li><li class="marker:text-muted mb-vsp-xs [&amp;>ul]:mt-vsp-xs [&amp;>ul]:mb-0 [&amp;>ol]:mt-vsp-xs [&amp;>ol]:mb-0">Step two</li><li class="marker:text-muted mb-vsp-xs [&amp;>ul]:mt-vsp-xs [&amp;>ul]:mb-0 [&amp;>ol]:mt-vsp-xs [&amp;>ol]:mb-0">Step three</li></ol>",
+  "source": "<ProseOl>
+  <ProseLi>Step one</ProseLi>
+  <ProseLi>Step two</ProseLi>
+  <ProseLi>Step three</ProseLi>
+</ProseOl>",
+}
+`;
+
+exports[`story source vs. render drift > content/prose-p/prose-p.stories.tsx → Default (Default) 1`] = `
+{
+  "html": "<p>Regular body copy, unadorned.</p>",
+  "source": "<ProseP>Regular body copy, unadorned.</ProseP>",
+}
+`;
+
+exports[`story source vs. render drift > content/prose-strong/prose-strong.stories.tsx → Default (Default) 1`] = `
+{
+  "html": "<strong class="font-bold text-fg">important text</strong>",
+  "source": "<ProseStrong>important text</ProseStrong>",
+}
+`;
+
+exports[`story source vs. render drift > content/prose-table/prose-table.stories.tsx → Default (Default) 1`] = `
+{
+  "html": "<table class="w-full text-caption border-collapse"><thead><tr><th class="font-semibold text-fg bg-surface text-left py-vsp-xs px-hsp-md border-b-2 border-b-border" style="overflow-wrap:anywhere;">Token</th><th class="font-semibold text-fg bg-surface text-left py-vsp-xs px-hsp-md border-b-2 border-b-border" style="overflow-wrap:anywhere;">Purpose</th></tr></thead><tbody><tr><td class="text-left py-vsp-xs px-hsp-md border-b border-b-border" style="overflow-wrap:anywhere;">color-bg</td><td class="text-left py-vsp-xs px-hsp-md border-b border-b-border" style="overflow-wrap:anywhere;">Page background</td></tr><tr><td class="text-left py-vsp-xs px-hsp-md border-b border-b-border" style="overflow-wrap:anywhere;">color-accent</td><td class="text-left py-vsp-xs px-hsp-md border-b border-b-border" style="overflow-wrap:anywhere;">Accent color</td></tr></tbody></table>",
+  "source": "<ProseTable>
+  <thead>
+    <tr>
+      <ProseTh>Token</ProseTh>
+      <ProseTh>Purpose</ProseTh>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <ProseTd>color-bg</ProseTd>
+      <ProseTd>Page background</ProseTd>
+    </tr>
+    <tr>
+      <ProseTd>color-accent</ProseTd>
+      <ProseTd>Accent color</ProseTd>
+    </tr>
+  </tbody>
+</ProseTable>",
+}
+`;
+
+exports[`story source vs. render drift > content/prose-ul/prose-ul.stories.tsx → Default (Default) 1`] = `
+{
+  "html": "<ul class="list-disc pl-hsp-xl"><li class="marker:text-muted mb-vsp-xs [&amp;>ul]:mt-vsp-xs [&amp;>ul]:mb-0 [&amp;>ol]:mt-vsp-xs [&amp;>ol]:mb-0">Item one</li><li class="marker:text-muted mb-vsp-xs [&amp;>ul]:mt-vsp-xs [&amp;>ul]:mb-0 [&amp;>ol]:mt-vsp-xs [&amp;>ol]:mb-0">Item two</li></ul>",
+  "source": "<ProseUl>
+  <ProseLi>Item one</ProseLi>
+  <ProseLi>Item two</ProseLi>
+</ProseUl>",
+}
+`;
+
 exports[`story source vs. render drift > dialog/dialog.stories.tsx → Busy (Busy (submitting)) 1`] = `
 {
   "html": "<div class="relative min-h-[20rem]"><div class="fixed inset-0 z-[50] flex items-center justify-center p-hsp-lg bg-[rgb(0_0_0/0.5)]"><div role="dialog" aria-modal="true" aria-labelledby="zui-dialog-3" aria-busy="true" tabindex="-1" class="flex w-full max-w-[32rem] flex-col gap-vsp-md rounded-lg border border-line bg-surface p-hsp-xl shadow-overlay outline-none"><div class="flex items-start justify-between gap-hsp-md"><h2 id="zui-dialog-3" class="text-lg font-semibold tracking-tight text-ink">Saving changes</h2><button type="button" aria-label="Close" disabled class="shrink-0 rounded-md p-hsp-2xs text-ink-mute outline-none transition-colors hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:opacity-50 disabled:cursor-not-allowed"><span aria-hidden="true">×</span></button></div><div class="text-sm text-ink-soft">Applying your changes…</div><div class="mt-vsp-2xs flex items-center justify-end gap-hsp-md"><button type="button" class="inline-flex items-center justify-center gap-hsp-xs rounded-md font-semibold no-underline whitespace-nowrap cursor-pointer select-none transition-colors outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:opacity-50 disabled:cursor-not-allowed aria-disabled:opacity-50 text-sm px-hsp-lg py-vsp-2xs bg-surface text-ink border border-line hover:border-brand hover:text-brand active:bg-surface-sunken" disabled>Cancel</button><button type="button" class="inline-flex items-center justify-center gap-hsp-xs rounded-md font-semibold no-underline whitespace-nowrap cursor-pointer select-none transition-colors outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:opacity-50 disabled:cursor-not-allowed aria-disabled:opacity-50 text-sm px-hsp-lg py-vsp-2xs bg-brand text-on-brand hover:bg-brand-strong active:bg-brand-strong" disabled aria-busy="true">Save</button></div></div></div></div>",
@@ -742,6 +893,25 @@ exports[`story source vs. render drift > media/placeholder-box/placeholder-box.s
   "source": "<PlaceholderBox label="size = sm" size="sm" />
 <PlaceholderBox label="size = md" size="md" />
 <PlaceholderBox label="size = lg" size="lg" />",
+}
+`;
+
+exports[`story source vs. render drift > news/category-badge/category-badge.stories.tsx → AllCategories (All categories) 1`] = `
+{
+  "html": "<div class="flex flex-wrap gap-hsp-sm"><span class="inline-flex items-center whitespace-nowrap rounded border px-hsp-xs py-vsp-2xs text-micro font-semibold leading-none text-accent" style="background-color:color-mix(in srgb, var(--color-accent) 12%, var(--color-bg));border-color:color-mix(in srgb, var(--color-accent) 35%, var(--color-bg));">Corporate</span><span class="inline-flex items-center whitespace-nowrap rounded border px-hsp-xs py-vsp-2xs text-micro font-semibold leading-none text-accent" style="background-color:color-mix(in srgb, var(--color-accent) 12%, var(--color-bg));border-color:color-mix(in srgb, var(--color-accent) 35%, var(--color-bg));">Products</span><span class="inline-flex items-center whitespace-nowrap rounded border px-hsp-xs py-vsp-2xs text-micro font-semibold leading-none text-muted" style="background-color:var(--color-surface);border-color:var(--color-border);">Sustainability</span><span class="inline-flex items-center whitespace-nowrap rounded border px-hsp-xs py-vsp-2xs text-micro font-semibold leading-none text-muted" style="background-color:var(--color-surface);border-color:var(--color-border);">Exhibitions</span><span class="inline-flex items-center whitespace-nowrap rounded border px-hsp-xs py-vsp-2xs text-micro font-semibold leading-none text-accent" style="background-color:color-mix(in srgb, var(--color-accent) 12%, var(--color-bg));border-color:color-mix(in srgb, var(--color-accent) 35%, var(--color-bg));">IR</span></div>",
+  "source": "<CategoryBadge category="Corporate" />
+<CategoryBadge category="Products" />
+<CategoryBadge category="Sustainability" />
+<CategoryBadge category="Exhibitions" />
+<CategoryBadge category="IR" />",
+}
+`;
+
+exports[`story source vs. render drift > news/category-badge/category-badge.stories.tsx → UnknownFallback (Unknown category (neutral fallback)) 1`] = `
+{
+  "html": "<div class="flex flex-wrap gap-hsp-sm"><span class="inline-flex items-center whitespace-nowrap rounded border px-hsp-xs py-vsp-2xs text-micro font-semibold leading-none text-accent" style="background-color:color-mix(in srgb, var(--color-accent) 12%, var(--color-bg));border-color:color-mix(in srgb, var(--color-accent) 35%, var(--color-bg));">IR</span><span class="inline-flex items-center whitespace-nowrap rounded border px-hsp-xs py-vsp-2xs text-micro font-semibold leading-none text-muted" style="background-color:var(--color-surface);border-color:var(--color-border);">Recruiting</span></div>",
+  "source": "<CategoryBadge category="IR" />
+<CategoryBadge category="Recruiting" />",
 }
 `;
 
