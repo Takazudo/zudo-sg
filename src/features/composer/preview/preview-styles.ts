@@ -169,6 +169,33 @@ html[${COMPOSER_PREVIEW_DOC_ATTR}] {
 }
 .zc-chrome-menu:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 1px; }
 
+/* ── Drag grip (issue #258) ───────────────────────────────────────────────── */
+/* Shown only on the SELECTED, non-opaque node's chrome. The chrome itself is a
+   pointer-events:none label, so the grip re-enables them on itself (it must be
+   grabbable). Opaque nodes get no grip — the tree's up/down buttons stay their
+   only movement. */
+.zc-chrome-grip {
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-inline-end: 0.25rem;
+  padding: 0 0.25rem;
+  border: none;
+  border-radius: 2px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  line-height: inherit;
+  cursor: grab;
+}
+.zc-chrome-grip:active { cursor: grabbing; }
+.zc-chrome-grip:hover,
+.zc-chrome-grip:focus-visible {
+  background: color-mix(in srgb, var(--color-on-accent) 25%, transparent);
+}
+.zc-chrome-grip:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 1px; }
+
 /* ── Insert points: one at EVERY addable index of every declared slot ─────── */
 /* The wrapper pairs the direct "+" add button with its "⋯" insert-menu
    companion (issue #256) — two SIBLING buttons, never nested. It owns the
@@ -240,6 +267,28 @@ html[${COMPOSER_PREVIEW_DOC_ATTR}] {
   background: color-mix(in srgb, var(--color-accent) 12%, transparent);
 }
 .zc-insert-menu:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 1px; }
+
+/* ── Drag & drop: insert points as drop zones (issue #258) ────────────────── */
+/* While a drag is active, the insert GROUP is the drop target, so its CHILDREN
+   go inert — a child-crossing dragleave has a null relatedTarget in Chromium
+   DnD and would otherwise wipe the hovered-target highlight (verified). */
+.zc-canvas[data-zc-dragging] .zc-insert-group > * { pointer-events: none; }
+
+/* Every VALID insert point highlights during a drag; the hovered one gets a
+   stronger state. Invalid targets (inside the dragged subtree) get neither. */
+.zc-canvas[data-zc-dragging] .zc-insert-group[data-zc-drop-valid] {
+  outline: 1px dashed var(--color-accent);
+  outline-offset: 2px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--color-accent) 8%, transparent);
+}
+.zc-canvas[data-zc-dragging] .zc-insert-group[data-zc-drop-valid].zc-insert-group--vertical {
+  min-height: 1.25rem;
+}
+.zc-canvas[data-zc-dragging] .zc-insert-group[data-zc-drop-active] {
+  outline: 2px solid var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 20%, transparent);
+}
 
 /* ── Opaque node: preserved, selectable, never silently dropped ───────────── */
 .zc-opaque {

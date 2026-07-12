@@ -381,3 +381,104 @@ export function insertSubtree(
 
   return { ok: true, document: next, selectedId: clone.id, insertedId: clone.id, changed: true };
 }
+
+// ── move (cross-slot drag & drop, wave 9, issue #258) ────────────────────────
+//
+// Relocate an EXISTING node (with its whole subtree) from wherever it currently
+// sits to an `InsertionTarget`. This is the MOVE half of drag & drop; the COPY
+// half composes `cloneSubtreeWithNewIds` + `insertSubtree` instead (a fresh
+// clone needs no cycle guard and no index adjustment because the source is not
+// removed). The controller (#247) picks between them from the drop's Alt flag,
+// and layers the opaque-node policy on top — this function is purely mechanical.
+
+/**
+ * Move `sourceNodeId` (and its subtree) to `target`, removing it from its
+ * current slot first. Pure — returns a NEW document, never mutates the input.
+ *
+ * Two subtleties this function owns, both verified by the #242 interaction
+ * prototype (see its README):
+ *
+ *  1. **Same-slot index adjustment.** The adjustment applies ONLY when the
+ *     source and destination are the SAME slot (same parent AND same slot id) —
+ *     same parent is NOT sufficient, because a `SplitLayout` left→right move
+ *     shares a parent but crosses slots. Within one slot, removing the source
+ *     shifts every later sibling down by one, so a target index that sat AFTER
+ *     the source is decremented by one; otherwise the raw index is used.
+ *
+ *  2. **Descendant-cycle guard.** A target whose parent is the moved node itself
+ *     or any of its descendants is rejected: the destination would be reparented
+ *     under a subtree that is about to be detached, orphaning it.
+ *
+ * Slot acceptance and single-cardinality are both enforced ONLY for a
+ * cross-slot move — a same-slot reorder changes no slot membership (the node
+ * already lives there), so it can neither violate an `accepts` list it already
+ * satisfied nor exceed cardinality, and this is what lets an opaque node (whose
+ * `componentId` no `accepts` list names) reorder within its OWN slot, matching
+ * `reorderNode`'s identical assumption. A same-slot move whose adjusted index
+ * equals the source index is a valid no-op (`changed: false`).
+ */
+export function moveSubtree(
+  document: CompositionDocument,
+  manifest: ComponentManifest,
+  sourceNodeId: string,
+  target: InsertionTarget,
+): CommandResult {
+  const next = cloneJson(document);
+  const index = indexDocument(next, manifest);
+  const locate = (id: string): CompositionNode | undefined => index.byId.get(id)?.node;
+
+  const source = index.byId.get(sourceNodeId);
+  if (!source) return { ok: false, error: `Node "${sourceNodeId}" not found` };
+
+  // Descendant-cycle guard: the destination parent may not be the moved node
+  // itself or any node inside its subtree (that would orphan the destination).
+  const movedIds = subtreeIds(source.node);
+  if (target.parentId !== null && movedIds.has(target.parentId)) {
+    return { ok: false, error: `Cannot move "${sourceNodeId}" into its own subtree` };
+  }
+
+  const validation = validateInsertionTarget(next, manifest, target, locate);
+  if (!validation.ok) return { ok: false, error: validation.error ?? "invalid insertion target" };
+
+  // Same SLOT — not merely same parent (SplitLayout left→right shares a parent
+  // but crosses slots, so it must NOT get the same-slot index adjustment).
+  const sameSlot = source.parentId === target.parentId && source.slotId === target.slotId;
+
+  // Slot acceptance and cardinality are both checked ONLY on a CROSS-slot move
+  // — a same-slot reorder does not change slot membership (the node already
+  // lives there, already having passed both checks when it was first inserted;
+  // `reorderNode`'s sibling swap makes the identical assumption). This is what
+  // lets an opaque node — whose `componentId` no legitimate `accepts` list can
+  // ever name — reorder within its OWN slot: same-slot is a pure position
+  // change, never a fresh membership decision.
+  if (!sameSlot && target.parentId !== null) {
+    const parent = locate(target.parentId)!;
+    const parentEntry = manifest.get(parent.componentId)!;
+    const slot = parentEntry.slots.find((s) => s.id === target.slotId)!;
+    if (slot.accepts && !slot.accepts.includes(source.node.componentId)) {
+      return {
+        ok: false,
+        error: `Slot "${target.slotId}" does not accept "${source.node.componentId}"`,
+      };
+    }
+    if (slot.cardinality === "single" && (parent.slots[target.slotId] ?? []).length >= 1) {
+      return {
+        ok: false,
+        error: `Slot "${target.slotId}" is single-child and already occupied`,
+      };
+    }
+  }
+
+  // Remove the source subtree from its current slot, then insert it at the
+  // (possibly adjusted) target index. When same-slot, both `slotArray` calls
+  // resolve to the SAME array object, so the splice-out/splice-in run on it.
+  const sourceArray = slotArray(next, source.parentId, source.slotId, locate)!;
+  const [detached] = sourceArray.splice(source.index, 1);
+
+  const insertIndex = sameSlot && source.index < target.index ? target.index - 1 : target.index;
+  const targetArray = slotArray(next, target.parentId, target.slotId, locate)!;
+  targetArray.splice(insertIndex, 0, detached);
+
+  const changed = !(sameSlot && insertIndex === source.index);
+  return { ok: true, document: next, selectedId: sourceNodeId, changed };
+}

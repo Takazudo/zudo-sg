@@ -147,3 +147,19 @@ describe("preview palette scope — live document", () => {
     expect(value.trim()).toBe("");
   });
 });
+
+describe("drag & drop chrome (issue #258)", () => {
+  it("carries the pointer-events guard: insert-group children go inert while dragging", () => {
+    // The verified Chromium DnD fix — a child-crossing dragleave (null
+    // relatedTarget) must not reach a child and wipe the drop highlight.
+    expect(COMPOSER_PREVIEW_CSS).toMatch(
+      /\.zc-canvas\[data-zc-dragging\]\s+\.zc-insert-group\s*>\s*\*\s*\{\s*pointer-events:\s*none/,
+    );
+  });
+
+  it("styles the drag grip and the valid/active drop-target states", () => {
+    expect(COMPOSER_PREVIEW_CSS).toContain(".zc-chrome-grip");
+    expect(COMPOSER_PREVIEW_CSS).toContain("[data-zc-drop-valid]");
+    expect(COMPOSER_PREVIEW_CSS).toContain("[data-zc-drop-active]");
+  });
+});

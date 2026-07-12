@@ -17,6 +17,7 @@
 // cheap to prove without a DOM harness.
 
 import type {
+  CommandResult,
   ComponentManifest,
   CompositionDocument,
   CompositionNode,
@@ -31,6 +32,7 @@ import {
   findLocation,
   insertSubtree,
   isNodeOpaque,
+  moveSubtree,
   removeNode,
   reorderNode,
   repairSelection,
@@ -103,6 +105,7 @@ export type ComposerAction =
   | { type: "cut"; nodeId: string }
   | { type: "paste"; target: InsertionTarget }
   | { type: "duplicate"; nodeId: string }
+  | { type: "drop"; sourceNodeId: string; target: InsertionTarget; copy: boolean }
   | { type: "select"; nodeId: string | null }
   | { type: "reveal"; nodeId: string }
   | { type: "toggleExpanded"; nodeId: string }
@@ -137,6 +140,7 @@ const DOCUMENT_MUTATION_TYPES = new Set<ComposerAction["type"]>([
   "cut",
   "paste",
   "duplicate",
+  "drop",
   "resetToSample",
 ]);
 
@@ -335,6 +339,59 @@ export function applyComposerAction(
       };
       const result = insertSubtree(state.document, ctx.manifest, target, clone);
       if (!result.ok) return { state, error: result.error, documentChanged: false };
+      let nextExpanded: ReadonlySet<string> = state.expandedIds;
+      for (const id of ancestorIds(result.document, ctx.manifest, result.selectedId!)) {
+        nextExpanded = withExpanded(nextExpanded, id, true);
+      }
+      return {
+        state: {
+          ...state,
+          document: result.document,
+          selectedId: result.selectedId,
+          expandedIds: nextExpanded,
+        },
+        error: null,
+        documentChanged: result.changed,
+      };
+    }
+    case "drop": {
+      // The ATOMIC host revalidation for a canvas drag & drop (issue #258): the
+      // iframe's highlight was advisory only, so the WHOLE operation is
+      // re-checked here and applied through the single model mutation path, or
+      // rejected with an honest `error` and NO document change.
+      const location = findLocation(state.document, ctx.manifest, action.sourceNodeId);
+      if (!location) {
+        return { state, error: `Node "${action.sourceNodeId}" not found`, documentChanged: false };
+      }
+
+      // Opaque-node policy: opaque nodes may reorder within their OWN slot only —
+      // never a cross-slot move and never a copy.
+      const sameSlot =
+        location.parentId === action.target.parentId && location.slotId === action.target.slotId;
+      if (isNodeOpaque(location.node, ctx.manifest) && (action.copy || !sameSlot)) {
+        return {
+          state,
+          error: action.copy
+            ? `Cannot copy an unavailable node ("${action.sourceNodeId}")`
+            : `Cannot move an unavailable node ("${action.sourceNodeId}") across slots`,
+          documentChanged: false,
+        };
+      }
+
+      // COPY composes #255's clone-with-new-ids + insert-subtree (a fresh,
+      // independent clone needs no cycle guard); MOVE relocates the same node ids
+      // via #258's moveSubtree (cycle guard + same-slot index adjustment).
+      let result: CommandResult;
+      if (action.copy) {
+        const clone = cloneSubtreeWithNewIds(location.node, ctx.idFactory);
+        result = insertSubtree(state.document, ctx.manifest, action.target, clone);
+      } else {
+        result = moveSubtree(state.document, ctx.manifest, action.sourceNodeId, action.target);
+      }
+      if (!result.ok) return { state, error: result.error, documentChanged: false };
+
+      // Reveal the moved/new node: select it AND expand its ancestors (same as
+      // paste/duplicate). `selectedId` is always present on a successful command.
       let nextExpanded: ReadonlySet<string> = state.expandedIds;
       for (const id of ancestorIds(result.document, ctx.manifest, result.selectedId!)) {
         nextExpanded = withExpanded(nextExpanded, id, true);

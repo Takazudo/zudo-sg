@@ -252,6 +252,16 @@ export interface CompositionCanvasProps {
    * inline-edit need not supply it.
    */
   onCommitInlineEdit?: (nodeId: string, fieldKey: string, value: string) => void;
+  /**
+   * A cross-slot drag & drop completed on the canvas (issue #258). `copy` is
+   * true when Alt was held at drop. The renderer reports the raw
+   * `{ sourceNodeId, target, copy }`; the host stamps the revision, revalidates
+   * ATOMICALLY (slot/cardinality/cycle/root/opaque-policy), and applies through
+   * the controller — the highlight the renderer draws is advisory only. Optional
+   * so mounts/tests that never drag need not supply it (and no grip renders
+   * without it).
+   */
+  onDropNode?: (sourceNodeId: string, target: InsertionTarget, copy: boolean) => void;
   /** A node's component threw and was isolated behind its error boundary. */
   onNodeError?: (nodeId: string, message: string) => void;
 }
@@ -271,6 +281,7 @@ export function CompositionCanvas(props: CompositionCanvasProps): JSX.Element {
     onRequestNodeMenu,
     onRequestInsertMenu,
     onCommitInlineEdit,
+    onDropNode,
     onNodeError,
   } = props;
   const edit = session.mode === "edit";
@@ -442,6 +453,61 @@ export function CompositionCanvas(props: CompositionCanvasProps): JSX.Element {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- fires only on a mode transition
   }, [session.mode]);
 
+  // ── Drag & drop (issue #258) ──────────────────────────────────────────────
+  // LOCAL renderer state; only the resulting `{ sourceNodeId, target, copy }`
+  // ever crosses the bridge (the host revalidates + applies). The three verified
+  // Chromium footguns the code below fixes EXACTLY (see the prototype README):
+  //   - `dragstart` calls `setData` SYNCHRONOUSLY and DEFERS every state mutation
+  //     (a synchronous setState in dragstart cancels the native drag in Chromium);
+  //   - while dragging, insert-point CHILDREN are `pointer-events: none` (CSS,
+  //     keyed off `data-zc-dragging`) — a child-crossing `dragleave` has a null
+  //     `relatedTarget` in Chromium DnD and would otherwise wipe the highlight;
+  //   - `dragend` clears the drag state UNCONDITIONALLY (a drop OR a cancel).
+  const [dragSourceId, setDragSourceId] = useState<string | null>(null);
+  const dragSourceRef = useRef<string | null>(null);
+  const [dropKey, setDropKey] = useState<string | null>(null);
+  const dropKeyRef = useRef<string | null>(null);
+  const setDrop = useCallback((key: string | null) => {
+    dropKeyRef.current = key;
+    setDropKey(key);
+  }, []);
+
+  const beginDrag = useCallback((sourceNodeId: string) => {
+    dragSourceRef.current = sourceNodeId;
+    setDragSourceId(sourceNodeId);
+  }, []);
+  const endDrag = useCallback(() => {
+    dragSourceRef.current = null;
+    dropKeyRef.current = null;
+    setDragSourceId(null);
+    setDropKey(null);
+  }, []);
+
+  // The dragged node's own subtree ids — every insert point inside them is an
+  // INVALID target (dropping there would orphan the subtree; the host's cycle
+  // guard would reject it anyway, so the highlight simply excludes them).
+  const draggedIds = useMemo(() => {
+    if (!dragSourceId) return null;
+    const source = findNodeById(document.root, dragSourceId);
+    if (!source) return null;
+    const ids = new Set<string>();
+    const walk = (n: CompositionNode): void => {
+      ids.add(n.id);
+      for (const children of Object.values(n.slots)) for (const child of children ?? []) walk(child);
+    };
+    walk(source);
+    return ids;
+  }, [dragSourceId, document]);
+
+  const dragActive = dragSourceId !== null;
+
+  /** A drop target is valid unless it sits inside the dragged subtree. */
+  const isValidDropTarget = useCallback(
+    (target: InsertionTarget): boolean =>
+      dragActive && !(target.parentId !== null && (draggedIds?.has(target.parentId) ?? false)),
+    [dragActive, draggedIds],
+  );
+
   /**
    * In Edit mode the canvas swallows every click in the CAPTURE phase before it
    * can reach a rendered `<a>`/`<button>`, so authoring a link never navigates
@@ -527,9 +593,50 @@ export function CompositionCanvas(props: CompositionCanvasProps): JSX.Element {
   ): JSX.Element {
     const position = empty ? `empty ${label}` : `${label}, position ${target.index + 1}`;
     const focusToken = insertMenuFocusToken(target);
+    // Drop-target wiring (issue #258). The GROUP is the drop zone; its children
+    // go inert during a drag (CSS, keyed off the canvas's `data-zc-dragging`),
+    // so a child-crossing `dragleave` (null `relatedTarget`) can't wipe the
+    // highlight. `dragover.preventDefault()` is what tells the browser this is a
+    // valid drop point at all — omit it on invalid targets and the browser
+    // refuses the drop there.
+    const dropKeyStr = `${target.parentId ?? ""}:${target.slotId}:${target.index}`;
+    const valid = isValidDropTarget(target);
+    const dropHandlers = dragActive
+      ? {
+          onDragEnter: (event: DragEvent) => {
+            if (!isValidDropTarget(target)) return;
+            event.preventDefault();
+            setDrop(dropKeyStr);
+          },
+          onDragOver: (event: DragEvent) => {
+            if (!isValidDropTarget(target)) return;
+            event.preventDefault();
+            if (event.dataTransfer) event.dataTransfer.dropEffect = event.altKey ? "copy" : "move";
+            if (dropKeyRef.current !== dropKeyStr) setDrop(dropKeyStr);
+          },
+          onDragLeave: () => {
+            if (dropKeyRef.current === dropKeyStr) setDrop(null);
+          },
+          onDrop: (event: DragEvent) => {
+            const sourceNodeId =
+              event.dataTransfer?.getData("text/plain") || dragSourceRef.current;
+            if (!sourceNodeId || !isValidDropTarget(target)) return;
+            event.preventDefault();
+            // `dragend` still fires after this and clears the drag state
+            // unconditionally — so the emit stays here, the cleanup stays there.
+            onDropNode?.(sourceNodeId, target, event.altKey);
+          },
+        }
+      : null;
     return h(
       "div",
-      { key: `zc-ip-${target.index}`, class: `zc-insert-group zc-insert-group--${flow}` },
+      {
+        key: dropKeyStr,
+        class: `zc-insert-group zc-insert-group--${flow}`,
+        "data-zc-drop-valid": dragActive && valid ? "" : undefined,
+        "data-zc-drop-active": dropKey === dropKeyStr ? "" : undefined,
+        ...dropHandlers,
+      },
       h(
         "button",
         {
@@ -674,8 +781,38 @@ export function CompositionCanvas(props: CompositionCanvasProps): JSX.Element {
     // its own `aria-hidden` span only in the selected branch, so the trigger
     // button — the only focusable thing here — is never inside an
     // `aria-hidden` ancestor.
+    // The drag grip (issue #258): shown ONLY on the SELECTED, non-opaque node
+    // (opaque nodes are not draggable — same-slot reorder via the tree stays
+    // their only movement), and only when a drop sink is wired. `dragstart`
+    // sets the transfer data SYNCHRONOUSLY and DEFERS the drag-state mutation.
+    const grip =
+      selected && onDropNode && !opaque
+        ? h(
+            "button",
+            {
+              key: "zc-chrome-grip",
+              type: "button",
+              class: "zc-chrome-grip",
+              "data-zc-affordance": "",
+              draggable: true,
+              "aria-label": `Drag ${label} to move it`,
+              onDragStart: (event: DragEvent) => {
+                event.dataTransfer?.setData("text/plain", node.id);
+                if (event.dataTransfer) event.dataTransfer.effectAllowed = "copyMove";
+                const id = node.id;
+                // Defer ALL state mutation to a macrotask — a synchronous
+                // setState here cancels the native drag in Chromium (verified).
+                setTimeout(() => beginDrag(id), 0);
+              },
+              onDragEnd: () => endDrag(),
+            },
+            h("span", { "aria-hidden": "true" }, "⠿"),
+          )
+        : null;
+
     const chromeContent: ComponentChildren = selected
       ? [
+          grip,
           h("span", { key: "zc-chrome-label", "aria-hidden": "true" }, label),
           h(
             "button",
@@ -744,6 +881,10 @@ export function CompositionCanvas(props: CompositionCanvasProps): JSX.Element {
       class: "zc-canvas",
       "data-composer-canvas": "",
       "data-mode": session.mode,
+      // The CSS hook for the drag lifecycle (issue #258): while set, insert-point
+      // children are `pointer-events: none` so a child-crossing `dragleave`
+      // (null `relatedTarget` in Chromium) can't wipe the drop highlight.
+      "data-zc-dragging": dragActive ? "" : undefined,
       onClickCapture: edit ? onClickCapture : onPreviewClickCapture,
       onKeyDownCapture: edit ? onKeyDownCapture : undefined,
       // Bubbling (not capture) so an active session's own `dblclick`

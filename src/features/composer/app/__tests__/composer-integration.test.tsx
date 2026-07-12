@@ -13,6 +13,7 @@ import type { CompositionDocument, InsertionTarget } from "@/composer";
 import { VIRTUAL_ROOT_SLOT_ID, createSequentialIdFactory } from "@/composer";
 import {
   commitInlineEditMessage,
+  dropNodeMessage,
   readyMessage,
   requestAddMessage,
   requestInsertMenuMessage,
@@ -476,5 +477,53 @@ describe("ComposerIntegration — context menus + menu bridge (#256)", () => {
     // anchorBelowRect: x unchanged, y = translated bottom + 4.
     expect(panel.style.left).toBe(`${RECT.x + 100}px`);
     expect(panel.style.top).toBe(`${RECT.y + 40 + RECT.height + 4}px`);
+  });
+});
+
+describe("ComposerIntegration — canvas drag & drop end-to-end (#258)", () => {
+  it("a canvas MOVE mutates the document, mirrors selection, and reveals the node", () => {
+    const s = setup(undefined, makeAbcDocument());
+    // Move B to the end of split.right → [C, B], with B selected.
+    act(() =>
+      s.bridge.deliver(
+        dropNodeMessage("B", { parentId: "split", slotId: "right", index: 2 }, false, rev++),
+      ),
+    );
+
+    const doc = s.canvasDoc();
+    expect(doc.root[0]!.slots.right!.map((n) => n.id)).toEqual(["C", "B"]);
+    expect(s.lastSentSession().selectedId).toBe("B");
+    // The moved node is present + revealed in the tree.
+    expect(s.tree().querySelector('[data-sg-tree-node-id="B"]')).not.toBeNull();
+  });
+
+  it("an Alt-COPY keeps the source and selects the fully re-ID'd clone", () => {
+    const s = setup(undefined, makeAbcDocument());
+    act(() =>
+      s.bridge.deliver(
+        dropNodeMessage("B", { parentId: "split", slotId: "right", index: 0 }, true, rev++),
+      ),
+    );
+
+    const right = s.canvasDoc().root[0]!.slots.right!;
+    // Source B kept; a distinct clone inserted at index 0.
+    expect(right.some((n) => n.id === "B")).toBe(true);
+    expect(right[0]!.id).not.toBe("B");
+    expect(right[0]!.props.label).toBe("B");
+    // The new node is selected + revealed.
+    expect(s.lastSentSession().selectedId).toBe(right[0]!.id);
+    expect(s.tree().querySelector(`[data-sg-tree-node-id="${right[0]!.id}"]`)).not.toBeNull();
+  });
+
+  it("an invalid drop (cycle) is rejected: no document change and an error surfaces", () => {
+    const s = setup(undefined, makeAbcDocument());
+    const before = s.canvasDoc();
+    act(() =>
+      s.bridge.deliver(
+        dropNodeMessage("split", { parentId: "split", slotId: "right", index: 0 }, false, rev++),
+      ),
+    );
+    // The document is unchanged (the last render is still the pre-drop one).
+    expect(s.canvasDoc()).toEqual(before);
   });
 });

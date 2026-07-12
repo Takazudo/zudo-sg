@@ -9,6 +9,7 @@ import {
 import { COMPOSER_PREVIEW_IFRAME_TITLE } from "../route";
 import {
   commitInlineEditMessage,
+  dropNodeMessage,
   errorMessage,
   readyMessage,
   requestAddMessage,
@@ -283,6 +284,27 @@ describe("createComposerPreviewBridge — inbound guard", () => {
     });
 
     expect(onCommitInlineEdit).toHaveBeenCalledWith("prose-1", "children", "Edited body copy", 5);
+  });
+
+  it("routes drop-node to onDropNode with its copy flag + documentRevision (issue #258)", () => {
+    const host = fakeHostWindow();
+    const iframe = fakeFrame();
+    const onDropNode = vi.fn();
+    createComposerPreviewBridge({
+      frame: iframe.frame,
+      location: LOCATION,
+      hostWindow: host,
+      onDropNode,
+    });
+
+    const target = { parentId: "split-1", slotId: "right", index: 2 };
+    host.deliver({
+      data: dropNodeMessage("stack-1", target, true, 6),
+      origin: ORIGIN,
+      source: iframe.contentWindow,
+    });
+
+    expect(onDropNode).toHaveBeenCalledWith("stack-1", target, true, 6);
   });
 
   it("DROPS messages from a foreign window or a foreign origin", () => {

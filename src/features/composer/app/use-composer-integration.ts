@@ -98,6 +98,14 @@ export interface ComposerIntegrationApi {
    * live. Field-domain validation stays `updateProps`'s job.
    */
   handleCommitInlineEdit: (nodeId: string, fieldKey: string, value: string) => void;
+
+  // ── Canvas drag & drop (issue #258) ───────────────────────────────────────
+  /**
+   * A canvas drag & drop that PASSED the host's revision check → route the
+   * move (or Alt-copy) through the controller's `drop` action, which atomically
+   * revalidates and applies it, then selects + reveals the moved/new node.
+   */
+  handleDropNode: (sourceNodeId: string, target: InsertionTarget, copy: boolean) => void;
 }
 
 export function useComposerIntegration(
@@ -183,6 +191,12 @@ export function useComposerIntegration(
     [controller],
   );
 
+  const handleDropNode = useCallback(
+    (sourceNodeId: string, target: InsertionTarget, copy: boolean) =>
+      controller.drop(sourceNodeId, target, copy),
+    [controller],
+  );
+
   // Keep an escape handler whose identity only changes when what it must close
   // changes, so the keyboard hook does not re-bind on every controller update.
   const openStateRef = useRef({ chooserOpen: chooser.open, exportOpen: exportState.open });
@@ -215,5 +229,6 @@ export function useComposerIntegration(
     handlePaste,
     handleDuplicate,
     handleCommitInlineEdit,
+    handleDropNode,
   };
 }

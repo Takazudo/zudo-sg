@@ -174,6 +174,25 @@ describe("createPreviewClient", () => {
     expect(posts[0]!.targetOrigin).toBe(ORIGIN);
   });
 
+  it("stamps outbound drop-node with the revision on screen (documentRevision)", () => {
+    const { client, posts, fromParent } = setup();
+    fromParent(renderMessage(9, SAMPLE_DOCUMENT, EDIT));
+    posts.length = 0;
+
+    const target = { parentId: "split-1", slotId: "right", index: 1 };
+    client.emitDropNode("stack-1", target, true);
+
+    expect(posts).toHaveLength(1);
+    expect(posts[0]!.message).toMatchObject({
+      type: "drop-node",
+      sourceNodeId: "stack-1",
+      target,
+      copy: true,
+      documentRevision: 9,
+    });
+    expect(posts[0]!.targetOrigin).toBe(ORIGIN);
+  });
+
   it("routes an inbound restore-focus to onRestoreFocus WITHOUT touching state/onState", () => {
     const { client, onState, onRestoreFocus, fromParent } = setup();
     fromParent(renderMessage(1, SAMPLE_DOCUMENT, EDIT));

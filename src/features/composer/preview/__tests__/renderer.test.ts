@@ -2,7 +2,7 @@
 // — no stub components, so slot projection is proved against production
 // `Stack` / `SplitLayout`, not against a lookalike.
 
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { h } from "preact";
 import { act } from "preact/test-utils";
 import { fireEvent, render } from "@testing-library/preact";
@@ -855,5 +855,233 @@ describe("recoverable failures", () => {
     } finally {
       spy.mockRestore();
     }
+  });
+});
+
+// ── Drag & drop (issue #258) ─────────────────────────────────────────────────
+describe("drag & drop (issue #258)", () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  // happy-dom has no `ondragstart`/`ondrop` element PROPERTY, so Preact can't
+  // fold `onDragStart`→"dragstart" and instead registers the case-preserved
+  // listener names ("DragStart", "DragEnd", "DragEnter", "DragOver",
+  // "DragLeave", "Drop"). In a real browser those props exist and Preact uses
+  // the lowercase names — this map only bridges the happy-dom test env.
+  const PREACT_DRAG_EVENT: Record<string, string> = {
+    dragstart: "DragStart",
+    dragend: "DragEnd",
+    dragenter: "DragEnter",
+    dragover: "DragOver",
+    dragleave: "DragLeave",
+    drop: "Drop",
+  };
+
+  /** A minimal DragEvent stand-in: happy-dom has no DragEvent constructor, and
+   *  Preact attaches on* handlers as plain DOM listeners, so a bubbling Event
+   *  with the fields our handlers read (dataTransfer, altKey) is enough. */
+  function dragEvent(type: string, props: Record<string, unknown> = {}): Event {
+    const event = new Event(PREACT_DRAG_EVENT[type] ?? type, { bubbles: true, cancelable: true });
+    Object.assign(event, props);
+    return event;
+  }
+
+  function fakeDataTransfer() {
+    const store: { id: string } = { id: "" };
+    return {
+      setData: vi.fn((_type: string, value: string) => {
+        store.id = value;
+      }),
+      getData: vi.fn(() => store.id),
+      effectAllowed: "",
+      dropEffect: "",
+    };
+  }
+
+  const gripOf = (container: HTMLElement, nodeId: string): HTMLElement | null =>
+    container.querySelector(`[data-zc-node-id="${nodeId}"] > .zc-chrome > .zc-chrome-grip`);
+
+  const groupOf = (container: HTMLElement, key: string): HTMLElement =>
+    container.querySelector(`[data-zc-insert="${key}"]`)!.closest(".zc-insert-group") as HTMLElement;
+
+  /** Start a drag from `nodeId`'s grip and flush the DEFERRED state mutation. */
+  function startDrag(container: HTMLElement, nodeId: string, dt: ReturnType<typeof fakeDataTransfer>) {
+    act(() => void gripOf(container, nodeId)!.dispatchEvent(dragEvent("dragstart", { dataTransfer: dt })));
+    act(() => void vi.runOnlyPendingTimers());
+  }
+
+  describe("the drag grip", () => {
+    it("renders ONLY on the selected, non-opaque node (and only with a drop sink)", () => {
+      const { container } = draw(SPLIT, {
+        session: { ...EDIT, selectedId: "prose-1" },
+        onDropNode: vi.fn(),
+      });
+      expect(gripOf(container, "prose-1")).not.toBeNull();
+      // An unselected node's own chrome has no grip.
+      expect(gripOf(container, "split-1")).toBeNull();
+    });
+
+    it("is absent when no onDropNode sink is wired (feature off)", () => {
+      const { container } = draw(SPLIT, { session: { ...EDIT, selectedId: "prose-1" } });
+      expect(gripOf(container, "prose-1")).toBeNull();
+    });
+
+    it("is absent on an opaque node — opaque nodes are not draggable", () => {
+      const OPAQUE = doc([node("opaque-1", "ghost.unknown", { foo: 1 })]);
+      const { container } = draw(OPAQUE, {
+        session: { ...EDIT, selectedId: "opaque-1" },
+        onDropNode: vi.fn(),
+      });
+      // It IS selected (opaque nodes stay selectable) …
+      expect(container.querySelector('[data-zc-node-id="opaque-1"][data-zc-selected]')).not.toBeNull();
+      // … but it has no drag grip.
+      expect(gripOf(container, "opaque-1")).toBeNull();
+    });
+
+    it("is absent in Preview mode", () => {
+      const { container } = draw(SPLIT, {
+        session: { mode: "preview", theme: "light", selectedId: "prose-1" },
+        onDropNode: vi.fn(),
+      });
+      expect(container.querySelector(".zc-chrome-grip")).toBeNull();
+    });
+  });
+
+  describe("dragstart: synchronous setData, deferred state mutation (the #1 footgun)", () => {
+    it("calls dataTransfer.setData synchronously but does NOT mutate renderer state until deferred", () => {
+      const { container } = draw(SPLIT, {
+        session: { ...EDIT, selectedId: "prose-1" },
+        onDropNode: vi.fn(),
+      });
+      const dt = fakeDataTransfer();
+      const canvas = container.querySelector(".zc-canvas")!;
+
+      act(() => void gripOf(container, "prose-1")!.dispatchEvent(dragEvent("dragstart", { dataTransfer: dt })));
+      // setData ran SYNCHRONOUSLY with the source node id …
+      expect(dt.setData).toHaveBeenCalledWith("text/plain", "prose-1");
+      expect(dt.effectAllowed).toBe("copyMove");
+      // … but the dragging state is still deferred (a synchronous setState here
+      // cancels the drag in Chromium).
+      expect(canvas.hasAttribute("data-zc-dragging")).toBe(false);
+
+      act(() => void vi.runOnlyPendingTimers());
+      expect(canvas.hasAttribute("data-zc-dragging")).toBe(true);
+    });
+  });
+
+  describe("valid-target highlighting", () => {
+    it("highlights every valid insert point and EXCLUDES points inside the dragged subtree", () => {
+      const { container } = draw(SPLIT, {
+        session: { ...EDIT, selectedId: "stack-1" },
+        onDropNode: vi.fn(),
+      });
+      startDrag(container, "stack-1", fakeDataTransfer());
+
+      // A root-level and a split-slot insert point are valid targets.
+      expect(groupOf(container, ":root:0").hasAttribute("data-zc-drop-valid")).toBe(true);
+      expect(groupOf(container, "split-1:right:0").hasAttribute("data-zc-drop-valid")).toBe(true);
+      // An insert point INSIDE the dragged stack's own subtree is invalid.
+      expect(groupOf(container, "stack-1:content:0").hasAttribute("data-zc-drop-valid")).toBe(false);
+    });
+
+    it("gives the hovered target a STRONGER state, cleared on dragleave", () => {
+      const { container } = draw(SPLIT, {
+        session: { ...EDIT, selectedId: "prose-1" },
+        onDropNode: vi.fn(),
+      });
+      const dt = fakeDataTransfer();
+      startDrag(container, "prose-1", dt);
+      const g = groupOf(container, ":root:0");
+
+      act(() => void g.dispatchEvent(dragEvent("dragenter", { dataTransfer: dt })));
+      expect(g.hasAttribute("data-zc-drop-active")).toBe(true);
+
+      act(() => void g.dispatchEvent(dragEvent("dragleave", { dataTransfer: dt })));
+      expect(g.hasAttribute("data-zc-drop-active")).toBe(false);
+    });
+
+    it("marks the canvas data-zc-dragging — the CSS hook for the pointer-events guard", () => {
+      const { container } = draw(SPLIT, {
+        session: { ...EDIT, selectedId: "prose-1" },
+        onDropNode: vi.fn(),
+      });
+      startDrag(container, "prose-1", fakeDataTransfer());
+      expect(container.querySelector(".zc-canvas")!.hasAttribute("data-zc-dragging")).toBe(true);
+    });
+  });
+
+  describe("drop", () => {
+    it("emits onDropNode with the source id, the target, and copy=false (no Alt)", () => {
+      const onDropNode = vi.fn();
+      const { container } = draw(SPLIT, { session: { ...EDIT, selectedId: "prose-1" }, onDropNode });
+      const dt = fakeDataTransfer();
+      startDrag(container, "prose-1", dt);
+      const g = groupOf(container, ":root:1");
+
+      act(() => void g.dispatchEvent(dragEvent("dragover", { dataTransfer: dt, altKey: false })));
+      act(() => void g.dispatchEvent(dragEvent("drop", { dataTransfer: dt, altKey: false })));
+
+      expect(onDropNode).toHaveBeenCalledWith(
+        "prose-1",
+        { parentId: null, slotId: "root", index: 1 },
+        false,
+      );
+    });
+
+    it("emits copy=true when Alt is held at drop", () => {
+      const onDropNode = vi.fn();
+      const { container } = draw(SPLIT, { session: { ...EDIT, selectedId: "prose-1" }, onDropNode });
+      const dt = fakeDataTransfer();
+      startDrag(container, "prose-1", dt);
+      const g = groupOf(container, "split-1:right:0");
+
+      act(() => void g.dispatchEvent(dragEvent("drop", { dataTransfer: dt, altKey: true })));
+
+      expect(onDropNode).toHaveBeenCalledWith(
+        "prose-1",
+        { parentId: "split-1", slotId: "right", index: 0 },
+        true,
+      );
+    });
+
+    it("does NOT emit for a target inside the dragged subtree (advisory guard holds)", () => {
+      const onDropNode = vi.fn();
+      const { container } = draw(SPLIT, { session: { ...EDIT, selectedId: "stack-1" }, onDropNode });
+      const dt = fakeDataTransfer();
+      startDrag(container, "stack-1", dt);
+      const g = groupOf(container, "stack-1:content:0");
+
+      act(() => void g.dispatchEvent(dragEvent("drop", { dataTransfer: dt })));
+
+      expect(onDropNode).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("dragend clears the drag state UNCONDITIONALLY", () => {
+    it("clears on a plain cancel (no drop)", () => {
+      const { container } = draw(SPLIT, { session: { ...EDIT, selectedId: "prose-1" }, onDropNode: vi.fn() });
+      const canvas = container.querySelector(".zc-canvas")!;
+      startDrag(container, "prose-1", fakeDataTransfer());
+      expect(canvas.hasAttribute("data-zc-dragging")).toBe(true);
+
+      act(() => void gripOf(container, "prose-1")!.dispatchEvent(dragEvent("dragend")));
+      expect(canvas.hasAttribute("data-zc-dragging")).toBe(false);
+    });
+
+    it("clears after a completed drop too", () => {
+      const onDropNode = vi.fn();
+      const { container } = draw(SPLIT, { session: { ...EDIT, selectedId: "prose-1" }, onDropNode });
+      const canvas = container.querySelector(".zc-canvas")!;
+      const dt = fakeDataTransfer();
+      startDrag(container, "prose-1", dt);
+      const g = groupOf(container, ":root:0");
+      act(() => void g.dispatchEvent(dragEvent("drop", { dataTransfer: dt })));
+      act(() => void gripOf(container, "prose-1")!.dispatchEvent(dragEvent("dragend")));
+
+      expect(onDropNode).toHaveBeenCalledTimes(1);
+      expect(canvas.hasAttribute("data-zc-dragging")).toBe(false);
+      // The highlight state is gone with it.
+      expect(container.querySelector("[data-zc-drop-valid]")).toBeNull();
+    });
   });
 });
