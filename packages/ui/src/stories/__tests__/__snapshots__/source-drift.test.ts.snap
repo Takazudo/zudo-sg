@@ -690,3 +690,70 @@ exports[`story source vs. render drift > shared/section-heading/section-heading.
 />",
 }
 `;
+
+exports[`story source vs. render drift > shared/split-layout/split-layout.stories.tsx → Default (Default (50/50)) 1`] = `
+{
+  "html": "<div class="flex flex-col items-stretch md:flex-row gap-x-hsp-xl gap-y-vsp-lg"><div class="min-w-0 md:flex-1"><div class="rounded-md border border-border bg-surface px-hsp-lg py-vsp-md text-small text-fg">Left pane</div></div><div class="min-w-0 md:flex-1"><div class="rounded-md border border-border bg-surface px-hsp-lg py-vsp-md text-small text-fg">Right pane</div></div></div>",
+  "source": "<SplitLayout left={<div>Left pane</div>} right={<div>Right pane</div>} />",
+}
+`;
+
+exports[`story source vs. render drift > shared/split-layout/split-layout.stories.tsx → Narrow (Narrow (stacked below md)) 1`] = `
+{
+  "html": "<div style="max-width:320px;"><div class="flex flex-col items-stretch md:flex-row gap-x-hsp-xl gap-y-vsp-lg"><div class="min-w-0 md:flex-1"><div class="rounded-md border border-border bg-surface px-hsp-lg py-vsp-md text-small text-fg">Left pane</div></div><div class="min-w-0 md:flex-1"><div class="rounded-md border border-border bg-surface px-hsp-lg py-vsp-md text-small text-fg">Right pane</div></div></div></div>",
+  "source": "<div style={{ maxWidth: "320px" }}>
+  <SplitLayout left={<div>Left pane</div>} right={<div>Right pane</div>} />
+</div>",
+}
+`;
+
+exports[`story source vs. render drift > shared/split-layout/split-layout.stories.tsx → OrderedRightChildren (Multiple ordered right-slot children (60/40)) 1`] = `
+{
+  "html": "<div class="flex flex-col items-stretch md:flex-row gap-x-hsp-xl gap-y-vsp-lg"><div class="min-w-0 md:flex-[3_1_0%]"><div class="rounded-md border border-border bg-surface px-hsp-lg py-vsp-md text-small text-fg">Left pane</div></div><div class="min-w-0 md:flex-[2_1_0%]"><div class="flex flex-col gap-y-vsp-sm"><div class="rounded-md border border-border bg-surface px-hsp-lg py-vsp-md text-small text-fg">Right — first</div><div class="rounded-md border border-border bg-surface px-hsp-lg py-vsp-md text-small text-fg">Right — second</div></div></div></div>",
+  "source": "<SplitLayout
+  ratio="60/40"
+  left={<div>Left pane</div>}
+  right={
+    <>
+      <div>Right — first</div>
+      <div>Right — second</div>
+    </>
+  }
+/>",
+}
+`;
+
+exports[`story source vs. render drift > shared/stack/stack.stories.tsx → Default (Default (vertical, gap=md)) 1`] = `
+{
+  "html": "<div class="flex flex-col gap-y-vsp-md items-stretch justify-start"><div class="rounded-md border border-border bg-surface px-hsp-md py-vsp-sm text-small text-fg">First</div><div class="rounded-md border border-border bg-surface px-hsp-md py-vsp-sm text-small text-fg">Second</div><div class="rounded-md border border-border bg-surface px-hsp-md py-vsp-sm text-small text-fg">Third</div></div>",
+  "source": "<Stack>
+  <div>First</div>
+  <div>Second</div>
+  <div>Third</div>
+</Stack>",
+}
+`;
+
+exports[`story source vs. render drift > shared/stack/stack.stories.tsx → Horizontal (Horizontal (wraps instead of overflowing)) 1`] = `
+{
+  "html": "<div class="flex flex-row flex-wrap gap-x-hsp-sm items-stretch justify-start"><div class="rounded-md border border-border bg-surface px-hsp-md py-vsp-sm text-small text-fg">A</div><div class="rounded-md border border-border bg-surface px-hsp-md py-vsp-sm text-small text-fg">B</div><div class="rounded-md border border-border bg-surface px-hsp-md py-vsp-sm text-small text-fg">C</div></div>",
+  "source": "<Stack direction="horizontal" gap="sm">
+  <div>A</div>
+  <div>B</div>
+  <div>C</div>
+</Stack>",
+}
+`;
+
+exports[`story source vs. render drift > shared/stack/stack.stories.tsx → Narrow (Narrow (horizontal wraps without overflow)) 1`] = `
+{
+  "html": "<div style="max-width:220px;"><div class="flex flex-row flex-wrap gap-x-hsp-sm items-stretch justify-start"><div class="rounded-md border border-border bg-surface px-hsp-md py-vsp-sm text-small text-fg">Alpha</div><div class="rounded-md border border-border bg-surface px-hsp-md py-vsp-sm text-small text-fg">Bravo</div><div class="rounded-md border border-border bg-surface px-hsp-md py-vsp-sm text-small text-fg">Charlie</div></div></div>",
+  "source": "<div style={{ maxWidth: "220px" }}>
+  <Stack direction="horizontal" gap="sm">
+    <div>Alpha</div>
+    <div>Bravo</div>
+    <div>Charlie</div>
+  </Stack>
+</div>",
+}
+`;
