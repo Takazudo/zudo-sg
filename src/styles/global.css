@@ -115,6 +115,16 @@
  * ======================================== */
 @import "../features/styleguide/styles.css";
 
+/* Composer workspace — feature CSS (#247). Same "kept unlayered, moved up
+ * into the top import block" reasoning as the styleguide import above, but
+ * with no actual hazard to guard against: every Composer selector is a
+ * bespoke `.sg-composer-*` class or `[data-sg-composer-*]` attribute that
+ * shares no selector+property pair with any Tailwind utility or the
+ * `.zd-doc-content-band` rules below (the Composer route doesn't render
+ * DocLayout's content band at all — see src/features/composer/styles.css's
+ * file header). */
+@import "../features/composer/styles.css";
+
 /* ========================================
  * Tailwind v4 content sources
  *
@@ -141,6 +151,10 @@
 @source "src/features/styleguide/**/*.{tsx,ts,jsx,js}";
 @source "src/styleguide/**/*.{tsx,ts,jsx,js}";
 @source "pages/components/**/*.{tsx,ts,jsx,js}";
+/* Composer route (#247) — scan so Tailwind generates the utility classes
+ * used by the toolbar/workspace shell and its page module. */
+@source "src/features/composer/**/*.{tsx,ts,jsx,js}";
+@source "pages/composer/**/*.{tsx,ts,jsx,js}";
 
 /* ========================================
  * Design Token System
