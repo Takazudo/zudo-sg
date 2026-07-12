@@ -41,6 +41,33 @@ describe("story-authoring contract", () => {
           expect(node, `${name}.render() returned nullish`).toBeDefined();
         }
       });
+
+      // A `composer` opt-in is OPTIONAL. When present, guard the invariants a
+      // definition must satisfy at the package level (the host registry adds
+      // cross-module + JSON-safety checks). No component opts in yet (#246), so
+      // this is a forward-looking guard.
+      it("composer opt-in, when present, is a well-formed definition", () => {
+        const composer = meta?.composer;
+        if (!composer) return;
+        expect(typeof composer.componentId, "componentId").toBe("string");
+        expect(composer.componentId.length).toBeGreaterThan(0);
+        expect(Number.isInteger(composer.version), "version is an integer").toBe(true);
+        expect(typeof composer.component, "component is a function").toBe("function");
+
+        const slotIds = new Set<string>();
+        const slotProps = new Set<string>();
+        for (const slot of composer.slots ?? []) {
+          expect(slotIds.has(slot.id), `duplicate slot id ${slot.id}`).toBe(false);
+          slotIds.add(slot.id);
+          slotProps.add(slot.prop);
+        }
+        // One prop cannot be both a scalar field and a structural slot.
+        for (const field of composer.fields ?? []) {
+          expect(slotProps.has(field.prop), `prop ${field.prop} is both field and slot`).toBe(
+            false,
+          );
+        }
+      });
     });
   }
 });
