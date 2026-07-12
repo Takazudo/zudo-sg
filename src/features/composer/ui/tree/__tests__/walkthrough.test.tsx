@@ -81,6 +81,8 @@ function Harness() {
             setSelectedId(result.selectedId);
           }
         }}
+        onOpenNodeMenu={() => undefined}
+        onOpenInsertMenu={() => undefined}
       />
       <ComposerChooser
         open={chooser.open}

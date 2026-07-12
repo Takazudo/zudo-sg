@@ -16,12 +16,15 @@ import type {
   MessageEventLike,
   MessagePoster,
   MessageTarget,
+  SerializedRect,
 } from "./protocol";
 import {
   errorMessage,
   readParentToPreview,
   readyMessage,
   requestAddMessage,
+  requestInsertMenuMessage,
+  requestNodeMenuMessage,
   selectMessage,
 } from "./protocol";
 import { INITIAL_PREVIEW_STATE, applyInbound, type PreviewState } from "./snapshot-store";
@@ -39,6 +42,12 @@ export interface PreviewClientOptions {
   targetOrigin: string;
   /** A newer snapshot was applied. Stale messages never reach this. */
   onState: (state: PreviewState) => void;
+  /**
+   * The host answered a `request-node-menu` / `request-insert-menu` with a
+   * `restore-focus` (issue #256). NOT revision-gated and never touches
+   * `PreviewState` — see `snapshot-store.ts`'s `applyInbound` comment.
+   */
+  onRestoreFocus?: (focusToken: string) => void;
   /** A message was DROPPED by the guard. */
   onRejected?: (reason: GuardFailure, detail?: string) => void;
 }
@@ -48,6 +57,10 @@ export interface PreviewClient {
   emitReady(): void;
   emitSelect(nodeId: string | null): void;
   emitRequestAdd(target: InsertionTarget): void;
+  /** The selected node's chrome "⋯" was activated (issue #256). */
+  emitRequestNodeMenu(nodeId: string, rect: SerializedRect, focusToken: string): void;
+  /** An insert point's "⋯" was activated (issue #256). */
+  emitRequestInsertMenu(target: InsertionTarget, rect: SerializedRect, focusToken: string): void;
   emitError(message: string, recoverable?: boolean): void;
   /** The newest applied state. */
   readonly state: PreviewState;
@@ -81,7 +94,14 @@ export function createPreviewClient(options: PreviewClientOptions): PreviewClien
       options.onRejected?.(result.reason, result.detail);
       return;
     }
-    const next = applyInbound(state, result.message);
+    const message = result.message;
+    // `restore-focus` (#256) is not a document/session snapshot — it never
+    // reaches the revision-gated fold below. See `applyInbound`'s comment.
+    if (message.type === "restore-focus") {
+      options.onRestoreFocus?.(message.focusToken);
+      return;
+    }
+    const next = applyInbound(state, message);
     if (!next) return; // stale revision — drop it whole
     state = next;
     options.onState(next);
@@ -98,6 +118,12 @@ export function createPreviewClient(options: PreviewClientOptions): PreviewClien
     },
     emitRequestAdd(target) {
       post(requestAddMessage(outboundRevision(), target));
+    },
+    emitRequestNodeMenu(nodeId, rect, focusToken) {
+      post(requestNodeMenuMessage(outboundRevision(), nodeId, rect, focusToken));
+    },
+    emitRequestInsertMenu(target, rect, focusToken) {
+      post(requestInsertMenuMessage(outboundRevision(), target, rect, focusToken));
     },
     emitError(message, recoverable = true) {
       post(errorMessage(state.revision < 0 ? null : state.revision, message, recoverable));

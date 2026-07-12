@@ -104,4 +104,19 @@ describe("useComposerKeyboard — the guard matrix (#251)", () => {
     fire("Escape", { tagName: "INPUT", isContentEditable: false });
     expect(onEscape).not.toHaveBeenCalled();
   });
+
+  it("suppresses Delete/Backspace while a ComposerMenu is open (issue #256) — it owns its own Delete item", () => {
+    const onRemoveSelected = vi.fn();
+    const { fire } = setup({ mode: "edit", selectedId: "n1", onRemoveSelected, onEscape: vi.fn(), menuOpen: true });
+    fire("Delete");
+    fire("Backspace");
+    expect(onRemoveSelected).not.toHaveBeenCalled();
+  });
+
+  it("still runs onEscape while a ComposerMenu is open — the menu's own listener additionally closes itself", () => {
+    const onEscape = vi.fn();
+    const { fire } = setup({ mode: "edit", selectedId: "n1", onRemoveSelected: vi.fn(), onEscape, menuOpen: true });
+    fire("Escape");
+    expect(onEscape).toHaveBeenCalledTimes(1);
+  });
 });

@@ -22,8 +22,8 @@ import { useCallback, useEffect, useRef, useState } from "preact/hooks";
 import type { InsertionTarget } from "@/composer";
 import { composerEntries } from "@/styleguide/data/composer-registry";
 import { createPreviewClient, type PreviewClient } from "./client";
-import type { GuardFailure, MessagePoster, MessageTarget } from "./protocol";
-import { CompositionCanvas } from "./renderer";
+import type { GuardFailure, MessagePoster, MessageTarget, SerializedRect } from "./protocol";
+import { CompositionCanvas, focusByToken } from "./renderer";
 import { INITIAL_PREVIEW_STATE, type PreviewState } from "./snapshot-store";
 
 /**
@@ -65,6 +65,10 @@ export default function ComposerPreviewApp(): JSX.Element {
         // A valid snapshot means the bridge is healthy again.
         setError(null);
       },
+      // Host answered a request-node-menu / request-insert-menu once its menu
+      // closed (issue #256) — restore focus to the exact control that opened
+      // it. Not a state transition, so it never touches `setState`.
+      onRestoreFocus: (focusToken) => focusByToken(focusToken),
       onRejected: (reason: GuardFailure, detail) => {
         // A wrong-source / wrong-origin message is just noise: ANY page in ANY
         // tab can postMessage this window. Reacting to it would raise a false
@@ -102,6 +106,17 @@ export default function ComposerPreviewApp(): JSX.Element {
   const onRequestAdd = useCallback((target: InsertionTarget) => {
     clientRef.current?.emitRequestAdd(target);
   }, []);
+
+  const onRequestNodeMenu = useCallback((nodeId: string, rect: SerializedRect, focusToken: string) => {
+    clientRef.current?.emitRequestNodeMenu(nodeId, rect, focusToken);
+  }, []);
+
+  const onRequestInsertMenu = useCallback(
+    (target: InsertionTarget, rect: SerializedRect, focusToken: string) => {
+      clientRef.current?.emitRequestInsertMenu(target, rect, focusToken);
+    },
+    [],
+  );
 
   const onNodeError = useCallback((nodeId: string, message: string) => {
     clientRef.current?.emitError(`Node "${nodeId}" failed to render: ${message}`, true);
@@ -145,6 +160,8 @@ export default function ComposerPreviewApp(): JSX.Element {
         revision: state.revision,
         onSelect,
         onRequestAdd,
+        onRequestNodeMenu,
+        onRequestInsertMenu,
         onNodeError,
       })
     : h("p", { class: "zc-empty" }, "Waiting for a composition…");

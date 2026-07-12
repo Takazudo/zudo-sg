@@ -30,6 +30,10 @@ export interface TreeNodeCallbacks {
   onReorder: (nodeId: string, direction: "up" | "down") => void;
   onRemove: (nodeId: string) => void;
   registerRowRef: (nodeId: string, element: HTMLButtonElement | null) => void;
+  /** Opens the node context menu (Copy/Cut/Duplicate/Delete — issue #256). */
+  onOpenNodeMenu: (nodeId: string, trigger: HTMLElement) => void;
+  /** Opens the insert menu (Add component…/Paste here — issue #256), alongside the direct "+Add". */
+  onOpenInsertMenu: (target: InsertionTarget, trigger: HTMLElement) => void;
 }
 
 export interface TreeNodeProps extends TreeNodeCallbacks {
@@ -46,6 +50,7 @@ export interface TreeNodeProps extends TreeNodeCallbacks {
 export function TreeNode(props: TreeNodeProps): JSX.Element {
   const { node, document, manifest, catalogById, index, selectedId, expandedIds, readOnly } = props;
   const { onReveal, onToggleExpanded, onOpenChooser, onReorder, onRemove, registerRowRef } = props;
+  const { onOpenNodeMenu, onOpenInsertMenu } = props;
 
   const entry = manifest.get(node.componentId);
   const summary = summarizeNode(node, manifest, catalogById);
@@ -118,6 +123,18 @@ export function TreeNode(props: TreeNodeProps): JSX.Element {
           onMoveDown={() => onReorder(node.id, "down")}
           onRemove={() => onRemove(node.id)}
         />
+
+        {!readOnly && (
+          <button
+            type="button"
+            class="sg-composer-tree-action sg-composer-tree-menu-trigger"
+            aria-label={`Open menu for ${displayName}`}
+            title="More actions"
+            onClick={(event) => onOpenNodeMenu(node.id, event.currentTarget as HTMLElement)}
+          >
+            <span aria-hidden="true">⋯</span>
+          </button>
+        )}
       </div>
 
       {hasSlots && isExpanded && (
@@ -139,14 +156,30 @@ export function TreeNode(props: TreeNodeProps): JSX.Element {
                     {label} <span class="sg-composer-tree-count">({children.length})</span>
                   </span>
                   {canAdd && (
-                    <button
-                      type="button"
-                      class="sg-composer-tree-action sg-composer-tree-add"
-                      aria-label={`Add component to ${label} in ${displayName}`}
-                      onClick={() => onOpenChooser({ parentId: node.id, slotId, index: children.length })}
-                    >
-                      + Add
-                    </button>
+                    <span class="sg-composer-tree-slot-add-group">
+                      <button
+                        type="button"
+                        class="sg-composer-tree-action sg-composer-tree-add"
+                        aria-label={`Add component to ${label} in ${displayName}`}
+                        onClick={() => onOpenChooser({ parentId: node.id, slotId, index: children.length })}
+                      >
+                        + Add
+                      </button>
+                      <button
+                        type="button"
+                        class="sg-composer-tree-action sg-composer-tree-insert-menu"
+                        aria-label={`Insert options for ${label} in ${displayName}`}
+                        title="Insert options"
+                        onClick={(event) =>
+                          onOpenInsertMenu(
+                            { parentId: node.id, slotId, index: children.length },
+                            event.currentTarget as HTMLElement,
+                          )
+                        }
+                      >
+                        <span aria-hidden="true">⋯</span>
+                      </button>
+                    </span>
                   )}
                 </div>
 
@@ -171,6 +204,8 @@ export function TreeNode(props: TreeNodeProps): JSX.Element {
                         onReorder={onReorder}
                         onRemove={onRemove}
                         registerRowRef={registerRowRef}
+                        onOpenNodeMenu={onOpenNodeMenu}
+                        onOpenInsertMenu={onOpenInsertMenu}
                       />
                     ))}
                   </ul>

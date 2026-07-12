@@ -7,7 +7,7 @@
 //   <iframe ref={ref} {...composerPreviewFrameProps(location)} />
 //   const bridge = createComposerPreviewBridge({
 //     frame: ref.current, location, hostWindow: window,
-//     onSelect, onRequestAdd, onError,
+//     onSelect, onRequestAdd, onRequestNodeMenu, onRequestInsertMenu, onError,
 //   });
 //   bridge.render(document, { mode, theme, selectedId });    // revision minted here
 //   bridge.updateSession({ mode, theme, selectedId });       // session-only change
@@ -44,11 +44,16 @@ export {
   compositionNodeSchema,
   insertionTargetSchema,
   previewSessionSchema,
+  rectSchema,
+  serializeRect,
   errorMessageSchema,
   modeMessageSchema,
   readyMessageSchema,
   renderMessageSchema,
   requestAddMessageSchema,
+  requestNodeMenuMessageSchema,
+  requestInsertMenuMessageSchema,
+  restoreFocusMessageSchema,
   selectMessageSchema,
   parentToPreviewSchema,
   previewToParentSchema,
@@ -71,7 +76,11 @@ export type {
   ReadyMessage,
   RenderMessage,
   RequestAddMessage,
+  RequestNodeMenuMessage,
+  RequestInsertMenuMessage,
+  RestoreFocusMessage,
   SelectMessage,
+  SerializedRect,
 } from "./protocol";
 
 // Type only — the store itself runs inside the iframe.

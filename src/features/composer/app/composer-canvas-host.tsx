@@ -23,6 +23,23 @@
 // chooser we FOCUS the iframe, so it is captured as the chooser's trigger and
 // focus returns to it on close (issue #251 scope item 3). Recoverable renderer
 // errors surface as a dismissible banner above the canvas.
+//
+// ── Menu relay (issue #256) ──────────────────────────────────────────────────
+// `request-node-menu` / `request-insert-menu` carry a rect in the IFRAME's
+// own coordinates plus an opaque `focusToken`. This is the ONE place that
+// TRANSLATES that rect by the iframe element's own offset within this host
+// document (`frame.getBoundingClientRect()`) before handing it to
+// `onRequestNodeMenu`/`onRequestInsertMenu` — viewport CLAMPING itself is left
+// to `ComposerMenu` (one clamp implementation, shared by every menu origin;
+// see that component's header). The `restoreFocus` thunk each callback also
+// receives closes the loop: it posts a `restore-focus` response carrying the
+// SAME `focusToken` back over the bridge, which the iframe uses to refocus
+// its own control — the host never reaches into the iframe's DOM directly.
+//
+// "Add component…" (selected from a canvas-relayed insert menu) does NOT use
+// that generic restore — it reuses the EXISTING `onRequestAdd` focus sequence
+// (focus the iframe first, so the shared chooser captures IT as the trigger)
+// via the `addComponent` thunk passed to `onRequestInsertMenu`.
 
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import type { JSX } from "preact";
@@ -36,8 +53,20 @@ import {
   type ComposerPreviewLocation,
   type MessageTarget,
   type PreviewSession,
+  type SerializedRect,
 } from "@/features/composer/preview";
 import { COMPOSER_VIEWPORT_WIDTHS } from "./viewport";
+
+/** Translate an iframe-local rect into HOST viewport coordinates (issue #256). */
+function translateRect(rect: SerializedRect, frame: HTMLIFrameElement | null): SerializedRect {
+  const frameBox = frame?.getBoundingClientRect();
+  return {
+    x: rect.x + (frameBox?.left ?? 0),
+    y: rect.y + (frameBox?.top ?? 0),
+    width: rect.width,
+    height: rect.height,
+  };
+}
 
 export interface ComposerCanvasHostProps {
   document: CompositionDocument;
@@ -47,6 +76,15 @@ export interface ComposerCanvasHostProps {
   onSelect: (nodeId: string | null) => void;
   /** An insert point was activated — carries #245's index-bearing target. */
   onRequestAdd: (target: InsertionTarget) => void;
+  /** The selected node's chrome "⋯" was activated — rect already translated to host coordinates (issue #256). */
+  onRequestNodeMenu: (nodeId: string, rect: SerializedRect, restoreFocus: () => void) => void;
+  /** An insert point's "⋯" was activated — rect already translated to host coordinates (issue #256). */
+  onRequestInsertMenu: (
+    target: InsertionTarget,
+    rect: SerializedRect,
+    restoreFocus: () => void,
+    addComponent: () => void,
+  ) => void;
 
   // ── Test seams (production defaults) ──────────────────────────────────────
   /** Override the bridge factory. Defaults to #248's real bridge. */
@@ -64,6 +102,8 @@ export function ComposerCanvasHost(props: ComposerCanvasHostProps): JSX.Element 
     viewport,
     onSelect,
     onRequestAdd,
+    onRequestNodeMenu,
+    onRequestInsertMenu,
     createBridge = createComposerPreviewBridge,
     location: locationProp,
     hostWindow,
@@ -75,8 +115,8 @@ export function ComposerCanvasHost(props: ComposerCanvasHostProps): JSX.Element 
   // The bridge is created ONCE; its callbacks read the latest props through
   // this ref so a controller state change never needs to re-create the bridge
   // (which would drop readiness and re-add a listener).
-  const handlersRef = useRef({ onSelect, onRequestAdd });
-  handlersRef.current = { onSelect, onRequestAdd };
+  const handlersRef = useRef({ onSelect, onRequestAdd, onRequestNodeMenu, onRequestInsertMenu });
+  handlersRef.current = { onSelect, onRequestAdd, onRequestNodeMenu, onRequestInsertMenu };
 
   const [renderError, setRenderError] = useState<string | null>(null);
   const [, setReady] = useState(false);
@@ -101,6 +141,24 @@ export function ComposerCanvasHost(props: ComposerCanvasHostProps): JSX.Element 
         // captured trigger — focus then returns here on close.
         frameRef.current?.focus();
         handlersRef.current.onRequestAdd(target);
+      },
+      onRequestNodeMenu: (nodeId, rect, focusToken) => {
+        handlersRef.current.onRequestNodeMenu(nodeId, translateRect(rect, frameRef.current), () =>
+          bridgeRef.current?.restoreFocus(focusToken),
+        );
+      },
+      onRequestInsertMenu: (target, rect, focusToken) => {
+        handlersRef.current.onRequestInsertMenu(
+          target,
+          translateRect(rect, frameRef.current),
+          () => bridgeRef.current?.restoreFocus(focusToken),
+          () => {
+            // Same focus sequence as a direct request-add: focus the iframe
+            // FIRST so the shared chooser captures it as its trigger.
+            frameRef.current?.focus();
+            handlersRef.current.onRequestAdd(target);
+          },
+        );
       },
       onError: (message, recoverable) => {
         if (recoverable) setRenderError(message);

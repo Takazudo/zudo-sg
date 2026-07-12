@@ -8,10 +8,14 @@ import { createPreviewClient } from "../client";
 import {
   modeMessage,
   renderMessage,
+  restoreFocusMessage,
   type MessageEventLike,
   type MessageTarget,
   type PreviewSession,
+  type SerializedRect,
 } from "../protocol";
+
+const RECT: SerializedRect = { x: 5, y: 6, width: 40, height: 12 };
 
 const ORIGIN = "https://sg.example.com";
 const EDIT: PreviewSession = { mode: "edit", theme: "light", selectedId: null };
@@ -37,6 +41,7 @@ function setup() {
   };
   const onState = vi.fn();
   const onRejected = vi.fn();
+  const onRestoreFocus = vi.fn();
   const client = createPreviewClient({
     hostWindow,
     parentWindow,
@@ -45,11 +50,12 @@ function setup() {
     targetOrigin: ORIGIN,
     onState,
     onRejected,
+    onRestoreFocus,
   });
   const fromParent = (data: unknown, over: Partial<MessageEventLike> = {}): void => {
     hostWindow.deliver({ data, origin: ORIGIN, source: parentWindow, ...over });
   };
-  return { client, posts, onState, onRejected, fromParent, parentWindow };
+  return { client, posts, onState, onRejected, onRestoreFocus, fromParent, parentWindow };
 }
 
 describe("createPreviewClient", () => {
@@ -123,6 +129,44 @@ describe("createPreviewClient", () => {
       target: { parentId: "stack-1", slotId: "content", index: 1 },
     });
     for (const post of posts) expect(post.targetOrigin).toBe(ORIGIN);
+  });
+
+  it("stamps outbound request-node-menu / request-insert-menu with the revision on screen", () => {
+    const { client, posts, fromParent } = setup();
+    fromParent(renderMessage(5, SAMPLE_DOCUMENT, EDIT));
+    posts.length = 0;
+
+    client.emitRequestNodeMenu("box-1", RECT, "node-menu:box-1");
+    client.emitRequestInsertMenu({ parentId: "stack-1", slotId: "content", index: 1 }, RECT, "insert-menu:x");
+
+    expect(posts[0]!.message).toMatchObject({
+      type: "request-node-menu",
+      revision: 5,
+      nodeId: "box-1",
+      rect: RECT,
+      focusToken: "node-menu:box-1",
+    });
+    expect(posts[1]!.message).toMatchObject({
+      type: "request-insert-menu",
+      revision: 5,
+      target: { parentId: "stack-1", slotId: "content", index: 1 },
+      rect: RECT,
+      focusToken: "insert-menu:x",
+    });
+    for (const post of posts) expect(post.targetOrigin).toBe(ORIGIN);
+  });
+
+  it("routes an inbound restore-focus to onRestoreFocus WITHOUT touching state/onState", () => {
+    const { client, onState, onRestoreFocus, fromParent } = setup();
+    fromParent(renderMessage(1, SAMPLE_DOCUMENT, EDIT));
+    onState.mockClear();
+
+    fromParent(restoreFocusMessage("node-menu:box-1"));
+
+    expect(onRestoreFocus).toHaveBeenCalledWith("node-menu:box-1");
+    expect(onState).not.toHaveBeenCalled();
+    // The revision on screen is untouched — restore-focus is not a snapshot.
+    expect(client.state.revision).toBe(1);
   });
 
   it("reports an error with a null revision before the first snapshot", () => {

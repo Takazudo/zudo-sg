@@ -11,11 +11,16 @@ import {
   errorMessage,
   readyMessage,
   requestAddMessage,
+  requestInsertMenuMessage,
+  requestNodeMenuMessage,
   selectMessage,
   type MessageEventLike,
   type MessageTarget,
   type PreviewSession,
+  type SerializedRect,
 } from "../protocol";
+
+const RECT: SerializedRect = { x: 3, y: 4, width: 50, height: 16 };
 
 const ORIGIN = "https://sg.example.com";
 const LOCATION = { src: "/composer/preview", targetOrigin: ORIGIN };
@@ -182,6 +187,19 @@ describe("createComposerPreviewBridge — readiness + replay", () => {
     expect(a).toBeGreaterThanOrEqual(0);
   });
 
+  it("restoreFocus posts a restore-focus message once ready, to the exact origin", () => {
+    const bridge = bridgeWith();
+    bridge.restoreFocus("node-menu:box-1");
+    expect(iframe.posts).toHaveLength(0); // not ready yet — silently dropped, not queued
+
+    ready();
+    iframe.posts.length = 0;
+    bridge.restoreFocus("node-menu:box-1");
+    expect(iframe.posts).toHaveLength(1);
+    expect(iframe.posts[0]!.message).toMatchObject({ type: "restore-focus", focusToken: "node-menu:box-1" });
+    expect(iframe.posts[0]!.targetOrigin).toBe(ORIGIN);
+  });
+
   it("a session change made before ready is carried by the replay", () => {
     const bridge = bridgeWith();
     bridge.render(SAMPLE_DOCUMENT, EDIT);
@@ -197,11 +215,13 @@ describe("createComposerPreviewBridge — readiness + replay", () => {
 });
 
 describe("createComposerPreviewBridge — inbound guard", () => {
-  it("routes select / request-add / error to their handlers", () => {
+  it("routes select / request-add / request-node-menu / request-insert-menu / error to their handlers", () => {
     const host = fakeHostWindow();
     const iframe = fakeFrame();
     const onSelect = vi.fn();
     const onRequestAdd = vi.fn();
+    const onRequestNodeMenu = vi.fn();
+    const onRequestInsertMenu = vi.fn();
     const onError = vi.fn();
     createComposerPreviewBridge({
       frame: iframe.frame,
@@ -209,6 +229,8 @@ describe("createComposerPreviewBridge — inbound guard", () => {
       hostWindow: host,
       onSelect,
       onRequestAdd,
+      onRequestNodeMenu,
+      onRequestInsertMenu,
       onError,
     });
 
@@ -219,11 +241,24 @@ describe("createComposerPreviewBridge — inbound guard", () => {
       origin: ORIGIN,
       source,
     });
+    host.deliver({ data: requestNodeMenuMessage(2, "box-1", RECT, "node-menu:box-1"), origin: ORIGIN, source });
+    host.deliver({
+      data: requestInsertMenuMessage(2, { parentId: "stack-1", slotId: "content", index: 1 }, RECT, "insert-menu:x"),
+      origin: ORIGIN,
+      source,
+    });
     host.deliver({ data: errorMessage(2, "node threw", true), origin: ORIGIN, source });
 
     expect(onSelect).toHaveBeenCalledWith("prose-1", 2);
     expect(onRequestAdd).toHaveBeenCalledWith(
       { parentId: "stack-1", slotId: "content", index: 1 },
+      2,
+    );
+    expect(onRequestNodeMenu).toHaveBeenCalledWith("box-1", RECT, "node-menu:box-1", 2);
+    expect(onRequestInsertMenu).toHaveBeenCalledWith(
+      { parentId: "stack-1", slotId: "content", index: 1 },
+      RECT,
+      "insert-menu:x",
       2,
     );
     expect(onError).toHaveBeenCalledWith("node threw", true, 2);

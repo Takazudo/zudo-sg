@@ -52,6 +52,10 @@ export interface ComposerTreeProps {
   onOpenChooser: (target: InsertionTarget) => void;
   onReorder: (nodeId: string, direction: "up" | "down") => void;
   onRemove: (nodeId: string) => void;
+  /** Opens the node context menu (Copy/Cut/Duplicate/Delete — issue #256). */
+  onOpenNodeMenu: (nodeId: string, trigger: HTMLElement) => void;
+  /** Opens the insert menu (Add component…/Paste here — issue #256), alongside the direct "+Add". */
+  onOpenInsertMenu: (target: InsertionTarget, trigger: HTMLElement) => void;
   /** Hides every mutating affordance (Add/move/remove) — e.g. while in Preview mode. */
   readOnly?: boolean;
 }
@@ -67,6 +71,8 @@ export function ComposerTree({
   onOpenChooser,
   onReorder,
   onRemove,
+  onOpenNodeMenu,
+  onOpenInsertMenu,
   readOnly = false,
 }: ComposerTreeProps): JSX.Element {
   const manifestIndex = useMemo(() => buildManifestIndex(manifest), [manifest]);
@@ -120,6 +126,20 @@ export function ComposerTree({
             >
               + Add
             </button>
+            <button
+              type="button"
+              class="sg-composer-tree-action sg-composer-tree-insert-menu"
+              aria-label="Insert options for document root"
+              title="Insert options"
+              onClick={(event) =>
+                onOpenInsertMenu(
+                  { parentId: null, slotId: VIRTUAL_ROOT_SLOT_ID, index: document.root.length },
+                  event.currentTarget as HTMLElement,
+                )
+              }
+            >
+              <span aria-hidden="true">⋯</span>
+            </button>
           </div>
         )}
       </div>
@@ -145,6 +165,8 @@ export function ComposerTree({
               onReorder={onReorder}
               onRemove={onRemove}
               registerRowRef={registerRowRef}
+              onOpenNodeMenu={onOpenNodeMenu}
+              onOpenInsertMenu={onOpenInsertMenu}
             />
           ))}
         </ul>
@@ -156,5 +178,5 @@ export function ComposerTree({
 // Re-exported so #251/other waves can compose the same row-action affordance
 // elsewhere (e.g. a future canvas selection toolbar) without reaching into
 // this module's internals.
-export { TreeRowActions } from "./tree-row-actions";
-export type { TreeRowActionsProps } from "./tree-row-actions";
+export { TreeRowActions, SubtreeRemovalConfirm } from "./tree-row-actions";
+export type { TreeRowActionsProps, SubtreeRemovalConfirmProps } from "./tree-row-actions";

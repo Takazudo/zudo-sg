@@ -128,10 +128,47 @@ html[${COMPOSER_PREVIEW_DOC_ATTR}] {
   opacity: 1;
 }
 
+/* The SELECTED node's "⋯" menu trigger (issue #256) — chrome itself keeps
+   pointer-events:none (it is a label), so the button re-enables them on
+   itself. It must stay reachable even before hover, since it is the ONLY
+   way to reach the node menu when the node has no pointer nearby. */
+.zc-chrome-menu {
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-inline-start: 0.25rem;
+  padding: 0 0.25rem;
+  border: none;
+  border-radius: 2px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  line-height: inherit;
+  cursor: pointer;
+}
+.zc-chrome-menu:hover,
+.zc-chrome-menu:focus-visible {
+  background: color-mix(in srgb, var(--color-on-accent) 25%, transparent);
+}
+.zc-chrome-menu:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 1px; }
+
 /* ── Insert points: one at EVERY addable index of every declared slot ─────── */
-.zc-insert {
+/* The wrapper pairs the direct "+" add button with its "⋯" insert-menu
+   companion (issue #256) — two SIBLING buttons, never nested. It owns the
+   positioning/isolation .zc-insert used to own by itself. */
+.zc-insert-group {
   position: relative;
   z-index: var(--z-index-local-1);
+  display: flex;
+  gap: 2px;
+}
+.zc-insert-group--vertical { width: 100%; flex-direction: row; align-items: stretch; }
+.zc-insert-group--horizontal { align-self: stretch; flex-direction: column; align-items: stretch; min-width: 0.75rem; }
+
+.zc-insert {
+  position: relative;
+  flex: 1 1 auto;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -163,6 +200,30 @@ html[${COMPOSER_PREVIEW_DOC_ATTR}] {
   color: var(--color-muted);
 }
 .zc-insert-plus { font-size: 0.875rem; line-height: 1; }
+
+/* The insert point's "⋯" companion — opens the insert MENU (Add
+   component…/Paste here) alongside the direct "+" add shortcut. */
+.zc-insert-menu {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.125rem;
+  padding: 0 0.125rem;
+  border: 1px dashed transparent;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--color-accent);
+  cursor: pointer;
+  font-size: 0.75rem;
+  line-height: 1;
+}
+.zc-insert-menu:hover,
+.zc-insert-menu:focus-visible {
+  border-color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+}
+.zc-insert-menu:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 1px; }
 
 /* ── Opaque node: preserved, selectable, never silently dropped ───────────── */
 .zc-opaque {

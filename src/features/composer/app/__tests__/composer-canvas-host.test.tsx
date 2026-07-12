@@ -15,13 +15,16 @@ import {
   modeMessage,
   readyMessage,
   requestAddMessage,
+  requestInsertMenuMessage,
+  requestNodeMenuMessage,
   selectMessage,
 } from "@/features/composer/preview/protocol";
-import type { PreviewSession } from "@/features/composer/preview";
+import type { PreviewSession, SerializedRect } from "@/features/composer/preview";
 import { ComposerCanvasHost } from "../composer-canvas-host";
 import { makeTestBridge } from "../test-support/preview-harness";
 
 const EDIT: PreviewSession = { mode: "edit", theme: "light", selectedId: null };
+const RECT: SerializedRect = { x: 10, y: 20, width: 100, height: 24 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const asAny = (v: unknown) => v as any;
@@ -30,6 +33,8 @@ function mount(overrides: Partial<Parameters<typeof ComposerCanvasHost>[0]> = {}
   const bridge = makeTestBridge();
   const onSelect = vi.fn();
   const onRequestAdd = vi.fn();
+  const onRequestNodeMenu = vi.fn();
+  const onRequestInsertMenu = vi.fn();
   const doc = createSampleDocument();
   doc.name = "first";
   const utils = render(
@@ -39,12 +44,14 @@ function mount(overrides: Partial<Parameters<typeof ComposerCanvasHost>[0]> = {}
       viewport="fluid"
       onSelect={onSelect}
       onRequestAdd={onRequestAdd}
+      onRequestNodeMenu={onRequestNodeMenu}
+      onRequestInsertMenu={onRequestInsertMenu}
       createBridge={bridge.createBridge}
       location={bridge.location}
       {...overrides}
     />,
   );
-  return { bridge, onSelect, onRequestAdd, doc, ...utils };
+  return { bridge, onSelect, onRequestAdd, onRequestNodeMenu, onRequestInsertMenu, doc, ...utils };
 }
 
 describe("ComposerCanvasHost — bridge lifecycle (#251)", () => {
@@ -61,7 +68,7 @@ describe("ComposerCanvasHost — bridge lifecycle (#251)", () => {
   });
 
   it("a document change re-renders; a session-only change is a lighter update", () => {
-    const { bridge, doc, rerender, onSelect, onRequestAdd } = mount();
+    const { bridge, doc, rerender, onSelect, onRequestAdd, onRequestNodeMenu, onRequestInsertMenu } = mount();
     act(() => bridge.deliver(readyMessage()));
     bridge.posts.length = 0;
 
@@ -74,6 +81,8 @@ describe("ComposerCanvasHost — bridge lifecycle (#251)", () => {
         viewport="fluid"
         onSelect={onSelect}
         onRequestAdd={onRequestAdd}
+        onRequestNodeMenu={onRequestNodeMenu}
+        onRequestInsertMenu={onRequestInsertMenu}
         createBridge={bridge.createBridge}
         location={bridge.location}
       />,
@@ -89,6 +98,8 @@ describe("ComposerCanvasHost — bridge lifecycle (#251)", () => {
         viewport="fluid"
         onSelect={onSelect}
         onRequestAdd={onRequestAdd}
+        onRequestNodeMenu={onRequestNodeMenu}
+        onRequestInsertMenu={onRequestInsertMenu}
         createBridge={bridge.createBridge}
         location={bridge.location}
       />,
@@ -124,7 +135,8 @@ describe("ComposerCanvasHost — bridge lifecycle (#251)", () => {
   });
 
   it("sizes the frame to the chosen viewport width (preview width only)", () => {
-    const { bridge, container, rerender, onSelect, onRequestAdd, doc } = mount();
+    const { bridge, container, rerender, onSelect, onRequestAdd, onRequestNodeMenu, onRequestInsertMenu, doc } =
+      mount();
     const frame = () => container.querySelector(".sg-composer-canvas-frame") as HTMLElement;
     // fluid → no fixed width
     expect(frame().style.width).toBe("");
@@ -135,6 +147,8 @@ describe("ComposerCanvasHost — bridge lifecycle (#251)", () => {
         viewport="tablet"
         onSelect={onSelect}
         onRequestAdd={onRequestAdd}
+        onRequestNodeMenu={onRequestNodeMenu}
+        onRequestInsertMenu={onRequestInsertMenu}
         createBridge={bridge.createBridge}
         location={bridge.location}
       />,
@@ -148,5 +162,99 @@ describe("ComposerCanvasHost — bridge lifecycle (#251)", () => {
     act(() => bridge.deliver(readyMessage()));
     act(() => bridge.deliver(errorMessage(6, "fatal", false)));
     expect(screen.queryByText(/Preview error/)).not.toBeInTheDocument();
+  });
+});
+
+describe("ComposerCanvasHost — menu relay (issue #256)", () => {
+  it("translates a request-node-menu rect by the iframe's own offset before forwarding it", () => {
+    const { bridge, onRequestNodeMenu, container } = mount();
+    act(() => bridge.deliver(readyMessage()));
+    const iframe = container.querySelector("iframe")!;
+    vi.spyOn(iframe, "getBoundingClientRect").mockReturnValue({
+      x: 200,
+      y: 50,
+      width: 600,
+      height: 400,
+      top: 50,
+      left: 200,
+      right: 800,
+      bottom: 450,
+      toJSON: () => ({}),
+    });
+
+    act(() => bridge.deliver(requestNodeMenuMessage(4, "box-1", RECT, "node-menu:box-1")));
+
+    expect(onRequestNodeMenu).toHaveBeenCalledTimes(1);
+    const [nodeId, translated, restoreFocus] = onRequestNodeMenu.mock.calls[0]!;
+    expect(nodeId).toBe("box-1");
+    expect(translated).toEqual({ x: RECT.x + 200, y: RECT.y + 50, width: RECT.width, height: RECT.height });
+    expect(typeof restoreFocus).toBe("function");
+  });
+
+  it("invoking the returned restoreFocus posts restore-focus with the SAME focusToken", () => {
+    const { bridge, onRequestNodeMenu } = mount();
+    act(() => bridge.deliver(readyMessage()));
+    act(() => bridge.deliver(requestNodeMenuMessage(4, "box-1", RECT, "node-menu:box-1")));
+    bridge.posts.length = 0;
+
+    const [, , restoreFocus] = onRequestNodeMenu.mock.calls[0]!;
+    act(() => restoreFocus());
+
+    expect(bridge.posts).toHaveLength(1);
+    expect(asAny(bridge.posts[0]!.message)).toMatchObject({
+      type: "restore-focus",
+      focusToken: "node-menu:box-1",
+    });
+  });
+
+  it("translates a request-insert-menu rect and forwards the exact InsertionTarget", () => {
+    const { bridge, onRequestInsertMenu, container } = mount();
+    act(() => bridge.deliver(readyMessage()));
+    const iframe = container.querySelector("iframe")!;
+    vi.spyOn(iframe, "getBoundingClientRect").mockReturnValue({
+      x: 10,
+      y: 5,
+      width: 600,
+      height: 400,
+      top: 5,
+      left: 10,
+      right: 610,
+      bottom: 405,
+      toJSON: () => ({}),
+    });
+    const target = { parentId: "stack-1", slotId: "content", index: 1 };
+
+    act(() => bridge.deliver(requestInsertMenuMessage(4, target, RECT, "insert-menu:x")));
+
+    expect(onRequestInsertMenu).toHaveBeenCalledTimes(1);
+    const [forwardedTarget, translated, restoreFocus, addComponent] = onRequestInsertMenu.mock.calls[0]!;
+    expect(forwardedTarget).toEqual(target);
+    expect(translated).toEqual({ x: RECT.x + 10, y: RECT.y + 5, width: RECT.width, height: RECT.height });
+    expect(typeof restoreFocus).toBe("function");
+    expect(typeof addComponent).toBe("function");
+  });
+
+  it("the insert-menu's addComponent thunk focuses the iframe THEN forwards onRequestAdd — same sequence as a direct request-add", () => {
+    const { bridge, onRequestAdd, onRequestInsertMenu, container } = mount();
+    act(() => bridge.deliver(readyMessage()));
+    const target = { parentId: null, slotId: "root", index: 0 };
+    act(() => bridge.deliver(requestInsertMenuMessage(4, target, RECT, "insert-menu:root:0")));
+
+    const [, , , addComponent] = onRequestInsertMenu.mock.calls[0]!;
+    act(() => addComponent());
+
+    expect(onRequestAdd).toHaveBeenCalledWith(target);
+    expect(document.activeElement).toBe(container.querySelector("iframe"));
+  });
+
+  it("falls back to an untranslated rect when the iframe has not measured yet", () => {
+    const { bridge, onRequestNodeMenu } = mount();
+    act(() => bridge.deliver(readyMessage()));
+    act(() => bridge.deliver(requestNodeMenuMessage(4, "box-1", RECT, "node-menu:box-1")));
+    // happy-dom's default getBoundingClientRect() is all zeros — the
+    // translation is a no-op, not a thrown error.
+    const [, translated] = onRequestNodeMenu.mock.calls[0]!;
+    expect(translated.x).toBe(RECT.x);
+    expect(translated.y).toBe(RECT.y);
   });
 });

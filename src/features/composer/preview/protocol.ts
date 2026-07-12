@@ -23,13 +23,19 @@
 // (both of which share this `window`); `v` lets a future breaking change be
 // rejected rather than misread.
 //
-// Waves 7-9 (#256 request-node-menu / request-insert-menu, #257 inline-edit
-// commit, #258 move/copy) ADD message types to this module. To add one:
+// Waves 7-9 (#256 request-node-menu / request-insert-menu / restore-focus,
+// #257 inline-edit commit, #258 move/copy) ADD message types to this module.
+// To add one:
 //   1. declare its `.strict()` schema next to its peers below;
 //   2. append it to `PARENT_TO_PREVIEW_MEMBERS` / `PREVIEW_TO_PARENT_MEMBERS`;
 //   3. add a handler to the corresponding options interface.
 // Nothing else changes — the guards, the union types, and the exhaustive
-// switches all derive from those two member tuples.
+// switches all derive from those two member tuples. The one exception is
+// `restore-focus` (#256): it carries no revision (it is a one-shot focus
+// command, not a document/session snapshot), so `snapshot-store.ts`'s
+// `applyInbound` is typed to only the revision-gated members
+// (`RenderMessage | ModeMessage`) and `client.ts` intercepts `restore-focus`
+// before it would ever reach that fold — see both files' comments.
 
 import { z } from "zod";
 import type { CompositionDocument, CompositionNode, InsertionTarget } from "@/composer";
@@ -163,6 +169,30 @@ export const insertionTargetSchema: z.ZodType<InsertionTarget> = z
   })
   .strict();
 
+/**
+ * A `getBoundingClientRect()` snapshot, serialized to plain JSON-safe fields
+ * (issue #256). `DOMRect`'s own fields are accessor properties on its
+ * PROTOTYPE, not own-enumerable properties of an instance, so a bare
+ * `JSON.stringify(rect)` yields `{}` — callers must build this explicitly (see
+ * `serializeRect` below) rather than spread a live `DOMRect`. `.finite()`
+ * rejects `NaN`/`Infinity`, which a detached or zero-sized element can produce.
+ */
+export const rectSchema = z
+  .object({
+    x: z.number().finite(),
+    y: z.number().finite(),
+    width: z.number().finite(),
+    height: z.number().finite(),
+  })
+  .strict();
+
+export type SerializedRect = z.infer<typeof rectSchema>;
+
+/** Build the wire-safe rect shape from any `DOMRect`-like value. */
+export function serializeRect(rect: { x: number; y: number; width: number; height: number }): SerializedRect {
+  return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
+}
+
 // ── Envelope ────────────────────────────────────────────────────────────────
 
 const envelope = {
@@ -200,13 +230,38 @@ export const modeMessageSchema = z
   })
   .strict();
 
+/**
+ * Host → preview focus-restore response (issue #256). Sent once a context menu
+ * the preview requested (`request-node-menu` / `request-insert-menu`) has
+ * closed, so the iframe can restore focus to the EXACT control that opened it
+ * — the host never reaches into the iframe's DOM itself; it only echoes back
+ * the opaque `focusToken` the preview minted on the original request.
+ *
+ * Deliberately NOT revision-stamped: it is not a document/session snapshot
+ * (nothing in `PreviewState` changes), so it sits outside the
+ * `render`/`mode` revision-gated fold in `snapshot-store.ts` — see that
+ * module's `applyInbound` and `client.ts`'s `onRestoreFocus` handling.
+ */
+export const restoreFocusMessageSchema = z
+  .object({
+    ...envelope,
+    type: z.literal("restore-focus"),
+    focusToken: z.string().min(1),
+  })
+  .strict();
+
 /** Append future parent → preview messages here (see the module header). */
-export const PARENT_TO_PREVIEW_MEMBERS = [renderMessageSchema, modeMessageSchema] as const;
+export const PARENT_TO_PREVIEW_MEMBERS = [
+  renderMessageSchema,
+  modeMessageSchema,
+  restoreFocusMessageSchema,
+] as const;
 
 export const parentToPreviewSchema = z.discriminatedUnion("type", [...PARENT_TO_PREVIEW_MEMBERS]);
 
 export type RenderMessage = z.infer<typeof renderMessageSchema>;
 export type ModeMessage = z.infer<typeof modeMessageSchema>;
+export type RestoreFocusMessage = z.infer<typeof restoreFocusMessageSchema>;
 export type ParentToPreviewMessage = z.infer<typeof parentToPreviewSchema>;
 
 // ── preview → parent ────────────────────────────────────────────────────────
@@ -239,6 +294,42 @@ export const requestAddMessageSchema = z
   })
   .strict();
 
+/**
+ * The selected node's chrome "⋯" was activated in Edit mode (issue #256).
+ * `rect` is the trigger control's own `getBoundingClientRect()`, serialized —
+ * IFRAME-LOCAL coordinates; the host translates by the iframe's own offset
+ * before positioning the menu (see `composer-canvas-host.tsx`). `focusToken`
+ * is opaque to the host: it is only ever echoed back verbatim in a later
+ * `restore-focus` message, which this same control's `data-zc-focus-token`
+ * attribute is looked up by (see `renderer.ts`'s `focusByToken`).
+ */
+export const requestNodeMenuMessageSchema = z
+  .object({
+    ...envelope,
+    type: z.literal("request-node-menu"),
+    revision: revisionSchema,
+    nodeId: z.string().min(1),
+    rect: rectSchema,
+    focusToken: z.string().min(1),
+  })
+  .strict();
+
+/**
+ * An insert point's "⋯" was activated. Carries #245's insert-at-index target
+ * (the round-2 contract) plus the same rect/focusToken pair as
+ * `request-node-menu` — see that schema's comment.
+ */
+export const requestInsertMenuMessageSchema = z
+  .object({
+    ...envelope,
+    type: z.literal("request-insert-menu"),
+    revision: revisionSchema,
+    target: insertionTargetSchema,
+    rect: rectSchema,
+    focusToken: z.string().min(1),
+  })
+  .strict();
+
 /** A render/protocol failure the preview recovered from, surfaced to the host. */
 export const errorMessageSchema = z
   .object({
@@ -257,6 +348,8 @@ export const PREVIEW_TO_PARENT_MEMBERS = [
   readyMessageSchema,
   selectMessageSchema,
   requestAddMessageSchema,
+  requestNodeMenuMessageSchema,
+  requestInsertMenuMessageSchema,
   errorMessageSchema,
 ] as const;
 
@@ -265,6 +358,8 @@ export const previewToParentSchema = z.discriminatedUnion("type", [...PREVIEW_TO
 export type ReadyMessage = z.infer<typeof readyMessageSchema>;
 export type SelectMessage = z.infer<typeof selectMessageSchema>;
 export type RequestAddMessage = z.infer<typeof requestAddMessageSchema>;
+export type RequestNodeMenuMessage = z.infer<typeof requestNodeMenuMessageSchema>;
+export type RequestInsertMenuMessage = z.infer<typeof requestInsertMenuMessageSchema>;
 export type ErrorMessage = z.infer<typeof errorMessageSchema>;
 export type PreviewToParentMessage = z.infer<typeof previewToParentSchema>;
 
@@ -368,6 +463,28 @@ export function selectMessage(revision: number, nodeId: string | null): SelectMe
 
 export function requestAddMessage(revision: number, target: InsertionTarget): RequestAddMessage {
   return { ...envelopeValue(), type: "request-add", revision, target };
+}
+
+export function requestNodeMenuMessage(
+  revision: number,
+  nodeId: string,
+  rect: SerializedRect,
+  focusToken: string,
+): RequestNodeMenuMessage {
+  return { ...envelopeValue(), type: "request-node-menu", revision, nodeId, rect, focusToken };
+}
+
+export function requestInsertMenuMessage(
+  revision: number,
+  target: InsertionTarget,
+  rect: SerializedRect,
+  focusToken: string,
+): RequestInsertMenuMessage {
+  return { ...envelopeValue(), type: "request-insert-menu", revision, target, rect, focusToken };
+}
+
+export function restoreFocusMessage(focusToken: string): RestoreFocusMessage {
+  return { ...envelopeValue(), type: "restore-focus", focusToken };
 }
 
 export function errorMessage(

@@ -14,6 +14,18 @@
 // Kept as a tiny, pure-ish hook so the whole guard matrix is unit-testable
 // without a full app render (waves 6-9 extend this baseline — #256 menus reuse
 // the Escape path).
+//
+// ── `menuOpen` (issue #256) ──────────────────────────────────────────────────
+// A `ComposerMenu` owns its OWN Escape/outside/scroll/resize dismissal (see
+// that component) — it must, to stay a self-contained, independently testable
+// unit. It does NOT intercept Delete/Backspace, which would otherwise still
+// bubble here and fire this hook's GLOBAL "remove the selected node" shortcut
+// while a menu happens to be open — a double/wrong-node delete, since the
+// menu's own subject is not necessarily `selectedId` (an insert menu has no
+// node subject at all). `menuOpen: true` suppresses ONLY that structural
+// shortcut; Escape still runs `onEscape` too (harmless — nothing else is ever
+// open at the same time as a menu) so this hook remains the single place
+// Escape is wired, per the epic's "don't duplicate the shortcut" invariant.
 
 import { useEffect } from "preact/hooks";
 import type { ComposerMode } from "@/features/composer/chrome/controller-model";
@@ -32,6 +44,8 @@ export interface ComposerKeyboardOptions {
   onRemoveSelected: (nodeId: string) => void;
   /** Close open menus/dialogs (chooser, export). */
   onEscape: () => void;
+  /** A `ComposerMenu` (issue #256) is currently open — suppresses the global Delete/Backspace shortcut. */
+  menuOpen?: boolean;
   /** Test seam — defaults to `document`. */
   host?: KeyboardHost;
 }
@@ -46,7 +60,7 @@ export function isEditableEventTarget(target: EventTarget | null): boolean {
 }
 
 export function useComposerKeyboard(options: ComposerKeyboardOptions): void {
-  const { mode, selectedId, onRemoveSelected, onEscape, host } = options;
+  const { mode, selectedId, onRemoveSelected, onEscape, menuOpen = false, host } = options;
 
   useEffect(() => {
     const target: KeyboardHost = host ?? document;
@@ -63,6 +77,10 @@ export function useComposerKeyboard(options: ComposerKeyboardOptions): void {
       // Structural mutation is Edit-only.
       if (mode === "preview") return;
 
+      // An open ComposerMenu owns Delete via its own item, and its subject is
+      // not necessarily `selectedId` — see the module header.
+      if (menuOpen) return;
+
       if ((event.key === "Delete" || event.key === "Backspace") && selectedId !== null) {
         event.preventDefault();
         onRemoveSelected(selectedId);
@@ -71,5 +89,5 @@ export function useComposerKeyboard(options: ComposerKeyboardOptions): void {
 
     target.addEventListener("keydown", onKeyDown);
     return () => target.removeEventListener("keydown", onKeyDown);
-  }, [mode, selectedId, onRemoveSelected, onEscape, host]);
+  }, [mode, selectedId, onRemoveSelected, onEscape, menuOpen, host]);
 }
