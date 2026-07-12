@@ -34,7 +34,7 @@
 // `outline`, which is out-of-flow: it neither remounts nor reflows the node.
 
 import { Component, Fragment, h } from "preact";
-import { useMemo } from "preact/hooks";
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "preact/hooks";
 import type { ComponentChildren, JSX } from "preact";
 import type {
   ComponentManifest,
@@ -72,11 +72,126 @@ export function insertMenuFocusToken(target: InsertionTarget): string {
 
 /** Focus the control a `restore-focus` message's token points at, if it still exists. */
 export function focusByToken(token: string): void {
-  const escaped =
-    typeof CSS !== "undefined" && typeof CSS.escape === "function"
-      ? CSS.escape(token)
-      : token.replace(/(["\\])/g, "\\$1");
-  document.querySelector<HTMLElement>(`[${FOCUS_TOKEN_ATTR}="${escaped}"]`)?.focus();
+  document.querySelector<HTMLElement>(`[${FOCUS_TOKEN_ATTR}="${escapeAttrValue(token)}"]`)?.focus();
+}
+
+function escapeAttrValue(value: string): string {
+  return typeof CSS !== "undefined" && typeof CSS.escape === "function"
+    ? CSS.escape(value)
+    : value.replace(/(["\\])/g, "\\$1");
+}
+
+// ── Inline text editing (issue #257) ────────────────────────────────────────
+//
+// A flag alone can't target the right text node: real components render
+// decorations (`CtaButton` an arrow, `SectionHeading` an eyebrow/heading/intro).
+// So the trusted, non-serializable `adapters.inlineEditor` (kept only in the
+// runtime registry — #244/#246) resolves the editable element inside a rendered
+// component. MVP: at most ONE inline-editable field per component.
+//
+// The three verified prototype rules the session code below follows exactly:
+//   - the editing element carries NO vdom text child (its content is set
+//     imperatively via ref) so an unrelated re-render can never reset the caret;
+//   - its body is KEYED differently in edit vs read mode, so exiting the session
+//     remounts it and cannot leave a duplicate (imperatively-inserted) text node;
+//   - `dblclick` inside an active session STOPS propagation (word-select must not
+//     bubble to the canvas and restart the session, reverting the typing).
+
+/** The editable text region of a node, resolved from its runtime definition. */
+interface InlineEditable {
+  field: string;
+  multiline: boolean;
+  resolveElement: (root: HTMLElement) => HTMLElement | null;
+}
+
+/** An active on-canvas editing session — LOCAL renderer state, never persisted. */
+interface InlineSessionState {
+  nodeId: string;
+  fieldKey: string;
+  multiline: boolean;
+  /** The value the field held when the session opened. Set imperatively. */
+  initialValue: string;
+}
+
+const INLINE_EDITING_ATTR = "data-zc-inline-editing";
+
+/** The `{ field, multiline, resolveElement }` for a node, or null if it has none. */
+function inlineEditableForEntry(entry: ComposerEntry | undefined): InlineEditable | null {
+  const adapter = entry?.definition.adapters?.inlineEditor;
+  if (!adapter) return null;
+  const field = entry?.definition.fields?.find((f) => f.prop === adapter.field);
+  if (!field || field.kind !== "text" || !field.inlineEdit) return null;
+  return {
+    field: adapter.field,
+    multiline: field.inlineEdit.multiline ?? false,
+    resolveElement: adapter.resolveElement,
+  };
+}
+
+/** Depth-first lookup of a node by id within a composition's slot tree. */
+function findNodeById(nodes: readonly CompositionNode[], id: string): CompositionNode | null {
+  for (const node of nodes) {
+    if (node.id === id) return node;
+    for (const children of Object.values(node.slots)) {
+      const found = findNodeById(children ?? [], id);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
+/**
+ * Read the committed text out of an editing element.
+ *
+ * Decoration islands are skipped: a child marked `aria-hidden` /
+ * `contenteditable="false"` (e.g. `CtaButton`'s trailing arrow) is chrome, not
+ * content, so it never leaks into the committed value. For a multiline field,
+ * `<br>` and block boundaries become newlines; a single-line field can hold
+ * none (its Enter commits instead of inserting one), and any pasted newline is
+ * collapsed to a space so the value stays single-line.
+ */
+function readEditableValue(el: HTMLElement, multiline: boolean): string {
+  let out = "";
+  const walk = (node: Node): void => {
+    for (const child of Array.from(node.childNodes)) {
+      if (child.nodeType === 3 /* Text */) {
+        out += (child as Text).data;
+        continue;
+      }
+      if (child.nodeType !== 1 /* Element */) continue;
+      const elChild = child as HTMLElement;
+      if (
+        elChild.getAttribute("aria-hidden") === "true" ||
+        elChild.getAttribute("contenteditable") === "false"
+      ) {
+        continue; // decoration island — not editable content
+      }
+      if (elChild.tagName === "BR") {
+        out += "\n";
+        continue;
+      }
+      if (multiline && out.length > 0 && !out.endsWith("\n")) out += "\n";
+      walk(elChild);
+    }
+  };
+  walk(el);
+  return multiline ? out : out.replace(/[\r\n]+/g, " ");
+}
+
+/** Best-effort caret-to-end. Selection APIs missing (or a detached el) never throw. */
+function placeCaretAtEnd(el: HTMLElement): void {
+  try {
+    const view = el.ownerDocument.defaultView;
+    const selection = view?.getSelection?.();
+    if (!selection) return;
+    const range = el.ownerDocument.createRange();
+    range.selectNodeContents(el);
+    range.collapse(false);
+    selection.removeAllRanges();
+    selection.addRange(range);
+  } catch {
+    // Best effort only.
+  }
 }
 
 /**
@@ -130,6 +245,13 @@ export interface CompositionCanvasProps {
   onRequestNodeMenu: (nodeId: string, rect: SerializedRect, focusToken: string) => void;
   /** An insert point's "⋯" was activated (issue #256). */
   onRequestInsertMenu: (target: InsertionTarget, rect: SerializedRect, focusToken: string) => void;
+  /**
+   * An inline-editing session committed a value (issue #257). The host stamps
+   * `documentRevision` and validates it; the renderer only reports the raw
+   * `{ nodeId, fieldKey, value }`. Optional so existing mounts/tests that never
+   * inline-edit need not supply it.
+   */
+  onCommitInlineEdit?: (nodeId: string, fieldKey: string, value: string) => void;
   /** A node's component threw and was isolated behind its error boundary. */
   onNodeError?: (nodeId: string, message: string) => void;
 }
@@ -140,8 +262,17 @@ export interface CompositionCanvasProps {
  * addable index of EVERY declared slot.
  */
 export function CompositionCanvas(props: CompositionCanvasProps): JSX.Element {
-  const { document, entries, session, onSelect, onRequestAdd, onRequestNodeMenu, onRequestInsertMenu, onNodeError } =
-    props;
+  const {
+    document,
+    entries,
+    session,
+    onSelect,
+    onRequestAdd,
+    onRequestNodeMenu,
+    onRequestInsertMenu,
+    onCommitInlineEdit,
+    onNodeError,
+  } = props;
   const edit = session.mode === "edit";
 
   const entryById = useMemo(
@@ -149,6 +280,167 @@ export function CompositionCanvas(props: CompositionCanvasProps): JSX.Element {
     [entries],
   );
   const manifest = manifestFor(entries);
+
+  // ── Inline editing session (issue #257) ───────────────────────────────────
+  // LOCAL renderer state; never travels over the bridge and never mutates the
+  // document until a commit routes through the host's `updateProps`.
+  const canvasRef = useRef<HTMLDivElement | null>(null);
+  const editableRef = useRef<HTMLElement | null>(null);
+  const finishingRef = useRef(false);
+  const commitCbRef = useRef(onCommitInlineEdit);
+  commitCbRef.current = onCommitInlineEdit;
+
+  const [inlineSession, setInlineSessionState] = useState<InlineSessionState | null>(null);
+  // Mirror in a ref so the imperative event listeners (attached to a real
+  // component DOM node, outside Preact) always see the live session.
+  const sessionRef = useRef<InlineSessionState | null>(null);
+  const setSession = useCallback((next: InlineSessionState | null) => {
+    sessionRef.current = next;
+    setInlineSessionState(next);
+  }, []);
+
+  const commitInline = useCallback(() => {
+    const active = sessionRef.current;
+    if (!active || finishingRef.current) return;
+    finishingRef.current = true;
+    const el = editableRef.current;
+    const value = el ? readEditableValue(el, active.multiline) : active.initialValue;
+    commitCbRef.current?.(active.nodeId, active.fieldKey, value);
+    setSession(null);
+  }, [setSession]);
+
+  const cancelInline = useCallback(() => {
+    if (!sessionRef.current || finishingRef.current) return;
+    finishingRef.current = true;
+    setSession(null);
+  }, [setSession]);
+
+  const enterInlineSession = useCallback(
+    (nodeId: string): boolean => {
+      if (sessionRef.current) return false;
+      const targetNode = findNodeById(document.root, nodeId);
+      if (!targetNode) return false;
+      const entry = entryById.get(targetNode.componentId);
+      const editable = inlineEditableForEntry(entry);
+      if (!editable || !entry) return false;
+      const effective: Record<string, unknown> = {
+        ...(entry.definition.defaults ?? {}),
+        ...targetNode.props,
+      };
+      const raw = effective[editable.field];
+      const initialValue = typeof raw === "string" ? raw : raw == null ? "" : String(raw);
+      setSession({ nodeId, fieldKey: editable.field, multiline: editable.multiline, initialValue });
+      return true;
+    },
+    [document, entryById, setSession],
+  );
+
+  // Set up (and tear down) the imperative contentEditable when a session opens.
+  // A layout effect runs after the keyed-body remount has committed the fresh
+  // (empty-field) component DOM but before paint, so the caret is placed with
+  // no flicker. Content is set imperatively here — never via a vdom child.
+  useLayoutEffect(() => {
+    const active = sessionRef.current;
+    if (!active) return;
+    finishingRef.current = false;
+
+    const wrapper = canvasRef.current?.querySelector<HTMLElement>(
+      `[data-zc-node-id="${escapeAttrValue(active.nodeId)}"]`,
+    );
+    const componentRoot = wrapper
+      ? (Array.from(wrapper.children).find((c) => !c.classList.contains("zc-chrome")) as
+          | HTMLElement
+          | undefined)
+      : undefined;
+    const resolve = inlineEditableForEntry(
+      entryById.get(findNodeById(document.root, active.nodeId)?.componentId ?? ""),
+    )?.resolveElement;
+    const el = componentRoot && resolve ? resolve(componentRoot) : null;
+    if (!el) {
+      // The adapter could not resolve a text region — abandon rather than trap
+      // the user in a broken editor.
+      setSession(null);
+      return;
+    }
+    editableRef.current = el;
+
+    const ownerDoc = el.ownerDocument;
+    el.setAttribute(INLINE_EDITING_ATTR, "");
+    el.setAttribute("contenteditable", active.multiline ? "true" : "plaintext-only");
+    // Protect decoration islands (e.g. CtaButton's aria-hidden arrow) so a caret
+    // can't wander into them and so `readEditableValue` can exclude them.
+    el.querySelectorAll<HTMLElement>('[aria-hidden="true"]').forEach((d) =>
+      d.setAttribute("contenteditable", "false"),
+    );
+    // Content set IMPERATIVELY, and BEFORE any decoration so the label sits ahead
+    // of a trailing arrow. The component rendered this field with no vdom child,
+    // so Preact never manages (or resets) this text node.
+    el.insertBefore(ownerDoc.createTextNode(active.initialValue), el.firstChild);
+    el.focus();
+    placeCaretAtEnd(el);
+
+    let composing = false;
+    const onCompositionStart = (): void => {
+      composing = true;
+    };
+    const onCompositionEnd = (): void => {
+      composing = false;
+    };
+    const onKeyDown = (event: KeyboardEvent): void => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        cancelInline();
+        return;
+      }
+      if (event.key === "Enter" && !active.multiline) {
+        // IME-SAFE: a composition's confirming Enter (isComposing / keyCode 229)
+        // commits the CANDIDATE, never the field — so Japanese input is never
+        // truncated. Only a non-composing Enter commits the single-line field.
+        if (composing || event.isComposing || event.keyCode === 229) return;
+        event.preventDefault();
+        commitInline();
+      }
+    };
+    const onBlur = (): void => {
+      commitInline();
+    };
+    // Word-select inside an active session must NOT bubble to the canvas, or it
+    // would restart the session and revert the typing (verified failure mode).
+    const onDblClick = (event: MouseEvent): void => {
+      event.stopPropagation();
+    };
+
+    el.addEventListener("compositionstart", onCompositionStart);
+    el.addEventListener("compositionend", onCompositionEnd);
+    el.addEventListener("keydown", onKeyDown);
+    el.addEventListener("blur", onBlur);
+    el.addEventListener("dblclick", onDblClick);
+
+    return () => {
+      el.removeEventListener("compositionstart", onCompositionStart);
+      el.removeEventListener("compositionend", onCompositionEnd);
+      el.removeEventListener("keydown", onKeyDown);
+      el.removeEventListener("blur", onBlur);
+      el.removeEventListener("dblclick", onDblClick);
+      el.removeAttribute("contenteditable");
+      el.removeAttribute(INLINE_EDITING_ATTR);
+      if (editableRef.current === el) editableRef.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed by the session identity
+  }, [inlineSession?.nodeId, inlineSession?.fieldKey]);
+
+  // Switching to Preview mid-edit COMMITS the draft (defined, tested behavior).
+  // The keyed body is not remounted by a mere mode change, so the live editable
+  // is still attached here and `commitInline` reads its current text.
+  const prevModeRef = useRef(session.mode);
+  useLayoutEffect(() => {
+    const previous = prevModeRef.current;
+    prevModeRef.current = session.mode;
+    if (previous !== "preview" && session.mode === "preview" && sessionRef.current) {
+      commitInline();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fires only on a mode transition
+  }, [session.mode]);
 
   /**
    * In Edit mode the canvas swallows every click in the CAPTURE phase before it
@@ -160,15 +452,40 @@ export function CompositionCanvas(props: CompositionCanvasProps): JSX.Element {
   const swallow = (event: Event): boolean => {
     const target = event.target as Element | null;
     if (target?.closest("[data-zc-affordance]")) return false;
+    // An active inline-editing region owns its own keys/clicks (Enter commits,
+    // a multiline Enter inserts a newline, Space/caret keys type normally). The
+    // capture-phase swallow must NOT stop those before they reach the editable.
+    if (sessionRef.current && target?.closest(`[${INLINE_EDITING_ATTR}]`)) return false;
     event.preventDefault();
     event.stopPropagation();
     return true;
   };
 
   const onClickCapture = (event: MouseEvent): void => {
+    const target = event.target as Element | null;
+    // A click INSIDE the active editable is caret placement — never swallow it.
+    if (sessionRef.current && target?.closest(`[${INLINE_EDITING_ATTR}]`)) return;
     if (!swallow(event)) return;
-    const host = (event.target as Element | null)?.closest("[data-zc-node-id]");
-    onSelect(host?.getAttribute("data-zc-node-id") ?? null);
+    const host = target?.closest("[data-zc-node-id]");
+    const nodeId = host?.getAttribute("data-zc-node-id") ?? null;
+    // Click AGAIN on the already-selected node opens its inline editor (if it has
+    // one); the first click on an unselected node just selects it.
+    if (nodeId && !sessionRef.current && nodeId === session.selectedId && enterInlineSession(nodeId)) {
+      return;
+    }
+    onSelect(nodeId);
+  };
+
+  /** Double-click enters an inline session directly (the other entry path). */
+  const onDblClick = (event: MouseEvent): void => {
+    // An active session's own dblclick is stopped before it reaches here (see
+    // the session's `onDblClick`); guard anyway so word-select never restarts it.
+    if (sessionRef.current) return;
+    const target = event.target as Element | null;
+    if (target?.closest("[data-zc-affordance]")) return;
+    const host = target?.closest("[data-zc-node-id]");
+    const nodeId = host?.getAttribute("data-zc-node-id") ?? null;
+    if (nodeId && enterInlineSession(nodeId)) event.preventDefault();
   };
 
   /** Keyboard activation is the other way a link/button fires. Swallow it too. */
@@ -286,6 +603,11 @@ export function CompositionCanvas(props: CompositionCanvasProps): JSX.Element {
       ...(definition.defaults ?? {}),
       ...safeProps(node.props),
     };
+    // While inline-editing THIS node's field, render it with NO vdom text child:
+    // the live text is owned imperatively (see the session layout effect), so a
+    // re-render can never reset the caret. Exiting re-keys the body (below),
+    // remounting it with the real value and leaving no duplicate text node.
+    if (inlineSession?.nodeId === node.id) componentProps[inlineSession.fieldKey] = "";
     const flow = slotFlow(node);
 
     for (const slot of definition.slots ?? []) {
@@ -394,7 +716,10 @@ export function CompositionCanvas(props: CompositionCanvasProps): JSX.Element {
         : null,
       h(
         Fragment,
-        { key: "zc-body" },
+        // Keyed DIFFERENTLY in edit vs read mode: entering/exiting a session
+        // remounts the body, so the imperatively-managed editing DOM is fully
+        // discarded on exit and can never leave a duplicate text node.
+        { key: inlineSession?.nodeId === node.id ? "zc-body-editing" : "zc-body" },
         h(
           NodeErrorBoundary,
           {
@@ -415,11 +740,15 @@ export function CompositionCanvas(props: CompositionCanvasProps): JSX.Element {
   return h(
     "div",
     {
+      ref: canvasRef,
       class: "zc-canvas",
       "data-composer-canvas": "",
       "data-mode": session.mode,
       onClickCapture: edit ? onClickCapture : onPreviewClickCapture,
       onKeyDownCapture: edit ? onKeyDownCapture : undefined,
+      // Bubbling (not capture) so an active session's own `dblclick`
+      // stopPropagation can keep word-select from restarting the session.
+      onDblClick: edit ? onDblClick : undefined,
     },
     renderSlotChildren(
       document.root,

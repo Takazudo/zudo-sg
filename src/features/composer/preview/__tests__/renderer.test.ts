@@ -4,6 +4,7 @@
 
 import { describe, expect, it, vi } from "vitest";
 import { h } from "preact";
+import { act } from "preact/test-utils";
 import { fireEvent, render } from "@testing-library/preact";
 import type { CompositionDocument, CompositionNode } from "@/composer";
 import { COMPOSITION_SCHEMA_VERSION } from "@/composer";
@@ -494,6 +495,301 @@ describe("menu relay (issue #256)", () => {
 
   it("focusByToken is a silent no-op when nothing matches (e.g. the node was removed)", () => {
     expect(() => focusByToken("node-menu:does-not-exist")).not.toThrow();
+  });
+});
+
+describe("inline text editing (issue #257)", () => {
+  const EDITABLE = "[data-zc-inline-editing]";
+
+  /** The active editable element inside a node, or null. */
+  function editableOf(container: HTMLElement, nodeId: string): HTMLElement | null {
+    return container.querySelector<HTMLElement>(`[data-zc-node-id="${nodeId}"] ${EDITABLE}`);
+  }
+
+  /**
+   * Render (attached to the document so focus/selection work), then open an
+   * inline session by clicking the already-selected node's `inner` element —
+   * the click-again-on-selected entry path.
+   */
+  function openSession(nodeId: string, inner: string, document = SPLIT) {
+    const onCommitInlineEdit = vi.fn();
+    const utils = render(
+      h(CompositionCanvas, {
+        document,
+        entries: composerEntries,
+        session: { ...EDIT, selectedId: nodeId },
+        onSelect: vi.fn(),
+        onRequestAdd: vi.fn(),
+        onRequestNodeMenu: vi.fn(),
+        onRequestInsertMenu: vi.fn(),
+        onCommitInlineEdit,
+      }),
+    );
+    const target = utils.container.querySelector(`[data-zc-node-id="${nodeId}"] ${inner}`)!;
+    fireEvent.click(target);
+    return { ...utils, onCommitInlineEdit };
+  }
+
+  describe("entering a session", () => {
+    it("opens on click-again on the SELECTED node and makes the adapter's element editable", () => {
+      const { container } = openSession("prose-1", "p");
+      const editable = editableOf(container, "prose-1");
+      expect(editable).not.toBeNull();
+      expect(editable!.tagName).toBe("P");
+      expect(editable!.getAttribute("contenteditable")).toBe("true"); // prose is multiline
+      expect(container.ownerDocument.activeElement).toBe(editable);
+      // Content is present but was set imperatively (no vdom text child).
+      expect(editable!.textContent).toBe("First paragraph.");
+    });
+
+    it("opens on DOUBLE-CLICK even when the node is not yet selected", () => {
+      const onCommitInlineEdit = vi.fn();
+      const { container } = render(
+        h(CompositionCanvas, {
+          document: SPLIT,
+          entries: composerEntries,
+          session: EDIT,
+          onSelect: vi.fn(),
+          onRequestAdd: vi.fn(),
+          onRequestNodeMenu: vi.fn(),
+          onRequestInsertMenu: vi.fn(),
+          onCommitInlineEdit,
+        }),
+      );
+      fireEvent.dblClick(container.querySelector('[data-zc-node-id="prose-1"] p')!);
+      expect(editableOf(container, "prose-1")).not.toBeNull();
+    });
+
+    it("does NOT open on a node with no inline-editable field (just selects)", () => {
+      // ui.stack has no inline-editable field.
+      const onSelect = vi.fn();
+      const { container } = render(
+        h(CompositionCanvas, {
+          document: SPLIT,
+          entries: composerEntries,
+          session: { ...EDIT, selectedId: "stack-1" },
+          onSelect,
+          onRequestAdd: vi.fn(),
+          onRequestNodeMenu: vi.fn(),
+          onRequestInsertMenu: vi.fn(),
+          onCommitInlineEdit: vi.fn(),
+        }),
+      );
+      fireEvent.click(container.querySelector('[data-zc-node-id="stack-1"] > div')!);
+      expect(container.querySelector(EDITABLE)).toBeNull();
+      expect(onSelect).toHaveBeenCalledWith("stack-1");
+    });
+
+    it("targets the RIGHT element for a decorated component (SectionHeading → h2, not the eyebrow)", () => {
+      // heading-1 in SPLIT has no eyebrow; use a fixture that renders one.
+      const document = doc([
+        node("h-2", "ui.section-heading", { eyebrow: "About", heading: "Team", as: "h2" }),
+      ]);
+      const { container } = openSession("h-2", "h2", document);
+      const wrapper = container.querySelector('[data-zc-node-id="h-2"]')!;
+      // The h2 is the editable region…
+      expect(wrapper.querySelector(`h2${EDITABLE}`)).not.toBeNull();
+      // …and the eyebrow paragraph is NOT.
+      const eyebrow = [...wrapper.querySelectorAll("p")].find((p) => p.textContent === "About");
+      expect(eyebrow).toBeDefined();
+      expect(eyebrow!.hasAttribute("data-zc-inline-editing")).toBe(false);
+    });
+  });
+
+  describe("commit / cancel matrix", () => {
+    it("Enter COMMITS a single-line field with the current value", () => {
+      const { container, onCommitInlineEdit } = openSession("h-1", "h2", doc([
+        node("h-1", "ui.section-heading", { heading: "Compose", as: "h2" }),
+      ]));
+      const editable = editableOf(container, "h-1")!;
+      editable.textContent = "Composed";
+      fireEvent.keyDown(editable, { key: "Enter" });
+      expect(onCommitInlineEdit).toHaveBeenCalledTimes(1);
+      expect(onCommitInlineEdit).toHaveBeenCalledWith("h-1", "heading", "Composed");
+      // Session exited — the editable is gone (body remounted to read mode).
+      expect(container.querySelector(EDITABLE)).toBeNull();
+    });
+
+    it("blur COMMITS", () => {
+      const { container, onCommitInlineEdit } = openSession("prose-1", "p");
+      const editable = editableOf(container, "prose-1")!;
+      editable.textContent = "Reworded body.";
+      fireEvent.blur(editable);
+      expect(onCommitInlineEdit).toHaveBeenCalledWith("prose-1", "children", "Reworded body.");
+    });
+
+    it("Escape CANCELS without committing", () => {
+      const { container, onCommitInlineEdit } = openSession("prose-1", "p");
+      const editable = editableOf(container, "prose-1")!;
+      editable.textContent = "Discard me";
+      fireEvent.keyDown(editable, { key: "Escape" });
+      expect(onCommitInlineEdit).not.toHaveBeenCalled();
+      expect(container.querySelector(EDITABLE)).toBeNull();
+    });
+
+    it("preserves NEWLINES for a multiline field on commit", () => {
+      const { container, onCommitInlineEdit } = openSession("prose-1", "p");
+      const editable = editableOf(container, "prose-1")!;
+      editable.innerHTML = "Edited line 1<br>Edited line 2";
+      fireEvent.blur(editable);
+      expect(onCommitInlineEdit).toHaveBeenCalledWith("prose-1", "children", "Edited line 1\nEdited line 2");
+    });
+
+    it("Enter does NOT commit a MULTILINE field (it inserts a newline instead)", () => {
+      const { container, onCommitInlineEdit } = openSession("prose-1", "p");
+      fireEvent.keyDown(editableOf(container, "prose-1")!, { key: "Enter" });
+      expect(onCommitInlineEdit).not.toHaveBeenCalled();
+      expect(editableOf(container, "prose-1")).not.toBeNull(); // still editing
+    });
+  });
+
+  describe("IME-safe commit", () => {
+    it("Enter during composition does NOT commit; the next Enter after it commits ONCE", () => {
+      const { container, onCommitInlineEdit } = openSession("h-1", "h2", doc([
+        node("h-1", "ui.section-heading", { heading: "Compose", as: "h2" }),
+      ]));
+      const editable = editableOf(container, "h-1")!;
+
+      act(() => editable.dispatchEvent(new Event("compositionstart", { bubbles: true })));
+      // The composition's confirming Enter (isComposing / keyCode 229) must NOT commit.
+      act(() =>
+        editable.dispatchEvent(
+          new KeyboardEvent("keydown", { key: "Enter", isComposing: true, bubbles: true, cancelable: true }),
+        ),
+      );
+      expect(onCommitInlineEdit).not.toHaveBeenCalled();
+
+      act(() => editable.dispatchEvent(new Event("compositionend", { bubbles: true })));
+      editable.textContent = "日本語";
+      act(() =>
+        editable.dispatchEvent(
+          new KeyboardEvent("keydown", { key: "Enter", isComposing: false, bubbles: true, cancelable: true }),
+        ),
+      );
+      expect(onCommitInlineEdit).toHaveBeenCalledTimes(1);
+      expect(onCommitInlineEdit).toHaveBeenCalledWith("h-1", "heading", "日本語");
+    });
+
+    it("also treats keyCode 229 as an in-flight composition", () => {
+      const { container, onCommitInlineEdit } = openSession("h-1", "h2", doc([
+        node("h-1", "ui.section-heading", { heading: "Compose", as: "h2" }),
+      ]));
+      const editable = editableOf(container, "h-1")!;
+      act(() =>
+        editable.dispatchEvent(
+          new KeyboardEvent("keydown", { key: "Enter", keyCode: 229, bubbles: true, cancelable: true }),
+        ),
+      );
+      expect(onCommitInlineEdit).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("caret survival + no duplication", () => {
+    it("the editable DOM node survives an unrelated re-render and keeps its content", () => {
+      const onCommitInlineEdit = vi.fn();
+      const props = {
+        document: SPLIT,
+        entries: composerEntries,
+        session: { ...EDIT, selectedId: "prose-1" } as PreviewSession,
+        onSelect: vi.fn(),
+        onRequestAdd: vi.fn(),
+        onRequestNodeMenu: vi.fn(),
+        onRequestInsertMenu: vi.fn(),
+        onCommitInlineEdit,
+      };
+      const { container, rerender } = render(h(CompositionCanvas, props));
+      fireEvent.click(container.querySelector('[data-zc-node-id="prose-1"] p')!);
+      const before = editableOf(container, "prose-1")!;
+      expect(before.textContent).toBe("First paragraph.");
+
+      // An unrelated session change (theme) must not reset the caret: same DOM
+      // node, same imperative content, still editable, no commit.
+      rerender(h(CompositionCanvas, { ...props, session: { ...props.session, theme: "dark" } }));
+      const after = editableOf(container, "prose-1")!;
+      expect(after).toBe(before);
+      expect(after.textContent).toBe("First paragraph.");
+      expect(after.getAttribute("contenteditable")).toBe("true");
+      expect(onCommitInlineEdit).not.toHaveBeenCalled();
+    });
+
+    it("leaves NO duplicate text node after exiting the session", () => {
+      const { container, onCommitInlineEdit } = openSession("prose-1", "p");
+      const editable = editableOf(container, "prose-1")!;
+      editable.textContent = "Committed copy.";
+      fireEvent.blur(editable);
+      expect(onCommitInlineEdit).toHaveBeenCalled();
+
+      const paragraphs = container.querySelectorAll('[data-zc-node-id="prose-1"] > p');
+      expect(paragraphs).toHaveLength(1);
+      // Read-mode paragraph shows the document's (still original) value — exactly
+      // one text node, and no lingering contentEditable.
+      expect(paragraphs[0]!.childNodes).toHaveLength(1);
+      expect(container.querySelector(EDITABLE)).toBeNull();
+    });
+  });
+
+  describe("decorated component: the arrow is protected and excluded", () => {
+    it("keeps CtaButton's arrow, marks it non-editable, and commits ONLY the label", () => {
+      const { container, onCommitInlineEdit } = openSession("cta", "a", doc([
+        node("cta", "ui.cta-button", { href: "/x", children: "Get started", arrow: true }),
+      ]));
+      const editable = editableOf(container, "cta")!;
+      expect(editable.tagName).toBe("A");
+      const arrow = editable.querySelector('[aria-hidden="true"]')!;
+      expect(arrow).not.toBeNull();
+      expect(arrow.getAttribute("contenteditable")).toBe("false");
+
+      // Edit only the label text node (before the arrow).
+      (editable.firstChild as Text).data = "Go now";
+      fireEvent.keyDown(editable, { key: "Enter" });
+      expect(onCommitInlineEdit).toHaveBeenCalledWith("cta", "children", "Go now");
+    });
+  });
+
+  describe("dblclick guard", () => {
+    it("a dblclick inside the active session does not bubble to the canvas (word-select can't restart it)", () => {
+      const { container } = openSession("cta", "a", doc([
+        node("cta", "ui.cta-button", { href: "/x", children: "Label", arrow: true }),
+      ]));
+      const editable = editableOf(container, "cta")!;
+      (editable.firstChild as Text).data = "Typed label";
+
+      const canvasSpy = vi.fn();
+      container.querySelector(".zc-canvas")!.addEventListener("dblclick", canvasSpy);
+      fireEvent.dblClick(editable);
+
+      // Propagation stopped: the canvas never saw it, so the session was not
+      // restarted and the typing is preserved on the SAME node.
+      expect(canvasSpy).not.toHaveBeenCalled();
+      expect(editableOf(container, "cta")).toBe(editable);
+      expect((editable.firstChild as Text).data).toBe("Typed label");
+    });
+  });
+
+  describe("switching to Preview mid-edit commits the draft", () => {
+    it("commits the in-flight value when the mode flips to preview", () => {
+      const onCommitInlineEdit = vi.fn();
+      const document = doc([node("h-1", "ui.section-heading", { heading: "Compose", as: "h2" })]);
+      const props = {
+        document,
+        entries: composerEntries,
+        session: { ...EDIT, selectedId: "h-1" } as PreviewSession,
+        onSelect: vi.fn(),
+        onRequestAdd: vi.fn(),
+        onRequestNodeMenu: vi.fn(),
+        onRequestInsertMenu: vi.fn(),
+        onCommitInlineEdit,
+      };
+      const { container, rerender } = render(h(CompositionCanvas, props));
+      fireEvent.click(container.querySelector('[data-zc-node-id="h-1"] h2')!);
+      const editable = editableOf(container, "h-1")!;
+      editable.textContent = "Draft heading";
+
+      act(() => rerender(h(CompositionCanvas, { ...props, session: { ...props.session, mode: "preview" } })));
+
+      expect(onCommitInlineEdit).toHaveBeenCalledTimes(1);
+      expect(onCommitInlineEdit).toHaveBeenCalledWith("h-1", "heading", "Draft heading");
+    });
   });
 });
 

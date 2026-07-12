@@ -100,6 +100,22 @@ html[${COMPOSER_PREVIEW_DOC_ATTR}] {
   outline-offset: 2px;
 }
 
+/* ── Inline text editing (issue #257) ─────────────────────────────────────── */
+/* The active contentEditable region: a clear editing affordance and a text
+   caret. The outline is out-of-flow, so making a text node editable neither
+   reflows nor remounts the component (see the caret-survival note in
+   renderer.ts). */
+[${COMPOSER_PREVIEW_DOC_ATTR}] [data-zc-inline-editing] {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
+  border-radius: 2px;
+  cursor: text;
+  background: color-mix(in srgb, var(--color-accent) 8%, transparent);
+}
+[${COMPOSER_PREVIEW_DOC_ATTR}] [data-zc-inline-editing]:focus {
+  outline-color: var(--color-focus);
+}
+
 /* ── Chrome: floats ABOVE the node's box, never over it ───────────────────── */
 .zc-chrome {
   position: absolute;
