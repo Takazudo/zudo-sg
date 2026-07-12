@@ -124,6 +124,12 @@ export default function ComposerPreviewApp(): JSX.Element {
     clientRef.current?.emitCommitInlineEdit(nodeId, fieldKey, value);
   }, []);
 
+  const onDropNode = useCallback((sourceNodeId: string, target: InsertionTarget, copy: boolean) => {
+    // The client stamps the revision on screen (`documentRevision`); the host
+    // validates it and revalidates the whole move/copy before applying.
+    clientRef.current?.emitDropNode(sourceNodeId, target, copy);
+  }, []);
+
   const onNodeError = useCallback((nodeId: string, message: string) => {
     clientRef.current?.emitError(`Node "${nodeId}" failed to render: ${message}`, true);
   }, []);
@@ -169,6 +175,7 @@ export default function ComposerPreviewApp(): JSX.Element {
         onRequestNodeMenu,
         onRequestInsertMenu,
         onCommitInlineEdit,
+        onDropNode,
         onNodeError,
       })
     : h("p", { class: "zc-empty" }, "Waiting for a composition…");
