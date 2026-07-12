@@ -369,6 +369,28 @@ export const commitInlineEditMessageSchema = z
   })
   .strict();
 
+/**
+ * A cross-slot drag & drop completed on the canvas (issue #258). Carries the
+ * drag SOURCE's node id, #245's insert-at-index `target`, and `copy` (Alt held
+ * at drop → a copy instead of a move). `documentRevision` is the revision the
+ * preview was showing when the user dropped — the host uses it exactly like
+ * #257's inline-edit `documentRevision` to DROP a stale drop authored against a
+ * document it has since superseded (see `composer-canvas-host.tsx`), never
+ * silently applying it. The host revalidates the whole operation ATOMICALLY
+ * (slot acceptance, cardinality, cycle guard, root semantics, opaque-node
+ * policy) before applying — the iframe's own highlight state is advisory only.
+ */
+export const dropNodeMessageSchema = z
+  .object({
+    ...envelope,
+    type: z.literal("drop-node"),
+    sourceNodeId: z.string().min(1),
+    target: insertionTargetSchema,
+    copy: z.boolean(),
+    documentRevision: revisionSchema,
+  })
+  .strict();
+
 /** Append future preview → parent messages here (see the module header). */
 export const PREVIEW_TO_PARENT_MEMBERS = [
   readyMessageSchema,
@@ -378,6 +400,7 @@ export const PREVIEW_TO_PARENT_MEMBERS = [
   requestInsertMenuMessageSchema,
   errorMessageSchema,
   commitInlineEditMessageSchema,
+  dropNodeMessageSchema,
 ] as const;
 
 export const previewToParentSchema = z.discriminatedUnion("type", [...PREVIEW_TO_PARENT_MEMBERS]);
@@ -389,6 +412,7 @@ export type RequestNodeMenuMessage = z.infer<typeof requestNodeMenuMessageSchema
 export type RequestInsertMenuMessage = z.infer<typeof requestInsertMenuMessageSchema>;
 export type ErrorMessage = z.infer<typeof errorMessageSchema>;
 export type CommitInlineEditMessage = z.infer<typeof commitInlineEditMessageSchema>;
+export type DropNodeMessage = z.infer<typeof dropNodeMessageSchema>;
 export type PreviewToParentMessage = z.infer<typeof previewToParentSchema>;
 
 // ── Structural window/message types ─────────────────────────────────────────
@@ -522,6 +546,15 @@ export function commitInlineEditMessage(
   documentRevision: number,
 ): CommitInlineEditMessage {
   return { ...envelopeValue(), type: "commit-inline-edit", nodeId, fieldKey, value, documentRevision };
+}
+
+export function dropNodeMessage(
+  sourceNodeId: string,
+  target: InsertionTarget,
+  copy: boolean,
+  documentRevision: number,
+): DropNodeMessage {
+  return { ...envelopeValue(), type: "drop-node", sourceNodeId, target, copy, documentRevision };
 }
 
 export function errorMessage(

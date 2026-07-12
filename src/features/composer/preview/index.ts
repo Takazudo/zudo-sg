@@ -41,6 +41,8 @@ export {
   COMPOSER_PREVIEW_PROTOCOL_VERSION,
   RESERVED_PROP_KEYS,
   commitInlineEditMessageSchema,
+  dropNodeMessage,
+  dropNodeMessageSchema,
   compositionDocumentSchema,
   compositionNodeSchema,
   insertionTargetSchema,
@@ -63,6 +65,7 @@ export {
 } from "./protocol";
 export type {
   CommitInlineEditMessage,
+  DropNodeMessage,
   ErrorMessage,
   GuardFailure,
   GuardResult,

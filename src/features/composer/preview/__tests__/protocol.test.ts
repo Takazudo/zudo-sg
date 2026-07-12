@@ -5,6 +5,7 @@ import {
   COMPOSER_PREVIEW_PROTOCOL_VERSION,
   RESERVED_PROP_KEYS,
   commitInlineEditMessage,
+  dropNodeMessage,
   modeMessage,
   readParentToPreview,
   readPreviewToParent,
@@ -488,6 +489,46 @@ describe("readPreviewToParent", () => {
     ["negative documentRevision", { ...commitInlineEditMessage("prose-1", "children", "v", 1), documentRevision: -1 }],
     ["extra key", { ...commitInlineEditMessage("prose-1", "children", "v", 1), smuggled: true }],
   ])("REJECTS a malformed commit-inline-edit (%s)", (_label, data) => {
+    const result = readPreviewToParent({ data, origin: ORIGIN, source: IFRAME }, FROM_IFRAME);
+    expect(result.ok).toBe(false);
+  });
+
+  // ── drop-node (issue #258) ─────────────────────────────────────────────────
+  it("carries { sourceNodeId, target, copy, documentRevision } verbatim on drop-node", () => {
+    const target = { parentId: "split-1", slotId: "right", index: 2 };
+    const result = readPreviewToParent(
+      { data: dropNodeMessage("stack-1", target, true, 9), origin: ORIGIN, source: IFRAME },
+      FROM_IFRAME,
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok || result.message.type !== "drop-node") return;
+    expect(result.message).toMatchObject({
+      sourceNodeId: "stack-1",
+      target,
+      copy: true,
+      documentRevision: 9,
+    });
+  });
+
+  it("carries a virtual-root target verbatim on drop-node", () => {
+    const target = { parentId: null, slotId: "root", index: 0 };
+    const result = readPreviewToParent(
+      { data: dropNodeMessage("box-1", target, false, 3), origin: ORIGIN, source: IFRAME },
+      FROM_IFRAME,
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok || result.message.type !== "drop-node") return;
+    expect(result.message.target).toEqual(target);
+    expect(result.message.copy).toBe(false);
+  });
+
+  it.each([
+    ["empty sourceNodeId", { ...dropNodeMessage("x", { parentId: null, slotId: "root", index: 0 }, false, 1), sourceNodeId: "" }],
+    ["non-boolean copy", { ...dropNodeMessage("box-1", { parentId: null, slotId: "root", index: 0 }, false, 1), copy: "yes" }],
+    ["negative documentRevision", { ...dropNodeMessage("box-1", { parentId: null, slotId: "root", index: 0 }, false, 1), documentRevision: -1 }],
+    ["append-only target (no index)", { ...dropNodeMessage("box-1", { parentId: null, slotId: "root", index: 0 }, false, 1), target: { parentId: null, slotId: "root" } }],
+    ["extra key", { ...dropNodeMessage("box-1", { parentId: null, slotId: "root", index: 0 }, false, 1), smuggled: true }],
+  ])("REJECTS a malformed drop-node (%s)", (_label, data) => {
     const result = readPreviewToParent({ data, origin: ORIGIN, source: IFRAME }, FROM_IFRAME);
     expect(result.ok).toBe(false);
   });

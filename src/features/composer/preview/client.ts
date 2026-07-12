@@ -20,6 +20,7 @@ import type {
 } from "./protocol";
 import {
   commitInlineEditMessage,
+  dropNodeMessage,
   errorMessage,
   readParentToPreview,
   readyMessage,
@@ -68,6 +69,12 @@ export interface PreviewClient {
    * commit — exactly like `emitSelect`/`emitRequestAdd` stamp theirs.
    */
   emitCommitInlineEdit(nodeId: string, fieldKey: string, value: string): void;
+  /**
+   * A cross-slot drag & drop committed (issue #258). Stamped with the revision
+   * on screen (`documentRevision`) so the host can drop a stale drop — exactly
+   * like `emitCommitInlineEdit` stamps its own.
+   */
+  emitDropNode(sourceNodeId: string, target: InsertionTarget, copy: boolean): void;
   emitError(message: string, recoverable?: boolean): void;
   /** The newest applied state. */
   readonly state: PreviewState;
@@ -134,6 +141,9 @@ export function createPreviewClient(options: PreviewClientOptions): PreviewClien
     },
     emitCommitInlineEdit(nodeId, fieldKey, value) {
       post(commitInlineEditMessage(nodeId, fieldKey, value, outboundRevision()));
+    },
+    emitDropNode(sourceNodeId, target, copy) {
+      post(dropNodeMessage(sourceNodeId, target, copy, outboundRevision()));
     },
     emitError(message, recoverable = true) {
       post(errorMessage(state.revision < 0 ? null : state.revision, message, recoverable));

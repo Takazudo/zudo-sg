@@ -135,6 +135,14 @@ export interface ComposerPreviewBridgeOptions {
    * through `updateProps`, dropping a stale edit rather than applying it.
    */
   onCommitInlineEdit?: (nodeId: string, fieldKey: string, value: string, documentRevision: number) => void;
+  /**
+   * A cross-slot drag & drop completed inside the iframe (issue #258). `copy` is
+   * true when Alt was held at drop. `documentRevision` is the revision the
+   * preview was showing at drop time — the host validates it against the newest
+   * DOCUMENT snapshot it sent before applying the move/copy through the
+   * controller, dropping a stale drop rather than applying it.
+   */
+  onDropNode?: (sourceNodeId: string, target: InsertionTarget, copy: boolean, documentRevision: number) => void;
   onError?: (message: string, recoverable: boolean, revision: number | null) => void;
   /** A message that failed source/origin/schema validation was DROPPED. */
   onRejected?: (reason: GuardFailure, detail?: string) => void;
@@ -238,6 +246,9 @@ export function createComposerPreviewBridge(
         return;
       case "commit-inline-edit":
         options.onCommitInlineEdit?.(message.nodeId, message.fieldKey, message.value, message.documentRevision);
+        return;
+      case "drop-node":
+        options.onDropNode?.(message.sourceNodeId, message.target, message.copy, message.documentRevision);
         return;
       case "error":
         options.onError?.(message.message, message.recoverable, message.revision);
