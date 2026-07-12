@@ -19,6 +19,22 @@ import * as card from "../../card/card.stories";
 import * as cardsCallout from "../../cards/callout/callout.stories";
 import * as cardsCardGrid from "../../cards/card-grid/card-grid.stories";
 import * as cardsCard from "../../cards/card/card.stories";
+import * as contentProseA from "../../content/prose-a/prose-a.stories";
+import * as contentProseBlockquote from "../../content/prose-blockquote/prose-blockquote.stories";
+import * as contentProseDl from "../../content/prose-dl/prose-dl.stories";
+import * as contentProseEm from "../../content/prose-em/prose-em.stories";
+import * as contentProseH2 from "../../content/prose-h2/prose-h2.stories";
+import * as contentProseH3 from "../../content/prose-h3/prose-h3.stories";
+import * as contentProseH4 from "../../content/prose-h4/prose-h4.stories";
+import * as contentProseH5 from "../../content/prose-h5/prose-h5.stories";
+import * as contentProseH6 from "../../content/prose-h6/prose-h6.stories";
+import * as contentProseLi from "../../content/prose-li/prose-li.stories";
+import * as contentProseOl from "../../content/prose-ol/prose-ol.stories";
+import * as contentProseP from "../../content/prose-p/prose-p.stories";
+import * as contentProseStrong from "../../content/prose-strong/prose-strong.stories";
+import * as contentProseTable from "../../content/prose-table/prose-table.stories";
+import * as contentProseUl from "../../content/prose-ul/prose-ul.stories";
+import * as contentTypography from "../../content/typography/typography.stories";
 import * as dialog from "../../dialog/dialog.stories";
 import * as footer from "../../footer/footer.stories";
 import * as form from "../../form/form.stories";
@@ -42,6 +58,22 @@ export const STORY_MODULES: Record<string, StoryModule> = {
   "cards/callout/callout.stories.tsx": cardsCallout as unknown as StoryModule,
   "cards/card-grid/card-grid.stories.tsx": cardsCardGrid as unknown as StoryModule,
   "cards/card/card.stories.tsx": cardsCard as unknown as StoryModule,
+  "content/prose-a/prose-a.stories.tsx": contentProseA as unknown as StoryModule,
+  "content/prose-blockquote/prose-blockquote.stories.tsx": contentProseBlockquote as unknown as StoryModule,
+  "content/prose-dl/prose-dl.stories.tsx": contentProseDl as unknown as StoryModule,
+  "content/prose-em/prose-em.stories.tsx": contentProseEm as unknown as StoryModule,
+  "content/prose-h2/prose-h2.stories.tsx": contentProseH2 as unknown as StoryModule,
+  "content/prose-h3/prose-h3.stories.tsx": contentProseH3 as unknown as StoryModule,
+  "content/prose-h4/prose-h4.stories.tsx": contentProseH4 as unknown as StoryModule,
+  "content/prose-h5/prose-h5.stories.tsx": contentProseH5 as unknown as StoryModule,
+  "content/prose-h6/prose-h6.stories.tsx": contentProseH6 as unknown as StoryModule,
+  "content/prose-li/prose-li.stories.tsx": contentProseLi as unknown as StoryModule,
+  "content/prose-ol/prose-ol.stories.tsx": contentProseOl as unknown as StoryModule,
+  "content/prose-p/prose-p.stories.tsx": contentProseP as unknown as StoryModule,
+  "content/prose-strong/prose-strong.stories.tsx": contentProseStrong as unknown as StoryModule,
+  "content/prose-table/prose-table.stories.tsx": contentProseTable as unknown as StoryModule,
+  "content/prose-ul/prose-ul.stories.tsx": contentProseUl as unknown as StoryModule,
+  "content/typography/typography.stories.tsx": contentTypography as unknown as StoryModule,
   "dialog/dialog.stories.tsx": dialog as unknown as StoryModule,
   "footer/footer.stories.tsx": footer as unknown as StoryModule,
   "form/form.stories.tsx": form as unknown as StoryModule,
