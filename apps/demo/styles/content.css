@@ -1,0 +1,101 @@
+/* =============================================================================
+ * .zd-content — markdown/MDX prose flow contract.
+ *
+ * Applied to the wrapper around rendered MDX body content (see
+ * pages/[...slug].tsx). Deliberately holds NO appearance rules (color,
+ * border, list-style, font) — those live on the individual prose components
+ * (#233/#227's `_mdx-components.ts` registrations). This file owns only the
+ * vertical rhythm between an MDX document's direct-child elements, plus a
+ * short list of "retained" elements that #227's prose batch didn't take over
+ * (inline code, pre, hr, img).
+ *
+ * Rules:
+ *   - Every spacing rule is `> direct child` scoped + `--flow-space` /
+ *     `margin-top` — never descendant-scoped, so component islands nested in
+ *     the content (cards, tables, etc.) aren't affected by this file.
+ *   - `:where(...)` keeps specificity at 0 so a utility class or component
+ *     style easily overrides it.
+ *
+ * MUST STAY UNLAYERED — this file relies on cascade order beating Tailwind's
+ * layered utilities/preflight (an `@layer` block would lose to them
+ * regardless of source order). Do not wrap this in `@layer`.
+ * ============================================================================= */
+
+.zd-content {
+  color: var(--color-fg);
+  font-size: var(--text-body);
+  line-height: var(--leading-relaxed);
+}
+
+/* Vertical rhythm between direct children; each element tunes --flow-space. */
+.zd-content > :where(* + *) {
+  margin-top: var(--flow-space, var(--spacing-vsp-md));
+}
+
+.zd-content > :where(h2) {
+  --flow-space: var(--spacing-vsp-xl);
+}
+
+.zd-content > :where(h3) {
+  --flow-space: var(--spacing-vsp-lg);
+}
+
+.zd-content > :where(h4) {
+  --flow-space: var(--spacing-vsp-md);
+}
+
+/* Tighten the space right after a heading (heading → body reads closer than
+ * body → body). Same specificity as the heading rules above — this block
+ * must stay AFTER them so source order decides the winner; don't reorder. */
+.zd-content > :where(h2, h3) + * {
+  --flow-space: var(--spacing-vsp-xs);
+}
+
+.zd-content > :where(h4, h5, h6) + * {
+  --flow-space: var(--spacing-vsp-2xs);
+}
+
+/* ── Retained appearance rules (not covered by a prose component yet) ──
+ * NOTE: unlike some sibling projects, these rules are NOT scoped away from
+ * embedded component islands (e.g. a `<Card>` with its own internal
+ * `<code>`/`<img>`) — no such convention exists yet. If #233/#227 introduce
+ * one, exclude it here the same way `.zd-content` itself stays unlayered. */
+
+.zd-content :where(code:not(pre code)) {
+  font-size: var(--text-small);
+  font-weight: var(--font-weight-medium);
+  font-family: var(--font-mono);
+  background-color: var(--color-surface-2);
+  color: var(--color-fg);
+  border-radius: var(--radius-DEFAULT);
+  padding: 0.1em var(--spacing-hsp-xs);
+}
+
+.zd-content :where(pre) {
+  font-size: var(--text-small);
+  line-height: var(--leading-relaxed);
+  font-family: var(--font-mono);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-vsp-sm) var(--spacing-hsp-lg);
+  overflow-x: auto;
+}
+
+.zd-content :where(pre code) {
+  background: transparent;
+  padding: 0;
+  border: none;
+  color: inherit;
+  font-size: inherit;
+}
+
+.zd-content :where(hr) {
+  border: none;
+  border-top: 1px solid var(--color-border);
+}
+
+.zd-content :where(img) {
+  max-width: 100%;
+  height: auto;
+}
