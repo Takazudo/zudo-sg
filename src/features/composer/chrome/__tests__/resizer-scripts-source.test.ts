@@ -61,8 +61,14 @@ describe("RESIZER_SCRIPT", () => {
     expect(RESIZER_SCRIPT).toContain("'End'");
   });
 
-  it("is idempotent via a window install guard", () => {
-    expect(RESIZER_SCRIPT).toContain("__sgComposerResizersInstalled");
+  it("is idempotent per element (not via a one-shot global guard) so a late-hydrating island still wires", () => {
+    // The old `__sgComposerResizersInstalled` global one-shot guard wired
+    // nothing (the island had not mounted) yet blocked every retry. Idempotency
+    // now lives on each element (`__sgWired`), and a MutationObserver retries
+    // `init()` until both rails exist.
+    expect(RESIZER_SCRIPT).not.toContain("__sgComposerResizersInstalled");
+    expect(RESIZER_SCRIPT).toContain("__sgWired");
+    expect(RESIZER_SCRIPT).toContain("MutationObserver");
   });
 
   it("dispatches the Preact-bridging width-change event only on commit (pointerup/keydown), not on every pointermove", () => {

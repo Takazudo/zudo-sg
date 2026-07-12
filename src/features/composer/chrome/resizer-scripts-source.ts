@@ -50,8 +50,6 @@ export const RESTORE_SCRIPT = `(function(){
 })();`;
 
 export const RESIZER_SCRIPT = `(function(){
-  if (window.__sgComposerResizersInstalled) return;
-  window.__sgComposerResizersInstalled = true;
   var MIN=${MIN_RAIL_W}, MAX=${MAX_RAIL_W}, MIN_CANVAS=${MIN_CANVAS_W}, TRACK=${RESIZER_TRACK_W};
   var STEP = 16;
   var ACCENT_OUTLINE = '2px solid var(--zd-accent, rgba(128,128,128,0.5))';
@@ -165,6 +163,23 @@ export const RESIZER_SCRIPT = `(function(){
       inspector.__sgWired = true;
       attach(inspector, { cssVar: '${CSS_VAR_INSPECTOR_W}', lsKey: '${LS_INSPECTOR_WIDTH}', otherCssVar: '${CSS_VAR_TREE_W}', edge: 'right', rail: 'inspector' });
     }
+    return !!(tree && tree.__sgWired && inspector && inspector.__sgWired);
   }
-  init();
+
+  // The workspace mounts as a "when: load" island, so this body-end script
+  // usually runs BEFORE the resizer elements exist. Wire whatever is present
+  // now, then observe until the island hydrates and both rails are wired
+  // (per-element __sgWired keeps re-runs idempotent). A stale one-shot global
+  // guard here used to wire nothing yet block every retry — that was the bug.
+  if (window.__sgComposerResizerObserver) {
+    window.__sgComposerResizerObserver.disconnect();
+    window.__sgComposerResizerObserver = null;
+  }
+  if (!init() && typeof MutationObserver !== 'undefined') {
+    var obs = new MutationObserver(function(){
+      if (init()) { obs.disconnect(); window.__sgComposerResizerObserver = null; }
+    });
+    obs.observe(document.documentElement, { childList: true, subtree: true });
+    window.__sgComposerResizerObserver = obs;
+  }
 })();`;

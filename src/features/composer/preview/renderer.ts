@@ -178,15 +178,59 @@ function readEditableValue(el: HTMLElement, multiline: boolean): string {
   return multiline ? out : out.replace(/[\r\n]+/g, " ");
 }
 
-/** Best-effort caret-to-end. Selection APIs missing (or a detached el) never throw. */
+/**
+ * The last editable text node in document order, skipping decoration islands
+ * (`aria-hidden` / `contenteditable="false"`, e.g. `CtaButton`'s trailing
+ * arrow) with the same exclusion rule as `readEditableValue`. Returns null for
+ * a field with no editable text (an empty field, or one holding only
+ * decoration).
+ */
+function lastEditableTextNode(el: HTMLElement): Text | null {
+  let found: Text | null = null;
+  const walk = (node: Node): void => {
+    for (const child of Array.from(node.childNodes)) {
+      if (child.nodeType === 3 /* Text */) {
+        found = child as Text;
+        continue;
+      }
+      if (child.nodeType !== 1 /* Element */) continue;
+      const elChild = child as HTMLElement;
+      if (
+        elChild.getAttribute("aria-hidden") === "true" ||
+        elChild.getAttribute("contenteditable") === "false"
+      ) {
+        continue; // decoration island — never a caret target
+      }
+      walk(elChild);
+    }
+  };
+  walk(el);
+  return found;
+}
+
+/**
+ * Best-effort caret-to-end. Collapses to the end of the last EDITABLE text node
+ * rather than `el`'s raw contents end: when a field ends in a
+ * `contenteditable="false"` decoration (e.g. `CtaButton`'s trailing arrow),
+ * collapsing to the raw end lands the caret after the non-editable node and the
+ * browser bounces it to offset 0, so typed text prepends instead of appends
+ * (issue #257 follow-up). Selection APIs missing (or a detached el) never throw.
+ */
 function placeCaretAtEnd(el: HTMLElement): void {
   try {
     const view = el.ownerDocument.defaultView;
     const selection = view?.getSelection?.();
     if (!selection) return;
     const range = el.ownerDocument.createRange();
-    range.selectNodeContents(el);
-    range.collapse(false);
+    const textNode = lastEditableTextNode(el);
+    if (textNode) {
+      range.setStart(textNode, textNode.data.length);
+    } else {
+      // No editable text (empty field or decoration-only): caret before any
+      // trailing decoration, at the start of the editable host.
+      range.setStart(el, 0);
+    }
+    range.collapse(true);
     selection.removeAllRanges();
     selection.addRange(range);
   } catch {

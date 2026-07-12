@@ -600,22 +600,12 @@ test.describe.serial("Composer 14-step walkthrough (#252) — steps 1-6, 8-13", 
 
   // ── Step 11 ────────────────────────────────────────────────────────────
   test("step 11 - inline-edits a flagged text field on the canvas (commit/cancel/IME/blur) and the inspector reflects it", async () => {
-    // KNOWN REAL APP BUG (#252 follow-up, NOT a spec issue) — left failing on
-    // purpose via test.fail() so the serial chain still reaches steps 12-13.
-    //
-    // Inline-editing CtaButton's `label` is broken because its editable region
-    // ends in a `contenteditable="false"` decoration island (the trailing "→"
-    // arrow). renderer.ts's `placeCaretAtEnd` does
-    // `selectNodeContents(el); collapse(false)`, which lands the caret AFTER
-    // that non-editable arrow; the browser relocates it to offset 0. Net effect
-    // in a real browser (verified against the built DOM): the caret sits at the
-    // START, Ctrl+A / selectText / fill cannot select the pre-filled value, and
-    // typed text is PREPENDED — so "Get building" commits as
-    // "Get buildingGet started". The SAME flow works perfectly on nodes whose
-    // editable has no trailing decoration (heading-1's SectionHeading,
-    // prose-1's ProseP both replace + commit correctly). Fix belongs in the
-    // renderer's caret/selection handling for decorated editables (app code).
-    test.fail();
+    // Regression guard for a #252-confirmation fix: inline-editing CtaButton's
+    // `label` used to PREPEND ("Get building" → "Get buildingGet started")
+    // because its editable ends in a `contenteditable="false"` decoration (the
+    // trailing "→" arrow) and `placeCaretAtEnd` collapsed to the raw contents
+    // end — after the arrow — which the browser bounced to offset 0. Fixed in
+    // renderer.ts by collapsing to the last EDITABLE text node instead.
     await treeNode(page, "cta-1").locator(".sg-composer-tree-select").first().click();
     expect(await selectedTreeNodeId(page)).toBe("cta-1");
 
@@ -1017,23 +1007,14 @@ test.describe("Composer lightweight responsive + protocol checks (supplemental)"
   });
 
   test("the structure-rail resizer clamps via keyboard (Home/End) and persists", async ({ page }) => {
-    // KNOWN REAL APP BUG (#252 follow-up, NOT a spec issue) — left failing on
-    // purpose via test.fail(). The workspace resizers are entirely inert on the
-    // built page: neither keyboard (Arrow/Home/End) NOR pointer-drag changes the
-    // width (verified against the built DOM — a real +100px drag also no-ops).
-    // Root cause: `ComposerApp` is mounted as `Island({ when: "load" })` whose
-    // ssrFallback contains no resizer, so `[data-sg-composer-tree-resizer]` only
-    // exists AFTER client hydration. But `ComposerResizerInitScript`
-    // (resizer-scripts-source.ts's RESIZER_SCRIPT, a body-end inline <script>)
-    // runs during initial parse — BEFORE the island mounts — so its one-shot
-    // `init()` finds no resizer, wires nothing, yet sets the global
-    // `window.__sgComposerResizersInstalled = true` guard. The mounted resizer's
-    // per-element `__sgWired` flag stays false forever and no handler is ever
-    // attached. Fix belongs in app code (wire the resizers from inside the
-    // island after mount, or observe/retry for the element and drop the one-shot
-    // guard) — the code-panel precedent worked only because its element is SSR-
-    // present. See the agent report for full evidence.
-    test.fail();
+    // Regression guard for a #252-confirmation fix: the workspace resizers used
+    // to be entirely inert because `ComposerApp` mounts as `Island({ when:
+    // "load" })` whose ssrFallback has no resizer, so
+    // `[data-sg-composer-tree-resizer]` only exists AFTER hydration — but the
+    // body-end RESIZER_SCRIPT ran at parse time (before the island), wired
+    // nothing, and a one-shot global guard then blocked every retry. Fixed by
+    // dropping that guard and retrying `init()` via a MutationObserver until the
+    // island hydrates (per-element `__sgWired` keeps it idempotent).
     await gotoComposer(page);
     const resizer = page.locator("[data-sg-composer-tree-resizer]");
     await resizer.focus();
