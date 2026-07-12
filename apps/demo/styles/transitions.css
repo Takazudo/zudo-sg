@@ -1,0 +1,139 @@
+/* ========================================
+ * SPA page-transition base wiring.
+ *
+ * <ClientRouter /> (layouts/default.tsx) drives soft navigation. This file
+ * currently covers only the loading-overlay indicator
+ * (components/router/page-loading-overlay.tsx), which is CSS-driven
+ * visibility (no View Transitions API dependency) and works standalone.
+ *
+ * NOT yet in this file (Wave 5 #234 adds these once the SPA/search sub
+ * lands, so they can be verified against real soft navigations):
+ *   - `[data-zfb-transition-persist^="sidebar-"]` / `"header-"` rules that
+ *     extract the persistent nav rail + header from the View Transition
+ *     root snapshot (so only the main content crossfades)
+ *   - `::view-transition-old(root)` / `::view-transition-new(root)`
+ *     crossfade
+ *   - the `prefers-reduced-motion` opt-out for the above
+ * ======================================== */
+
+.page-loading-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-index-ui-overlay);
+
+  /* Hidden by default; fades in only once `data-visible` is set. */
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity 200ms ease,
+    visibility 0s linear 200ms;
+
+  /* A light frost veil derived from the page background, not a black scrim. */
+  background: var(--color-loading-scrim);
+  -webkit-backdrop-filter: blur(3px) saturate(1.05);
+  backdrop-filter: blur(3px) saturate(1.05);
+}
+
+.page-loading-overlay[data-visible] {
+  opacity: 1;
+  visibility: visible;
+  transition:
+    opacity 200ms ease,
+    visibility 0s linear 0s;
+}
+
+/* Top progress bar (3px, accent color) — indeterminate slide. */
+.page-loading-bar {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline: 0;
+  block-size: 3px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--color-accent) 18%, transparent);
+}
+
+.page-loading-bar::before {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  inline-size: 40%;
+  background: var(--color-accent);
+  border-radius: var(--radius-full);
+  /* Paused while idle — only runs while the overlay is visible. */
+  animation: zdLoadingBarSlide 1.1s ease-in-out infinite;
+  animation-play-state: paused;
+}
+
+@keyframes zdLoadingBarSlide {
+  0% {
+    transform: translateX(-110%);
+  }
+  60% {
+    transform: translateX(180%);
+  }
+  100% {
+    transform: translateX(180%);
+  }
+}
+
+/* Centered spinner ring (accent color). */
+.page-loading-spinner {
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-start: 50%;
+  inline-size: 48px;
+  block-size: 48px;
+  margin-block-start: -24px;
+  margin-inline-start: -24px;
+
+  border: 3px solid color-mix(in srgb, var(--color-accent) 22%, transparent);
+  border-bottom-color: transparent;
+  border-radius: var(--radius-full);
+  animation: zdLoadingSpin 0.8s linear infinite;
+  animation-play-state: paused;
+}
+
+.page-loading-overlay[data-visible] .page-loading-bar::before,
+.page-loading-overlay[data-visible] .page-loading-spinner {
+  animation-play-state: running;
+}
+
+@media (min-width: 1024px) {
+  .page-loading-spinner {
+    inline-size: 64px;
+    block-size: 64px;
+    margin-block-start: -32px;
+    margin-inline-start: -32px;
+  }
+}
+
+@keyframes zdLoadingSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Pending nav link (the one that was clicked) — accent-colored while navigating. */
+[data-zd-nav-pending] {
+  color: var(--color-accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-loading-overlay {
+    transition: none;
+  }
+
+  .page-loading-spinner {
+    animation: none;
+    border-color: color-mix(in srgb, var(--color-accent) 45%, transparent);
+    opacity: 0.6;
+  }
+
+  .page-loading-bar::before {
+    animation: none;
+    inline-size: 100%;
+    transform: none;
+    opacity: 0.6;
+  }
+}
