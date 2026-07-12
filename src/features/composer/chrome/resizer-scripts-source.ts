@@ -181,5 +181,15 @@ export const RESIZER_SCRIPT = `(function(){
     });
     obs.observe(document.documentElement, { childList: true, subtree: true });
     window.__sgComposerResizerObserver = obs;
+    // Safety valve: the island mounts on \`load\`, so init() normally succeeds
+    // within a second. If the rails never appear (e.g. the user navigated away
+    // before hydration), stop observing rather than watch the whole document
+    // forever.
+    setTimeout(function(){
+      if (window.__sgComposerResizerObserver === obs) {
+        obs.disconnect();
+        window.__sgComposerResizerObserver = null;
+      }
+    }, 15000);
   }
 })();`;
