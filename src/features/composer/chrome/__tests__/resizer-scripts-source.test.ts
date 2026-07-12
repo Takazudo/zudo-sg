@@ -64,4 +64,19 @@ describe("RESIZER_SCRIPT", () => {
   it("is idempotent via a window install guard", () => {
     expect(RESIZER_SCRIPT).toContain("__sgComposerResizersInstalled");
   });
+
+  it("dispatches the Preact-bridging width-change event only on commit (pointerup/keydown), not on every pointermove", () => {
+    const applyBody = RESIZER_SCRIPT.slice(
+      RESIZER_SCRIPT.indexOf("function apply(px)"),
+      RESIZER_SCRIPT.indexOf("function commit()"),
+    );
+    expect(applyBody).not.toContain("dispatchChange(");
+    const commitBody = RESIZER_SCRIPT.slice(
+      RESIZER_SCRIPT.indexOf("function commit()"),
+      RESIZER_SCRIPT.indexOf("handle.setAttribute('aria-valuemin'"),
+    );
+    expect(commitBody).toContain("dispatchChange(opts.rail, cached)");
+    // Called from the keydown handler and from pointerup/cancel/lostcapture (onUp).
+    expect(RESIZER_SCRIPT.match(/commit\(\);/g) ?? []).toHaveLength(2);
+  });
 });

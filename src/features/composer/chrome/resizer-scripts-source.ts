@@ -86,11 +86,21 @@ export const RESIZER_SCRIPT = `(function(){
     }
 
     function apply(px) {
+      // Live path -- runs on every pointermove, so this stays DOM/CSS-only
+      // (CSS var + persisted width + ARIA), matching the code-panel
+      // resizer's per-move cost. dispatchChange is deliberately NOT called
+      // here: it bridges into the Preact controller's state, and firing a
+      // re-render on every pixel of a drag would visibly jank the drag
+      // itself. Callers commit a dispatch explicitly (pointer release,
+      // each discrete keydown) via commit() below.
       cached = Math.max(MIN, Math.min(clampFor(otherWidth()), px));
       r.style.setProperty(opts.cssVar, cached + 'px');
       persist(opts.lsKey, cached);
       handle.setAttribute('aria-valuemax', String(Math.round(clampFor(otherWidth()))));
       handle.setAttribute('aria-valuenow', String(Math.round(cached)));
+    }
+
+    function commit() {
       dispatchChange(opts.rail, cached);
     }
 
@@ -114,6 +124,7 @@ export const RESIZER_SCRIPT = `(function(){
       else return;
       e.preventDefault();
       apply(w);
+      commit();
     });
 
     handle.addEventListener('pointerdown', function(e) {
@@ -134,6 +145,7 @@ export const RESIZER_SCRIPT = `(function(){
         handle.removeEventListener('pointerup', onUp);
         handle.removeEventListener('pointercancel', onUp);
         handle.removeEventListener('lostpointercapture', onUp);
+        commit();
       }
       handle.addEventListener('pointermove', onMove);
       handle.addEventListener('pointerup', onUp);
