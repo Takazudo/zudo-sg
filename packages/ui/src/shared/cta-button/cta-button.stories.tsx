@@ -31,7 +31,13 @@ const meta: StoryMeta = {
       // Trusted, non-serializable. Resolves the editable text node for
       // inline editing (CtaButton renders a trailing arrow, so a prop flag
       // alone can't target the label). Runtime-registry side only.
-      inlineEditor: { field: "children", resolveElement: (root) => root },
+      inlineEditor: {
+        field: "children",
+        // Target the label wrapper, not the <a> root: the root also contains
+        // the trailing-arrow decoration, and a contenteditable host with a
+        // non-editable island inside breaks select-all/replace (prepend bug).
+        resolveElement: (root) => root.querySelector<HTMLElement>("[data-cta-label]") ?? root,
+      },
     },
   }),
 };

@@ -728,18 +728,23 @@ describe("inline text editing (issue #257)", () => {
     });
   });
 
-  describe("decorated component: the arrow is protected and excluded", () => {
-    it("keeps CtaButton's arrow, marks it non-editable, and commits ONLY the label", () => {
+  describe("decorated component: the editable is a decoration-free label region", () => {
+    it("targets the label wrapper (not the <a>), keeps the arrow OUTSIDE it, and commits ONLY the label", () => {
       const { container, onCommitInlineEdit } = openSession("cta", "a", doc([
         node("cta", "ui.cta-button", { href: "/x", children: "Get started", arrow: true }),
       ]));
       const editable = editableOf(container, "cta")!;
-      expect(editable.tagName).toBe("A");
-      const arrow = editable.querySelector('[aria-hidden="true"]')!;
+      // The inline-editor adapter resolves to the label wrapper, so the
+      // contenteditable host holds ONLY editable text — no decoration island
+      // inside it to break select-all/replace (the prepend bug).
+      expect(editable.tagName).toBe("SPAN");
+      expect(editable.hasAttribute("data-cta-label")).toBe(true);
+      // The arrow decoration is a SIBLING outside the editable host.
+      expect(editable.querySelector('[aria-hidden="true"]')).toBeNull();
+      const arrow = editable.parentElement!.querySelector('[aria-hidden="true"]')!;
       expect(arrow).not.toBeNull();
-      expect(arrow.getAttribute("contenteditable")).toBe("false");
 
-      // Edit only the label text node (before the arrow).
+      // Edit the label text node and commit only the label.
       (editable.firstChild as Text).data = "Go now";
       fireEvent.keyDown(editable, { key: "Enter" });
       expect(onCommitInlineEdit).toHaveBeenCalledWith("cta", "children", "Go now");
