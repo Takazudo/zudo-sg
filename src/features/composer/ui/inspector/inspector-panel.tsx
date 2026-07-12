@@ -1,0 +1,221 @@
+/** @jsxRuntime automatic */
+/** @jsxImportSource preact */
+// Schema-driven Composer inspector panel (issue #249) — the presentational
+// component that plugs into #247's `ComposerWorkspace` `inspector` slot.
+// Purely presentational over the shared #245 document model + #247
+// controller contracts: it reads `document`/`manifest`/`selectedId`/`mode`
+// and reports every mutation through typed callbacks, never touching
+// commands/storage itself.
+//
+// Layered behaviour:
+//  - identity + breadcrumb + slot counts are derived, read-only views over
+//    the document, built with the public `@/composer` traversal/diagnostics
+//    API (`findLocation`, `classifyNode`, `orderedSlotIds`) — never a second
+//    tree/index implementation;
+//  - editable fields are declared ONLY by the selected node's manifest entry
+//    (`entry.fields`) — an opaque/unknown node renders zero fields, only its
+//    diagnostics + raw identity, per the epic's opaque-node contract. Sibling
+//    move/remove stay available for opaque nodes (they act on the SLOT
+//    array, not the node's own props);
+//  - Preview/read-only mode keeps the same selection/values on screen but
+//    disables every control, so switching back to Edit never loses what was
+//    selected.
+
+import type { JSX } from "preact";
+import type {
+  ComponentManifest,
+  CompositionDocument,
+  CompositionNode,
+  JsonObject,
+} from "@/composer";
+import { classifyNode, findLocation, orderedSlotIds } from "@/composer";
+import type { ComposerMode } from "@/features/composer/chrome/controller-model";
+import { InspectorField } from "./inspector-field";
+
+export interface InspectorPanelProps {
+  document: CompositionDocument;
+  manifest: ComponentManifest;
+  selectedId: string | null;
+  mode: ComposerMode;
+  onUpdateProps: (nodeId: string, patch: JsonObject) => void;
+  onReorder: (nodeId: string, direction: "up" | "down") => void;
+  onRemove: (nodeId: string) => void;
+  /**
+   * Optional friendlier display name for a component id — e.g. sourced from
+   * the host's richer `composerManifest` (title/category/description), which
+   * this component's own `ComponentManifest` contract does not carry. Falls
+   * back to the raw, stable `componentId`.
+   */
+  titleFor?: (componentId: string) => string | undefined;
+}
+
+interface BreadcrumbStep {
+  key: string;
+  label: string;
+}
+
+function buildBreadcrumb(
+  document: CompositionDocument,
+  manifest: ComponentManifest,
+  selectedId: string,
+  titleFor: ((componentId: string) => string | undefined) | undefined,
+): BreadcrumbStep[] {
+  const chain: { node: CompositionNode; slotId: string }[] = [];
+  let loc = findLocation(document, manifest, selectedId);
+  while (loc && loc.parentId !== null) {
+    const parentLoc = findLocation(document, manifest, loc.parentId);
+    if (!parentLoc) break;
+    chain.push({ node: parentLoc.node, slotId: loc.slotId });
+    loc = parentLoc;
+  }
+  chain.reverse();
+  const steps = chain.map(({ node, slotId }) => {
+    const entry = manifest.get(node.componentId);
+    const slot = entry?.slots.find((s) => s.id === slotId);
+    const title = titleFor?.(node.componentId) ?? node.componentId;
+    return { key: node.id, label: `${title} › ${slot?.label ?? slotId}` };
+  });
+  return [{ key: "root", label: "Root" }, ...steps];
+}
+
+export function InspectorPanel({
+  document,
+  manifest,
+  selectedId,
+  mode,
+  onUpdateProps,
+  onReorder,
+  onRemove,
+  titleFor,
+}: InspectorPanelProps): JSX.Element {
+  const readOnly = mode === "preview";
+  const location = selectedId !== null ? findLocation(document, manifest, selectedId) : undefined;
+
+  if (selectedId === null || !location) {
+    return (
+      <div class="flex h-full flex-col gap-vsp-2xs p-hsp-md py-vsp-md" data-sg-inspector-state="empty">
+        <p class="text-small font-semibold text-fg">Nothing selected</p>
+        <p class="text-small text-muted">
+          {document.root.length === 0
+            ? "The composition is empty. Add a component from the structure panel to start editing."
+            : "Select a component in the canvas or structure tree to edit its properties."}
+        </p>
+      </div>
+    );
+  }
+
+  const node = location.node;
+  const diagnostic = classifyNode(node, manifest);
+  const entry = manifest.get(node.componentId);
+  const breadcrumb = buildBreadcrumb(document, manifest, selectedId, titleFor);
+  const title = titleFor?.(node.componentId) ?? node.componentId;
+
+  const siblingArray =
+    location.parentId === null
+      ? document.root
+      : (findLocation(document, manifest, location.parentId)?.node.slots[location.slotId] ?? []);
+  const canMoveUp = location.index > 0;
+  const canMoveDown = location.index < siblingArray.length - 1;
+  const slotIds = orderedSlotIds(node, entry);
+
+  return (
+    <div
+      class="flex h-full flex-col gap-vsp-sm overflow-y-auto p-hsp-md py-vsp-md"
+      data-sg-inspector-state={diagnostic.opaque ? "opaque" : "editable"}
+    >
+      <nav aria-label="Selected component location">
+        <ol class="flex flex-wrap items-center gap-hsp-3xs text-xs text-muted">
+          {breadcrumb.map((step, i) => (
+            <li key={step.key} class="flex items-center gap-hsp-3xs">
+              {i > 0 && <span aria-hidden="true">/</span>}
+              {step.label}
+            </li>
+          ))}
+        </ol>
+      </nav>
+
+      <div data-sg-inspector-identity>
+        <p class="truncate text-small font-semibold text-fg">{title}</p>
+        <p class="text-xs text-muted">
+          {node.componentId} · v{node.componentVersion}
+        </p>
+      </div>
+
+      {readOnly && (
+        <p class="text-xs text-muted" role="status">
+          Preview mode — properties are read-only.
+        </p>
+      )}
+
+      {diagnostic.opaque && (
+        <div class="sg-composer-inspector-diagnostics" role="alert">
+          <p class="sg-composer-inspector-diagnostics-title">This component can't be edited.</p>
+          <ul class="list-disc pl-hsp-md">
+            {diagnostic.reasons.map((reason, i) => (
+              <li key={`${reason.code}-${i}`}>{reason.message}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <div class="flex flex-wrap items-center gap-hsp-xs">
+        <button
+          type="button"
+          class="sg-composer-toolbar-button"
+          disabled={readOnly || !canMoveUp}
+          onClick={() => onReorder(node.id, "up")}
+        >
+          Move up
+        </button>
+        <button
+          type="button"
+          class="sg-composer-toolbar-button"
+          disabled={readOnly || !canMoveDown}
+          onClick={() => onReorder(node.id, "down")}
+        >
+          Move down
+        </button>
+        <button
+          type="button"
+          class="sg-composer-toolbar-button sg-composer-inspector-remove"
+          disabled={readOnly}
+          onClick={() => onRemove(node.id)}
+        >
+          Remove
+        </button>
+      </div>
+
+      {!diagnostic.opaque && entry && entry.fields.length > 0 && (
+        <div class="flex flex-col gap-vsp-sm">
+          {entry.fields.map((field) => (
+            <InspectorField
+              key={`${selectedId}:${field.prop}`}
+              field={field}
+              value={node.props[field.prop] ?? null}
+              disabled={readOnly}
+              onCommit={(value) => onUpdateProps(node.id, { [field.prop]: value })}
+            />
+          ))}
+        </div>
+      )}
+
+      {slotIds.length > 0 && (
+        <div data-sg-inspector-slots>
+          <p class="text-xs font-semibold uppercase tracking-wide text-muted">Slots</p>
+          <ul class="mt-vsp-3xs flex flex-col gap-vsp-3xs text-small text-fg">
+            {slotIds.map((slotId) => {
+              const slot = entry?.slots.find((s) => s.id === slotId);
+              const count = (node.slots[slotId] ?? []).length;
+              return (
+                <li key={slotId}>
+                  {slot?.label ?? slotId} — {count} {count === 1 ? "child" : "children"}
+                  {slot?.cardinality === "single" ? " (single)" : ""}
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
