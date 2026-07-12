@@ -250,6 +250,11 @@ html[data-sg-composer-doc] body {
   outline-offset: 2px;
 }
 
+.sg-composer-toolbar-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
 .sg-composer-save-status {
   display: inline-flex;
   align-items: center;
@@ -291,4 +296,51 @@ html[data-sg-composer-doc] body {
 
 .sg-composer-placeholder-pane strong {
   color: var(--color-fg);
+}
+
+/* ── Inspector (issue #249) ──────────────────────────────────────────────── */
+/* Component-first: most inspector/toolbar/export markup uses Tailwind
+ * utilities directly. These handful of classes cover what utilities can't
+ * express cleanly here: a shared touch-target-sizing wrapper (mirrors
+ * `.sg-composer-toolbar-button`'s literal 2.75rem minimum above), the color
+ * swatch box, and two spots that must override `.sg-composer-toolbar-button`'s
+ * own (unlayered) color/border — a Tailwind utility on the same element can't
+ * win that fight, since `@import "tailwindcss/utilities"` in global.css is
+ * layered while this file is not, and unlayered rules always beat layered
+ * ones regardless of source order or specificity. */
+
+.sg-composer-inspector-control {
+  display: flex;
+  align-items: center;
+  min-height: 2.75rem;
+}
+
+.sg-composer-inspector-swatch {
+  display: inline-block;
+  flex-shrink: 0;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-muted);
+}
+
+.sg-composer-inspector-remove {
+  color: var(--color-danger);
+  border-color: var(--color-danger);
+}
+
+/* Shared "this node/export can't be used as-is" diagnostics box — reused by
+ * both the inspector's opaque-node state and the export dialog's blocked
+ * state (issue #249). */
+.sg-composer-inspector-diagnostics {
+  border: 1px solid var(--color-warning);
+  border-radius: var(--radius-md);
+  background: color-mix(in oklch, var(--color-warning) 12%, transparent);
+  padding: var(--spacing-vsp-xs) var(--spacing-hsp-sm);
+  font-size: var(--text-small);
+  color: var(--color-fg);
+}
+
+.sg-composer-inspector-diagnostics-title {
+  font-weight: 600;
 }
