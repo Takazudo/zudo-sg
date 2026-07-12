@@ -84,7 +84,7 @@ This is a pnpm workspace monorepo:
 - **Root (`.`)** — the zudo-doc styleguide host and component catalog
 - **`doc/`** (`@zudo-sg/doc`) — the full docs workspace; owns Claude resource
   generation and doc-lookup skill setup
-- **`packages/ui`** (`@zudo-sg/ui`) — shared Preact component library: 70
+- **`packages/ui`** (`@zudo-sg/ui`) — shared Preact component library: ~70
   components under `src/<category>/<component>/`, grouped into 9 category
   directories (`cards/ chrome/ content/ forms/ landing/ media/ news/ search/
   shared/`)
