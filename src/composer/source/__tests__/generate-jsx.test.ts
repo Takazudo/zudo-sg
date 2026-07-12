@@ -3,7 +3,8 @@ import { generateJsx } from "../generate-jsx";
 import { addNode } from "../../model/commands";
 import { createSequentialIdFactory } from "../../model/id-factory";
 import { traversalOrder } from "../../model/index-model";
-import { VIRTUAL_ROOT_SLOT_ID } from "../../model/types";
+import { createManifest, VIRTUAL_ROOT_SLOT_ID } from "../../model/types";
+import type { ComponentManifestEntry } from "../../model/types";
 import { SAMPLE_COMPONENT_IDS as C, SAMPLE_SLOT_IDS as S } from "../../sample/sample-ids";
 import {
   FIXTURE_COMPONENT_IDS as X,
@@ -90,8 +91,6 @@ describe("generateJsx — escaping", () => {
 
   it("emits booleans, numbers, arrays, and objects as escaped expressions", () => {
     const box = node(X.box, { label: "x", size: 3, list: [1, 2], meta: { a: 1 } }, {}, "b");
-    const cta = node(X.box, {}, {}, "ignore");
-    void cta;
     const code = generateJsx(doc([box]), M).code;
     expect(code).toContain("size={3}");
     expect(code).toContain("list={[1,2]}");
@@ -111,6 +110,22 @@ describe("generateJsx — escaping", () => {
     expect(code).not.toContain("NaN");
     expect(code).not.toContain("gone");
     expect(code).not.toContain("bad");
+  });
+
+  it("escapes a string containing a raw control character (not just \\n\\r\\t)", () => {
+    // form feed (U+000C) — not one of the three most common whitespace escapes
+    const box = node(X.box, { label: "a\fb" }, {}, "b");
+    const code = generateJsx(doc([box]), M).code;
+    expect(code).not.toContain('label="a\fb"'); // never a literal control byte in a string attr
+    expect(code).toContain("label={");
+    expect(code).toContain("\\f");
+  });
+
+  it("omits a prop key that cannot be expressed as a valid JSX attribute name", () => {
+    const box = node(X.box, { label: "ok", "not a name": "x" } as never, {}, "b");
+    const code = generateJsx(doc([box]), M).code;
+    expect(code).toContain('label="ok"');
+    expect(code).not.toContain("not a name"); // would otherwise produce unparseable JSX
   });
 });
 
@@ -135,6 +150,25 @@ describe("generateJsx — imports", () => {
     const code = generateJsx(makeAbcDocument(), M).code;
     expect(code.indexOf('from "@fixtures/box"')).toBeLessThan(code.indexOf('from "@fixtures/split-layout"'));
   });
+
+  it("shares one import when two componentIds resolve to the identical (module, exportKind, exportName)", () => {
+    // Two definitions wrapping the SAME default export of the SAME module — a
+    // JS module can bind that export under only one local name per file, so
+    // both nodes must resolve to ONE shared import, not a dropped/duplicated one.
+    const entries: ComponentManifestEntry[] = [
+      { componentId: "dup.a", version: 1, source: { module: "@fixtures/dual", exportKind: "default", exportName: "Thing" }, defaults: {}, fields: [], slots: [] },
+      { componentId: "dup.b", version: 1, source: { module: "@fixtures/dual", exportKind: "default", exportName: "Thing" }, defaults: {}, fields: [], slots: [] },
+    ];
+    const manifest = createManifest(entries);
+    const document = doc([node("dup.a", {}, {}, "n1"), node("dup.b", {}, {}, "n2")]);
+    const result = generateJsx(document, manifest);
+    expect(result.ok).toBe(true);
+    // exactly one import statement for the module, referenced by both tags
+    expect(result.code.match(/from "@fixtures\/dual"/g)).toHaveLength(1);
+    expect(result.code).toContain("<Thing />");
+    expect(result.code.match(/<Thing \/>/g)).toHaveLength(2);
+    expect(result.imports).toHaveLength(1);
+  });
 });
 
 describe("generateJsx — diagnostics gate", () => {
@@ -155,6 +189,26 @@ describe("generateJsx — adapters + determinism", () => {
       sourceAdapters: { [X.box]: (ctx) => `<CustomBox tag="${ctx.tag}" />` },
     }).code;
     expect(code).toContain('<CustomBox tag="Box" />');
+  });
+
+  it("exposes namedSlotSource so an adapter can preserve a component's named-slot content", () => {
+    const split = node(
+      C.splitLayout,
+      { ratio: "50-50", gap: "md" },
+      {
+        [S.splitLeft]: [node(X.box, { label: "L" }, {}, "L")],
+        [S.splitRight]: [node(X.box, { label: "R" }, {}, "R")],
+      },
+      "split",
+    );
+    const result = generateJsx(doc([split]), M, {
+      sourceAdapters: {
+        [C.splitLayout]: (ctx) => `<${ctx.tag} custom ${ctx.namedSlotSource}>${ctx.childrenSource}</${ctx.tag}>`,
+      },
+    });
+    expect(result.code).toContain('left={<Box label="L" />}');
+    expect(result.code).toContain('right={<Box label="R" />}');
+    expect(result.emittedNodeOrder).toEqual(["split", "L", "R"]);
   });
 
   it("is deterministic across repeated runs", () => {

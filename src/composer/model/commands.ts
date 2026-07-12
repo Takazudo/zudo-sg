@@ -72,10 +72,10 @@ export function addNode(
   target: InsertionTarget,
   componentId: string,
   idFactory: IdFactory,
-  selectedId: string | null = null,
 ): CommandResult {
   const next = cloneJson(document);
-  const locate = nodeLookup(next, manifest);
+  const index = indexDocument(next, manifest);
+  const locate = (id: string): CompositionNode | undefined => index.byId.get(id)?.node;
 
   const validation = validateInsertionTarget(next, manifest, target, locate);
   if (!validation.ok) return { ok: false, error: validation.error ?? "invalid insertion target" };
@@ -106,7 +106,7 @@ export function addNode(
   }
 
   const id = idFactory(componentId);
-  if (indexDocument(next, manifest).byId.has(id)) {
+  if (index.byId.has(id)) {
     return { ok: false, error: `Id factory produced a duplicate id "${id}"` };
   }
 
@@ -149,9 +149,12 @@ function validateFieldValue(field: ComposerFieldMeta, value: JsonValue): string 
 
 /**
  * Merge a JSON-safe prop patch into a node's props. Rejects opaque nodes
- * (their props are read-only), non-JSON-safe values, and values that violate a
- * declared field's kind/domain. Props not described by a field are still
- * accepted as long as they are JSON-safe.
+ * (their props are read-only), non-JSON-safe values, values that violate a
+ * declared field's kind/domain, and any key that names a declared STRUCTURAL
+ * slot's `prop` (that prop is reserved for the slot's rendered children — a
+ * scalar written there would sit inert in storage yet claim the same prop the
+ * generator binds structural children to). Props not described by a field are
+ * otherwise still accepted as long as they are JSON-safe.
  */
 export function updateProps(
   document: CompositionDocument,
@@ -169,8 +172,15 @@ export function updateProps(
 
   const entry = manifest.get(node.componentId)!;
   const fieldsByProp = new Map(entry.fields.map((f) => [f.prop, f]));
+  const slotProps = new Set(entry.slots.map((s) => s.prop));
 
   for (const [prop, value] of Object.entries(patch)) {
+    if (slotProps.has(prop)) {
+      return {
+        ok: false,
+        error: `Prop "${prop}" is a structural slot on "${node.componentId}" and cannot be set as a scalar prop`,
+      };
+    }
     if (!isJsonSafe(value)) {
       return { ok: false, error: `Prop "${prop}" value is not JSON-safe` };
     }

@@ -48,6 +48,14 @@ export interface JsxSourceAdapterContext {
   props: JsonObject;
   /** Pre-rendered children source (structural children or text child), or "". */
   childrenSource: string;
+  /**
+   * Pre-rendered named-slot attribute source (e.g. `left={<A/>} right={<>…</>}`),
+   * space-joined, or "" when the component has no populated named slots. An
+   * adapter that OMITS this from its returned string silently drops the
+   * component's named-slot children from the export — splice it into the
+   * opening tag when the component being overridden declares named slots.
+   */
+  namedSlotSource: string;
 }
 
 /** Optional per-component override that returns the full element source string. */
@@ -77,9 +85,19 @@ export interface JsxGenerationResult {
 // ── Escaping ─────────────────────────────────────────────────────────────────
 
 // A string is "simple" (safe as a JSX string attribute) only if it contains no
-// backslash, double-quote, angle bracket, brace, ampersand, or whitespace-line
-// control. Everything else must go through a JS-expression attribute.
-const SIMPLE_STRING = /^[^\\"<>{}&\n\r\t]*$/;
+// backslash, double-quote, angle bracket, brace, ampersand, or C0/DEL control
+// character (newline/tab/form-feed/etc — ANY raw control byte, not just the
+// three most common ones). Everything else must go through a JS-expression
+// attribute.
+const SIMPLE_STRING = /^[^\\"<>{}&\x00-\x1F\x7F]*$/;
+
+// A prop key survives as a literal JSX attribute name only if it is a legal
+// JS identifier optionally hyphenated (JSX allows `data-*`/`aria-*`). A
+// non-conforming key (e.g. stray whitespace on a JSON prop that bypassed a
+// field descriptor) cannot be expressed as `name={...}` without producing
+// unparseable JSX, so it is OMITTED from scalar attrs rather than corrupting
+// the generated module.
+const VALID_JSX_ATTR_NAME = /^[A-Za-z_$][A-Za-z0-9_$]*(-[A-Za-z0-9_$]+)*$/;
 
 function renderScalarAttr(name: string, value: unknown): string | null {
   if (value === undefined) return null; // never emit undefined
@@ -123,8 +141,23 @@ function planImports(
 
   const used = new Set(reserved);
   const plan = new Map<string, ImportPlan>();
+  // Two different componentIds can point at the EXACT same (module,
+  // exportKind, exportName) export — e.g. two definitions wrapping the same
+  // underlying component. A JS module can bind a given export under only one
+  // local name per file, so they MUST share one ImportPlan; planning them
+  // independently would either double-import or (for two `default` exports of
+  // the same module) silently drop one import while still referencing its tag.
+  const byExportKey = new Map<string, ImportPlan>();
+
   for (const componentId of sorted) {
     const src = manifest.get(componentId)!.source;
+    const exportKey = `${src.exportKind}:${src.module}#${src.exportName}`;
+    const shared = byExportKey.get(exportKey);
+    if (shared) {
+      plan.set(componentId, shared);
+      continue;
+    }
+
     let local = src.localName ?? src.exportName;
     if (used.has(local)) {
       let i = 2;
@@ -132,13 +165,15 @@ function planImports(
       local = `${local}_${i}`;
     }
     used.add(local);
-    plan.set(componentId, {
+    const importPlan: ImportPlan = {
       componentId,
       module: src.module,
       exportKind: src.exportKind,
       exportName: src.exportName,
       localName: local,
-    });
+    };
+    byExportKey.set(exportKey, importPlan);
+    plan.set(componentId, importPlan);
   }
   return plan;
 }
@@ -213,6 +248,10 @@ export function generateJsx(
   collect(document.root);
 
   const plan = planImports([...usedComponentIds], manifest, new Set([componentName]));
+  // De-duplicated by reference: two componentIds sharing the exact same export
+  // (see `planImports`) point at the SAME ImportPlan object, so a Set collapses
+  // them to one entry for both the emitted import statement and `imports`.
+  const uniqueImportPlans = [...new Set(plan.values())];
   const tagOf = (componentId: string): string => plan.get(componentId)!.localName;
 
   const renderNode = (node: CompositionNode): string[] => {
@@ -235,6 +274,7 @@ export function generateJsx(
       if (emittedProps.has(prop)) return;
       if (prop === textChildProp || slotProps.has(prop)) return;
       if (!(prop in node.props)) return;
+      if (!VALID_JSX_ATTR_NAME.test(prop)) return; // cannot be expressed as a JSX attr
       const attr = renderScalarAttr(prop, node.props[prop]);
       if (attr !== null) scalarAttrs.push(attr);
       emittedProps.add(prop);
@@ -264,13 +304,17 @@ export function generateJsx(
         : null;
     const textChildSource = textChildValue !== null ? `{${JSON.stringify(textChildValue)}}` : "";
 
-    // Adapter override: build a children-source string and defer to the adapter.
+    // Adapter override: build children + named-slot source and defer to the
+    // adapter. Both are handed over explicitly so an adapter for a component
+    // with named slots can splice them in — omitting namedSlotSource here
+    // would silently drop that content from the export (see the field doc).
     const adapter = adapters[node.componentId];
     if (adapter) {
       const childrenSource = structuralChildBlocks.length
         ? structuralChildBlocks.flatMap((b) => b).join("\n")
         : textChildSource;
-      return adapter({ node, tag, props: node.props, childrenSource }).split("\n");
+      const namedSlotSource = namedAttrLines.map((lines) => lines.join(" ")).join(" ");
+      return adapter({ node, tag, props: node.props, childrenSource, namedSlotSource }).split("\n");
     }
 
     const attrBlocks: string[][] = [...scalarAttrs.map((a) => [a]), ...namedAttrLines];
@@ -309,7 +353,7 @@ export function generateJsx(
   };
 
   const rootBlocks = document.root.map((node) => renderNode(node));
-  const importLines = buildImportLines([...plan.values()]);
+  const importLines = buildImportLines(uniqueImportPlans);
 
   const body =
     rootBlocks.length === 0
@@ -331,7 +375,7 @@ export function generateJsx(
     blocked: false,
     code: lines.join("\n"),
     diagnostics,
-    imports: [...plan.values()],
+    imports: uniqueImportPlans,
     emittedNodeOrder,
   };
 }

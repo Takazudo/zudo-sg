@@ -180,6 +180,16 @@ describe("updateProps", () => {
     if (result.ok) return;
     expect(result.error).toMatch(/read-only/i);
   });
+
+  it("rejects writing into a prop that is a declared structural slot", () => {
+    // Stack's default slot renders into the "children" prop — a scalar write
+    // there would sit inert in storage while colliding with the slot's prop.
+    const stack = node(C.stack, { gap: "md" }, { [S.stackChildren]: [] }, "stack");
+    const result = updateProps(doc([stack]), M, "stack", { children: "hijacked" });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error).toMatch(/structural slot/i);
+  });
 });
 
 describe("reorderNode", () => {
