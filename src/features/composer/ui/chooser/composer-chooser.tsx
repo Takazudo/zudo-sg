@@ -29,18 +29,31 @@
 // expected to be mounted unconditionally, with `open` toggling visibility) so
 // "Added" announcements survive the dialog closing/hiding.
 //
-// ── Composability for wave 6 (#254) ─────────────────────────────────────────
-// Search/filter/list rendering stays in this one component (no internal
-// sub-dialog abstraction) so a later "live preview pane + enlarge toggle"
-// extension can wrap this same target-capture/focus/keyboard machinery
-// without re-deriving it.
+// ── Live preview + enlarge (issue #254) ─────────────────────────────────────
+// Search/filter/list rendering stayed in this one component (no internal
+// sub-dialog abstraction, per #250's own header note) so this extension could
+// wrap the existing target-capture/focus/keyboard machinery without
+// re-deriving it. Hovering OR keyboard-focusing a catalog card sets the
+// STICKY `previewedComponentId` (never cleared by mouseleave/blur — only
+// replaced by the next hover/focus); `ChooserPreviewHost` owns the actual
+// second bridge + iframe (see that module's header for the ephemeral
+// create/dispose contract). The enlarge toggle is local UI state only — it
+// resizes the `<dialog>` via `data-sg-enlarged`; it does not touch #250's
+// focus-containment/Escape/restoration effects, which key off `open` and
+// `capturedTarget`, not this attribute.
 
 import { useEffect, useId, useMemo, useRef, useState } from "preact/hooks";
 import type { JSX } from "preact";
 import type { CompositionDocument, InsertionTarget } from "@/composer";
 import type { ComposerManifestEntry } from "@/styleguide/data/composer-registry";
+import type {
+  ComposerPreviewLocation,
+  MessageTarget,
+  createComposerPreviewBridge,
+} from "@/features/composer/preview";
 import { ancestorChainIds, buildCatalogById, buildManifestIndex } from "../tree/tree-helpers";
 import { describeInsertionTarget, eligibleEntries, matchesQuery } from "./chooser-helpers";
+import { ChooserPreviewHost } from "./chooser-preview-host";
 
 export interface ComposerChooserProps {
   open: boolean;
@@ -54,6 +67,12 @@ export interface ComposerChooserProps {
   onExpandAncestors: (nodeIds: string[]) => void;
   /** Fired on every close path (Escape, Cancel, backdrop, or after a successful add). */
   onClose: () => void;
+
+  // ── Live preview pane test seams (production defaults) — forwarded to
+  // `ChooserPreviewHost`'s OWN, second bridge. Never used by the main canvas. ──
+  previewCreateBridge?: typeof createComposerPreviewBridge;
+  previewLocation?: ComposerPreviewLocation;
+  previewHostWindow?: MessageTarget;
 }
 
 const ALL_CATEGORY = "All" as const;
@@ -66,6 +85,9 @@ export function ComposerChooser({
   onAdd,
   onExpandAncestors,
   onClose,
+  previewCreateBridge,
+  previewLocation,
+  previewHostWindow,
 }: ComposerChooserProps): JSX.Element {
   const dialogRef = useRef<HTMLDialogElement | null>(null);
   const searchRef = useRef<HTMLInputElement | null>(null);
@@ -81,6 +103,12 @@ export function ComposerChooser({
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<string>(ALL_CATEGORY);
   const [status, setStatus] = useState("");
+  // Sticky: set on hover/focus, never cleared by mouseleave/blur — only ever
+  // replaced by the NEXT hover/focus, or reset to null on the next open.
+  const [previewedComponentId, setPreviewedComponentId] = useState<string | null>(null);
+  // Resets to false on every open (see the capture effect below) — the
+  // enlarge toggle is per-session UI state, not a persisted preference.
+  const [enlarged, setEnlarged] = useState(false);
 
   const titleId = useId();
 
@@ -95,6 +123,8 @@ export function ComposerChooser({
       setQuery("");
       setCategory(ALL_CATEGORY);
       setStatus("");
+      setPreviewedComponentId(null);
+      setEnlarged(false);
     } else if (!open && capturedTarget !== null) {
       setCapturedTarget(null);
     }
@@ -154,6 +184,8 @@ export function ComposerChooser({
   const targetLabel = capturedTarget
     ? describeInsertionTarget(document, manifestIndex, catalogById, capturedTarget)
     : "";
+
+  const previewedEntry = previewedComponentId ? (catalogById.get(previewedComponentId) ?? null) : null;
 
   function confirmAdd(componentId: string) {
     if (!capturedTarget) return;
@@ -218,6 +250,7 @@ export function ComposerChooser({
       <dialog
         ref={dialogRef}
         class="sg-composer-chooser"
+        data-sg-enlarged={enlarged}
         aria-modal="true"
         aria-labelledby={titleId}
         onKeyDown={handleDialogKeyDown}
@@ -237,6 +270,16 @@ export function ComposerChooser({
               <h2 id={titleId} class="sg-composer-chooser-title">
                 Add a component
               </h2>
+              <button
+                type="button"
+                class="sg-composer-toolbar-button sg-composer-chooser-enlarge"
+                aria-pressed={enlarged}
+                aria-label={enlarged ? "Restore chooser to default size" : "Enlarge chooser"}
+                title={enlarged ? "Restore size" : "Enlarge"}
+                onClick={() => setEnlarged((value) => !value)}
+              >
+                <span aria-hidden="true">{enlarged ? "⤡" : "⤢"}</span>
+              </button>
               <p class="sg-composer-chooser-target">
                 Adding to: <strong>{targetLabel}</strong>
               </p>
@@ -254,79 +297,91 @@ export function ComposerChooser({
                 {blockedReason}
               </p>
             ) : (
-              <>
-                <div class="sg-composer-chooser-controls">
-                  <label class="sg-composer-chooser-search-label">
-                    <span class="sr-only">Search components</span>
-                    <input
-                      ref={searchRef}
-                      type="search"
-                      class="sg-composer-chooser-search"
-                      placeholder="Search components…"
-                      value={query}
-                      onInput={(e) => setQuery((e.target as HTMLInputElement).value)}
-                      onKeyDown={handleSearchKeyDown}
-                    />
-                  </label>
+              <div class="sg-composer-chooser-body">
+                <div class="sg-composer-chooser-catalog">
+                  <div class="sg-composer-chooser-controls">
+                    <label class="sg-composer-chooser-search-label">
+                      <span class="sr-only">Search components</span>
+                      <input
+                        ref={searchRef}
+                        type="search"
+                        class="sg-composer-chooser-search"
+                        placeholder="Search components…"
+                        value={query}
+                        onInput={(e) => setQuery((e.target as HTMLInputElement).value)}
+                        onKeyDown={handleSearchKeyDown}
+                      />
+                    </label>
 
-                  <div class="sg-composer-chooser-categories" role="group" aria-label="Filter by category">
-                    {categories.map((cat) => (
-                      <button
-                        key={cat}
-                        type="button"
-                        class="sg-composer-chooser-category"
-                        aria-pressed={category === cat}
-                        onClick={() => setCategory(cat)}
-                      >
-                        {cat}
-                      </button>
-                    ))}
+                    <div class="sg-composer-chooser-categories" role="group" aria-label="Filter by category">
+                      {categories.map((cat) => (
+                        <button
+                          key={cat}
+                          type="button"
+                          class="sg-composer-chooser-category"
+                          aria-pressed={category === cat}
+                          onClick={() => setCategory(cat)}
+                        >
+                          {cat}
+                        </button>
+                      ))}
+                    </div>
                   </div>
+
+                  <p class="sg-composer-chooser-count" aria-live="polite">
+                    {filtered.length} of {eligible.length} component{eligible.length === 1 ? "" : "s"}
+                  </p>
+
+                  {filtered.length === 0 ? (
+                    <div class="sg-composer-chooser-empty">
+                      <p>No matching components. Try another search or clear the filters.</p>
+                      {hasActiveFilter && (
+                        <button type="button" class="sg-composer-toolbar-button" onClick={clearFilters}>
+                          Clear filters
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <ul class="sg-composer-chooser-list">
+                      {filtered.map((entry) => (
+                        <li key={entry.componentId}>
+                          <button
+                            type="button"
+                            class="sg-composer-chooser-card"
+                            // The accessible NAME is the title alone (not the
+                            // concatenated title+category+description a plain
+                            // button would otherwise compute) — category and
+                            // description are supplementary, linked via
+                            // aria-describedby instead, per the accname vs.
+                            // accdescription split.
+                            aria-label={entry.title}
+                            aria-describedby={`${entry.componentId}-meta`}
+                            onClick={() => confirmAdd(entry.componentId)}
+                            onMouseEnter={() => setPreviewedComponentId(entry.componentId)}
+                            onFocus={() => setPreviewedComponentId(entry.componentId)}
+                          >
+                            <span class="sg-composer-chooser-card-title" aria-hidden="true">
+                              {entry.title}
+                            </span>
+                            <span id={`${entry.componentId}-meta`} class="sg-composer-chooser-card-meta">
+                              <span class="sg-composer-chooser-card-category">{entry.category}</span>
+                              <span class="sg-composer-chooser-card-description">{entry.description}</span>
+                            </span>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
 
-                <p class="sg-composer-chooser-count" aria-live="polite">
-                  {filtered.length} of {eligible.length} component{eligible.length === 1 ? "" : "s"}
-                </p>
-
-                {filtered.length === 0 ? (
-                  <div class="sg-composer-chooser-empty">
-                    <p>No matching components. Try another search or clear the filters.</p>
-                    {hasActiveFilter && (
-                      <button type="button" class="sg-composer-toolbar-button" onClick={clearFilters}>
-                        Clear filters
-                      </button>
-                    )}
-                  </div>
-                ) : (
-                  <ul class="sg-composer-chooser-list">
-                    {filtered.map((entry) => (
-                      <li key={entry.componentId}>
-                        <button
-                          type="button"
-                          class="sg-composer-chooser-card"
-                          // The accessible NAME is the title alone (not the
-                          // concatenated title+category+description a plain
-                          // button would otherwise compute) — category and
-                          // description are supplementary, linked via
-                          // aria-describedby instead, per the accname vs.
-                          // accdescription split.
-                          aria-label={entry.title}
-                          aria-describedby={`${entry.componentId}-meta`}
-                          onClick={() => confirmAdd(entry.componentId)}
-                        >
-                          <span class="sg-composer-chooser-card-title" aria-hidden="true">
-                            {entry.title}
-                          </span>
-                          <span id={`${entry.componentId}-meta`} class="sg-composer-chooser-card-meta">
-                            <span class="sg-composer-chooser-card-category">{entry.category}</span>
-                            <span class="sg-composer-chooser-card-description">{entry.description}</span>
-                          </span>
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </>
+                <ChooserPreviewHost
+                  entry={previewedEntry}
+                  catalogById={catalogById}
+                  createBridge={previewCreateBridge}
+                  location={previewLocation}
+                  hostWindow={previewHostWindow}
+                />
+              </div>
             )}
           </>
         )}
