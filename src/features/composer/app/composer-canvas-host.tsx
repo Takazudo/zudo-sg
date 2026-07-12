@@ -91,6 +91,13 @@ export interface ComposerCanvasHostProps {
    * fresh one — route it straight through `updateProps` (the one mutation path).
    */
   onCommitInlineEdit: (nodeId: string, fieldKey: string, value: string) => void;
+  /**
+   * A canvas drag & drop completed and PASSED the revision check (issue #258).
+   * The host has already dropped any stale drop, so this only fires for a fresh
+   * one — route it through the controller's `drop` action (the one mutation
+   * path), which atomically revalidates and applies the move/copy.
+   */
+  onDropNode: (sourceNodeId: string, target: InsertionTarget, copy: boolean) => void;
 
   // ── Test seams (production defaults) ──────────────────────────────────────
   /** Override the bridge factory. Defaults to #248's real bridge. */
@@ -111,6 +118,7 @@ export function ComposerCanvasHost(props: ComposerCanvasHostProps): JSX.Element 
     onRequestNodeMenu,
     onRequestInsertMenu,
     onCommitInlineEdit,
+    onDropNode,
     createBridge = createComposerPreviewBridge,
     location: locationProp,
     hostWindow,
@@ -132,6 +140,7 @@ export function ComposerCanvasHost(props: ComposerCanvasHostProps): JSX.Element 
     onRequestNodeMenu,
     onRequestInsertMenu,
     onCommitInlineEdit,
+    onDropNode,
   });
   handlersRef.current = {
     onSelect,
@@ -139,6 +148,7 @@ export function ComposerCanvasHost(props: ComposerCanvasHostProps): JSX.Element 
     onRequestNodeMenu,
     onRequestInsertMenu,
     onCommitInlineEdit,
+    onDropNode,
   };
 
   const [renderError, setRenderError] = useState<string | null>(null);
@@ -197,6 +207,21 @@ export function ComposerCanvasHost(props: ComposerCanvasHostProps): JSX.Element 
         }
         setStaleNotice(null);
         handlersRef.current.onCommitInlineEdit(nodeId, fieldKey, value);
+      },
+      onDropNode: (sourceNodeId, target, copy, documentRevision) => {
+        // Same revision gate as an inline-edit commit (issue #258): a drop
+        // authored against a document snapshot the host has already superseded
+        // is DROPPED with an honest status. The controller then does the ATOMIC
+        // model revalidation (slot/cardinality/cycle/root/opaque-policy) — this
+        // is only the stale-revision half of "host revalidates before applying".
+        if (documentRevision < lastDocRevisionRef.current) {
+          setStaleNotice(
+            "Your drag was not applied — the canvas changed while you were dragging. Please try again.",
+          );
+          return;
+        }
+        setStaleNotice(null);
+        handlersRef.current.onDropNode(sourceNodeId, target, copy);
       },
       onError: (message, recoverable) => {
         if (recoverable) setRenderError(message);

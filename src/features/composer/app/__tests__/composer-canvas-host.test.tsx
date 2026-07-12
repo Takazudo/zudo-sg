@@ -12,6 +12,7 @@ import { fireEvent, render, screen } from "@testing-library/preact";
 import { createSampleDocument } from "@/composer";
 import {
   commitInlineEditMessage,
+  dropNodeMessage,
   errorMessage,
   modeMessage,
   readyMessage,
@@ -37,6 +38,7 @@ function mount(overrides: Partial<Parameters<typeof ComposerCanvasHost>[0]> = {}
   const onRequestNodeMenu = vi.fn();
   const onRequestInsertMenu = vi.fn();
   const onCommitInlineEdit = vi.fn();
+  const onDropNode = vi.fn();
   const doc = createSampleDocument();
   doc.name = "first";
   const utils = render(
@@ -49,6 +51,7 @@ function mount(overrides: Partial<Parameters<typeof ComposerCanvasHost>[0]> = {}
       onRequestNodeMenu={onRequestNodeMenu}
       onRequestInsertMenu={onRequestInsertMenu}
       onCommitInlineEdit={onCommitInlineEdit}
+      onDropNode={onDropNode}
       createBridge={bridge.createBridge}
       location={bridge.location}
       {...overrides}
@@ -60,6 +63,7 @@ function mount(overrides: Partial<Parameters<typeof ComposerCanvasHost>[0]> = {}
     onRequestAdd,
     onRequestNodeMenu,
     onRequestInsertMenu,
+    onDropNode,
     onCommitInlineEdit,
     doc,
     ...utils,
@@ -80,7 +84,7 @@ describe("ComposerCanvasHost — bridge lifecycle (#251)", () => {
   });
 
   it("a document change re-renders; a session-only change is a lighter update", () => {
-    const { bridge, doc, rerender, onSelect, onRequestAdd, onRequestNodeMenu, onRequestInsertMenu, onCommitInlineEdit } =
+    const { bridge, doc, rerender, onSelect, onRequestAdd, onRequestNodeMenu, onRequestInsertMenu, onCommitInlineEdit, onDropNode } =
       mount();
     act(() => bridge.deliver(readyMessage()));
     bridge.posts.length = 0;
@@ -97,6 +101,7 @@ describe("ComposerCanvasHost — bridge lifecycle (#251)", () => {
         onRequestNodeMenu={onRequestNodeMenu}
         onRequestInsertMenu={onRequestInsertMenu}
         onCommitInlineEdit={onCommitInlineEdit}
+        onDropNode={onDropNode}
         createBridge={bridge.createBridge}
         location={bridge.location}
       />,
@@ -115,6 +120,7 @@ describe("ComposerCanvasHost — bridge lifecycle (#251)", () => {
         onRequestNodeMenu={onRequestNodeMenu}
         onRequestInsertMenu={onRequestInsertMenu}
         onCommitInlineEdit={onCommitInlineEdit}
+        onDropNode={onDropNode}
         createBridge={bridge.createBridge}
         location={bridge.location}
       />,
@@ -159,6 +165,7 @@ describe("ComposerCanvasHost — bridge lifecycle (#251)", () => {
       onRequestNodeMenu,
       onRequestInsertMenu,
       onCommitInlineEdit,
+      onDropNode,
       doc,
     } = mount();
     const frame = () => container.querySelector(".sg-composer-canvas-frame") as HTMLElement;
@@ -174,6 +181,7 @@ describe("ComposerCanvasHost — bridge lifecycle (#251)", () => {
         onRequestNodeMenu={onRequestNodeMenu}
         onRequestInsertMenu={onRequestInsertMenu}
         onCommitInlineEdit={onCommitInlineEdit}
+        onDropNode={onDropNode}
         createBridge={bridge.createBridge}
         location={bridge.location}
       />,
@@ -205,6 +213,7 @@ describe("ComposerCanvasHost — inline-edit revision validation (issue #257)", 
         onRequestNodeMenu={base.onRequestNodeMenu}
         onRequestInsertMenu={base.onRequestInsertMenu}
         onCommitInlineEdit={base.onCommitInlineEdit}
+        onDropNode={base.onDropNode}
         createBridge={bridge.createBridge}
         location={bridge.location}
       />,
@@ -341,5 +350,79 @@ describe("ComposerCanvasHost — menu relay (issue #256)", () => {
     const [, translated] = onRequestNodeMenu.mock.calls[0]!;
     expect(translated.x).toBe(RECT.x);
     expect(translated.y).toBe(RECT.y);
+  });
+});
+
+describe("ComposerCanvasHost — drop-node revision validation (issue #258)", () => {
+  const TARGET = { parentId: null, slotId: "root", index: 0 };
+
+  /** Advance to a NEWER document so an old drop becomes stale; return the current revision. */
+  function advanceDocument(bridge: ReturnType<typeof makeTestBridge>, base: ReturnType<typeof mount>) {
+    const doc2 = createSampleDocument();
+    doc2.name = "second";
+    base.rerender(
+      <ComposerCanvasHost
+        document={doc2}
+        session={EDIT}
+        viewport="fluid"
+        onSelect={base.onSelect}
+        onRequestAdd={base.onRequestAdd}
+        onRequestNodeMenu={base.onRequestNodeMenu}
+        onRequestInsertMenu={base.onRequestInsertMenu}
+        onCommitInlineEdit={base.onCommitInlineEdit}
+        onDropNode={base.onDropNode}
+        createBridge={bridge.createBridge}
+        location={bridge.location}
+      />,
+    );
+    return asAny(bridge.posts.at(-1)!.message).revision as number;
+  }
+
+  it("routes a FRESH drop (current revision) straight through to onDropNode", () => {
+    const base = mount();
+    const { bridge, onDropNode } = base;
+    act(() => bridge.deliver(readyMessage()));
+    const currentRev = advanceDocument(bridge, base);
+
+    act(() => bridge.deliver(dropNodeMessage("box-1", TARGET, false, currentRev)));
+
+    expect(onDropNode).toHaveBeenCalledWith("box-1", TARGET, false);
+  });
+
+  it("forwards the copy flag (Alt held at drop)", () => {
+    const base = mount();
+    const { bridge, onDropNode } = base;
+    act(() => bridge.deliver(readyMessage()));
+    const currentRev = advanceDocument(bridge, base);
+
+    act(() => bridge.deliver(dropNodeMessage("box-1", TARGET, true, currentRev)));
+
+    expect(onDropNode).toHaveBeenCalledWith("box-1", TARGET, true);
+  });
+
+  it("DROPS a stale drop (older revision) with an honest status, never calling onDropNode", () => {
+    const base = mount();
+    const { bridge, onDropNode } = base;
+    act(() => bridge.deliver(readyMessage()));
+    const currentRev = advanceDocument(bridge, base);
+
+    act(() => bridge.deliver(dropNodeMessage("box-1", TARGET, false, currentRev - 1)));
+
+    expect(onDropNode).not.toHaveBeenCalled();
+    expect(screen.getByText(/not applied/i)).toBeInTheDocument();
+  });
+
+  it("clears the stale notice once a fresh drop lands", () => {
+    const base = mount();
+    const { bridge, onDropNode } = base;
+    act(() => bridge.deliver(readyMessage()));
+    const currentRev = advanceDocument(bridge, base);
+
+    act(() => bridge.deliver(dropNodeMessage("box-1", TARGET, false, currentRev - 1)));
+    expect(screen.getByText(/not applied/i)).toBeInTheDocument();
+
+    act(() => bridge.deliver(dropNodeMessage("box-1", TARGET, false, currentRev)));
+    expect(onDropNode).toHaveBeenCalledWith("box-1", TARGET, false);
+    expect(screen.queryByText(/not applied/i)).not.toBeInTheDocument();
   });
 });

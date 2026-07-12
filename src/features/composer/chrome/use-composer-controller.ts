@@ -76,6 +76,13 @@ export interface ComposerController {
   paste: (target: InsertionTarget) => void;
   /** Clone-with-new-ids + insert immediately after the source, then select + reveal it. Refused for opaque nodes. */
   duplicate: (nodeId: string) => void;
+  /**
+   * Canvas drag & drop (issue #258): move (or, when `copy`, clone) `sourceNodeId`
+   * to `target`, then select + reveal it. Atomically revalidated (slot/
+   * cardinality/cycle/root/opaque-policy); an invalid drop surfaces via
+   * `lastError`, never a silent partial change.
+   */
+  drop: (sourceNodeId: string, target: InsertionTarget, copy: boolean) => void;
   select: (nodeId: string | null) => void;
   reveal: (nodeId: string) => void;
   toggleExpanded: (nodeId: string) => void;
@@ -204,6 +211,7 @@ export function useComposerController(options: UseComposerControllerOptions = {}
       cut: (nodeId) => dispatch({ type: "cut", nodeId }),
       paste: (target) => dispatch({ type: "paste", target }),
       duplicate: (nodeId) => dispatch({ type: "duplicate", nodeId }),
+      drop: (sourceNodeId, target, copy) => dispatch({ type: "drop", sourceNodeId, target, copy }),
       select: (nodeId) => dispatch({ type: "select", nodeId }),
       reveal: (nodeId) => dispatch({ type: "reveal", nodeId }),
       toggleExpanded: (nodeId) => dispatch({ type: "toggleExpanded", nodeId }),
