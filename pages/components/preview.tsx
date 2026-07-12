@@ -10,10 +10,16 @@
 // This page is intentionally chrome-free (no layout header/sidebar) — it is
 // only ever shown inside an iframe. It owns its OWN full `<html>` document
 // (`data-sg-preview-doc`) rather than going through the docs DocLayout, so it
-// must explicitly link the root CSS bundle: the relative `../../src/styles/
+// must explicitly link the CSS bundle: the relative `../../src/styles/
 // global.css` import is what gets the rendered UI component its utility classes
-// + design tokens. The design-token tweaker reaches it via the theme
-// iframe-bridge receiver that PreviewApp installs.
+// + design tokens. That single global bundle re-asserts the semantic color
+// names to the doc-chrome --zd-* values, which the preview document has no
+// source for — so the `data-sg-preview-doc` attribute below is the hook a
+// scoped rule in src/styles/preview.css (pulled into the same bundle) uses to
+// RESTORE the @zudo-sg/ui palette for the previewed components. See that file's
+// header for why a separate entrypoint can't do it (zfb builds one global
+// stylesheet). The design-token tweaker reaches it via the theme iframe-bridge
+// receiver that PreviewApp installs.
 
 import "../../src/styles/global.css";
 
@@ -54,7 +60,7 @@ export default function PreviewRoute(): JSX.Element {
           }}
         />
       </head>
-      <body class="bg-paper">{app}</body>
+      <body class="bg-bg">{app}</body>
     </html>
   );
 }

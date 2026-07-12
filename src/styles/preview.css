@@ -1,0 +1,48 @@
+/*
+ * Styleguide preview-iframe palette scope.
+ *
+ * Loaded as part of the single site-wide stylesheet (global.css @imports this
+ * file) and applied ONLY inside the chrome-free preview document that is the
+ * `src` of every VariantFrame iframe on the /components detail pages — the
+ * `<html data-sg-preview-doc>` route owned by pages/components/preview.tsx.
+ *
+ * WHY THIS EXISTS (and is not a standalone CSS entrypoint):
+ *   zfb builds ONE authored global stylesheet (it resolves src/styles/global.css
+ *   and emits a single hashed bundle that every page links — a page importing a
+ *   different .css file does NOT get its own bundle). That one bundle carries
+ *   the host `@theme` block, which RE-ASSERTS the overlapping @zudo-sg/ui
+ *   semantic color names to the doc-chrome `var(--zd-*)` values. The preview
+ *   document has no `--zd-*` injected (it never goes through the docs layout /
+ *   ColorSchemeProvider), so those re-asserted `--color-*` tokens would resolve
+ *   to an UNDEFINED `--zd-*` and the previewed components would lose their
+ *   colors. A separate `preview.css` import can't escape that — there is only
+ *   one bundle.
+ *
+ *   So instead of a second entrypoint, we RESTORE the @zudo-sg/ui palette for
+ *   exactly the re-asserted names, scoped to the preview document root. The
+ *   selector is `html[data-sg-preview-doc]` — specificity (0,1,1), which beats
+ *   the `:root` (0,1,0) the host `@theme` emits, so this wins regardless of
+ *   @import source order. Doc-chrome pages (no `data-sg-preview-doc`) never
+ *   match, so their `--zd-*`-driven look is untouched.
+ *
+ *   The values below mirror the canonical Tier-2 tokens in
+ *   packages/ui/styles/colors.css (before the host `@theme` shadows them) and
+ *   reference the same `--palette-*` rungs, which ARE present in the bundle. The
+ *   ui-only names the host does NOT re-assert (surface-2, border, rail-*, focus,
+ *   on-accent, loading-scrim) already resolve to the ui palette here — no need
+ *   to restore them. Keep this list in sync with the host re-assertion collision
+ *   set in global.css until the Wave-6 atomic swap removes the whole dance.
+ */
+
+html[data-sg-preview-doc] {
+  --color-bg:           light-dark(var(--palette-base-0), var(--palette-base-10));
+  --color-surface:      light-dark(var(--palette-base-1), var(--palette-base-9));
+  --color-fg:           light-dark(var(--palette-base-8), var(--palette-base-2));
+  --color-muted:        light-dark(var(--palette-base-5), var(--palette-base-4));
+  --color-accent:       light-dark(var(--palette-accent-2), var(--palette-accent-1));
+  --color-accent-hover: light-dark(var(--palette-accent-3), var(--palette-accent-0));
+  --color-success: light-dark(var(--palette-state-success), var(--palette-state-success-dark));
+  --color-danger:  light-dark(var(--palette-state-danger),  var(--palette-state-danger-dark));
+  --color-warning: light-dark(var(--palette-state-warning), var(--palette-state-warning-dark));
+  --color-info:    light-dark(var(--palette-state-info),    var(--palette-state-info-dark));
+}

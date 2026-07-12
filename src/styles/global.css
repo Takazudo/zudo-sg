@@ -20,14 +20,37 @@
    (radius values, --leading-snug, shadow-lg) are re-defined in @theme below. */
 @import "@zudo-sg/ui/styles/tokens.css";
 
-/* Shared SEMANTIC COLOR tokens from @zudo-sg/ui (ink/paper/surface/line/brand/
-   state, light + dark via light-dark()). Adds UI-only utilities WITHOUT
-   changing the docs theme: the four token names that overlap with the host
-   palette (`--color-surface`, `--color-accent`, `--color-success`,
-   `--color-danger`) are RE-ASSERTED to the host's `var(--zd-*)` values by the
-   `@theme` block below, which wins by source order — so the docs site is
-   unchanged. See packages/ui/STORIES.md §1 "Required style imports". */
+/* Shared SEMANTIC COLOR tokens from @zudo-sg/ui — the grouped three-tier
+   palette (bg, surface, surface-2, border, fg, muted, accent, accent-hover,
+   the rail family, the state colors, focus, on-accent, plus a temporary
+   compat-alias block of the old ink/paper/line/brand names), light + dark via
+   light-dark(). Adds UI-only utilities WITHOUT changing the docs theme.
+
+   COLLISION SET — every name @zudo-sg/ui defines that ALSO exists in the host
+   `@theme` below is RE-ASSERTED there to `var(--zd-*)`, which wins by source
+   order (this import precedes that block), so doc-chrome is unchanged:
+       bg, fg, surface, muted, accent, accent-hover, success, danger,
+       warning, info
+   (this widened from the old {surface, accent, success, danger} when the ui
+   palette adopted the reference's bg/fg/muted/accent-hover/warning/info names).
+
+   The remaining NEW ui-only names — surface-2, border, focus, on-accent,
+   loading-scrim, and the rail family — are intentionally NOT re-asserted:
+   doc-chrome consumes none of them (verified: no bg-surface-2, border-border,
+   text-rail- utilities anywhere under src|pages, nor in the zudo-doc package
+   CSS), so leaving them at their ui values activates no doc-chrome utility. The
+   compat aliases (ink/paper/line/brand/…) are likewise unused by doc-chrome.
+
+   See packages/ui/STORIES.md §1 "Required style imports". */
 @import "@zudo-sg/ui/styles/colors.css";
+
+/* Preview-iframe palette scope. Restores the @zudo-sg/ui semantic colors for
+   the chrome-free /components/preview document (`<html data-sg-preview-doc>`),
+   which has no --zd-* injected and would otherwise render the re-asserted
+   `--color-*` names below as undefined. Scoped by `html[data-sg-preview-doc]`
+   (specificity beats the :root the @theme emits), so it is order-independent
+   and never affects doc-chrome pages. See src/styles/preview.css. */
+@import "./preview.css";
 
 /* ========================================
  * @takazudo/zudo-doc package safelist
@@ -135,6 +158,12 @@
    *
    * Spacing, typography, radius, shadows, breakpoints come from the shared
    * @zudo-sg/ui token file imported above.
+   *
+   * The `bg/fg/surface/muted/accent/accent-hover/success/danger/warning/info`
+   * declarations here double as the RE-ASSERTION that shadows @zudo-sg/ui's
+   * grouped palette (imported above) with the doc-chrome --zd-* values — this
+   * block comes later in source order, so doc-chrome renders unchanged. See the
+   * colors.css import comment above for the full collision set + rationale.
    * ======================================== */
 
   /* ── Base ── */
@@ -185,7 +214,9 @@
   --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
 
   /* ========================================
-   * Line height — snug step (shared file omits --leading-snug; add here)
+   * Line height — snug step. The shared @zudo-sg/ui tokens.css now provides
+   * --leading-snug: 1.4; this re-declares it at 1.375 for the denser
+   * documentation context (later source order wins for root pages).
    * ======================================== */
   --leading-snug: 1.375;
 
