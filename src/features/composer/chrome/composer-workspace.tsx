@@ -108,9 +108,9 @@ export function ComposerWorkspace({
           {inspector ?? <ComposerPlaceholderPane label="Inspector" note="The prop inspector mounts here in a later Composer wave." />}
         </div>
       </div>
-      {/* The prototype's exact canvas-only copy (_temp-resource/243-composer
-          /index.html's `.small-screen-note` — text reused, no code import).
-          CSS-only visible below the 64rem seam. */}
+      {/* The canvas-only narrow-seam copy, matching the epic's now-retired
+          prototype text verbatim (no code import). CSS-only visible below
+          the 64rem seam. */}
       <div class="sg-composer-narrow-note" data-sg-composer-narrow-note>
         <strong>Canvas-only view</strong>
         <span>Use a wider window to edit the tree and properties.</span>
