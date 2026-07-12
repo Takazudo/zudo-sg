@@ -130,22 +130,23 @@ async function setPanelRadiusMd(page: Page, pxValue: string): Promise<void> {
 }
 
 /**
- * Navigate to the "Color" tab in the currently-open panel and set --color-brand
- * to a specific value using its text input (aria-label: "--color-brand value").
+ * Navigate to the "Color" tab in the currently-open panel and set
+ * --color-accent to a specific value using its text input (aria-label:
+ * "--color-accent value").
  *
  * Mirrors setPanelRadiusMd, but for the Color tab (`ui-color` — a non-reserved
  * id routed to zdtp's GenericTab, see COLOR_TAB in preview-token-panel-config.ts).
  * Driving it via the panel UI (not a direct postMessage) populates the
  * registry's previewOverrides Map, which is what Export actually serializes.
  */
-async function setPanelColorBrand(page: Page, value: string): Promise<void> {
+async function setPanelColorAccent(page: Page, value: string): Promise<void> {
   const panel = page.locator(".tokenpanel-shell").first();
 
   const colorTab = panel.getByRole("tab", { name: "Color", exact: true });
   await expect(colorTab).toBeVisible({ timeout: 5_000 });
   await colorTab.click();
 
-  const colorInput = panel.getByLabel("--color-brand value");
+  const colorInput = panel.getByLabel("--color-accent value");
   await expect(colorInput).toBeVisible({ timeout: 3_000 });
 
   await colorInput.fill(value);
@@ -395,7 +396,7 @@ test("preview panel: Export emits zdtp schema; Load-from-JSON restores overrides
   // Regression coverage for #197: zdtp's serializer previously dropped this
   // tab from Export/Load even though Apply/Reset worked live — exercising
   // only the reserved-id Size tab above would not have caught that bug.
-  await setPanelColorBrand(page, COLOR_TAB_SENTINEL);
+  await setPanelColorAccent(page, COLOR_TAB_SENTINEL);
 
   // Click Export to open the export modal.
   const exportBtn = page
@@ -426,7 +427,7 @@ test("preview panel: Export emits zdtp schema; Load-from-JSON restores overrides
   // must be captured by Export too, not just reserved-id tabs like Size —
   // this is exactly the tab/token the fixed serializer bug affected.
   expect(exportedJson).toContain('"ui-color"');
-  expect(exportedJson).toContain("--color-brand");
+  expect(exportedJson).toContain("--color-accent");
 
   // Assert the JSON is well-formed.
   const parsed = JSON.parse(exportedJson) as Record<string, unknown>;
@@ -479,10 +480,10 @@ test("preview panel: Export emits zdtp schema; Load-from-JSON restores overrides
   await page.waitForTimeout(250);
   expect(await getIframeRootVar(frame, "--radius-md")).toBe("20px");
 
-  // Same round-trip assertion for the Color tab (#197) — --color-brand must
+  // Same round-trip assertion for the Color tab (#197) — --color-accent must
   // also be restored, proving the ui-color tab was captured by Export and
   // correctly re-applied by Load, not just silently ignored.
-  expect(await getIframeRootVar(frame, "--color-brand")).toBe(COLOR_TAB_SENTINEL);
+  expect(await getIframeRootVar(frame, "--color-accent")).toBe(COLOR_TAB_SENTINEL);
 
   // Dismiss the modal.
   await importModal.getByRole("button", { name: "Close", exact: true }).click();
