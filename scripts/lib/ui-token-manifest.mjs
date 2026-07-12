@@ -61,44 +61,65 @@ const FONT_WEIGHT_OPTIONS = [
 
 /**
  * Tier-1 raw palette — every `--palette-*` in colors.css's `:root` block.
- * Order matches the section order in colors.css (base, accent, state) purely
- * for readability; has no functional effect.
+ * Order matches the section order in colors.css (base, accent, state, line)
+ * purely for readability; has no functional effect. The panel's PALETTE_TAB
+ * groups these into base / accent / state / line families (see
+ * `splitPaletteName` in preview-token-panel-config.ts).
  */
 export const PALETTE_NAMES = [
-  "base-0", "base-1", "base-2", "base-3", "base-4",
-  "accent-0", "accent-1", "accent-2",
-  "state-danger", "state-success", "state-warning", "state-info",
+  "base-0", "base-1", "base-2", "base-3", "base-4", "base-5",
+  "base-6", "base-7", "base-8", "base-9", "base-10",
+  "accent-0", "accent-1", "accent-2", "accent-3",
+  "state-danger", "state-danger-dark",
+  "state-success", "state-success-dark",
+  "state-warning", "state-warning-dark",
+  "state-info", "state-info-dark",
+  "line-vacuum-accent", "line-vacuum-accent-dark", "line-vacuum-hover", "line-vacuum-hover-dark",
+  "line-process-accent", "line-process-accent-dark", "line-process-hover", "line-process-hover-dark",
+  "line-laser-accent", "line-laser-accent-dark", "line-laser-hover", "line-laser-hover-dark",
+  "line-meeting-accent", "line-meeting-accent-dark", "line-meeting-hover", "line-meeting-hover-dark",
+  "line-beauty-accent", "line-beauty-accent-dark", "line-beauty-hover", "line-beauty-hover-dark",
 ];
 
 /**
- * Tier-2 semantic color tokens. All render as free-text rows (`light-dark()`
- * expressions can't drive a single-axis slider), so `control: "text"` is
- * applied uniformly in buildColorTokens() rather than repeated per entry.
+ * Tier-2 CANONICAL semantic color tokens (the grouped three-tier scheme). The
+ * temporary compat aliases (ink/paper/line/brand/…) are intentionally omitted —
+ * they exist only to keep old components rendering until the Wave-6 atomic swap
+ * and should not clutter the tweak panel. All render as free-text rows
+ * (`light-dark()` / `color-mix()` expressions can't drive a single-axis
+ * slider), so `control: "text"` is applied uniformly in buildColorTokens().
  */
 export const COLOR_SPECS = [
-  { cssVar: "--color-ink", group: "ink" },
-  { cssVar: "--color-ink-soft", group: "ink" },
-  { cssVar: "--color-ink-mute", group: "ink" },
-  { cssVar: "--color-paper", group: "surface" },
+  { cssVar: "--color-bg", group: "surface" },
   { cssVar: "--color-surface", group: "surface" },
-  { cssVar: "--color-surface-sunken", group: "surface" },
-  { cssVar: "--color-line", group: "line" },
-  { cssVar: "--color-line-strong", group: "line" },
-  { cssVar: "--color-brand", group: "brand" },
-  { cssVar: "--color-brand-strong", group: "brand" },
-  { cssVar: "--color-brand-soft", group: "brand" },
+  { cssVar: "--color-surface-2", group: "surface" },
+  { cssVar: "--color-border", group: "surface" },
   {
-    cssVar: "--color-on-brand",
-    group: "brand",
-    note:
-      "Foreground token for filled brand/state surfaces (consumed via `text-on-brand`).",
+    cssVar: "--color-loading-scrim",
+    group: "surface",
+    note: "Translucent frost scrim derived from --color-bg (SPA loading overlay).",
   },
-  { cssVar: "--color-accent", group: "state" },
+  { cssVar: "--color-fg", group: "text" },
+  { cssVar: "--color-muted", group: "text" },
+  { cssVar: "--color-accent", group: "accent" },
+  { cssVar: "--color-accent-hover", group: "accent" },
+  {
+    cssVar: "--color-on-accent",
+    group: "accent",
+    note:
+      "Foreground token for text/icons on filled accent/state surfaces (consumed via `text-on-accent`).",
+  },
+  { cssVar: "--color-focus", group: "accent" },
+  { cssVar: "--color-rail-bg", group: "rail" },
+  { cssVar: "--color-rail-bg-strong", group: "rail" },
+  { cssVar: "--color-rail-fg", group: "rail" },
+  { cssVar: "--color-rail-muted", group: "rail" },
+  { cssVar: "--color-rail-border", group: "rail" },
+  { cssVar: "--color-rail-hover-bg", group: "rail" },
   { cssVar: "--color-success", group: "state" },
-  { cssVar: "--color-success-soft", group: "state" },
   { cssVar: "--color-danger", group: "state" },
-  { cssVar: "--color-danger-soft", group: "state" },
-  { cssVar: "--color-focus", group: "state" },
+  { cssVar: "--color-warning", group: "state" },
+  { cssVar: "--color-info", group: "state" },
 ];
 
 /** Horizontal (hsp) + vertical (vsp) spacing axes from tokens.css. */
@@ -170,6 +191,7 @@ export const FONT_SPECS = [
   },
 
   { cssVar: "--leading-tight", group: "line-height", step: 0.05, unit: "" },
+  { cssVar: "--leading-snug", group: "line-height", step: 0.05, unit: "" },
   { cssVar: "--leading-normal", group: "line-height", step: 0.05, unit: "" },
   { cssVar: "--leading-relaxed", group: "line-height", step: 0.05, unit: "" },
 
@@ -182,6 +204,7 @@ export const FONT_SPECS = [
  * expressions can't be driven by a single-axis slider.
  */
 export const SIZE_SPECS = [
+  { cssVar: "--radius-DEFAULT", group: "radius", step: 1, unit: "px" },
   { cssVar: "--radius-sm", group: "radius", step: 1, unit: "px" },
   { cssVar: "--radius-md", group: "radius", step: 1, unit: "px" },
   { cssVar: "--radius-lg", group: "radius", step: 1, unit: "px" },

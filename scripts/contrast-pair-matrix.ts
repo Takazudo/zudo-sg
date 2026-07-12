@@ -59,7 +59,7 @@ export const PAIR_MATRIX: PairSpec[] = [
 // Evaluation
 // ---------------------------------------------------------------------------
 
-export type PresetSource = "colorSchemes";
+export type PresetSource = "colorSchemes" | "uiColors";
 
 export interface PairResult {
   key: string;

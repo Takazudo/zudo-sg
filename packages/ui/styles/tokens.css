@@ -12,17 +12,22 @@
  * What is shared:
  *   - Spacing axes: hsp (horizontal) / vsp (vertical)
  *   - Typography: 6 abstract font sizes xs–2xl with paired line-heights
- *     (Tier 1), plus the semantic aliases micro/caption/small/body/heading/
- *     display that reference them (Tier 2), 3 weights
- *   - Radius: sm / md / lg / full
+ *     (Tier 1), plus the semantic aliases micro/caption/small/body/title/
+ *     heading/display that reference them (Tier 2), 4 weights, 4 line-heights
+ *     (tight/snug/normal/relaxed)
+ *   - Radius: DEFAULT / sm / md / lg / full
  *   - Shadows: card / raised / overlay
  *   - Breakpoints: sm / lg / xl
  *   - Transition defaults
+ *   - Z-index: the semantic --z-index-ui-* scale (see the block below)
  *
  * What is NOT shared (context-specific):
- *   - Colors: root uses --zd-* palette (zudo-doc injection); demo uses
- *     standalone oklch literals. Each consumer defines its own color tokens.
- *   - Z-index: semantic tiers differ between root and demo.
+ *   - Colors: the shared semantic set lives in ./colors.css; the root host
+ *     RE-ASSERTS the overlapping names to its --zd-* palette (zudo-doc
+ *     injection) so doc-chrome is unchanged. Each consumer imports colors.css.
+ *   - Z-index: the `--z-index-ui-*` set below is the shared @zudo-sg/ui scale;
+ *     the root host and apps/demo ALSO keep their own context-specific scales
+ *     (the `ui-` prefix keeps all three collision-free).
  *
  * --text-body / --text-caption / --text-small are an external API contract:
  * @takazudo/zudo-doc's content.css renders doc prose via var(--text-body),
@@ -107,6 +112,7 @@
   --text-caption: var(--text-sm);   /* 14px */
   --text-small:   var(--text-base); /* 16px */
   --text-body:    var(--text-lg);   /* 20px */
+  --text-title:   var(--text-lg);   /* 20px — card/section title (target-site components use text-title) */
   --text-heading: var(--text-xl);   /* 28px */
   --text-display: var(--text-2xl);  /* 40px */
 
@@ -116,9 +122,12 @@
   --font-weight-semibold: 600;
   --font-weight-bold:     700;
 
-  /* Line heights (3 steps — Tailwind v4 --leading-* namespace for leading-* utilities.
-     Also used directly as var(--leading-*) in component CSS for manual overrides.) */
+  /* Line heights (4 steps — Tailwind v4 --leading-* namespace for leading-* utilities.
+     Also used directly as var(--leading-*) in component CSS for manual overrides.)
+     `snug` is used by the target-site components; the root host re-declares it at
+     its own denser value in src/styles/global.css. */
   --leading-tight:   1.25;
+  --leading-snug:    1.4;
   --leading-normal:  1.5;
   --leading-relaxed: 1.75;
 
@@ -132,6 +141,7 @@
    * Border radius (4 steps)
    * ======================================== */
 
+  --radius-DEFAULT: 0.25rem; /*  4px — bare `rounded`; target-site components use it */
   --radius-sm:   0.25rem;   /*  4px */
   --radius-md:   0.5rem;    /*  8px */
   --radius-lg:   1rem;      /* 16px */
@@ -174,4 +184,23 @@
 
   --default-transition-duration: 0.15s;
   --default-transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ========================================
+   * Z-index — semantic single-namespace scale for @zudo-sg/ui components.
+   *
+   * Names describe ROLES, not magnitudes (zudo-css-wisdom z-index-strategy).
+   * The `ui-` prefix is deliberate: it keeps this scale collision-free with
+   * BOTH the root host's generated `--z-index-*` scale (content/sidebar/toolbar/
+   * dropdown/popover/modal-backdrop/modal/toast/tooltip/drag — see
+   * src/config/z-index-tokens.ts; note `dropdown`/`modal`/`toast` would otherwise
+   * clash) AND the apps/demo local set (base/raised/modal). Tailwind v4 reads the
+   * `--z-index-<name>` key and emits a `z-<name>` utility, so these produce
+   * `z-ui-base` … `z-ui-toast`.
+   * ======================================== */
+  --z-index-ui-base:     0;
+  --z-index-ui-sticky:   10;   /* sticky header */
+  --z-index-ui-dropdown: 20;   /* nav dropdowns / mega-menu */
+  --z-index-ui-overlay:  30;   /* backdrops / scrims */
+  --z-index-ui-modal:    40;   /* dialogs / drawers */
+  --z-index-ui-toast:    50;   /* transient notifications */
 }

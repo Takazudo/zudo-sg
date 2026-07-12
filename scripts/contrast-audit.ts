@@ -28,6 +28,7 @@ import { resolve } from "node:path";
 
 import { PAIR_MATRIX, getAllPresets, evaluateScheme } from "./contrast-pair-matrix";
 import type { SchemeReport } from "./contrast-pair-matrix";
+import { evaluateUiSchemes } from "./ui-contrast-pairs";
 
 // ---------------------------------------------------------------------------
 // Console report
@@ -78,6 +79,9 @@ async function main(): Promise<void> {
 
   const presets = getAllPresets();
   const reports = presets.map(({ name, scheme, source }) => evaluateScheme(name, scheme, source));
+  // Also audit the @zudo-sg/ui grouped-palette semantic tokens (rail + line
+  // accents included) — parsed straight from packages/ui/styles/colors.css.
+  reports.push(...evaluateUiSchemes());
 
   for (const report of reports) {
     printSchemeTable(report);
