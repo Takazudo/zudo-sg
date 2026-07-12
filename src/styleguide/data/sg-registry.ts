@@ -38,10 +38,23 @@ import * as cardsCard from "@zudo-sg/ui/src/cards/card/card.stories.tsx";
 import * as dialog from "@zudo-sg/ui/src/dialog/dialog.stories.tsx";
 import * as footer from "@zudo-sg/ui/src/footer/footer.stories.tsx";
 import * as form from "@zudo-sg/ui/src/form/form.stories.tsx";
+import * as formsContactForm from "@zudo-sg/ui/src/forms/contact-form/contact-form.stories.tsx";
+import * as formsField from "@zudo-sg/ui/src/forms/field/field.stories.tsx";
+import * as formsInput from "@zudo-sg/ui/src/forms/input/input.stories.tsx";
+import * as formsRecruitEntryForm from "@zudo-sg/ui/src/forms/recruit-entry-form/recruit-entry-form.stories.tsx";
+import * as formsReviewRow from "@zudo-sg/ui/src/forms/review-row/review-row.stories.tsx";
+import * as formsSecondaryButton from "@zudo-sg/ui/src/forms/secondary-button/secondary-button.stories.tsx";
+import * as formsSelect from "@zudo-sg/ui/src/forms/select/select.stories.tsx";
+import * as formsSubmitButton from "@zudo-sg/ui/src/forms/submit-button/submit-button.stories.tsx";
+import * as formsTextarea from "@zudo-sg/ui/src/forms/textarea/textarea.stories.tsx";
 import * as heading from "@zudo-sg/ui/src/heading/heading.stories.tsx";
 import * as hero from "@zudo-sg/ui/src/hero/hero.stories.tsx";
 import * as link from "@zudo-sg/ui/src/link/link.stories.tsx";
 import * as mediaPlaceholderBox from "@zudo-sg/ui/src/media/placeholder-box/placeholder-box.stories.tsx";
+import * as newsCategoryBadge from "@zudo-sg/ui/src/news/category-badge/category-badge.stories.tsx";
+import * as newsNewsFilter from "@zudo-sg/ui/src/news/news-filter/news-filter.stories.tsx";
+import * as newsNewsList from "@zudo-sg/ui/src/news/news-list/news-list.stories.tsx";
+import * as newsNewsTeaser from "@zudo-sg/ui/src/news/news-teaser/news-teaser.stories.tsx";
 import * as sharedAutoGrid from "@zudo-sg/ui/src/shared/auto-grid/auto-grid.stories.tsx";
 import * as sharedCardLink from "@zudo-sg/ui/src/shared/card-link/card-link.stories.tsx";
 import * as sharedContainer from "@zudo-sg/ui/src/shared/container/container.stories.tsx";
@@ -66,10 +79,23 @@ export const storyModules: Record<string, StoryModule> = {
   "./ui/src/dialog/dialog.stories.tsx": dialog as unknown as StoryModule,
   "./ui/src/footer/footer.stories.tsx": footer as unknown as StoryModule,
   "./ui/src/form/form.stories.tsx": form as unknown as StoryModule,
+  "./ui/src/forms/contact-form/contact-form.stories.tsx": formsContactForm as unknown as StoryModule,
+  "./ui/src/forms/field/field.stories.tsx": formsField as unknown as StoryModule,
+  "./ui/src/forms/input/input.stories.tsx": formsInput as unknown as StoryModule,
+  "./ui/src/forms/recruit-entry-form/recruit-entry-form.stories.tsx": formsRecruitEntryForm as unknown as StoryModule,
+  "./ui/src/forms/review-row/review-row.stories.tsx": formsReviewRow as unknown as StoryModule,
+  "./ui/src/forms/secondary-button/secondary-button.stories.tsx": formsSecondaryButton as unknown as StoryModule,
+  "./ui/src/forms/select/select.stories.tsx": formsSelect as unknown as StoryModule,
+  "./ui/src/forms/submit-button/submit-button.stories.tsx": formsSubmitButton as unknown as StoryModule,
+  "./ui/src/forms/textarea/textarea.stories.tsx": formsTextarea as unknown as StoryModule,
   "./ui/src/heading/heading.stories.tsx": heading as unknown as StoryModule,
   "./ui/src/hero/hero.stories.tsx": hero as unknown as StoryModule,
   "./ui/src/link/link.stories.tsx": link as unknown as StoryModule,
   "./ui/src/media/placeholder-box/placeholder-box.stories.tsx": mediaPlaceholderBox as unknown as StoryModule,
+  "./ui/src/news/category-badge/category-badge.stories.tsx": newsCategoryBadge as unknown as StoryModule,
+  "./ui/src/news/news-filter/news-filter.stories.tsx": newsNewsFilter as unknown as StoryModule,
+  "./ui/src/news/news-list/news-list.stories.tsx": newsNewsList as unknown as StoryModule,
+  "./ui/src/news/news-teaser/news-teaser.stories.tsx": newsNewsTeaser as unknown as StoryModule,
   "./ui/src/shared/auto-grid/auto-grid.stories.tsx": sharedAutoGrid as unknown as StoryModule,
   "./ui/src/shared/card-link/card-link.stories.tsx": sharedCardLink as unknown as StoryModule,
   "./ui/src/shared/container/container.stories.tsx": sharedContainer as unknown as StoryModule,
@@ -100,10 +126,23 @@ export const storyExportOrder: Record<string, string[]> = {
   "./ui/src/dialog/dialog.stories.tsx": ["Playground", "Default", "Busy", "WithError"],
   "./ui/src/footer/footer.stories.tsx": ["Playground", "Default", "Minimal"],
   "./ui/src/form/form.stories.tsx": ["TextField", "Required", "Disabled", "ContactForm"],
+  "./ui/src/forms/contact-form/contact-form.stories.tsx": ["Default"],
+  "./ui/src/forms/field/field.stories.tsx": ["Required", "Optional"],
+  "./ui/src/forms/input/input.stories.tsx": ["Playground"],
+  "./ui/src/forms/recruit-entry-form/recruit-entry-form.stories.tsx": ["NewGraduate", "Career"],
+  "./ui/src/forms/review-row/review-row.stories.tsx": ["Default"],
+  "./ui/src/forms/secondary-button/secondary-button.stories.tsx": ["Default"],
+  "./ui/src/forms/select/select.stories.tsx": ["Default"],
+  "./ui/src/forms/submit-button/submit-button.stories.tsx": ["Default", "Disabled"],
+  "./ui/src/forms/textarea/textarea.stories.tsx": ["Default"],
   "./ui/src/heading/heading.stories.tsx": ["Playground", "Page", "Section", "SectionWithAction"],
   "./ui/src/hero/hero.stories.tsx": ["Playground", "Basic", "WithMedia", "Plain"],
   "./ui/src/link/link.stories.tsx": ["Playground", "Variants", "External"],
   "./ui/src/media/placeholder-box/placeholder-box.stories.tsx": ["Default", "AspectRatios", "Sizes", "FromMarkdownImg"],
+  "./ui/src/news/category-badge/category-badge.stories.tsx": ["AllCategories", "UnknownFallback"],
+  "./ui/src/news/news-filter/news-filter.stories.tsx": ["Default", "FewCategories"],
+  "./ui/src/news/news-list/news-list.stories.tsx": ["Default", "LimitedThree", "IROnly", "WithFilter", "Empty"],
+  "./ui/src/news/news-teaser/news-teaser.stories.tsx": ["News", "IRNews", "Narrow"],
   "./ui/src/shared/auto-grid/auto-grid.stories.tsx": ["Default", "WiderTracks", "Fill"],
   "./ui/src/shared/card-link/card-link.stories.tsx": ["Default", "ViewAll"],
   "./ui/src/shared/container/container.stories.tsx": ["Default"],
