@@ -11,6 +11,7 @@ import { act } from "preact/test-utils";
 import { fireEvent, render, screen } from "@testing-library/preact";
 import { createSampleDocument } from "@/composer";
 import {
+  commitInlineEditMessage,
   errorMessage,
   modeMessage,
   readyMessage,
@@ -35,6 +36,7 @@ function mount(overrides: Partial<Parameters<typeof ComposerCanvasHost>[0]> = {}
   const onRequestAdd = vi.fn();
   const onRequestNodeMenu = vi.fn();
   const onRequestInsertMenu = vi.fn();
+  const onCommitInlineEdit = vi.fn();
   const doc = createSampleDocument();
   doc.name = "first";
   const utils = render(
@@ -46,12 +48,22 @@ function mount(overrides: Partial<Parameters<typeof ComposerCanvasHost>[0]> = {}
       onRequestAdd={onRequestAdd}
       onRequestNodeMenu={onRequestNodeMenu}
       onRequestInsertMenu={onRequestInsertMenu}
+      onCommitInlineEdit={onCommitInlineEdit}
       createBridge={bridge.createBridge}
       location={bridge.location}
       {...overrides}
     />,
   );
-  return { bridge, onSelect, onRequestAdd, onRequestNodeMenu, onRequestInsertMenu, doc, ...utils };
+  return {
+    bridge,
+    onSelect,
+    onRequestAdd,
+    onRequestNodeMenu,
+    onRequestInsertMenu,
+    onCommitInlineEdit,
+    doc,
+    ...utils,
+  };
 }
 
 describe("ComposerCanvasHost — bridge lifecycle (#251)", () => {
@@ -68,7 +80,8 @@ describe("ComposerCanvasHost — bridge lifecycle (#251)", () => {
   });
 
   it("a document change re-renders; a session-only change is a lighter update", () => {
-    const { bridge, doc, rerender, onSelect, onRequestAdd, onRequestNodeMenu, onRequestInsertMenu } = mount();
+    const { bridge, doc, rerender, onSelect, onRequestAdd, onRequestNodeMenu, onRequestInsertMenu, onCommitInlineEdit } =
+      mount();
     act(() => bridge.deliver(readyMessage()));
     bridge.posts.length = 0;
 
@@ -83,6 +96,7 @@ describe("ComposerCanvasHost — bridge lifecycle (#251)", () => {
         onRequestAdd={onRequestAdd}
         onRequestNodeMenu={onRequestNodeMenu}
         onRequestInsertMenu={onRequestInsertMenu}
+        onCommitInlineEdit={onCommitInlineEdit}
         createBridge={bridge.createBridge}
         location={bridge.location}
       />,
@@ -100,6 +114,7 @@ describe("ComposerCanvasHost — bridge lifecycle (#251)", () => {
         onRequestAdd={onRequestAdd}
         onRequestNodeMenu={onRequestNodeMenu}
         onRequestInsertMenu={onRequestInsertMenu}
+        onCommitInlineEdit={onCommitInlineEdit}
         createBridge={bridge.createBridge}
         location={bridge.location}
       />,
@@ -135,8 +150,17 @@ describe("ComposerCanvasHost — bridge lifecycle (#251)", () => {
   });
 
   it("sizes the frame to the chosen viewport width (preview width only)", () => {
-    const { bridge, container, rerender, onSelect, onRequestAdd, onRequestNodeMenu, onRequestInsertMenu, doc } =
-      mount();
+    const {
+      bridge,
+      container,
+      rerender,
+      onSelect,
+      onRequestAdd,
+      onRequestNodeMenu,
+      onRequestInsertMenu,
+      onCommitInlineEdit,
+      doc,
+    } = mount();
     const frame = () => container.querySelector(".sg-composer-canvas-frame") as HTMLElement;
     // fluid → no fixed width
     expect(frame().style.width).toBe("");
@@ -149,6 +173,7 @@ describe("ComposerCanvasHost — bridge lifecycle (#251)", () => {
         onRequestAdd={onRequestAdd}
         onRequestNodeMenu={onRequestNodeMenu}
         onRequestInsertMenu={onRequestInsertMenu}
+        onCommitInlineEdit={onCommitInlineEdit}
         createBridge={bridge.createBridge}
         location={bridge.location}
       />,
@@ -162,6 +187,66 @@ describe("ComposerCanvasHost — bridge lifecycle (#251)", () => {
     act(() => bridge.deliver(readyMessage()));
     act(() => bridge.deliver(errorMessage(6, "fatal", false)));
     expect(screen.queryByText(/Preview error/)).not.toBeInTheDocument();
+  });
+});
+
+describe("ComposerCanvasHost — inline-edit revision validation (issue #257)", () => {
+  /** Advance to a NEWER document so an old commit becomes stale, and return the current revision. */
+  function advanceDocument(bridge: ReturnType<typeof makeTestBridge>, base: ReturnType<typeof mount>) {
+    const doc2 = createSampleDocument();
+    doc2.name = "second";
+    base.rerender(
+      <ComposerCanvasHost
+        document={doc2}
+        session={EDIT}
+        viewport="fluid"
+        onSelect={base.onSelect}
+        onRequestAdd={base.onRequestAdd}
+        onRequestNodeMenu={base.onRequestNodeMenu}
+        onRequestInsertMenu={base.onRequestInsertMenu}
+        onCommitInlineEdit={base.onCommitInlineEdit}
+        createBridge={bridge.createBridge}
+        location={bridge.location}
+      />,
+    );
+    return asAny(bridge.posts.at(-1)!.message).revision as number;
+  }
+
+  it("routes a FRESH commit (current revision) straight through to onCommitInlineEdit", () => {
+    const base = mount();
+    const { bridge, onCommitInlineEdit } = base;
+    act(() => bridge.deliver(readyMessage()));
+    const currentRev = advanceDocument(bridge, base);
+
+    act(() => bridge.deliver(commitInlineEditMessage("box-1", "children", "Fresh copy", currentRev)));
+
+    expect(onCommitInlineEdit).toHaveBeenCalledWith("box-1", "children", "Fresh copy");
+  });
+
+  it("DROPS a stale commit (older revision) with an honest status, never calling updateProps", () => {
+    const base = mount();
+    const { bridge, onCommitInlineEdit } = base;
+    act(() => bridge.deliver(readyMessage()));
+    const currentRev = advanceDocument(bridge, base);
+
+    act(() => bridge.deliver(commitInlineEditMessage("box-1", "children", "Stale copy", currentRev - 1)));
+
+    expect(onCommitInlineEdit).not.toHaveBeenCalled();
+    expect(screen.getByText(/not applied/i)).toBeInTheDocument();
+  });
+
+  it("clears the stale notice once a fresh commit lands", () => {
+    const base = mount();
+    const { bridge, onCommitInlineEdit } = base;
+    act(() => bridge.deliver(readyMessage()));
+    const currentRev = advanceDocument(bridge, base);
+
+    act(() => bridge.deliver(commitInlineEditMessage("box-1", "children", "Stale", currentRev - 1)));
+    expect(screen.getByText(/not applied/i)).toBeInTheDocument();
+
+    act(() => bridge.deliver(commitInlineEditMessage("box-1", "children", "Fresh", currentRev)));
+    expect(onCommitInlineEdit).toHaveBeenCalledWith("box-1", "children", "Fresh");
+    expect(screen.queryByText(/not applied/i)).not.toBeInTheDocument();
   });
 });
 

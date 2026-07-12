@@ -85,6 +85,12 @@ export interface ComposerCanvasHostProps {
     restoreFocus: () => void,
     addComponent: () => void,
   ) => void;
+  /**
+   * A canvas inline edit committed and PASSED the revision check (issue #257).
+   * The host has already dropped any stale edit, so this only ever fires for a
+   * fresh one — route it straight through `updateProps` (the one mutation path).
+   */
+  onCommitInlineEdit: (nodeId: string, fieldKey: string, value: string) => void;
 
   // ── Test seams (production defaults) ──────────────────────────────────────
   /** Override the bridge factory. Defaults to #248's real bridge. */
@@ -104,6 +110,7 @@ export function ComposerCanvasHost(props: ComposerCanvasHostProps): JSX.Element 
     onRequestAdd,
     onRequestNodeMenu,
     onRequestInsertMenu,
+    onCommitInlineEdit,
     createBridge = createComposerPreviewBridge,
     location: locationProp,
     hostWindow,
@@ -112,13 +119,30 @@ export function ComposerCanvasHost(props: ComposerCanvasHostProps): JSX.Element 
   const frameRef = useRef<HTMLIFrameElement | null>(null);
   const bridgeRef = useRef<ComposerPreviewBridge | null>(null);
   const prevDocRef = useRef<CompositionDocument | null>(null);
+  // Revision of the newest DOCUMENT snapshot sent (updated on `render`, NOT on a
+  // session-only `updateSession`). An inline-edit commit stamped BELOW this was
+  // authored against a document the host has since superseded → stale → dropped.
+  const lastDocRevisionRef = useRef(-1);
   // The bridge is created ONCE; its callbacks read the latest props through
   // this ref so a controller state change never needs to re-create the bridge
   // (which would drop readiness and re-add a listener).
-  const handlersRef = useRef({ onSelect, onRequestAdd, onRequestNodeMenu, onRequestInsertMenu });
-  handlersRef.current = { onSelect, onRequestAdd, onRequestNodeMenu, onRequestInsertMenu };
+  const handlersRef = useRef({
+    onSelect,
+    onRequestAdd,
+    onRequestNodeMenu,
+    onRequestInsertMenu,
+    onCommitInlineEdit,
+  });
+  handlersRef.current = {
+    onSelect,
+    onRequestAdd,
+    onRequestNodeMenu,
+    onRequestInsertMenu,
+    onCommitInlineEdit,
+  };
 
   const [renderError, setRenderError] = useState<string | null>(null);
+  const [staleNotice, setStaleNotice] = useState<string | null>(null);
   const [, setReady] = useState(false);
 
   const location = useMemo(
@@ -160,6 +184,20 @@ export function ComposerCanvasHost(props: ComposerCanvasHostProps): JSX.Element 
           },
         );
       },
+      onCommitInlineEdit: (nodeId, fieldKey, value, documentRevision) => {
+        // The host VALIDATES the revision here (issue #257): a commit authored
+        // against a document snapshot the host has already superseded is
+        // DROPPED with an honest status, never silently applied. Only a fresh
+        // commit reaches `updateProps` — the single mutation path.
+        if (documentRevision < lastDocRevisionRef.current) {
+          setStaleNotice(
+            "Your inline edit was not applied — the canvas changed while you were typing. Please try again.",
+          );
+          return;
+        }
+        setStaleNotice(null);
+        handlersRef.current.onCommitInlineEdit(nodeId, fieldKey, value);
+      },
       onError: (message, recoverable) => {
         if (recoverable) setRenderError(message);
       },
@@ -179,7 +217,10 @@ export function ComposerCanvasHost(props: ComposerCanvasHostProps): JSX.Element 
     if (prevDocRef.current !== doc) {
       prevDocRef.current = doc;
       setRenderError(null);
-      bridge.render(doc, session);
+      // A fresh document clears any stale-edit notice and advances the revision
+      // an inline commit is validated against.
+      setStaleNotice(null);
+      lastDocRevisionRef.current = bridge.render(doc, session);
     } else {
       bridge.updateSession(session);
     }
@@ -197,6 +238,18 @@ export function ComposerCanvasHost(props: ComposerCanvasHostProps): JSX.Element 
             type="button"
             class="sg-composer-toolbar-button"
             onClick={() => setRenderError(null)}
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+      {staleNotice !== null && (
+        <div class="sg-composer-canvas-error" role="status">
+          <span>{staleNotice}</span>
+          <button
+            type="button"
+            class="sg-composer-toolbar-button"
+            onClick={() => setStaleNotice(null)}
           >
             Dismiss
           </button>

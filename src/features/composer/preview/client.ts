@@ -19,6 +19,7 @@ import type {
   SerializedRect,
 } from "./protocol";
 import {
+  commitInlineEditMessage,
   errorMessage,
   readParentToPreview,
   readyMessage,
@@ -61,6 +62,12 @@ export interface PreviewClient {
   emitRequestNodeMenu(nodeId: string, rect: SerializedRect, focusToken: string): void;
   /** An insert point's "⋯" was activated (issue #256). */
   emitRequestInsertMenu(target: InsertionTarget, rect: SerializedRect, focusToken: string): void;
+  /**
+   * An inline-editing session committed a new value (issue #257). Stamped with
+   * the revision on screen (`documentRevision`) so the host can drop a stale
+   * commit — exactly like `emitSelect`/`emitRequestAdd` stamp theirs.
+   */
+  emitCommitInlineEdit(nodeId: string, fieldKey: string, value: string): void;
   emitError(message: string, recoverable?: boolean): void;
   /** The newest applied state. */
   readonly state: PreviewState;
@@ -124,6 +131,9 @@ export function createPreviewClient(options: PreviewClientOptions): PreviewClien
     },
     emitRequestInsertMenu(target, rect, focusToken) {
       post(requestInsertMenuMessage(outboundRevision(), target, rect, focusToken));
+    },
+    emitCommitInlineEdit(nodeId, fieldKey, value) {
+      post(commitInlineEditMessage(nodeId, fieldKey, value, outboundRevision()));
     },
     emitError(message, recoverable = true) {
       post(errorMessage(state.revision < 0 ? null : state.revision, message, recoverable));

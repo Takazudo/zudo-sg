@@ -12,6 +12,7 @@ import { fireEvent, render, screen, within } from "@testing-library/preact";
 import type { CompositionDocument, InsertionTarget } from "@/composer";
 import { VIRTUAL_ROOT_SLOT_ID, createSequentialIdFactory } from "@/composer";
 import {
+  commitInlineEditMessage,
   readyMessage,
   requestAddMessage,
   requestInsertMenuMessage,
@@ -169,6 +170,28 @@ describe("ComposerIntegration — mutations reflect everywhere (#251)", () => {
     expect(s.canvasDoc().root[0]!.props.label).toBe("Renamed");
     expect(s.canvasDoc().root[0]!.id).toBe(boxId); // same stable node, not a remount
     expect(within(s.toolbar()).getByText("Saved locally")).toBeInTheDocument();
+  });
+
+  it("a canvas inline-edit commit routes through updateProps; the inspector reflects it live (#257)", () => {
+    const s = setup();
+    s.addAt(ROOT, "Box");
+    const boxId = s.canvasDoc().root[0]!.id;
+
+    const label = () => within(s.inspector()).getByLabelText("Label") as HTMLInputElement;
+    expect(label().value).toBe("Box");
+
+    // The revision the canvas is currently showing (its newest render).
+    const currentRev = asAny(
+      s.bridge.posts.filter((p) => asAny(p.message).type === "render").at(-1)!.message,
+    ).revision as number;
+
+    act(() => s.bridge.deliver(commitInlineEditMessage(boxId, "label", "Edited on canvas", currentRev)));
+
+    // Routed through the ONE mutation path → document + canvas snapshot updated…
+    expect(s.canvasDoc().root[0]!.props.label).toBe("Edited on canvas");
+    expect(s.canvasDoc().root[0]!.id).toBe(boxId); // same stable node, not a remount
+    // …and the inspector reflects the change with no extra wiring.
+    expect(label().value).toBe("Edited on canvas");
   });
 
   it("a sibling move reorders the document across tree + canvas", () => {

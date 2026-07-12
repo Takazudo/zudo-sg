@@ -118,6 +118,12 @@ export default function ComposerPreviewApp(): JSX.Element {
     [],
   );
 
+  const onCommitInlineEdit = useCallback((nodeId: string, fieldKey: string, value: string) => {
+    // The client stamps the revision on screen (`documentRevision`); the host
+    // validates it before routing through `updateProps`.
+    clientRef.current?.emitCommitInlineEdit(nodeId, fieldKey, value);
+  }, []);
+
   const onNodeError = useCallback((nodeId: string, message: string) => {
     clientRef.current?.emitError(`Node "${nodeId}" failed to render: ${message}`, true);
   }, []);
@@ -162,6 +168,7 @@ export default function ComposerPreviewApp(): JSX.Element {
         onRequestAdd,
         onRequestNodeMenu,
         onRequestInsertMenu,
+        onCommitInlineEdit,
         onNodeError,
       })
     : h("p", { class: "zc-empty" }, "Waiting for a composition…");
