@@ -2,48 +2,21 @@
 
 /** @jsxRuntime automatic */
 /** @jsxImportSource preact */
-// The `/composer` client island entry (issue #247) — composes the controller
-// hook with the presentational workspace shell. This is the component
-// `pages/composer/index.tsx` mounts via zfb's `<Island>`.
-//
-// Deliberately thin: all state lives in `useComposerController`, all layout
-// lives in `ComposerWorkspace`. Tree/canvas/inspector stay at their default
-// placeholders (see ComposerWorkspace's header) — wiring the real structure
-// tree (#250), preview iframe (#248), and inspector (#249) in here is
-// explicitly the wave-5 integration's job (#251), not this issue's.
+// The `/composer` client island entry — the component `pages/composer/index.tsx`
+// mounts via zfb's `<Island>`. Wave-5 integration (#251) wired the real surfaces
+// in: this now delegates to `ComposerIntegration` (the production app), which
+// fills #247's `ComposerWorkspace` slots with the structure tree (#250), the
+// secure preview iframe host (#248), the inspector + export (#249), and a
+// composed toolbar — all driven by #247's one controller. The integration body
+// lives under `src/features/composer/app/` (this issue's exclusive ownership);
+// this entry file stays a thin, stable mount point so the page route is
+// unchanged.
 
 import type { JSX } from "preact";
-import { useComposerController } from "./use-composer-controller";
-import { ComposerWorkspace } from "./composer-workspace";
-import { ComposerToolbar } from "./composer-toolbar";
-import { ComposerLoadNoticeBanner } from "./composer-load-notice";
+import { ComposerIntegration } from "@/features/composer/app";
 
 export default function ComposerApp(): JSX.Element {
-  const controller = useComposerController();
-  const { state } = controller;
-
-  return (
-    <ComposerWorkspace
-      treeWidthPx={state.leftWidth}
-      inspectorWidthPx={state.rightWidth}
-      banner={
-        state.loadNotice && (
-          <ComposerLoadNoticeBanner notice={state.loadNotice} onDismiss={controller.dismissLoadNotice} />
-        )
-      }
-      toolbar={
-        <ComposerToolbar
-          documentName={state.document.name}
-          mode={state.mode}
-          viewport={state.viewport}
-          saveStatus={state.saveStatus}
-          onSetMode={controller.setMode}
-          onSetViewport={controller.setViewport}
-          onReset={controller.reset}
-        />
-      }
-    />
-  );
+  return <ComposerIntegration />;
 }
 
 ComposerApp.displayName = "ComposerApp";
