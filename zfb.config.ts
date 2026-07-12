@@ -58,7 +58,8 @@ export default defineConfig({
   // default, so it rejects that dependency ("Main fields must be configured
   // explicitly when using the neutral platform") the moment any island
   // transitively imports `msw`/`msw/browser` (src/features/styleguide/
-  // preview-demos/dialog-demo.tsx). This is zfb's own documented escape hatch
+  // preview-demos/contact-form-demo.tsx, #235 — retargeted from the retired
+  // dialog-demo.tsx). This is zfb's own documented escape hatch
   // for exactly this case — see the `msw` → `path-to-regexp@6` example in
   // node_modules/@takazudo/zfb's BundleConfig.mainFields doc (zfb #676).
   // `bundle.external: ["path-to-regexp"]` would scope this narrower, but
