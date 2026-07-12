@@ -3,9 +3,11 @@
 // A pure-JSON `CompositionDocument` used as the recovery/reset target. It
 // exercises all three slot kinds the epic cares about: a SplitLayout named
 // `left` slot (single), a named `right` slot (many), and a Stack DEFAULT
-// `children` slot — and it contains duplicate component types (two `prose`
-// leaves) with distinct node ids. It imports NO components and reads NO
-// storage/prototype resource; it references component/slot ids as strings only.
+// `content` slot (rendering into the component's `children` prop) — and it
+// contains duplicate component types (two `prose-p` leaves) with distinct node
+// ids. It imports NO components and reads NO storage/prototype resource; it
+// references component/slot ids as strings only, reconciled against the real
+// #246 cohort ids (see `sample-ids.ts`).
 
 import type { CompositionDocument } from "../model/types";
 import { COMPOSITION_SCHEMA_VERSION } from "../model/types";

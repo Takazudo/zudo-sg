@@ -37,8 +37,8 @@ describe("native sample document", () => {
   });
 
   it("is fully available (no opaque nodes) under the intended cohort", () => {
-    // NOTE: validated against the fixture manifest that mirrors the intended
-    // cohort ids. Wave-5 (#251) reconciles these ids with the real manifest.
+    // Validated against the fixture manifest, whose ids/slot-ids are copied
+    // verbatim from the real #246 cohort (see sample-ids.ts).
     expect(diagnoseDocument(createSampleDocument(), M).canExport).toBe(true);
   });
 
