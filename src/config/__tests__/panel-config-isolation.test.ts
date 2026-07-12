@@ -189,15 +189,16 @@ describe("panel config isolation", () => {
     expect(paletteTab?.colorExtras).toBeUndefined();
 
     // One TierConfig per --palette-{group}-{step-or-role} group (base/accent/
-    // state), matching UI_PALETTE_COLORS in ui-design-tokens-manifest.ts —
+    // state/line), matching UI_PALETTE_COLORS in ui-design-tokens-manifest.ts —
     // NOT one flat tier, since the curve editor derives every step in a tier
     // from one shared curve.
     const tierIds = paletteTab?.tiers.map((t) => t.id).sort();
     expect(tierIds).toEqual(
-      ["palette-accent", "palette-base", "palette-state"].sort(),
+      ["palette-accent", "palette-base", "palette-line", "palette-state"].sort(),
     );
+    // base(11) + accent(4) + state(8) + line(20) = 43.
     const totalItems = paletteTab?.tiers.reduce((n, t) => n + t.items.length, 0);
-    expect(totalItems).toBe(12);
+    expect(totalItems).toBe(43);
     const baseTier = paletteTab?.tiers.find((t) => t.id === "palette-base");
     expect(baseTier?.items.map((item) => item.id)).toEqual([
       "palette-base-0",
@@ -205,6 +206,12 @@ describe("panel config isolation", () => {
       "palette-base-2",
       "palette-base-3",
       "palette-base-4",
+      "palette-base-5",
+      "palette-base-6",
+      "palette-base-7",
+      "palette-base-8",
+      "palette-base-9",
+      "palette-base-10",
     ]);
     expect(baseTier?.items.map((item) => item.cssVar)).toEqual([
       "--palette-base-0",
@@ -212,14 +219,27 @@ describe("panel config isolation", () => {
       "--palette-base-2",
       "--palette-base-3",
       "--palette-base-4",
+      "--palette-base-5",
+      "--palette-base-6",
+      "--palette-base-7",
+      "--palette-base-8",
+      "--palette-base-9",
+      "--palette-base-10",
     ]);
     const stateTier = paletteTab?.tiers.find((t) => t.id === "palette-state");
     expect(stateTier?.items.map((item) => item.id)).toEqual([
       "palette-state-danger",
+      "palette-state-danger-dark",
       "palette-state-success",
+      "palette-state-success-dark",
       "palette-state-warning",
+      "palette-state-warning-dark",
       "palette-state-info",
+      "palette-state-info-dark",
     ]);
+    const lineTier = paletteTab?.tiers.find((t) => t.id === "palette-line");
+    expect(lineTier?.items.length).toBe(20);
+    expect(lineTier?.items[0]?.cssVar).toBe("--palette-line-vacuum-accent");
     // Every item opts into the lossless OKLCH color picker (zdtp >= 0.3.3).
     for (const tier of paletteTab?.tiers ?? []) {
       for (const item of tier.items) {
