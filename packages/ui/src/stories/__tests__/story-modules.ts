@@ -19,6 +19,14 @@ import * as card from "../../card/card.stories";
 import * as cardsCallout from "../../cards/callout/callout.stories";
 import * as cardsCardGrid from "../../cards/card-grid/card-grid.stories";
 import * as cardsCard from "../../cards/card/card.stories";
+import * as chromeBreadcrumbs from "../../chrome/breadcrumbs/breadcrumbs.stories";
+import * as chromeContextSwitcherEnhancer from "../../chrome/context-switcher-enhancer/context-switcher-enhancer.stories";
+import * as chromeMobileNavEnhancer from "../../chrome/mobile-nav-enhancer/mobile-nav-enhancer.stories";
+import * as chromeNavEnhancer from "../../chrome/nav-enhancer/nav-enhancer.stories";
+import * as chromeSearchToggleEnhancer from "../../chrome/search-toggle-enhancer/search-toggle-enhancer.stories";
+import * as chromeSiteFooter from "../../chrome/site-footer/site-footer.stories";
+import * as chromeSiteHeader from "../../chrome/site-header/site-header.stories";
+import * as chromeSiteNav from "../../chrome/site-nav/site-nav.stories";
 import * as dialog from "../../dialog/dialog.stories";
 import * as footer from "../../footer/footer.stories";
 import * as form from "../../form/form.stories";
@@ -42,6 +50,14 @@ export const STORY_MODULES: Record<string, StoryModule> = {
   "cards/callout/callout.stories.tsx": cardsCallout as unknown as StoryModule,
   "cards/card-grid/card-grid.stories.tsx": cardsCardGrid as unknown as StoryModule,
   "cards/card/card.stories.tsx": cardsCard as unknown as StoryModule,
+  "chrome/breadcrumbs/breadcrumbs.stories.tsx": chromeBreadcrumbs as unknown as StoryModule,
+  "chrome/context-switcher-enhancer/context-switcher-enhancer.stories.tsx": chromeContextSwitcherEnhancer as unknown as StoryModule,
+  "chrome/mobile-nav-enhancer/mobile-nav-enhancer.stories.tsx": chromeMobileNavEnhancer as unknown as StoryModule,
+  "chrome/nav-enhancer/nav-enhancer.stories.tsx": chromeNavEnhancer as unknown as StoryModule,
+  "chrome/search-toggle-enhancer/search-toggle-enhancer.stories.tsx": chromeSearchToggleEnhancer as unknown as StoryModule,
+  "chrome/site-footer/site-footer.stories.tsx": chromeSiteFooter as unknown as StoryModule,
+  "chrome/site-header/site-header.stories.tsx": chromeSiteHeader as unknown as StoryModule,
+  "chrome/site-nav/site-nav.stories.tsx": chromeSiteNav as unknown as StoryModule,
   "dialog/dialog.stories.tsx": dialog as unknown as StoryModule,
   "footer/footer.stories.tsx": footer as unknown as StoryModule,
   "form/form.stories.tsx": form as unknown as StoryModule,
