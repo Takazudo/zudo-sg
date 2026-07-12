@@ -46,7 +46,11 @@ export function CtaButton({
       )}
       style={{ textDecoration: "none", color: TEXT_COLOR[variant] }}
     >
-      {children}
+      {/* Label wrapped so the Composer inline-editor can target a
+          decoration-free region: editing the bare <a> would trap the
+          trailing arrow inside the contenteditable host and break
+          select-all/replace. See the composer inlineEditor adapter. */}
+      <span data-cta-label>{children}</span>
       {arrow && <span aria-hidden="true">→</span>}
     </a>
   );

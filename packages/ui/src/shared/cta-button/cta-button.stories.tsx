@@ -1,4 +1,5 @@
 import type { StoryMeta, Story } from "../../stories/types";
+import { defineComposer } from "../../composer/types";
 import { CtaButton, type CtaButtonProps } from "./cta-button";
 
 const meta: StoryMeta = {
@@ -8,6 +9,37 @@ const meta: StoryMeta = {
   usage: `import { CtaButton } from "@zudo-sg/ui/src/shared/cta-button/cta-button";
 
 <CtaButton href="/products" variant="primary">Browse products</CtaButton>`,
+  // Leaf: `children` is scalar label text (never a nested slot). See
+  // STORIES.md §10 for the canonical worked example this mirrors.
+  composer: defineComposer<CtaButtonProps>({
+    componentId: "ui.cta-button",
+    version: 1,
+    component: CtaButton,
+    source: {
+      module: "@zudo-sg/ui/src/shared/cta-button/cta-button",
+      exportKind: "named",
+      exportName: "CtaButton",
+    },
+    defaults: { href: "/products", variant: "primary", arrow: true, children: "Browse products" },
+    fields: [
+      { kind: "text", prop: "href", label: "Link" },
+      { kind: "select", prop: "variant", label: "Variant", options: ["primary", "secondary"] },
+      { kind: "boolean", prop: "arrow", label: "Arrow" },
+      { kind: "text", prop: "children", label: "Label", inlineEdit: { multiline: false } },
+    ],
+    adapters: {
+      // Trusted, non-serializable. Resolves the editable text node for
+      // inline editing (CtaButton renders a trailing arrow, so a prop flag
+      // alone can't target the label). Runtime-registry side only.
+      inlineEditor: {
+        field: "children",
+        // Target the label wrapper, not the <a> root: the root also contains
+        // the trailing-arrow decoration, and a contenteditable host with a
+        // non-editable island inside breaks select-all/replace (prepend bug).
+        resolveElement: (root) => root.querySelector<HTMLElement>("[data-cta-label]") ?? root,
+      },
+    },
+  }),
 };
 
 export default meta;

@@ -19,6 +19,7 @@
  */
 
 import type { ComponentChildren } from "preact";
+import type { ComposerMeta } from "../composer/types";
 
 /**
  * Top-level grouping in the catalog sidebar. Keep the set small + stable.
@@ -78,6 +79,18 @@ export interface StoryMeta {
    * STORIES.md §6 → "The `previewRoute` escape hatch".
    */
   previewRoute?: string;
+  /**
+   * OPTIONAL opt-in to the `/composer` sub-application (epic #243). When
+   * present, this component is exposed in the Composer catalog and can be
+   * instantiated into a Composition. Authored via `defineComposer<P>(...)` so
+   * the definition is typechecked against the component's real props, then
+   * erased to the non-generic `ComposerMeta` stored here. Omitted for every
+   * component that has not explicitly opted in — the derived Composer registry
+   * exposes only metas that set this. Display title/category/description are
+   * NOT duplicated in the definition; they stay sourced from this `StoryMeta`.
+   * See `../composer/types.ts` and packages/ui/STORIES.md "Composer contract".
+   */
+  composer?: ComposerMeta;
 }
 
 /**

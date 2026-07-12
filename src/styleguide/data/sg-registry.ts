@@ -98,6 +98,8 @@ import * as sharedContainer from "@zudo-sg/ui/src/shared/container/container.sto
 import * as sharedCtaButton from "@zudo-sg/ui/src/shared/cta-button/cta-button.stories.tsx";
 import * as sharedHero from "@zudo-sg/ui/src/shared/hero/hero.stories.tsx";
 import * as sharedSectionHeading from "@zudo-sg/ui/src/shared/section-heading/section-heading.stories.tsx";
+import * as sharedSplitLayout from "@zudo-sg/ui/src/shared/split-layout/split-layout.stories.tsx";
+import * as sharedStack from "@zudo-sg/ui/src/shared/stack/stack.stories.tsx";
 
 /**
  * Path → story module map. Keys are glob-relative (e.g.
@@ -174,6 +176,8 @@ export const storyModules: Record<string, StoryModule> = {
   "./ui/src/shared/cta-button/cta-button.stories.tsx": sharedCtaButton as unknown as StoryModule,
   "./ui/src/shared/hero/hero.stories.tsx": sharedHero as unknown as StoryModule,
   "./ui/src/shared/section-heading/section-heading.stories.tsx": sharedSectionHeading as unknown as StoryModule,
+  "./ui/src/shared/split-layout/split-layout.stories.tsx": sharedSplitLayout as unknown as StoryModule,
+  "./ui/src/shared/stack/stack.stories.tsx": sharedStack as unknown as StoryModule,
 };
 
 /**
@@ -256,5 +260,7 @@ export const storyExportOrder: Record<string, string[]> = {
   "./ui/src/shared/cta-button/cta-button.stories.tsx": ["Playground", "Pair"],
   "./ui/src/shared/hero/hero.stories.tsx": ["Primary", "Secondary"],
   "./ui/src/shared/section-heading/section-heading.stories.tsx": ["Default", "HeadingOnly", "WithEyebrow"],
+  "./ui/src/shared/split-layout/split-layout.stories.tsx": ["Default", "OrderedRightChildren", "Narrow"],
+  "./ui/src/shared/stack/stack.stories.tsx": ["Default", "Horizontal", "Narrow"],
 };
 // GENERATED:SG_REGISTRY_END

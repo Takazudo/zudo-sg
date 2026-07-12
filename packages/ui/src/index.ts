@@ -79,6 +79,22 @@ export type { AutoGridMin, AutoGridGap, AutoGridProps } from "./shared/auto-grid
 export { Container } from "./shared/container/container";
 export type { ContainerProps } from "./shared/container/container";
 
+export { SplitLayout } from "./shared/split-layout/split-layout";
+export type {
+  SplitLayoutRatio,
+  SplitLayoutGap,
+  SplitLayoutProps,
+} from "./shared/split-layout/split-layout";
+
+export { Stack } from "./shared/stack/stack";
+export type {
+  StackDirection,
+  StackGap,
+  StackAlign,
+  StackJustify,
+  StackProps,
+} from "./shared/stack/stack";
+
 // ── Data display ─────────────────────────────────────────────────────────
 export { Card, CardTitle } from "./cards/card/card";
 export type { CardVariant, CardPadding, CardProps, CardTitleProps } from "./cards/card/card";
@@ -255,6 +271,26 @@ export type {
   StoryModule,
 } from "./stories/types";
 export { defineStory } from "./stories/types";
+
+// ── Composer authoring contract (consumed by the /composer app, epic #243) ─
+export type {
+  JsonPrimitive,
+  JsonValue,
+  ComposerSource,
+  ComposerField,
+  ComposerFieldMeta,
+  ComposerSlot,
+  ComposerSlotMeta,
+  ComposerSlotCardinality,
+  ComposerConstraints,
+  ComposerInlineEditorAdapter,
+  ComposerAdapters,
+  ComposerAdaptersMeta,
+  ComposerDefaults,
+  ComposerDefinition,
+  ComposerMeta,
+} from "./composer/types";
+export { defineComposer } from "./composer/types";
 
 // ── Utilities ────────────────────────────────────────────────────────────
 export { cx } from "./lib/cx";
