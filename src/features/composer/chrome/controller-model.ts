@@ -19,13 +19,18 @@
 import type {
   ComponentManifest,
   CompositionDocument,
+  CompositionNode,
   IdFactory,
   InsertionTarget,
   JsonObject,
 } from "@/composer";
 import {
   addNode,
+  cloneJson,
+  cloneSubtreeWithNewIds,
   findLocation,
+  insertSubtree,
+  isNodeOpaque,
   removeNode,
   reorderNode,
   repairSelection,
@@ -74,6 +79,13 @@ export interface ComposerControllerState {
   rightWidth: number;
   saveStatus: ComposerSaveStatus;
   loadNotice: ComposerLoadNotice | null;
+  /**
+   * Session-only clipboard: a deep-cloned JSON subtree payload, NEVER a live
+   * node reference — it is a snapshot that survives later edits to the
+   * document (including edits to the very node it was copied from). Never
+   * persisted to storage (issue #255).
+   */
+  clipboard: CompositionNode | null;
 }
 
 /**
@@ -87,6 +99,10 @@ export type ComposerAction =
   | { type: "updateProps"; nodeId: string; patch: JsonObject }
   | { type: "reorder"; nodeId: string; direction: "up" | "down" }
   | { type: "remove"; nodeId: string }
+  | { type: "copy"; nodeId: string }
+  | { type: "cut"; nodeId: string }
+  | { type: "paste"; target: InsertionTarget }
+  | { type: "duplicate"; nodeId: string }
   | { type: "select"; nodeId: string | null }
   | { type: "reveal"; nodeId: string }
   | { type: "toggleExpanded"; nodeId: string }
@@ -118,6 +134,9 @@ const DOCUMENT_MUTATION_TYPES = new Set<ComposerAction["type"]>([
   "updateProps",
   "reorder",
   "remove",
+  "cut",
+  "paste",
+  "duplicate",
   "resetToSample",
 ]);
 
@@ -177,6 +196,7 @@ export function createInitialControllerState(options: {
     rightWidth,
     saveStatus,
     loadNotice,
+    clipboard: null,
   };
 }
 
@@ -230,6 +250,102 @@ export function applyComposerAction(
       if (!result.ok) return { state, error: result.error, documentChanged: false };
       return {
         state: { ...state, document: result.document, selectedId: result.selectedId },
+        error: null,
+        documentChanged: result.changed,
+      };
+    }
+    case "copy": {
+      const location = findLocation(state.document, ctx.manifest, action.nodeId);
+      if (!location) return { state, error: `Node "${action.nodeId}" not found`, documentChanged: false };
+      if (isNodeOpaque(location.node, ctx.manifest)) {
+        return {
+          state,
+          error: `Cannot copy an unavailable node ("${action.nodeId}")`,
+          documentChanged: false,
+        };
+      }
+      // Deep-clone into the clipboard NOW — a snapshot, never a live reference,
+      // so later edits to the document (including to this very node) can't
+      // change what a subsequent paste inserts.
+      return {
+        state: { ...state, clipboard: cloneJson(location.node) },
+        error: null,
+        documentChanged: false,
+      };
+    }
+    case "cut": {
+      const location = findLocation(state.document, ctx.manifest, action.nodeId);
+      if (!location) return { state, error: `Node "${action.nodeId}" not found`, documentChanged: false };
+      if (isNodeOpaque(location.node, ctx.manifest)) {
+        return {
+          state,
+          error: `Cannot cut an unavailable node ("${action.nodeId}")`,
+          documentChanged: false,
+        };
+      }
+      const clipboard = cloneJson(location.node);
+      const removed = removeNode(state.document, ctx.manifest, action.nodeId, state.selectedId);
+      if (!removed.ok) return { state, error: removed.error, documentChanged: false };
+      return {
+        state: {
+          ...state,
+          document: removed.document,
+          selectedId: removed.selectedId,
+          clipboard,
+        },
+        error: null,
+        documentChanged: removed.changed,
+      };
+    }
+    case "paste": {
+      if (!state.clipboard) return { state, error: "Clipboard is empty", documentChanged: false };
+      const clone = cloneSubtreeWithNewIds(state.clipboard, ctx.idFactory);
+      const result = insertSubtree(state.document, ctx.manifest, action.target, clone);
+      if (!result.ok) return { state, error: result.error, documentChanged: false };
+      let nextExpanded: ReadonlySet<string> = state.expandedIds;
+      for (const id of ancestorIds(result.document, ctx.manifest, result.selectedId!)) {
+        nextExpanded = withExpanded(nextExpanded, id, true);
+      }
+      return {
+        state: {
+          ...state,
+          document: result.document,
+          selectedId: result.selectedId,
+          expandedIds: nextExpanded,
+        },
+        error: null,
+        documentChanged: result.changed,
+      };
+    }
+    case "duplicate": {
+      const location = findLocation(state.document, ctx.manifest, action.nodeId);
+      if (!location) return { state, error: `Node "${action.nodeId}" not found`, documentChanged: false };
+      if (isNodeOpaque(location.node, ctx.manifest)) {
+        return {
+          state,
+          error: `Cannot duplicate an unavailable node ("${action.nodeId}")`,
+          documentChanged: false,
+        };
+      }
+      const clone = cloneSubtreeWithNewIds(location.node, ctx.idFactory);
+      const target: InsertionTarget = {
+        parentId: location.parentId,
+        slotId: location.slotId,
+        index: location.index + 1,
+      };
+      const result = insertSubtree(state.document, ctx.manifest, target, clone);
+      if (!result.ok) return { state, error: result.error, documentChanged: false };
+      let nextExpanded: ReadonlySet<string> = state.expandedIds;
+      for (const id of ancestorIds(result.document, ctx.manifest, result.selectedId!)) {
+        nextExpanded = withExpanded(nextExpanded, id, true);
+      }
+      return {
+        state: {
+          ...state,
+          document: result.document,
+          selectedId: result.selectedId,
+          expandedIds: nextExpanded,
+        },
         error: null,
         documentChanged: result.changed,
       };
