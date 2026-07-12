@@ -127,9 +127,10 @@ test("/components/<slug> detail page renders with code panel aside", async ({ pa
 test("/components/<slug> code panel updates when switching variant tabs", async ({ page }) => {
   // Regression test for #105: SourceEditor created its CodeMirror view once
   // and never diffed `value`, so switching variant tabs kept showing the
-  // first variant's source. Button has two variants (Playground, Variants)
-  // with distinct `source` text — a stable target for this check.
-  const response = await page.goto("/components/button");
+  // first variant's source. CtaButton has two variants (Playground,
+  // "Primary + secondary pair") with distinct `source` text — a stable target
+  // for this check ("Company info" appears only in the second variant).
+  const response = await page.goto("/components/cta-button");
   expect(response?.status()).toBe(200);
 
   const codePanel = page.locator("#sg-code-panel");
@@ -145,25 +146,25 @@ test("/components/<slug> code panel updates when switching variant tabs", async 
   // which tab is default. (Default-tab ordering is asserted separately in the
   // next test, per #128 / #174.)
   await codePanel.getByRole("tab", { name: "Playground" }).click();
-  await expect(sourceCode).toContainText('size="md"', { timeout: 15_000 });
+  await expect(sourceCode).toContainText("Browse products", { timeout: 15_000 });
+  await expect(sourceCode).not.toContainText("Company info");
 
-  await codePanel.getByRole("tab", { name: "Variants" }).click();
+  await codePanel.getByRole("tab", { name: "Primary + secondary pair" }).click();
 
-  await expect(sourceCode).toContainText("Secondary", { timeout: 15_000 });
-  await expect(sourceCode).not.toContainText('size="md"');
+  await expect(sourceCode).toContainText("Company info", { timeout: 15_000 });
 });
 
-test("/components/button defaults its code-panel tab to the first-authored story", async ({
+test("/components/cta-button defaults its code-panel tab to the first-authored story", async ({
   page,
 }) => {
   // #128 / #174: variant tabs render in SOURCE order (not the alphabetical key
   // enumeration of an ES-module namespace), so the default-selected tab is the
-  // first-authored story. For Button that is "Playground" (source order:
-  // Playground, Variants, Sizes, AsLink, Disabled, Block) — before the fix the
-  // alphabetical order made "As link" the default. Kept separate from the #105
-  // by-name switching test above so that test stays decoupled from default
-  // ordering. This is the durable guard for the ordering itself.
-  const response = await page.goto("/components/button");
+  // first-authored story. For CtaButton that is "Playground" (source order:
+  // Playground, then "Primary + secondary pair") — an alphabetical enumeration
+  // would instead surface "Primary + secondary pair" first. Kept separate from
+  // the #105 by-name switching test above so that test stays decoupled from
+  // default ordering. This is the durable guard for the ordering itself.
+  const response = await page.goto("/components/cta-button");
   expect(response?.status()).toBe(200);
 
   const codePanel = page.locator("#sg-code-panel");
@@ -251,20 +252,20 @@ test("styleguide sidebar preserves DOM identity and scroll across page transitio
   ).toBe(true);
   expect(scrollInfo.scrollTop).toBeGreaterThan(0);
 
-  const targetSelector = '#desktop-sidebar a[href="/components/button"]';
+  const targetSelector = '#desktop-sidebar a[href="/components/cta-button"]';
   await expect(page.locator(targetSelector)).toBeAttached();
 
   const swapFired = await clickAndWaitForSwap(page, targetSelector);
   expect(swapFired, "zfb:after-swap should fire for /components navigation").toBe(true);
 
   await page
-    .locator('#desktop-sidebar a[href="/components/button"][aria-current="page"]')
+    .locator('#desktop-sidebar a[href="/components/cta-button"][aria-current="page"]')
     .waitFor({ state: "attached", timeout: 5_000 });
 
   const postSwap = await page.evaluate(() => {
     const aside = document.querySelector<HTMLElement>("#desktop-sidebar");
     const active = document.querySelector<HTMLAnchorElement>(
-      '#desktop-sidebar a[href="/components/button"]',
+      '#desktop-sidebar a[href="/components/cta-button"]',
     );
     return {
       marker: (aside as (HTMLElement & { __sidebarPersistMarker__?: string }) | null)

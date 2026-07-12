@@ -50,7 +50,9 @@ export default defineConfig({
     },
     {
       name: "demo-smoke",
-      testMatch: "demo-smoke.spec.ts",
+      // Both demo specs serve from the same built demo dist (DEMO_SMOKE_PORT):
+      // the render smoke checks and the SPA-transition regression suite.
+      testMatch: ["demo-smoke.spec.ts", "demo-transition.spec.ts"],
       use: { baseURL: `http://localhost:${DEMO_SMOKE_PORT}` },
     },
   ],
