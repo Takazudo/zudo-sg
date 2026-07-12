@@ -29,9 +29,6 @@
 // GENERATED:SG_REGISTRY_BEGIN — do not hand-edit; run `pnpm gen:sg-registry`.
 import type { StoryModule } from "@zudo-sg/ui";
 
-import * as badge from "@zudo-sg/ui/src/badge/badge.stories.tsx";
-import * as button from "@zudo-sg/ui/src/button/button.stories.tsx";
-import * as card from "@zudo-sg/ui/src/card/card.stories.tsx";
 import * as cardsCallout from "@zudo-sg/ui/src/cards/callout/callout.stories.tsx";
 import * as cardsCardGrid from "@zudo-sg/ui/src/cards/card-grid/card-grid.stories.tsx";
 import * as cardsCard from "@zudo-sg/ui/src/cards/card/card.stories.tsx";
@@ -59,9 +56,6 @@ import * as contentProseStrong from "@zudo-sg/ui/src/content/prose-strong/prose-
 import * as contentProseTable from "@zudo-sg/ui/src/content/prose-table/prose-table.stories.tsx";
 import * as contentProseUl from "@zudo-sg/ui/src/content/prose-ul/prose-ul.stories.tsx";
 import * as contentTypography from "@zudo-sg/ui/src/content/typography/typography.stories.tsx";
-import * as dialog from "@zudo-sg/ui/src/dialog/dialog.stories.tsx";
-import * as footer from "@zudo-sg/ui/src/footer/footer.stories.tsx";
-import * as form from "@zudo-sg/ui/src/form/form.stories.tsx";
 import * as formsContactForm from "@zudo-sg/ui/src/forms/contact-form/contact-form.stories.tsx";
 import * as formsField from "@zudo-sg/ui/src/forms/field/field.stories.tsx";
 import * as formsInput from "@zudo-sg/ui/src/forms/input/input.stories.tsx";
@@ -71,8 +65,6 @@ import * as formsSecondaryButton from "@zudo-sg/ui/src/forms/secondary-button/se
 import * as formsSelect from "@zudo-sg/ui/src/forms/select/select.stories.tsx";
 import * as formsSubmitButton from "@zudo-sg/ui/src/forms/submit-button/submit-button.stories.tsx";
 import * as formsTextarea from "@zudo-sg/ui/src/forms/textarea/textarea.stories.tsx";
-import * as heading from "@zudo-sg/ui/src/heading/heading.stories.tsx";
-import * as hero from "@zudo-sg/ui/src/hero/hero.stories.tsx";
 import * as landingBusinessLinePortal from "@zudo-sg/ui/src/landing/business-line-portal/business-line-portal.stories.tsx";
 import * as landingBusinessSegments from "@zudo-sg/ui/src/landing/business-segments/business-segments.stories.tsx";
 import * as landingCertList from "@zudo-sg/ui/src/landing/cert-list/cert-list.stories.tsx";
@@ -93,7 +85,6 @@ import * as landingSectionNav from "@zudo-sg/ui/src/landing/section-nav/section-
 import * as landingStatBand from "@zudo-sg/ui/src/landing/stat-band/stat-band.stories.tsx";
 import * as landingStrengthList from "@zudo-sg/ui/src/landing/strength-list/strength-list.stories.tsx";
 import * as landingValuePillars from "@zudo-sg/ui/src/landing/value-pillars/value-pillars.stories.tsx";
-import * as link from "@zudo-sg/ui/src/link/link.stories.tsx";
 import * as mediaPlaceholderBox from "@zudo-sg/ui/src/media/placeholder-box/placeholder-box.stories.tsx";
 import * as newsCategoryBadge from "@zudo-sg/ui/src/news/category-badge/category-badge.stories.tsx";
 import * as newsNewsFilter from "@zudo-sg/ui/src/news/news-filter/news-filter.stories.tsx";
@@ -107,8 +98,6 @@ import * as sharedContainer from "@zudo-sg/ui/src/shared/container/container.sto
 import * as sharedCtaButton from "@zudo-sg/ui/src/shared/cta-button/cta-button.stories.tsx";
 import * as sharedHero from "@zudo-sg/ui/src/shared/hero/hero.stories.tsx";
 import * as sharedSectionHeading from "@zudo-sg/ui/src/shared/section-heading/section-heading.stories.tsx";
-import * as siteHeader from "@zudo-sg/ui/src/site-header/site-header.stories.tsx";
-import * as stat from "@zudo-sg/ui/src/stat/stat.stories.tsx";
 
 /**
  * Path → story module map. Keys are glob-relative (e.g.
@@ -116,9 +105,6 @@ import * as stat from "@zudo-sg/ui/src/stat/stat.stories.tsx";
  * `{ default: meta, ...named Story exports }`.
  */
 export const storyModules: Record<string, StoryModule> = {
-  "./ui/src/badge/badge.stories.tsx": badge as unknown as StoryModule,
-  "./ui/src/button/button.stories.tsx": button as unknown as StoryModule,
-  "./ui/src/card/card.stories.tsx": card as unknown as StoryModule,
   "./ui/src/cards/callout/callout.stories.tsx": cardsCallout as unknown as StoryModule,
   "./ui/src/cards/card-grid/card-grid.stories.tsx": cardsCardGrid as unknown as StoryModule,
   "./ui/src/cards/card/card.stories.tsx": cardsCard as unknown as StoryModule,
@@ -146,9 +132,6 @@ export const storyModules: Record<string, StoryModule> = {
   "./ui/src/content/prose-table/prose-table.stories.tsx": contentProseTable as unknown as StoryModule,
   "./ui/src/content/prose-ul/prose-ul.stories.tsx": contentProseUl as unknown as StoryModule,
   "./ui/src/content/typography/typography.stories.tsx": contentTypography as unknown as StoryModule,
-  "./ui/src/dialog/dialog.stories.tsx": dialog as unknown as StoryModule,
-  "./ui/src/footer/footer.stories.tsx": footer as unknown as StoryModule,
-  "./ui/src/form/form.stories.tsx": form as unknown as StoryModule,
   "./ui/src/forms/contact-form/contact-form.stories.tsx": formsContactForm as unknown as StoryModule,
   "./ui/src/forms/field/field.stories.tsx": formsField as unknown as StoryModule,
   "./ui/src/forms/input/input.stories.tsx": formsInput as unknown as StoryModule,
@@ -158,8 +141,6 @@ export const storyModules: Record<string, StoryModule> = {
   "./ui/src/forms/select/select.stories.tsx": formsSelect as unknown as StoryModule,
   "./ui/src/forms/submit-button/submit-button.stories.tsx": formsSubmitButton as unknown as StoryModule,
   "./ui/src/forms/textarea/textarea.stories.tsx": formsTextarea as unknown as StoryModule,
-  "./ui/src/heading/heading.stories.tsx": heading as unknown as StoryModule,
-  "./ui/src/hero/hero.stories.tsx": hero as unknown as StoryModule,
   "./ui/src/landing/business-line-portal/business-line-portal.stories.tsx": landingBusinessLinePortal as unknown as StoryModule,
   "./ui/src/landing/business-segments/business-segments.stories.tsx": landingBusinessSegments as unknown as StoryModule,
   "./ui/src/landing/cert-list/cert-list.stories.tsx": landingCertList as unknown as StoryModule,
@@ -180,7 +161,6 @@ export const storyModules: Record<string, StoryModule> = {
   "./ui/src/landing/stat-band/stat-band.stories.tsx": landingStatBand as unknown as StoryModule,
   "./ui/src/landing/strength-list/strength-list.stories.tsx": landingStrengthList as unknown as StoryModule,
   "./ui/src/landing/value-pillars/value-pillars.stories.tsx": landingValuePillars as unknown as StoryModule,
-  "./ui/src/link/link.stories.tsx": link as unknown as StoryModule,
   "./ui/src/media/placeholder-box/placeholder-box.stories.tsx": mediaPlaceholderBox as unknown as StoryModule,
   "./ui/src/news/category-badge/category-badge.stories.tsx": newsCategoryBadge as unknown as StoryModule,
   "./ui/src/news/news-filter/news-filter.stories.tsx": newsNewsFilter as unknown as StoryModule,
@@ -194,8 +174,6 @@ export const storyModules: Record<string, StoryModule> = {
   "./ui/src/shared/cta-button/cta-button.stories.tsx": sharedCtaButton as unknown as StoryModule,
   "./ui/src/shared/hero/hero.stories.tsx": sharedHero as unknown as StoryModule,
   "./ui/src/shared/section-heading/section-heading.stories.tsx": sharedSectionHeading as unknown as StoryModule,
-  "./ui/src/site-header/site-header.stories.tsx": siteHeader as unknown as StoryModule,
-  "./ui/src/stat/stat.stories.tsx": stat as unknown as StoryModule,
 };
 
 /**
@@ -209,9 +187,6 @@ export const storyModules: Record<string, StoryModule> = {
  * `isStory()`-filtered variants, never to gate membership.
  */
 export const storyExportOrder: Record<string, string[]> = {
-  "./ui/src/badge/badge.stories.tsx": ["Playground", "Soft", "Solid", "Outline"],
-  "./ui/src/button/button.stories.tsx": ["Playground", "Variants", "Sizes", "AsLink", "Disabled", "Block"],
-  "./ui/src/card/card.stories.tsx": ["Playground", "Variants", "WithFooter", "Linked"],
   "./ui/src/cards/callout/callout.stories.tsx": ["Default", "Tones", "WithoutTitle", "NoteAlias"],
   "./ui/src/cards/card-grid/card-grid.stories.tsx": ["Default"],
   "./ui/src/cards/card/card.stories.tsx": ["Default", "Variants", "Paddings", "BodyOnly"],
@@ -239,9 +214,6 @@ export const storyExportOrder: Record<string, string[]> = {
   "./ui/src/content/prose-table/prose-table.stories.tsx": ["Default"],
   "./ui/src/content/prose-ul/prose-ul.stories.tsx": ["Default"],
   "./ui/src/content/typography/typography.stories.tsx": ["AllElements", "Headings", "TextFormatting", "Lists", "Table", "QuoteAndDefinitionList"],
-  "./ui/src/dialog/dialog.stories.tsx": ["Playground", "Default", "Busy", "WithError"],
-  "./ui/src/footer/footer.stories.tsx": ["Playground", "Default", "Minimal"],
-  "./ui/src/form/form.stories.tsx": ["TextField", "Required", "Disabled", "ContactForm"],
   "./ui/src/forms/contact-form/contact-form.stories.tsx": ["Default"],
   "./ui/src/forms/field/field.stories.tsx": ["Required", "Optional"],
   "./ui/src/forms/input/input.stories.tsx": ["Playground"],
@@ -251,8 +223,6 @@ export const storyExportOrder: Record<string, string[]> = {
   "./ui/src/forms/select/select.stories.tsx": ["Default"],
   "./ui/src/forms/submit-button/submit-button.stories.tsx": ["Default", "Disabled"],
   "./ui/src/forms/textarea/textarea.stories.tsx": ["Default"],
-  "./ui/src/heading/heading.stories.tsx": ["Playground", "Page", "Section", "SectionWithAction"],
-  "./ui/src/hero/hero.stories.tsx": ["Playground", "Basic", "WithMedia", "Plain"],
   "./ui/src/landing/business-line-portal/business-line-portal.stories.tsx": ["Default", "Filtered", "Bare"],
   "./ui/src/landing/business-segments/business-segments.stories.tsx": ["Default", "Narrow"],
   "./ui/src/landing/cert-list/cert-list.stories.tsx": ["Default", "Single", "Narrow"],
@@ -273,7 +243,6 @@ export const storyExportOrder: Record<string, string[]> = {
   "./ui/src/landing/stat-band/stat-band.stories.tsx": ["Default", "CustomStats", "Narrow"],
   "./ui/src/landing/strength-list/strength-list.stories.tsx": ["Default", "Narrow"],
   "./ui/src/landing/value-pillars/value-pillars.stories.tsx": ["Default", "Narrow"],
-  "./ui/src/link/link.stories.tsx": ["Playground", "Variants", "External"],
   "./ui/src/media/placeholder-box/placeholder-box.stories.tsx": ["Default", "AspectRatios", "Sizes", "FromMarkdownImg"],
   "./ui/src/news/category-badge/category-badge.stories.tsx": ["AllCategories", "UnknownFallback"],
   "./ui/src/news/news-filter/news-filter.stories.tsx": ["Default", "FewCategories"],
@@ -287,7 +256,5 @@ export const storyExportOrder: Record<string, string[]> = {
   "./ui/src/shared/cta-button/cta-button.stories.tsx": ["Playground", "Pair"],
   "./ui/src/shared/hero/hero.stories.tsx": ["Primary", "Secondary"],
   "./ui/src/shared/section-heading/section-heading.stories.tsx": ["Default", "HeadingOnly", "WithEyebrow"],
-  "./ui/src/site-header/site-header.stories.tsx": ["Playground", "Default", "WithAction"],
-  "./ui/src/stat/stat.stories.tsx": ["Playground", "Single", "Group", "Divided"],
 };
 // GENERATED:SG_REGISTRY_END
