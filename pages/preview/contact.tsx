@@ -49,7 +49,7 @@ export default function ContactPreviewRoute(): JSX.Element {
         <meta name="robots" content="noindex" />
         <title>Contact Form Preview</title>
       </head>
-      <body class="bg-paper p-hsp-xl">
+      <body class="bg-bg p-hsp-xl">
         <h1 class="mb-vsp-md text-heading font-bold">Contact form — live demo</h1>
         {app}
       </body>

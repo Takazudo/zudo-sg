@@ -31,11 +31,11 @@ describe("parseCssCustomProperties", () => {
   it("keeps a light-dark() pair intact — commas inside parens are not split", () => {
     const css = `
       @theme {
-        --color-ink: light-dark(var(--palette-base-4), var(--palette-base-0));
+        --color-fg: light-dark(var(--palette-base-4), var(--palette-base-0));
       }
     `;
     const vars = parseCssCustomProperties(css);
-    expect(vars.get("--color-ink")).toBe(
+    expect(vars.get("--color-fg")).toBe(
       "light-dark(var(--palette-base-4), var(--palette-base-0))",
     );
   });

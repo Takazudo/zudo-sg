@@ -238,24 +238,24 @@ test("preview panel: overrides reach iframe :root; host <html> is unchanged", as
   // defines base @zudo-sg/ui tokens (src/styles/global.css aliases them onto the
   // doc chrome), so these are NOT empty — the correct isolation assertion is that
   // the preview override does not CHANGE the host value, not that it equals "".
-  const hostBrandBefore = await getHostRootVar(page, "--color-brand");
+  const hostBrandBefore = await getHostRootVar(page, "--color-accent");
   const hostRadiusBefore = await getHostRootVar(page, "--radius-md");
 
   await applyVarsToFirstIframe(page, [
-    ["--color-brand", brandOverride],
+    ["--color-accent", brandOverride],
     ["--radius-md", radiusOverride],
   ]);
 
   // Assert iframe :root has the overrides applied.
-  expect(await getIframeRootVar(frame, "--color-brand")).toBe(brandOverride);
+  expect(await getIframeRootVar(frame, "--color-accent")).toBe(brandOverride);
   expect(await getIframeRootVar(frame, "--radius-md")).toBe(radiusOverride);
 
   // Assert host <html> is UNCHANGED by the preview override — the applySink
   // routes writes to iframes only, never to the host :root.
-  expect(await getHostRootVar(page, "--color-brand")).toBe(hostBrandBefore);
+  expect(await getHostRootVar(page, "--color-accent")).toBe(hostBrandBefore);
   expect(await getHostRootVar(page, "--radius-md")).toBe(hostRadiusBefore);
   // …and specifically never picked up the iframe sentinel values.
-  expect(await getHostRootVar(page, "--color-brand")).not.toBe(brandOverride);
+  expect(await getHostRootVar(page, "--color-accent")).not.toBe(brandOverride);
   expect(await getHostRootVar(page, "--radius-md")).not.toBe(radiusOverride);
 });
 
@@ -269,8 +269,8 @@ test("doc Tokens panel: dispatching toggle-sg-doc-tweak opens the real (non-empt
   await gotoFirstDetailPage(page);
   const frame = await waitForFirstPreviewFrame(page);
 
-  // Capture the iframe's baseline --color-brand value.
-  const beforeBrand = await getIframeRootVar(frame, "--color-brand");
+  // Capture the iframe's baseline --color-accent value.
+  const beforeBrand = await getIframeRootVar(frame, "--color-accent");
 
   // Open the DOC token panel via its explicit toggle channel.
   // The doc panel has NO applySink — it writes to the host :root only.
@@ -305,15 +305,15 @@ test("doc Tokens panel: dispatching toggle-sg-doc-tweak opens the real (non-empt
     docPanel.getByRole("tab", { name: "Size", exact: true }),
   ).toBeVisible();
 
-  // Opening the doc panel must not have changed --color-brand on the iframe.
-  expect(await getIframeRootVar(frame, "--color-brand")).toBe(beforeBrand);
+  // Opening the doc panel must not have changed --color-accent on the iframe.
+  expect(await getIframeRootVar(frame, "--color-accent")).toBe(beforeBrand);
 
   // Apply a sentinel value to the iframe via direct postMessage.
-  await applyVarsToFirstIframe(page, [["--color-brand", BRAND_SENTINEL]]);
-  expect(await getIframeRootVar(frame, "--color-brand")).toBe(BRAND_SENTINEL);
+  await applyVarsToFirstIframe(page, [["--color-accent", BRAND_SENTINEL]]);
+  expect(await getIframeRootVar(frame, "--color-accent")).toBe(BRAND_SENTINEL);
 
   // Click Reset on the doc panel — this resets the doc panel's host :root vars
-  // but must NOT clear the preview iframe's --color-brand.
+  // but must NOT clear the preview iframe's --color-accent.
   // The doc panel's Reset calls clearAppliedStyles (no sink), which only removes
   // inline styles from the host document.documentElement — not from iframes.
   const resetBtn = page
@@ -323,8 +323,8 @@ test("doc Tokens panel: dispatching toggle-sg-doc-tweak opens the real (non-empt
   await resetBtn.click();
   await page.waitForTimeout(200);
 
-  // Iframe's --color-brand must still be the sentinel after doc panel Reset.
-  expect(await getIframeRootVar(frame, "--color-brand")).toBe(BRAND_SENTINEL);
+  // Iframe's --color-accent must still be the sentinel after doc panel Reset.
+  expect(await getIframeRootVar(frame, "--color-accent")).toBe(BRAND_SENTINEL);
 });
 
 // ---------------------------------------------------------------------------

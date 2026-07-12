@@ -124,7 +124,7 @@ export default function StoryDetailPage(
         {...chrome}
         codePanel={codePanel}
       >
-        <p class="text-ink-soft">Story not found: {slug}</p>
+        <p class="text-muted">Story not found: {slug}</p>
       </StyleguideLayout>
     );
   }
@@ -146,19 +146,19 @@ export default function StoryDetailPage(
     >
       <div class="mx-auto max-w-[56rem]">
         <header class="mb-vsp-lg">
-          <h1 class="text-2xl font-bold text-ink">{entry.meta.title}</h1>
-          <p class="mt-vsp-xs text-ink-soft">{entry.meta.description}</p>
-          <span class="mt-vsp-xs inline-block rounded-full border border-line px-hsp-sm py-vsp-3xs text-xs text-ink-mute">
+          <h1 class="text-2xl font-bold text-fg">{entry.meta.title}</h1>
+          <p class="mt-vsp-xs text-muted">{entry.meta.description}</p>
+          <span class="mt-vsp-xs inline-block rounded-full border border-border px-hsp-sm py-vsp-3xs text-xs text-muted">
             {entry.meta.category}
           </span>
         </header>
 
         <section class="mb-vsp-xl">
-          <h2 class="mb-vsp-sm text-small font-semibold uppercase tracking-wide text-ink-mute">
+          <h2 class="mb-vsp-sm text-small font-semibold uppercase tracking-wide text-muted">
             Usage
           </h2>
           <div class="sg-snippet">
-            <pre class="overflow-auto rounded-md bg-surface-sunken p-hsp-md text-xs text-ink-soft">
+            <pre class="overflow-auto rounded-md bg-surface-2 p-hsp-md text-xs text-muted">
               <code>{entry.meta.usage}</code>
             </pre>
           </div>
@@ -168,13 +168,13 @@ export default function StoryDetailPage(
           // Sanctioned `previewRoute` pattern (STORIES.md §6): a link out to a
           // REAL page route, not one of the variant preview iframes below —
           // kept visually distinct (its own bordered callout, not a frame).
-          <section class="mb-vsp-xl rounded-md border border-line bg-surface-sunken p-hsp-md">
-            <h2 class="mb-vsp-2xs text-small font-semibold uppercase tracking-wide text-ink-mute">
+          <section class="mb-vsp-xl rounded-md border border-border bg-surface-2 p-hsp-md">
+            <h2 class="mb-vsp-2xs text-small font-semibold uppercase tracking-wide text-muted">
               Live demo
             </h2>
             <a
               href={withBase(entry.meta.previewRoute)}
-              class="text-sm font-medium text-brand underline underline-offset-2"
+              class="text-sm font-medium text-accent underline underline-offset-2"
             >
               Open live demo →
             </a>
@@ -199,7 +199,7 @@ export default function StoryDetailPage(
         </div>
 
         {doc && (
-          <section class="mt-vsp-xl border-t border-line pt-vsp-xl">
+          <section class="mt-vsp-xl border-t border-border pt-vsp-xl">
             {/* `.zd-content` supplies the shared prose typography (headings,
                 lists, code blocks) via zudo-doc's content.css; the components
                 map adds the admonition tags. */}

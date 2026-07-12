@@ -42,8 +42,8 @@ compile or publish before consuming. Two consequences for the catalog:
 
 ### Required style imports
 
-Components reference **semantic token utilities only** (`bg-brand`, `text-ink`,
-`border-line`, `bg-surface-sunken`, `shadow-card`, `gap-vsp-md`, …). Those
+Components reference **semantic token utilities only** (`bg-accent`, `text-fg`,
+`border-border`, `bg-surface-2`, `shadow-card`, `gap-vsp-md`, …). Those
 utilities exist only if the consumer imports both shared token files **after**
 Tailwind's preflight + utilities, in this order:
 
@@ -73,8 +73,8 @@ roles:
 | **3 — Component** | Scoped overrides — rarely needed under Tailwind utilities | per-component |
 
 **The palette is raw and is NEVER referenced directly by components.** Components
-bind only to the semantic `--color-*` Tailwind utilities (`bg-brand`,
-`text-ink`, `border-line`, …). The palette lives in a plain `:root` block (**not
+bind only to the semantic `--color-*` Tailwind utilities (`bg-accent`,
+`text-fg`, `border-border`, …). The palette lives in a plain `:root` block (**not
 `@theme`**) on purpose: a `@theme` entry would make Tailwind emit
 `bg-palette-*`/`text-palette-*` utilities, letting a component bypass the
 semantic layer — plain `:root` vars still resolve through `var()` inside the

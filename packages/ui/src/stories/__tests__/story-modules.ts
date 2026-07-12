@@ -13,9 +13,6 @@ import type { StoryModule } from "../types";
 // the `*.stories.tsx` files on disk — never hand-edit it; run
 // `pnpm gen:sg-registry` and commit the result.
 // GENERATED:SG_REGISTRY_BEGIN — do not hand-edit; run `pnpm gen:sg-registry`.
-import * as badge from "../../badge/badge.stories";
-import * as button from "../../button/button.stories";
-import * as card from "../../card/card.stories";
 import * as cardsCallout from "../../cards/callout/callout.stories";
 import * as cardsCardGrid from "../../cards/card-grid/card-grid.stories";
 import * as cardsCard from "../../cards/card/card.stories";
@@ -43,9 +40,6 @@ import * as contentProseStrong from "../../content/prose-strong/prose-strong.sto
 import * as contentProseTable from "../../content/prose-table/prose-table.stories";
 import * as contentProseUl from "../../content/prose-ul/prose-ul.stories";
 import * as contentTypography from "../../content/typography/typography.stories";
-import * as dialog from "../../dialog/dialog.stories";
-import * as footer from "../../footer/footer.stories";
-import * as form from "../../form/form.stories";
 import * as formsContactForm from "../../forms/contact-form/contact-form.stories";
 import * as formsField from "../../forms/field/field.stories";
 import * as formsInput from "../../forms/input/input.stories";
@@ -55,8 +49,6 @@ import * as formsSecondaryButton from "../../forms/secondary-button/secondary-bu
 import * as formsSelect from "../../forms/select/select.stories";
 import * as formsSubmitButton from "../../forms/submit-button/submit-button.stories";
 import * as formsTextarea from "../../forms/textarea/textarea.stories";
-import * as heading from "../../heading/heading.stories";
-import * as hero from "../../hero/hero.stories";
 import * as landingBusinessLinePortal from "../../landing/business-line-portal/business-line-portal.stories";
 import * as landingBusinessSegments from "../../landing/business-segments/business-segments.stories";
 import * as landingCertList from "../../landing/cert-list/cert-list.stories";
@@ -77,7 +69,6 @@ import * as landingSectionNav from "../../landing/section-nav/section-nav.storie
 import * as landingStatBand from "../../landing/stat-band/stat-band.stories";
 import * as landingStrengthList from "../../landing/strength-list/strength-list.stories";
 import * as landingValuePillars from "../../landing/value-pillars/value-pillars.stories";
-import * as link from "../../link/link.stories";
 import * as mediaPlaceholderBox from "../../media/placeholder-box/placeholder-box.stories";
 import * as newsCategoryBadge from "../../news/category-badge/category-badge.stories";
 import * as newsNewsFilter from "../../news/news-filter/news-filter.stories";
@@ -91,13 +82,8 @@ import * as sharedContainer from "../../shared/container/container.stories";
 import * as sharedCtaButton from "../../shared/cta-button/cta-button.stories";
 import * as sharedHero from "../../shared/hero/hero.stories";
 import * as sharedSectionHeading from "../../shared/section-heading/section-heading.stories";
-import * as siteHeader from "../../site-header/site-header.stories";
-import * as stat from "../../stat/stat.stories";
 
 export const STORY_MODULES: Record<string, StoryModule> = {
-  "badge/badge.stories.tsx": badge as unknown as StoryModule,
-  "button/button.stories.tsx": button as unknown as StoryModule,
-  "card/card.stories.tsx": card as unknown as StoryModule,
   "cards/callout/callout.stories.tsx": cardsCallout as unknown as StoryModule,
   "cards/card-grid/card-grid.stories.tsx": cardsCardGrid as unknown as StoryModule,
   "cards/card/card.stories.tsx": cardsCard as unknown as StoryModule,
@@ -125,9 +111,6 @@ export const STORY_MODULES: Record<string, StoryModule> = {
   "content/prose-table/prose-table.stories.tsx": contentProseTable as unknown as StoryModule,
   "content/prose-ul/prose-ul.stories.tsx": contentProseUl as unknown as StoryModule,
   "content/typography/typography.stories.tsx": contentTypography as unknown as StoryModule,
-  "dialog/dialog.stories.tsx": dialog as unknown as StoryModule,
-  "footer/footer.stories.tsx": footer as unknown as StoryModule,
-  "form/form.stories.tsx": form as unknown as StoryModule,
   "forms/contact-form/contact-form.stories.tsx": formsContactForm as unknown as StoryModule,
   "forms/field/field.stories.tsx": formsField as unknown as StoryModule,
   "forms/input/input.stories.tsx": formsInput as unknown as StoryModule,
@@ -137,8 +120,6 @@ export const STORY_MODULES: Record<string, StoryModule> = {
   "forms/select/select.stories.tsx": formsSelect as unknown as StoryModule,
   "forms/submit-button/submit-button.stories.tsx": formsSubmitButton as unknown as StoryModule,
   "forms/textarea/textarea.stories.tsx": formsTextarea as unknown as StoryModule,
-  "heading/heading.stories.tsx": heading as unknown as StoryModule,
-  "hero/hero.stories.tsx": hero as unknown as StoryModule,
   "landing/business-line-portal/business-line-portal.stories.tsx": landingBusinessLinePortal as unknown as StoryModule,
   "landing/business-segments/business-segments.stories.tsx": landingBusinessSegments as unknown as StoryModule,
   "landing/cert-list/cert-list.stories.tsx": landingCertList as unknown as StoryModule,
@@ -159,7 +140,6 @@ export const STORY_MODULES: Record<string, StoryModule> = {
   "landing/stat-band/stat-band.stories.tsx": landingStatBand as unknown as StoryModule,
   "landing/strength-list/strength-list.stories.tsx": landingStrengthList as unknown as StoryModule,
   "landing/value-pillars/value-pillars.stories.tsx": landingValuePillars as unknown as StoryModule,
-  "link/link.stories.tsx": link as unknown as StoryModule,
   "media/placeholder-box/placeholder-box.stories.tsx": mediaPlaceholderBox as unknown as StoryModule,
   "news/category-badge/category-badge.stories.tsx": newsCategoryBadge as unknown as StoryModule,
   "news/news-filter/news-filter.stories.tsx": newsNewsFilter as unknown as StoryModule,
@@ -173,7 +153,5 @@ export const STORY_MODULES: Record<string, StoryModule> = {
   "shared/cta-button/cta-button.stories.tsx": sharedCtaButton as unknown as StoryModule,
   "shared/hero/hero.stories.tsx": sharedHero as unknown as StoryModule,
   "shared/section-heading/section-heading.stories.tsx": sharedSectionHeading as unknown as StoryModule,
-  "site-header/site-header.stories.tsx": siteHeader as unknown as StoryModule,
-  "stat/stat.stories.tsx": stat as unknown as StoryModule,
 };
 // GENERATED:SG_REGISTRY_END

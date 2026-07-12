@@ -112,7 +112,7 @@ describe("clearPreviewVars", () => {
   it("deletes from the override map so cleared names are not replayed", () => {
     registry.applyPreviewVars([
       ["--zd-space", "8px"],
-      ["--color-brand", "#f00"],
+      ["--color-accent", "#f00"],
     ]);
     registry.clearPreviewVars(["--zd-space"]);
 
@@ -123,7 +123,7 @@ describe("clearPreviewVars", () => {
 
     // Only the surviving override is replayed.
     expect(applyCalls).toEqual([
-      { iframe: late, vars: [["--color-brand", "#f00"]] },
+      { iframe: late, vars: [["--color-accent", "#f00"]] },
     ]);
   });
 
@@ -141,7 +141,7 @@ describe("replay on onIframeReady", () => {
   it("replays current overrides to an iframe registered AFTER applyPreviewVars", () => {
     registry.applyPreviewVars([
       ["--zd-space", "8px"],
-      ["--color-brand", "#f00"],
+      ["--color-accent", "#f00"],
     ]);
 
     const late = makeIframe("late");
@@ -155,7 +155,7 @@ describe("replay on onIframeReady", () => {
         iframe: late,
         vars: [
           ["--zd-space", "8px"],
-          ["--color-brand", "#f00"],
+          ["--color-accent", "#f00"],
         ],
       },
     ]);

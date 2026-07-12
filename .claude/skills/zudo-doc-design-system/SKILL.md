@@ -57,8 +57,8 @@ token file above. Know which world the file you're editing belongs to:
   (`text-body`, `text-caption`, ...) via `@takazudo/zudo-doc`'s `content.css`.
 - **UI-component world** (`packages/ui/src/**`, also consumed by `apps/demo` and by the root's
   `/components/*` catalog): colors come from `packages/ui/styles/colors.css`'s semantic tokens —
-  `text-ink`/`ink-soft`/`ink-mute`, `bg-paper`/`surface`/`surface-sunken`, `border-line`/`line-strong`,
-  `bg-brand`/`brand-strong`/`brand-soft`, `text-on-brand`, plus `accent`/`success`/`danger`/`focus`.
+  `text-fg`/`muted`, `bg-bg`/`surface`/`surface-2`, `border-border`,
+  `bg-accent`/`accent-hover`, `text-on-accent`, plus `success`/`danger`/`warning`/`info`/`focus`.
   `@zudo-sg/ui` components use the **Tier-1 abstract** typography sizes directly (`text-sm`,
   `text-lg`, ...) rather than the Tier-2 semantic aliases — see `packages/ui/styles/tokens.css`'s
   header comment for why (abstract names let any element pick a size without a misleading role name).
@@ -83,7 +83,7 @@ different concrete tokens:
   - **Tier 1** (`--palette-{family}-{step}`): raw oklch values, plain `:root` vars (not `@theme`,
     so no `bg-palette-*` utility is ever generated) — **never** referenced by components directly
   - **Tier 2** (`--color-*`): semantic roles, each a `light-dark()` pair of Tier-1 refs — this is
-    what components bind to (`bg-brand`, `text-ink`, ...)
+    what components bind to (`bg-accent`, `text-fg`, ...)
   - Full contract + rationale: `packages/ui/STORIES.md` §"Three-tier color system"
 
 ### Search & highlight tokens (role-split)
