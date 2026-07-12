@@ -256,6 +256,26 @@ export type {
 } from "./stories/types";
 export { defineStory } from "./stories/types";
 
+// ── Composer authoring contract (consumed by the /composer app, epic #243) ─
+export type {
+  JsonPrimitive,
+  JsonValue,
+  ComposerSource,
+  ComposerField,
+  ComposerFieldMeta,
+  ComposerSlot,
+  ComposerSlotMeta,
+  ComposerSlotCardinality,
+  ComposerConstraints,
+  ComposerInlineEditorAdapter,
+  ComposerAdapters,
+  ComposerAdaptersMeta,
+  ComposerDefaults,
+  ComposerDefinition,
+  ComposerMeta,
+} from "./composer/types";
+export { defineComposer } from "./composer/types";
+
 // ── Utilities ────────────────────────────────────────────────────────────
 export { cx } from "./lib/cx";
 export type { ClassValue } from "./lib/cx";
