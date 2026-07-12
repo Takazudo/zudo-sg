@@ -1,0 +1,294 @@
+/* ============================================================================
+ * Composer — feature CSS (issue #247)
+ *
+ * The `/composer` route owns a dedicated document shell (NOT StyleguideLayout
+ * / DocLayout — see pages/composer/index.tsx's header comment for why: no
+ * docs sidebar/TOC/footer, no padded `.zd-doc-content-band` article geometry).
+ * This file is the ONLY place Composer-specific selectors live, imported by
+ * src/styles/global.css next to the styleguide feature import. `sg-` classes
+ * / `data-sg-composer-*` attributes follow the same naming family as
+ * src/features/styleguide/styles.css.
+ *
+ * Layout: below the shared 3.5rem header (--sg-header-h, already defined by
+ * the styleguide feature CSS) sits a fixed-height toolbar, then a workspace
+ * that fills the remaining viewport height. Desktop (>=64rem) is the
+ * "five-track" grid the issue describes: tree rail | resizer | canvas
+ * (minmax(0,1fr)) | resizer | inspector rail. Below 64rem the rails and
+ * resizers are hidden and the canvas fills the width — this is the
+ * content-driven narrow seam from the prototype (`_temp-resource/243-composer
+ * /styles.css`'s `@media (max-width: 1023px)` block), reproduced here from
+ * the copy only (no code import — see repo-root `_temp-resource/README.md`).
+ *
+ * Overlay z-index: the resizer handles reuse the existing `sidebar` tier
+ * (`z-index-sidebar`, src/config/z-index-tokens.ts — its documented purpose
+ * is literally "…resizer handle") and the toolbar reuses `toolbar`. No new
+ * z-index tier was needed, so `pnpm gen:z-index` was not run.
+ * ========================================================================== */
+
+:root {
+  /* Rail widths — the resizer scripts (resizer-scripts-source.ts) override
+   * these per-user in px at runtime; these are just the first-paint
+   * defaults for a session with nothing persisted yet. */
+  --sg-composer-tree-w: 18rem;
+  --sg-composer-inspector-w: 20rem;
+  /* Visual (not hit-area) width of each resizer track. */
+  --sg-composer-resizer-w: 0.75rem;
+}
+
+/* Composer owns its own document (see pages/composer/index.tsx) — this guard
+ * is scoped to it so no other route's <body> is affected. Horizontal overflow
+ * here would come from the grid's rail widths at very narrow viewports; the
+ * canvas-only collapse below prevents that, but the guard stays as a hard
+ * backstop (acceptance: "no body horizontal overflow" at every tested width). */
+html[data-sg-composer-doc] body {
+  overflow-x: hidden;
+}
+
+.sg-composer-shell {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - var(--sg-header-h));
+  min-height: 0;
+}
+
+.sg-composer-toolbar {
+  flex-shrink: 0;
+  position: relative;
+  z-index: var(--z-index-toolbar);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-hsp-sm);
+  padding-inline: var(--spacing-hsp-lg);
+  padding-block: var(--spacing-vsp-sm);
+  border-bottom: 1px solid var(--color-muted);
+  background: var(--color-bg);
+}
+
+.sg-composer-grid {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  /* Narrow (< 64rem): canvas-only — see the min-width:64rem block below. */
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.sg-composer-tree,
+.sg-composer-inspector {
+  display: none;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  background: var(--color-bg);
+}
+
+.sg-composer-tree {
+  border-right: 1px solid var(--color-muted);
+}
+
+.sg-composer-inspector {
+  border-left: 1px solid var(--color-muted);
+}
+
+.sg-composer-canvas {
+  grid-column: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.sg-composer-resizer {
+  display: none;
+}
+
+.sg-composer-narrow-note {
+  position: absolute;
+  z-index: var(--z-index-sidebar);
+  right: var(--spacing-hsp-md);
+  bottom: var(--spacing-vsp-md);
+  max-width: 16rem;
+  padding: var(--spacing-vsp-2xs) var(--spacing-hsp-sm);
+  border: 1px solid var(--color-muted);
+  border-radius: var(--radius-md);
+  background: color-mix(in oklch, var(--color-surface) 92%, transparent);
+  color: var(--color-muted);
+  font-size: var(--text-micro);
+  box-shadow: var(--shadow-lg);
+}
+
+.sg-composer-narrow-note strong {
+  display: block;
+  color: var(--color-fg);
+}
+
+@media (min-width: 64rem) {
+  .sg-composer-grid {
+    position: relative;
+    grid-template-columns:
+      var(--sg-composer-tree-w)
+      var(--sg-composer-resizer-w)
+      minmax(0, 1fr)
+      var(--sg-composer-resizer-w)
+      var(--sg-composer-inspector-w);
+  }
+
+  .sg-composer-tree,
+  .sg-composer-inspector {
+    display: block;
+  }
+
+  .sg-composer-canvas {
+    grid-column: 3;
+  }
+
+  .sg-composer-resizer {
+    position: relative;
+    display: block;
+    grid-row: 1;
+    cursor: col-resize;
+    background: transparent;
+  }
+
+  [data-sg-composer-tree-resizer] {
+    grid-column: 2;
+  }
+
+  [data-sg-composer-inspector-resizer] {
+    grid-column: 4;
+  }
+
+  @media (hover: hover) {
+    .sg-composer-resizer:hover {
+      background: color-mix(in oklch, var(--color-accent) 30%, transparent);
+    }
+  }
+  .sg-composer-resizer[data-sg-dragging] {
+    background: color-mix(in oklch, var(--color-accent) 30%, transparent);
+  }
+  .sg-composer-resizer:focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: -2px;
+    background: color-mix(in oklch, var(--color-accent) 20%, transparent);
+  }
+
+  .sg-composer-narrow-note {
+    display: none;
+  }
+}
+
+/* Generous hit area for the resizer without widening its visible track —
+ * mirrors the code panel resizer's grab-strip approach
+ * (src/features/styleguide/styles.css). The pseudo-element extends the
+ * pointer/touch target to ~44px (touch-target-sizing best practice) while
+ * the visible column stays a slim 0.75rem. */
+.sg-composer-resizer::before {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  inset-inline: calc(-1 * var(--spacing-hsp-2xs));
+}
+
+/* ── Toolbar controls ────────────────────────────────────────────────────── */
+
+.sg-composer-mode-toggle {
+  display: inline-flex;
+  border: 1px solid var(--color-muted);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.sg-composer-mode-toggle button {
+  padding: var(--spacing-vsp-3xs) var(--spacing-hsp-sm);
+  font-size: var(--text-small);
+  color: var(--color-muted);
+  background: transparent;
+  cursor: pointer;
+  min-height: 2.75rem;
+}
+
+@media (hover: hover) {
+  .sg-composer-mode-toggle button:hover {
+    color: var(--color-fg);
+  }
+}
+
+.sg-composer-mode-toggle button[aria-pressed="true"] {
+  color: var(--color-on-accent);
+  background: var(--color-accent);
+}
+
+.sg-composer-mode-toggle button:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: -2px;
+}
+
+.sg-composer-toolbar-button {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  padding: var(--spacing-vsp-3xs) var(--spacing-hsp-sm);
+  border: 1px solid var(--color-muted);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-muted);
+  font-size: var(--text-small);
+  cursor: pointer;
+  transition:
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+@media (hover: hover) {
+  .sg-composer-toolbar-button:hover {
+    color: var(--color-fg);
+  }
+}
+.sg-composer-toolbar-button:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.sg-composer-save-status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-hsp-2xs);
+  font-size: var(--text-micro);
+  color: var(--color-muted);
+}
+
+.sg-composer-save-status[data-sg-status="error"],
+.sg-composer-save-status[data-sg-status="quarantined"] {
+  color: var(--color-warning);
+}
+
+.sg-composer-load-notice {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-hsp-sm);
+  padding-inline: var(--spacing-hsp-lg);
+  padding-block: var(--spacing-vsp-2xs);
+  border-bottom: 1px solid var(--color-warning);
+  background: color-mix(in oklch, var(--color-warning) 12%, transparent);
+  color: var(--color-fg);
+  font-size: var(--text-small);
+}
+
+.sg-composer-placeholder-pane {
+  display: flex;
+  height: 100%;
+  min-height: 8rem;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-vsp-3xs);
+  padding: var(--spacing-vsp-lg) var(--spacing-hsp-md);
+  text-align: center;
+  color: var(--color-muted);
+  font-size: var(--text-small);
+}
+
+.sg-composer-placeholder-pane strong {
+  color: var(--color-fg);
+}
