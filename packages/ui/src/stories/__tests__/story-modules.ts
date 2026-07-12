@@ -26,6 +26,8 @@ import * as heading from "../../heading/heading.stories";
 import * as hero from "../../hero/hero.stories";
 import * as link from "../../link/link.stories";
 import * as mediaPlaceholderBox from "../../media/placeholder-box/placeholder-box.stories";
+import * as searchSearchResultsEnhancer from "../../search/search-results-enhancer/search-results-enhancer.stories";
+import * as searchSearchResults from "../../search/search-results/search-results.stories";
 import * as sharedAutoGrid from "../../shared/auto-grid/auto-grid.stories";
 import * as sharedCardLink from "../../shared/card-link/card-link.stories";
 import * as sharedContainer from "../../shared/container/container.stories";
@@ -49,6 +51,8 @@ export const STORY_MODULES: Record<string, StoryModule> = {
   "hero/hero.stories.tsx": hero as unknown as StoryModule,
   "link/link.stories.tsx": link as unknown as StoryModule,
   "media/placeholder-box/placeholder-box.stories.tsx": mediaPlaceholderBox as unknown as StoryModule,
+  "search/search-results-enhancer/search-results-enhancer.stories.tsx": searchSearchResultsEnhancer as unknown as StoryModule,
+  "search/search-results/search-results.stories.tsx": searchSearchResults as unknown as StoryModule,
   "shared/auto-grid/auto-grid.stories.tsx": sharedAutoGrid as unknown as StoryModule,
   "shared/card-link/card-link.stories.tsx": sharedCardLink as unknown as StoryModule,
   "shared/container/container.stories.tsx": sharedContainer as unknown as StoryModule,
