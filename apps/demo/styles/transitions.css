@@ -1,20 +1,111 @@
 /* ========================================
- * SPA page-transition base wiring.
+ * SPA page-transition wiring.
  *
- * <ClientRouter /> (layouts/default.tsx) drives soft navigation. This file
- * currently covers only the loading-overlay indicator
- * (components/router/page-loading-overlay.tsx), which is CSS-driven
- * visibility (no View Transitions API dependency) and works standalone.
+ * <ClientRouter /> (layouts/default.tsx) drives soft navigation via
+ * `document.startViewTransition`. Two parts:
  *
- * NOT yet in this file (Wave 5 #234 adds these once the SPA/search sub
- * lands, so they can be verified against real soft navigations):
- *   - `[data-zfb-transition-persist^="sidebar-"]` / `"header-"` rules that
- *     extract the persistent nav rail + header from the View Transition
- *     root snapshot (so only the main content crossfades)
- *   - `::view-transition-old(root)` / `::view-transition-new(root)`
- *     crossfade
- *   - the `prefers-reduced-motion` opt-out for the above
+ *   1. Chrome extraction + root crossfade (below): the left rail and global
+ *      header are carved out of the View Transition's root snapshot via
+ *      `data-zfb-transition-persist` hooks (layouts/default.tsx wraps
+ *      <SiteHeader>/<SiteNav> in a marker `<div>`; the sidebar wrapper is
+ *      `display: contents` so it adds no box of its own — the selectors
+ *      below reach through it to the real fixed `<nav>`). Everything else
+ *      (main content, breadcrumbs, footer) is not given its own
+ *      view-transition-name, so it crossfades as part of `root`.
+ *
+ *      `data-line` on `<html>` (layouts/default.tsx) is deliberately NOT in
+ *      `<ClientRouter preserveHtmlAttrs>` — it's re-derived per navigation
+ *      from the new page's own frontmatter, not carried over from the old
+ *      page.
+ *
+ *   2. The loading-overlay indicator (components/router/page-loading-
+ *      overlay.tsx), which is plain CSS-driven visibility, no View
+ *      Transitions API dependency.
  * ======================================== */
+
+@keyframes zdContentFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-0.75rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes zdContentFadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+/* ── Chrome extraction — left rail ──
+ * The wrapper's suffix (`sidebar-${line ?? "main"}`) isn't distinguished
+ * further below — every value maps to the same view-transition-name, so the
+ * rail always gets the "persist, don't crossfade" treatment regardless of
+ * which line it belongs to. */
+[data-zfb-transition-persist^="sidebar-"] #zui-nav-drawer {
+  view-transition-name: zfb-sidebar;
+}
+
+/* Same rail on both sides of the navigation: swap instantly, no morph. */
+::view-transition-old(zfb-sidebar),
+::view-transition-new(zfb-sidebar),
+::view-transition-group(zfb-sidebar) {
+  animation: none;
+}
+
+/* Rail present on only one side (a route that hides it): fade instead of an
+ * instant pop. `:only-child` outranks `animation: none` above (higher
+ * specificity), so it wins for this case. */
+::view-transition-old(zfb-sidebar):only-child {
+  animation: 150ms ease-in both zdContentFadeOut;
+}
+::view-transition-new(zfb-sidebar):only-child {
+  animation: 300ms ease-out both zdContentFadeIn;
+}
+
+/* ── Chrome extraction — global header ── */
+[data-zfb-transition-persist^="header-"] {
+  view-transition-name: zfb-header;
+}
+
+::view-transition-old(zfb-header),
+::view-transition-new(zfb-header),
+::view-transition-group(zfb-header) {
+  animation: none;
+}
+
+::view-transition-old(zfb-header):only-child {
+  animation: 150ms ease-in both zdContentFadeOut;
+}
+::view-transition-new(zfb-header):only-child {
+  animation: 300ms ease-out both zdContentFadeIn;
+}
+
+/* ── Root crossfade — everything not extracted above. ── */
+::view-transition-old(root) {
+  animation: 150ms ease-in both zdContentFadeOut;
+}
+::view-transition-new(root) {
+  animation: 300ms ease-out both zdContentFadeIn;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(root),
+  ::view-transition-old(root),
+  ::view-transition-new(root),
+  ::view-transition-old(zfb-sidebar):only-child,
+  ::view-transition-new(zfb-sidebar):only-child,
+  ::view-transition-old(zfb-header):only-child,
+  ::view-transition-new(zfb-header):only-child {
+    animation: none;
+  }
+}
 
 .page-loading-overlay {
   position: fixed;

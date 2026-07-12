@@ -1,0 +1,45 @@
+/* =============================================================================
+ * styles/lines.css — per-business-line theming.
+ *
+ * `layouts/default.tsx` sets `<html data-line="<key>">` for pages under
+ * `lines/<key>/...` (see lib/site-tree.ts's module doc — `deriveLineKey`
+ * reads the slug prefix only, no per-line registry yet). This file is the
+ * single hook that reacts to it: `[data-line="<key>"]` overrides ONLY the
+ * Tier-2 `--color-accent` / `--color-accent-hover` semantic tokens (defined
+ * in `@zudo-sg/ui/styles/colors.css`), so every accent-bound Tailwind
+ * utility (bg-accent, text-accent, border-accent, …) cascades to the active
+ * line's color with zero markup changes. Nothing else in the Tier-1/Tier-2
+ * chain is touched.
+ *
+ * Values reference the `--palette-line-<key>-*` Tier-1 rungs from
+ * `packages/ui/styles/colors.css` (each line already re-hued into an
+ * AA-safe envelope for this site's warm scheme, light + dark rungs) — never
+ * raw hues here; see that file's module doc for the "why".
+ *
+ * Import this AFTER colors.css (global.css) so these overrides win.
+ * ============================================================================= */
+
+[data-line="vacuum"] {
+  --color-accent: light-dark(var(--palette-line-vacuum-accent), var(--palette-line-vacuum-accent-dark));
+  --color-accent-hover: light-dark(var(--palette-line-vacuum-hover), var(--palette-line-vacuum-hover-dark));
+}
+
+[data-line="process"] {
+  --color-accent: light-dark(var(--palette-line-process-accent), var(--palette-line-process-accent-dark));
+  --color-accent-hover: light-dark(var(--palette-line-process-hover), var(--palette-line-process-hover-dark));
+}
+
+[data-line="laser"] {
+  --color-accent: light-dark(var(--palette-line-laser-accent), var(--palette-line-laser-accent-dark));
+  --color-accent-hover: light-dark(var(--palette-line-laser-hover), var(--palette-line-laser-hover-dark));
+}
+
+[data-line="meeting"] {
+  --color-accent: light-dark(var(--palette-line-meeting-accent), var(--palette-line-meeting-accent-dark));
+  --color-accent-hover: light-dark(var(--palette-line-meeting-hover), var(--palette-line-meeting-hover-dark));
+}
+
+[data-line="beauty"] {
+  --color-accent: light-dark(var(--palette-line-beauty-accent), var(--palette-line-beauty-accent-dark));
+  --color-accent-hover: light-dark(var(--palette-line-beauty-hover), var(--palette-line-beauty-hover-dark));
+}

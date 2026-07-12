@@ -28,9 +28,9 @@
    redefine these names here. */
 @import "@zudo-sg/ui/styles/colors.css";
 
-/* Per-line theming (`[data-line="<key>"]` → --color-accent overrides) lands
-   in #234 as styles/lines.css, imported here right after colors.css so its
-   overrides win. No file to import yet. */
+/* Per-line theming (`[data-line="<key>"]` → --color-accent overrides).
+   Imported right after colors.css so its overrides win. */
+@import "./lines.css";
 
 /* markdown/MDX prose flow contract (.zd-content). Imported after the token
    declarations above so its var(--color-*) / var(--spacing-*) / var(--text-*)
