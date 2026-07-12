@@ -836,6 +836,21 @@ exports[`story source vs. render drift > hero/hero.stories.tsx → WithMedia (Wi
 }
 `;
 
+exports[`story source vs. render drift > landing/landing-hero/landing-hero.stories.tsx → Default (Default) 1`] = `
+{
+  "html": "<section class="w-full" style="background-color:color-mix(in srgb, var(--color-accent) 6%, var(--color-bg));" aria-label="Hero"><div class="max-w-[88rem] py-vsp-2xl" style="margin-inline:auto;padding-inline:clamp(var(--spacing-hsp-md), 4vw, var(--spacing-hsp-2xl));"><p class="text-caption font-semibold uppercase tracking-wide text-accent">Sample Tagline</p><h1 class="mt-vsp-sm max-w-[20ch] font-bold leading-tight text-fg" style="font-size:clamp(var(--text-display), 1.6rem + 3.4vw, 4rem);text-wrap:balance;">Sample <span class="text-accent">×</span> Demo, combined</h1><p class="mt-vsp-md max-w-[44rem] text-title leading-relaxed text-fg" style="text-wrap:pretty;">A demo positioning statement describing what this fictional company does.</p><div class="mt-vsp-lg flex flex-wrap gap-x-hsp-md gap-y-vsp-xs"><a href="/products" class="inline-flex items-center gap-x-hsp-xs rounded-md px-hsp-xl py-vsp-sm text-small font-semibold no-underline transition-colors bg-accent text-bg hover:bg-accent-hover border border-accent hover:border-accent-hover" style="text-decoration:none;color:var(--color-bg);">View products<span aria-hidden="true">→</span></a><a href="/company" class="inline-flex items-center gap-x-hsp-xs rounded-md px-hsp-xl py-vsp-sm text-small font-semibold no-underline transition-colors bg-bg text-accent border border-border hover:border-accent hover:bg-surface" style="text-decoration:none;color:var(--color-accent);">About us<span aria-hidden="true">→</span></a></div></div></section>",
+  "source": "<LandingHero
+  eyebrow="Sample Tagline"
+  heading={<>Sample <span class="text-accent">×</span> Demo, combined</>}
+  lead="A demo positioning statement describing what this fictional company does."
+  actions={[
+    { label: "View products", href: "/products", variant: "primary" },
+    { label: "About us", href: "/company", variant: "secondary" },
+  ]}
+/>",
+}
+`;
+
 exports[`story source vs. render drift > link/link.stories.tsx → External (External) 1`] = `
 {
   "html": "<p class="text-base text-ink">Visit the <a href="https://example.com" class="rounded-sm outline-none transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus text-brand underline decoration-from-font underline-offset-2 hover:text-brand-strong" target="_blank" rel="noopener noreferrer">external site<span aria-hidden="true" class="ml-hsp-2xs text-[0.85em] opacity-70">↗</span></a> for more.</p>",

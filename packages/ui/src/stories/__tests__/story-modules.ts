@@ -57,6 +57,26 @@ import * as formsSubmitButton from "../../forms/submit-button/submit-button.stor
 import * as formsTextarea from "../../forms/textarea/textarea.stories";
 import * as heading from "../../heading/heading.stories";
 import * as hero from "../../hero/hero.stories";
+import * as landingBusinessLinePortal from "../../landing/business-line-portal/business-line-portal.stories";
+import * as landingBusinessSegments from "../../landing/business-segments/business-segments.stories";
+import * as landingCertList from "../../landing/cert-list/cert-list.stories";
+import * as landingCompanyProfileTable from "../../landing/company-profile-table/company-profile-table.stories";
+import * as landingDiscoveryTeaser from "../../landing/discovery-teaser/discovery-teaser.stories";
+import * as landingFeatureSplit from "../../landing/feature-split/feature-split.stories";
+import * as landingFinancialHighlights from "../../landing/financial-highlights/financial-highlights.stories";
+import * as landingGroupCompanyGrid from "../../landing/group-company-grid/group-company-grid.stories";
+import * as landingHistoryTimeline from "../../landing/history-timeline/history-timeline.stories";
+import * as landingInitiativeGrid from "../../landing/initiative-grid/initiative-grid.stories";
+import * as landingLandingHero from "../../landing/landing-hero/landing-hero.stories";
+import * as landingLineHero from "../../landing/line-hero/line-hero.stories";
+import * as landingLocationList from "../../landing/location-list/location-list.stories";
+import * as landingProductCategoryGrid from "../../landing/product-category-grid/product-category-grid.stories";
+import * as landingRecruitBand from "../../landing/recruit-band/recruit-band.stories";
+import * as landingSdgsHighlight from "../../landing/sdgs-highlight/sdgs-highlight.stories";
+import * as landingSectionNav from "../../landing/section-nav/section-nav.stories";
+import * as landingStatBand from "../../landing/stat-band/stat-band.stories";
+import * as landingStrengthList from "../../landing/strength-list/strength-list.stories";
+import * as landingValuePillars from "../../landing/value-pillars/value-pillars.stories";
 import * as link from "../../link/link.stories";
 import * as mediaPlaceholderBox from "../../media/placeholder-box/placeholder-box.stories";
 import * as newsCategoryBadge from "../../news/category-badge/category-badge.stories";
@@ -119,6 +139,26 @@ export const STORY_MODULES: Record<string, StoryModule> = {
   "forms/textarea/textarea.stories.tsx": formsTextarea as unknown as StoryModule,
   "heading/heading.stories.tsx": heading as unknown as StoryModule,
   "hero/hero.stories.tsx": hero as unknown as StoryModule,
+  "landing/business-line-portal/business-line-portal.stories.tsx": landingBusinessLinePortal as unknown as StoryModule,
+  "landing/business-segments/business-segments.stories.tsx": landingBusinessSegments as unknown as StoryModule,
+  "landing/cert-list/cert-list.stories.tsx": landingCertList as unknown as StoryModule,
+  "landing/company-profile-table/company-profile-table.stories.tsx": landingCompanyProfileTable as unknown as StoryModule,
+  "landing/discovery-teaser/discovery-teaser.stories.tsx": landingDiscoveryTeaser as unknown as StoryModule,
+  "landing/feature-split/feature-split.stories.tsx": landingFeatureSplit as unknown as StoryModule,
+  "landing/financial-highlights/financial-highlights.stories.tsx": landingFinancialHighlights as unknown as StoryModule,
+  "landing/group-company-grid/group-company-grid.stories.tsx": landingGroupCompanyGrid as unknown as StoryModule,
+  "landing/history-timeline/history-timeline.stories.tsx": landingHistoryTimeline as unknown as StoryModule,
+  "landing/initiative-grid/initiative-grid.stories.tsx": landingInitiativeGrid as unknown as StoryModule,
+  "landing/landing-hero/landing-hero.stories.tsx": landingLandingHero as unknown as StoryModule,
+  "landing/line-hero/line-hero.stories.tsx": landingLineHero as unknown as StoryModule,
+  "landing/location-list/location-list.stories.tsx": landingLocationList as unknown as StoryModule,
+  "landing/product-category-grid/product-category-grid.stories.tsx": landingProductCategoryGrid as unknown as StoryModule,
+  "landing/recruit-band/recruit-band.stories.tsx": landingRecruitBand as unknown as StoryModule,
+  "landing/sdgs-highlight/sdgs-highlight.stories.tsx": landingSdgsHighlight as unknown as StoryModule,
+  "landing/section-nav/section-nav.stories.tsx": landingSectionNav as unknown as StoryModule,
+  "landing/stat-band/stat-band.stories.tsx": landingStatBand as unknown as StoryModule,
+  "landing/strength-list/strength-list.stories.tsx": landingStrengthList as unknown as StoryModule,
+  "landing/value-pillars/value-pillars.stories.tsx": landingValuePillars as unknown as StoryModule,
   "link/link.stories.tsx": link as unknown as StoryModule,
   "media/placeholder-box/placeholder-box.stories.tsx": mediaPlaceholderBox as unknown as StoryModule,
   "news/category-badge/category-badge.stories.tsx": newsCategoryBadge as unknown as StoryModule,
