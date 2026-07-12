@@ -79,6 +79,16 @@ export interface ComposerIntegrationApi {
   handleRemoveSelected: (nodeId: string) => void;
   /** Keyboard Escape → close any open menu/dialog. */
   handleEscape: () => void;
+
+  // ── Clipboard/duplicate seam (issue #255; wave 7's #256 menus call these) ──
+  /** Copy: session clipboard = a snapshot of the node. Refused (via `controller.lastError`) for opaque nodes. */
+  handleCopy: (nodeId: string) => void;
+  /** Cut: copy + remove, with #245's selection repair. Refused for opaque nodes. */
+  handleCut: (nodeId: string) => void;
+  /** Paste: clone-with-new-ids + insert-subtree at `target`, then select + reveal it. An incompatible target surfaces via `controller.lastError`, never a silent no-op. */
+  handlePaste: (target: InsertionTarget) => void;
+  /** Duplicate: clone-with-new-ids + insert immediately after the source, then select + reveal it. Refused for opaque nodes. */
+  handleDuplicate: (nodeId: string) => void;
 }
 
 export function useComposerIntegration(
@@ -153,6 +163,11 @@ export function useComposerIntegration(
     [controller],
   );
 
+  const handleCopy = useCallback((nodeId: string) => controller.copy(nodeId), [controller]);
+  const handleCut = useCallback((nodeId: string) => controller.cut(nodeId), [controller]);
+  const handlePaste = useCallback((target: InsertionTarget) => controller.paste(target), [controller]);
+  const handleDuplicate = useCallback((nodeId: string) => controller.duplicate(nodeId), [controller]);
+
   // Keep an escape handler whose identity only changes when what it must close
   // changes, so the keyboard hook does not re-bind on every controller update.
   const openStateRef = useRef({ chooserOpen: chooser.open, exportOpen: exportState.open });
@@ -180,5 +195,9 @@ export function useComposerIntegration(
     handleExpandAncestors,
     handleRemoveSelected,
     handleEscape,
+    handleCopy,
+    handleCut,
+    handlePaste,
+    handleDuplicate,
   };
 }

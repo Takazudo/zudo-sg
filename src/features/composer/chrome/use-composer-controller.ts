@@ -68,6 +68,14 @@ export interface ComposerController {
   updateProps: (nodeId: string, patch: JsonObject) => void;
   reorder: (nodeId: string, direction: "up" | "down") => void;
   remove: (nodeId: string) => void;
+  /** Session clipboard = a deep-cloned snapshot of the node. Refused for opaque nodes. */
+  copy: (nodeId: string) => void;
+  /** Copy + remove (with #245's selection repair). Refused for opaque nodes. */
+  cut: (nodeId: string) => void;
+  /** Clone-with-new-ids + insert-subtree at `target`, then select + reveal it. Errors (e.g. an incompatible slot) surface via `lastError`, never a silent no-op. */
+  paste: (target: InsertionTarget) => void;
+  /** Clone-with-new-ids + insert immediately after the source, then select + reveal it. Refused for opaque nodes. */
+  duplicate: (nodeId: string) => void;
   select: (nodeId: string | null) => void;
   reveal: (nodeId: string) => void;
   toggleExpanded: (nodeId: string) => void;
@@ -192,6 +200,10 @@ export function useComposerController(options: UseComposerControllerOptions = {}
       updateProps: (nodeId, patch) => dispatch({ type: "updateProps", nodeId, patch }),
       reorder: (nodeId, direction) => dispatch({ type: "reorder", nodeId, direction }),
       remove: (nodeId) => dispatch({ type: "remove", nodeId }),
+      copy: (nodeId) => dispatch({ type: "copy", nodeId }),
+      cut: (nodeId) => dispatch({ type: "cut", nodeId }),
+      paste: (target) => dispatch({ type: "paste", target }),
+      duplicate: (nodeId) => dispatch({ type: "duplicate", nodeId }),
       select: (nodeId) => dispatch({ type: "select", nodeId }),
       reveal: (nodeId) => dispatch({ type: "reveal", nodeId }),
       toggleExpanded: (nodeId) => dispatch({ type: "toggleExpanded", nodeId }),

@@ -11,6 +11,7 @@
 // clipboard chip (#255).
 
 import type { JSX } from "preact";
+import type { CompositionNode } from "@/composer";
 import type {
   ComposerCanvasViewport,
   ComposerMode,
@@ -19,6 +20,7 @@ import type {
 import { ComposerModeToggle } from "@/features/composer/ui/toolbar/mode-toggle";
 import { ComposerStatusIndicator } from "@/features/composer/ui/toolbar/status-indicator";
 import { ComposerToolbarActions } from "@/features/composer/ui/toolbar/toolbar-actions";
+import { ComposerClipboardChip } from "./composer-clipboard-chip";
 import { COMPOSER_VIEWPORTS, COMPOSER_VIEWPORT_LABELS } from "./viewport";
 
 export interface ComposerToolbarBarProps {
@@ -31,6 +33,10 @@ export interface ComposerToolbarBarProps {
   onReset: () => void;
   onExport: () => void;
   exportDisabled?: boolean;
+  /** The session clipboard (issue #255) — renders as a chip beside the save status when non-empty. */
+  clipboard?: CompositionNode | null;
+  /** Friendly display name for a component id — required only when `clipboard` is passed. */
+  titleFor?: (componentId: string) => string | undefined;
 }
 
 export function ComposerToolbarBar({
@@ -43,6 +49,8 @@ export function ComposerToolbarBar({
   onReset,
   onExport,
   exportDisabled = false,
+  clipboard = null,
+  titleFor = () => undefined,
 }: ComposerToolbarBarProps): JSX.Element {
   return (
     <>
@@ -51,7 +59,9 @@ export function ComposerToolbarBar({
           <p class="text-xs text-muted uppercase tracking-wide">Composition</p>
           <strong class="block truncate text-fg text-small font-semibold">{documentName}</strong>
         </div>
-        <ComposerStatusIndicator saveStatus={saveStatus} />
+        <ComposerStatusIndicator saveStatus={saveStatus}>
+          <ComposerClipboardChip clipboard={clipboard} titleFor={titleFor} />
+        </ComposerStatusIndicator>
       </div>
 
       <div class="flex items-center gap-hsp-sm">
