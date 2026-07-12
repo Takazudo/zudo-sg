@@ -296,3 +296,88 @@ export function repairSelection(
   }
   return document.root[0]?.id ?? null;
 }
+
+// ── clipboard/duplicate foundation (wave 6, issue #255) ──────────────────────
+//
+// Two pure primitives the #247 controller composes into copy/cut/paste/
+// duplicate: `cloneSubtreeWithNewIds` never touches a document (it only
+// re-issues ids on a detached node tree), and `insertSubtree` inserts an
+// already-built subtree — as opposed to `addNode`, which builds a fresh node
+// from manifest defaults. Splitting them this way is what lets the controller
+// paste (clone, then insert) and duplicate (clone, then insert right after the
+// source) share the exact same insertion validation `addNode` uses.
+
+/**
+ * Deep-clone `node` and every descendant, re-issuing every node's `id` via
+ * `idFactory` — componentId/componentVersion/props/slot structure are
+ * preserved verbatim. Never mutates `node`; the result shares no references
+ * with it. Two calls against the same source (e.g. pasting the same clipboard
+ * twice) always produce fully distinct id sets, since `idFactory` mints a
+ * fresh id on every invocation.
+ */
+export function cloneSubtreeWithNewIds(node: CompositionNode, idFactory: IdFactory): CompositionNode {
+  const detached = cloneJson(node) as CompositionNode;
+  const reissueIds = (n: CompositionNode): CompositionNode => {
+    const slots: Record<string, CompositionNode[]> = {};
+    for (const [slotId, children] of Object.entries(n.slots)) {
+      slots[slotId] = children.map(reissueIds);
+    }
+    return { ...n, id: idFactory(n.componentId), slots };
+  };
+  return reissueIds(detached);
+}
+
+/**
+ * Insert an already-built subtree (its ids already final — see
+ * `cloneSubtreeWithNewIds`) into the slot described by `target`. Validates the
+ * target's slot acceptance, cardinality, index bounds, and root-slot schema
+ * exactly like `addNode` — BEFORE applying anything — and additionally refuses
+ * to insert if any id in `subtree` already exists in `document` (an invariant
+ * violation; callers are expected to have re-issued ids first). Never mutates
+ * `document` or `subtree`.
+ */
+export function insertSubtree(
+  document: CompositionDocument,
+  manifest: ComponentManifest,
+  target: InsertionTarget,
+  subtree: CompositionNode,
+): CommandResult {
+  const next = cloneJson(document);
+  const index = indexDocument(next, manifest);
+  const locate = (id: string): CompositionNode | undefined => index.byId.get(id)?.node;
+
+  const validation = validateInsertionTarget(next, manifest, target, locate);
+  if (!validation.ok) return { ok: false, error: validation.error ?? "invalid insertion target" };
+
+  // Slot-level acceptance + cardinality (the virtual root accepts anything).
+  if (target.parentId !== null) {
+    const parent = locate(target.parentId)!;
+    const parentEntry = manifest.get(parent.componentId)!;
+    const slot = parentEntry.slots.find((s) => s.id === target.slotId)!;
+    const existing = parent.slots[target.slotId] ?? [];
+    if (slot.accepts && !slot.accepts.includes(subtree.componentId)) {
+      return {
+        ok: false,
+        error: `Slot "${target.slotId}" does not accept "${subtree.componentId}"`,
+      };
+    }
+    if (slot.cardinality === "single" && existing.length >= 1) {
+      return {
+        ok: false,
+        error: `Slot "${target.slotId}" is single-child and already occupied`,
+      };
+    }
+  }
+
+  const clone = cloneJson(subtree) as CompositionNode;
+  for (const id of subtreeIds(clone)) {
+    if (index.byId.has(id)) {
+      return { ok: false, error: `Node id "${id}" already exists in the document` };
+    }
+  }
+
+  const array = slotArray(next, target.parentId, target.slotId, locate)!;
+  array.splice(target.index, 0, clone);
+
+  return { ok: true, document: next, selectedId: clone.id, insertedId: clone.id, changed: true };
+}

@@ -59,6 +59,8 @@ export {
   reorderNode,
   removeNode,
   repairSelection,
+  cloneSubtreeWithNewIds,
+  insertSubtree,
 } from "./model/commands";
 
 // ── Recovery ─────────────────────────────────────────────────────────────────
