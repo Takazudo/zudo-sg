@@ -158,21 +158,21 @@ function ContactFormDemo(): JSX.Element {
   }
 
   if (workerState === "starting") {
-    return <p class="text-sm text-ink-mute">Starting mock service worker…</p>;
+    return <p class="text-sm text-muted">Starting mock service worker…</p>;
   }
 
   const activePath = variant === "success" ? SUCCESS_PATH : FAILURE_PATH;
 
   return (
     <div class="flex flex-col gap-vsp-md">
-      <p class="text-sm text-ink-mute">
+      <p class="text-sm text-muted">
         "Send this" issues a real <code>fetch</code> against an endpoint intercepted by MSW,
         scoped to <code>{PREVIEW_SCOPE}</code>.
       </p>
       <div class="flex gap-hsp-md">
         <button
           type="button"
-          class="rounded-md border border-line bg-surface px-hsp-md py-hsp-xs text-sm hover:border-accent"
+          class="rounded-md border border-border bg-surface px-hsp-md py-hsp-xs text-sm hover:border-accent"
           aria-pressed={variant === "success"}
           onClick={() => setVariant("success")}
         >
@@ -180,14 +180,14 @@ function ContactFormDemo(): JSX.Element {
         </button>
         <button
           type="button"
-          class="rounded-md border border-line bg-surface px-hsp-md py-hsp-xs text-sm hover:border-accent"
+          class="rounded-md border border-border bg-surface px-hsp-md py-hsp-xs text-sm hover:border-accent"
           aria-pressed={variant === "failure"}
           onClick={() => setVariant("failure")}
         >
           5xx-recovery demo
         </button>
       </div>
-      <p class="text-sm text-ink-mute">
+      <p class="text-sm text-muted">
         {variant === "success" ? (
           <>
             Submitting calls <code>POST {withBase(activePath)}</code>, mocked to resolve 200. The

@@ -81,7 +81,7 @@ export default function ComponentsIndexPage(): JSX.Element {
                 {group.stories.map((story) => (
                   <a
                     href={withBase(`/components/${story.slug}`)}
-                    class="block rounded-md border border-line bg-surface p-hsp-md transition-colors hover:border-accent"
+                    class="block rounded-md border border-border bg-surface p-hsp-md transition-colors hover:border-accent"
                     data-sg-card
                     data-name={story.meta.title.toLowerCase()}
                     data-category={group.category}

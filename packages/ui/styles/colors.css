@@ -211,37 +211,11 @@
      reuses --color-accent; no dedicated token. */
   --color-loading-scrim: color-mix(in srgb, var(--color-bg) 40%, transparent);
 
-  /* ── State — danger/success/warning/info, light + dark rung per role.
-     -soft companions for success/danger live in the compat block below (the
-     existing components consume them; they intentionally collapse to the page
-     surface, matching the flat grayscale surface model). ── */
+  /* ── State — danger/success/warning/info, light + dark rung per role. ── */
   --color-success: light-dark(var(--palette-state-success), var(--palette-state-success-dark));
   --color-danger:  light-dark(var(--palette-state-danger),  var(--palette-state-danger-dark));
   --color-warning: light-dark(var(--palette-state-warning), var(--palette-state-warning-dark));
   --color-info:    light-dark(var(--palette-state-info),    var(--palette-state-info-dark));
-
-  /* ========================================
-   * TEMPORARY compat aliases — REMOVE in the Wave-6 atomic token swap.
-   *
-   * Re-expresses the OLD Tier-2 names on the new grouped palette so the 11
-   * existing @zudo-sg/ui components + the current apps/demo keep rendering
-   * until the atomic-swap sub-issue migrates every component class name to the
-   * canonical tokens above and deletes this block. Do NOT add new usages of
-   * these names.
-   * ======================================== */
-  --color-ink:      light-dark(var(--palette-base-8), var(--palette-base-2)); /* → fg */
-  --color-ink-soft: light-dark(var(--palette-base-7), var(--palette-base-4));
-  --color-ink-mute: light-dark(var(--palette-base-5), var(--palette-base-4)); /* → muted */
-  --color-paper:          light-dark(var(--palette-base-0), var(--palette-base-10)); /* → bg */
-  --color-surface-sunken: light-dark(var(--palette-base-2), var(--palette-base-8)); /* → surface-2 */
-  --color-line:        light-dark(var(--palette-base-3), var(--palette-base-7)); /* → border */
-  --color-line-strong: light-dark(var(--palette-base-5), var(--palette-base-5));
-  --color-brand:        light-dark(var(--palette-accent-2), var(--palette-accent-1)); /* → accent */
-  --color-brand-strong: light-dark(var(--palette-accent-3), var(--palette-accent-0)); /* → accent-hover */
-  --color-brand-soft:   light-dark(var(--palette-base-0), var(--palette-base-10));
-  --color-on-brand:     light-dark(var(--palette-base-0), var(--palette-base-10)); /* → on-accent */
-  --color-success-soft: light-dark(var(--palette-base-0), var(--palette-base-10));
-  --color-danger-soft:  light-dark(var(--palette-base-0), var(--palette-base-10));
 }
 
 /* ========================================

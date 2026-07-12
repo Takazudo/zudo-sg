@@ -57,7 +57,7 @@ export default function SourceEditor({
   return (
     <div class="relative text-small">
       {!loaded && (
-        <pre class="m-0 overflow-auto rounded-md bg-surface-sunken p-hsp-sm text-xs text-ink-soft">
+        <pre class="m-0 overflow-auto rounded-md bg-surface-2 p-hsp-sm text-xs text-muted">
           <code>{value}</code>
         </pre>
       )}

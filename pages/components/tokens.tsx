@@ -111,7 +111,7 @@ export default function TokensPage(): JSX.Element {
       <div class="mx-auto max-w-[64rem]">
         <header class="mb-vsp-lg">
           <h1 class="text-heading font-bold mb-vsp-2xs">Design tokens</h1>
-          <p class="mt-vsp-xs text-ink-soft">
+          <p class="mt-vsp-xs text-muted">
             The semantic tokens the <code>@zudo-sg/ui</code> components consume.
             <strong> Click any token</strong> to copy it; use the toolbar to
             pick whether you copy the resolved value or the{" "}
@@ -124,14 +124,14 @@ export default function TokensPage(): JSX.Element {
 
         <div data-sg-tokens-root>
           <section class="mb-vsp-xl">
-            <h2 class="mb-vsp-2xs text-lg font-semibold text-ink">Palette</h2>
-            <p class="mb-vsp-sm text-small text-ink-soft">
+            <h2 class="mb-vsp-2xs text-lg font-semibold text-fg">Palette</h2>
+            <p class="mb-vsp-sm text-small text-muted">
               Raw grouped swatches that feed the semantic component tokens.
             </p>
             <div class="flex flex-col gap-vsp-md">
               {PALETTE_GROUPS.map((group) => (
                 <div>
-                  <h3 class="mb-vsp-2xs text-small font-semibold text-ink">
+                  <h3 class="mb-vsp-2xs text-small font-semibold text-fg">
                     {group.label}
                   </h3>
                   <div class="grid grid-cols-2 gap-hsp-md sm:grid-cols-3 lg:grid-cols-4">
@@ -149,10 +149,10 @@ export default function TokensPage(): JSX.Element {
                           style={{ background: `var(${tok.varName})` }}
                         />
                         <span class="sg-token-card-meta">
-                          <span class="text-small font-medium text-ink">
+                          <span class="text-small font-medium text-fg">
                             {tok.name}
                           </span>
-                          <span class="text-xs text-ink-mute">{tok.varName}</span>
+                          <span class="text-xs text-muted">{tok.varName}</span>
                         </span>
                       </button>
                     ))}
@@ -163,10 +163,10 @@ export default function TokensPage(): JSX.Element {
           </section>
 
           <section class="mb-vsp-xl">
-            <h2 class="mb-vsp-2xs text-lg font-semibold text-ink">
+            <h2 class="mb-vsp-2xs text-lg font-semibold text-fg">
               Semantic color
             </h2>
-            <p class="mb-vsp-sm text-small text-ink-soft">
+            <p class="mb-vsp-sm text-small text-muted">
               Public color tokens consumed by components.
             </p>
             <div class="grid grid-cols-2 gap-hsp-md sm:grid-cols-3 lg:grid-cols-4">
@@ -184,10 +184,10 @@ export default function TokensPage(): JSX.Element {
                     style={{ background: `var(${tok.varName})` }}
                   />
                   <span class="sg-token-card-meta">
-                    <span class="text-small font-medium text-ink">
+                    <span class="text-small font-medium text-fg">
                       {tok.name}
                     </span>
-                    <span class="text-xs text-ink-mute">{tok.varName}</span>
+                    <span class="text-xs text-muted">{tok.varName}</span>
                   </span>
                 </button>
               ))}
@@ -195,7 +195,7 @@ export default function TokensPage(): JSX.Element {
           </section>
 
           <section class="mb-vsp-xl">
-            <h2 class="mb-vsp-sm text-lg font-semibold text-ink">Spacing</h2>
+            <h2 class="mb-vsp-sm text-lg font-semibold text-fg">Spacing</h2>
             <div class="flex flex-col gap-vsp-2xs">
               {SPACING_TOKENS.filter(
                 (t) => t.group === "hsp" || t.group === "vsp",
@@ -208,14 +208,14 @@ export default function TokensPage(): JSX.Element {
                   data-kind="length"
                   title={`Click to copy ${tok.cssVar}`}
                 >
-                  <span class="w-[6rem] shrink-0 text-left text-small text-ink">
+                  <span class="w-[6rem] shrink-0 text-left text-small text-fg">
                     {tok.label}
                   </span>
-                  <span class="w-[5rem] shrink-0 text-left text-xs text-ink-mute">
+                  <span class="w-[5rem] shrink-0 text-left text-xs text-muted">
                     {tok.default}
                   </span>
                   <span
-                    class="h-[0.75rem] rounded-sm bg-brand"
+                    class="h-[0.75rem] rounded-sm bg-accent"
                     style={{ width: `var(${tok.cssVar})` }}
                   />
                 </button>
@@ -224,7 +224,7 @@ export default function TokensPage(): JSX.Element {
           </section>
 
           <section class="mb-vsp-xl">
-            <h2 class="mb-vsp-sm text-lg font-semibold text-ink">Type scale</h2>
+            <h2 class="mb-vsp-sm text-lg font-semibold text-fg">Type scale</h2>
             <div class="flex flex-col gap-vsp-sm">
               {FONT_TOKENS.filter((t) => t.group === "font-size").map((tok) => (
                 <button
@@ -235,11 +235,11 @@ export default function TokensPage(): JSX.Element {
                   data-kind="length"
                   title={`Click to copy ${tok.cssVar}`}
                 >
-                  <span class="w-[6rem] shrink-0 text-left text-xs text-ink-mute">
+                  <span class="w-[6rem] shrink-0 text-left text-xs text-muted">
                     {tok.label}
                   </span>
                   <span
-                    class="text-left text-ink"
+                    class="text-left text-fg"
                     style={{ fontSize: `var(${tok.cssVar})` }}
                   >
                     The quick brown fox

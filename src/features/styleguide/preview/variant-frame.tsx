@@ -90,9 +90,9 @@ function VariantFrame(props: VariantFrameProps): JSX.Element {
   }
 
   return (
-    <section class="border border-line rounded-md overflow-hidden bg-surface">
-      <div class="flex items-center justify-between gap-hsp-md px-hsp-md py-vsp-2xs border-b border-line bg-surface-sunken">
-        <span class="text-small font-medium text-ink">{name}</span>
+    <section class="border border-border rounded-md overflow-hidden bg-surface">
+      <div class="flex items-center justify-between gap-hsp-md px-hsp-md py-vsp-2xs border-b border-border bg-surface-2">
+        <span class="text-small font-medium text-fg">{name}</span>
         <div role="group" aria-label="Preview viewport" class="flex gap-hsp-3xs">
           {VIEWPORTS.map((vp) => (
             <button
@@ -102,8 +102,8 @@ function VariantFrame(props: VariantFrameProps): JSX.Element {
               class={
                 "px-hsp-xs py-vsp-3xs text-xs rounded-sm border transition-colors " +
                 (viewport.id === vp.id
-                  ? "border-brand bg-brand text-on-brand"
-                  : "border-line text-ink-mute hover:text-ink")
+                  ? "border-accent bg-accent text-on-accent"
+                  : "border-border text-muted hover:text-fg")
               }
             >
               {vp.label}
@@ -111,7 +111,7 @@ function VariantFrame(props: VariantFrameProps): JSX.Element {
           ))}
         </div>
       </div>
-      <div class="flex justify-center bg-paper p-hsp-md">
+      <div class="flex justify-center bg-bg p-hsp-md">
         <div style={{ width: viewport.width, maxWidth: "100%" }}>
           <iframe
             ref={iframeRef}
@@ -129,7 +129,7 @@ function VariantFrame(props: VariantFrameProps): JSX.Element {
         </div>
       </div>
       {controls && controls.length > 0 && (
-        <div class="border-t border-line px-hsp-md py-vsp-xs">
+        <div class="border-t border-border px-hsp-md py-vsp-xs">
           <ControlsPanel controls={controls} onChange={sendProps} />
         </div>
       )}
@@ -200,7 +200,7 @@ function ControlsPanel({
           type="button"
           onClick={() => setOpen((o) => !o)}
           aria-expanded={open}
-          class="flex items-center gap-hsp-2xs text-xs uppercase tracking-wide text-ink-mute hover:text-ink"
+          class="flex items-center gap-hsp-2xs text-xs uppercase tracking-wide text-muted hover:text-fg"
         >
           <span aria-hidden="true">{open ? "▼" : "▶"}</span>
           Controls
@@ -209,7 +209,7 @@ function ControlsPanel({
           <button
             type="button"
             onClick={reset}
-            class="text-xs rounded-sm border border-line px-hsp-xs py-vsp-3xs text-ink-mute hover:text-ink hover:border-line-strong transition-colors"
+            class="text-xs rounded-sm border border-border px-hsp-xs py-vsp-3xs text-muted hover:text-fg hover:border-border transition-colors"
           >
             Reset
           </button>
@@ -219,12 +219,12 @@ function ControlsPanel({
       {open && (
         <div class="flex flex-wrap gap-hsp-md">
           {controls.map((control) => (
-            <label class="flex items-center gap-hsp-2xs text-small text-ink">
-              <span class="text-ink-mute">{control.label}</span>
+            <label class="flex items-center gap-hsp-2xs text-small text-fg">
+              <span class="text-muted">{control.label}</span>
 
               {control.type === "select" && (
                 <select
-                  class="border border-line rounded-sm bg-surface px-hsp-2xs py-vsp-3xs text-small"
+                  class="border border-border rounded-sm bg-surface px-hsp-2xs py-vsp-3xs text-small"
                   value={values[control.prop] as string}
                   onChange={(e) =>
                     set(control.prop, (e.target as HTMLSelectElement).value)
@@ -250,7 +250,7 @@ function ControlsPanel({
                 <input
                   type="text"
                   value={values[control.prop] as string}
-                  class="border border-line rounded-sm bg-surface px-hsp-2xs py-vsp-3xs text-small"
+                  class="border border-border rounded-sm bg-surface px-hsp-2xs py-vsp-3xs text-small"
                   onInput={(e) =>
                     set(control.prop, (e.target as HTMLInputElement).value)
                   }
@@ -265,7 +265,7 @@ function ControlsPanel({
                     min={control.min}
                     max={control.max}
                     step={control.step}
-                    class="w-[5rem] border border-line rounded-sm bg-surface px-hsp-2xs py-vsp-3xs text-small"
+                    class="w-[5rem] border border-border rounded-sm bg-surface px-hsp-2xs py-vsp-3xs text-small"
                     onInput={(e) =>
                       set(
                         control.prop,
@@ -288,7 +288,7 @@ function ControlsPanel({
                         )
                       }
                     />
-                    <span class="text-ink-mute tabular-nums w-[2.5rem] text-right">
+                    <span class="text-muted tabular-nums w-[2.5rem] text-right">
                       {String(values[control.prop])}
                     </span>
                   </span>
@@ -298,7 +298,7 @@ function ControlsPanel({
                 <input
                   type="color"
                   value={values[control.prop] as string}
-                  class="h-[1.5rem] w-[2.5rem] border border-line rounded-sm bg-surface"
+                  class="h-[1.5rem] w-[2.5rem] border border-border rounded-sm bg-surface"
                   onInput={(e) =>
                     set(control.prop, (e.target as HTMLInputElement).value)
                   }
