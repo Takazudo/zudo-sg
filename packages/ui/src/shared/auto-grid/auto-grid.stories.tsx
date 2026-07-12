@@ -1,4 +1,5 @@
 import type { StoryMeta, Story } from "../../stories/types";
+import { defineComposer } from "../../composer/types";
 import { AutoGrid, type AutoGridProps } from "./auto-grid";
 import { Card } from "../../cards/card/card";
 
@@ -13,6 +14,28 @@ const meta: StoryMeta = {
   <Card title="One">…</Card>
   <Card title="Two">…</Card>
 </AutoGrid>`,
+  composer: defineComposer<AutoGridProps>({
+    componentId: "ui.auto-grid",
+    version: 1,
+    component: AutoGrid,
+    source: {
+      module: "@zudo-sg/ui/src/shared/auto-grid/auto-grid",
+      exportKind: "named",
+      exportName: "AutoGrid",
+    },
+    defaults: { min: "15rem", fill: false, gap: "md" },
+    fields: [
+      {
+        kind: "select",
+        prop: "min",
+        label: "Min track width",
+        options: ["11rem", "13rem", "14rem", "15rem", "16rem", "18rem"],
+      },
+      { kind: "select", prop: "gap", label: "Gap", options: ["sm", "md", "split"] },
+      { kind: "boolean", prop: "fill", label: "Fill (keep empty tracks)" },
+    ],
+    slots: [{ id: "items", prop: "children", label: "Items", cardinality: "many" }],
+  }),
 };
 
 export default meta;

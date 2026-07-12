@@ -82,6 +82,8 @@ import * as sharedContainer from "../../shared/container/container.stories";
 import * as sharedCtaButton from "../../shared/cta-button/cta-button.stories";
 import * as sharedHero from "../../shared/hero/hero.stories";
 import * as sharedSectionHeading from "../../shared/section-heading/section-heading.stories";
+import * as sharedSplitLayout from "../../shared/split-layout/split-layout.stories";
+import * as sharedStack from "../../shared/stack/stack.stories";
 
 export const STORY_MODULES: Record<string, StoryModule> = {
   "cards/callout/callout.stories.tsx": cardsCallout as unknown as StoryModule,
@@ -153,5 +155,7 @@ export const STORY_MODULES: Record<string, StoryModule> = {
   "shared/cta-button/cta-button.stories.tsx": sharedCtaButton as unknown as StoryModule,
   "shared/hero/hero.stories.tsx": sharedHero as unknown as StoryModule,
   "shared/section-heading/section-heading.stories.tsx": sharedSectionHeading as unknown as StoryModule,
+  "shared/split-layout/split-layout.stories.tsx": sharedSplitLayout as unknown as StoryModule,
+  "shared/stack/stack.stories.tsx": sharedStack as unknown as StoryModule,
 };
 // GENERATED:SG_REGISTRY_END

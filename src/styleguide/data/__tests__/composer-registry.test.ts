@@ -6,6 +6,7 @@ import {
   buildComposerRegistry,
   composerEntries,
   composerManifest,
+  getComposerComponentIds,
   getComposerEntry,
   getComposerManifestEntry,
   isJsonSafe,
@@ -216,10 +217,30 @@ describe("serializable manifest projection", () => {
   });
 });
 
-describe("live registry (no cohort opted in yet — issue #244 out of scope)", () => {
-  it("composerEntries is empty until the real cohort opts in (issue #246)", () => {
-    expect(composerEntries).toEqual([]);
-    expect(composerManifest).toEqual([]);
+// The curated cohort opted in by issue #246: true containers, leaves, and
+// the two new layout primitives. Kept as an explicit sorted list (rather than
+// just checking length) so an accidental extra/missing opt-in fails loudly
+// with a readable diff, satisfying "unsupported story entries remain absent
+// from the Composer chooser."
+const CURATED_COHORT_IDS = [
+  "ui.auto-grid",
+  "ui.callout",
+  "ui.card",
+  "ui.container",
+  "ui.cta-button",
+  "ui.hero",
+  "ui.placeholder-box",
+  "ui.prose-p",
+  "ui.section-heading",
+  "ui.split-layout",
+  "ui.stack",
+].sort();
+
+describe("live registry — curated cohort opted in (issue #246)", () => {
+  it("exposes exactly the curated cohort, each with a unique stable componentId", () => {
+    const ids = getComposerComponentIds();
+    expect(new Set(ids).size).toBe(ids.length);
+    expect([...ids].sort()).toEqual(CURATED_COHORT_IDS);
   });
 
   it("does not surface Story.render() in the Composer contract", () => {
@@ -231,5 +252,70 @@ describe("live registry (no cohort opted in yet — issue #244 out of scope)", (
     }
     expect(getComposerEntry("nope")).toBeUndefined();
     expect(getComposerManifestEntry("nope")).toBeUndefined();
+  });
+
+  it("every opted-in definition has one trusted component and a real source export", () => {
+    for (const entry of composerEntries) {
+      expect(typeof entry.definition.component, entry.componentId).toBe("function");
+      expect(entry.definition.source.module.startsWith("@zudo-sg/ui/src/")).toBe(true);
+      expect(entry.definition.source.exportName.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("every opted-in definition has valid, JSON-safe defaults and no field/slot collision", () => {
+    // Re-run the same validator the registry build throws on — any failure
+    // here means an opt-in regressed without tripping the (fail-fast) throw
+    // at import time, e.g. after a refactor changes evaluation order.
+    expect(validateComposerDefinitions(composerEntries.map((e) => e.definition))).toEqual([]);
+  });
+
+  it("the manifest projects 1:1 with the runtime registry and round-trips through JSON", () => {
+    expect(composerManifest.length).toBe(composerEntries.length);
+    expect(JSON.parse(JSON.stringify(composerManifest))).toEqual(composerManifest);
+  });
+
+  it("SplitLayout exposes one single-cardinality left slot and one many-cardinality right slot, named-prop mapped", () => {
+    const entry = getComposerEntry("ui.split-layout");
+    expect(entry).toBeDefined();
+    const left = entry!.definition.slots?.find((s) => s.id === "left");
+    const right = entry!.definition.slots?.find((s) => s.id === "right");
+    expect(left).toMatchObject({ prop: "left", cardinality: "single" });
+    expect(right).toMatchObject({ prop: "right", cardinality: "many" });
+  });
+
+  it("Stack exposes a many-cardinality default children slot", () => {
+    const entry = getComposerEntry("ui.stack");
+    expect(entry).toBeDefined();
+    const slot = entry!.definition.slots?.find((s) => s.prop === "children");
+    expect(slot).toMatchObject({ cardinality: "many" });
+  });
+
+  it("marks exactly the spec'd text-like scalar fields inline-editable, each with a trusted adapter", () => {
+    // Per #246's synthesis note: ProseP/CtaButton text-bound children and
+    // SectionHeading's heading — nothing else in the cohort.
+    const expected: Record<string, string> = {
+      "ui.prose-p": "children",
+      "ui.cta-button": "children",
+      "ui.section-heading": "heading",
+    };
+    for (const entry of composerEntries) {
+      const inlineFields = (entry.definition.fields ?? []).filter(
+        (f) => f.kind === "text" && f.inlineEdit,
+      );
+      if (entry.componentId in expected) {
+        expect(inlineFields.map((f) => f.prop)).toEqual([expected[entry.componentId]]);
+        expect(typeof entry.definition.adapters?.inlineEditor?.resolveElement).toBe("function");
+        expect(entry.definition.adapters?.inlineEditor?.field).toBe(expected[entry.componentId]);
+      } else {
+        expect(inlineFields).toEqual([]);
+      }
+    }
+  });
+
+  it("unsupported (not opted-in) stories stay absent from the registry", () => {
+    // FeatureSplit is explicitly out of scope (#246) — a fixed-tuple layout,
+    // not a generic slot container.
+    expect(getComposerEntry("ui.feature-split")).toBeUndefined();
+    expect(composerEntries.some((e) => e.title === "FeatureSplit")).toBe(false);
   });
 });

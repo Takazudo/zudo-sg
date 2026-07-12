@@ -1,4 +1,5 @@
 import type { StoryMeta, Story } from "../../stories/types";
+import { defineComposer } from "../../composer/types";
 import { Container, type ContainerProps } from "./container";
 
 const meta: StoryMeta = {
@@ -11,6 +12,17 @@ const meta: StoryMeta = {
 <Container>
   <p>Page content…</p>
 </Container>`,
+  composer: defineComposer<ContainerProps>({
+    componentId: "ui.container",
+    version: 1,
+    component: Container,
+    source: {
+      module: "@zudo-sg/ui/src/shared/container/container",
+      exportKind: "named",
+      exportName: "Container",
+    },
+    slots: [{ id: "content", prop: "children", label: "Content", cardinality: "many" }],
+  }),
 };
 
 export default meta;

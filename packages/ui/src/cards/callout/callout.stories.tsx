@@ -1,4 +1,5 @@
 import type { StoryMeta, Story } from "../../stories/types";
+import { defineComposer } from "../../composer/types";
 import { Callout, Note, type CalloutProps } from "./callout";
 
 const meta: StoryMeta = {
@@ -9,6 +10,24 @@ const meta: StoryMeta = {
 
 <Callout tone="note" title="Note">Body copy.</Callout>
 <Note title="Note">Same as tone="note".</Note>`,
+  // Opts in the base `Callout` (real `tone` prop), not the `Note` alias — the
+  // Composer instantiates one trusted component per definition.
+  composer: defineComposer<CalloutProps>({
+    componentId: "ui.callout",
+    version: 1,
+    component: Callout,
+    source: {
+      module: "@zudo-sg/ui/src/cards/callout/callout",
+      exportKind: "named",
+      exportName: "Callout",
+    },
+    defaults: { tone: "note", title: "Note" },
+    fields: [
+      { kind: "select", prop: "tone", label: "Tone", options: ["note", "muted"] },
+      { kind: "text", prop: "title", label: "Title" },
+    ],
+    slots: [{ id: "body", prop: "children", label: "Body", cardinality: "many" }],
+  }),
 };
 
 export default meta;
