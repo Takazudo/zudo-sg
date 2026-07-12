@@ -6,7 +6,7 @@ description: How co-located UI stories and optional component docs become the st
 
 ## Story files are the catalog input
 
-Component catalog entries start in `packages/ui/src/*/*.stories.tsx`. Each story file is co-located with the component it documents and exports:
+Component catalog entries start in `packages/ui/src/<category>/<component>/*.stories.tsx`. Each story file is co-located with the component it documents and exports:
 
 - a default `StoryMeta` object with title, category, description, usage, and optional order;
 - one or more named `Story<P>` exports with a pure synchronous `render` function;
@@ -18,7 +18,7 @@ The catalog renders stories during static build, so story rendering must not dep
 
 The catalog does not discover stories with `import.meta.glob` at runtime. zfb does not inline that call into shared client islands, so zudo-sg uses code generation instead.
 
-`scripts/gen-sg-registry.mjs` scans `packages/ui/src/*/*.stories.tsx` and regenerates explicit import registries:
+`scripts/gen-sg-registry.mjs` scans `packages/ui/src/**/*.stories.tsx` (any nesting depth) and regenerates explicit import registries:
 
 - `src/styleguide/data/sg-registry.ts` for the root styleguide catalog.
 - `packages/ui/src/stories/__tests__/story-modules.ts` for story contract and drift tests.
@@ -46,9 +46,9 @@ Do not hand-edit code between `GENERATED:SG_REGISTRY_BEGIN` and `GENERATED:SG_RE
 Quick reference content lives in story metadata. When a component needs more guidance, add an optional MDX file next to the component and story:
 
 ```txt
-packages/ui/src/button/button.tsx
-packages/ui/src/button/button.stories.tsx
-packages/ui/src/button/button.mdx
+packages/ui/src/cards/card/card.tsx
+packages/ui/src/cards/card/card.stories.tsx
+packages/ui/src/cards/card/card.mdx
 ```
 
 The root host compiles those MDX files through a `componentDocs` collection rooted at `packages/ui/src`. Component detail pages look up the matching MDX entry from the same component path the story registry uses, so there is no separate registration step.
