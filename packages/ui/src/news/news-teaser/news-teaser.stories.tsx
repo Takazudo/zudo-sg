@@ -46,6 +46,20 @@ export const IRNews: Story = {
   ),
 };
 
+export const WithIntro: Story = {
+  name: "With supporting copy",
+  render: () => (
+    <div style={{ maxWidth: "960px" }}>
+      <NewsTeaser
+        heading="News"
+        intro="A roundup of our latest announcements, certifications, and events."
+        items={MOCK_NEWS}
+        viewAllHref="/news"
+      />
+    </div>
+  ),
+};
+
 export const Narrow: Story = {
   name: "Narrow (heading row stacks)",
   render: () => (

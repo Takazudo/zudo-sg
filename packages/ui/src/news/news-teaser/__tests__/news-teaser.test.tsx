@@ -26,4 +26,13 @@ describe("NewsTeaser", () => {
     render(<NewsTeaser heading="News" items={ITEMS} viewAllHref="/news" />);
     expect(screen.queryByRole("group", { name: "Filter by category" })).not.toBeInTheDocument();
   });
+
+  it("renders the intro copy when provided, and omits it when absent", () => {
+    const { rerender } = render(
+      <NewsTeaser heading="News" items={ITEMS} viewAllHref="/news" intro="A roundup." />,
+    );
+    expect(screen.getByText("A roundup.")).toBeInTheDocument();
+    rerender(<NewsTeaser heading="News" items={ITEMS} viewAllHref="/news" />);
+    expect(screen.queryByText("A roundup.")).not.toBeInTheDocument();
+  });
 });
