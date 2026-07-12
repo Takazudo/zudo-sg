@@ -269,6 +269,26 @@ describe("moveSubtree — slot acceptance + cardinality", () => {
     expect(result.changed).toBe(false);
   });
 
+  it("reorders freely within an `accepts`-restricted slot without re-checking membership", () => {
+    // Gallery.items only accepts boxes, and both children already satisfy that
+    // (they were validated at insertion time). A same-slot reorder must not
+    // re-run the accepts check — it is a pure position change, not a fresh
+    // membership decision (mirrors reorderNode's identical assumption, and is
+    // what lets an opaque node's accepts-violating componentId — which would
+    // ALSO make its parent opaque per classifyNode's "unaccepted-child" rule,
+    // and so is blocked from ANY entry by validateInsertionTarget regardless —
+    // stay purely academic: within a still-valid, non-opaque parent, same-slot
+    // membership is never in question).
+    const before = doc([
+      node(X.gallery, {}, { items: [node(X.box, { label: "a" }, {}, "a"), node(X.box, { label: "b" }, {}, "b")] }, "g"),
+    ]);
+    const t: InsertionTarget = { parentId: "g", slotId: "items", index: 2 };
+    const result = moveSubtree(before, M, "a", t);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.document.root[0].slots.items.map((n) => n.id)).toEqual(["b", "a"]);
+  });
+
   it("rejects an out-of-range target index", () => {
     const before = makeStackDocument();
     const t: InsertionTarget = { parentId: "stack", slotId: S.stackChildren, index: 99 };

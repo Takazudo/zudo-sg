@@ -409,11 +409,13 @@ export function insertSubtree(
  *     or any of its descendants is rejected: the destination would be reparented
  *     under a subtree that is about to be detached, orphaning it.
  *
- * Slot acceptance is always enforced; single-cardinality is enforced only for a
- * cross-slot move (a same-slot reorder adds no new child, so it cannot exceed
- * cardinality — and a `single` slot's lone occupant must be able to reorder).
- * A same-slot move whose adjusted index equals the source index is a valid
- * no-op (`changed: false`).
+ * Slot acceptance and single-cardinality are both enforced ONLY for a
+ * cross-slot move — a same-slot reorder changes no slot membership (the node
+ * already lives there), so it can neither violate an `accepts` list it already
+ * satisfied nor exceed cardinality, and this is what lets an opaque node (whose
+ * `componentId` no `accepts` list names) reorder within its OWN slot, matching
+ * `reorderNode`'s identical assumption. A same-slot move whose adjusted index
+ * equals the source index is a valid no-op (`changed: false`).
  */
 export function moveSubtree(
   document: CompositionDocument,
@@ -442,7 +444,14 @@ export function moveSubtree(
   // but crosses slots, so it must NOT get the same-slot index adjustment).
   const sameSlot = source.parentId === target.parentId && source.slotId === target.slotId;
 
-  if (target.parentId !== null) {
+  // Slot acceptance and cardinality are both checked ONLY on a CROSS-slot move
+  // — a same-slot reorder does not change slot membership (the node already
+  // lives there, already having passed both checks when it was first inserted;
+  // `reorderNode`'s sibling swap makes the identical assumption). This is what
+  // lets an opaque node — whose `componentId` no legitimate `accepts` list can
+  // ever name — reorder within its OWN slot: same-slot is a pure position
+  // change, never a fresh membership decision.
+  if (!sameSlot && target.parentId !== null) {
     const parent = locate(target.parentId)!;
     const parentEntry = manifest.get(parent.componentId)!;
     const slot = parentEntry.slots.find((s) => s.id === target.slotId)!;
@@ -452,9 +461,7 @@ export function moveSubtree(
         error: `Slot "${target.slotId}" does not accept "${source.node.componentId}"`,
       };
     }
-    // Cardinality only bites on a CROSS-slot move — a same-slot reorder adds no
-    // new child, so it can never push a `single` slot past one.
-    if (!sameSlot && slot.cardinality === "single" && (parent.slots[target.slotId] ?? []).length >= 1) {
+    if (slot.cardinality === "single" && (parent.slots[target.slotId] ?? []).length >= 1) {
       return {
         ok: false,
         error: `Slot "${target.slotId}" is single-child and already occupied`,
