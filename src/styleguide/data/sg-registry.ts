@@ -50,6 +50,8 @@ import * as heading from "@zudo-sg/ui/src/heading/heading.stories.tsx";
 import * as hero from "@zudo-sg/ui/src/hero/hero.stories.tsx";
 import * as link from "@zudo-sg/ui/src/link/link.stories.tsx";
 import * as mediaPlaceholderBox from "@zudo-sg/ui/src/media/placeholder-box/placeholder-box.stories.tsx";
+import * as searchSearchResultsEnhancer from "@zudo-sg/ui/src/search/search-results-enhancer/search-results-enhancer.stories.tsx";
+import * as searchSearchResults from "@zudo-sg/ui/src/search/search-results/search-results.stories.tsx";
 import * as sharedAutoGrid from "@zudo-sg/ui/src/shared/auto-grid/auto-grid.stories.tsx";
 import * as sharedCardLink from "@zudo-sg/ui/src/shared/card-link/card-link.stories.tsx";
 import * as sharedContainer from "@zudo-sg/ui/src/shared/container/container.stories.tsx";
@@ -86,6 +88,8 @@ export const storyModules: Record<string, StoryModule> = {
   "./ui/src/hero/hero.stories.tsx": hero as unknown as StoryModule,
   "./ui/src/link/link.stories.tsx": link as unknown as StoryModule,
   "./ui/src/media/placeholder-box/placeholder-box.stories.tsx": mediaPlaceholderBox as unknown as StoryModule,
+  "./ui/src/search/search-results-enhancer/search-results-enhancer.stories.tsx": searchSearchResultsEnhancer as unknown as StoryModule,
+  "./ui/src/search/search-results/search-results.stories.tsx": searchSearchResults as unknown as StoryModule,
   "./ui/src/shared/auto-grid/auto-grid.stories.tsx": sharedAutoGrid as unknown as StoryModule,
   "./ui/src/shared/card-link/card-link.stories.tsx": sharedCardLink as unknown as StoryModule,
   "./ui/src/shared/container/container.stories.tsx": sharedContainer as unknown as StoryModule,
@@ -128,6 +132,8 @@ export const storyExportOrder: Record<string, string[]> = {
   "./ui/src/hero/hero.stories.tsx": ["Playground", "Basic", "WithMedia", "Plain"],
   "./ui/src/link/link.stories.tsx": ["Playground", "Variants", "External"],
   "./ui/src/media/placeholder-box/placeholder-box.stories.tsx": ["Default", "AspectRatios", "Sizes", "FromMarkdownImg"],
+  "./ui/src/search/search-results-enhancer/search-results-enhancer.stories.tsx": ["Live"],
+  "./ui/src/search/search-results/search-results.stories.tsx": ["Default", "WithQuery", "NoResults"],
   "./ui/src/shared/auto-grid/auto-grid.stories.tsx": ["Default", "WiderTracks", "Fill"],
   "./ui/src/shared/card-link/card-link.stories.tsx": ["Default", "ViewAll"],
   "./ui/src/shared/container/container.stories.tsx": ["Default"],
