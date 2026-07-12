@@ -146,6 +146,13 @@ describe("isJsonSafe", () => {
     expect(isJsonSafe(Number.NaN)).toBe(false);
     expect(isJsonSafe({ nested: () => 1 })).toBe(false);
   });
+  it("accepts a shared reference (DAG) but rejects a true cycle", () => {
+    const shared = { k: "v" };
+    expect(isJsonSafe({ a: shared, b: shared })).toBe(true);
+    const cyclic: Record<string, unknown> = {};
+    cyclic.self = cyclic;
+    expect(isJsonSafe(cyclic)).toBe(false);
+  });
 });
 
 describe("buildComposerRegistry (derived from story modules)", () => {

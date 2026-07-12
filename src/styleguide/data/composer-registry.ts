@@ -92,19 +92,28 @@ function isVNodeLike(value: object): boolean {
  * numbers, booleans, null, arrays, and plain objects — never functions,
  * undefined, symbols, bigints, class instances, or Preact VNodes.
  */
-export function isJsonSafe(value: unknown, seen: Set<unknown> = new Set()): boolean {
+export function isJsonSafe(value: unknown, ancestors: Set<unknown> = new Set()): boolean {
   if (value === null) return true;
   const t = typeof value;
   if (t === "string" || t === "boolean") return true;
   if (t === "number") return Number.isFinite(value as number);
   if (t !== "object") return false; // undefined, function, symbol, bigint
-  if (seen.has(value)) return false; // circular reference
-  seen.add(value as object);
-  if (isVNodeLike(value as object)) return false;
-  if (Array.isArray(value)) return value.every((v) => isJsonSafe(v, seen));
-  const proto = Object.getPrototypeOf(value);
-  if (proto !== Object.prototype && proto !== null) return false; // Date, Map, class instance…
-  return Object.values(value as Record<string, unknown>).every((v) => isJsonSafe(v, seen));
+  const obj = value as object;
+  if (isVNodeLike(obj)) return false;
+  if (ancestors.has(obj)) return false; // circular reference on the current path
+  const proto = Object.getPrototypeOf(obj);
+  if (!Array.isArray(obj) && proto !== Object.prototype && proto !== null) {
+    return false; // Date, Map, class instance…
+  }
+  // Track ancestors only (backtrack after) so a shared reference in a DAG is
+  // not mistaken for a cycle.
+  ancestors.add(obj);
+  const children = Array.isArray(obj)
+    ? obj
+    : Object.values(obj as Record<string, unknown>);
+  const ok = children.every((v) => isJsonSafe(v, ancestors));
+  ancestors.delete(obj);
+  return ok;
 }
 
 // ── Validation ───────────────────────────────────────────────────────────
