@@ -12,6 +12,62 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 import type { JSX } from "preact";
 
+export interface SubtreeRemovalConfirmProps {
+  nodeTitle: string;
+  descendantCount: number;
+  onCancel: () => void;
+  onConfirm: () => void;
+}
+
+/**
+ * The inline "Remove X and its N nested components?" confirmation shown
+ * before removing a populated subtree. Extracted so issue #256's node
+ * context menu can reuse the EXACT same copy/behavior for its Delete item
+ * (rendered as the menu's `children`, in place of its item list) instead of
+ * re-deriving a second confirmation flow — see `use-composer-menus.ts`.
+ */
+export function SubtreeRemovalConfirm({
+  nodeTitle,
+  descendantCount,
+  onCancel,
+  onConfirm,
+}: SubtreeRemovalConfirmProps): JSX.Element {
+  const confirmButtonRef = useRef<HTMLButtonElement | null>(null);
+
+  useEffect(() => {
+    confirmButtonRef.current?.focus();
+  }, []);
+
+  return (
+    <div class="sg-composer-tree-confirm" role="group" aria-label={`Confirm removing ${nodeTitle}`}>
+      <span class="sg-composer-tree-confirm-text">
+        Remove {nodeTitle} and its {descendantCount} nested component{descendantCount === 1 ? "" : "s"}?
+      </span>
+      <button
+        type="button"
+        class="sg-composer-tree-action"
+        onClick={onCancel}
+        onKeyDown={(e) => {
+          if (e.key === "Escape") onCancel();
+        }}
+      >
+        Cancel
+      </button>
+      <button
+        ref={confirmButtonRef}
+        type="button"
+        class="sg-composer-tree-action sg-composer-tree-action-danger"
+        onClick={onConfirm}
+        onKeyDown={(e) => {
+          if (e.key === "Escape") onCancel();
+        }}
+      >
+        Confirm removal
+      </button>
+    </div>
+  );
+}
+
 export interface TreeRowActionsProps {
   nodeTitle: string;
   descendantCount: number;
@@ -34,45 +90,20 @@ export function TreeRowActions({
   onRemove,
 }: TreeRowActionsProps): JSX.Element {
   const [confirming, setConfirming] = useState(false);
-  const confirmButtonRef = useRef<HTMLButtonElement | null>(null);
-
-  useEffect(() => {
-    if (confirming) confirmButtonRef.current?.focus();
-  }, [confirming]);
 
   if (readOnly) return <></>;
 
   if (confirming) {
     return (
-      <div class="sg-composer-tree-confirm" role="group" aria-label={`Confirm removing ${nodeTitle}`}>
-        <span class="sg-composer-tree-confirm-text">
-          Remove {nodeTitle} and its {descendantCount} nested component{descendantCount === 1 ? "" : "s"}?
-        </span>
-        <button
-          type="button"
-          class="sg-composer-tree-action"
-          onClick={() => setConfirming(false)}
-          onKeyDown={(e) => {
-            if (e.key === "Escape") setConfirming(false);
-          }}
-        >
-          Cancel
-        </button>
-        <button
-          ref={confirmButtonRef}
-          type="button"
-          class="sg-composer-tree-action sg-composer-tree-action-danger"
-          onClick={() => {
-            setConfirming(false);
-            onRemove();
-          }}
-          onKeyDown={(e) => {
-            if (e.key === "Escape") setConfirming(false);
-          }}
-        >
-          Confirm removal
-        </button>
-      </div>
+      <SubtreeRemovalConfirm
+        nodeTitle={nodeTitle}
+        descendantCount={descendantCount}
+        onCancel={() => setConfirming(false)}
+        onConfirm={() => {
+          setConfirming(false);
+          onRemove();
+        }}
+      />
     );
   }
 

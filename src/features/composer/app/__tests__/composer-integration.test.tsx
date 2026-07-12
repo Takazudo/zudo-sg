@@ -6,35 +6,42 @@
 // events (select / request-add) and outbound snapshots are exercised for real.
 // The tree/chooser/inspector/toolbar are the genuine components.
 
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { act } from "preact/test-utils";
 import { fireEvent, render, screen, within } from "@testing-library/preact";
 import type { CompositionDocument, InsertionTarget } from "@/composer";
 import { VIRTUAL_ROOT_SLOT_ID, createSequentialIdFactory } from "@/composer";
-import { readyMessage, requestAddMessage, selectMessage } from "@/features/composer/preview/protocol";
+import {
+  readyMessage,
+  requestAddMessage,
+  requestInsertMenuMessage,
+  requestNodeMenuMessage,
+  selectMessage,
+} from "@/features/composer/preview/protocol";
 import { ComposerIntegration } from "../composer-integration";
 import { makeTestBridge } from "../test-support/preview-harness";
 import { LS_COMPOSER_VIEWPORT } from "../viewport";
-import { fixtureCatalog, FIXTURE_IDS } from "../../ui/tree/__tests__/fixtures";
+import { fixtureCatalog, FIXTURE_IDS, makeAbcDocument, resetFixtureIds } from "../../ui/tree/__tests__/fixtures";
 
 function emptyDoc(): CompositionDocument {
   return { schemaVersion: 1, id: "it-doc", name: "Integration Doc", root: [] };
 }
 
 const ROOT: InsertionTarget = { parentId: null, slotId: VIRTUAL_ROOT_SLOT_ID, index: 0 };
+const RECT = { x: 10, y: 20, width: 80, height: 24 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const asAny = (v: unknown) => v as any;
 
 let rev = 1000;
 
-function setup(seedViewport?: string) {
+function setup(seedViewport?: string, sample: CompositionDocument = emptyDoc()) {
   if (seedViewport) localStorage.setItem(LS_COMPOSER_VIEWPORT, seedViewport);
   const bridge = makeTestBridge();
   const utils = render(
     <ComposerIntegration
       manifestEntries={fixtureCatalog}
-      controllerOptions={{ sample: emptyDoc(), idFactory: createSequentialIdFactory("n") }}
+      controllerOptions={{ sample, idFactory: createSequentialIdFactory("n") }}
       createBridge={bridge.createBridge}
       previewLocation={bridge.location}
     />,
@@ -48,6 +55,7 @@ function setup(seedViewport?: string) {
   const toolbar = () => screen.getByRole("toolbar", { name: "Composer toolbar" });
   const frame = () => region(".sg-composer-canvas-frame");
   const iframe = () => utils.container.querySelector("iframe") as HTMLIFrameElement;
+  const menu = () => utils.container.querySelector(".sg-composer-menu") as HTMLElement | null;
 
   const renders = () => bridge.posts.filter((p) => asAny(p.message).type === "render");
   const canvasDoc = (): CompositionDocument => asAny(renders().at(-1)!.message).document;
@@ -68,6 +76,7 @@ function setup(seedViewport?: string) {
     toolbar,
     frame,
     iframe,
+    menu,
     canvasDoc,
     lastSentSession,
     addAt,
@@ -279,5 +288,170 @@ describe("ComposerIntegration — replay + guarded keyboard (#251)", () => {
     fireEvent.click(within(s.toolbar()).getByRole("button", { name: "Edit" }));
     fireEvent.keyDown(document.body, { key: "Delete" });
     expect(s.canvasDoc().root).toHaveLength(0);
+  });
+});
+
+describe("ComposerIntegration — context menus + menu bridge (#256)", () => {
+  beforeEach(() => resetFixtureIds());
+
+  it("tree node menu: Copy/Cut/Duplicate/Delete, Delete danger-styled, and closing restores focus to the trigger", () => {
+    const s = setup(undefined, makeAbcDocument());
+    // The tree is collapsed by default — expand Split Layout to reach B's row.
+    fireEvent.click(within(s.tree()).getByRole("button", { name: /expand split layout/i }));
+    const trigger = within(s.tree()).getByRole("button", { name: "Open menu for Box B" });
+
+    fireEvent.click(trigger);
+    expect(within(s.menu()!).getAllByRole("menuitem").map((el) => el.textContent)).toEqual([
+      "Copy",
+      "Cut",
+      "Duplicate",
+      "Delete",
+    ]);
+    expect(within(s.menu()!).getByRole("menuitem", { name: "Delete" }).className).toContain(
+      "sg-composer-menu-item-danger",
+    );
+
+    fireEvent.click(within(s.menu()!).getByRole("menuitem", { name: "Copy" }));
+    expect(within(s.toolbar()).getByText("Box", { exact: false })).toBeInTheDocument();
+    expect(s.menu()).toBeNull();
+    expect(document.activeElement).toBe(trigger);
+  });
+
+  it("opaque nodes show NO Copy/Cut/Duplicate in the node menu — Delete remains", () => {
+    const doc = makeAbcDocument();
+    doc.root.push({ id: "ghost", componentId: "ghost.unknown", componentVersion: 1, props: {}, slots: {} });
+    const s = setup(undefined, doc);
+    const trigger = within(s.tree()).getByRole("button", { name: /open menu for ghost.unknown/i });
+    fireEvent.click(trigger);
+    expect(within(s.menu()!).getAllByRole("menuitem").map((el) => el.textContent)).toEqual(["Delete"]);
+  });
+
+  it("Delete on a populated subtree shows #250's exact subtree-removal confirmation instead of removing immediately", () => {
+    const s = setup(undefined, makeAbcDocument());
+    fireEvent.click(within(s.tree()).getByRole("button", { name: "Open menu for Split Layout" }));
+    fireEvent.click(within(s.menu()!).getByRole("menuitem", { name: "Delete" }));
+
+    expect(within(s.menu()!).getByText(/Remove Split Layout and its 3 nested components\?/)).toBeInTheDocument();
+    expect(s.canvasDoc().root).toHaveLength(1); // no mutation yet
+
+    fireEvent.click(within(s.menu()!).getByRole("button", { name: "Confirm removal" }));
+    expect(s.canvasDoc().root).toHaveLength(0);
+    expect(s.menu()).toBeNull();
+  });
+
+  it("insert menu always offers BOTH Add component… and Paste here; paste disabled while clipboard is empty", () => {
+    const s = setup(undefined, makeAbcDocument());
+    fireEvent.click(within(s.tree()).getByRole("button", { name: "Insert options for document root" }));
+    const items = within(s.menu()!).getAllByRole("menuitem");
+    expect(items.map((el) => el.textContent)).toEqual(["Add component…", "Paste here"]);
+    expect((within(s.menu()!).getByRole("menuitem", { name: "Paste here" }) as HTMLButtonElement).disabled).toBe(
+      true,
+    );
+  });
+
+  it("PASTE INTO A NAMED SLOT end-to-end through the insert menu — the B/C right-slot fixture", () => {
+    const s = setup(undefined, makeAbcDocument());
+    fireEvent.click(within(s.tree()).getByRole("button", { name: /expand split layout/i }));
+
+    // Copy B via its node menu.
+    fireEvent.click(within(s.tree()).getByRole("button", { name: "Open menu for Box B" }));
+    fireEvent.click(within(s.menu()!).getByRole("menuitem", { name: "Copy" }));
+    expect(s.menu()).toBeNull();
+
+    // Open the RIGHT slot's insert menu (the companion "⋯" beside its own "+Add").
+    fireEvent.click(within(s.tree()).getByRole("button", { name: "Insert options for Right in Split Layout" }));
+    const paste = within(s.menu()!).getByRole("menuitem", { name: 'Paste "Box" here' });
+    expect((paste as HTMLButtonElement).disabled).toBe(false);
+    fireEvent.click(paste);
+
+    const rightSlot = s.tree().querySelector('[data-sg-tree-slot-id="right"]')!;
+    const rightIds = [...rightSlot.querySelectorAll("[data-sg-tree-node-id]")].map((el) =>
+      el.getAttribute("data-sg-tree-node-id"),
+    );
+    expect(rightIds).toHaveLength(3);
+    expect(rightIds.slice(0, 2)).toEqual(["B", "C"]);
+    const pastedId = rightIds[2]!;
+    expect(pastedId).not.toBe("B");
+    // Landed in the CANVAS snapshot too — one document, everywhere.
+    const pastedInCanvas = s.canvasDoc().root[0]!.slots.right.find((n: { id: string }) => n.id === pastedId);
+    expect(pastedInCanvas?.componentId).toBe(FIXTURE_IDS.box);
+    expect(s.menu()).toBeNull();
+  });
+
+  it("Escape closes the tree-origin menu and returns focus to its trigger", () => {
+    const s = setup(undefined, makeAbcDocument());
+    const trigger = within(s.tree()).getByRole("button", { name: "Insert options for document root" });
+    fireEvent.click(trigger);
+    expect(s.menu()).not.toBeNull();
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(s.menu()).toBeNull();
+    expect(document.activeElement).toBe(trigger);
+  });
+
+  it("cross-frame: request-node-menu opens the SAME menu, and closing posts restore-focus with the exact focusToken", () => {
+    const s = setup(undefined, makeAbcDocument());
+    act(() => s.bridge.deliver(requestNodeMenuMessage(rev++, "B", RECT, "node-menu:B")));
+
+    expect(s.menu()).not.toBeNull();
+    expect(within(s.menu()!).getAllByRole("menuitem").map((el) => el.textContent)).toEqual([
+      "Copy",
+      "Cut",
+      "Duplicate",
+      "Delete",
+    ]);
+
+    s.bridge.posts.length = 0;
+    fireEvent.click(within(s.menu()!).getByRole("menuitem", { name: "Cut" }));
+
+    expect(s.menu()).toBeNull();
+    // Cutting B also re-renders the canvas snapshot (a document mutation) —
+    // the restore-focus response is ONE of possibly several posts.
+    const restoreFocusPosts = s.bridge.posts.filter((p) => asAny(p.message).type === "restore-focus");
+    expect(restoreFocusPosts).toHaveLength(1);
+    expect(asAny(restoreFocusPosts[0]!.message)).toMatchObject({ type: "restore-focus", focusToken: "node-menu:B" });
+  });
+
+  it("cross-frame insert menu: Add component… focuses the iframe and opens the shared chooser for the exact target (no restore-focus round trip)", () => {
+    const s = setup(undefined, makeAbcDocument());
+    const target = { parentId: null, slotId: VIRTUAL_ROOT_SLOT_ID, index: 1 };
+    act(() => s.bridge.deliver(requestInsertMenuMessage(rev++, target, RECT, "insert-menu:root:1")));
+    s.bridge.posts.length = 0;
+
+    fireEvent.click(within(s.menu()!).getByRole("menuitem", { name: "Add component…" }));
+
+    // No restore-focus round trip for the "Add" hand-off — the iframe was
+    // focused directly (so the chooser captures IT as its own trigger), and
+    // the chooser immediately moves focus on to its own search field.
+    expect(s.bridge.posts.filter((p) => asAny(p.message).type === "restore-focus")).toHaveLength(0);
+    expect(s.chooser()).not.toBeNull();
+    fireEvent.click(within(s.chooser()).getByRole("button", { name: "Box" }));
+    expect(s.canvasDoc().root.map((n) => n.componentId)[1]).toBe(FIXTURE_IDS.box);
+    // The chooser's OWN close-focus-restore returns focus to its captured
+    // trigger — the iframe, matching the existing #251 request-add contract.
+    expect(document.activeElement).toBe(s.iframe());
+  });
+
+  it("cross-frame: request-insert-menu translates the rect by the iframe's own offset", () => {
+    const s = setup(undefined, makeAbcDocument());
+    vi.spyOn(s.iframe(), "getBoundingClientRect").mockReturnValue({
+      x: 100,
+      y: 40,
+      width: 500,
+      height: 300,
+      top: 40,
+      left: 100,
+      right: 600,
+      bottom: 340,
+      toJSON: () => ({}),
+    });
+    act(() =>
+      s.bridge.deliver(
+        requestInsertMenuMessage(rev++, { parentId: null, slotId: VIRTUAL_ROOT_SLOT_ID, index: 1 }, RECT, "t"),
+      ),
+    );
+    const panel = s.menu()!;
+    // anchorBelowRect: x unchanged, y = translated bottom + 4.
+    expect(panel.style.left).toBe(`${RECT.x + 100}px`);
+    expect(panel.style.top).toBe(`${RECT.y + 40 + RECT.height + 4}px`);
   });
 });

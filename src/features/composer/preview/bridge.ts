@@ -42,8 +42,9 @@ import type {
   MessagePoster,
   MessageTarget,
   PreviewSession,
+  SerializedRect,
 } from "./protocol";
-import { modeMessage, readPreviewToParent, renderMessage } from "./protocol";
+import { modeMessage, readPreviewToParent, renderMessage, restoreFocusMessage } from "./protocol";
 
 // ── URL + iframe seam ───────────────────────────────────────────────────────
 
@@ -123,6 +124,10 @@ export interface ComposerPreviewBridgeOptions {
   onReady?: () => void;
   onSelect?: (nodeId: string | null, revision: number) => void;
   onRequestAdd?: (target: InsertionTarget, revision: number) => void;
+  /** The selected node's chrome "⋯" was activated inside the iframe (issue #256). */
+  onRequestNodeMenu?: (nodeId: string, rect: SerializedRect, focusToken: string, revision: number) => void;
+  /** An insert point's "⋯" was activated inside the iframe (issue #256). */
+  onRequestInsertMenu?: (target: InsertionTarget, rect: SerializedRect, focusToken: string, revision: number) => void;
   onError?: (message: string, recoverable: boolean, revision: number | null) => void;
   /** A message that failed source/origin/schema validation was DROPPED. */
   onRejected?: (reason: GuardFailure, detail?: string) => void;
@@ -133,6 +138,13 @@ export interface ComposerPreviewBridge {
   render(document: CompositionDocument, session: PreviewSession): number;
   /** Send (or retain) a session-only change. Returns its revision. */
   updateSession(session: PreviewSession): number;
+  /**
+   * Answer a `request-node-menu` / `request-insert-menu` once its menu has
+   * closed: echoes the `focusToken` back so the iframe can restore focus to
+   * the exact control that opened it (issue #256). Not revision-gated — a
+   * no-op (silently dropped by the iframe's own guard) if not yet ready.
+   */
+  restoreFocus(focusToken: string): void;
   /** True once the iframe has announced `ready` at least once. */
   readonly ready: boolean;
   /** Revision of the retained newest snapshot (`-1` before the first send). */
@@ -211,6 +223,12 @@ export function createComposerPreviewBridge(
       case "request-add":
         options.onRequestAdd?.(message.target, message.revision);
         return;
+      case "request-node-menu":
+        options.onRequestNodeMenu?.(message.nodeId, message.rect, message.focusToken, message.revision);
+        return;
+      case "request-insert-menu":
+        options.onRequestInsertMenu?.(message.target, message.rect, message.focusToken, message.revision);
+        return;
       case "error":
         options.onError?.(message.message, message.recoverable, message.revision);
         return;
@@ -247,6 +265,12 @@ export function createComposerPreviewBridge(
       // iframe is mid-reload this post is lost — the `ready` replay covers it.
       if (ready) post(modeMessage(retained.revision, session));
       return retained.revision;
+    },
+    restoreFocus(focusToken) {
+      // Not retained/replayed: a menu can only have been requested by an
+      // iframe that already announced `ready`, and if it reloads mid-menu the
+      // control the token pointed at is gone anyway — nothing to replay.
+      if (ready) post(restoreFocusMessage(focusToken));
     },
     get ready() {
       return ready;

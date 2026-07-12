@@ -12,7 +12,7 @@
 // reloads and re-announces `ready`.
 
 import type { CompositionDocument } from "@/composer";
-import type { ParentToPreviewMessage, PreviewSession } from "./protocol";
+import type { ModeMessage, PreviewSession, RenderMessage } from "./protocol";
 
 /** Everything the preview draws from. */
 export interface PreviewState {
@@ -39,10 +39,19 @@ export const INITIAL_PREVIEW_STATE: PreviewState = {
  *
  * Returns `null` when the message is STALE (revision <= current) — the caller
  * must then drop it entirely, not merge any part of it.
+ *
+ * Typed to `RenderMessage | ModeMessage` ONLY — the two revision-gated
+ * snapshot members — not the full `ParentToPreviewMessage` union. `#256`'s
+ * `restore-focus` is a one-shot focus command with no `revision` and no
+ * document/session payload, so it does not belong in this fold at all;
+ * `client.ts`'s `onMessage` narrows it away (an early `if (type ===
+ * "restore-focus")` branch) before ever calling this function, and that
+ * narrowing is what keeps this signature honest instead of forcing a
+ * meaningless case here.
  */
 export function applyInbound(
   state: PreviewState,
-  message: ParentToPreviewMessage,
+  message: RenderMessage | ModeMessage,
 ): PreviewState | null {
   if (message.revision <= state.revision) return null;
 
@@ -53,11 +62,10 @@ export function applyInbound(
       // Session-only — the document on screen is kept as-is.
       return { revision: message.revision, document: state.document, session: message.session };
     default: {
-      // Compile-time exhaustiveness: appending a member to
-      // PARENT_TO_PREVIEW_MEMBERS (waves 7-9) without adding a case here is a
-      // TYPE ERROR. Fails CLOSED — an unhandled type is dropped rather than
-      // mistaken for a session update (which would bump the revision and make
-      // the next legitimate snapshot look stale).
+      // Compile-time exhaustiveness over the NARROWED two-member type above.
+      // Fails CLOSED — an unhandled type is dropped rather than mistaken for
+      // a session update (which would bump the revision and make the next
+      // legitimate snapshot look stale).
       const unhandled: never = message;
       void unhandled;
       return null;

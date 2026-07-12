@@ -8,7 +8,7 @@ import { fireEvent, render } from "@testing-library/preact";
 import type { CompositionDocument, CompositionNode } from "@/composer";
 import { COMPOSITION_SCHEMA_VERSION } from "@/composer";
 import { composerEntries } from "@/styleguide/data/composer-registry";
-import { CompositionCanvas, type CompositionCanvasProps } from "../renderer";
+import { CompositionCanvas, focusByToken, type CompositionCanvasProps } from "../renderer";
 import type { PreviewSession } from "../protocol";
 
 const EDIT: PreviewSession = { mode: "edit", theme: "light", selectedId: null };
@@ -34,6 +34,8 @@ function draw(document: CompositionDocument, overrides: Partial<CompositionCanva
     session: EDIT,
     onSelect: vi.fn(),
     onRequestAdd: vi.fn(),
+    onRequestNodeMenu: vi.fn(),
+    onRequestInsertMenu: vi.fn(),
     ...overrides,
   };
   return { ...render(h(CompositionCanvas, props)), props };
@@ -392,6 +394,106 @@ describe("DOM identity stability (hard acceptance criterion)", () => {
     const [first, second] = [...wrapper.children];
     expect(first!.className).toBe("zc-chrome");
     expect(second!.tagName).toBe("P");
+  });
+});
+
+describe("menu relay (issue #256)", () => {
+  it("renders the node-menu '⋯' trigger ONLY on the SELECTED node's chrome", () => {
+    const { container } = draw(SPLIT, { session: { ...EDIT, selectedId: "prose-1" } });
+    const selectedChrome = container.querySelector('[data-zc-node-id="prose-1"] > .zc-chrome')!;
+    expect(selectedChrome.querySelector(".zc-chrome-menu")).not.toBeNull();
+
+    const otherChrome = container.querySelector('[data-zc-node-id="cta-1"] > .zc-chrome')!;
+    expect(otherChrome.querySelector(".zc-chrome-menu")).toBeNull();
+    // Unselected chrome stays exactly the bare, aria-hidden label.
+    expect(otherChrome.getAttribute("aria-hidden")).toBe("true");
+  });
+
+  it("the node-menu trigger is not aria-hidden and carries an accessible name", () => {
+    const { container } = draw(SPLIT, { session: { ...EDIT, selectedId: "prose-1" } });
+    const chrome = container.querySelector('[data-zc-node-id="prose-1"] > .zc-chrome')!;
+    expect(chrome.hasAttribute("aria-hidden")).toBe(false);
+    const trigger = chrome.querySelector(".zc-chrome-menu")!;
+    expect(trigger.getAttribute("aria-label")).toMatch(/open menu/i);
+  });
+
+  it("clicking the node-menu trigger emits onRequestNodeMenu with a serialized rect + stable focus token, and does not also select", () => {
+    const onRequestNodeMenu = vi.fn();
+    const onSelect = vi.fn();
+    const { container } = draw(SPLIT, {
+      session: { ...EDIT, selectedId: "prose-1" },
+      onRequestNodeMenu,
+      onSelect,
+    });
+    fireEvent.click(container.querySelector('[data-zc-node-id="prose-1"] .zc-chrome-menu')!);
+
+    expect(onRequestNodeMenu).toHaveBeenCalledTimes(1);
+    const [nodeId, rect, focusToken] = onRequestNodeMenu.mock.calls[0]!;
+    expect(nodeId).toBe("prose-1");
+    expect(rect).toEqual({ x: expect.any(Number), y: expect.any(Number), width: expect.any(Number), height: expect.any(Number) });
+    expect(focusToken).toBe("node-menu:prose-1");
+    // Swallowed before it can reach the capture-phase select handler.
+    expect(onSelect).not.toHaveBeenCalled();
+  });
+
+  it("every insert point has a companion '⋯' that emits onRequestInsertMenu with the exact InsertionTarget", () => {
+    const onRequestInsertMenu = vi.fn();
+    const onRequestAdd = vi.fn();
+    const { container } = draw(SPLIT, { onRequestInsertMenu, onRequestAdd });
+
+    const group = container.querySelector('[data-zc-insert="stack-1:content:1"]')!.closest(".zc-insert-group")!;
+    fireEvent.click(group.querySelector(".zc-insert-menu")!);
+
+    expect(onRequestInsertMenu).toHaveBeenCalledTimes(1);
+    const [target, rect, focusToken] = onRequestInsertMenu.mock.calls[0]!;
+    expect(target).toEqual({ parentId: "stack-1", slotId: "content", index: 1 });
+    expect(rect).toEqual({ x: expect.any(Number), y: expect.any(Number), width: expect.any(Number), height: expect.any(Number) });
+    expect(focusToken).toBe("insert-menu:stack-1:content:1");
+    // The direct "+" add path is untouched by the companion trigger.
+    expect(onRequestAdd).not.toHaveBeenCalled();
+  });
+
+  it("the insert-menu trigger does not disturb the direct add button's own class/attributes", () => {
+    const { container } = draw(SPLIT);
+    const addButton = container.querySelector('[data-zc-insert="stack-1:content:0"]')!;
+    expect(addButton.className).toBe("zc-insert zc-insert--vertical");
+    expect(addButton.parentElement!.className).toContain("zc-insert-group");
+  });
+
+  it("both trigger kinds are absent entirely in Preview mode", () => {
+    const { container } = draw(SPLIT, { session: PREVIEW });
+    expect(container.querySelectorAll(".zc-chrome-menu")).toHaveLength(0);
+    expect(container.querySelectorAll(".zc-insert-menu")).toHaveLength(0);
+  });
+
+  it("focusByToken finds and focuses the exact node-menu trigger by its data-zc-focus-token", () => {
+    const { container } = draw(SPLIT, { session: { ...EDIT, selectedId: "prose-1" } });
+    document.body.append(container);
+    try {
+      focusByToken("node-menu:prose-1");
+      expect(document.activeElement).toBe(container.querySelector(".zc-chrome-menu"));
+    } finally {
+      container.remove();
+    }
+  });
+
+  it("focusByToken finds and focuses the exact insert-menu trigger by its data-zc-focus-token", () => {
+    const { container } = draw(SPLIT);
+    document.body.append(container);
+    try {
+      focusByToken("insert-menu:stack-1:content:1");
+      const expected = container
+        .querySelector('[data-zc-insert="stack-1:content:1"]')!
+        .closest(".zc-insert-group")!
+        .querySelector(".zc-insert-menu");
+      expect(document.activeElement).toBe(expected);
+    } finally {
+      container.remove();
+    }
+  });
+
+  it("focusByToken is a silent no-op when nothing matches (e.g. the node was removed)", () => {
+    expect(() => focusByToken("node-menu:does-not-exist")).not.toThrow();
   });
 });
 

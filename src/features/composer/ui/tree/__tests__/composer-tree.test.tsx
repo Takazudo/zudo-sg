@@ -16,6 +16,8 @@ function baseProps() {
     onOpenChooser: vi.fn(),
     onReorder: vi.fn(),
     onRemove: vi.fn(),
+    onOpenNodeMenu: vi.fn(),
+    onOpenInsertMenu: vi.fn(),
   };
 }
 

@@ -47,8 +47,37 @@ import type {
 import { VIRTUAL_ROOT_SLOT_ID, classifyNode, createManifest } from "@/composer";
 import type { ComposerEntry } from "@/styleguide/data/composer-registry";
 import { toManifestEntry } from "@/styleguide/data/composer-registry";
-import { RESERVED_PROP_KEYS, type PreviewSession } from "./protocol";
+import { RESERVED_PROP_KEYS, serializeRect, type PreviewSession, type SerializedRect } from "./protocol";
 import { slotFlow, type SlotFlow } from "./slot-flow";
+
+// ── Menu focus tokens (issue #256) ──────────────────────────────────────────
+//
+// The attribute a menu trigger control carries so a later `restore-focus`
+// message (see `preview-app.ts`) can find and refocus the EXACT control that
+// requested the menu, even though the document may have re-rendered in the
+// meantime. Deterministic (not random) — a re-render that recreates the same
+// logical affordance recreates the same token, so a plain close (Escape /
+// outside-click / scroll / resize dismiss, no document mutation) always finds
+// a live match. A mutation that removes the affordance (e.g. Delete) simply
+// leaves no match — `focusByToken` is a silent no-op then, never a throw.
+const FOCUS_TOKEN_ATTR = "data-zc-focus-token";
+
+export function nodeMenuFocusToken(nodeId: string): string {
+  return `node-menu:${nodeId}`;
+}
+
+export function insertMenuFocusToken(target: InsertionTarget): string {
+  return `insert-menu:${target.parentId ?? ""}:${target.slotId}:${target.index}`;
+}
+
+/** Focus the control a `restore-focus` message's token points at, if it still exists. */
+export function focusByToken(token: string): void {
+  const escaped =
+    typeof CSS !== "undefined" && typeof CSS.escape === "function"
+      ? CSS.escape(token)
+      : token.replace(/(["\\])/g, "\\$1");
+  document.querySelector<HTMLElement>(`[${FOCUS_TOKEN_ATTR}="${escaped}"]`)?.focus();
+}
 
 /**
  * One manifest per registry array, built once. `toManifestEntry` runs a zod
@@ -97,6 +126,10 @@ export interface CompositionCanvasProps {
   onSelect: (nodeId: string | null) => void;
   /** An insert point was activated. Carries #245's insert-at-index target. */
   onRequestAdd: (target: InsertionTarget) => void;
+  /** The SELECTED node's chrome "⋯" was activated (issue #256). */
+  onRequestNodeMenu: (nodeId: string, rect: SerializedRect, focusToken: string) => void;
+  /** An insert point's "⋯" was activated (issue #256). */
+  onRequestInsertMenu: (target: InsertionTarget, rect: SerializedRect, focusToken: string) => void;
   /** A node's component threw and was isolated behind its error boundary. */
   onNodeError?: (nodeId: string, message: string) => void;
 }
@@ -107,7 +140,8 @@ export interface CompositionCanvasProps {
  * addable index of EVERY declared slot.
  */
 export function CompositionCanvas(props: CompositionCanvasProps): JSX.Element {
-  const { document, entries, session, onSelect, onRequestAdd, onNodeError } = props;
+  const { document, entries, session, onSelect, onRequestAdd, onRequestNodeMenu, onRequestInsertMenu, onNodeError } =
+    props;
   const edit = session.mode === "edit";
 
   const entryById = useMemo(
@@ -161,6 +195,13 @@ export function CompositionCanvas(props: CompositionCanvasProps): JSX.Element {
     event.preventDefault();
   };
 
+  /**
+   * One insert point: the existing direct "+" add button (unchanged — same
+   * class/attributes/behavior existing callers and tests depend on) PLUS a
+   * companion "⋯" that opens the richer insert MENU (issue #256's "Add
+   * component…" AND "Paste here", both always present). Two SIBLING
+   * `<button>`s inside a non-interactive wrapper — never nested buttons.
+   */
   function insertPoint(
     target: InsertionTarget,
     label: string,
@@ -168,21 +209,41 @@ export function CompositionCanvas(props: CompositionCanvasProps): JSX.Element {
     empty: boolean,
   ): JSX.Element {
     const position = empty ? `empty ${label}` : `${label}, position ${target.index + 1}`;
+    const focusToken = insertMenuFocusToken(target);
     return h(
-      "button",
-      {
-        key: `zc-ip-${target.index}`,
-        type: "button",
-        class: `zc-insert zc-insert--${flow}${empty ? " zc-insert--empty" : ""}`,
-        "data-zc-affordance": "",
-        // Presentational/debug hook only — the click closes over the real target
-        // object. Empty parent segment == the virtual root (a real node id is
-        // never empty), so it cannot collide with a node literally named "root".
-        "data-zc-insert": `${target.parentId ?? ""}:${target.slotId}:${target.index}`,
-        "aria-label": `Add a component to ${position}`,
-        onClick: () => onRequestAdd(target),
-      },
-      h("span", { class: "zc-insert-plus", "aria-hidden": "true" }, "+"),
+      "div",
+      { key: `zc-ip-${target.index}`, class: `zc-insert-group zc-insert-group--${flow}` },
+      h(
+        "button",
+        {
+          type: "button",
+          class: `zc-insert zc-insert--${flow}${empty ? " zc-insert--empty" : ""}`,
+          "data-zc-affordance": "",
+          // Presentational/debug hook only — the click closes over the real target
+          // object. Empty parent segment == the virtual root (a real node id is
+          // never empty), so it cannot collide with a node literally named "root".
+          "data-zc-insert": `${target.parentId ?? ""}:${target.slotId}:${target.index}`,
+          "aria-label": `Add a component to ${position}`,
+          onClick: () => onRequestAdd(target),
+        },
+        h("span", { class: "zc-insert-plus", "aria-hidden": "true" }, "+"),
+      ),
+      h(
+        "button",
+        {
+          type: "button",
+          class: "zc-insert-menu",
+          "data-zc-affordance": "",
+          "data-zc-focus-token": focusToken,
+          "aria-label": `Insert options for ${position}`,
+          onClick: (event: MouseEvent) => {
+            event.stopPropagation();
+            const rect = serializeRect((event.currentTarget as HTMLElement).getBoundingClientRect());
+            onRequestInsertMenu(target, rect, focusToken);
+          },
+        },
+        h("span", { "aria-hidden": "true" }, "⋯"),
+      ),
     );
   }
 
@@ -279,9 +340,40 @@ export function CompositionCanvas(props: CompositionCanvasProps): JSX.Element {
     const diagnostic = classifyNode(node, manifest);
     const opaque = diagnostic.opaque || !entry;
     const label = entry?.title ?? node.componentId;
+    const selected = session.selectedId === node.id;
 
     const body: ComponentChildren =
       opaque || !entry ? renderOpaque(node, diagnostic) : renderComponent(node, entry);
+
+    // The SELECTED node's chrome gains a "⋯" trigger (issue #256) — every
+    // other node's chrome stays exactly the bare label it always was (see
+    // "the chrome is a keyed sibling" test: an unselected node's `.zc-chrome`
+    // has no other class and no child elements). The label itself moves into
+    // its own `aria-hidden` span only in the selected branch, so the trigger
+    // button — the only focusable thing here — is never inside an
+    // `aria-hidden` ancestor.
+    const chromeContent: ComponentChildren = selected
+      ? [
+          h("span", { key: "zc-chrome-label", "aria-hidden": "true" }, label),
+          h(
+            "button",
+            {
+              key: "zc-chrome-menu",
+              type: "button",
+              class: "zc-chrome-menu",
+              "data-zc-affordance": "",
+              "data-zc-focus-token": nodeMenuFocusToken(node.id),
+              "aria-label": `Open menu for ${label}`,
+              onClick: (event: MouseEvent) => {
+                event.stopPropagation();
+                const rect = serializeRect((event.currentTarget as HTMLElement).getBoundingClientRect());
+                onRequestNodeMenu(node.id, rect, nodeMenuFocusToken(node.id));
+              },
+            },
+            h("span", { "aria-hidden": "true" }, "⋯"),
+          ),
+        ]
+      : label;
 
     return h(
       "div",
@@ -289,15 +381,15 @@ export function CompositionCanvas(props: CompositionCanvasProps): JSX.Element {
         key: `zc-node-${node.id}`,
         class: "zc-node",
         "data-zc-node-id": node.id,
-        "data-zc-selected": session.selectedId === node.id ? "" : undefined,
+        "data-zc-selected": selected ? "" : undefined,
         "data-zc-opaque": opaque ? "" : undefined,
       },
       // Both children are KEYED — see the DOM-identity note in the module header.
       edit
         ? h(
             "span",
-            { key: "zc-chrome", class: "zc-chrome", "aria-hidden": "true" },
-            label,
+            { key: "zc-chrome", class: "zc-chrome", "aria-hidden": selected ? undefined : "true" },
+            chromeContent,
           )
         : null,
       h(

@@ -525,6 +525,36 @@ html[data-sg-composer-doc] body {
   font-size: var(--text-micro);
 }
 
+/* Node context-menu trigger (issue #256): visible on row hover/focus-within,
+   but NEVER removed from the DOM/tab order — a plain opacity toggle keeps it
+   reachable by keyboard even before the pointer ever touches the row. */
+.sg-composer-tree-menu-trigger {
+  opacity: 0;
+}
+@media (hover: hover) {
+  .sg-composer-tree-row:hover .sg-composer-tree-menu-trigger {
+    opacity: 1;
+  }
+}
+.sg-composer-tree-row:focus-within .sg-composer-tree-menu-trigger,
+.sg-composer-tree-menu-trigger:focus-visible {
+  opacity: 1;
+}
+
+/* Insert-menu companion beside a slot's "+Add" (issue #256) — always visible,
+   matching "+Add" itself; opens Add/Paste instead of jumping straight to the
+   chooser. */
+.sg-composer-tree-slot-add-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+.sg-composer-tree-insert-menu {
+  width: auto;
+  padding-inline: var(--spacing-hsp-2xs);
+  font-size: var(--text-micro);
+}
+
 .sg-composer-tree-confirm {
   display: flex;
   flex-wrap: wrap;
@@ -757,6 +787,65 @@ html[data-sg-composer-doc] body {
 .sg-composer-chooser-card-description {
   color: var(--color-muted);
   font-size: var(--text-micro);
+}
+
+/* ── Context menu (issue #256) ──────────────────────────────────────────────
+   ONE host-side popover (`ComposerMenu`) reused for the node menu (Copy/Cut/
+   Duplicate/Delete), the insert menu (Add component…/Paste here), and the
+   Delete subtree-removal confirmation (`SubtreeRemovalConfirm`, styled by the
+   `.sg-composer-tree-confirm*` rules above — reused verbatim, not restyled).
+   `position: fixed`, positioned/clamped in JS (`menu-position.ts`) — this
+   file only supplies appearance.
+
+   Overlay z-index: adopts the EXISTING `popover` tier (`--z-index-popover`,
+   src/config/z-index-tokens.ts) — reserved for exactly this ("inline
+   popovers") and unused until now, so `pnpm gen:z-index` was not run. It
+   sits above ordinary content/toolbar/sidebar chrome and below the modal
+   chooser/backdrop tiers, which the menu is never open at the same time as
+   (selecting "Add component…" closes the menu before the chooser opens). */
+.sg-composer-menu {
+  z-index: var(--z-index-popover);
+  display: flex;
+  flex-direction: column;
+  min-width: 12rem;
+  max-width: min(20rem, calc(100vw - 1rem));
+  max-height: min(24rem, calc(100vh - 1rem));
+  overflow: auto;
+  padding: var(--spacing-vsp-3xs);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+  color: var(--color-fg);
+  box-shadow: var(--shadow-lg);
+}
+
+.sg-composer-menu-item {
+  display: block;
+  width: 100%;
+  padding: var(--spacing-vsp-3xs) var(--spacing-hsp-2xs);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-fg);
+  text-align: start;
+  font-size: var(--text-small);
+  cursor: pointer;
+}
+@media (hover: hover) {
+  .sg-composer-menu-item:hover:not(:disabled) {
+    background: color-mix(in oklch, var(--color-accent) 10%, transparent);
+  }
+}
+.sg-composer-menu-item:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: -2px;
+}
+.sg-composer-menu-item:disabled {
+  color: var(--color-muted);
+  cursor: not-allowed;
+}
+.sg-composer-menu-item-danger:not(:disabled) {
+  color: var(--color-danger);
 }
 
 /* ── Canvas preview host (issue #251 central integration) ──────────────────
