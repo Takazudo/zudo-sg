@@ -11,11 +11,21 @@
  * expected, not an error.
  */
 import type { FunctionComponent } from "preact";
+import { Island, type IslandProps } from "@takazudo/zfb";
 import DefaultLayout from "../layouts/default";
 import { Container } from "@zudo-sg/ui/src/shared/container/container.tsx";
 import { mdxComponents } from "./_mdx-components";
 import { normalizeSlug, deriveLineKey } from "../lib/site-tree";
 import type { ContentData } from "../lib/content-schema";
+
+// The mock forms' enhancer islands (ContactForm on content/contact/index.mdx,
+// RecruitEntryForm on content/recruit/*.mdx) find their target markup via a
+// document-wide `[data-contact-form]`/`[data-recruit-form]` query (see each
+// enhancer's own header comment) rather than DOM nesting, so mounting both
+// unconditionally on every content page is safe — a page without either
+// form's markup just runs a no-op query.
+import ContactFormEnhancer from "@zudo-sg/ui/src/forms/contact-form/contact-form-enhancer.tsx";
+import RecruitFormEnhancer from "@zudo-sg/ui/src/forms/recruit-entry-form/recruit-form-enhancer.tsx";
 
 type ContentEntry = {
   slug: string;
@@ -64,6 +74,13 @@ export default function ContentPage({ entry, slug }: Props) {
           <entry.Content components={mdxComponents} />
         </div>
       </Container>
+
+      <Island when="visible" ssrFallback={null}>
+        {(<ContactFormEnhancer />) as unknown as IslandProps["children"]}
+      </Island>
+      <Island when="visible" ssrFallback={null}>
+        {(<RecruitFormEnhancer />) as unknown as IslandProps["children"]}
+      </Island>
     </DefaultLayout>
   );
 }
