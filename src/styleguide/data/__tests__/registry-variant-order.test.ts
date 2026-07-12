@@ -13,26 +13,19 @@ import { getStoryBySlug } from "../registry";
  * enumeration of the `import * as` namespace it builds them from.
  */
 describe("registry variant ordering (#128 / #174)", () => {
-  it("orders Button variants in source order; variants[0] (default tab) is Playground", () => {
-    const button = getStoryBySlug("button");
-    expect(button).toBeDefined();
-    expect(button!.variants.map((v) => v.exportName)).toEqual([
-      "Playground",
-      "Variants",
-      "Sizes",
-      "AsLink",
-      "Disabled",
-      "Block",
-    ]);
+  it("orders CtaButton variants in source order; variants[0] (default tab) is Playground", () => {
+    const ctaButton = getStoryBySlug("cta-button");
+    expect(ctaButton).toBeDefined();
+    expect(ctaButton!.variants.map((v) => v.exportName)).toEqual(["Playground", "Pair"]);
     // The code panel defaults to variants[0] — this is the reported default-tab bug.
-    expect(button!.variants[0]!.exportName).toBe("Playground");
+    expect(ctaButton!.variants[0]!.exportName).toBe("Playground");
   });
 
   it("defaults to the first source-order export, not a hardcoded Playground", () => {
-    // Form authors no Playground — its first source-order export is TextField,
+    // Card authors no Playground — its first source-order export is Default,
     // so the general contract is "first-authored story", not "Playground".
-    const form = getStoryBySlug("form");
-    expect(form).toBeDefined();
-    expect(form!.variants[0]!.exportName).toBe("TextField");
+    const card = getStoryBySlug("card");
+    expect(card).toBeDefined();
+    expect(card!.variants[0]!.exportName).toBe("Default");
   });
 });

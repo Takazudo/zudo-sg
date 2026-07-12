@@ -57,13 +57,13 @@ function runSetup(command: "dev" | "build") {
 // verify zdtp's @theme rewrite path.
 const COLORS_CSS_FIXTURE = `:root {
   --palette-base-0: oklch(.965 .004 65);
-  --palette-base-4: oklch(.185 .005 65);   /* ink (light) */
+  --palette-base-4: oklch(.185 .005 65);   /* fg (light) */
 
   color-scheme: light dark;
 }
 
 @theme {
-  --color-ink: light-dark(var(--palette-base-4), var(--palette-base-0));
+  --color-fg: light-dark(var(--palette-base-4), var(--palette-base-0));
 }
 `;
 
@@ -119,7 +119,7 @@ describe("createDevMiddlewareHandler", () => {
     expect(payload.ok).toBe(true);
 
     const css = readColorsCss();
-    expect(css).toContain("--palette-base-4: oklch(.250 .006 65);   /* ink (light) */");
+    expect(css).toContain("--palette-base-4: oklch(.250 .006 65);   /* fg (light) */");
     // Everything else is untouched — a minimal, single-declaration diff.
     expect(css).toContain("--palette-base-0: oklch(.965 .004 65);");
     expect(css).toContain("color-scheme: light dark;");
@@ -154,19 +154,19 @@ describe("createDevMiddlewareHandler", () => {
     });
     const before = readColorsCss();
 
-    const res = await post(handler, { tokens: { "--color-ink": "red" } });
+    const res = await post(handler, { tokens: { "--color-fg": "red" } });
 
     expect(res.status).toBe(400);
     const payload = JSON.parse(res.body ?? "{}");
     expect(payload.ok).toBe(false);
-    expect(payload.rejected).toContain("--color-ink");
+    expect(payload.rejected).toContain("--color-fg");
     expect(readColorsCss()).toBe(before);
   });
 
   it("rewrites a routed @theme var when that prefix is explicitly routed", async () => {
     // "color" IS routed here (unlike production config) specifically to
     // isolate @theme rewriting from the "unrouted prefix" case
-    // above: --color-ink resolves to a file+prefix match, but the var itself
+    // above: --color-fg resolves to a file+prefix match, but the var itself
     // lives in the file's `@theme` block.
     const handler = createDevMiddlewareHandler({
       rootDir: sandbox,
@@ -175,13 +175,13 @@ describe("createDevMiddlewareHandler", () => {
     });
     const before = readColorsCss();
 
-    const res = await post(handler, { tokens: { "--color-ink": "red" } });
+    const res = await post(handler, { tokens: { "--color-fg": "red" } });
 
     expect(res.status).toBe(200);
     const payload = JSON.parse(res.body ?? "{}");
     expect(payload.ok).toBe(true);
-    expect(payload.updated?.[0]?.changed).toContain("--color-ink");
-    expect(readColorsCss()).toContain("--color-ink: red;");
+    expect(payload.updated?.[0]?.changed).toContain("--color-fg");
+    expect(readColorsCss()).toContain("--color-fg: red;");
   });
 
   it("rejects a routing entry whose path escapes the write-root (invalid token path)", async () => {
@@ -335,7 +335,7 @@ const REAL_COLORS_FIXTURE = `:root {
 }
 
 @theme {
-  --color-ink: light-dark(var(--palette-base-4), var(--palette-base-0));
+  --color-fg: light-dark(var(--palette-base-4), var(--palette-base-0));
 }
 `;
 
@@ -441,16 +441,16 @@ describe("createDevMiddlewareHandler — real routing map + same-file shim", () 
     expect(css).toContain(`${NEW_SHADOW};`);
   });
 
-  it("(c) --color-ink light-dark() expression is overwritten with a literal", async () => {
-    expect(readReal("colors.css")).toContain("--color-ink: light-dark(");
+  it("(c) --color-fg light-dark() expression is overwritten with a literal", async () => {
+    expect(readReal("colors.css")).toContain("--color-fg: light-dark(");
     const res = await post(realHandler(), {
-      tokens: { "--color-ink": "oklch(.3 .01 65)" },
+      tokens: { "--color-fg": "oklch(.3 .01 65)" },
     });
     expect(res.status).toBe(200);
     expect(JSON.parse(res.body ?? "{}").ok).toBe(true);
     const css = readReal("colors.css");
-    expect(css).toContain("--color-ink: oklch(.3 .01 65);");
-    expect(css).not.toContain("--color-ink: light-dark(");
+    expect(css).toContain("--color-fg: oklch(.3 .01 65);");
+    expect(css).not.toContain("--color-fg: light-dark(");
   });
 
   // ── (d) SAME-FILE pairs: bug reproduction (raw) + fix verification (shim) ──
@@ -460,12 +460,12 @@ describe("createDevMiddlewareHandler — real routing map + same-file shim", () 
   it("(d) palette + color → colors.css: RAW zdtp handler clobbers (the bug)", async () => {
     const { status } = await postRaw(rawHandler(), {
       "--palette-base-4": "oklch(.250 .006 65)",
-      "--color-ink": "red",
+      "--color-fg": "red",
     });
     expect(status).toBe(200);
     const css = readReal("colors.css");
     const hasPalette = css.includes("--palette-base-4: oklch(.250 .006 65);");
-    const hasColor = css.includes("--color-ink: red;");
+    const hasColor = css.includes("--color-fg: red;");
     // read-all-then-write-all: both same-file groups read the ORIGINAL, so the
     // second write clobbers the first — they cannot both survive.
     expect(hasPalette && hasColor).toBe(false);
@@ -475,7 +475,7 @@ describe("createDevMiddlewareHandler — real routing map + same-file shim", () 
     const res = await post(realHandler(), {
       tokens: {
         "--palette-base-4": "oklch(.250 .006 65)",
-        "--color-ink": "red",
+        "--color-fg": "red",
       },
     });
     expect(res.status).toBe(200);
@@ -483,7 +483,7 @@ describe("createDevMiddlewareHandler — real routing map + same-file shim", () 
     expect(payload.ok).toBe(true);
     const css = readReal("colors.css");
     expect(css).toContain("--palette-base-4: oklch(.250 .006 65);");
-    expect(css).toContain("--color-ink: red;");
+    expect(css).toContain("--color-fg: red;");
     // The two same-file prefix calls must be COALESCED into one `updated` row —
     // zdtp's result modal keys rows by `file`, so a duplicate `file` would render
     // as split/partial sections (and collide as Preact keys). One row, both vars.
@@ -492,7 +492,7 @@ describe("createDevMiddlewareHandler — real routing map + same-file shim", () 
     );
     expect(colorRows).toHaveLength(1);
     expect(colorRows[0].changed).toEqual(
-      expect.arrayContaining(["--palette-base-4", "--color-ink"]),
+      expect.arrayContaining(["--palette-base-4", "--color-fg"]),
     );
     // No file appears twice across the whole `updated` list.
     const files = (payload.updated ?? []).map((u: { file?: string }) => u.file);

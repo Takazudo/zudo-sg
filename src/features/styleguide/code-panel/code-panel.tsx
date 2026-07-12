@@ -58,7 +58,7 @@ export default function CodePanel({
     <div class="flex h-full flex-col gap-vsp-md p-hsp-md">
       <div>
         <div class="flex items-center justify-between gap-hsp-sm">
-          <h2 class="text-small font-semibold uppercase tracking-wide text-ink-mute">
+          <h2 class="text-small font-semibold uppercase tracking-wide text-muted">
             Source
           </h2>
           {active && <CopyButton text={active.source} label="Copy source" />}
@@ -75,8 +75,8 @@ export default function CodePanel({
                 class={
                   "px-hsp-xs py-vsp-3xs text-xs rounded-sm border transition-colors " +
                   (v.exportName === activeVariant
-                    ? "border-brand bg-brand text-on-brand"
-                    : "border-line text-ink-mute hover:text-ink")
+                    ? "border-accent bg-accent text-on-accent"
+                    : "border-border text-muted hover:text-fg")
                 }
               >
                 {v.name}
@@ -101,10 +101,10 @@ export default function CodePanel({
       </div>
 
       <div class="flex min-h-0 flex-1 flex-col">
-        <h2 class="text-small font-semibold uppercase tracking-wide text-ink-mute">
+        <h2 class="text-small font-semibold uppercase tracking-wide text-muted">
           Live CSS
         </h2>
-        <p class="mt-vsp-3xs text-xs text-ink-mute">
+        <p class="mt-vsp-3xs text-xs text-muted">
           Injected into the previews above. {storyTitle}
         </p>
         <div class="mt-vsp-xs min-h-0 flex-1">

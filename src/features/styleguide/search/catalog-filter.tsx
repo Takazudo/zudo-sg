@@ -112,7 +112,7 @@ export default function CatalogFilter({
             stroke-linecap="round"
             stroke-linejoin="round"
             aria-hidden="true"
-            class="text-ink-mute"
+            class="text-muted"
           >
             <circle cx="11" cy="11" r="8" />
             <path d="m21 21-4.3-4.3" />
@@ -145,7 +145,7 @@ export default function CatalogFilter({
             </button>
           )}
         </div>
-        <span class="text-xs text-ink-mute" aria-live="polite">
+        <span class="text-xs text-muted" aria-live="polite">
           {summary}
         </span>
       </div>

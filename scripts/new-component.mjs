@@ -10,11 +10,23 @@
 //
 // Usage:
 //   pnpm new:component <name> --category <Category>
-//   node scripts/new-component.mjs <name> --category <Category>
+//   pnpm new:component <name> --category <Category> --nested
+//   node scripts/new-component.mjs <name> --category <Category> [--nested]
 //
-// <name>     must be kebab-case and not already exist under packages/ui/src/.
+// <name>     must be kebab-case. Unique within its scaffold scope (below).
 // <Category> must be one of the StoryCategory union members (see
 //            scripts/lib/component-scaffold.mjs → VALID_CATEGORIES).
+// --nested   scaffolds into the category-nested layout,
+//            packages/ui/src/<category-slug>/<name>/, instead of the default
+//            one-level packages/ui/src/<name>/. `<name>` only needs to be
+//            unique WITHIN that category directory when nested — two
+//            categories may each scaffold a same-named component (the S6
+//            catalog and gen-sg-registry.mjs both key off the full nested
+//            path, not the bare name; see STORIES.md). Per the epic's
+//            transition rule, a nested scaffold NEVER touches the barrel
+//            (packages/ui/src/index.ts) — new components stay out of it
+//            until the atomic-swap sub rebuilds it — so --skip-barrel is a
+//            no-op alongside --nested.
 //
 // See packages/ui/STORIES.md → "Scaffolding a new component" for what gets
 // generated and what to do next. Pure helpers (validation, templates, the
@@ -23,7 +35,7 @@
 // is just the fs/process orchestration.
 
 import { spawnSync } from "node:child_process";
-import { mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -31,6 +43,7 @@ import {
   assertUnusedName,
   assertValidCategory,
   assertValidName,
+  categorySlug,
   componentTemplate,
   insertBarrelExport,
   storiesTemplate,
@@ -50,6 +63,7 @@ export function parseArgs(argv) {
   const positional = [];
   let category;
   let skipBarrel = false;
+  let nested = false;
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === "--category") {
@@ -58,35 +72,54 @@ export function parseArgs(argv) {
       category = arg.slice("--category=".length);
     } else if (arg === "--skip-barrel") {
       skipBarrel = true;
+    } else if (arg === "--nested") {
+      nested = true;
     } else if (!arg.startsWith("--")) {
       positional.push(arg);
     }
   }
-  return { name: positional[0], category, skipBarrel };
+  return { name: positional[0], category, skipBarrel, nested };
 }
 
 function printUsage() {
   console.error(
-    `Usage: pnpm new:component <name> --category <Category> [--skip-barrel]\n` +
+    `Usage: pnpm new:component <name> --category <Category> [--skip-barrel] [--nested]\n` +
       `  <Category> must be one of: ${VALID_CATEGORIES.join(", ")}\n` +
-      `  --skip-barrel skips inserting the export into ${BARREL_INDEX ?? "the barrel file"}.`,
+      `  --skip-barrel skips inserting the export into ${BARREL_INDEX ?? "the barrel file"}.\n` +
+      `  --nested scaffolds packages/ui/src/<category-slug>/<name>/ and never touches the barrel.`,
   );
 }
 
 function main() {
-  const { name, category, skipBarrel } = parseArgs(process.argv.slice(2));
+  const { name, category, skipBarrel, nested } = parseArgs(process.argv.slice(2));
 
   if (!name || !category) {
     printUsage();
     return 1;
   }
 
+  // Nested scaffolds are scoped under their own category directory — the
+  // uniqueness check only needs to consider siblings already scaffolded in
+  // THAT category, since a same-named component in a different category is
+  // the whole point of category-nesting (distinct full paths, see
+  // gen-sg-registry.mjs's dirPathToImportName). The flat layout keeps its
+  // original global (whole components-root) uniqueness check.
+  const scanRoot = nested ? resolve(UI_SRC_DIR, categorySlug(category)) : UI_SRC_DIR;
+  const componentDir = nested
+    ? resolve(UI_SRC_DIR, categorySlug(category), name)
+    : resolve(UI_SRC_DIR, name);
+  const relComponentDir = nested
+    ? `${COMPONENTS_ROOT}/${categorySlug(category)}/${name}`
+    : `${COMPONENTS_ROOT}/${name}`;
+
   try {
     assertValidName(name);
     assertValidCategory(category);
-    const existingNames = readdirSync(UI_SRC_DIR, { withFileTypes: true })
-      .filter((entry) => entry.isDirectory())
-      .map((entry) => entry.name);
+    const existingNames = existsSync(scanRoot)
+      ? readdirSync(scanRoot, { withFileTypes: true })
+          .filter((entry) => entry.isDirectory())
+          .map((entry) => entry.name)
+      : [];
     assertUnusedName(name, existingNames);
   } catch (err) {
     console.error(`new-component: ${err.message}`);
@@ -94,13 +127,12 @@ function main() {
   }
 
   const pascalName = toPascalCase(name);
-  const componentDir = resolve(UI_SRC_DIR, name);
   const testsDir = resolve(componentDir, "__tests__");
   mkdirSync(testsDir, { recursive: true });
 
   writeFileSync(
     resolve(componentDir, `${name}.tsx`),
-    componentTemplate({ pascalName, kebabName: name }),
+    componentTemplate({ pascalName, kebabName: name, nested }),
   );
   writeFileSync(
     resolve(componentDir, `${name}.stories.tsx`),
@@ -111,7 +143,10 @@ function main() {
     testTemplate({ pascalName, kebabName: name }),
   );
 
-  const shouldInsertBarrel = INDEX_PATH !== null && !skipBarrel;
+  // Transition rule (STORIES.md, epic #222): new components stay OUT of the
+  // barrel until the atomic-swap sub rebuilds it — a nested scaffold never
+  // inserts into INDEX_PATH, regardless of --skip-barrel.
+  const shouldInsertBarrel = !nested && INDEX_PATH !== null && !skipBarrel;
   if (shouldInsertBarrel) {
     const indexSrc = readFileSync(INDEX_PATH, "utf8");
     writeFileSync(
@@ -120,9 +155,14 @@ function main() {
     );
   }
 
-  console.log(`Scaffolded ${pascalName} at ${COMPONENTS_ROOT}/${name}/`);
+  console.log(`Scaffolded ${pascalName} at ${relComponentDir}/`);
   if (shouldInsertBarrel) {
     console.log(`Added the barrel export to ${BARREL_INDEX}.`);
+  } else if (nested) {
+    console.log(
+      "Nested (category-dir) scaffold — skipped the barrel-export step (new components " +
+        "stay out of the barrel until the atomic-swap rebuild; see STORIES.md).",
+    );
   } else if (INDEX_PATH === null) {
     console.log("No BARREL_INDEX configured — skipped the barrel-export step.");
   } else {
@@ -145,9 +185,9 @@ function main() {
   }
 
   const steps = [
-    `Fill in the TODOs in ${COMPONENTS_ROOT}/${name}/${name}.tsx and ${name}.stories.tsx.`,
+    `Fill in the TODOs in ${relComponentDir}/${name}.tsx and ${name}.stories.tsx.`,
   ];
-  if (!shouldInsertBarrel && INDEX_PATH !== null) {
+  if (!nested && !shouldInsertBarrel && INDEX_PATH !== null) {
     steps.push(`Add the barrel export to ${BARREL_INDEX} by hand (skipped via --skip-barrel).`);
   }
   steps.push(`Run \`pnpm lint:tokens\`, \`pnpm check\`, and \`pnpm test:unit\`.`);

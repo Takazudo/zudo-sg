@@ -6,44 +6,47 @@
  * After these imports, only project-defined tokens exist; `p-4` or `bg-gray-500`
  * cause build errors at the CSS level.
  *
- * Shared tokens (spacing, typography — both the abstract Tier 1 scale and
- * the semantic Tier 2 aliases —, radius, shadows, breakpoints) AND the
- * semantic color set come from @zudo-sg/ui — the single source of truth for
- * the whole monorepo. This file adds only demo-specific extras: the demo's
- * z-index tiers.
+ * Shared tokens (spacing, typography, radius, shadows, breakpoints, and the
+ * `--z-index-ui-*` semantic scale) AND the semantic color set come from
+ * @zudo-sg/ui — the single source of truth for the whole monorepo. This file
+ * adds only site-specific CSS: the content-prose contract and the SPA
+ * transition/loading-overlay wiring.
  */
 
 @import "tailwindcss/preflight";
 @import "tailwindcss/utilities";
 
-/* Shared tight-token set — spacing (hsp/vsp), font-sizes (xs–2xl),
-   font-weights, line-heights, font-families, radius, shadows, breakpoints.
+/* Shared tight-token set — spacing (hsp/vsp), font-sizes, font-weights,
+   line-heights, font-families, radius, shadows, breakpoints, z-index.
    Single source of truth for the monorepo; do NOT duplicate these here. */
 @import "@zudo-sg/ui/styles/tokens.css";
 
-/* Shared semantic color tokens (ink/paper/surface/line/brand/state) with
-   light + dark values via light-dark(). This is the color contract the
-   @zudo-sg/ui components depend on — importing it makes the demo dark-correct
-   and keeps the component palette consistent across the monorepo. Do NOT
+/* Shared semantic color tokens (bg/surface/border/fg/muted/accent/rail family)
+   with light + dark values via light-dark(). This is the color
+   contract @zudo-sg/ui components depend on — importing it keeps the demo
+   dark-correct and palette-consistent with the rest of the monorepo. Do NOT
    redefine these names here. */
 @import "@zudo-sg/ui/styles/colors.css";
+
+/* Per-line theming (`[data-line="<key>"]` → --color-accent overrides).
+   Imported right after colors.css so its overrides win. */
+@import "./lines.css";
+
+/* markdown/MDX prose flow contract (.zd-content). Imported after the token
+   declarations above so its var(--color-*) / var(--spacing-*) / var(--text-*)
+   references resolve. */
+@import "./content.css";
+
+/* SPA navigation loading-overlay + transition wiring. */
+@import "./transitions.css";
 
 /* ── Content source declarations ─────────────────────────────────────── */
 @source "pages/**/*.{tsx,ts,jsx,js}";
 @source "layouts/**/*.{tsx,ts,jsx,js}";
+@source "components/**/*.{tsx,ts,jsx,js}";
 /* The component library lives outside this app's tree; scan it so Tailwind
    picks up the utility classes the components emit. */
 @source "../../packages/ui/src/**/*.{tsx,ts,jsx,js}";
-
-@theme {
-  /* ========================================
-   * Z-index — semantic steps for the demo layout
-   * ======================================== */
-
-  --z-index-base:   0;
-  --z-index-raised: 10;   /* sticky header */
-  --z-index-modal:  50;
-}
 
 /* ── Base styles ─────────────────────────────────────────────────────── */
 @layer base {
@@ -63,8 +66,8 @@
     font-family: var(--font-sans);
     font-size: var(--text-base);
     line-height: var(--text-base--line-height);
-    background: var(--color-paper);
-    color: var(--color-ink);
+    background: var(--color-bg);
+    color: var(--color-fg);
     -webkit-font-smoothing: antialiased;
   }
 
@@ -87,7 +90,7 @@
   }
 
   :focus-visible {
-    outline: 2px solid var(--color-brand);
+    outline: 2px solid var(--color-accent);
     outline-offset: 2px;
   }
 }

@@ -43,9 +43,11 @@ That source-consumption contract has two important consequences:
 
 The package also exports `@zudo-sg/ui/styles/tokens.css` and `@zudo-sg/ui/styles/colors.css`. Those CSS files are the shared token contract for consumers.
 
+Components live under `packages/ui/src/<category>/<component>/`, grouped into nine category directories (`cards/`, `chrome/`, `content/`, `forms/`, `landing/`, `media/`, `news/`, `search/`, `shared/`). The package barrel (`src/index.ts`) exports the full set, organized into sections that follow the story catalog's own (larger) `StoryCategory` taxonomy rather than the on-disk directories. See [Component Catalog Pipeline](./component-catalog-pipeline.mdx) for how stories are discovered and grouped.
+
 ## Demo app and docs site
 
-`apps/demo` is a static app deployed at `https://zudo-sg-demo-site.takazudomodular.com/`. It validates that `@zudo-sg/ui` works as a normal website dependency, not only inside the styleguide catalog.
+`apps/demo` is a multi-page corporate demo site deployed at `https://zudo-sg-demo-site.takazudomodular.com/`. Its content collection drives navigation, footer, and breadcrumbs from frontmatter; it adds cross-site search, an SPA-style client router with View Transitions, and per-business-line theming on top of `@zudo-sg/ui` components — validating that the package works as a full site dependency, not only inside the styleguide catalog.
 
 `doc` is a separate zudo-doc site deployed for contributor documentation. It should explain how zudo-sg works; it should not duplicate the styleguide catalog or become the operating manual for every styleguide panel.
 

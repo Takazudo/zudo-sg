@@ -5,3 +5,7 @@ dist
 .wrangler/
 *.log
 .DS_Store
+
+# zfb dev writes its synthesized Tailwind entry file alongside styles/global.css
+# (not into .zfb-build) — observed leaking into the tree on a crashed CSS build.
+styles/zfb-tailwind-entry-*.css

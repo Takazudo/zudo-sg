@@ -37,6 +37,12 @@ export const STORY_CATEGORIES = [
   "Data Display",
   "Forms",
   "Navigation",
+  "Content",
+  "Landing",
+  "News",
+  "Search",
+  "Feedback",
+  "Media",
 ] as const;
 export type StoryCategory = (typeof STORY_CATEGORIES)[number];
 

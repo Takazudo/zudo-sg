@@ -1,51 +1,54 @@
 /*
- * @zudo-sg/ui — Tier 2: canonical semantic color tokens (light + dark)
+ * @zudo-sg/ui — grouped three-tier color system (light + dark)
  *
  * This is the COLOR contract the @zudo-sg/ui components depend on. Components
- * reference these semantic Tailwind color utilities only (bg-surface, text-ink,
- * bg-brand, border-line, …) — never raw oklch literals, numeric Tailwind
- * shades (`bg-gray-500` is a build error under the tight-token strategy), and
- * never the raw Tier-1 palette directly.
+ * reference these semantic Tailwind color utilities only (bg-surface, text-fg,
+ * bg-accent, border-border, text-rail-fg, …) — never raw oklch literals, never
+ * numeric Tailwind shades (`bg-gray-500` is a build error under the tight-token
+ * strategy), and never the raw Tier-1 palette directly.
  *
  * Three-tier color strategy (zudo-css-wisdom: styling/color/
- * three-tier-color-strategy) — same shape as zudo-doc's --zd-* → --color-*:
- *   Tier 1  Palette   — raw oklch values   (the :root --palette-* block below)
- *   Tier 2  Semantic  — roles → palette    (the --color-* @theme block below)
- *   Tier 3  Component — scoped overrides   (rare under Tailwind utilities)
+ * three-tier-color-strategy, "Palette grouping"):
+ *   Tier 1  Palette   — raw oklch values, GROUPED by role family
+ *                       (--palette-{group}-{n}, the :root block below)
+ *   Tier 2  Semantic  — roles → palette (the --color-* @theme block below)
+ *   Tier 3  Component — scoped overrides (rare under Tailwind utilities)
  * Most Tier-2 --color-* values are light-dark() pairs of var(--palette-…) refs.
- * A few light-mode state/action roles carry zudo-doc-style AA-tuned OKLCH
- * literals because the minimized shared ramps intentionally do not contain
- * every contrast-adjusted stop. The Tier-1 palette is inlined at the TOP of this
- * file (a plain :root block, immediately below) rather than split into a sibling
- * file: the single consumer contract requires every consumer to do exactly one
- * `@import "@zudo-sg/ui/styles/colors.css"`, and the consumer Tailwind/Lightning
- * pipeline inlines that package import's CONTENTS but leaves a nested relative
- * `@import "./palette.css"` as a literal, misplaced @import the browser then
+ * A few AA-tuned OKLCH literals appear only where a shared ramp rung cannot hit
+ * the required contrast (each carries a `why` comment).
+ *
+ * Palette values are keyed off THIS site's own warm color scheme
+ * (src/config/color-schemes.ts) — a warm-neutral `base` ramp (hue ~65) and the
+ * amber `accent` ramp — NOT a cold blue/navy scheme. Where the older ui palette
+ * drifted from color-schemes.ts (e.g. dark danger .640 vs .655), color-schemes.ts
+ * is the source of truth and wins.
+ *
+ * The Tier-1 palette is inlined at the TOP of this file (a plain :root block)
+ * rather than a sibling file: the single-consumer contract requires every
+ * consumer to do exactly one `@import "@zudo-sg/ui/styles/colors.css"`, and the
+ * consumer Tailwind/Lightning pipeline inlines that import's CONTENTS but leaves
+ * a nested relative `@import "./palette.css"` as a literal the browser then
  * ignores — dropping the palette entirely. Inlining keeps both tiers in the one
- * bundled file, which the issue allows as equally correct.
+ * bundled file.
  *
  * RULE: the --palette-* values are raw and MUST NOT be referenced by
  * components. Components bind only to the semantic utilities generated from the
- * --color-* tokens here — that is what makes a palette swap or a redesign a
- * one-file change. (See the Tier-1 block below for the full rule + naming.)
+ * --color-* tokens here — that is what makes a palette swap or redesign a
+ * one-file change.
  *
  * Dark mode strategy (zudo-css-wisdom: dark-mode-strategies):
- *   - Every token is declared with light-dark(<light>, <dark>) so a single
- *     declaration carries both schemes. The two sides reference different
- *     palette rungs — dark mode is just a different Tier-2 mapping.
+ *   - Every scheme-varying token is declared with light-dark(<light>, <dark>)
+ *     so a single declaration carries both schemes; the two sides reference
+ *     different palette rungs — dark mode is just a different Tier-2 mapping.
  *   - `color-scheme: light dark` is set on :root so light-dark() resolves and
  *     UA-styled controls (inputs, scrollbars) follow the active scheme.
- *   - Default is OS preference. A host that wants a manual toggle sets
- *     `color-scheme: light` / `light` on :root[data-theme="…"] (see the
- *     [data-theme] overrides at the bottom) — components need no changes.
- *   - Dark values are NOT naive inversions: surfaces are dark gray (not pure
- *     black), ink is off-white (not pure white), and brand/state hues gain
+ *   - The `rail` role (persistent dark nav surface) is intentionally NOT a
+ *     light-dark() pair: it stays a dark warm panel in BOTH schemes, mirroring
+ *     the reference implementation's persistent navy rail (which likewise did
+ *     not invert in dark mode) — re-hued here to warm tones from the base ramp.
+ *   - Dark values are NOT naive inversions: surfaces are warm dark gray (not
+ *     pure black), fg is off-white (not pure white), and accent/state hues gain
  *     lightness + lose a touch of chroma so they don't vibrate on dark.
- *
- * Why this lives in @zudo-sg/ui (not per-consumer): the demo previously
- * redefined these names inline with light-only values. Centralizing them here
- * makes every consumer dark-correct for free and keeps the component contract
- * stable. Spacing/typography/radius/shadow tokens come from ./tokens.css.
  *
  * NOTE: this file does NOT @import "tailwindcss" — import it AFTER the
  * preflight + utilities imports in the consumer's global.css, alongside
@@ -59,40 +62,99 @@
  */
 
 /* ========================================
- * Tier 1 — raw color palette (--palette-{group}-{n})
+ * Tier 1 — raw color palette (--palette-{group}-{n}), GROUPED by role family
  *
  * The raw material of the color system: every concrete oklch value, named by
- * group + 0-based lightness index. Plain :root custom properties (NOT @theme) so
- * NO bg-palette-* / text-palette-* utility is generated. Only the Tier-2
- * --color-* declarations further down may read these; components NEVER do.
+ * group + index (base/accent) or role (state/line). Plain :root custom
+ * properties (NOT @theme) so NO bg-palette-* / text-palette-* utility is
+ * generated. Only the Tier-2 --color-* declarations further down read these;
+ * components NEVER do.
  *
- * Groups mirror the zudo-doc 3.x ramp-native palette:
- *   base    5-step grayscale / warm-neutral ramp, light → dark
- *   accent  3-step amber action ramp, light/hover → dark
- *   state   single named status colors for danger/success/warning/info
- *
- * Component source must never consume these raw vars directly. Components use
- * the Tier-2 `--color-*` semantic tokens below, which keep the public contract
- * stable while this raw palette can keep evolving.
+ * Groups:
+ *   base    warm-neutral grayscale ramp (hue ~65), 11 rungs light → dark. Sized
+ *           to supply bg / surface / surface-2 / border / muted / fg AND the
+ *           dark warm rail in BOTH light and dark schemes from one ramp.
+ *   accent  amber action ramp, 4 rungs (light accent+hover, dark accent+hover)
+ *   state   danger / success / warning / info — a light + a dark rung per role
+ *   line-*  5 business lines (vacuum/process/laser/meeting/beauty), each an
+ *           accent + hover pair per scheme, re-derived as OKLCH hues that keep
+ *           each line's identity but sit in a unified light+dark AA envelope
+ *           harmonious with the warm scheme (NOT the reference's cold hues).
  * ======================================== */
 :root {
-  /* ── Base grayscale / warm-neutral ramp, light → dark ── */
-  --palette-base-0: oklch(.965 .004 65); /* light bg / dark fg */
-  --palette-base-1: oklch(.705 .008 65); /* muted on dark / line on light */
-  --palette-base-2: oklch(.480 .008 65); /* muted on light / strong line */
-  --palette-base-3: oklch(.300 .006 65); /* soft ink / raised dark surface */
-  --palette-base-4: oklch(.185 .005 65); /* dark bg / light fg */
+  /* ── base — warm-neutral ramp, light (0) → dark (10), hue ~65 ──
+     Rung usage (L=light scheme, D=dark scheme):
+       0  L bg
+       1  L surface
+       2  L surface-2 · D fg · rail fg
+       3  L border
+       4  D muted · rail muted
+       5  L muted
+       6  rail border
+       7  L border(dark side) · D border · rail hover-bg
+       8  L fg · D surface-2 · rail bg
+       9  D surface · rail bg-strong
+       10 D bg */
+  --palette-base-0:  oklch(.985 .003 65);
+  --palette-base-1:  oklch(.958 .004 65);
+  --palette-base-2:  oklch(.923 .005 65);
+  --palette-base-3:  oklch(.878 .006 65);
+  --palette-base-4:  oklch(.708 .012 65);
+  --palette-base-5:  oklch(.508 .014 65);
+  --palette-base-6:  oklch(.400 .014 65);
+  --palette-base-7:  oklch(.342 .013 65);
+  --palette-base-8:  oklch(.285 .011 65);
+  --palette-base-9:  oklch(.232 .009 65);
+  --palette-base-10: oklch(.185 .006 65);
 
-  /* ── Accent / amber ramp ── */
+  /* ── accent — amber action ramp (from color-schemes.ts accent stops,
+     extended with the light-hover rung) ── */
   --palette-accent-0: oklch(.755 .130 64); /* dark hover */
   --palette-accent-1: oklch(.700 .158 62); /* dark accent */
   --palette-accent-2: oklch(.470 .120 56); /* light accent */
+  --palette-accent-3: oklch(.400 .096 56); /* light hover (extends the ramp) */
 
-  /* ── State colors ── */
-  --palette-state-danger: oklch(.640 .170 25);
-  --palette-state-success: oklch(.680 .145 145);
-  --palette-state-warning: oklch(.760 .135 82);
-  --palette-state-info: oklch(.680 .130 245);
+  /* ── state — danger/success/warning/info, a light + a dark rung per role.
+     Values from color-schemes.ts (light map literals + dark ramp/overrides);
+     each is AA (≥4.5:1) as text on its scheme's bg. ── */
+  --palette-state-danger:       oklch(.505 .170 25);
+  --palette-state-danger-dark:  oklch(.655 .170 25);
+  --palette-state-success:      oklch(.470 .140 145);
+  --palette-state-success-dark: oklch(.680 .145 145);
+  --palette-state-warning:      oklch(.490 .100 82);
+  --palette-state-warning-dark: oklch(.760 .135 82);
+  --palette-state-info:         oklch(.485 .122 245);
+  --palette-state-info-dark:    oklch(.680 .130 245);
+
+  /* ── line-* — per-business-line accent + hover, light + dark rungs.
+     Re-hued in OKLCH into a shared L/C envelope harmonious with the warm
+     scheme; each line keeps its identity hue but every rung is AA both as
+     accent text on its scheme's bg AND as the fill under on-accent text.
+     Consumed later by the port batches' `[data-line="<key>"]` Tier-2 overrides. */
+  --palette-line-vacuum-accent:       oklch(.538 .100 200);
+  --palette-line-vacuum-accent-dark:  oklch(.760 .085 200);
+  --palette-line-vacuum-hover:        oklch(.460 .088 200);
+  --palette-line-vacuum-hover-dark:   oklch(.830 .070 200);
+
+  --palette-line-process-accent:      oklch(.530 .150 300);
+  --palette-line-process-accent-dark: oklch(.720 .130 300);
+  --palette-line-process-hover:       oklch(.455 .140 300);
+  --palette-line-process-hover-dark:  oklch(.795 .110 300);
+
+  --palette-line-laser-accent:        oklch(.555 .175 28);
+  --palette-line-laser-accent-dark:   oklch(.700 .165 28);
+  --palette-line-laser-hover:         oklch(.478 .168 28);
+  --palette-line-laser-hover-dark:    oklch(.775 .140 28);
+
+  --palette-line-meeting-accent:      oklch(.536 .132 150);
+  --palette-line-meeting-accent-dark: oklch(.740 .125 150);
+  --palette-line-meeting-hover:       oklch(.458 .116 150);
+  --palette-line-meeting-hover-dark:  oklch(.815 .105 150);
+
+  --palette-line-beauty-accent:       oklch(.565 .172 350);
+  --palette-line-beauty-accent-dark:  oklch(.720 .150 350);
+  --palette-line-beauty-hover:        oklch(.485 .166 350);
+  --palette-line-beauty-hover-dark:   oklch(.795 .130 350);
 
   /* light-dark() requires color-scheme to be declared. */
   color-scheme: light dark;
@@ -100,52 +162,60 @@
 
 @theme {
   /* ========================================
-   * Ink (foreground text) — off-black in light, off-white in dark.
+   * Tier 2 — canonical semantic color tokens.
+   *
+   * Naming follows the target-website scheme: bg, surface, surface-2, border,
+   * fg, muted, accent, accent-hover, on-accent, focus, the rail family, and the
+   * four state colors. Each is a light-dark() pair of Tier-1 refs unless noted
+   * (rail is scheme-independent).
    * ======================================== */
-  --color-ink:      light-dark(var(--palette-base-4), var(--palette-base-0));
-  --color-ink-soft: light-dark(var(--palette-base-3), var(--palette-base-1));
-  --color-ink-mute: light-dark(var(--palette-base-2), var(--palette-base-1));
 
-  /* On-brand foreground — text/icons that sit on filled brand/state surfaces.
-     Dark mode fills are bright, so the foreground flips to base-4. */
-  --color-on-brand: light-dark(var(--palette-base-0), var(--palette-base-4));
+  /* ── Surfaces & dividers — page bg, two raised surfaces, hairline border.
+     Light scheme steps down from near-white; dark scheme steps up from the
+     warm near-black. ── */
+  --color-bg:        light-dark(var(--palette-base-0),  var(--palette-base-10));
+  --color-surface:   light-dark(var(--palette-base-1),  var(--palette-base-9));
+  --color-surface-2: light-dark(var(--palette-base-2),  var(--palette-base-8));
+  --color-border:    light-dark(var(--palette-base-3),  var(--palette-base-7));
 
-  /* ========================================
-   * Surfaces — page paper, raised surface, sunken surface.
-   * Dark surfaces are dark gray (not #000) and step lighter as they raise,
-   * matching the light scheme's sunken→paper→surface ordering inverted.
-   * ======================================== */
-  --color-paper:          light-dark(var(--palette-base-0), var(--palette-base-4));
-  --color-surface:        light-dark(var(--palette-base-0), var(--palette-base-4));
-  --color-surface-sunken: light-dark(var(--palette-base-0), var(--palette-base-3));
+  /* ── Text — body fg (off-black / off-white) and muted auxiliary text.
+     muted is AA (≥4.5:1) on bg/surface/surface-2 in both schemes; reserve it
+     for labels/meta, not long-form reading. ── */
+  --color-fg:    light-dark(var(--palette-base-8), var(--palette-base-2));
+  --color-muted: light-dark(var(--palette-base-5), var(--palette-base-4));
 
-  /* Lines / borders / dividers. */
-  --color-line:        light-dark(var(--palette-base-1), var(--palette-base-3));
-  --color-line-strong: light-dark(var(--palette-base-2), var(--palette-base-2));
-
-  /* ========================================
-   * Brand — primary action / link hue. Uses the same amber ramp as zudo-doc.
-   * ======================================== */
-  --color-brand:        light-dark(var(--palette-accent-2), var(--palette-accent-1));
-  --color-brand-strong: light-dark(oklch(.400 .096 56), var(--palette-accent-0));
-  --color-brand-soft:   light-dark(var(--palette-base-0), var(--palette-base-4));
-
-  /* ========================================
-   * State — accent / success / danger, each with a soft companion.
-   * Soft companions collapse onto the base ramp, matching zudo-doc's flatter
-   * grayscale surface model while status text/fills keep contrast-tuned color.
-   * ======================================== */
+  /* ── Accent — primary action / link hue (amber). ── */
   --color-accent:       light-dark(var(--palette-accent-2), var(--palette-accent-1));
+  --color-accent-hover: light-dark(var(--palette-accent-3), var(--palette-accent-0));
 
-  --color-success:      light-dark(oklch(.470 .140 145), var(--palette-state-success));
-  --color-success-soft: light-dark(var(--palette-base-0), var(--palette-base-4));
+  /* Foreground for text/icons sitting ON a filled accent/state surface. Light
+     accent is dark → white text; dark accent is bright → near-black text. */
+  --color-on-accent: light-dark(var(--palette-base-0), var(--palette-base-10));
 
-  --color-danger:       light-dark(oklch(.505 .170 25), var(--palette-state-danger));
-  --color-danger-soft:  light-dark(var(--palette-base-0), var(--palette-base-4));
-
-  /* Focus ring — shared by all interactive components. Resolves identically to
-     --color-brand, so it reuses the same brand palette rungs. */
+  /* Focus ring — shared by all interactive components; resolves identically to
+     --color-accent so it reuses the same amber rungs. */
   --color-focus: light-dark(var(--palette-accent-2), var(--palette-accent-1));
+
+  /* ── Rail — persistent dark warm nav surface. NOT a light-dark() pair: it
+     stays dark in both schemes (the reference's navy rail likewise did not
+     invert). rail-fg/rail-muted are AA on rail-bg. ── */
+  --color-rail-bg:        var(--palette-base-8);
+  --color-rail-bg-strong: var(--palette-base-9);
+  --color-rail-fg:        var(--palette-base-2);
+  --color-rail-muted:     var(--palette-base-4);
+  --color-rail-border:    var(--palette-base-6);
+  --color-rail-hover-bg:  var(--palette-base-7);
+
+  /* Loading-overlay scrim — a translucent frost derived from the page bg (NOT a
+     black veil), so it follows the active scheme's surface color. The indicator
+     reuses --color-accent; no dedicated token. */
+  --color-loading-scrim: color-mix(in srgb, var(--color-bg) 40%, transparent);
+
+  /* ── State — danger/success/warning/info, light + dark rung per role. ── */
+  --color-success: light-dark(var(--palette-state-success), var(--palette-state-success-dark));
+  --color-danger:  light-dark(var(--palette-state-danger),  var(--palette-state-danger-dark));
+  --color-warning: light-dark(var(--palette-state-warning), var(--palette-state-warning-dark));
+  --color-info:    light-dark(var(--palette-state-info),    var(--palette-state-info-dark));
 }
 
 /* ========================================

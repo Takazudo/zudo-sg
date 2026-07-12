@@ -42,11 +42,13 @@ test("key layout landmarks are visible", async ({ page }) => {
 test("primary nav and hero CTA render", async ({ page }) => {
   await page.goto("/");
 
-  // SiteHeader's primary nav (aria-label="Primary").
-  await expect(page.getByRole("navigation", { name: "Primary" })).toBeVisible();
-
-  // Hero's primary action button links to the in-page contact section.
+  // The ported SiteNav's global navigation landmark (aria-label="Global navigation").
   await expect(
-    page.getByRole("link", { name: "Start a project" }).first(),
+    page.getByRole("navigation", { name: "Global navigation" }),
+  ).toBeVisible();
+
+  // Landing hero's primary CTA (from the demo landing config → /products).
+  await expect(
+    page.getByRole("link", { name: "ダミー分類" }).first(),
   ).toBeVisible();
 });

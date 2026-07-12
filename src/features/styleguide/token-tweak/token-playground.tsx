@@ -11,7 +11,7 @@
 //      hex / rem) AND keeps the `var(--name)` reference available. A small
 //      toast confirms.
 //   2. COPY MODE — a toggle picks whether a click copies the resolved value
-//      (e.g. `#1f6f8b`) or the `var(--color-brand)` reference, since designers
+//      (e.g. `#1f6f8b`) or the `var(--color-accent)` reference, since designers
 //      want one and engineers the other.
 //   3. LIVE TWEAK — a button opens the existing zdtp design-token panel via the
 //      same "toggle-sg-doc-tweak" event the header Design Tokens icon
@@ -21,7 +21,7 @@
 //
 // Contract with the SSR markup (pages/components/tokens.tsx):
 //   - Each copyable element is `[data-sg-token]` with:
-//       data-var   → the custom property name, e.g. "--color-brand"
+//       data-var   → the custom property name, e.g. "--color-accent"
 //       data-kind  → "color" | "length" | "raw" (formatting hint for the value)
 //   - A `[data-sg-tokens-root]` element is the delegation host.
 
@@ -93,7 +93,7 @@ export default function TokenPlayground(): JSX.Element {
   return (
     <div class="sg-token-toolbar">
       <div class="sg-token-modes" role="group" aria-label="Copy format">
-        <span class="text-xs font-medium text-ink-mute">Click copies:</span>
+        <span class="text-xs font-medium text-muted">Click copies:</span>
         <button
           type="button"
           class="sg-chip"

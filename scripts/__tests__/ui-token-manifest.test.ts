@@ -22,6 +22,7 @@ import {
 // can run against a small fixture instead of the full project CSS.
 const FIXTURE_SIZE_CSS = `
   @theme {
+    --radius-DEFAULT: 0.25rem;
     --radius-sm: 0.25rem;
     --radius-md: 0.5rem;
     --radius-lg: 1rem;
@@ -106,12 +107,12 @@ describe("buildUiTokenManifest", () => {
       label: "text-xs / lh",
     });
 
-    const colorInk = manifest.colorTokens.find((t) => t.cssVar === "--color-ink");
-    expect(colorInk).toMatchObject({
-      id: "ui-color-ink",
-      label: "color-ink",
+    const colorBg = manifest.colorTokens.find((t) => t.cssVar === "--color-bg");
+    expect(colorBg).toMatchObject({
+      id: "ui-color-bg",
+      label: "color-bg",
       control: "text",
-      default: "light-dark(var(--palette-base-4), var(--palette-base-0))",
+      default: "light-dark(var(--palette-base-0), var(--palette-base-10))",
     });
   });
 
@@ -188,14 +189,17 @@ describe("buildUiTokenManifest", () => {
     );
     const vars = parseCssCustomProperties(colorsCss);
     const pairs = [
-      ["--color-ink", "--color-surface"],
-      ["--color-ink-soft", "--color-surface"],
-      ["--color-ink-mute", "--color-surface"],
-      ["--color-on-brand", "--color-brand"],
-      ["--color-on-brand", "--color-success"],
-      ["--color-on-brand", "--color-danger"],
-      ["--color-brand", "--color-paper"],
-      ["--color-brand-strong", "--color-paper"],
+      ["--color-fg", "--color-bg"],
+      ["--color-fg", "--color-surface"],
+      ["--color-fg", "--color-surface-2"],
+      ["--color-muted", "--color-bg"],
+      ["--color-muted", "--color-surface"],
+      ["--color-muted", "--color-surface-2"],
+      ["--color-on-accent", "--color-accent"],
+      ["--color-on-accent", "--color-success"],
+      ["--color-on-accent", "--color-danger"],
+      ["--color-accent", "--color-bg"],
+      ["--color-accent-hover", "--color-bg"],
     ];
     const failures = [];
 

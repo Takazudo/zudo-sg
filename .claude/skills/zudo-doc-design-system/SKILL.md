@@ -57,16 +57,30 @@ token file above. Know which world the file you're editing belongs to:
   (`text-body`, `text-caption`, ...) via `@takazudo/zudo-doc`'s `content.css`.
 - **UI-component world** (`packages/ui/src/**`, also consumed by `apps/demo` and by the root's
   `/components/*` catalog): colors come from `packages/ui/styles/colors.css`'s semantic tokens —
-  `text-ink`/`ink-soft`/`ink-mute`, `bg-paper`/`surface`/`surface-sunken`, `border-line`/`line-strong`,
-  `bg-brand`/`brand-strong`/`brand-soft`, `text-on-brand`, plus `accent`/`success`/`danger`/`focus`.
-  `@zudo-sg/ui` components use the **Tier-1 abstract** typography sizes directly (`text-sm`,
-  `text-lg`, ...) rather than the Tier-2 semantic aliases — see `packages/ui/styles/tokens.css`'s
-  header comment for why (abstract names let any element pick a size without a misleading role name).
-- Four token **names** exist in both worlds (`surface`, `accent`, `success`, `danger`). On root-host
-  pages the doc-chrome `@theme` block in `global.css` re-asserts these four to the `--zd-*` values
-  (source order wins), so a root-rendered `@zudo-sg/ui` component still matches the docs palette.
-  In `apps/demo` (no re-assertion), the same four names resolve to `@zudo-sg/ui`'s own values.
-  Never assume a color utility means the same thing in both worlds — check which file you're in.
+  `bg`, `surface`/`surface-2`, `border`, `fg`/`muted`, `accent`/`accent-hover`, `on-accent`,
+  `focus`, `success`/`danger`/`warning`/`info`, `loading-scrim`, and the persistent-dark-nav
+  `rail-*` family (`rail-bg`, `rail-bg-strong`, `rail-fg`, `rail-muted`, `rail-border`,
+  `rail-hover-bg` — intentionally NOT a `light-dark()` pair; it stays dark in both schemes).
+  All ~70 components use the **Tier-2 semantic** typography aliases directly (`text-body`,
+  `text-title`, `text-caption`, ...) — this is the inverse of the doc-chrome convention, and the
+  inverse of what this section used to say before the port: there is no longer any component
+  in this package using the Tier-1 abstract sizes (`text-sm`, `text-lg`, ...) directly. See
+  `packages/ui/styles/tokens.css`'s header comment for the two-tier rationale.
+- Ten token **names** exist in both worlds (`bg`, `fg`, `surface`, `muted`, `accent`,
+  `accent-hover`, `success`, `danger`, `warning`, `info` — widened from an original four when
+  the UI palette adopted these names). On root-host pages the doc-chrome `@theme` block in
+  `global.css` re-asserts all ten to the `--zd-*` values (source order wins), so a root-rendered
+  `@zudo-sg/ui` component still matches the docs palette. In `apps/demo` (no re-assertion), the
+  same ten names resolve to `@zudo-sg/ui`'s own values. The remaining UI-only names
+  (`surface-2`, `border`, `focus`, `on-accent`, `loading-scrim`, the `rail-*` family) are NOT
+  re-asserted — doc-chrome consumes none of them. Never assume a color utility means the same
+  thing in both worlds — check which file you're in.
+- The chrome-free `/components/preview` iframe document (`<html data-sg-preview-doc>`) has no
+  `--zd-*` injected, so it needs its own entrypoint to restore the `@zudo-sg/ui` semantic colors
+  that the root-host re-assertion above would otherwise leave undefined: `src/styles/preview.css`,
+  imported after `global.css`'s `@zudo-sg/ui/styles/colors.css` import and scoped to
+  `html[data-sg-preview-doc]` (specificity beats the `:root` the `@theme` block emits, so it's
+  order-independent and never affects regular doc-chrome pages).
 
 ### Color Tokens (three-tier system)
 
@@ -80,10 +94,13 @@ different concrete tokens:
     - p1=danger, p2=success, p3=warning, p4=info, p5=accent
     - p8=muted, p9=background, p10=surface, p11=text primary
 - **UI-component** (`packages/ui/styles/colors.css`):
-  - **Tier 1** (`--palette-{family}-{step}`): raw oklch values, plain `:root` vars (not `@theme`,
-    so no `bg-palette-*` utility is ever generated) — **never** referenced by components directly
+  - **Tier 1** (`--palette-{group}-{n}`): raw oklch values, GROUPED by role family —
+    `base` (warm-neutral grayscale ramp), `accent` (amber action ramp), `state`
+    (danger/success/warning/info), and a `line-*` ramp per business line. Plain
+    `:root` vars (not `@theme`, so no `bg-palette-*` utility is ever generated) —
+    **never** referenced by components directly
   - **Tier 2** (`--color-*`): semantic roles, each a `light-dark()` pair of Tier-1 refs — this is
-    what components bind to (`bg-brand`, `text-ink`, ...)
+    what components bind to (`bg-accent`, `text-fg`, ...)
   - Full contract + rationale: `packages/ui/STORIES.md` §"Three-tier color system"
 
 ### Search & highlight tokens (role-split)

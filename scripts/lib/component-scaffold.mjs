@@ -27,6 +27,12 @@ export const VALID_CATEGORIES = [
   "Data Display",
   "Forms",
   "Navigation",
+  "Content",
+  "Landing",
+  "News",
+  "Search",
+  "Feedback",
+  "Media",
   // GENERATED:STORY_CATEGORIES_END
 ];
 
@@ -49,6 +55,16 @@ export function assertValidCategory(category) {
       `"${category}" is not a valid --category — expected one of: ${VALID_CATEGORIES.join(", ")}.`,
     );
   }
+}
+
+/**
+ * `StoryCategory` display name → directory slug for the category-nested
+ * layout (`packages/ui/src/<slug>/<name>/`), e.g. "Data Display" →
+ * "data-display", "Landing" → "landing". Pure string transform — lowercase,
+ * spaces to hyphens — with no dependency on what's actually on disk.
+ */
+export function categorySlug(category) {
+  return category.toLowerCase().replace(/\s+/g, "-");
 }
 
 /** Throws if `name` already names a directory under packages/ui/src/. */
@@ -75,11 +91,17 @@ export function toPascalCase(kebabName) {
  * outline classes (see button.tsx / link.tsx). Two placeholder variants keep
  * the skeleton typecheck- and lint:tokens-clean out of the box; the TODOs mark
  * what an author fills in.
+ *
+ * `nested` (default `false`) accounts for the extra directory level the
+ * category-nested layout inserts between `packages/ui/src` and the
+ * component's own directory: the relative import to the shared `lib/cx`
+ * helper needs one more `../` (`../../lib/cx` instead of `../lib/cx`) or it
+ * resolves to a nonexistent path.
  */
-export function componentTemplate({ pascalName, kebabName }) {
+export function componentTemplate({ pascalName, kebabName, nested = false }) {
   const lines = [
     `import type { ComponentChildren } from "preact";`,
-    `import { cx } from "../lib/cx";`,
+    `import { cx } from "${nested ? "../../lib/cx" : "../lib/cx"}";`,
     ``,
     `export type ${pascalName}Variant = "primary" | "secondary";`,
     ``,
@@ -96,8 +118,8 @@ export function componentTemplate({ pascalName, kebabName }) {
     `// TODO: replace with this component's real per-variant classes — these are`,
     `// placeholders so the scaffold typechecks and passes lint:tokens as-is.`,
     `const variants: Record<${pascalName}Variant, string> = {`,
-    `  primary: "bg-brand text-on-brand",`,
-    `  secondary: "bg-surface text-ink border border-line",`,
+    `  primary: "bg-accent text-on-accent",`,
+    `  secondary: "bg-surface text-fg border border-border",`,
     `};`,
     ``,
     `/**`,
@@ -175,13 +197,13 @@ export function testTemplate({ pascalName, kebabName }) {
     `  it("defaults to the primary variant", () => {`,
     `    render(<${pascalName}>Content</${pascalName}>);`,
     `    const el = screen.getByText("Content");`,
-    `    expect(el.className).toContain("bg-brand");`,
+    `    expect(el.className).toContain("bg-accent");`,
     `  });`,
     ``,
     `  it("applies the secondary variant classes", () => {`,
     `    render(<${pascalName} variant="secondary">Content</${pascalName}>);`,
     `    const el = screen.getByText("Content");`,
-    `    expect(el.className).toContain("border-line");`,
+    `    expect(el.className).toContain("border-border");`,
     `  });`,
     `});`,
   ];

@@ -104,12 +104,17 @@ function tierFromGroup(
 // ---------------------------------------------------------------------------
 
 /**
- * Split a `UI_PALETTE_COLORS` name (e.g. "base-4" or "state-danger") into its
- * group ("base"/"state") and step/role ("4"/"danger"). Names with no
- * recognized grouping are kept as single-item families for defensive
- * compatibility, but the committed @zudo-sg/ui palette uses grouped names.
+ * Split a `UI_PALETTE_COLORS` name into its group family and step/role:
+ *   "base-4"              → { family: "base",  step: "4" }
+ *   "state-danger-dark"   → { family: "state", step: "danger-dark" }
+ *   "line-vacuum-accent"  → { family: "line",  step: "vacuum-accent" }
+ * Names with no recognized grouping are kept as single-item families for
+ * defensive compatibility, but the committed @zudo-sg/ui palette uses grouped
+ * names (base / accent / state / line).
  */
 function splitPaletteName(name: string): { family: string; step: string | null } {
+  const lineMatch = /^line-(.+)$/.exec(name);
+  if (lineMatch) return { family: "line", step: lineMatch[1] ?? null };
   const stateMatch = /^state-(.+)$/.exec(name);
   if (stateMatch) return { family: "state", step: stateMatch[1] ?? null };
   const match = /^(.+)-(\d+)$/.exec(name);
@@ -166,10 +171,10 @@ const COLOR_TAB: TabConfig = {
   id: "ui-color",
   label: "Color",
   tiers: [
-    tierFromGroup(UI_COLOR_TOKENS, "ink", "Ink"),
     tierFromGroup(UI_COLOR_TOKENS, "surface", "Surface"),
-    tierFromGroup(UI_COLOR_TOKENS, "line", "Line"),
-    tierFromGroup(UI_COLOR_TOKENS, "brand", "Brand"),
+    tierFromGroup(UI_COLOR_TOKENS, "text", "Text"),
+    tierFromGroup(UI_COLOR_TOKENS, "accent", "Accent"),
+    tierFromGroup(UI_COLOR_TOKENS, "rail", "Rail"),
     tierFromGroup(UI_COLOR_TOKENS, "state", "State"),
   ],
 };

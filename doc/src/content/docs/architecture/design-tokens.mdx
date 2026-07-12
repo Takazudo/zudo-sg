@@ -24,7 +24,7 @@ Consumers import the shared UI token CSS after Tailwind preflight and utilities:
 @import "@zudo-sg/ui/styles/colors.css";
 ```
 
-`tokens.css` defines spacing, typography, radius, shadow, and related non-color tokens. `colors.css` defines the UI package color system. Components use semantic utilities such as `bg-brand`, `text-ink`, `border-line`, and `bg-surface-sunken`; they do not reach into raw palette variables.
+`tokens.css` defines spacing, typography, radius, shadow, and related non-color tokens. `colors.css` defines the UI package color system. Components use semantic utilities such as `bg-accent`, `text-fg`, `border-border`, and `bg-surface-2`; they do not reach into raw palette variables.
 
 ## Three-tier color strategy
 
@@ -36,7 +36,9 @@ The UI package follows the [Three-Tier Color Strategy](https://zudo-css-wisdom.t
 | Semantic | `--color-*` roles backed by palette refs, with a few zudo-doc-style AA-tuned light-mode literals | `packages/ui/styles/colors.css` |
 | Component | Scoped overrides when a component truly needs them | component code or CSS |
 
-Palette groups include `base`, `accent`, and `state`. `base` is the grayscale / warm-neutral ramp, `accent` is the amber action ramp, and `state` contains named status colors.
+Palette groups include `base`, `accent`, `state`, and a `line-*` ramp per business line. `base` is the grayscale / warm-neutral ramp, `accent` is the amber action ramp, `state` contains named status colors (danger/success/warning/info), and each `line-*` group supplies a business line's own accent + hover pair, layered in through a `[data-line="<key>"]` override of the semantic `--color-accent`/`--color-accent-hover` roles below — components never bind to a `line-*` palette entry directly.
+
+Semantic (Tier 2) roles built from these groups: `bg`, `surface`, `surface-2`, `border`, `fg`, `muted`, `accent`, `accent-hover`, `on-accent`, `focus`, the four state colors, and the `rail-*` family (a persistent dark nav surface — deliberately not a `light-dark()` pair, so it stays dark in both schemes).
 
 :::note[No palette utilities]
 Palette variables live in plain `:root`, not Tailwind `@theme`, so Tailwind does not generate `bg-palette-*` or `text-palette-*` utilities. Components must bind to semantic `--color-*` roles instead.

@@ -1,282 +1,231 @@
-import {
-  Hero,
-  Button,
-  PageHeading,
-  SectionHeading,
-  Card,
-  CardTitle,
-  CardBody,
-  CardFooter,
-  Badge,
-  Stat,
-  StatGroup,
-  Link,
-  Field,
-  Input,
-  Textarea,
-} from "@zudo-sg/ui";
-import SiteLayout from "../layouts/site-layout";
+import DefaultLayout from "../layouts/default";
+import { Container } from "@zudo-sg/ui/src/shared/container/container.tsx";
+import { LandingHero } from "@zudo-sg/ui/src/landing/landing-hero/landing-hero.tsx";
+import { NewsTeaser } from "@zudo-sg/ui/src/news/news-teaser/news-teaser.tsx";
+import { StatBand, type BandStat } from "@zudo-sg/ui/src/landing/stat-band/stat-band.tsx";
+import { FeatureSplit, type FeatureSplitPillar } from "@zudo-sg/ui/src/landing/feature-split/feature-split.tsx";
+import { BusinessSegments } from "@zudo-sg/ui/src/landing/business-segments/business-segments.tsx";
+import { DiscoveryTeaser, type DiscoveryScene } from "@zudo-sg/ui/src/landing/discovery-teaser/discovery-teaser.tsx";
+import { BusinessLinePortal } from "@zudo-sg/ui/src/landing/business-line-portal/business-line-portal.tsx";
+import { SdgsHighlight, type SdgsInitiative } from "@zudo-sg/ui/src/landing/sdgs-highlight/sdgs-highlight.tsx";
+import { RecruitBand } from "@zudo-sg/ui/src/landing/recruit-band/recruit-band.tsx";
+import { SectionNav, type SectionNavLink } from "@zudo-sg/ui/src/landing/section-nav/section-nav.tsx";
+
+import { getNews } from "../lib/news";
+import { BUSINESS_SEGMENTS } from "../config/segments";
+import { BUSINESS_LINE_LIST } from "../config/lines";
 
 export const frontmatter = {
   title: "Home",
-  description:
-    "Northwind — a demo marketing site composed entirely from @zudo-sg/ui components.",
+  description: "ダミー株式会社（Dummy Co., Ltd.）の企業サイト — 会社情報・製品・サステナビリティ・IR情報をご紹介します。",
 };
 
-// ── Dummy content (issue #1: real copy "will write later"; lorem is fine) ──
+// This landing page's own copy — heading/lead/scene/initiative text below —
+// is fictional dummy corporate content matching the ported content
+// collection's language (see apps/demo/content/); it is not real business
+// data.
 
-const SERVICES = [
+const HERO_ACTIONS = [
+  { label: "ダミー分類", href: "/products", variant: "primary" as const },
+  { label: "企業情報", href: "/company", variant: "secondary" as const },
+];
+
+const STATS: BandStat[] = [
+  { value: "1953", unit: "年", label: "設立（昭和28年11月）" },
+  { value: "約81", unit: "億円", label: "資本金" },
+  { value: "約1,500", unit: "名", label: "連結従業員数" },
+  { value: "4", unit: "区分", label: "事業領域" },
+];
+
+const FEATURE_PILLARS: [FeatureSplitPillar, FeatureSplitPillar] = [
   {
-    badge: "01",
-    title: "Product strategy",
-    body: "We pressure-test the idea before a line of code is written — market signals, user research, and a roadmap your stakeholders can actually fund.",
-    points: ["Discovery sprints", "Roadmapping", "Success metrics"],
+    index: "01",
+    title: "ダミー見出し",
+    body: "あのイーハトーヴォのすきとおった風、夏でも底に冷たさをもつ青いそら、うつくしい森で飾られたモリーオ市、郊外のぎらぎらひかる草の波。この物語はダミーテキストであり、実際の内容とは一切関係がありません。",
   },
   {
-    badge: "02",
-    title: "Design systems",
-    body: "Interfaces that scale: a token-driven design system, accessible by default, documented so every team ships a consistent product.",
-    points: ["UI & interaction design", "Component libraries", "Accessibility audits"],
-  },
-  {
-    badge: "03",
-    title: "Engineering",
-    body: "Senior engineers who own delivery end to end — typed front ends, resilient APIs, and deploys you trust on a Friday afternoon.",
-    points: ["Web & mobile builds", "Platform & APIs", "CI/CD & observability"],
-  },
-  {
-    badge: "04",
-    title: "Scale & support",
-    body: "Once it ships we stay close — performance work, growth experiments, and an on-call partnership that keeps the product healthy.",
-    points: ["Performance tuning", "Growth experiments", "Managed maintenance"],
+    index: "02",
+    title: "サンプルタイトル",
+    body: "彼は背後にひそかな足音を聞いた。それはあまり良い意味を示すものではない。誰がこんな夜更けに、しかもこんな街灯のお粗末な港街の狭い小道で彼をつけて来るというのだ。人生の航路を捻じ曲げ、その獲物と共に立ち去ろうとしている、その丁度今。彼のこの仕事への恐れを和らげるために、数多い仲間の中に同じ考えを抱き、彼を見守り、待っている者がいるというのか。",
   },
 ];
 
-const PRINCIPLES = [
+const DISCOVERY_SCENES: DiscoveryScene[] = [
   {
-    title: "Small teams, senior people",
-    body: "No layers of account managers. The people who scope your work are the people who do it.",
+    title: "車",
+    body: "LiDAR 用光学フィルタや画像処理 LSI、ToF センサが、先進運転支援と快適なカーライフを支えます。",
   },
   {
-    title: "Evidence over opinion",
-    body: "Every decision ties back to a metric or a user signal. We instrument first, then iterate.",
+    title: "学校",
+    body: "カメラモジュールやインタラクティブホワイトボードが、教育のデジタル化と学びの場を支えます。",
   },
   {
-    title: "Build to hand over",
-    body: "Typed, tested, documented code your in-house team can own the day we step back.",
+    title: "病院",
+    body: "医療機器に組み込まれるダミー区分1や、衛生環境を保つケミカル製品が、医療の現場を支えます。",
+  },
+  {
+    title: "太陽光発電",
+    body: "パワーデバイスやパワーコンディショナ向け部品が、再生可能エネルギーの安定運用を支えます。",
   },
 ];
 
-const MILESTONES = [
-  { year: "2016", text: "Founded by three engineers." },
-  { year: "2019", text: "Grew to a 20-person product team." },
-  { year: "2022", text: "Opened a remote-first European practice." },
-  { year: "2025", text: "120+ products shipped across 6 industries." },
+const SDGS_INITIATIVES: SdgsInitiative[] = [
+  {
+    title: "環境配慮型製品の開発・販売",
+    body: "気候変動対応や資源循環に貢献する製品ラインナップを拡充し、環境配慮型ビジネスを推進します。",
+  },
+  {
+    title: "資源・エネルギーの有効活用",
+    body: "国内5拠点の太陽光発電や LED 照明化、社有車の低公害車化でエネルギー効率を高めます。",
+  },
+  {
+    title: "社会に貢献する活動の推進",
+    body: "障がいのある方の雇用推進や森林ボランティア活動など、地域・社会と連携した貢献を続けます。",
+  },
 ];
 
-const CHANNELS = [
-  { label: "Email", value: "hello@northwind.example", href: "mailto:hello@northwind.example" },
-  { label: "Phone", value: "+1 (206) 555-0142", href: "tel:+12065550142" },
-  { label: "Studio", value: "412 Pike Street, Seattle WA", href: null },
+// Recruiting is consolidated in RecruitBand below, so the site-wide section
+// nav omits its own recruiting card (the component itself stays reusable —
+// only the links passed here are trimmed).
+const SECTION_NAV_LINKS: SectionNavLink[] = [
+  {
+    title: "企業情報",
+    sub: "Company",
+    body: "ダミーのあゆみ・経営理念・会社概要。複合企業としての姿をご紹介します。",
+    href: "/company",
+  },
+  {
+    title: "ダミー分類",
+    sub: "Products",
+    body: "ダミー区分1・ダミー区分2・電子機器・ダミーの 4 領域。",
+    href: "/products",
+  },
+  {
+    title: "サステナビリティ",
+    sub: "Sustainability",
+    body: "事業を通じた社会課題の解決と、持続可能な未来への取り組み。",
+    href: "/sustainability",
+  },
+  {
+    title: "IR情報",
+    sub: "IR",
+    body: "株主・投資家の皆さまへ。業績・決算・IR ライブラリをご案内します。",
+    href: "/ir",
+  },
+  {
+    title: "お問い合わせ",
+    sub: "Contact",
+    body: "製品・取引・採用・IR など、各種お問い合わせはこちらから。",
+    href: "/contact",
+  },
 ];
 
 /**
- * Northwind demo landing page — a single polished marketing page composed
- * entirely from @zudo-sg/ui components. Section structure (Hero → Services →
- * About → Contact → Footer) mirrors the corporate-website reference; styling is
- * the shared tight-token system, so it is dark-correct and responsive for free.
+ * Landing page (`/`) — composed entirely from `@zudo-sg/ui`'s ported landing
+ * components (#230), with dummy copy/data matching the ported content
+ * collection (#233). `BusinessLinePortal` reuses `config/lines.ts`
+ * (BUSINESS_LINE_LIST) and `BusinessSegments` reuses `config/segments.ts`
+ * (BUSINESS_SEGMENTS) — the same registries `_mdx-content-sections.tsx`
+ * derives from for the MDX-registered variants — so the landing page and the
+ * content pages it links to can't drift apart on labels/hrefs.
  */
 export default function HomePage() {
+  const newsItems = getNews({ limit: 4 });
+  const irNewsItems = getNews({ category: "IR", limit: 3 });
+  const segments = BUSINESS_SEGMENTS.map((s) => ({ title: s.title, body: s.summary, href: s.href }));
+  const lines = BUSINESS_LINE_LIST.map((line) => ({
+    key: line.key,
+    label: line.label,
+    description: line.description,
+    href: line.homeHref,
+  }));
+
   return (
-    <SiteLayout title="Home" activePath="/">
-      {/* ── Hero ───────────────────────────────────────────────────────── */}
-      <section class="px-hsp-lg pt-vsp-xl pb-vsp-2xl">
-        <Hero
-          eyebrow="Product engineering partner"
-          title="We build digital products that earn their keep"
-          lede="Northwind pairs senior engineers with product strategists and designers, so the thing you ship is the thing your customers actually needed — measured, not guessed."
-          actions={
-            <>
-              <Button size="lg" href="#contact">
-                Start a project
-              </Button>
-              <Button size="lg" variant="secondary" href="#services">
-                See how we work
-              </Button>
-            </>
-          }
-          media={
-            <div class="flex flex-col gap-vsp-md rounded-lg bg-surface p-hsp-xl shadow-card">
-              <div class="flex items-center justify-between gap-hsp-md">
-                <span class="text-sm font-semibold text-ink">Trusted outcomes</span>
-                <Badge tone="success">On track</Badge>
-              </div>
-              <StatGroup divided>
-                <Stat value="120+" label="Products shipped" />
-                <Stat value="9 yrs" label="Avg. team tenure" />
-                <Stat value="4.9/5" label="Client rating" />
-              </StatGroup>
-            </div>
-          }
+    <DefaultLayout>
+      <LandingHero
+        eyebrow="Dummy Tagline"
+        heading={
+          <>
+            ダミー<span class="text-accent">×</span>サンプル見出しで
+            <br class="max-sm:hidden" />
+            これはダミーの見出しです
+          </>
+        }
+        lead="彼は背後にひそかな足音を聞いた。それはあまり良い意味を示すものではない。誰がこんな夜更けに、しかもこんな街灯のお粗末な港街の狭い小道で彼をつけて来るというのだ。人生の航路を捻じ曲げ、その獲物と共に立ち去ろうとしている、その丁度今。彼のこの仕事への恐れを和らげるために、数多い仲間の中に同じ考えを抱き、彼を見守り、待っている者がいるというのか。それとも背後の足音の主は、この街に無数にいる法監視役で、強靭な罰をすぐにも彼の手首にガシャンと下すというのか。"
+        actions={HERO_ACTIONS}
+      />
+
+      <Container class="py-vsp-lg">
+        <NewsTeaser heading="お知らせ" items={newsItems} viewAllHref="/news" viewAllLabel="すべて見る" />
+      </Container>
+
+      <section class="border-y border-border bg-surface py-vsp-lg">
+        <Container>
+          <NewsTeaser heading="IRニュース" items={irNewsItems} viewAllHref="/ir/news" viewAllLabel="すべて見る" />
+        </Container>
+      </section>
+
+      <Container class="py-vsp-lg">
+        <StatBand stats={STATS} />
+      </Container>
+
+      <Container class="pb-vsp-2xl">
+        <FeatureSplit
+          eyebrow="Dummy Tagline"
+          heading="ダミー見出し"
+          lead="彼のこの仕事への恐れを和らげるために、数多い仲間の中に同じ考えを抱き、彼を見守り、待っている者がいるというのか。それとも背後の足音の主は、この街に無数にいる法監視役で、強靭な罰をすぐにも彼の手首にガシャンと下すというのか。"
+          pillars={FEATURE_PILLARS}
         />
+      </Container>
+
+      <section class="border-y border-border bg-surface py-vsp-2xl">
+        <Container>
+          <BusinessSegments heading="ダミー見出し" intro="あのイーハトーヴォのすきとおった風、夏でも底に冷たさをもつ青いそら、うつくしい森で飾られたモリーオ市、郊外のぎらぎらひかる草の波。この物語はダミーテキストであり、実際の内容とは一切関係がありません。" segments={segments} />
+        </Container>
       </section>
 
-      {/* ── Services / feature cards ───────────────────────────────────── */}
-      <section id="services" class="bg-surface-sunken px-hsp-lg py-vsp-2xl">
-        <div class="mx-auto flex w-full max-w-[72rem] flex-col gap-vsp-xl">
-          <SectionHeading description="Most agencies hand you a deliverable and disappear. We stay accountable from the first whiteboard sketch to the metrics review six months after launch.">
-            One partner, the whole product lifecycle
-          </SectionHeading>
+      <Container class="py-vsp-2xl">
+        <DiscoveryTeaser
+          heading="こんなところにダミー"
+          intro="暮らしや社会のさまざまな場所で、ダミーのダミー区分1・ダミー区分2・電子電気機器・ダミーが活躍しています。"
+          scenes={DISCOVERY_SCENES}
+          href="/company/discovery"
+          linkLabel="すべてのシーンを見る"
+        />
+      </Container>
 
-          <div class="grid gap-hsp-lg sm:grid-cols-2 lg:grid-cols-4">
-            {SERVICES.map((service) => (
-              <Card key={service.badge} variant="elevated">
-                <Badge tone="brand" variant="solid">
-                  {service.badge}
-                </Badge>
-                <CardTitle>{service.title}</CardTitle>
-                <CardBody>{service.body}</CardBody>
-                <CardFooter>
-                  <ul class="flex flex-col gap-vsp-3xs text-sm text-ink-soft">
-                    {service.points.map((point) => (
-                      <li key={point} class="flex items-center gap-hsp-xs">
-                        <span aria-hidden="true" class="text-brand">
-                          →
-                        </span>
-                        {point}
-                      </li>
-                    ))}
-                  </ul>
-                </CardFooter>
-              </Card>
-            ))}
-          </div>
-        </div>
+      <section class="border-y border-border bg-surface py-vsp-2xl">
+        <Container>
+          <BusinessLinePortal
+            heading="事業ライン一覧"
+            intro="5 つの事業ラインで、幅広い分野に価値を届けています。"
+            lines={lines}
+          />
+        </Container>
       </section>
 
-      {/* ── About ──────────────────────────────────────────────────────── */}
-      <section id="about" class="px-hsp-lg py-vsp-2xl">
-        <div class="mx-auto grid w-full max-w-[72rem] gap-hsp-2xl lg:grid-cols-2 lg:items-start">
-          <div class="flex flex-col gap-vsp-lg">
-            <PageHeading
-              as="h2"
-              eyebrow="Who we are"
-              description="Northwind started with a simple frustration: too many digital projects shipped late, over budget, and missing the point. We set out to build a studio where senior practitioners stay on the tools and own the outcome."
-            >
-              A studio built around accountability
-            </PageHeading>
+      <Container class="py-vsp-2xl">
+        <SdgsHighlight
+          eyebrow="Sustainability"
+          heading="持続可能な未来への取り組み"
+          lead="「人と技術と自然環境の共生」というビジョンのもと、事業を通じて環境・社会・経済の持続可能な発展に貢献します。"
+          initiatives={SDGS_INITIATIVES}
+          href="/sustainability/sdgs"
+          linkLabel="SDGsへの取り組みを見る"
+        />
+      </Container>
 
-            <ul class="flex flex-col gap-vsp-md">
-              {PRINCIPLES.map((principle) => (
-                <li key={principle.title} class="flex flex-col gap-vsp-3xs">
-                  <h3 class="flex items-center gap-hsp-sm text-lg font-semibold tracking-tight text-ink">
-                    <span aria-hidden="true" class="inline-block size-[0.5rem] rounded-full bg-brand" />
-                    {principle.title}
-                  </h3>
-                  <p class="text-sm text-ink-soft text-pretty">{principle.body}</p>
-                </li>
-              ))}
-            </ul>
-          </div>
+      <RecruitBand
+        eyebrow="Recruit"
+        heading="未来をつくる仲間を募集しています"
+        lead="エレクトロニクスとケミカル、二つの力で社会の課題に挑む。新卒・キャリア採用の情報とエントリーは、採用情報ページでご案内しています。"
+        href="/recruit"
+        ctaLabel="採用情報を見る"
+      />
 
-          <Card variant="filled">
-            <CardTitle>Milestones</CardTitle>
-            <ol class="mt-vsp-xs flex flex-col gap-vsp-md">
-              {MILESTONES.map((item) => (
-                <li key={item.year} class="flex gap-hsp-lg">
-                  <Badge tone="neutral" variant="outline">
-                    {item.year}
-                  </Badge>
-                  <span class="text-sm text-ink-soft">{item.text}</span>
-                </li>
-              ))}
-            </ol>
-            <CardFooter>
-              <Link href="https://github.com/Takazudo/zudo-sg" variant="standalone" external>
-                Read the project background
-              </Link>
-            </CardFooter>
-          </Card>
-        </div>
-      </section>
-
-      {/* ── Contact ────────────────────────────────────────────────────── */}
-      <section id="contact" class="bg-surface-sunken px-hsp-lg py-vsp-2xl">
-        <div class="mx-auto grid w-full max-w-[72rem] gap-hsp-2xl lg:grid-cols-2 lg:items-start">
-          <div class="flex flex-col gap-vsp-lg">
-            <SectionHeading description="Send a few lines about your product and timeline. You'll hear back from a senior member of the team within one business day — no sales funnel, no scripted demo.">
-              Tell us what you're building
-            </SectionHeading>
-
-            <ul class="flex flex-col gap-vsp-md">
-              {CHANNELS.map((channel) => (
-                <li key={channel.label} class="flex flex-col gap-vsp-3xs">
-                  <span class="text-xs font-semibold uppercase tracking-wide text-ink-mute">
-                    {channel.label}
-                  </span>
-                  {channel.href ? (
-                    <Link href={channel.href}>{channel.value}</Link>
-                  ) : (
-                    <span class="text-sm text-ink-soft">{channel.value}</span>
-                  )}
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <Card variant="elevated">
-            <form action="#" method="post" class="flex flex-col gap-vsp-md">
-              <Field label="Name" required>
-                {(props) => (
-                  <Input
-                    {...props}
-                    name="name"
-                    autocomplete="name"
-                    placeholder="Jordan Avery"
-                    required
-                  />
-                )}
-              </Field>
-
-              <Field label="Work email" required>
-                {(props) => (
-                  <Input
-                    {...props}
-                    type="email"
-                    name="email"
-                    autocomplete="email"
-                    placeholder="jordan@company.example"
-                    required
-                  />
-                )}
-              </Field>
-
-              <Field
-                label="About the project"
-                hint="A few lines on what you're building and what success looks like."
-                required
-              >
-                {(props) => (
-                  <Textarea
-                    {...props}
-                    name="project"
-                    rows={4}
-                    placeholder="What are you building, and what does success look like?"
-                    required
-                  />
-                )}
-              </Field>
-
-              <Button type="submit" block>
-                Send the brief
-              </Button>
-              <p class="text-xs text-ink-mute">
-                This demo form is static — submissions are not stored.
-              </p>
-            </form>
-          </Card>
-        </div>
-      </section>
-    </SiteLayout>
+      <Container class="py-vsp-2xl">
+        <SectionNav heading="サイト案内" links={SECTION_NAV_LINKS} />
+      </Container>
+    </DefaultLayout>
   );
 }

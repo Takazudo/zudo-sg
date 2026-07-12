@@ -33,7 +33,7 @@ authors component variants without adopting this catalog's UI at all.
 |---|---|---|
 | [`packages/ui/src/stories/types.ts`](./packages/ui/src/stories/types.ts) | The story-authoring contract's TypeScript shapes: `StoryCategory`, `StoryMeta`, `Story<P>`, `StoryControl<P>`, `defineStory`. | Wherever the adopting project's shared component library lives, e.g. `<ui-package>/src/stories/types.ts`. |
 | [`packages/ui/STORIES.md`](./packages/ui/STORIES.md) | The prose contract that `types.ts` implements — file location/discovery, module shape, controls convention, source extraction, browser/MSW rules, scaffolding. Keep it and `types.ts` in sync. | `<ui-package>/STORIES.md`. |
-| [`scripts/gen-sg-registry.mjs`](./scripts/gen-sg-registry.mjs) | Codegen that globs `<components-root>/*/*.stories.tsx` on the filesystem and rewrites two explicit-import registries from it (story discovery can't be `import.meta.glob` — zfb doesn't statically inline that call, and the literal survives into the client islands bundle and throws in the browser). Needs the flag adaptations in §3 below. | `scripts/gen-sg-registry.mjs`. |
+| [`scripts/gen-sg-registry.mjs`](./scripts/gen-sg-registry.mjs) | Codegen that globs `<components-root>/**/*.stories.tsx` (any depth — covers both the one-level and category-nested layouts) on the filesystem and rewrites two explicit-import registries from it (story discovery can't be `import.meta.glob` — zfb doesn't statically inline that call, and the literal survives into the client islands bundle and throws in the browser). Needs the flag adaptations in §3 below. | `scripts/gen-sg-registry.mjs`. |
 | `src/features/styleguide/*` (21 files across `chrome/`, `code-panel/`, `preview/`, `search/`, `token-tweak/`, plus a top-level `styles.css`) | The catalog UI itself: layout chrome + header toggles, the code panel (source display, copy button, CSS injection, CodeMirror setup), the preview iframe/route, the sidebar search/filter, and the design-token live-tweak panel. | `src/features/styleguide/` (or wherever the adopting project's app-level `src/` lives). |
 | [`src/styleguide/data/`](./src/styleguide/data/) | The registry consumer: `sg-registry.ts` (codegen output), `registry.ts` (category grouping + variant ordering), `nav-nodes.ts`, `component-docs.ts`. | `src/styleguide/data/`. |
 | [`scripts/new-component.mjs`](./scripts/new-component.mjs) + [`scripts/lib/component-scaffold.mjs`](./scripts/lib/component-scaffold.mjs) + [`scripts/lib/scaffold-config.mjs`](./scripts/lib/scaffold-config.mjs) | The `pnpm new:component` scaffolder — generates a component skeleton, stories file, test file, barrel export, and re-runs the registry codegen in one command. | `scripts/new-component.mjs`, `scripts/lib/component-scaffold.mjs`, `scripts/lib/scaffold-config.mjs`. |
@@ -64,12 +64,24 @@ document, not as of the original adoption writeup.
 single source of truth both `new-component.mjs` and `gen-sg-registry.mjs`
 read from — edit these three exported constants for your project's layout:
 
-- `COMPONENTS_ROOT` (default `"packages/ui/src"`) — the directory scanned for
-  `<name>/<name>.stories.tsx`, one level deep.
+- `COMPONENTS_ROOT` (default `"packages/ui/src"`) — the directory scanned at
+  any depth for `*.stories.tsx`. Every component in this repo now lives in
+  the **category-nested** layout, `<COMPONENTS_ROOT>/<category-slug>/<name>/`
+  (e.g. `packages/ui/src/cards/card/card.stories.tsx`) — the original
+  one-level `<COMPONENTS_ROOT>/<name>/` layout the scaffolder still supports
+  (omit `--nested`) has no components left using it in this repo; a fork
+  starting fresh should treat `--nested` as the only path worth adopting.
+  `<category-slug>` is the lowercase, hyphenated form of the component's
+  `StoryCategory` (§below), e.g. `"Data Display"` → `data-display`.
 - `BARREL_INDEX` (default `"packages/ui/src/index.ts"`) — the barrel file the
   scaffolder inserts an `export { … }` block into. Set to `null` for a
   project with no barrel-file convention; `new-component.mjs` then always
-  skips the insert step (same as always passing `--skip-barrel`).
+  skips the insert step (same as always passing `--skip-barrel`). Note a
+  `--nested` scaffold never touches the barrel regardless of this setting —
+  the registry (`sg-registry.ts`) imports every story via its package
+  subpath, never the barrel, so a nested component is catalog-visible
+  without a barrel export at all; only add one by hand if the component
+  should also be reachable from `@zudo-sg/ui`'s top-level import.
 - `UI_PACKAGE_NAME` (default `"@zudo-sg/ui"`) — the npm package name used in
   generated `usage` snippets and in the package-scoped import specifiers
   `gen-sg-registry.mjs` emits. If `COMPONENTS_ROOT` moves, keep the UI
@@ -79,12 +91,20 @@ read from — edit these three exported constants for your project's layout:
 
 ### The `StoryCategory` set
 
-`StoryCategory` is a closed union declared once in `packages/ui/src/stories/types.ts`
-(`STORY_CATEGORIES`). Two other files need the same set as a **runtime**
-array (a plain `.mjs` script can't import a `.ts` type), so
-`pnpm gen:story-categories` (`scripts/gen-story-categories.mjs`) regex-parses
-`STORY_CATEGORIES` out of `types.ts`'s source text and rewrites the
-`GENERATED:STORY_CATEGORIES` marker blocks in:
+`StoryCategory` is a closed union of 12 members (`Actions`, `Typography`,
+`Layout`, `Data Display`, `Forms`, `Navigation`, `Content`, `Landing`,
+`News`, `Search`, `Feedback`, `Media`), declared once in
+`packages/ui/src/stories/types.ts` (`STORY_CATEGORIES`). This is the
+**sidebar-grouping taxonomy** the catalog sorts stories into — it is
+independent of, and larger than, the 9 on-disk category-nested directories
+(`cards/ chrome/ content/ forms/ landing/ media/ news/ search/ shared/`): a
+single directory can hold components from several `StoryCategory` values
+(e.g. `shared/` spans `Actions`, `Layout`, `Navigation`, and `Content`). Two
+other files need the same set as a **runtime** array (a plain `.mjs` script
+can't import a `.ts` type), so `pnpm gen:story-categories`
+(`scripts/gen-story-categories.mjs`) regex-parses `STORY_CATEGORIES` out of
+`types.ts`'s source text and rewrites the `GENERATED:STORY_CATEGORIES`
+marker blocks in:
 
 - `src/styleguide/data/registry.ts` (`CATEGORY_ORDER`)
 - `scripts/lib/component-scaffold.mjs` (`VALID_CATEGORIES`)

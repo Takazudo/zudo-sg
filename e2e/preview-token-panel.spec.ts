@@ -130,22 +130,23 @@ async function setPanelRadiusMd(page: Page, pxValue: string): Promise<void> {
 }
 
 /**
- * Navigate to the "Color" tab in the currently-open panel and set --color-brand
- * to a specific value using its text input (aria-label: "--color-brand value").
+ * Navigate to the "Color" tab in the currently-open panel and set
+ * --color-accent to a specific value using its text input (aria-label:
+ * "--color-accent value").
  *
  * Mirrors setPanelRadiusMd, but for the Color tab (`ui-color` — a non-reserved
  * id routed to zdtp's GenericTab, see COLOR_TAB in preview-token-panel-config.ts).
  * Driving it via the panel UI (not a direct postMessage) populates the
  * registry's previewOverrides Map, which is what Export actually serializes.
  */
-async function setPanelColorBrand(page: Page, value: string): Promise<void> {
+async function setPanelColorAccent(page: Page, value: string): Promise<void> {
   const panel = page.locator(".tokenpanel-shell").first();
 
   const colorTab = panel.getByRole("tab", { name: "Color", exact: true });
   await expect(colorTab).toBeVisible({ timeout: 5_000 });
   await colorTab.click();
 
-  const colorInput = panel.getByLabel("--color-brand value");
+  const colorInput = panel.getByLabel("--color-accent value");
   await expect(colorInput).toBeVisible({ timeout: 3_000 });
 
   await colorInput.fill(value);
@@ -237,24 +238,24 @@ test("preview panel: overrides reach iframe :root; host <html> is unchanged", as
   // defines base @zudo-sg/ui tokens (src/styles/global.css aliases them onto the
   // doc chrome), so these are NOT empty — the correct isolation assertion is that
   // the preview override does not CHANGE the host value, not that it equals "".
-  const hostBrandBefore = await getHostRootVar(page, "--color-brand");
+  const hostBrandBefore = await getHostRootVar(page, "--color-accent");
   const hostRadiusBefore = await getHostRootVar(page, "--radius-md");
 
   await applyVarsToFirstIframe(page, [
-    ["--color-brand", brandOverride],
+    ["--color-accent", brandOverride],
     ["--radius-md", radiusOverride],
   ]);
 
   // Assert iframe :root has the overrides applied.
-  expect(await getIframeRootVar(frame, "--color-brand")).toBe(brandOverride);
+  expect(await getIframeRootVar(frame, "--color-accent")).toBe(brandOverride);
   expect(await getIframeRootVar(frame, "--radius-md")).toBe(radiusOverride);
 
   // Assert host <html> is UNCHANGED by the preview override — the applySink
   // routes writes to iframes only, never to the host :root.
-  expect(await getHostRootVar(page, "--color-brand")).toBe(hostBrandBefore);
+  expect(await getHostRootVar(page, "--color-accent")).toBe(hostBrandBefore);
   expect(await getHostRootVar(page, "--radius-md")).toBe(hostRadiusBefore);
   // …and specifically never picked up the iframe sentinel values.
-  expect(await getHostRootVar(page, "--color-brand")).not.toBe(brandOverride);
+  expect(await getHostRootVar(page, "--color-accent")).not.toBe(brandOverride);
   expect(await getHostRootVar(page, "--radius-md")).not.toBe(radiusOverride);
 });
 
@@ -268,8 +269,8 @@ test("doc Tokens panel: dispatching toggle-sg-doc-tweak opens the real (non-empt
   await gotoFirstDetailPage(page);
   const frame = await waitForFirstPreviewFrame(page);
 
-  // Capture the iframe's baseline --color-brand value.
-  const beforeBrand = await getIframeRootVar(frame, "--color-brand");
+  // Capture the iframe's baseline --color-accent value.
+  const beforeBrand = await getIframeRootVar(frame, "--color-accent");
 
   // Open the DOC token panel via its explicit toggle channel.
   // The doc panel has NO applySink — it writes to the host :root only.
@@ -304,15 +305,15 @@ test("doc Tokens panel: dispatching toggle-sg-doc-tweak opens the real (non-empt
     docPanel.getByRole("tab", { name: "Size", exact: true }),
   ).toBeVisible();
 
-  // Opening the doc panel must not have changed --color-brand on the iframe.
-  expect(await getIframeRootVar(frame, "--color-brand")).toBe(beforeBrand);
+  // Opening the doc panel must not have changed --color-accent on the iframe.
+  expect(await getIframeRootVar(frame, "--color-accent")).toBe(beforeBrand);
 
   // Apply a sentinel value to the iframe via direct postMessage.
-  await applyVarsToFirstIframe(page, [["--color-brand", BRAND_SENTINEL]]);
-  expect(await getIframeRootVar(frame, "--color-brand")).toBe(BRAND_SENTINEL);
+  await applyVarsToFirstIframe(page, [["--color-accent", BRAND_SENTINEL]]);
+  expect(await getIframeRootVar(frame, "--color-accent")).toBe(BRAND_SENTINEL);
 
   // Click Reset on the doc panel — this resets the doc panel's host :root vars
-  // but must NOT clear the preview iframe's --color-brand.
+  // but must NOT clear the preview iframe's --color-accent.
   // The doc panel's Reset calls clearAppliedStyles (no sink), which only removes
   // inline styles from the host document.documentElement — not from iframes.
   const resetBtn = page
@@ -322,8 +323,8 @@ test("doc Tokens panel: dispatching toggle-sg-doc-tweak opens the real (non-empt
   await resetBtn.click();
   await page.waitForTimeout(200);
 
-  // Iframe's --color-brand must still be the sentinel after doc panel Reset.
-  expect(await getIframeRootVar(frame, "--color-brand")).toBe(BRAND_SENTINEL);
+  // Iframe's --color-accent must still be the sentinel after doc panel Reset.
+  expect(await getIframeRootVar(frame, "--color-accent")).toBe(BRAND_SENTINEL);
 });
 
 // ---------------------------------------------------------------------------
@@ -395,7 +396,7 @@ test("preview panel: Export emits zdtp schema; Load-from-JSON restores overrides
   // Regression coverage for #197: zdtp's serializer previously dropped this
   // tab from Export/Load even though Apply/Reset worked live — exercising
   // only the reserved-id Size tab above would not have caught that bug.
-  await setPanelColorBrand(page, COLOR_TAB_SENTINEL);
+  await setPanelColorAccent(page, COLOR_TAB_SENTINEL);
 
   // Click Export to open the export modal.
   const exportBtn = page
@@ -426,7 +427,7 @@ test("preview panel: Export emits zdtp schema; Load-from-JSON restores overrides
   // must be captured by Export too, not just reserved-id tabs like Size —
   // this is exactly the tab/token the fixed serializer bug affected.
   expect(exportedJson).toContain('"ui-color"');
-  expect(exportedJson).toContain("--color-brand");
+  expect(exportedJson).toContain("--color-accent");
 
   // Assert the JSON is well-formed.
   const parsed = JSON.parse(exportedJson) as Record<string, unknown>;
@@ -479,10 +480,10 @@ test("preview panel: Export emits zdtp schema; Load-from-JSON restores overrides
   await page.waitForTimeout(250);
   expect(await getIframeRootVar(frame, "--radius-md")).toBe("20px");
 
-  // Same round-trip assertion for the Color tab (#197) — --color-brand must
+  // Same round-trip assertion for the Color tab (#197) — --color-accent must
   // also be restored, proving the ui-color tab was captured by Export and
   // correctly re-applied by Load, not just silently ignored.
-  expect(await getIframeRootVar(frame, "--color-brand")).toBe(COLOR_TAB_SENTINEL);
+  expect(await getIframeRootVar(frame, "--color-accent")).toBe(COLOR_TAB_SENTINEL);
 
   // Dismiss the modal.
   await importModal.getByRole("button", { name: "Close", exact: true }).click();

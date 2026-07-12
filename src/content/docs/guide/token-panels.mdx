@@ -37,7 +37,7 @@ Click the **Preview tokens** icon in the header (the stacked-frames glyph, on st
 
 The preview panel edits the `@zudo-sg/ui` design tokens — `--color-*`, `--spacing-*`, `--font-*`, `--radius-*`, `--shadow-*`. Instead of writing to the host `:root`, every change is sent directly into each registered preview iframe's `:root` via zudo-doc's theme bridge.
 
-Its **Palette** tab exposes the raw Tier-1 colors as grouped `base`, `accent`, and `state` swatches. The semantic **Color** tab keeps the unchanged `--color-*` names that point at those palette entries.
+Its **Palette** tab exposes the raw Tier-1 colors as grouped `base`, `accent`, `state`, and `line` (business-line accents) swatches. The semantic **Color** tab keeps the unchanged `--color-*` names that point at those palette entries.
 
 **Why iframes only?** In `src/styles/global.css` the `@zudo-sg/ui` target tokens are aliased onto the doc chrome. Writing them to the host `:root` would corrupt the documentation site's appearance, so the panel deliberately routes all writes into the iframes and leaves the host untouched.
 
