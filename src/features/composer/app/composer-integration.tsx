@@ -89,6 +89,8 @@ export function ComposerIntegration(props: ComposerIntegrationProps): JSX.Elemen
             onSetViewport={setViewport}
             onReset={controller.reset}
             onExport={exportState.openExport}
+            clipboard={state.clipboard}
+            titleFor={titleFor}
           />
         }
         tree={
