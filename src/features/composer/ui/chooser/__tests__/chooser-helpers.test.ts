@@ -53,6 +53,27 @@ describe("eligibleEntries", () => {
     expect(blockedReason).toMatch(/already has a component/i);
   });
 
+  it("blocks adding into an opaque parent (e.g. a version mismatch) even though its slot is otherwise valid", () => {
+    resetFixtureIds();
+    const document = fixtureDocument([
+      {
+        id: "split",
+        componentId: FIXTURE_IDS.split,
+        componentVersion: 99, // manifest only knows version 1 -> opaque
+        props: {},
+        slots: { left: [], right: [] },
+      },
+    ]);
+    const manifest = buildManifestIndex(fixtureCatalog);
+    const { entries, blockedReason } = eligibleEntries(document, manifest, fixtureCatalog, {
+      parentId: "split",
+      slotId: "right",
+      index: 0,
+    });
+    expect(entries).toEqual([]);
+    expect(blockedReason).toMatch(/unavailable/i);
+  });
+
   it("allows an unrestricted many-cardinality slot to accept everything", () => {
     resetFixtureIds();
     const document = makeAbcDocument();

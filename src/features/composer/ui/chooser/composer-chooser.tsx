@@ -165,8 +165,12 @@ export function ComposerChooser({
     dialogRef.current?.close();
   }
 
+  // Enter only confirms when the current filter narrows to exactly ONE
+  // component — with several matches still showing, silently adding
+  // whichever happens to sort first would be a surprising, easy-to-mistrigger
+  // footgun rather than a helpful shortcut.
   function handleSearchKeyDown(event: JSX.TargetedKeyboardEvent<HTMLInputElement>) {
-    if (event.key === "Enter" && filtered.length > 0) {
+    if (event.key === "Enter" && filtered.length === 1) {
       event.preventDefault();
       confirmAdd(filtered[0]!.componentId);
     }
@@ -214,6 +218,7 @@ export function ComposerChooser({
       <dialog
         ref={dialogRef}
         class="sg-composer-chooser"
+        aria-modal="true"
         aria-labelledby={titleId}
         onKeyDown={handleDialogKeyDown}
         onClick={(event) => {

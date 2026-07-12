@@ -5,7 +5,7 @@
 // `composer-chooser.tsx` for how these compose into the rendered dialog.
 
 import type { ComponentManifest, CompositionDocument, InsertionTarget } from "@/composer";
-import { findLocation } from "@/composer";
+import { findLocation, isNodeOpaque } from "@/composer";
 import type { ComposerManifestEntry } from "@/styleguide/data/composer-registry";
 
 export interface ChooserEligibility {
@@ -37,6 +37,17 @@ export function eligibleEntries(
   const entry = manifest.get(location.node.componentId);
   const slot = entry?.slots.find((s) => s.id === target.slotId);
   if (!entry || !slot) return { entries: [], blockedReason: "This destination is no longer available." };
+
+  // Mirrors `@/composer`'s own `validateInsertionTarget` guard: nothing may be
+  // added into an opaque parent (unknown component, unsupported version,
+  // cardinality/accepts violation). The tree only ever offers Add on a
+  // non-opaque parent, but the chooser is a shared, reusable dialog any
+  // future trigger (e.g. a canvas insert point) can open with an arbitrary
+  // target — this keeps it from showing a false "you can add here" state
+  // `addNode` would then silently reject.
+  if (isNodeOpaque(location.node, manifest)) {
+    return { entries: [], blockedReason: "This component is unavailable and cannot accept new children." };
+  }
 
   const children = location.node.slots[target.slotId] ?? [];
   if (slot.cardinality === "single" && children.length >= 1) {
