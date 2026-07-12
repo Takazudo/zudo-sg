@@ -11,8 +11,10 @@
 // POSIX string; callers `resolve()` it against their own ROOT constant.
 
 /**
- * Repo-root-relative path to the directory scanned for
- * `<name>/<name>.stories.tsx` (one level deep — see STORIES.md §2).
+ * Repo-root-relative path to the directory scanned for `*.stories.tsx` files
+ * at any depth — both the one-level `<name>/<name>.stories.tsx` layout and
+ * the category-nested `<category>/<name>/<name>.stories.tsx` layout (see
+ * STORIES.md §2).
  */
 export const COMPONENTS_ROOT = "packages/ui/src";
 

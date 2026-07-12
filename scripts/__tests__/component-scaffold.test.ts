@@ -11,6 +11,7 @@ import {
   assertUnusedName,
   assertValidCategory,
   assertValidName,
+  categorySlug,
   componentTemplate,
   insertBarrelExport,
   storiesTemplate,
@@ -34,11 +35,12 @@ describe("scaffold-config", () => {
 });
 
 describe("new-component.mjs parseArgs", () => {
-  it("parses name, --category, and defaults --skip-barrel to false", () => {
+  it("parses name, --category, and defaults --skip-barrel/--nested to false", () => {
     expect(parseArgs(["demo-widget", "--category", "Layout"])).toEqual({
       name: "demo-widget",
       category: "Layout",
       skipBarrel: false,
+      nested: false,
     });
   });
 
@@ -47,6 +49,7 @@ describe("new-component.mjs parseArgs", () => {
       name: "demo-widget",
       category: "Layout",
       skipBarrel: false,
+      nested: false,
     });
   });
 
@@ -55,6 +58,7 @@ describe("new-component.mjs parseArgs", () => {
       name: "demo-widget",
       category: "Layout",
       skipBarrel: true,
+      nested: false,
     });
   });
 
@@ -63,6 +67,27 @@ describe("new-component.mjs parseArgs", () => {
       name: "demo-widget",
       category: "Layout",
       skipBarrel: true,
+      nested: false,
+    });
+  });
+
+  it("sets nested when --nested is passed", () => {
+    expect(parseArgs(["demo-widget", "--category", "Layout", "--nested"])).toEqual({
+      name: "demo-widget",
+      category: "Layout",
+      skipBarrel: false,
+      nested: true,
+    });
+  });
+
+  it("parses --nested regardless of position, combined with --skip-barrel", () => {
+    expect(
+      parseArgs(["--nested", "demo-widget", "--skip-barrel", "--category", "Layout"]),
+    ).toEqual({
+      name: "demo-widget",
+      category: "Layout",
+      skipBarrel: true,
+      nested: true,
     });
   });
 });
@@ -104,6 +129,22 @@ describe("assertValidCategory", () => {
   });
 });
 
+describe("categorySlug", () => {
+  it("lowercases a single-word category", () => {
+    expect(categorySlug("Landing")).toBe("landing");
+    expect(categorySlug("Layout")).toBe("layout");
+  });
+
+  it("hyphenates a multi-word category", () => {
+    expect(categorySlug("Data Display")).toBe("data-display");
+  });
+
+  it("produces a distinct slug per category (no accidental collisions across the union)", () => {
+    const slugs = VALID_CATEGORIES.map(categorySlug);
+    expect(new Set(slugs).size).toBe(VALID_CATEGORIES.length);
+  });
+});
+
 describe("assertUnusedName", () => {
   it("passes when the name isn't taken", () => {
     expect(() => assertUnusedName("demo-widget", ["badge", "button"])).not.toThrow();
@@ -124,6 +165,16 @@ describe("componentTemplate", () => {
     expect(src).toContain("focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus");
     expect(src).toContain("export function DemoWidget(");
     expect(src).toContain(`import { cx } from "../lib/cx";`);
+  });
+
+  it("uses a one-deeper relative lib/cx import when nested (category-dir scaffold)", () => {
+    const src = componentTemplate({
+      pascalName: "DemoWidget",
+      kebabName: "demo-widget",
+      nested: true,
+    });
+    expect(src).toContain(`import { cx } from "../../lib/cx";`);
+    expect(src).not.toContain(`from "../lib/cx"`);
   });
 });
 

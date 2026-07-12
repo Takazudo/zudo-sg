@@ -19,6 +19,12 @@ export const CATEGORY_ORDER: StoryCategory[] = [
   "Data Display",
   "Forms",
   "Navigation",
+  "Content",
+  "Landing",
+  "News",
+  "Search",
+  "Feedback",
+  "Media",
   // GENERATED:STORY_CATEGORIES_END
 ];
 

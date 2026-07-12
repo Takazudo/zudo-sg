@@ -3,10 +3,20 @@
 //
 // Codegen: rewrite the GENERATED:SG_REGISTRY marker block in two files from a
 // single source of truth — the `*.stories.tsx` files that actually exist under
-// packages/ui/src/*/*.stories.tsx:
+// packages/ui/src/**/*.stories.tsx (any depth — see discoverStories() below):
 //   - src/styleguide/data/sg-registry.ts               (the catalog registry)
 //   - packages/ui/src/stories/__tests__/story-modules.ts (the shared STORY_MODULES
 //     registry imported by contract.test.ts and source-drift.test.ts)
+//
+// TWO co-existing directory layouts are discovered by the same recursive walk:
+//   - OLD, one-level: packages/ui/src/<name>/<name>.stories.tsx
+//   - NEW, category-nested: packages/ui/src/<category>/<name>/<name>.stories.tsx
+// Neither layout is preferred by this script — it just globs `**/*.stories.tsx`
+// and derives each entry's identity from its full relative directory path, so
+// old components keep resolving to the exact same identifiers/keys they always
+// had (a 1-segment relative dir round-trips unchanged) while new nested entries
+// get distinct identifiers even when two categories scaffold a same-named
+// component (e.g. `layout/badge/` vs `forms/badge/` — see dirPathToImportName).
 //
 // WHY CODEGEN (NOT import.meta.glob): zfb does not statically inline
 // import.meta.glob — the literal call survives into the shared client islands
@@ -25,8 +35,10 @@
 //   node scripts/gen-sg-registry.mjs --check   # verify committed files are up
 //                                               # to date (exit 1 on drift, no write)
 //
-// MAINTENANCE: add or remove a `packages/ui/src/<name>/<name>.stories.tsx`
-// file, then run `pnpm gen:sg-registry` and commit the regenerated files.
+// MAINTENANCE: add or remove a `packages/ui/src/<name>/<name>.stories.tsx` (or,
+// under the category-nested layout, `packages/ui/src/<category>/<name>/<name>
+// .stories.tsx`) file, then run `pnpm gen:sg-registry` and commit the
+// regenerated files.
 // Never hand-edit either block between its BEGIN/END markers.
 
 import { readFileSync, writeFileSync, readdirSync } from "node:fs";
@@ -61,40 +73,112 @@ const END_MARKER = "GENERATED:SG_REGISTRY_END";
 const STORIES_SUFFIX = ".stories.tsx";
 
 /**
- * Glob `packages/ui/src/<dir>/<name>.stories.tsx` off the filesystem (one
- * level deep, matching the co-location convention in STORIES.md §2). Returns
- * entries sorted alphabetically by `<dir>/<stem>` for deterministic output.
+ * Recursively walk `dir` (relative to UI_SRC_DIR, POSIX-joined) collecting
+ * every `*.stories.tsx` file at ANY depth — matching both the old one-level
+ * layout (`<name>/<name>.stories.tsx`) and the new category-nested layout
+ * (`<category>/<name>/<name>.stories.tsx`, or deeper). Directories whose name
+ * starts with `.` or `_` are skipped at every level (keeps `__tests__` and any
+ * future `_shared`-style helper dir out of discovery). Returns `{ relDir, file
+ * }` pairs; both dirs and files are read in sorted order per directory for a
+ * deterministic (if redundant — see the final sort in discoverStories) walk.
  */
-function discoverStories() {
-  const dirs = readdirSync(UI_SRC_DIR, { withFileTypes: true })
-    .filter((d) => d.isDirectory())
+function walkStoryFiles(relDir) {
+  const absDir = relDir ? resolve(UI_SRC_DIR, relDir) : UI_SRC_DIR;
+  const dirEntries = readdirSync(absDir, { withFileTypes: true });
+
+  const files = dirEntries
+    .filter((d) => d.isFile() && d.name.endsWith(STORIES_SUFFIX))
+    .map((d) => d.name)
+    .sort();
+  const subdirs = dirEntries
+    .filter((d) => d.isDirectory() && !d.name.startsWith(".") && !d.name.startsWith("_"))
     .map((d) => d.name)
     .sort();
 
-  const entries = [];
-  for (const dir of dirs) {
-    const files = readdirSync(resolve(UI_SRC_DIR, dir)).filter((f) =>
-      f.endsWith(STORIES_SUFFIX),
-    );
-    for (const file of files.sort()) {
-      const stem = file.slice(0, -STORIES_SUFFIX.length);
-      const body = readFileSync(resolve(UI_SRC_DIR, dir, file), "utf8");
-      entries.push({
-        relDirStem: `${dir}/${stem}`,
-        importName: camelCase(stem),
-        exportOrder: scanExportOrder(body),
-      });
-    }
+  const results = files.map((file) => ({ relDir, file }));
+  for (const sub of subdirs) {
+    const nested = relDir ? `${relDir}/${sub}` : sub;
+    results.push(...walkStoryFiles(nested));
   }
+  return results;
+}
+
+/**
+ * Glob `packages/ui/src/**\/*.stories.tsx` off the filesystem (any depth —
+ * see walkStoryFiles) and derive each entry's `relDirStem` (registry-key
+ * suffix), `importName` (JS identifier), and `exportOrder`. Returns entries
+ * sorted alphabetically by `relDirStem` for deterministic output — this is
+ * the exact order the old one-level-only implementation produced for every
+ * entry that still lives at depth 1, so regenerating with existing
+ * components only produces a byte-identical result.
+ */
+function discoverStories() {
+  const found = walkStoryFiles("");
+
+  const entries = found.map(({ relDir, file }) => {
+    const stem = file.slice(0, -STORIES_SUFFIX.length);
+    const body = readFileSync(resolve(UI_SRC_DIR, relDir, file), "utf8");
+    return {
+      relDirStem: `${relDir}/${stem}`,
+      importName: dirPathToImportName(relDir),
+      exportOrder: scanExportOrder(body),
+    };
+  });
+
   if (entries.length === 0) {
     throw new Error(`No *${STORIES_SUFFIX} files found under ${UI_SRC_DIR}`);
   }
+  entries.sort((a, b) => a.relDirStem.localeCompare(b.relDirStem));
+  assertUniqueImportNames(entries);
   return entries;
 }
 
 /** Kebab-case story stem (e.g. "site-header") → camelCase identifier. */
 function camelCase(kebab) {
   return kebab.replace(/-([a-z0-9])/g, (_, c) => c.toUpperCase());
+}
+
+/**
+ * Derive the `import * as <name>` identifier from a story's CONTAINING
+ * directory path (relative to UI_SRC_DIR) — never from the file stem alone.
+ * For the old one-level layout `relDir` is one segment (e.g. "badge") and
+ * this is byte-identical to the previous `camelCase(stem)` derivation, since
+ * the convention is dir-name === file-stem. For the new category-nested
+ * layout `relDir` is multiple segments (e.g. "layout/badge-icon"); joining
+ * them with "-" before camelCasing folds the whole path into one identifier
+ * ("layoutBadgeIcon"), so two categories scaffolding a same-named component
+ * (e.g. "layout/badge" and "forms/badge") get distinct identifiers instead of
+ * colliding on "badge" — see assertUniqueImportNames for the defensive check
+ * that backs this up.
+ */
+function dirPathToImportName(relDir) {
+  return camelCase(relDir.split("/").join("-"));
+}
+
+/**
+ * Throws if two entries derive the same `importName` — `import * as X` twice
+ * under the same identifier is a duplicate-declaration syntax error, but this
+ * check surfaces it as a clear codegen-time message (naming the two
+ * colliding directories) instead of an opaque downstream failure. In
+ * practice this can only happen if two distinct directory paths coincide
+ * once hyphens and slashes are folded together (e.g. "foo-bar/baz" and
+ * "foo/bar-baz" both fold to "foo-bar-baz") — genuinely duplicate component
+ * names across categories (e.g. "layout/badge" vs "forms/badge") do NOT
+ * collide, by design (see dirPathToImportName).
+ */
+function assertUniqueImportNames(entries) {
+  const seen = new Map();
+  for (const entry of entries) {
+    const prior = seen.get(entry.importName);
+    if (prior !== undefined) {
+      throw new Error(
+        `gen-sg-registry: "${prior}" and "${entry.relDirStem}" both derive the import ` +
+          `identifier "${entry.importName}" — rename one of the component directories ` +
+          `so their derived identifiers don't collide.`,
+      );
+    }
+    seen.set(entry.importName, entry.relDirStem);
+  }
 }
 
 /**

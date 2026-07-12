@@ -96,15 +96,35 @@ of the Tier-2 pointers) — component CSS never changes.
 
 ## 2. File location & discovery mechanism
 
-- **Co-locate** each story file with its component: `src/<component>/<name>.stories.tsx`.
+Two directory layouts co-exist and are discovered by the same mechanism:
+
+- **One-level (original)**: `src/<component>/<name>.stories.tsx` — e.g.
+  `src/button/button.stories.tsx`. Every component shipped before #224 uses
+  this layout; it is not being migrated as part of #224.
+- **Category-nested (current convention for new components)**:
+  `src/<category-slug>/<component>/<name>.stories.tsx` — e.g.
+  `src/layout/badge-icon/badge-icon.stories.tsx`. `<category-slug>` is the
+  lowercase, hyphenated form of the component's `StoryCategory` (see §3),
+  e.g. `"Data Display"` → `data-display`. A component's own directory name
+  must still equal its story stem (`badge-icon/badge-icon.stories.tsx`, not
+  `badge-icon/story.stories.tsx`) — same one-dir-per-component rule as the
+  original layout, just with one more directory level in front of it.
+
+Two different categories MAY scaffold a same-named component (e.g.
+`layout/badge/` and `forms/badge/`) — the catalog keys everything off the full
+directory path, never the bare component name, so this produces two distinct,
+independently-addressable catalog entries rather than a collision (see the
+codegen details below).
+
 - **Naming:** always `*.stories.tsx` (the `.stories` infix is the discovery key).
 - **Discovery is codegen, not `import.meta.glob`.** zfb does not statically
   inline `import.meta.glob` — the literal call survives into the shared client
   islands bundle and throws in the browser (`import.meta.glob` is undefined
   there). So the catalog cannot use a runtime glob at all. Instead,
   [`scripts/gen-sg-registry.mjs`](../../scripts/gen-sg-registry.mjs) (repo
-  root) globs `packages/ui/src/*/*.stories.tsx` **on the filesystem at codegen
-  time** and regenerates two explicit-import lists from what it finds:
+  root) globs `packages/ui/src/**/*.stories.tsx` (any depth — both layouts
+  above) **on the filesystem at codegen time** and regenerates two
+  explicit-import lists from what it finds:
 
   - `src/styleguide/data/sg-registry.ts` (repo root) — the catalog's
     path→module registry.
@@ -117,6 +137,19 @@ of the Tier-2 pointers) — component CSS never changes.
   `import.meta.glob({ eager: true })` would have produced, just computed ahead
   of time instead of at runtime.
 
+  **Identifier derivation (why two `badge`s don't collide):** each entry's
+  `import * as <name>` identifier is derived from its FULL relative directory
+  path (every path segment, hyphen-joined then camelCased), not from the file
+  stem alone. A one-level component's directory is a single segment, so this
+  is byte-identical to what the generator always produced (`badge/` →
+  `badge`). A category-nested component's directory is two segments, so
+  `layout/badge/` → `layoutBadge` and `forms/badge/` → `formsBadge` — distinct
+  identifiers, both entries present in the generated map, neither silently
+  overwriting the other. The generator also asserts every derived identifier
+  is unique across the whole discovery pass and throws (no write) if it ever
+  finds two directories that fold to the same one — see
+  `scripts/__tests__/gen-sg-registry.test.ts`.
+
 - **After adding, renaming, or removing a story file**, run
   `pnpm gen:sg-registry` from the repo root and commit the regenerated files.
   `pnpm check:sg-registry` (wired into CI and `scripts/run-b4push.sh`) fails
@@ -124,6 +157,27 @@ of the Tier-2 pointers) — component CSS never changes.
   regenerate is a build failure, not a silently-missing catalog entry.
 - **Never hand-edit** between the `GENERATED:SG_REGISTRY_BEGIN`/`END` markers
   in either generated file; the next `pnpm gen:sg-registry` run overwrites it.
+
+### The barrel transition rule — new components stay OUT of the barrel
+
+`packages/ui/src/index.ts` (the barrel) is a **one-level-layout artifact**: its
+export names come straight from the original flat components (`Card`, `Hero`,
+`SiteHeader`, …). New, category-nested components being ported in from
+elsewhere may reuse those exact names for unrelated components (a different
+`Card`, a different `Hero`), which would collide if barrel-exported under the
+same identifier.
+
+**Rule: a component scaffolded into the category-nested layout is never added
+to the barrel.** It's still fully catalog-visible and testable — the registry
+(`sg-registry.ts` / `story-modules.ts`) imports every story via its package
+subpath (`@zudo-sg/ui/src/<category>/<name>/<name>.stories.tsx`), **never**
+via the barrel — but consumers of `@zudo-sg/ui`'s top-level export can't reach
+it yet. This is intentional and temporary: a later "atomic swap" sub-issue
+rebuilds the barrel from scratch once every new component has landed and the
+old ones are retired, resolving the name collisions in one pass instead of
+piecemeal. Until that lands, `pnpm new:component --nested` (§8) never touches
+`packages/ui/src/index.ts`, and hand-adding a nested component's export to the
+barrel is a bug, not a workaround.
 
 ---
 
@@ -160,10 +214,17 @@ export default meta;
 | `order`       | `number`        | no       | Sort hint within a category; alphabetical by `title` when omitted. |
 
 **`StoryCategory` is a closed union** — use one of:
-`"Actions" | "Typography" | "Layout" | "Data Display" | "Forms" | "Navigation"`.
+`"Actions" | "Typography" | "Layout" | "Data Display" | "Forms" | "Navigation" |
+"Content" | "Landing" | "News" | "Search" | "Feedback" | "Media"`.
 Adding a category means editing `StoryCategory` in `src/stories/types.ts` (so the
 catalog and the authors share one list). The catalog should render categories in
 the union's declared order.
+
+This field is the sidebar bucket only — it is **independent of the directory
+layout** in §2. A category-nested component's directory slug (`layout/`,
+`data-display/`, …) is usually derived from its `category`, but nothing
+enforces that the two match; a component's `meta.category` is what the
+catalog groups by, full stop.
 
 ### Named exports — `Story<P>`
 
@@ -351,41 +412,62 @@ When adding a component, ship its story in the same change:
 ## 8. Scaffolding a new component
 
 `pnpm new:component <name> --category <Category>` (repo root) generates the
-whole checklist above in one command:
+whole checklist above in one command, in either directory layout from §2:
 
 ```
+# One-level (only meaningful for the pre-#224 flat components; not used for
+# new components going forward — see the barrel transition rule in §2):
 pnpm new:component demo-widget --category Layout
+
+# Category-nested (current convention — packages/ui/src/<category-slug>/<name>/):
+pnpm new:component demo-widget --category Layout --nested
 ```
 
-- `<name>` must be kebab-case and not already exist under `packages/ui/src/`.
+- `<name>` must be kebab-case.
+  - Flat mode: must not already exist under `packages/ui/src/`.
+  - `--nested` mode: must not already exist under
+    `packages/ui/src/<category-slug>/` — the SAME name in a DIFFERENT
+    category is fine (that's the point of category-nesting; see §2).
 - `<Category>` must be one of the `StoryCategory` union members (§3):
-  `Actions`, `Typography`, `Layout`, `Data Display`, `Forms`, `Navigation`.
-- `--skip-barrel` (optional) skips the barrel-export insert step (below) —
-  use it when you want to add the export by hand, e.g. to place it in a
-  non-default position.
+  `Actions`, `Typography`, `Layout`, `Data Display`, `Forms`, `Navigation`,
+  `Content`, `Landing`, `News`, `Search`, `Feedback`, `Media`.
+- `--nested` scaffolds into `packages/ui/src/<category-slug>/<name>/` instead
+  of the flat `packages/ui/src/<name>/`, where `<category-slug>` is
+  `<Category>` lowercased with spaces replaced by hyphens (e.g.
+  `"Data Display"` → `data-display`). A nested scaffold **never** touches the
+  barrel (`packages/ui/src/index.ts`), regardless of `--skip-barrel` — see
+  the transition rule in §2.
+- `--skip-barrel` (optional, flat mode only) skips the barrel-export insert
+  step (below) — use it when you want to add the export by hand, e.g. to
+  place it in a non-default position. It's a no-op alongside `--nested`
+  (nested scaffolds already always skip the barrel).
 
 It creates, following the existing house pattern (variant union + `Record`
 class map + `class?` passthrough + the shared focus-visible outline classes):
 
-- `packages/ui/src/<name>/<name>.tsx` — typed-props component skeleton.
-- `packages/ui/src/<name>/<name>.stories.tsx` — `StoryMeta` + a typed
-  `Story<Props>` `Playground` variant with a controls skeleton (§3/§4).
-- `packages/ui/src/<name>/__tests__/<name>.test.tsx` — a starter test suite.
+- `packages/ui/src/<name>/<name>.tsx` (or, nested,
+  `packages/ui/src/<category-slug>/<name>/<name>.tsx`) — typed-props component
+  skeleton.
+- …`/<name>.stories.tsx` — `StoryMeta` + a typed `Story<Props>` `Playground`
+  variant with a controls skeleton (§3/§4).
+- …`/__tests__/<name>.test.tsx` — a starter test suite.
 - The barrel export in `packages/ui/src/index.ts`, inserted alphabetically
-  into the matching `// ── <Category> ──` section — unless `--skip-barrel`
-  is passed or this project has no barrel-file convention (see below).
+  into the matching `// ── <Category> ──` section — **flat mode only**,
+  unless `--skip-barrel` is passed or this project has no barrel-file
+  convention (see below). `--nested` always skips this step.
 - A `gen:sg-registry` run, so the component is registered in the S6 catalog
-  immediately (§2) — no separate step needed.
+  immediately (§2) — no separate step needed, for either layout.
 
 The generated files typecheck, pass `lint:tokens`, and pass the story-authoring
 contract test as-is (the two placeholder `variant`s exist so nothing is
 half-typed). Fill in the `TODO`s — the real markup, variant classes, and
 description — then run `pnpm check` and `pnpm test:unit` before shipping.
 
-The scaffolder's own logic (name/category validation, templates, and the
-barrel-insertion algorithm) lives in `scripts/lib/component-scaffold.mjs` and
-is unit-tested in `scripts/__tests__/component-scaffold.test.ts`; the CLI
-entry point is `scripts/new-component.mjs`.
+The scaffolder's own logic (name/category validation, the category→slug
+mapping, templates, and the barrel-insertion algorithm) lives in
+`scripts/lib/component-scaffold.mjs` and is unit-tested in
+`scripts/__tests__/component-scaffold.test.ts`; the CLI entry point is
+`scripts/new-component.mjs`.
 
 ### Configuring the scaffolder (a fork with a different layout)
 
@@ -414,6 +496,8 @@ intent, accessibility notes — ship an **optional** co-located MDX doc:
 
 ```
 src/<component>/<component>.mdx      # e.g. src/button/button.mdx
+# or, in the category-nested layout:
+src/<category-slug>/<component>/<component>.mdx
 ```
 
 - **Optional and co-located.** Same directory + base name as the component and
@@ -421,13 +505,16 @@ src/<component>/<component>.mdx      # e.g. src/button/button.mdx
   no `.mdx` renders no extra section on its detail page — nothing else to do.
 - **How it renders.** The doc is a
   [`componentDocs`](../../zfb.config.ts) content collection rooted at
-  `packages/ui/src` (`include: ["*/*.mdx"]`), so zfb's Rust pipeline compiles it
-  at build time. The host detail page (`pages/components/[slug].tsx`) looks up
-  the entry by deriving its slug from the story path
+  `packages/ui/src` (`include: ["**/*.mdx"]` — the globset `**` matches zero
+  or more directory components, so one pattern covers both the flat and
+  category-nested layouts), so zfb's Rust pipeline compiles it at build time.
+  The host detail page (`pages/components/[slug].tsx`) looks up the entry by
+  deriving its slug from the story path
   ([`src/styleguide/data/component-docs.ts`](../../src/styleguide/data/component-docs.ts))
   and renders `<entry.Content>` inside a `.zd-content` wrapper. Discovery is
-  therefore keyed off the **same** `packages/ui/src/<name>/` root the
-  `gen-sg-registry` codegen walks — no separate registration, no codegen change.
+  therefore keyed off the **same** `packages/ui/src/` root the `gen-sg-registry`
+  codegen walks, at whatever depth the story lives — no separate registration,
+  no codegen change.
 - **Authoring.** Start headings at `##` (the page title is already the `<h1>`).
   The shared doc typography (`.zd-content`), fenced code-block highlighting, and
   the admonition directives all work exactly as in a regular doc page:
