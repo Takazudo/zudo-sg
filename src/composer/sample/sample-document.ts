@@ -31,7 +31,7 @@ export function createSampleDocument(): CompositionDocument {
         id: "split-1",
         componentId: C.splitLayout,
         componentVersion: V,
-        props: { ratio: "50-50", gap: "lg" },
+        props: { ratio: "50/50", gap: "lg" },
         slots: {
           [S.splitLeft]: [
             {
@@ -83,7 +83,7 @@ export function createSampleDocument(): CompositionDocument {
               id: "cta-1",
               componentId: C.ctaButton,
               componentVersion: V,
-              props: { href: "/get-started", variant: "solid", arrow: true, children: "Get started" },
+              props: { href: "/get-started", variant: "primary", arrow: true, children: "Get started" },
               slots: {},
             },
           ],
