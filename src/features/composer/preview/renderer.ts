@@ -786,7 +786,7 @@ export function CompositionCanvas(props: CompositionCanvasProps): JSX.Element {
     // their only movement), and only when a drop sink is wired. `dragstart`
     // sets the transfer data SYNCHRONOUSLY and DEFERS the drag-state mutation.
     const grip =
-      onDropNode && !opaque
+      selected && onDropNode && !opaque
         ? h(
             "button",
             {
