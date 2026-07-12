@@ -26,24 +26,27 @@ import type { GuardFailure, MessagePoster, MessageTarget } from "./protocol";
 import { CompositionCanvas } from "./renderer";
 import { INITIAL_PREVIEW_STATE, type PreviewState } from "./snapshot-store";
 
-/** Human-readable copy for a message the guard threw away. */
-function rejectionMessage(reason: GuardFailure): string {
-  switch (reason) {
-    case "wrong-source":
-      return "A preview message arrived from an unexpected window and was ignored.";
-    case "wrong-origin":
-      return "A preview message arrived from an unexpected origin and was ignored.";
-    case "invalid-payload":
-      return "The Composer sent a message this preview could not understand. The last valid composition is still shown.";
-  }
+/**
+ * True when this document is actually embedded. `/composer/preview` is a real
+ * route, so it can be opened directly in a tab — and then `window.parent === window`,
+ * which means the page is its OWN expected message source and every message it
+ * posts to "the parent" is delivered straight back to itself. Without this
+ * guard, `emitReady()` → schema rejection (a `ready` is not a parent→preview
+ * message) → an error post → another rejection → … spins forever.
+ */
+function isFramed(): boolean {
+  return window.parent !== window;
 }
 
 export default function ComposerPreviewApp(): JSX.Element {
   const [state, setState] = useState<PreviewState>(INITIAL_PREVIEW_STATE);
   const [error, setError] = useState<string | null>(null);
+  const [framed] = useState(isFramed);
   const clientRef = useRef<PreviewClient | null>(null);
 
   useEffect(() => {
+    if (!framed) return;
+
     const hostWindow = window as unknown as MessageTarget;
     const parentWindow = window.parent as unknown as MessagePoster;
     const origin = window.location.origin;
@@ -62,11 +65,16 @@ export default function ComposerPreviewApp(): JSX.Element {
         // A valid snapshot means the bridge is healthy again.
         setError(null);
       },
-      onRejected: (reason, detail) => {
-        const message = rejectionMessage(reason);
+      onRejected: (reason: GuardFailure, detail) => {
+        // A wrong-source / wrong-origin message is just noise: ANY page in ANY
+        // tab can postMessage this window. Reacting to it would raise a false
+        // alarm and — worse — turn this preview into a postMessage amplifier.
+        // Drop it silently; only a malformed message from our OWN parent is a
+        // real bug worth surfacing.
+        if (reason !== "invalid-payload") return;
+        const message =
+          "The Composer sent a message this preview could not understand. The last valid composition is still shown.";
         setError(message);
-        // Surface it to the host too — a silently dropped message is the kind of
-        // bug that only shows up as "the canvas stopped updating".
         client.emitError(detail ? `${message} (${detail})` : message, true);
       },
     });
@@ -78,7 +86,7 @@ export default function ComposerPreviewApp(): JSX.Element {
       client.dispose();
       clientRef.current = null;
     };
-  }, []);
+  }, [framed]);
 
   // Mirror the host's active theme onto THIS document. `colors.css` keys
   // `color-scheme` off `:root[data-theme]`, which is what makes every
@@ -98,6 +106,16 @@ export default function ComposerPreviewApp(): JSX.Element {
   const onNodeError = useCallback((nodeId: string, message: string) => {
     clientRef.current?.emitError(`Node "${nodeId}" failed to render: ${message}`, true);
   }, []);
+
+  // Opened directly rather than embedded: there is no Composer to talk to, so
+  // say so instead of sitting on "Waiting for a composition…" forever.
+  if (!framed) {
+    return h(
+      "p",
+      { class: "zc-empty" },
+      "This is the Composer's preview canvas. It only renders inside the Composer.",
+    );
+  }
 
   const banner =
     error === null

@@ -70,9 +70,61 @@ export const previewSessionSchema = z
 // ── Composition document (wire schema) ──────────────────────────────────────
 
 /**
+ * Prop names a Composition node may NEVER carry.
+ *
+ * JSON-safety is not the same as safety. `dangerouslySetInnerHTML: { __html }`
+ * is perfectly JSON-safe, and several cohort components spread their rest props
+ * straight onto a DOM element (`ProseP` renders `<p {...rest} />`), so a
+ * document carrying that key would get raw HTML injected into a document that is
+ * SAME-ORIGIN with `/composer`. That is exactly the "nothing crossing this bridge
+ * is ever evaluated" invariant this protocol exists to hold, so the key is
+ * refused at the boundary rather than sanitized downstream.
+ *
+ * `key`/`ref` are Preact-reserved: `key` would hijack the renderer's own keying
+ * (the DOM-identity guarantee) and `ref` would hand a document out a live DOM
+ * handle. The prototype names are refused on principle — a JSON-parsed object
+ * can carry them as own properties.
+ *
+ * None of these are reachable from the authoring contract (#244): a Composer
+ * field is a scalar text/select/boolean/number/color prop, so no legitimate
+ * document can ever need one.
+ */
+export const RESERVED_PROP_KEYS: ReadonlySet<string> = new Set([
+  "dangerouslySetInnerHTML",
+  "key",
+  "ref",
+  "__proto__",
+  "constructor",
+  "prototype",
+]);
+
+/**
+ * Reject the reserved keys, then parse.
+ *
+ * The order is the whole point. The check runs on the RAW payload's own property
+ * names — not on a record zod has already built — because `result["__proto__"] = v`
+ * hits the prototype setter and silently vanishes, so a post-parse check would
+ * report a clean document while never having seen the key at all. Reading
+ * `Object.getOwnPropertyNames` off the raw value sees exactly what was sent.
+ */
+const nodePropsSchema = z
+  .unknown()
+  .superRefine((raw, ctx) => {
+    if (raw === null || typeof raw !== "object") return; // shape errors are the record's job
+    for (const key of Object.getOwnPropertyNames(raw)) {
+      if (!RESERVED_PROP_KEYS.has(key)) continue;
+      ctx.addIssue({
+        code: "custom",
+        message: `props may not contain the reserved key "${key}"`,
+      });
+    }
+  })
+  .pipe(z.record(z.string(), jsonValueSchema));
+
+/**
  * Wire-level zod schema for #245's `CompositionNode`. `.strict()` so a payload
- * carrying an extra key (a smuggled `component`, a stray `__proto__`-ish field,
- * a future-schema property) is REJECTED rather than silently forwarded into the
+ * carrying an extra key (a smuggled `component`, a stray `adapters` object, a
+ * future-schema property) is REJECTED rather than silently forwarded into the
  * renderer. The type annotation pins it to the model's own type, so the schema
  * cannot drift from `@/composer` without a compile error.
  */
@@ -82,7 +134,7 @@ export const compositionNodeSchema: z.ZodType<CompositionNode> = z.lazy(() =>
       id: z.string().min(1),
       componentId: z.string().min(1),
       componentVersion: z.number().int().nonnegative(),
-      props: z.record(z.string(), jsonValueSchema),
+      props: nodePropsSchema,
       slots: z.record(z.string(), z.array(compositionNodeSchema)),
     })
     .strict(),

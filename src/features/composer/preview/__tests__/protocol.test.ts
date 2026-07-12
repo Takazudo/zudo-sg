@@ -3,6 +3,7 @@ import { SAMPLE_DOCUMENT } from "@/composer";
 import {
   COMPOSER_PREVIEW_CHANNEL,
   COMPOSER_PREVIEW_PROTOCOL_VERSION,
+  RESERVED_PROP_KEYS,
   modeMessage,
   readParentToPreview,
   readPreviewToParent,
@@ -179,6 +180,56 @@ describe("readParentToPreview — the security gate", () => {
     for (const data of ["render", null, undefined, 42, []]) {
       expect(readParentToPreview(event(data), EXPECTED).ok).toBe(false);
     }
+  });
+
+  // JSON-safe is NOT the same as safe. `dangerouslySetInnerHTML` is perfectly
+  // JSON-safe, and cohort components spread their rest props onto real DOM nodes
+  // (ProseP renders `<p {...rest} />`) — inside a document that is SAME-ORIGIN
+  // with /composer. These keys are refused at the boundary.
+  it.each([...RESERVED_PROP_KEYS])("REJECTS a node prop named %s", (reserved) => {
+    const document = {
+      ...SAMPLE_DOCUMENT,
+      root: [
+        {
+          ...SAMPLE_DOCUMENT.root[0],
+          props: { ...SAMPLE_DOCUMENT.root[0]!.props, [reserved]: "x" },
+        },
+      ],
+    };
+    const result = readParentToPreview(
+      event({ ...renderMessage(0, SAMPLE_DOCUMENT, SESSION), document }),
+      EXPECTED,
+    );
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason).toBe("invalid-payload");
+  });
+
+  it("REJECTS a dangerouslySetInnerHTML payload nested deep in the tree", () => {
+    const document = {
+      ...SAMPLE_DOCUMENT,
+      root: [
+        {
+          ...SAMPLE_DOCUMENT.root[0]!,
+          slots: {
+            left: [
+              {
+                id: "evil-1",
+                componentId: "ui.prose-p",
+                componentVersion: 1,
+                props: { dangerouslySetInnerHTML: { __html: "<img src=x onerror=alert(1)>" } },
+                slots: {},
+              },
+            ],
+          },
+        },
+      ],
+    };
+    const result = readParentToPreview(
+      event({ ...renderMessage(0, SAMPLE_DOCUMENT, SESSION), document }),
+      EXPECTED,
+    );
+    expect(result.ok).toBe(false);
   });
 });
 

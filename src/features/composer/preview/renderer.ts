@@ -37,28 +37,62 @@ import { Component, Fragment, h } from "preact";
 import { useMemo } from "preact/hooks";
 import type { ComponentChildren, JSX } from "preact";
 import type {
+  ComponentManifest,
   CompositionDocument,
   CompositionNode,
   InsertionTarget,
+  JsonObject,
   NodeDiagnostic,
 } from "@/composer";
 import { VIRTUAL_ROOT_SLOT_ID, classifyNode, createManifest } from "@/composer";
 import type { ComposerEntry } from "@/styleguide/data/composer-registry";
 import { toManifestEntry } from "@/styleguide/data/composer-registry";
-import type { PreviewSession } from "./protocol";
+import { RESERVED_PROP_KEYS, type PreviewSession } from "./protocol";
 import { slotFlow, type SlotFlow } from "./slot-flow";
+
+/**
+ * One manifest per registry array, built once. `toManifestEntry` runs a zod
+ * validation per entry, and the whole cohort would otherwise be re-validated on
+ * every mount — which #254's ephemeral chooser preview pays repeatedly.
+ */
+const manifestCache = new WeakMap<readonly ComposerEntry[], ComponentManifest>();
+
+function manifestFor(entries: readonly ComposerEntry[]): ComponentManifest {
+  const cached = manifestCache.get(entries);
+  if (cached) return cached;
+  // #245's diagnostics run against the NORMALIZED manifest projection, not the
+  // raw definitions: `defineComposer` is an identity cast, so a leaf that
+  // declares no slots/fields/defaults leaves those properties `undefined` on the
+  // definition, while `toManifestEntry` fills them in. Feeding the raw
+  // definitions to `classifyNode` would throw on every leaf component.
+  const manifest = createManifest(entries.map(toManifestEntry));
+  manifestCache.set(entries, manifest);
+  return manifest;
+}
+
+/**
+ * Drop any prop the protocol reserves before it can reach a real component.
+ *
+ * The bridge already REFUSES a document carrying one of these
+ * (`compositionNodeSchema`), so this is defence in depth for the paths that do
+ * not cross the bridge — a host that renders a locally-built document, a future
+ * caller, a test. `dangerouslySetInnerHTML` is the one that matters: several
+ * cohort components spread their rest props onto a DOM element.
+ */
+function safeProps(props: JsonObject): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const [name, value] of Object.entries(props)) {
+    if (RESERVED_PROP_KEYS.has(name)) continue;
+    out[name] = value;
+  }
+  return out;
+}
 
 export interface CompositionCanvasProps {
   document: CompositionDocument;
   /** The TRUSTED runtime registry — retains real component functions. */
   entries: readonly ComposerEntry[];
   session: PreviewSession;
-  /**
-   * Revision of the snapshot being drawn. Used ONLY to clear a node's error
-   * boundary when a newer document arrives, so fixing the offending prop in the
-   * inspector retries the component instead of leaving it stuck on its error.
-   */
-  revision?: number;
   /** A node (or the empty canvas, `null`) was activated in Edit mode. */
   onSelect: (nodeId: string | null) => void;
   /** An insert point was activated. Carries #245's insert-at-index target. */
@@ -73,20 +107,14 @@ export interface CompositionCanvasProps {
  * addable index of EVERY declared slot.
  */
 export function CompositionCanvas(props: CompositionCanvasProps): JSX.Element {
-  const { document, entries, session, revision, onSelect, onRequestAdd, onNodeError } = props;
+  const { document, entries, session, onSelect, onRequestAdd, onNodeError } = props;
   const edit = session.mode === "edit";
 
-  // #245's diagnostics run against the NORMALIZED manifest projection, not the
-  // raw definitions: `defineComposer` is an identity cast, so a leaf that
-  // declares no slots/fields/defaults leaves those properties `undefined` on the
-  // definition, while `toManifestEntry` fills them in. Feeding the raw
-  // definitions to `classifyNode` would throw on every leaf component.
-  const { entryById, manifest } = useMemo(() => {
-    return {
-      entryById: new Map(entries.map((entry) => [entry.componentId, entry])),
-      manifest: createManifest(entries.map(toManifestEntry)),
-    };
-  }, [entries]);
+  const entryById = useMemo(
+    () => new Map(entries.map((entry) => [entry.componentId, entry])),
+    [entries],
+  );
+  const manifest = manifestFor(entries);
 
   /**
    * In Edit mode the canvas swallows every click in the CAPTURE phase before it
@@ -115,6 +143,24 @@ export function CompositionCanvas(props: CompositionCanvasProps): JSX.Element {
     swallow(event);
   };
 
+  /**
+   * PREVIEW mode: rendered controls activate normally — the event is NOT stopped,
+   * so a component's own handlers run, buttons work, disclosures toggle.
+   *
+   * The one thing that must not happen is the preview NAVIGATING ITSELF away.
+   * This document is the live runtime the parent drives; if an authored `<a href>`
+   * unloads it, the parent has no way to bring it back, and "return to Edit with
+   * state intact" (the fixed walkthrough) silently stops being true. So a link
+   * that would replace this document has its default suppressed — and only that.
+   */
+  const onPreviewClickCapture = (event: MouseEvent): void => {
+    const anchor = (event.target as Element | null)?.closest("a[href]");
+    if (!anchor) return;
+    const href = anchor.getAttribute("href") ?? "";
+    if (href === "" || href.startsWith("#")) return; // in-page: harmless
+    event.preventDefault();
+  };
+
   function insertPoint(
     target: InsertionTarget,
     label: string,
@@ -129,7 +175,10 @@ export function CompositionCanvas(props: CompositionCanvasProps): JSX.Element {
         type: "button",
         class: `zc-insert zc-insert--${flow}${empty ? " zc-insert--empty" : ""}`,
         "data-zc-affordance": "",
-        "data-zc-insert": `${target.parentId ?? VIRTUAL_ROOT_SLOT_ID}:${target.slotId}:${target.index}`,
+        // Presentational/debug hook only — the click closes over the real target
+        // object. Empty parent segment == the virtual root (a real node id is
+        // never empty), so it cannot collide with a node literally named "root".
+        "data-zc-insert": `${target.parentId ?? ""}:${target.slotId}:${target.index}`,
         "aria-label": `Add a component to ${position}`,
         onClick: () => onRequestAdd(target),
       },
@@ -171,18 +220,22 @@ export function CompositionCanvas(props: CompositionCanvasProps): JSX.Element {
   function renderComponent(node: CompositionNode, entry: ComposerEntry): ComponentChildren {
     const definition = entry.definition;
     // Defaults first, then the document's own props — the document always wins.
-    // (`defaults`/`slots` are optional on a raw definition; see the manifest note above.)
-    const componentProps: Record<string, unknown> = { ...(definition.defaults ?? {}), ...node.props };
+    // (`defaults`/`slots` are optional on a raw definition; see `manifestFor`.)
+    const componentProps: Record<string, unknown> = {
+      ...(definition.defaults ?? {}),
+      ...safeProps(node.props),
+    };
     const flow = slotFlow(node);
 
     for (const slot of definition.slots ?? []) {
       const children = node.slots[slot.id] ?? [];
       const single = slot.cardinality === "single";
       const rendered = renderSlotChildren(children, node.id, slot.id, slot.label, flow, single);
-      // A `single` slot takes the child itself (not a 1-element array) so a
-      // component that expects one VNode in a named prop gets exactly that.
-      componentProps[slot.prop] =
-        single && rendered.length === 1 ? rendered[0] : rendered;
+      // A `single` slot takes the child ITSELF (not a 1-element array) so a
+      // component that expects one VNode in a named prop gets exactly that —
+      // and `undefined` when empty, never a truthy `[]` that would defeat a
+      // component's own `left ?? fallback`.
+      componentProps[slot.prop] = single ? rendered[0] : rendered;
     }
 
     return definition.adapters?.render
@@ -255,7 +308,10 @@ export function CompositionCanvas(props: CompositionCanvasProps): JSX.Element {
           {
             nodeId: node.id,
             componentId: node.componentId,
-            resetToken: revision ?? 0,
+            // The DOCUMENT object, not the revision: a session-only message
+            // (selection, theme, mode) keeps the same document reference, so
+            // clicking around does not churn every latched error boundary.
+            resetToken: document,
             onError: onNodeError,
           },
           body,
@@ -270,7 +326,7 @@ export function CompositionCanvas(props: CompositionCanvasProps): JSX.Element {
       class: "zc-canvas",
       "data-composer-canvas": "",
       "data-mode": session.mode,
-      onClickCapture: edit ? onClickCapture : undefined,
+      onClickCapture: edit ? onClickCapture : onPreviewClickCapture,
       onKeyDownCapture: edit ? onKeyDownCapture : undefined,
     },
     renderSlotChildren(
@@ -290,14 +346,14 @@ interface NodeErrorBoundaryProps {
   nodeId: string;
   componentId: string;
   /** Changing this clears a latched error — see `getDerivedStateFromProps`. */
-  resetToken: number;
+  resetToken: unknown;
   onError?: (nodeId: string, message: string) => void;
   children?: ComponentChildren;
 }
 
 interface NodeErrorBoundaryState {
   error: string | null;
-  token: number | null;
+  token: unknown;
 }
 
 /**
@@ -309,13 +365,13 @@ interface NodeErrorBoundaryState {
  * revision arrives.
  */
 class NodeErrorBoundary extends Component<NodeErrorBoundaryProps, NodeErrorBoundaryState> {
-  state: NodeErrorBoundaryState = { error: null, token: null };
+  state: NodeErrorBoundaryState = { error: null, token: undefined };
 
   /**
-   * Clears a latched error whenever a NEWER snapshot arrives, without remounting
+   * Clears a latched error whenever a NEW DOCUMENT arrives, without remounting
    * the subtree — so fixing the offending prop in the inspector retries the
-   * component, while an ordinary re-render (hover, selection) leaves both the
-   * error state AND the component's DOM node untouched.
+   * component, while an ordinary re-render (hover, selection, theme) leaves both
+   * the error state AND the component's DOM node untouched.
    */
   static getDerivedStateFromProps(
     props: NodeErrorBoundaryProps,

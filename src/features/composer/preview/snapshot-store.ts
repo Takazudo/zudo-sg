@@ -46,9 +46,21 @@ export function applyInbound(
 ): PreviewState | null {
   if (message.revision <= state.revision) return null;
 
-  if (message.type === "render") {
-    return { revision: message.revision, document: message.document, session: message.session };
+  switch (message.type) {
+    case "render":
+      return { revision: message.revision, document: message.document, session: message.session };
+    case "mode":
+      // Session-only — the document on screen is kept as-is.
+      return { revision: message.revision, document: state.document, session: message.session };
+    default: {
+      // Compile-time exhaustiveness: appending a member to
+      // PARENT_TO_PREVIEW_MEMBERS (waves 7-9) without adding a case here is a
+      // TYPE ERROR. Fails CLOSED — an unhandled type is dropped rather than
+      // mistaken for a session update (which would bump the revision and make
+      // the next legitimate snapshot look stale).
+      const unhandled: never = message;
+      void unhandled;
+      return null;
+    }
   }
-  // "mode": session-only — the document on screen is kept as-is.
-  return { revision: message.revision, document: state.document, session: message.session };
 }

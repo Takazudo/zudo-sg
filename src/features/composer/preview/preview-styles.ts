@@ -3,20 +3,27 @@
 // ── Why a string, inlined into the document's own <head> ─────────────────────
 // zfb builds ONE authored global stylesheet (it resolves `src/styles/global.css`
 // and emits a single hashed bundle every page links); a page that imports some
-// OTHER `.css` file does NOT get a second bundle. The styleguide's equivalent
-// scope solves that by living inside the one bundle
-// (`src/styles/global.css` @imports `src/styles/preview.css`) — but
-// `src/styles/global.css` is owned by the parallel #247 route-shell issue, and
-// `src/features/composer/**` is not in its Tailwind `@source` list either.
+// OTHER `.css` file does NOT get a second bundle. So a feature-local
+// `composer-preview.css` would need an `@import` added to `src/styles/global.css`
+// — a file the parallel #247 route-shell issue owns exclusively — and the
+// chrome classes below would also need `src/features/composer/**` added to that
+// file's Tailwind `@source` list.
 //
-// So this runtime carries its own CSS as a string and the route inlines it into
-// the preview document's `<head>`. It is therefore:
-//   - guaranteed present inside the iframe, with no global-stylesheet edit;
+// Rather than take a cross-ownership edit, this runtime carries its own CSS as a
+// string and the route inlines it into the preview document's `<head>`. It is
+// therefore:
+//   - guaranteed present inside the iframe, with no shared-stylesheet edit;
 //   - scoped to `html[data-composer-preview-doc]`, which ONLY this document
 //     carries, so the host chrome is provably unaffected;
 //   - free of Tailwind utilities, so it needs no `@source` registration.
-// (Wave-5 integration may fold it into the bundle later; nothing here depends
-// on that.)
+//
+// The palette half below IS a deliberate near-duplicate of the styleguide's
+// `html[data-sg-preview-doc]` block in `src/styles/preview.css` (same tokens,
+// same values, different selector) — that file is already in the bundle, so the
+// long-term dedup for the integration wave is to add this selector to it and
+// delete the block here. Until then the duplication is held honest by
+// `__tests__/preview-styles.test.ts`, which DERIVES the expected token/value set
+// from `preview.css` and fails the moment the two drift.
 //
 // ── Part 1: palette restoration ─────────────────────────────────────────────
 // The single global bundle's host `@theme` block RE-ASSERTS the overlapping

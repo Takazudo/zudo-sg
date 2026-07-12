@@ -6,30 +6,49 @@
 //      the restored `--color-*` tokens resolve on the root; strip the attribute
 //      and they are gone.
 
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { COMPOSER_PREVIEW_CSS, COMPOSER_PREVIEW_DOC_ATTR } from "../preview-styles";
 
-/** The `--color-*` names the host `@theme` re-asserts, which must be restored. */
-const RESTORED_TOKENS = [
-  "--color-bg",
-  "--color-surface",
-  "--color-fg",
-  "--color-muted",
-  "--color-accent",
-  "--color-accent-hover",
-  "--color-success",
-  "--color-danger",
-  "--color-warning",
-  "--color-info",
-];
+/**
+ * The SOURCE OF TRUTH for which semantic tokens a chrome-free preview document
+ * has to restore: the styleguide's own preview scope
+ * (`html[data-sg-preview-doc]`), which solves the identical problem for
+ * `/components/preview`.
+ *
+ * Deriving the expected set from that file rather than hand-copying it is the
+ * whole point. The set is not arbitrary — it is exactly the collision set of
+ * `--color-*` names the host `@theme` in `global.css` re-asserts to `--zd-*`
+ * values the preview document does not have. When that collision set changes,
+ * `preview.css` gets updated (it is the styleguide's live scope), and this test
+ * then FAILS until the Composer's scope is updated too. A hand-copied list here
+ * could not catch that — it would drift in silence and the previewed components
+ * would quietly lose a color.
+ */
+const PREVIEW_CSS_PATH = resolve(__dirname, "../../../../styles/preview.css");
 
-/** The palette block: everything between the scoped selector and its `}`. */
+function declaredTokens(block: string): string[] {
+  return [...block.matchAll(/^\s*(--[\w-]+)\s*:/gm)].map((match) => match[1]!).sort();
+}
+
+/** Pull a selector's declaration block out of a stylesheet. */
+function blockFor(css: string, selector: string): string {
+  const start = css.indexOf(`${selector} {`);
+  expect(start, `expected a "${selector}" block`).toBeGreaterThanOrEqual(0);
+  const open = css.indexOf("{", start);
+  const end = css.indexOf("}", open);
+  return css.slice(open + 1, end);
+}
+
+/** The Composer preview's palette block. */
 function paletteBlock(): string {
-  const selector = `html[${COMPOSER_PREVIEW_DOC_ATTR}] {`;
-  const start = COMPOSER_PREVIEW_CSS.indexOf(selector);
-  expect(start, "the scoped palette block must exist").toBeGreaterThanOrEqual(0);
-  const end = COMPOSER_PREVIEW_CSS.indexOf("}", start);
-  return COMPOSER_PREVIEW_CSS.slice(start + selector.length, end);
+  return blockFor(COMPOSER_PREVIEW_CSS, `html[${COMPOSER_PREVIEW_DOC_ATTR}]`);
+}
+
+/** The styleguide preview's palette block — the source of truth. */
+function styleguidePaletteBlock(): string {
+  return blockFor(readFileSync(PREVIEW_CSS_PATH, "utf8"), "html[data-sg-preview-doc]");
 }
 
 afterEach(() => {
@@ -40,11 +59,23 @@ afterEach(() => {
 });
 
 describe("preview palette scope — structure", () => {
-  it("restores every re-asserted semantic color token", () => {
-    const block = paletteBlock();
-    for (const token of RESTORED_TOKENS) {
-      expect(block, `${token} must be restored`).toContain(`${token}:`);
-    }
+  it("restores EXACTLY the tokens the styleguide's preview scope restores", () => {
+    // The drift guard. If the host `@theme`'s re-assertion set ever grows and
+    // `src/styles/preview.css` is updated for it, this fails until the Composer
+    // preview's scope is updated to match — instead of the previewed components
+    // silently losing a color inside the Composer only.
+    expect(declaredTokens(paletteBlock())).toEqual(declaredTokens(styleguidePaletteBlock()));
+  });
+
+  it("restores each token to the same VALUE the styleguide scope uses", () => {
+    // Same tokens is not enough — they must resolve to the same palette rungs.
+    const normalize = (block: string): string[] =>
+      block
+        .split("\n")
+        .map((line) => line.trim().replace(/\s+/g, " "))
+        .filter((line) => line.startsWith("--"))
+        .sort();
+    expect(normalize(paletteBlock())).toEqual(normalize(styleguidePaletteBlock()));
   });
 
   it("restores them from the canonical --palette-* rungs, not hard-coded colors", () => {
@@ -52,7 +83,9 @@ describe("preview palette scope — structure", () => {
     expect(block).toContain("var(--palette-base-0)");
     expect(block).toContain("var(--palette-accent-2)");
     // light-dark() is what makes the theme switch work off `color-scheme`.
-    expect(block.match(/light-dark\(/g)?.length).toBe(RESTORED_TOKENS.length);
+    const tokenCount = declaredTokens(block).length;
+    expect(tokenCount).toBeGreaterThan(0);
+    expect(block.match(/light-dark\(/g)?.length).toBe(tokenCount);
   });
 
   it("declares NOTHING outside the preview document's scope — the host is untouched", () => {

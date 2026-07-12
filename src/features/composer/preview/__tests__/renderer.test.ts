@@ -32,7 +32,6 @@ function draw(document: CompositionDocument, overrides: Partial<CompositionCanva
     document,
     entries: composerEntries,
     session: EDIT,
-    revision: 0,
     onSelect: vi.fn(),
     onRequestAdd: vi.fn(),
     ...overrides,
@@ -127,8 +126,8 @@ describe("insert points — one at EVERY addable index of EVERY declared slot", 
     const targets = insertTargets(container);
 
     // Virtual root (1 child) → indices 0,1.
-    expect(targets).toContain("root:root:0");
-    expect(targets).toContain("root:root:1");
+    expect(targets).toContain(":root:0");
+    expect(targets).toContain(":root:1");
     // SplitLayout `right` (2 children) → indices 0,1,2.
     expect(targets).toContain("split-1:right:0");
     expect(targets).toContain("split-1:right:1");
@@ -163,7 +162,7 @@ describe("insert points — one at EVERY addable index of EVERY declared slot", 
       index: 1,
     });
 
-    fireEvent.click(container.querySelector('[data-zc-insert="root:root:0"]')!);
+    fireEvent.click(container.querySelector('[data-zc-insert=":root:0"]')!);
     expect(onRequestAdd).toHaveBeenLastCalledWith({ parentId: null, slotId: "root", index: 0 });
   });
 
@@ -242,19 +241,36 @@ describe("opaque nodes", () => {
 });
 
 describe("Edit vs Preview action behaviour", () => {
-  function clickAnchor(container: HTMLElement): { event: MouseEvent; anchor: HTMLAnchorElement } {
+  /**
+   * Dispatch a real click on the rendered CtaButton's `<a>`, with a listener
+   * attached to the anchor itself. `reached` is the honest test of "did this
+   * control ACTIVATE": in Edit the event must never get there at all; in Preview
+   * it must.
+   */
+  function clickAnchor(container: HTMLElement): {
+    event: MouseEvent;
+    anchor: HTMLAnchorElement;
+    reached: boolean;
+  } {
     const anchor = container.querySelector('[data-zc-node-id="cta-1"] a') as HTMLAnchorElement;
+    let reached = false;
+    anchor.addEventListener("click", () => {
+      reached = true;
+    });
     const event = new MouseEvent("click", { bubbles: true, cancelable: true });
     anchor.dispatchEvent(event);
-    return { event, anchor };
+    return { event, anchor, reached };
   }
 
   it("EDIT: a rendered link does NOT activate — the click selects its node instead", () => {
     const onSelect = vi.fn();
     const { container } = draw(SPLIT, { onSelect });
-    const { event, anchor } = clickAnchor(container);
+    const { event, anchor, reached } = clickAnchor(container);
 
     expect(anchor.getAttribute("href")).toBe("/get-started");
+    // Swallowed in the capture phase: it never reaches the anchor's own handlers,
+    // and its default (navigation) is cancelled.
+    expect(reached).toBe(false);
     expect(event.defaultPrevented).toBe(true);
     expect(onSelect).toHaveBeenCalledWith("cta-1");
   });
@@ -271,7 +287,7 @@ describe("Edit vs Preview action behaviour", () => {
     const onRequestAdd = vi.fn();
     const onSelect = vi.fn();
     const { container } = draw(SPLIT, { onRequestAdd, onSelect });
-    fireEvent.click(container.querySelector('[data-zc-insert="root:root:0"]')!);
+    fireEvent.click(container.querySelector('[data-zc-insert=":root:0"]')!);
     expect(onRequestAdd).toHaveBeenCalledTimes(1);
     expect(onSelect).not.toHaveBeenCalled();
   });
@@ -286,10 +302,26 @@ describe("Edit vs Preview action behaviour", () => {
   it("PREVIEW: the SAME link activates normally and selection is not emitted", () => {
     const onSelect = vi.fn();
     const { container } = draw(SPLIT, { session: PREVIEW, onSelect });
-    const { event } = clickAnchor(container);
+    const { event, reached } = clickAnchor(container);
 
-    expect(event.defaultPrevented).toBe(false);
+    // The click REACHES the control — ordinary interaction works on the same
+    // component DOM, and no editor selection is emitted.
+    expect(reached).toBe(true);
     expect(onSelect).not.toHaveBeenCalled();
+    // …but the link's default is still suppressed: navigating THIS document away
+    // would unload the live preview runtime the Composer is driving, and nothing
+    // could bring it back — "return to Edit with state intact" would silently
+    // stop being true.
+    expect(event.defaultPrevented).toBe(true);
+  });
+
+  it("PREVIEW: a plain in-page anchor is left completely alone", () => {
+    const document = doc([node("cta-1", "ui.cta-button", { href: "#section", children: "Jump" })]);
+    const { container } = draw(document, { session: PREVIEW });
+    const anchor = container.querySelector("a")!;
+    const event = new MouseEvent("click", { bubbles: true, cancelable: true });
+    anchor.dispatchEvent(event);
+    expect(event.defaultPrevented).toBe(false);
   });
 
   it("PREVIEW: every editor decoration is gone from the DOM", () => {
@@ -360,6 +392,35 @@ describe("DOM identity stability (hard acceptance criterion)", () => {
     const [first, second] = [...wrapper.children];
     expect(first!.className).toBe("zc-chrome");
     expect(second!.tagName).toBe("P");
+  });
+});
+
+describe("reserved props never reach a real component", () => {
+  // ProseP renders `<p {...rest} />`. Without the guard, a document carrying
+  // `dangerouslySetInnerHTML` would inject raw HTML into a document that is
+  // SAME-ORIGIN with /composer. The bridge refuses such a document outright
+  // (protocol.test.ts); this is the renderer's own defence in depth, for the
+  // paths that do not cross the bridge.
+  it("strips dangerouslySetInnerHTML", () => {
+    const document = doc([
+      node("prose-1", "ui.prose-p", {
+        children: "safe text",
+        dangerouslySetInnerHTML: { __html: "<img src=x onerror='alert(1)'>" },
+      }),
+    ]);
+    const { container } = draw(document, { session: PREVIEW });
+    const paragraph = container.querySelector('[data-zc-node-id="prose-1"] > p')!;
+    expect(paragraph.querySelector("img")).toBeNull();
+    expect(paragraph.innerHTML).not.toContain("onerror");
+    expect(paragraph.textContent).toBe("safe text");
+  });
+
+  it("strips a `key` prop, which would hijack the renderer's own keying", () => {
+    const document = doc([
+      node("prose-1", "ui.prose-p", { children: "text", key: "hijacked" }),
+    ]);
+    const { container } = draw(document, { session: PREVIEW });
+    expect(container.querySelector('[data-zc-node-id="prose-1"] > p')).not.toBeNull();
   });
 });
 

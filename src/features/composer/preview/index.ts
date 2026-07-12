@@ -6,7 +6,7 @@
 //   const location = buildComposerPreviewUrl();              // base-aware URL + exact origin
 //   <iframe ref={ref} {...composerPreviewFrameProps(location)} />
 //   const bridge = createComposerPreviewBridge({
-//     frame: ref.current, targetOrigin: location.targetOrigin, hostWindow: window,
+//     frame: ref.current, location, hostWindow: window,
 //     onSelect, onRequestAdd, onError,
 //   });
 //   bridge.render(document, { mode, theme, selectedId });    // revision minted here
@@ -16,8 +16,10 @@
 // The bridge is INSTANCE-SCOPED: two live previews (canvas + chooser) keep
 // separate readiness, revision counters, and retained snapshots.
 //
-// The IFRAME-SIDE modules (`preview-app`, `renderer`, `client`, `preview-styles`)
-// are imported by `pages/composer/preview.tsx`, not by the parent app.
+// The IFRAME-SIDE modules (`preview-app`, `renderer`, `client`, `snapshot-store`,
+// `preview-styles`) are imported by `pages/composer/preview.tsx`, not from here.
+// Only their TYPES are re-exported below, for hosts that want to name the
+// session/state they are driving.
 
 export { COMPOSER_PREVIEW_ROUTE_PATH, COMPOSER_PREVIEW_IFRAME_TITLE } from "./route";
 
@@ -37,6 +39,7 @@ export type {
 export {
   COMPOSER_PREVIEW_CHANNEL,
   COMPOSER_PREVIEW_PROTOCOL_VERSION,
+  RESERVED_PROP_KEYS,
   compositionDocumentSchema,
   compositionNodeSchema,
   insertionTargetSchema,
@@ -71,5 +74,5 @@ export type {
   SelectMessage,
 } from "./protocol";
 
+// Type only — the store itself runs inside the iframe.
 export type { PreviewState } from "./snapshot-store";
-export { INITIAL_PREVIEW_STATE, applyInbound } from "./snapshot-store";

@@ -18,6 +18,7 @@ import {
 } from "../protocol";
 
 const ORIGIN = "https://sg.example.com";
+const LOCATION = { src: "/composer/preview", targetOrigin: ORIGIN };
 const EDIT: PreviewSession = { mode: "edit", theme: "light", selectedId: null };
 
 /** A fake host window: real listener plumbing, no DOM, no MessageEvent quirks. */
@@ -94,7 +95,7 @@ describe("createComposerPreviewBridge — readiness + replay", () => {
   function bridgeWith(overrides: Record<string, unknown> = {}) {
     return createComposerPreviewBridge({
       frame: iframe.frame,
-      targetOrigin: ORIGIN,
+      location: LOCATION,
       hostWindow: host,
       ...overrides,
     });
@@ -153,7 +154,7 @@ describe("createComposerPreviewBridge — readiness + replay", () => {
 
     const second = createSampleDocument();
     second.name = "second";
-    bridge.render(second, EDIT);
+    const lastSent = bridge.render(second, EDIT);
 
     iframe.posts.length = 0;
 
@@ -163,8 +164,10 @@ describe("createComposerPreviewBridge — readiness + replay", () => {
     expect(iframe.posts).toHaveLength(1);
     const replayed = iframe.posts[0]!.message as PostedRender;
     expect(replayed.document.name).toBe("second");
-    // The replay reuses the snapshot's own revision; a freshly booted document
-    // starts at -1 and accepts it (see snapshot-store.test.ts).
+    // The replay mints a FRESH revision — strictly newer than anything the
+    // (possibly reloaded) iframe can already have applied. See
+    // reload-replay.test.ts for why that is load-bearing, not cosmetic.
+    expect(replayed.revision).toBeGreaterThan(lastSent);
     expect(replayed.revision).toBe(bridge.revision);
   });
 
@@ -202,7 +205,7 @@ describe("createComposerPreviewBridge — inbound guard", () => {
     const onError = vi.fn();
     createComposerPreviewBridge({
       frame: iframe.frame,
-      targetOrigin: ORIGIN,
+      location: LOCATION,
       hostWindow: host,
       onSelect,
       onRequestAdd,
@@ -234,7 +237,7 @@ describe("createComposerPreviewBridge — inbound guard", () => {
     const onRejected = vi.fn();
     const bridge = createComposerPreviewBridge({
       frame: iframe.frame,
-      targetOrigin: ORIGIN,
+      location: LOCATION,
       hostWindow: host,
       onSelect,
       onReady,
@@ -261,7 +264,7 @@ describe("createComposerPreviewBridge — inbound guard", () => {
     const onReady = vi.fn();
     const bridge = createComposerPreviewBridge({
       frame: iframe.frame,
-      targetOrigin: ORIGIN,
+      location: LOCATION,
       hostWindow: host,
       onReady,
     });
@@ -280,12 +283,12 @@ describe("createComposerPreviewBridge — instance scoping (wave 6 / #254)", () 
 
     const canvasBridge = createComposerPreviewBridge({
       frame: canvas.frame,
-      targetOrigin: ORIGIN,
+      location: LOCATION,
       hostWindow: host,
     });
     const chooserBridge = createComposerPreviewBridge({
       frame: chooser.frame,
-      targetOrigin: ORIGIN,
+      location: LOCATION,
       hostWindow: host,
     });
 
@@ -320,12 +323,12 @@ describe("createComposerPreviewBridge — instance scoping (wave 6 / #254)", () 
     const b = fakeFrame();
     const bridgeA = createComposerPreviewBridge({
       frame: a.frame,
-      targetOrigin: ORIGIN,
+      location: LOCATION,
       hostWindow: host,
     });
     const bridgeB = createComposerPreviewBridge({
       frame: b.frame,
-      targetOrigin: ORIGIN,
+      location: LOCATION,
       hostWindow: host,
     });
 

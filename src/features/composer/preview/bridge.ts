@@ -10,15 +10,22 @@
 // desynchronised by the other's revisions.
 //
 // ── Revision + replay contract ───────────────────────────────────────────────
-// - Every `render()` / `updateSession()` mints the NEXT revision (monotonic).
+// - Every outbound message mints the NEXT revision (strictly monotonic).
 // - The newest snapshot is always retained. If the iframe is not ready yet, the
 //   snapshot is held, not queued: a second `render()` REPLACES the first, so an
 //   older document can never be delivered after a newer one.
 // - On `ready` (first load, a late load, or a RELOAD) the bridge replays ONLY
-//   the retained newest snapshot, at its existing revision. A freshly loaded
-//   document starts at revision `-1` and accepts it; a still-live document that
-//   re-announced `ready` has already applied that revision and ignores it. Both
-//   outcomes are correct, and neither can resurrect an older document.
+//   the retained newest snapshot, at a FRESH revision.
+//
+//   The fresh revision is load-bearing, not cosmetic. A reload does not reset
+//   `ready` on this side (the bridge cannot observe the navigation), so between
+//   the reload and the new `ready` the parent may still post — e.g. a theme
+//   toggle sends a document-less `mode` message, which the freshly booted iframe
+//   accepts and which advances ITS revision to the retained one. Replaying at
+//   the retained (now equal) revision would then be rejected as stale by the
+//   iframe's `revision > current` guard, and the preview would sit blank
+//   forever. Minting a new revision for the replay makes it strictly newer than
+//   anything the iframe can already have seen.
 //
 // ── Origin contract ──────────────────────────────────────────────────────────
 // `targetOrigin` is DERIVED from the resolved iframe URL and used verbatim on
@@ -102,11 +109,15 @@ export interface PreviewFrameLike {
 export interface ComposerPreviewBridgeOptions {
   /** The iframe. Its `contentWindow` is BOTH the post target and the only source trusted. */
   frame: PreviewFrameLike;
-  /** From `buildComposerPreviewUrl(...).targetOrigin`. */
-  targetOrigin: string;
+  /**
+   * The resolved location from `buildComposerPreviewUrl()`. Taken whole rather
+   * than as a loose `targetOrigin` string, so the origin the bridge posts to is
+   * always the one the iframe's `src` actually resolved to — they cannot drift.
+   */
+  location: ComposerPreviewLocation;
   /** Window hosting the `message` listener — normally the parent `window`. */
   hostWindow: MessageTarget;
-  /** Origin every inbound message must carry. Defaults to `targetOrigin`. */
+  /** Origin every inbound message must carry. Defaults to the location's origin. */
   expectedOrigin?: string;
 
   onReady?: () => void;
@@ -138,7 +149,8 @@ interface Retained {
 export function createComposerPreviewBridge(
   options: ComposerPreviewBridgeOptions,
 ): ComposerPreviewBridge {
-  const { frame, targetOrigin, hostWindow } = options;
+  const { frame, location, hostWindow } = options;
+  const { targetOrigin } = location;
   const expectedOrigin = options.expectedOrigin ?? targetOrigin;
 
   // ── per-instance state ────────────────────────────────────────────────────
@@ -151,18 +163,29 @@ export function createComposerPreviewBridge(
 
   const post = (message: unknown): void => {
     // `contentWindow` is read at send time, not captured: it is null before the
-    // iframe attaches and is REPLACED on reload.
+    // iframe attaches, and it is the window a reload replaces the contents of.
     frame.contentWindow?.postMessage(message, targetOrigin);
   };
 
-  /** Send the retained snapshot as-is (same revision) — the replay path. */
-  const flush = (): void => {
+  /** Send the retained snapshot. Always at its CURRENT revision. */
+  const send = (): void => {
     if (!ready || !retained) return;
-    if (retained.document) {
-      post(renderMessage(retained.revision, retained.document, retained.session));
-    } else {
-      post(modeMessage(retained.revision, retained.session));
-    }
+    post(
+      retained.document
+        ? renderMessage(retained.revision, retained.document, retained.session)
+        : modeMessage(retained.revision, retained.session),
+    );
+  };
+
+  /**
+   * Answer a `ready`: replay ONLY the newest snapshot, at a FRESH revision so it
+   * is strictly newer than anything the (possibly reloaded) iframe already
+   * applied. See the revision/replay contract in the module header.
+   */
+  const replay = (): void => {
+    if (!retained) return;
+    retained = { ...retained, revision: nextRevision() };
+    send();
   };
 
   const onMessage = (event: MessageEventLike): void => {
@@ -180,8 +203,7 @@ export function createComposerPreviewBridge(
       case "ready":
         ready = true;
         options.onReady?.();
-        // Late load / reload: replay ONLY the newest snapshot.
-        flush();
+        replay();
         return;
       case "select":
         options.onSelect?.(message.nodeId, message.revision);
@@ -192,6 +214,18 @@ export function createComposerPreviewBridge(
       case "error":
         options.onError?.(message.message, message.recoverable, message.revision);
         return;
+      default: {
+        // Compile-time exhaustiveness: appending a member to
+        // PREVIEW_TO_PARENT_MEMBERS (waves 7-9) without adding a case here is a
+        // TYPE ERROR, not a silently dropped message. At runtime this is
+        // unreachable — zod already rejected anything not in the union.
+        const unhandled: never = message;
+        options.onRejected?.(
+          "invalid-payload",
+          `unhandled message type: ${String((unhandled as { type?: unknown }).type)}`,
+        );
+        return;
+      }
     }
   };
 
@@ -200,7 +234,7 @@ export function createComposerPreviewBridge(
   return {
     render(document, session) {
       retained = { document, session, revision: nextRevision() };
-      flush();
+      send();
       return retained.revision;
     },
     updateSession(session) {
@@ -209,10 +243,9 @@ export function createComposerPreviewBridge(
         session,
         revision: nextRevision(),
       };
-      if (ready) {
-        // Session-only: no need to resend the document.
-        post(modeMessage(retained.revision, session));
-      }
+      // Session-only: no need to resend the document to a live iframe. If the
+      // iframe is mid-reload this post is lost — the `ready` replay covers it.
+      if (ready) post(modeMessage(retained.revision, session));
       return retained.revision;
     },
     get ready() {
