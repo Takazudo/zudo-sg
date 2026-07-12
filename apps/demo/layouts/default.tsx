@@ -87,6 +87,19 @@ function buildSwitcherItems(): BrandSwitcherItem[] {
  * hardcode their shared 4rem header height directly in both components
  * rather than reading a shared `--gh-h` custom property, so this layout
  * doesn't define one — there's nothing that would consume it.
+ *
+ * `data-zfb-transition-persist` marker `<div>`s wrap SiteHeader/SiteNav so
+ * styles/transitions.css can carve them out of the SPA's View Transition
+ * root snapshot (persist across navigation instead of crossfading with the
+ * main content). SiteHeader/SiteNav don't accept an arbitrary data-attribute
+ * prop, hence the wrapper rather than setting it on the component directly.
+ * The header wrapper is a plain block (SiteHeader is its only, in-flow
+ * child, so the wrapper's box just hugs it); the sidebar wrapper is
+ * `display: contents` — SiteNav renders a fixed `<nav>` plus several
+ * out-of-flow siblings (checkbox/overlay/mobile bar), so a normal wrapper
+ * div would collapse to a zero-size box, and `contents` avoids adding one at
+ * all while still giving transitions.css a selector to reach the real `nav`
+ * through.
  */
 export default function DefaultLayout({
   title = DEFAULT_TITLE,
@@ -141,16 +154,20 @@ export default function DefaultLayout({
           Skip to content
         </a>
 
-        <SiteHeader switcherItems={switcherItems} brand={brand} brandHref="/" />
+        <div data-zfb-transition-persist={`header-${line ?? "main"}`}>
+          <SiteHeader switcherItems={switcherItems} brand={brand} brandHref="/" />
+        </div>
 
         <div class="grid min-h-screen grid-cols-[13rem_minmax(0,1fr)] max-sm:grid-cols-[minmax(0,1fr)]">
-          <SiteNav
-            sections={tree.sections}
-            brand={brand}
-            brandHref="/"
-            currentSlug={slug}
-            switcherItems={switcherItems}
-          />
+          <div data-zfb-transition-persist={`sidebar-${line ?? "main"}`} style={{ display: "contents" }}>
+            <SiteNav
+              sections={tree.sections}
+              brand={brand}
+              brandHref="/"
+              currentSlug={slug}
+              switcherItems={switcherItems}
+            />
+          </div>
 
           <div class="col-start-2 flex min-h-screen min-w-0 flex-col max-sm:col-start-1 max-sm:pt-[3.25rem]">
             <Breadcrumbs crumbs={crumbs} />
