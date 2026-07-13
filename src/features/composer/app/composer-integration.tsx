@@ -100,6 +100,7 @@ export function ComposerIntegration(props: ComposerIntegrationProps): JSX.Elemen
             onSetMode={controller.setMode}
             onSetViewport={setViewport}
             onReset={controller.reset}
+            onRetrySave={controller.retrySave}
             onExport={exportState.openExport}
             clipboard={state.clipboard}
             titleFor={titleFor}

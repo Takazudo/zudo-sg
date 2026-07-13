@@ -36,7 +36,7 @@ describe("ComposerToolbarBar — clipboard chip", () => {
     const clipboard: CompositionNode = { id: "b", componentId: "test.box", componentVersion: 1, props: {}, slots: {} };
     const titleFor = vi.fn((id: string) => (id === "test.box" ? "Box" : undefined));
     render(<ComposerToolbarBar {...baseProps()} clipboard={clipboard} titleFor={titleFor} />);
-    expect(screen.getByText("Saved locally")).toBeInTheDocument();
+    expect(screen.getByText("Saved")).toBeInTheDocument();
     expect(screen.getByText("Box")).toBeInTheDocument();
     expect(titleFor).toHaveBeenCalledWith("test.box");
   });

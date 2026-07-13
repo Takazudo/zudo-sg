@@ -12,16 +12,31 @@ import { describeSaveStatus } from "@/features/composer/chrome/controller-model"
 
 export interface ComposerStatusIndicatorProps {
   saveStatus: ComposerSaveStatus;
+  onRetry?: () => void;
   /** Composability seam — e.g. wave-6's clipboard status chip renders here. */
   children?: ComponentChildren;
 }
 
-export function ComposerStatusIndicator({ saveStatus, children }: ComposerStatusIndicatorProps): JSX.Element {
+export function ComposerStatusIndicator({
+  saveStatus,
+  onRetry,
+  children,
+}: ComposerStatusIndicatorProps): JSX.Element {
   return (
     <div class="flex items-center gap-hsp-2xs">
-      <span class="sg-composer-save-status" data-sg-status={saveStatus.kind} aria-live="polite">
+      <span
+        class="sg-composer-save-status"
+        data-sg-status={saveStatus.kind}
+        aria-live="polite"
+        title={saveStatus.kind === "error" ? saveStatus.reason : undefined}
+      >
         {describeSaveStatus(saveStatus)}
       </span>
+      {saveStatus.kind === "error" && onRetry && (
+        <button type="button" class="sg-composer-toolbar-button" onClick={onRetry}>
+          Retry
+        </button>
+      )}
       {children}
     </div>
   );

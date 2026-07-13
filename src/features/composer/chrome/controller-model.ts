@@ -49,8 +49,9 @@ export type ComposerMode = "edit" | "preview";
 export type ComposerCanvasViewport = "fluid" | "desktop" | "tablet" | "mobile";
 
 /**
- * Honest persistence status. Only `"saved"` means the in-memory document
- * matches what is (or, for a fresh/empty document, will be) in localStorage.
+ * Honest persistence status. Only `"saved"` means the mounted record matches
+ * the provider. `dirty` and `saving` mirror the async record queue; the older
+ * `unsaved`/`quarantined` variants remain for the temporary localStorage mount.
  *
  *  - `"saved"` — the last mutation persisted successfully.
  *  - `"unsaved"` — a mutation is pending a persistence attempt.
@@ -62,6 +63,8 @@ export type ComposerCanvasViewport = "fluid" | "desktop" | "tablet" | "mobile";
  */
 export type ComposerSaveStatus =
   | { kind: "saved" }
+  | { kind: "dirty" }
+  | { kind: "saving" }
   | { kind: "unsaved" }
   | { kind: "error"; reason: string }
   | { kind: "quarantined"; foundSchemaVersion: number };
@@ -98,6 +101,7 @@ export interface ComposerControllerState {
  */
 export type ComposerAction =
   | { type: "add"; target: InsertionTarget; componentId: string }
+  | { type: "rename"; name: string }
   | { type: "updateProps"; nodeId: string; patch: JsonObject }
   | { type: "reorder"; nodeId: string; direction: "up" | "down" }
   | { type: "remove"; nodeId: string }
@@ -134,6 +138,7 @@ export interface ComposerReducerResult {
 
 const DOCUMENT_MUTATION_TYPES = new Set<ComposerAction["type"]>([
   "add",
+  "rename",
   "updateProps",
   "reorder",
   "remove",
@@ -216,6 +221,16 @@ export function applyComposerAction(
   ctx: ComposerReducerContext,
 ): ComposerReducerResult {
   switch (action.type) {
+    case "rename": {
+      if (state.document.name === action.name) {
+        return { state, error: null, documentChanged: false };
+      }
+      return {
+        state: { ...state, document: { ...state.document, name: action.name } },
+        error: null,
+        documentChanged: true,
+      };
+    }
     case "add": {
       const result = addNode(
         state.document,
@@ -475,25 +490,27 @@ export function applyComposerAction(
   }
 }
 
-/** True while the document is NOT known to match localStorage — drives the navigation guard. */
+/** True while the document is not known to match its persistence target. */
 export function hasUnsavedChanges(state: ComposerControllerState): boolean {
   return state.saveStatus.kind !== "saved";
 }
 
 /**
  * A short, honest, user-facing description of `saveStatus` — the single
- * place the toolbar's save indicator sources its copy from, so "blocked
- * storage still starts and honestly reports 'not saved'" (issue #247) has
- * one wording, not one per call site.
+ * place the toolbar's save indicator sources its provider-neutral copy from.
  */
 export function describeSaveStatus(status: ComposerSaveStatus): string {
   switch (status.kind) {
     case "saved":
-      return "Saved locally";
+      return "Saved";
+    case "dirty":
+      return "Unsaved changes";
+    case "saving":
+      return "Saving…";
     case "unsaved":
-      return "Not saved yet";
+      return "Unsaved changes";
     case "error":
-      return "Not saved — local storage is unavailable";
+      return "Save failed";
     case "quarantined":
       return "Not saved — a newer Composition is in storage; editing the sample until you Reset";
   }
