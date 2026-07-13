@@ -111,6 +111,15 @@ interface InlineSessionState {
   multiline: boolean;
   /** The value the field held when the session opened. Set imperatively. */
   initialValue: string;
+  /**
+   * The document revision on screen when the session was ENTERED (issue #288).
+   * Carried on the session and stamped on the eventual commit INSTEAD OF the
+   * revision on screen at commit time — a mid-edit render that bumps the
+   * revision must make a later commit fail the host's staleness gate, not
+   * re-stamp itself as fresh just because it happened to be sent after that
+   * render landed.
+   */
+  startRevision: number;
 }
 
 const INLINE_EDITING_ATTR = "data-zc-inline-editing";
@@ -141,14 +150,26 @@ function findNodeById(nodes: readonly CompositionNode[], id: string): Compositio
 }
 
 /**
+ * Inline-level element tags (issue #288). None of these start a new line on
+ * their own — `<strong>Loud</strong> word` reads as one continuous line, not
+ * two — so `readEditableValue` must not prepend a `\n` before one of these
+ * just because it is an element child. Only a BLOCK-level child (e.g. a
+ * browser's own paragraph-splitting `<div>`) implies a line break. Kept
+ * intentionally small (the minimum the inline-editable cohort actually
+ * produces) rather than an exhaustive HTML inline-element list.
+ */
+const INLINE_ELEMENT_TAGS: ReadonlySet<string> = new Set(["B", "STRONG", "EM", "I", "SPAN", "A", "CODE"]);
+
+/**
  * Read the committed text out of an editing element.
  *
  * Decoration islands are skipped: a child marked `aria-hidden` /
  * `contenteditable="false"` (e.g. `CtaButton`'s trailing arrow) is chrome, not
  * content, so it never leaks into the committed value. For a multiline field,
- * `<br>` and block boundaries become newlines; a single-line field can hold
- * none (its Enter commits instead of inserting one), and any pasted newline is
- * collapsed to a space so the value stays single-line.
+ * `<br>` and BLOCK-level boundaries become newlines (an inline child, e.g. a
+ * `<strong>` run — see `INLINE_ELEMENT_TAGS` — never does); a single-line
+ * field can hold none (its Enter commits instead of inserting one), and any
+ * pasted newline is collapsed to a space so the value stays single-line.
  */
 function readEditableValue(el: HTMLElement, multiline: boolean): string {
   let out = "";
@@ -170,7 +191,14 @@ function readEditableValue(el: HTMLElement, multiline: boolean): string {
         out += "\n";
         continue;
       }
-      if (multiline && out.length > 0 && !out.endsWith("\n")) out += "\n";
+      if (
+        multiline &&
+        !INLINE_ELEMENT_TAGS.has(elChild.tagName) &&
+        out.length > 0 &&
+        !out.endsWith("\n")
+      ) {
+        out += "\n";
+      }
       walk(elChild);
     }
   };
@@ -281,6 +309,15 @@ export interface CompositionCanvasProps {
   /** The TRUSTED runtime registry — retains real component functions. */
   entries: readonly ComposerEntry[];
   session: PreviewSession;
+  /**
+   * The document revision on screen (issue #288). An inline-edit session
+   * captures this at the moment it is ENTERED and carries it forward as its
+   * `startRevision`, stamping it on the eventual commit instead of whatever
+   * revision happens to be on screen when the user finishes typing — see
+   * `onCommitInlineEdit`. Optional (default `0`) so mounts/tests that never
+   * inline-edit need not supply it.
+   */
+  revision?: number;
   /** A node (or the empty canvas, `null`) was activated in Edit mode. */
   onSelect: (nodeId: string | null) => void;
   /** An insert point was activated. Carries #245's insert-at-index target. */
@@ -290,12 +327,17 @@ export interface CompositionCanvasProps {
   /** An insert point's "⋯" was activated (issue #256). */
   onRequestInsertMenu: (target: InsertionTarget, rect: SerializedRect, focusToken: string) => void;
   /**
-   * An inline-editing session committed a value (issue #257). The host stamps
-   * `documentRevision` and validates it; the renderer only reports the raw
-   * `{ nodeId, fieldKey, value }`. Optional so existing mounts/tests that never
-   * inline-edit need not supply it.
+   * An inline-editing session committed a value (issue #257). `documentRevision`
+   * is the SESSION-START revision (issue #288) — the `revision` prop's value
+   * when the session was entered, not the revision on screen at commit time —
+   * so a commit authored during a session a mid-edit render has since
+   * superseded correctly fails the host's `documentRevision <
+   * lastDocRevisionRef.current` staleness gate instead of silently re-stamping
+   * itself as fresh. The host still validates it; the renderer only reports the
+   * raw `{ nodeId, fieldKey, value, documentRevision }`. Optional so existing
+   * mounts/tests that never inline-edit need not supply it.
    */
-  onCommitInlineEdit?: (nodeId: string, fieldKey: string, value: string) => void;
+  onCommitInlineEdit?: (nodeId: string, fieldKey: string, value: string, documentRevision: number) => void;
   /**
    * A cross-slot drag & drop completed on the canvas (issue #258). `copy` is
    * true when Alt was held at drop. The renderer reports the raw
@@ -320,6 +362,7 @@ export function CompositionCanvas(props: CompositionCanvasProps): JSX.Element {
     document,
     entries,
     session,
+    revision = 0,
     onSelect,
     onRequestAdd,
     onRequestNodeMenu,
@@ -360,7 +403,8 @@ export function CompositionCanvas(props: CompositionCanvasProps): JSX.Element {
     finishingRef.current = true;
     const el = editableRef.current;
     const value = el ? readEditableValue(el, active.multiline) : active.initialValue;
-    commitCbRef.current?.(active.nodeId, active.fieldKey, value);
+    // Stamped with the SESSION-START revision (issue #288) — see `InlineSessionState`.
+    commitCbRef.current?.(active.nodeId, active.fieldKey, value, active.startRevision);
     setSession(null);
   }, [setSession]);
 
@@ -384,10 +428,16 @@ export function CompositionCanvas(props: CompositionCanvasProps): JSX.Element {
       };
       const raw = effective[editable.field];
       const initialValue = typeof raw === "string" ? raw : raw == null ? "" : String(raw);
-      setSession({ nodeId, fieldKey: editable.field, multiline: editable.multiline, initialValue });
+      setSession({
+        nodeId,
+        fieldKey: editable.field,
+        multiline: editable.multiline,
+        initialValue,
+        startRevision: revision,
+      });
       return true;
     },
-    [document, entryById, setSession],
+    [document, entryById, revision, setSession],
   );
 
   // Set up (and tear down) the imperative contentEditable when a session opens.
@@ -496,6 +546,37 @@ export function CompositionCanvas(props: CompositionCanvasProps): JSX.Element {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- fires only on a mode transition
   }, [session.mode]);
+
+  // Cancel the session outright when the GROUND MOVES under it (issue #288):
+  // an incoming render mid-edit that changes the value of the field actually
+  // being edited means a concurrent change landed while the user was typing —
+  // the session is abandoned rather than let the user keep typing into a
+  // field whose eventual commit is either doomed to fail the host's revision
+  // gate or, worse, could coincidentally match. Cancelling remounts the keyed
+  // body (see `renderNode`), so the editor never sits there showing text that
+  // no longer reflects the document. A render that leaves this field alone
+  // (an edit elsewhere in the document) does NOT cancel — the session and the
+  // stale-but-correctly-gated commit path (see `commitInline`) both survive
+  // that case unchanged. Keyed on `document` identity alone: `mode`-only
+  // session updates keep the SAME document reference (`applyInbound`,
+  // `snapshot-store.ts`), so this effect only ever fires for an actual render.
+  const prevDocumentForGroundCheckRef = useRef(document);
+  useLayoutEffect(() => {
+    const previousDocument = prevDocumentForGroundCheckRef.current;
+    prevDocumentForGroundCheckRef.current = document;
+    const active = sessionRef.current;
+    if (!active || previousDocument === document) return;
+    const targetNode = findNodeById(document.root, active.nodeId);
+    const entry = targetNode ? entryById.get(targetNode.componentId) : undefined;
+    const effective: Record<string, unknown> = {
+      ...(entry?.definition.defaults ?? {}),
+      ...(targetNode?.props ?? {}),
+    };
+    const raw = effective[active.fieldKey];
+    const currentValue = typeof raw === "string" ? raw : raw == null ? "" : String(raw);
+    if (!targetNode || currentValue !== active.initialValue) cancelInline();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only a document IDENTITY change gates this check
+  }, [document]);
 
   // ── Drag & drop (issue #258) ──────────────────────────────────────────────
   // LOCAL renderer state; only the resulting `{ sourceNodeId, target, copy }`

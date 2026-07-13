@@ -64,11 +64,16 @@ export interface PreviewClient {
   /** An insert point's "⋯" was activated (issue #256). */
   emitRequestInsertMenu(target: InsertionTarget, rect: SerializedRect, focusToken: string): void;
   /**
-   * An inline-editing session committed a new value (issue #257). Stamped with
-   * the revision on screen (`documentRevision`) so the host can drop a stale
-   * commit — exactly like `emitSelect`/`emitRequestAdd` stamp theirs.
+   * An inline-editing session committed a new value (issue #257). `documentRevision`
+   * is supplied by the CALLER, not computed here (issue #288): the renderer
+   * captures its inline session's SESSION-START revision and threads it down
+   * through `preview-app.ts`, so the host can drop a commit authored during a
+   * session a later render has since superseded — reading `state.revision` at
+   * commit time here (like `emitSelect`/`emitRequestAdd` do for their own,
+   * one-shot, non-session actions) would always look "fresh", defeating the
+   * gate entirely.
    */
-  emitCommitInlineEdit(nodeId: string, fieldKey: string, value: string): void;
+  emitCommitInlineEdit(nodeId: string, fieldKey: string, value: string, documentRevision: number): void;
   /**
    * A cross-slot drag & drop committed (issue #258). Stamped with the revision
    * on screen (`documentRevision`) so the host can drop a stale drop — exactly
@@ -139,8 +144,10 @@ export function createPreviewClient(options: PreviewClientOptions): PreviewClien
     emitRequestInsertMenu(target, rect, focusToken) {
       post(requestInsertMenuMessage(outboundRevision(), target, rect, focusToken));
     },
-    emitCommitInlineEdit(nodeId, fieldKey, value) {
-      post(commitInlineEditMessage(nodeId, fieldKey, value, outboundRevision()));
+    emitCommitInlineEdit(nodeId, fieldKey, value, documentRevision) {
+      // `Math.max(0, ...)` mirrors `outboundRevision()`'s own guard — defence
+      // against a rogue caller producing a schema-invalid negative revision.
+      post(commitInlineEditMessage(nodeId, fieldKey, value, Math.max(0, documentRevision)));
     },
     emitDropNode(sourceNodeId, target, copy) {
       post(dropNodeMessage(sourceNodeId, target, copy, outboundRevision()));

@@ -118,11 +118,15 @@ export default function ComposerPreviewApp(): JSX.Element {
     [],
   );
 
-  const onCommitInlineEdit = useCallback((nodeId: string, fieldKey: string, value: string) => {
-    // The client stamps the revision on screen (`documentRevision`); the host
-    // validates it before routing through `updateProps`.
-    clientRef.current?.emitCommitInlineEdit(nodeId, fieldKey, value);
-  }, []);
+  const onCommitInlineEdit = useCallback(
+    (nodeId: string, fieldKey: string, value: string, documentRevision: number) => {
+      // The renderer supplies its inline session's SESSION-START revision
+      // (issue #288); the client forwards it verbatim as `documentRevision`
+      // and the host validates it before routing through `updateProps`.
+      clientRef.current?.emitCommitInlineEdit(nodeId, fieldKey, value, documentRevision);
+    },
+    [],
+  );
 
   const onDropNode = useCallback((sourceNodeId: string, target: InsertionTarget, copy: boolean) => {
     // The client stamps the revision on screen (`documentRevision`); the host

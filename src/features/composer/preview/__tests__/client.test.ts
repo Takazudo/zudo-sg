@@ -156,12 +156,17 @@ describe("createPreviewClient", () => {
     for (const post of posts) expect(post.targetOrigin).toBe(ORIGIN);
   });
 
-  it("stamps outbound commit-inline-edit with the revision on screen (documentRevision)", () => {
+  it("stamps outbound commit-inline-edit with the CALLER-SUPPLIED documentRevision, not the revision on screen (issue #288)", () => {
     const { client, posts, fromParent } = setup();
     fromParent(renderMessage(9, SAMPLE_DOCUMENT, EDIT));
+    // The revision on screen has since advanced past the session-start value
+    // the caller (the renderer, via `preview-app.ts`) captured — the client
+    // must forward that OLD value verbatim rather than reading `state.revision`
+    // itself, or a mid-edit render would always make the commit look fresh.
+    fromParent(renderMessage(20, SAMPLE_DOCUMENT, EDIT));
     posts.length = 0;
 
-    client.emitCommitInlineEdit("prose-1", "children", "Edited body copy");
+    client.emitCommitInlineEdit("prose-1", "children", "Edited body copy", 9);
 
     expect(posts).toHaveLength(1);
     expect(posts[0]!.message).toMatchObject({
@@ -172,6 +177,15 @@ describe("createPreviewClient", () => {
       documentRevision: 9,
     });
     expect(posts[0]!.targetOrigin).toBe(ORIGIN);
+  });
+
+  it("clamps a negative caller-supplied documentRevision to 0 (defence in depth)", () => {
+    const { client, posts } = setup();
+    client.emitCommitInlineEdit("prose-1", "children", "Edited body copy", -1);
+    expect(posts[0]!.message).toMatchObject({
+      type: "commit-inline-edit",
+      documentRevision: 0,
+    });
   });
 
   it("stamps outbound drop-node with the revision on screen (documentRevision)", () => {

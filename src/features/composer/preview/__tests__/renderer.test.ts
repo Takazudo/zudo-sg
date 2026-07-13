@@ -605,7 +605,7 @@ describe("inline text editing (issue #257)", () => {
       editable.textContent = "Composed";
       fireEvent.keyDown(editable, { key: "Enter" });
       expect(onCommitInlineEdit).toHaveBeenCalledTimes(1);
-      expect(onCommitInlineEdit).toHaveBeenCalledWith("h-1", "heading", "Composed");
+      expect(onCommitInlineEdit).toHaveBeenCalledWith("h-1", "heading", "Composed", 0);
       // Session exited — the editable is gone (body remounted to read mode).
       expect(container.querySelector(EDITABLE)).toBeNull();
     });
@@ -615,7 +615,7 @@ describe("inline text editing (issue #257)", () => {
       const editable = editableOf(container, "prose-1")!;
       editable.textContent = "Reworded body.";
       fireEvent.blur(editable);
-      expect(onCommitInlineEdit).toHaveBeenCalledWith("prose-1", "children", "Reworded body.");
+      expect(onCommitInlineEdit).toHaveBeenCalledWith("prose-1", "children", "Reworded body.", 0);
     });
 
     it("Escape CANCELS without committing", () => {
@@ -632,7 +632,7 @@ describe("inline text editing (issue #257)", () => {
       const editable = editableOf(container, "prose-1")!;
       editable.innerHTML = "Edited line 1<br>Edited line 2";
       fireEvent.blur(editable);
-      expect(onCommitInlineEdit).toHaveBeenCalledWith("prose-1", "children", "Edited line 1\nEdited line 2");
+      expect(onCommitInlineEdit).toHaveBeenCalledWith("prose-1", "children", "Edited line 1\nEdited line 2", 0);
     });
 
     it("Enter does NOT commit a MULTILINE field (it inserts a newline instead)", () => {
@@ -667,7 +667,7 @@ describe("inline text editing (issue #257)", () => {
         ),
       );
       expect(onCommitInlineEdit).toHaveBeenCalledTimes(1);
-      expect(onCommitInlineEdit).toHaveBeenCalledWith("h-1", "heading", "日本語");
+      expect(onCommitInlineEdit).toHaveBeenCalledWith("h-1", "heading", "日本語", 0);
     });
 
     it("also treats keyCode 229 as an in-flight composition", () => {
@@ -747,7 +747,7 @@ describe("inline text editing (issue #257)", () => {
       // Edit the label text node and commit only the label.
       (editable.firstChild as Text).data = "Go now";
       fireEvent.keyDown(editable, { key: "Enter" });
-      expect(onCommitInlineEdit).toHaveBeenCalledWith("cta", "children", "Go now");
+      expect(onCommitInlineEdit).toHaveBeenCalledWith("cta", "children", "Go now", 0);
     });
   });
 
@@ -793,7 +793,114 @@ describe("inline text editing (issue #257)", () => {
       act(() => rerender(h(CompositionCanvas, { ...props, session: { ...props.session, mode: "preview" } })));
 
       expect(onCommitInlineEdit).toHaveBeenCalledTimes(1);
-      expect(onCommitInlineEdit).toHaveBeenCalledWith("h-1", "heading", "Draft heading");
+      expect(onCommitInlineEdit).toHaveBeenCalledWith("h-1", "heading", "Draft heading", 0);
+    });
+  });
+
+  // The ~774 "switching to Preview mid-edit commits the draft" test flips
+  // MODE — a different effect entirely. These cover a mid-edit RENDER while
+  // STAYING in Edit mode (issue #288).
+  describe("mid-edit document changes fail closed, staying in Edit mode (issue #288)", () => {
+    it("stamps a commit with the SESSION-START revision, not the revision on screen at commit time", () => {
+      const onCommitInlineEdit = vi.fn();
+      const document = doc([node("h-1", "ui.section-heading", { heading: "Compose", as: "h2" })]);
+      const props: CompositionCanvasProps = {
+        document,
+        entries: composerEntries,
+        session: { ...EDIT, selectedId: "h-1" },
+        revision: 5,
+        onSelect: vi.fn(),
+        onRequestAdd: vi.fn(),
+        onRequestNodeMenu: vi.fn(),
+        onRequestInsertMenu: vi.fn(),
+        onCommitInlineEdit,
+      };
+      const { container, rerender } = render(h(CompositionCanvas, props));
+      fireEvent.click(container.querySelector('[data-zc-node-id="h-1"] h2')!);
+      const editable = editableOf(container, "h-1")!;
+      editable.textContent = "Draft heading";
+
+      // A render lands mid-edit that bumps the revision but leaves the edited
+      // field's value untouched (an unrelated change elsewhere in the
+      // document) — the session survives, but a later commit must still carry
+      // the OLD (session-start) revision so the host's existing
+      // `documentRevision < lastDocRevisionRef.current` gate correctly rejects
+      // it as stale instead of it re-stamping itself as fresh.
+      const nextDocument = doc([...document.root, node("aside-1", "ui.prose-p", { children: "Unrelated." })]);
+      act(() => rerender(h(CompositionCanvas, { ...props, document: nextDocument, revision: 9 })));
+
+      expect(editableOf(container, "h-1")).toBe(editable); // session survived
+      fireEvent.blur(editable);
+
+      expect(onCommitInlineEdit).toHaveBeenCalledWith("h-1", "heading", "Draft heading", 5);
+    });
+
+    it("cancels the active session when a mid-edit render changes the EDITED field's value", () => {
+      const onCommitInlineEdit = vi.fn();
+      const document = doc([node("h-1", "ui.section-heading", { heading: "Compose", as: "h2" })]);
+      const props: CompositionCanvasProps = {
+        document,
+        entries: composerEntries,
+        session: { ...EDIT, selectedId: "h-1" },
+        revision: 5,
+        onSelect: vi.fn(),
+        onRequestAdd: vi.fn(),
+        onRequestNodeMenu: vi.fn(),
+        onRequestInsertMenu: vi.fn(),
+        onCommitInlineEdit,
+      };
+      const { container, rerender } = render(h(CompositionCanvas, props));
+      fireEvent.click(container.querySelector('[data-zc-node-id="h-1"] h2')!);
+      const editable = editableOf(container, "h-1")!;
+      editable.textContent = "Draft heading";
+
+      // A concurrent change to the SAME node/field lands mid-edit — the
+      // ground the user is typing on moved, so the session is abandoned
+      // outright rather than risk a doomed (or coincidentally matching)
+      // commit later.
+      const collidedDocument = doc([
+        node("h-1", "ui.section-heading", { heading: "Someone else's edit", as: "h2" }),
+      ]);
+      act(() =>
+        rerender(h(CompositionCanvas, { ...props, document: collidedDocument, revision: 9 })),
+      );
+
+      // Session cancelled: no more editable region, and no commit was ever
+      // silently sent for the abandoned draft.
+      expect(container.querySelector("[data-zc-inline-editing]")).toBeNull();
+      expect(onCommitInlineEdit).not.toHaveBeenCalled();
+      // The DOM now shows the FRESH document's value, not the abandoned draft.
+      expect(container.querySelector('[data-zc-node-id="h-1"] h2')!.textContent).toBe(
+        "Someone else's edit",
+      );
+    });
+  });
+
+  describe("multiline newline guard (issue #288)", () => {
+    it("does NOT insert a spurious newline before an INLINE element child", () => {
+      const { container, onCommitInlineEdit } = openSession("prose-1", "p");
+      const editable = editableOf(container, "prose-1")!;
+      editable.innerHTML = "Hello <strong>world</strong> and <em>friends</em>.";
+      fireEvent.blur(editable);
+      expect(onCommitInlineEdit).toHaveBeenCalledWith(
+        "prose-1",
+        "children",
+        "Hello world and friends.",
+        0,
+      );
+    });
+
+    it("still inserts a newline before a BLOCK-level element child", () => {
+      const { container, onCommitInlineEdit } = openSession("prose-1", "p");
+      const editable = editableOf(container, "prose-1")!;
+      editable.innerHTML = "First line<div>Second line</div>";
+      fireEvent.blur(editable);
+      expect(onCommitInlineEdit).toHaveBeenCalledWith(
+        "prose-1",
+        "children",
+        "First line\nSecond line",
+        0,
+      );
     });
   });
 });
