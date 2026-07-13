@@ -449,7 +449,9 @@ test.describe("Composer Polish S7 contracts", () => {
       `CONTRACT: S3 slots border-inline-start width=${geo.slotBorderInlineStartWidth} color=${geo.slotBorderInlineStartColor} (--color-border=${geo.colorBorder}) | sibling left edges prose-1=${align.p1.toFixed(1)} prose-2=${align.p2.toFixed(1)}`,
     );
 
-    expect(geo.selMinH, "tree row min-height 32px desktop").toBe("32px");
+    // Composer UI Parity (#281): tree rows tightened 32px → 28px per the A1
+    // locked density spec (#277); still ≥ the 14px functional-text floor (asserted next).
+    expect(geo.selMinH, "tree row min-height 28px desktop").toBe("28px");
     expect(geo.titleFont, "tree row label 14px").toBe("14px");
     expect(
       geo.titleScrollW,
