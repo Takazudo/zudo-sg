@@ -29,6 +29,7 @@ import type {
   JsonObject,
 } from "@/composer";
 import { classifyNode, findLocation, orderedSlotIds } from "@/composer";
+import { ChevronDownIcon, ChevronUpIcon, TrashIcon } from "@/components/icons";
 import type { ComposerMode } from "@/features/composer/chrome/controller-model";
 import { InspectorField } from "./inspector-field";
 
@@ -174,26 +175,29 @@ export function InspectorPanel({
       <div class="sg-composer-inspector-section flex flex-wrap items-center gap-hsp-xs">
         <button
           type="button"
-          class="sg-composer-toolbar-button"
+          class="sg-composer-toolbar-button gap-hsp-3xs"
           disabled={readOnly || !canMoveUp}
           onClick={() => onReorder(node.id, "up")}
         >
+          <ChevronUpIcon size="sm" />
           Move up
         </button>
         <button
           type="button"
-          class="sg-composer-toolbar-button"
+          class="sg-composer-toolbar-button gap-hsp-3xs"
           disabled={readOnly || !canMoveDown}
           onClick={() => onReorder(node.id, "down")}
         >
+          <ChevronDownIcon size="sm" />
           Move down
         </button>
         <button
           type="button"
-          class="sg-composer-toolbar-button sg-composer-inspector-remove"
+          class="sg-composer-toolbar-button sg-composer-inspector-remove gap-hsp-3xs"
           disabled={readOnly}
           onClick={() => onRemove(node.id)}
         >
+          <TrashIcon size="sm" />
           Remove
         </button>
       </div>

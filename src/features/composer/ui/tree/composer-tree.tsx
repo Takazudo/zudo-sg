@@ -35,6 +35,7 @@ import { useEffect, useMemo, useRef } from "preact/hooks";
 import type { JSX } from "preact";
 import type { ComponentManifest, CompositionDocument, InsertionTarget } from "@/composer";
 import { VIRTUAL_ROOT_SLOT_ID } from "@/composer";
+import { EllipsisIcon, PageIcon } from "@/components/icons";
 import type { ComposerManifestEntry } from "@/styleguide/data/composer-registry";
 import { buildCatalogById, buildDocumentIndex, countDescendants } from "./tree-helpers";
 import { TreeNode } from "./tree-node";
@@ -112,6 +113,7 @@ export function ComposerTree({
           aria-pressed={rootSelected}
           onClick={() => onSelect(null)}
         >
+          <PageIcon size="xs" class="sg-composer-tree-node-icon" />
           <span class="sg-composer-tree-select-title">Document root</span>
           <span class="sg-composer-tree-count" aria-hidden="true">
             {rootTotal}
@@ -141,7 +143,7 @@ export function ComposerTree({
                 )
               }
             >
-              <span aria-hidden="true">⋯</span>
+              <EllipsisIcon size="xs" />
             </button>
           </div>
         )}

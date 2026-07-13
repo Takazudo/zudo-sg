@@ -545,6 +545,20 @@ html[data-sg-composer-doc] body {
   font-style: italic;
 }
 
+/* Node-type glyph (Page/Root, Slot, Container, Leaf — issue #282): NEUTRAL
+   only, `currentColor`-inherited from the row's own text color, never accent
+   (the tree's one accent role is already spent on row selection — see the
+   accent-budget note on `.sg-composer-tree-row[data-sg-selected]` above).
+   `align-self: center` corrects the icon against the row's own
+   `align-items: baseline` (right for text, wrong for an SVG glyph);
+   `vertical-align: middle` is the equivalent fix for the slot-header
+   placement, which is plain inline content, not a flex child. */
+.sg-composer-tree-node-icon {
+  flex-shrink: 0;
+  align-self: center;
+  vertical-align: middle;
+}
+
 .sg-composer-tree-select-title {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1013,6 +1027,16 @@ html[data-sg-composer-doc] body {
   text-align: start;
   font-size: var(--text-small);
   cursor: pointer;
+}
+
+/* Item glyph (Copy/Cut/Duplicate/Trash/Plus — issue #282): sits inline before
+   the label text (the item button is `display: block`, not flex), so this is
+   a spacing + optical-alignment fix rather than a flex `gap`. Inherits
+   `currentColor` — danger items (Delete) tint red via the same `color`
+   `.sg-composer-menu-item-danger` already sets below. */
+.sg-composer-menu-item-icon {
+  margin-inline-end: var(--spacing-hsp-2xs);
+  vertical-align: -0.15em;
 }
 /* Accent budget (#267): hover is not a whitelisted accent role — neutral fg
    tint, same idiom as the tree row/action hover. Delete keeps its own

@@ -20,6 +20,7 @@
 
 import { useEffect, useLayoutEffect, useRef } from "preact/hooks";
 import type { ComponentChildren, JSX } from "preact";
+import type { IconComponent } from "@/components/icons";
 import { clampMenuPosition, type MenuPoint } from "./menu-position";
 
 export interface ComposerMenuItemSpec {
@@ -29,6 +30,8 @@ export interface ComposerMenuItemSpec {
   disabled?: boolean;
   /** Danger-styled (issue #256: Delete). */
   danger?: boolean;
+  /** Optional leading glyph (issue #282) — `aria-hidden` internally, purely decorative. */
+  icon?: IconComponent;
 }
 
 export interface ComposerMenuProps {
@@ -158,6 +161,7 @@ export function ComposerMenu({ open, label, anchor, onClose, items, children }: 
               disabled={item.disabled}
               onClick={() => item.onSelect()}
             >
+              {item.icon && <item.icon size="sm" class="sg-composer-menu-item-icon" />}
               {item.label}
             </button>
           ))

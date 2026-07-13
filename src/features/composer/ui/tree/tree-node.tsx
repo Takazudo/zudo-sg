@@ -19,6 +19,7 @@ import type {
   InsertionTarget,
 } from "@/composer";
 import { orderedSlotIds } from "@/composer";
+import { ChevronDownIcon, ChevronRightIcon, ContainerIcon, EllipsisIcon, LeafIcon, SlotIcon } from "@/components/icons";
 import type { ComposerManifestEntry } from "@/styleguide/data/composer-registry";
 import { countDescendants, siblingBounds, summarizeNode } from "./tree-helpers";
 import { TreeRowActions } from "./tree-row-actions";
@@ -76,7 +77,7 @@ export function TreeNode(props: TreeNodeProps): JSX.Element {
             aria-label={`${isExpanded ? "Collapse" : "Expand"} ${displayName}`}
             onClick={() => onToggleExpanded(node.id)}
           >
-            <span aria-hidden="true">{isExpanded ? "▾" : "▸"}</span>
+            {isExpanded ? <ChevronDownIcon size="xs" /> : <ChevronRightIcon size="xs" />}
           </button>
         ) : (
           <span class="sg-composer-tree-disclosure-spacer" aria-hidden="true" />
@@ -91,6 +92,11 @@ export function TreeNode(props: TreeNodeProps): JSX.Element {
           title={summary.reasonText ?? undefined}
           onClick={() => onReveal(node.id)}
         >
+          {hasSlots ? (
+            <ContainerIcon size="xs" class="sg-composer-tree-node-icon" />
+          ) : (
+            <LeafIcon size="xs" class="sg-composer-tree-node-icon" />
+          )}
           <span class="sg-composer-tree-select-title">{summary.title}</span>
           {summary.subtitle && (
             <>
@@ -132,7 +138,7 @@ export function TreeNode(props: TreeNodeProps): JSX.Element {
             title="More actions"
             onClick={(event) => onOpenNodeMenu(node.id, event.currentTarget as HTMLElement)}
           >
-            <span aria-hidden="true">⋯</span>
+            <EllipsisIcon size="xs" />
           </button>
         )}
       </div>
@@ -153,7 +159,8 @@ export function TreeNode(props: TreeNodeProps): JSX.Element {
               <div class="sg-composer-tree-slot" key={slotId} data-sg-tree-slot-id={slotId}>
                 <div class="sg-composer-tree-slot-header">
                   <span class="sg-composer-tree-slot-label">
-                    {label} <span class="sg-composer-tree-count">({children.length})</span>
+                    <SlotIcon size="xs" class="sg-composer-tree-node-icon" /> {label}{" "}
+                    <span class="sg-composer-tree-count">({children.length})</span>
                   </span>
                   {canAdd && (
                     <span class="sg-composer-tree-slot-add-group">
@@ -177,7 +184,7 @@ export function TreeNode(props: TreeNodeProps): JSX.Element {
                           )
                         }
                       >
-                        <span aria-hidden="true">⋯</span>
+                        <EllipsisIcon size="xs" />
                       </button>
                     </span>
                   )}

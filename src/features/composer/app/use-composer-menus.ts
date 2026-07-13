@@ -35,6 +35,7 @@
 import { useCallback, useMemo, useState } from "preact/hooks";
 import type { InsertionTarget } from "@/composer";
 import { findLocation, isNodeOpaque } from "@/composer";
+import { CopyIcon, CutIcon, DuplicateIcon, PlusIcon, TrashIcon } from "@/components/icons";
 import type { ComposerMenuItemSpec } from "@/features/composer/ui/menu/composer-menu";
 import { anchorBelowRect, type MenuPoint } from "@/features/composer/ui/menu/menu-position";
 import { buildCatalogById, countDescendants, summarizeNode } from "@/features/composer/ui/tree/tree-helpers";
@@ -190,11 +191,22 @@ export function useComposerMenus(api: ComposerIntegrationApi): ComposerMenusApi 
       const opaque = isNodeOpaque(location.node, manifest);
       const items: ComposerMenuItemSpec[] = [];
       if (!opaque) {
-        items.push({ id: "copy", label: "Copy", onSelect: () => { controller.copy(menu.nodeId); close(); } });
-        items.push({ id: "cut", label: "Cut", onSelect: () => { controller.cut(menu.nodeId); close(); } });
+        items.push({
+          id: "copy",
+          label: "Copy",
+          icon: CopyIcon,
+          onSelect: () => { controller.copy(menu.nodeId); close(); },
+        });
+        items.push({
+          id: "cut",
+          label: "Cut",
+          icon: CutIcon,
+          onSelect: () => { controller.cut(menu.nodeId); close(); },
+        });
         items.push({
           id: "duplicate",
           label: "Duplicate",
+          icon: DuplicateIcon,
           onSelect: () => { controller.duplicate(menu.nodeId); close(); },
         });
       }
@@ -202,6 +214,7 @@ export function useComposerMenus(api: ComposerIntegrationApi): ComposerMenusApi 
         id: "delete",
         label: "Delete",
         danger: true,
+        icon: TrashIcon,
         onSelect: () => {
           if (countDescendants(location.node) > 0) {
             setMenu((prev) => (prev.open && prev.kind === "node" ? { ...prev, confirmingDelete: true } : prev));
@@ -221,6 +234,7 @@ export function useComposerMenus(api: ComposerIntegrationApi): ComposerMenusApi 
       {
         id: "add",
         label: "Add component…",
+        icon: PlusIcon,
         onSelect: () => {
           const addComponent = menu.addComponent;
           closeSilently();
