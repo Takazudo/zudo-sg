@@ -29,10 +29,11 @@
   /* Rail widths — the resizer scripts (resizer-scripts-source.ts) override
    * these per-user in px at runtime; these are just the first-paint
    * defaults for a session with nothing persisted yet. */
-  /* 17.5rem (280px) matches DEFAULT_TREE_W in resizer-contract.ts so the
-     first paint and the restore-script's fresh-session default agree — wide
-     enough that common component names fit untruncated (#265). */
-  --sg-composer-tree-w: 17.5rem;
+  /* 20rem (320px) matches DEFAULT_TREE_W in resizer-contract.ts so the first
+     paint and the restore-script's fresh-session default agree — wide enough
+     that common component names fit untruncated even with the leading
+     node-type glyph and on CI's wider fonts (#265 / #270 / parity #282). */
+  --sg-composer-tree-w: 20rem;
   --sg-composer-inspector-w: 20rem;
   /* Visual (not hit-area) width of each resizer track. */
   --sg-composer-resizer-w: 0.75rem;
