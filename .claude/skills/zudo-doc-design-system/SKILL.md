@@ -1,13 +1,24 @@
 ---
 name: zudo-doc-design-system
-description: "Project-specific CSS and component rules for zudo-doc. Must be consulted before writing or editing CSS, Tailwind classes, color tokens, or component markup in this project. Covers: component-first strategy, design token system, three-tier color architecture, and palette index convention. Triggered by 'design system', 'zudo-doc-design-system', 'zudo-doc-css-wisdom' (old name)."
+description: "Project-specific CSS and component rules for zudo-doc, including the Composer Polish epic's non-negotiables — accent budget (≤2-3 accent elements per viewport, hover always neutral), border ladder, 14px functional-text floor. Must be consulted before writing or editing CSS, Tailwind classes, color tokens, or component markup in this project. Covers: accent budget, component-first strategy, design token system, three-tier color architecture, and palette index convention. Triggered by 'design system', 'zudo-doc-design-system', 'zudo-doc-css-wisdom' (old name), 'accent budget'."
 user-invocable: true
-argument-hint: "[topic: tokens, colors, component-first, palette]"
+argument-hint: "[topic: tokens, colors, component-first, palette, accent-budget]"
 ---
 
 # zudo-doc CSS & Component Rules
 
 **IMPORTANT**: These rules are mandatory for all code changes in this project that touch CSS, Tailwind classes, color tokens, or component markup. Read the relevant section before making changes.
+
+## Non-Negotiables (read first)
+
+- **Accent budget**: ≤2–3 accent elements per viewport at rest; most viewports 0–1. Max ONE filled-accent element per viewport.
+- **Hover is always neutral** (fg color-mix / brightness) — never accent, even on editing-affordance chrome (resizers, handles, insert markers).
+- **Editing-affordance chrome** (insert markers, handles, resizers, guides) is muted/neutral at rest; accent appears only at the point of interaction (hover/focus/drag).
+- **Borders come from the border ladder** (`--color-border` / `--color-border-strong`) — NEVER `--color-muted`, which is a text token, not a border token.
+- **Functional text ≥ `--text-caption` (14px)**. `--text-micro` (12px) is for true meta only (counts, timestamps) — never uppercase + letter-tracked at 12px.
+- **Accent role whitelist (closed)**: focus ring, selection outline, pressed/selected small controls (`aria-pressed`/`aria-current`), one primary CTA. Everything not listed is neutral by default.
+
+Named failure mode: **the vivid-amber accent funnel** — selection, focus, hover, chips, insert markers, and resizers all painted the same orange. When in doubt: neutral, bordered, 14px.
 
 ## How to Use
 
@@ -16,7 +27,7 @@ touching (see "Two Worlds" below for which is which):
 
 | Topic | File |
 |-------|------|
-| Doc-chrome tokens (root host: `--zd-*` palette, `text-fg`/`bg-surface`/etc.), Tailwind `@theme` | `src/styles/global.css` |
+| Doc-chrome tokens (root host: `--zd-*` palette, `text-fg`/`bg-surface`/etc., border ladder), Tailwind `@theme` | `src/styles/global.css` |
 | Shared spacing (`hsp-*`/`vsp-*`) + typography (Tier 1/2 `--text-*`) tokens | `packages/ui/styles/tokens.css` |
 | `@zudo-sg/ui` semantic colors (ink/paper/surface/line/brand/state), three-tier color system, consumption model | `packages/ui/styles/colors.css`, `packages/ui/STORIES.md` (§1 "How the package is consumed", §"Three-tier color system") |
 | Component-first / server-rendered-by-default methodology | root `CLAUDE.md` ("Components" section) |
@@ -72,9 +83,14 @@ token file above. Know which world the file you're editing belongs to:
   `global.css` re-asserts all ten to the `--zd-*` values (source order wins), so a root-rendered
   `@zudo-sg/ui` component still matches the docs palette. In `apps/demo` (no re-assertion), the
   same ten names resolve to `@zudo-sg/ui`'s own values. The remaining UI-only names
-  (`surface-2`, `border`, `focus`, `on-accent`, `loading-scrim`, the `rail-*` family) are NOT
-  re-asserted — doc-chrome consumes none of them. Never assume a color utility means the same
-  thing in both worlds — check which file you're in.
+  (`surface-2`, `focus`, `on-accent`, `loading-scrim`, the `rail-*` family) are NOT re-asserted —
+  doc-chrome consumes none of them. **`border` is the one exception** (Composer Polish S1, #263):
+  doc-chrome now defines its own `--color-border` / `--color-border-strong` as LOCAL `@theme`
+  tokens in `global.css` — not a re-assertion of the UI package's value (that was an accidental
+  leak via import order, now closed off), but a deliberate first-class border-ladder addition
+  consumed by the composer chrome and the `/components` styleguide catalog (regular docs pages
+  still don't use it — see the border ladder table below). Never assume a color utility means the
+  same thing in both worlds — check which file you're in.
 - The chrome-free `/components/preview` iframe document (`<html data-sg-preview-doc>`) has no
   `--zd-*` injected, so it needs its own entrypoint to restore the `@zudo-sg/ui` semantic colors
   that the root-host re-assertion above would otherwise leave undefined: `src/styles/preview.css`,
@@ -102,6 +118,64 @@ different concrete tokens:
   - **Tier 2** (`--color-*`): semantic roles, each a `light-dark()` pair of Tier-1 refs — this is
     what components bind to (`bg-accent`, `text-fg`, ...)
   - Full contract + rationale: `packages/ui/STORIES.md` §"Three-tier color system"
+
+### Border ladder + composer panel tokens (Composer Polish S1, #263)
+
+Structural chrome tokens, co-located with the color tables above — defined in `src/styles/global.css`, and mirrored in `src/styles/preview.css` for the preview iframe (which has no `--zd-*` injected):
+
+| Token | Role |
+|---|---|
+| `--color-border` | Sitewide hairline border — the border-ladder default. **Never** substitute `--color-muted` (a text-color token) for a border. |
+| `--color-border-strong` | Major divisions (e.g. a bordered modal/panel edge) — one step up from `--color-border`. |
+| `--sg-composer-panel-bg` | Composer-scoped panel surface — tonally distinct from the canvas backdrop (~ΔL 0.045 lighter, both modes); the "page sheet" the composition floats on. |
+| `--sg-composer-canvas-backdrop` | Composer-scoped canvas background the panel sheet sits over. |
+| `--sg-composer-guide` | Composer-scoped quiet-chrome tone — the resting (non-accent) color for insert markers, handles, resizers, drag guides. |
+
+`--color-border` / `--color-border-strong` are consumed by the composer chrome and the `/components` styleguide catalog. The panel/backdrop/guide trio is composer-scoped by consumption — only `.sg-composer-*` / `.zc-*` chrome binds them; regular docs pages keep the pre-epic "minimized palette" look (surface==bg) untouched.
+
+### Accent budget: contrastive examples (real diffs, Composer Polish epic #262)
+
+The pre-epic composer painted selection, focus, hover, chips, insert markers, and resizers all the same orange — 20 orange elements at rest inside the preview iframe alone. These are real before/after diffs from the epic; match the RIGHT column's idiom, not the WRONG one.
+
+**Resizer hover/drag** (`src/features/composer/styles.css`) — hover is not a whitelisted accent role:
+
+```css
+/* WRONG (pre-epic) */
+.sg-composer-resizer:hover { background: color-mix(in oklch, var(--color-accent) 30%, transparent); }
+.sg-composer-resizer[data-sg-dragging] { background: color-mix(in oklch, var(--color-accent) 30%, transparent); }
+
+/* RIGHT (S5a, #267) — neutral fg tint; drag reads "committed" so it's stronger, still neutral */
+.sg-composer-resizer:hover { background: color-mix(in oklch, var(--color-fg) 8%, transparent); }
+.sg-composer-resizer[data-sg-dragging] { background: color-mix(in oklch, var(--color-fg) 14%, transparent); }
+```
+
+**Insert markers at rest** (`src/features/composer/preview/preview-styles.ts`) — the single biggest at-rest orange source:
+
+```css
+/* WRONG (pre-epic) */
+.zc-insert { border: 1px dashed transparent; color: var(--color-accent); }
+
+/* RIGHT (S4, #266) — muted guide tone at rest; accent spent only on hover/focus */
+.zc-insert { border: 1px dashed var(--sg-composer-guide); color: var(--sg-composer-guide); opacity: 0.5; }
+.zc-insert:hover, .zc-insert:focus-visible { color: var(--color-accent); opacity: 1; }
+```
+
+**Tree slot-group label** (`src/features/composer/styles.css`) — 12px meta text does not need shouting to read as a label:
+
+```css
+/* WRONG (pre-epic) */
+.sg-composer-tree-slot-header { font-size: var(--text-micro); text-transform: uppercase; letter-spacing: 0.02em; }
+
+/* RIGHT (S3, #265) — normal-case; still --text-micro because it's a true meta label ("LEFT (1)"), not functional body text */
+.sg-composer-tree-slot-header { font-size: var(--text-micro); }
+```
+
+### Measured ground truth (accent census, #270 confirm pass)
+
+These numbers are measured on the shipped composer (#270 confirm pass), not estimates — cite them as ground truth for the accent budget:
+
+- **At rest** (nothing selected): iframe orange census = **2**, chrome accent census = **1**.
+- **Realistic default** (app auto-selects the root node on load): iframe = **4**, chrome = **2** — the extras are the whitelisted selection outline + label inside the iframe, and the danger-red Remove control in the chrome.
 
 ### Search & highlight tokens (role-split)
 
