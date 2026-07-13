@@ -403,8 +403,18 @@ export function CompositionCanvas(props: CompositionCanvasProps): JSX.Element {
     finishingRef.current = true;
     const el = editableRef.current;
     const value = el ? readEditableValue(el, active.multiline) : active.initialValue;
-    // Stamped with the SESSION-START revision (issue #288) — see `InlineSessionState`.
-    commitCbRef.current?.(active.nodeId, active.fieldKey, value, active.startRevision);
+    // A NO-OP commit (value unchanged from session start) must not reach the
+    // host: it mutates nothing, yet still advances the document revision. That
+    // is not merely wasteful — a spurious commit-of-the-seed (a blur fired the
+    // instant the session opened, before any typing, which then re-enters a
+    // fresh session) would bump `lastDocRevisionRef` and make the user's real
+    // follow-up commit fail the host's SESSION-START staleness gate (issue
+    // #288), silently dropping the edit. Skipping unchanged values keeps the
+    // session-start revision contract sound across a re-entered session.
+    if (value !== active.initialValue) {
+      // Stamped with the SESSION-START revision (issue #288) — see `InlineSessionState`.
+      commitCbRef.current?.(active.nodeId, active.fieldKey, value, active.startRevision);
+    }
     setSession(null);
   }, [setSession]);
 

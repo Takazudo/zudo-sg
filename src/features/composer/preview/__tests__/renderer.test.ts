@@ -618,6 +618,24 @@ describe("inline text editing (issue #257)", () => {
       expect(onCommitInlineEdit).toHaveBeenCalledWith("prose-1", "children", "Reworded body.", 0);
     });
 
+    it("does NOT commit an UNCHANGED value — a no-op commit is skipped (issue #288)", () => {
+      // Regression: a blur firing the instant a session opens (before any
+      // typing) used to commit the untouched seed. That no-op still advanced
+      // the host's document revision, so when the dblclick re-entered a fresh
+      // session and the user's REAL edit committed, it failed the session-start
+      // staleness gate and was silently dropped. A no-op commit must never
+      // reach the host.
+      const { container, onCommitInlineEdit } = openSession("h-1", "h2", doc([
+        node("h-1", "ui.section-heading", { heading: "Compose", as: "h2" }),
+      ]));
+      const editable = editableOf(container, "h-1")!;
+      // No edit — blur with the seed value still in place.
+      fireEvent.blur(editable);
+      expect(onCommitInlineEdit).not.toHaveBeenCalled();
+      // The session still exits cleanly (body remounted to read mode).
+      expect(container.querySelector(EDITABLE)).toBeNull();
+    });
+
     it("Escape CANCELS without committing", () => {
       const { container, onCommitInlineEdit } = openSession("prose-1", "p");
       const editable = editableOf(container, "prose-1")!;
