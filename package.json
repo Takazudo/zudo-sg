@@ -69,6 +69,7 @@
     "@types/node": "^22.0.0",
     "@types/react": "^19.2.0",
     "culori": "^4.0.2",
+    "fake-indexeddb": "^6.2.5",
     "happy-dom": "^16.8.1",
     "html-validate": "^10.0.0",
     "lefthook": "^2.1.9",

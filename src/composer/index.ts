@@ -74,6 +74,9 @@ export * from "./library";
 // Revision-aware persistence coordination (framework and provider independent).
 export * from "./persistence";
 
+// ── Browser persistence ─────────────────────────────────────────────────────
+export * from "./storage/indexeddb";
+
 // ── Native sample ────────────────────────────────────────────────────────────
 export { createSampleDocument, SAMPLE_DOCUMENT } from "./sample/sample-document";
 export {
