@@ -214,8 +214,11 @@ export default function TokensPage(): JSX.Element {
                   <span class="w-[5rem] shrink-0 text-left text-xs text-muted">
                     {tok.default}
                   </span>
+                  {/* Magnitude bar — decorative-by-repetition (one per row), so
+                      it defaults to neutral per the accent budget (S5b/#268)
+                      rather than the accent fill it used before. */}
                   <span
-                    class="h-[0.75rem] rounded-sm bg-accent"
+                    class="h-[0.75rem] rounded-sm bg-muted"
                     style={{ width: `var(${tok.cssVar})` }}
                   />
                 </button>
