@@ -8,8 +8,9 @@ import {
 } from "../commands";
 import { createSequentialIdFactory } from "../id-factory";
 import { indexDocument } from "../index-model";
+import { RESERVED_PROP_KEYS } from "../reserved-keys";
 import { VIRTUAL_ROOT_SLOT_ID } from "../types";
-import type { InsertionTarget } from "../types";
+import type { InsertionTarget, JsonObject } from "../types";
 import { SAMPLE_COMPONENT_IDS as C, SAMPLE_SLOT_IDS as S } from "../../sample/sample-ids";
 import {
   FIXTURE_COMPONENT_IDS as X,
@@ -189,6 +190,48 @@ describe("updateProps", () => {
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.error).toMatch(/structural slot/i);
+  });
+
+  describe("rejects RESERVED_PROP_KEYS (#287)", () => {
+    // `updateProps` is the model layer's own gate: a direct caller bypasses the
+    // preview protocol's wire-level rejection (`protocol.ts`) entirely, so the
+    // model must refuse a reserved key on its own rather than trust the bridge.
+    const literalKeys = [...RESERVED_PROP_KEYS].filter((k) => k !== "__proto__");
+
+    it.each(literalKeys)('rejects a patch that sets reserved key "%s"', (reservedKey) => {
+      const heading = node(C.sectionHeading, { heading: "Old", as: "h2" }, {}, "h");
+      const before = doc([heading]);
+      const patch = { [reservedKey]: "x" } as JsonObject;
+
+      const result = updateProps(before, M, "h", patch);
+
+      expect(result.ok).toBe(false);
+      if (result.ok) return;
+      expect(result.error).toMatch(/reserved/i);
+      // the document is left unchanged
+      expect(before.root[0].props).toEqual({ heading: "Old", as: "h2" });
+    });
+
+    it("rejects a patch carrying __proto__ as an OWN property", () => {
+      // Object-literal syntax `{ __proto__: "x" }` sets the PROTOTYPE rather
+      // than creating an own property, so it would never reach `Object.entries`
+      // and would pass this check by accident regardless of correctness.
+      // `JSON.parse` (like a real attacker-controlled payload) creates a real
+      // own property named "__proto__" — the case the check must actually catch.
+      const patch = JSON.parse('{"__proto__": "x"}') as JsonObject;
+      expect(Object.prototype.hasOwnProperty.call(patch, "__proto__")).toBe(true);
+
+      const heading = node(C.sectionHeading, { heading: "Old", as: "h2" }, {}, "h");
+      const before = doc([heading]);
+
+      const result = updateProps(before, M, "h", patch);
+
+      expect(result.ok).toBe(false);
+      if (result.ok) return;
+      expect(result.error).toMatch(/reserved/i);
+      // the document is left unchanged
+      expect(before.root[0].props).toEqual({ heading: "Old", as: "h2" });
+    });
   });
 });
 
