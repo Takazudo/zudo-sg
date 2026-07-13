@@ -172,7 +172,7 @@ function ContactFormDemo(): JSX.Element {
       <div class="flex gap-hsp-md">
         <button
           type="button"
-          class="rounded-md border border-border bg-surface px-hsp-md py-hsp-xs text-sm hover:border-accent"
+          class="rounded-md border border-border bg-surface px-hsp-md py-hsp-xs text-sm hover:border-border-strong"
           aria-pressed={variant === "success"}
           onClick={() => setVariant("success")}
         >
@@ -180,7 +180,7 @@ function ContactFormDemo(): JSX.Element {
         </button>
         <button
           type="button"
-          class="rounded-md border border-border bg-surface px-hsp-md py-hsp-xs text-sm hover:border-accent"
+          class="rounded-md border border-border bg-surface px-hsp-md py-hsp-xs text-sm hover:border-border-strong"
           aria-pressed={variant === "failure"}
           onClick={() => setVariant("failure")}
         >
