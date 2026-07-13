@@ -199,12 +199,16 @@ export function useComposerIntegration(
 
   // Keep an escape handler whose identity only changes when what it must close
   // changes, so the keyboard hook does not re-bind on every controller update.
+  // Depend on `closeExport` itself (not the whole `exportState` object) so a
+  // stray re-render doesn't destabilize this callback even if `exportState`'s
+  // own memoization were ever loosened (issue #286).
+  const { closeExport } = exportState;
   const openStateRef = useRef({ chooserOpen: chooser.open, exportOpen: exportState.open });
   openStateRef.current = { chooserOpen: chooser.open, exportOpen: exportState.open };
   const handleEscape = useCallback(() => {
     if (openStateRef.current.chooserOpen) closeChooser();
-    if (openStateRef.current.exportOpen) exportState.closeExport();
-  }, [closeChooser, exportState]);
+    if (openStateRef.current.exportOpen) closeExport();
+  }, [closeChooser, closeExport]);
 
   return {
     controller,

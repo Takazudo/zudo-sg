@@ -7,7 +7,7 @@
 // output, never a second render/source mapping. `result` is never copied
 // into further local state anywhere downstream — it's held once, here.
 
-import { useCallback, useState } from "preact/hooks";
+import { useCallback, useMemo, useState } from "preact/hooks";
 import type { ComponentManifest, CompositionDocument, JsxGenerationResult } from "@/composer";
 import { generateJsx } from "@/composer";
 
@@ -34,5 +34,12 @@ export function useComposerExport(
     setOpen(false);
   }, []);
 
-  return { open, result, openExport, closeExport };
+  // Memoized so the returned object is referentially stable across renders
+  // that don't touch `open`/`result` — callers (e.g. the integration hook's
+  // `handleEscape`) can safely depend on this object without re-binding on
+  // every unrelated parent render (issue #286).
+  return useMemo(
+    () => ({ open, result, openExport, closeExport }),
+    [open, result, openExport, closeExport],
+  );
 }
