@@ -40,6 +40,7 @@ export interface ComposerToolbarBarProps {
   onSetMode: (mode: ComposerMode) => void;
   onSetViewport: (viewport: ComposerCanvasViewport) => void;
   onReset: () => void;
+  onRetrySave?: () => void;
   onExport: () => void;
   exportDisabled?: boolean;
   /** The session clipboard (issue #255) — renders as a chip beside the save status when non-empty. */
@@ -56,6 +57,7 @@ export function ComposerToolbarBar({
   onSetMode,
   onSetViewport,
   onReset,
+  onRetrySave,
   onExport,
   exportDisabled = false,
   clipboard = null,
@@ -70,7 +72,7 @@ export function ComposerToolbarBar({
           <p class="text-xs text-muted uppercase tracking-wide">Composition</p>
           <strong class="block truncate text-fg text-small font-semibold">{documentName}</strong>
         </div>
-        <ComposerStatusIndicator saveStatus={saveStatus}>
+        <ComposerStatusIndicator saveStatus={saveStatus} onRetry={onRetrySave}>
           <ComposerClipboardChip clipboard={clipboard} titleFor={titleFor} />
         </ComposerStatusIndicator>
       </div>

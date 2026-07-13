@@ -20,6 +20,7 @@ export interface ComposerToolbarProps {
   onSetMode: (mode: ComposerMode) => void;
   onSetViewport: (viewport: ComposerCanvasViewport) => void;
   onReset: () => void;
+  onRetrySave?: () => void;
 }
 
 const VIEWPORTS: { value: ComposerCanvasViewport; label: string }[] = [
@@ -37,6 +38,7 @@ export function ComposerToolbar({
   onSetMode,
   onSetViewport,
   onReset,
+  onRetrySave,
 }: ComposerToolbarProps): JSX.Element {
   return (
     <>
@@ -49,9 +51,15 @@ export function ComposerToolbar({
           class="sg-composer-save-status"
           data-sg-status={saveStatus.kind}
           aria-live="polite"
+          title={saveStatus.kind === "error" ? saveStatus.reason : undefined}
         >
           {describeSaveStatus(saveStatus)}
         </span>
+        {saveStatus.kind === "error" && onRetrySave && (
+          <button type="button" class="sg-composer-toolbar-button" onClick={onRetrySave}>
+            Retry
+          </button>
+        )}
       </div>
 
       <div class="flex items-center gap-hsp-sm">

@@ -27,7 +27,7 @@ describe("ComposerToolbar", () => {
   it("shows the document name and an honest save status", () => {
     renderToolbar();
     expect(screen.getByText("Product overview")).toBeInTheDocument();
-    expect(screen.getByText("Saved locally")).toBeInTheDocument();
+    expect(screen.getByText("Saved")).toBeInTheDocument();
   });
 
   it("shows a distinct 'not saved' status for quarantined storage", () => {

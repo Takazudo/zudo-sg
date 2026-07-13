@@ -1,0 +1,222 @@
+import { act, renderHook } from "@testing-library/preact";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  createCompositionSaveQueue,
+  createSequentialIdFactory,
+  type CompositionDocument,
+  type CompositionRecord,
+  type CompositionSaveQueue,
+  type CompositionSaveSnapshot,
+} from "@/composer";
+import { fixtureManifest, makeAbcDocument, resetFixtureIds } from "@/composer/__tests__/fixtures";
+import { BEFORE_NAVIGATE_EVENT } from "@takazudo/zudo-doc/transitions";
+import {
+  INSPECTOR_COMMIT_DEBOUNCE_MS,
+  useComposerController,
+} from "../use-composer-controller";
+
+const ref = { providerId: "indexeddb", recordId: "record-a" } as const;
+
+function record(): CompositionRecord {
+  const document = makeAbcDocument();
+  document.id = ref.recordId;
+  return {
+    id: ref.recordId,
+    createdAt: "2026-01-02T03:04:05.000Z",
+    updatedAt: "2026-01-02T03:04:05.000Z",
+    document,
+  };
+}
+
+interface Attempt {
+  snapshot: CompositionSaveSnapshot;
+  resolve(): void;
+  reject(reason: unknown): void;
+}
+
+function controlledQueue(initialRecord = record()): {
+  queue: CompositionSaveQueue;
+  attempts: Attempt[];
+} {
+  const attempts: Attempt[] = [];
+  const queue = createCompositionSaveQueue({
+    ref,
+    initialRecord,
+    write: (snapshot) =>
+      new Promise<void>((resolve, reject) => {
+        attempts.push({ snapshot, resolve, reject });
+      }),
+  });
+  return { queue, attempts };
+}
+
+function setup() {
+  resetFixtureIds();
+  const initialRecord = record();
+  const harness = controlledQueue(initialRecord);
+  const idFactory = createSequentialIdFactory("n");
+  const hook = renderHook(() =>
+    useComposerController({
+      manifest: fixtureManifest,
+      record: initialRecord,
+      saveQueue: harness.queue,
+      sample: makeAbcDocument(),
+      idFactory,
+      now: () => "2026-01-02T04:04:05.000Z",
+    }),
+  );
+  return { ...hook, ...harness };
+}
+
+async function advancePromises(): Promise<void> {
+  await Promise.resolve();
+  await Promise.resolve();
+  await Promise.resolve();
+}
+
+function labelOfA(document: CompositionDocument): unknown {
+  return document.root[0]!.slots.left![0]!.props.label;
+}
+
+beforeEach(() => {
+  localStorage.clear();
+});
+
+afterEach(() => {
+  vi.useRealTimers();
+  vi.restoreAllMocks();
+});
+
+describe("useComposerController — record persistence", () => {
+  it("serializes overlapping controller edits and saves the newest retained record", async () => {
+    const { result, queue, attempts } = setup();
+
+    act(() => result.current.updateProps("A", { label: "A1" }));
+    act(() => result.current.updateProps("A", { label: "A2" }));
+    expect(result.current.state.saveStatus).toEqual({ kind: "saving" });
+    await advancePromises();
+    expect(attempts).toHaveLength(1);
+    expect(labelOfA(attempts[0]!.snapshot.record.document)).toBe("A1");
+
+    attempts[0]!.resolve();
+    await advancePromises();
+    expect(attempts).toHaveLength(2);
+    expect(labelOfA(attempts[1]!.snapshot.record.document)).toBe("A2");
+    attempts[1]!.resolve();
+    await act(async () => result.current.flushPersistence());
+
+    expect(queue.state.status).toBe("saved");
+    expect(result.current.state.saveStatus).toEqual({ kind: "saved" });
+  });
+
+  it("retains the mounted draft after a failed flush, then Retry saves that same draft", async () => {
+    const { result, attempts } = setup();
+    act(() => result.current.updateProps("A", { label: "Keep me" }));
+    const flush = result.current.flushPersistence().catch((error: unknown) => error);
+    await advancePromises();
+
+    const failure = new Error("offline");
+    await act(async () => {
+      attempts[0]!.reject(failure);
+      await advancePromises();
+    });
+    expect(await flush).toBe(failure);
+    expect(labelOfA(result.current.state.document)).toBe("Keep me");
+    expect(result.current.state.saveStatus).toEqual({ kind: "error", reason: "offline" });
+
+    act(() => result.current.retrySave());
+    await advancePromises();
+    expect(attempts[1]!.snapshot.record.document).toEqual(result.current.state.document);
+    attempts[1]!.resolve();
+    await act(async () => result.current.flushPersistence());
+    expect(result.current.state.saveStatus).toEqual({ kind: "saved" });
+  });
+
+  it("a newer edit after failure restarts persistence without discarding either draft", async () => {
+    const { result, attempts } = setup();
+    act(() => result.current.updateProps("A", { label: "First" }));
+    await advancePromises();
+    attempts[0]!.reject(new Error("temporary"));
+    await advancePromises();
+
+    act(() => result.current.updateProps("A", { label: "Newer" }));
+    await advancePromises();
+    expect(attempts[1]!.snapshot.record.document.root[0]!.slots.left![0]!.props.label).toBe("Newer");
+    expect(labelOfA(result.current.state.document)).toBe("Newer");
+  });
+
+  it("marks debounce input dirty immediately and synchronously flushes it before unload/export", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    const { result, attempts } = setup();
+    act(() => result.current.updatePropsDebounced("A", { label: "Latest" }));
+
+    expect(result.current.state.saveStatus).toEqual({ kind: "dirty" });
+    expect(labelOfA(result.current.state.document)).toBe("A");
+
+    let blocked = false;
+    act(() => {
+      blocked = !window.dispatchEvent(new Event("beforeunload", { cancelable: true }));
+    });
+    expect(blocked).toBe(true);
+    expect(labelOfA(result.current.flushPropUpdates())).toBe("Latest");
+    await advancePromises();
+    expect(labelOfA(attempts[0]!.snapshot.record.document)).toBe("Latest");
+
+    act(() => vi.advanceTimersByTime(INSPECTOR_COMMIT_DEBOUNCE_MS * 2));
+    expect(attempts).toHaveLength(1);
+  });
+
+  it("restores the queue status when a pending prop command is rejected", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    const { result, attempts } = setup();
+    act(() => result.current.updatePropsDebounced("missing", { label: "Invalid" }));
+    expect(result.current.state.saveStatus).toEqual({ kind: "dirty" });
+
+    act(() => result.current.flushPropUpdates());
+    expect(result.current.lastError).toMatch(/not found/i);
+    expect(result.current.state.saveStatus).toEqual({ kind: "saved" });
+    await expect(result.current.flushPersistence()).resolves.toBeUndefined();
+    expect(attempts).toHaveLength(0);
+  });
+
+  it("guards shared navigation while dirty or in flight, then releases it after success", async () => {
+    const { result, attempts } = setup();
+    act(() => result.current.rename("Renamed"));
+
+    expect(!document.dispatchEvent(new Event(BEFORE_NAVIGATE_EVENT, { cancelable: true }))).toBe(true);
+    await advancePromises();
+    attempts[0]!.resolve();
+    await act(async () => result.current.flushPersistence());
+    expect(!document.dispatchEvent(new Event(BEFORE_NAVIGATE_EVENT, { cancelable: true }))).toBe(false);
+  });
+
+  it("persists rename and resets the sample body without changing record identity", async () => {
+    const { result, attempts } = setup();
+    act(() => result.current.rename("My composition"));
+    expect(result.current.record.document.name).toBe("My composition");
+    expect(result.current.record.id).toBe(ref.recordId);
+    expect(result.current.record.document.id).toBe(ref.recordId);
+    await advancePromises();
+    attempts[0]!.resolve();
+    await advancePromises();
+
+    act(() => result.current.reset());
+    expect(result.current.record.id).toBe(ref.recordId);
+    expect(result.current.record.document.id).toBe(ref.recordId);
+    expect(result.current.record.document.name).toBe(makeAbcDocument().name);
+    await advancePromises();
+    expect(attempts.at(-1)!.snapshot.record.id).toBe(ref.recordId);
+  });
+
+  it("closes on unmount without reporting a late write as saved or leaking its rejection", async () => {
+    const { result, queue, attempts, unmount } = setup();
+    act(() => result.current.updateProps("A", { label: "In flight" }));
+    await advancePromises();
+    unmount();
+    expect(queue.state).toMatchObject({ closed: true, dirty: true });
+
+    attempts[0]!.reject(new Error("late failure"));
+    await advancePromises();
+    expect(queue.state).toMatchObject({ closed: true, dirty: true, savedRevision: 0 });
+  });
+});
