@@ -29,6 +29,7 @@
 // composition lives in `useComposerIntegration`, layout lives in
 // `ComposerWorkspace`. It is the surface waves 6-9 extend.
 
+import { useEffect } from "preact/hooks";
 import type { JSX } from "preact";
 import type { ComposerManifestEntry } from "@/styleguide/data/composer-registry";
 import { ComposerWorkspace } from "@/features/composer/chrome/composer-workspace";
@@ -61,6 +62,13 @@ export interface ComposerIntegrationProps {
   createBridge?: typeof createComposerPreviewBridge;
   previewLocation?: ComposerPreviewLocation;
   hostWindow?: MessageTarget;
+  /** Production route coordinator seam for landing debounced props before transitions. */
+  registerFlushPendingProps?: (flush: (() => void) | null) => void;
+  onNavigateToLibrary?: () => void;
+  navigationError?: string | null;
+  recoveryNotice?: string | null;
+  onRetryRecovery?: () => void;
+  recoveryRetrying?: boolean;
 }
 
 export function ComposerIntegration(props: ComposerIntegrationProps): JSX.Element {
@@ -72,6 +80,11 @@ export function ComposerIntegration(props: ComposerIntegrationProps): JSX.Elemen
   const { state } = controller;
   const readOnly = state.mode === "preview";
   const menus = useComposerMenus(api);
+
+  useEffect(() => {
+    props.registerFlushPendingProps?.(controller.flushPropUpdates);
+    return () => props.registerFlushPendingProps?.(null);
+  }, [controller.flushPropUpdates, props.registerFlushPendingProps]);
 
   useComposerKeyboard({
     mode: state.mode,
@@ -87,9 +100,31 @@ export function ComposerIntegration(props: ComposerIntegrationProps): JSX.Elemen
         treeWidthPx={state.leftWidth}
         inspectorWidthPx={state.rightWidth}
         banner={
-          state.loadNotice && (
-            <ComposerLoadNoticeBanner notice={state.loadNotice} onDismiss={controller.dismissLoadNotice} />
-          )
+          <>
+            {props.navigationError && (
+              <div class="sg-composer-library-alert sg-composer-library-alert-error" role="alert">
+                <p>{props.navigationError}</p>
+              </div>
+            )}
+            {props.recoveryNotice && (
+              <div class="sg-composer-library-alert" aria-label="Composition recovery notice">
+                <p>{props.recoveryNotice}</p>
+                {props.onRetryRecovery && (
+                  <button
+                    type="button"
+                    class="sg-composer-library-button"
+                    disabled={props.recoveryRetrying}
+                    onClick={props.onRetryRecovery}
+                  >
+                    {props.recoveryRetrying ? "Retrying recovery…" : "Retry recovery"}
+                  </button>
+                )}
+              </div>
+            )}
+            {state.loadNotice && (
+              <ComposerLoadNoticeBanner notice={state.loadNotice} onDismiss={controller.dismissLoadNotice} />
+            )}
+          </>
         }
         toolbar={
           <ComposerToolbarBar
@@ -104,6 +139,7 @@ export function ComposerIntegration(props: ComposerIntegrationProps): JSX.Elemen
             onExport={exportState.openExport}
             clipboard={state.clipboard}
             titleFor={titleFor}
+            onNavigateToLibrary={props.onNavigateToLibrary}
           />
         }
         tree={

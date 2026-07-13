@@ -47,6 +47,8 @@ export interface ComposerToolbarBarProps {
   clipboard?: CompositionNode | null;
   /** Friendly display name for a component id — required only when `clipboard` is passed. */
   titleFor?: (componentId: string) => string | undefined;
+  /** Record-scoped production navigation; omitted in isolated editor tests. */
+  onNavigateToLibrary?: () => void;
 }
 
 export function ComposerToolbarBar({
@@ -62,12 +64,18 @@ export function ComposerToolbarBar({
   exportDisabled = false,
   clipboard = null,
   titleFor = () => undefined,
+  onNavigateToLibrary,
 }: ComposerToolbarBarProps): JSX.Element {
   const [confirmingReset, setConfirmingReset] = useState(false);
 
   return (
     <>
       <div class="flex items-center gap-hsp-md min-w-0">
+        {onNavigateToLibrary && (
+          <button type="button" class="sg-composer-toolbar-button" onClick={onNavigateToLibrary}>
+            Library
+          </button>
+        )}
         <div class="min-w-0">
           <p class="text-xs text-muted uppercase tracking-wide">Composition</p>
           <strong class="block truncate text-fg text-small font-semibold">{documentName}</strong>

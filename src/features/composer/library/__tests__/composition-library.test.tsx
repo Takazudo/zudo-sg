@@ -215,7 +215,7 @@ describe("CompositionLibrary data and capability states", () => {
   });
 
   it("renders a non-blocking recovered notice with the recovered collection", async () => {
-    renderLibrary(fakeIntents({
+    const intents = fakeIntents({
       initialize: vi.fn(async () => ({
         status: "ready-with-recovery",
         summaries: [ALPHA],
@@ -227,9 +227,12 @@ describe("CompositionLibrary data and capability states", () => {
           message: "Recovered one composition from malformed source data.",
         },
       })),
-    }));
+    });
+    renderLibrary(intents);
     expect(await screen.findByRole("heading", { name: "Recovery notice" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Open Alpha layout" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Retry recovery" }));
+    await waitFor(() => expect(intents.retry).toHaveBeenCalledWith("indexeddb"));
   });
 
   it("keeps the collection actionable when open reports not-found", async () => {
