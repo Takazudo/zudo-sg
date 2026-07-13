@@ -174,7 +174,7 @@ describe("insert points — one at EVERY addable index of EVERY declared slot", 
     expect(insertTargets(container)).toEqual([]);
   });
 
-  it("uses the vertical-BAR variant for a horizontal-flow container", () => {
+  it("uses the vertical-BAR variant for a horizontal-flow container's BETWEEN point (the END point gets the #283 compact button instead)", () => {
     const document = doc([
       node(
         "row-1",
@@ -186,7 +186,17 @@ describe("insert points — one at EVERY addable index of EVERY declared slot", 
     const { container } = draw(document);
     const points = [...container.querySelectorAll('[data-zc-insert^="row-1:content:"]')];
     expect(points).toHaveLength(2);
-    for (const point of points) expect(point.className).toContain("zc-insert--horizontal");
+
+    // index 0: before the only child — the slim between-bar, unchanged.
+    const between = container.querySelector('[data-zc-insert="row-1:content:0"]')!;
+    expect(between.className).toContain("zc-insert--horizontal");
+
+    // index 1 (== children.length): the slot's END point — the enlarged
+    // compact/auto-width button (issue #283), not the bar variant.
+    const end = container.querySelector('[data-zc-insert="row-1:content:1"]')!;
+    expect(end.className).not.toContain("zc-insert--horizontal");
+    expect(end.className).toContain("zc-insert-end-btn");
+    expect(end.closest(".zc-insert-group")!.className).toContain("zc-insert-end--horizontal");
   });
 
   it("uses the horizontal-RULE variant for a vertical-flow container", () => {
@@ -202,6 +212,74 @@ describe("insert points — one at EVERY addable index of EVERY declared slot", 
     const { container } = draw(document);
     const point = container.querySelector('[data-zc-insert="grid-1:items:0"]')!;
     expect(point.className).toContain("zc-insert--horizontal");
+  });
+});
+
+describe("A7: end-of-slot add affordance + icon glyphs (issue #283)", () => {
+  it("renders the slot's END point as the enlarged labeled button, with the dots companion", () => {
+    const { container } = draw(SPLIT);
+    // stack-1's `content` slot holds 2 children → index 2 is the END point.
+    const endButton = container.querySelector('[data-zc-insert="stack-1:content:2"]')!;
+    expect(endButton.className).toContain("zc-insert-end-btn");
+    expect(endButton.className).toContain("zc-insert"); // keeps the shared toning base class
+    expect(endButton.textContent).toContain("Add component");
+    // The "+" glyph is now a real icon (SVG), not literal text.
+    expect(endButton.querySelector("svg")).not.toBeNull();
+
+    const group = endButton.closest(".zc-insert-group")!;
+    const dots = group.querySelector(".zc-insert-menu--end");
+    expect(dots).not.toBeNull();
+    expect(dots!.querySelector("svg")).not.toBeNull();
+  });
+
+  it("keeps the between-children bar slim and unlabeled — only the slot's END point is enlarged", () => {
+    const { container } = draw(SPLIT);
+    const between = container.querySelector('[data-zc-insert="stack-1:content:0"]')!;
+    expect(between.className).not.toContain("zc-insert-end-btn");
+    expect(between.textContent ?? "").not.toContain("Add component");
+    // The between-bar's own "⋯" companion stays the plain (non-overlapping) variant.
+    const group = between.closest(".zc-insert-group")!;
+    expect(group.querySelector(".zc-insert-menu--end")).toBeNull();
+  });
+
+  it("keeps an empty slot's sole insert point BOTH end-styled and empty-styled (empty always implies end)", () => {
+    const document = doc([node("stack-1", "ui.stack", {}, { content: [] })]);
+    const { container } = draw(document);
+    const button = container.querySelector('[data-zc-insert="stack-1:content:0"]')!;
+    expect(button.className).toContain("zc-insert-end-btn");
+    expect(button.className).toContain("zc-insert--empty");
+    expect(button.textContent).toContain("Add component");
+  });
+
+  it("is full-width in column flow and compact/auto-width in row flow", () => {
+    const { container } = draw(SPLIT);
+    // stack-1's content flows vertically (column) → its END group is the
+    // full-width variant.
+    const verticalEnd = container.querySelector('[data-zc-insert="stack-1:content:2"]')!;
+    const verticalGroup = verticalEnd.closest(".zc-insert-group")!;
+    expect(verticalGroup.className).toContain("zc-insert-end--vertical");
+    expect(verticalGroup.className).not.toContain("zc-insert-end--horizontal");
+  });
+
+  it("swaps the insert-menu ⋯ glyph and the selected-node chrome ⋯ glyph to real icons", () => {
+    const { container } = draw(SPLIT, { session: { ...EDIT, selectedId: "prose-1" } });
+    const chromeMenu = container.querySelector(".zc-chrome-menu")!;
+    expect(chromeMenu.querySelector("svg")).not.toBeNull();
+    expect(chromeMenu.textContent?.trim()).toBe("");
+
+    const insertMenu = container.querySelector(".zc-insert-menu")!;
+    expect(insertMenu.querySelector("svg")).not.toBeNull();
+    expect(insertMenu.textContent?.trim()).toBe("");
+  });
+
+  it("preserves the data-zc-affordance / data-zc-insert wiring and the onRequestAdd relay at the END point", () => {
+    const onRequestAdd = vi.fn();
+    const { container } = draw(SPLIT, { onRequestAdd });
+    const endButton = container.querySelector('[data-zc-insert="stack-1:content:2"]')!;
+    expect(endButton.hasAttribute("data-zc-affordance")).toBe(true);
+
+    fireEvent.click(endButton);
+    expect(onRequestAdd).toHaveBeenCalledWith({ parentId: "stack-1", slotId: "content", index: 2 });
   });
 });
 
@@ -1212,6 +1290,60 @@ describe("drag & drop (issue #258)", () => {
       expect(canvas.hasAttribute("data-zc-dragging")).toBe(false);
       // The highlight state is gone with it.
       expect(container.querySelector("[data-zc-drop-valid]")).toBeNull();
+    });
+  });
+
+  // ── A7 regression (issue #283) ──────────────────────────────────────────
+  // The end-of-slot insert point's markup was restructured (enlarged button +
+  // dots overlapping its trailing edge instead of sitting inline). Both the
+  // DnD drop-target wiring and the insert-menu focus-restore token must still
+  // resolve against the NEW structure exactly as they did against the old
+  // slim-bar one — this is not just an "add button click still works" check.
+  describe("A7: DnD + focus-restore still work against the restructured END insert point (#283)", () => {
+    it("still highlights the END insert point as a valid drop target and accepts a drop on it", () => {
+      const onDropNode = vi.fn();
+      const { container } = draw(SPLIT, { session: { ...EDIT, selectedId: "prose-1" }, onDropNode });
+      const dt = fakeDataTransfer();
+      startDrag(container, "prose-1", dt);
+
+      // stack-1's `content` slot has 2 children → index 2 is the END point,
+      // now rendered as `.zc-insert-end--vertical` rather than
+      // `.zc-insert-group--vertical`.
+      const endGroup = groupOf(container, "stack-1:content:2");
+      expect(endGroup.className).toContain("zc-insert-end--vertical");
+      expect(endGroup.hasAttribute("data-zc-drop-valid")).toBe(true);
+
+      act(() => void endGroup.dispatchEvent(dragEvent("dragover", { dataTransfer: dt, altKey: false })));
+      act(() => void endGroup.dispatchEvent(dragEvent("drop", { dataTransfer: dt, altKey: false })));
+
+      expect(onDropNode).toHaveBeenCalledWith(
+        "prose-1",
+        { parentId: "stack-1", slotId: "content", index: 2 },
+        false,
+      );
+    });
+
+    it("excludes the END insert point when it sits inside the dragged subtree", () => {
+      const { container } = draw(SPLIT, { session: { ...EDIT, selectedId: "stack-1" }, onDropNode: vi.fn() });
+      startDrag(container, "stack-1", fakeDataTransfer());
+      // stack-1's own content:2 END point is inside stack-1's own subtree.
+      expect(groupOf(container, "stack-1:content:2").hasAttribute("data-zc-drop-valid")).toBe(false);
+    });
+
+    it("focusByToken still finds and focuses the END point's overlapping dots trigger", () => {
+      const { container } = draw(SPLIT);
+      document.body.append(container);
+      try {
+        focusByToken("insert-menu:stack-1:content:2");
+        const expected = container
+          .querySelector('[data-zc-insert="stack-1:content:2"]')!
+          .closest(".zc-insert-group")!
+          .querySelector(".zc-insert-menu--end");
+        expect(expected).not.toBeNull();
+        expect(document.activeElement).toBe(expected);
+      } finally {
+        container.remove();
+      }
     });
   });
 });

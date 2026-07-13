@@ -216,3 +216,56 @@ describe("accent budget — canvas quiet chrome (issue #266)", () => {
     );
   });
 });
+
+describe("end-of-slot add affordance geometry (issue #283)", () => {
+  it("sizes the button to the locked spec: min-height 2rem, 7px/12px padding, 6px icon gap", () => {
+    expect(COMPOSER_PREVIEW_CSS).toMatch(
+      /\.zc-insert-end-btn:not\(\.zc-insert--empty\)\s*\{[^}]*min-height:\s*2rem/,
+    );
+    expect(COMPOSER_PREVIEW_CSS).toMatch(
+      /\.zc-insert-end-btn:not\(\.zc-insert--empty\)\s*\{[^}]*padding-block:\s*var\(--spacing-vsp-2xs\)/,
+    );
+    expect(COMPOSER_PREVIEW_CSS).toMatch(
+      /\.zc-insert-end-btn:not\(\.zc-insert--empty\)\s*\{[^}]*padding-inline:\s*var\(--spacing-hsp-md\)/,
+    );
+    expect(blockFor(COMPOSER_PREVIEW_CSS, ".zc-insert-end-btn")).toContain(
+      "gap: var(--spacing-hsp-xs)",
+    );
+  });
+
+  it("keeps the empty-slot min-height:3rem from .zc-insert--empty unchanged, and adds the locked breathing padding", () => {
+    expect(blockFor(COMPOSER_PREVIEW_CSS, ".zc-insert--empty")).toContain("min-height: 3rem");
+    expect(blockFor(COMPOSER_PREVIEW_CSS, ".zc-insert-end-btn.zc-insert--empty")).toContain(
+      "padding: var(--spacing-vsp-xs)",
+    );
+  });
+
+  it("is full-width in column flow and auto-width (compact) in row flow", () => {
+    expect(blockFor(COMPOSER_PREVIEW_CSS, ".zc-insert-end--vertical")).toContain("width: 100%");
+    expect(blockFor(COMPOSER_PREVIEW_CSS, ".zc-insert-end--horizontal")).toContain("width: auto");
+  });
+
+  it("reserves the compact variant's trailing clearance for the overlapping dots companion", () => {
+    expect(COMPOSER_PREVIEW_CSS).toMatch(
+      /\.zc-insert-end--horizontal \.zc-insert-end-btn:not\(\.zc-insert--empty\)\s*\{[^}]*padding-inline-end:\s*calc\(var\(--spacing-hsp-sm\)\s*\+\s*1\.375rem\s*\+\s*var\(--spacing-hsp-xs\)\)/,
+    );
+  });
+
+  it("positions the dots companion absolutely over the button's trailing edge at the locked size", () => {
+    const block = blockFor(COMPOSER_PREVIEW_CSS, ".zc-insert-menu--end");
+    expect(block).toContain("position: absolute");
+    expect(block).toContain("inset-inline-end: var(--spacing-hsp-sm)");
+    expect(block).toContain("width: 1.375rem");
+    expect(block).toContain("height: 1.25rem");
+  });
+
+  it("declares NO accent color in the end-affordance geometry rules — toning stays inherited from .zc-insert", () => {
+    expect(blockFor(COMPOSER_PREVIEW_CSS, ".zc-insert-end-btn")).not.toContain("var(--color-accent)");
+    expect(
+      COMPOSER_PREVIEW_CSS.match(/\.zc-insert-end-btn:not\(\.zc-insert--empty\)\s*\{[^}]*\}/)?.[0] ?? "",
+    ).not.toContain("var(--color-accent)");
+    expect(blockFor(COMPOSER_PREVIEW_CSS, ".zc-insert-menu--end")).not.toContain(
+      "var(--color-accent)",
+    );
+  });
+});
