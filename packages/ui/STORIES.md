@@ -98,6 +98,10 @@ package, not part of the contract above. Consult it only when moving an
 existing component's markup in; it is not required reading for authoring a
 new component from scratch.
 
+See also `.claude/skills/zudo-doc-design-system/SKILL.md` for the accent-budget
+rules (≤2–3 accent elements per viewport, hover always neutral) that govern how
+components spend the `accent` token at runtime.
+
 ---
 
 ## 2. File location & discovery mechanism
