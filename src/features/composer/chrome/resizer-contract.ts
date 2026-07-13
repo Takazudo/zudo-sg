@@ -22,6 +22,15 @@ export const CSS_VAR_INSPECTOR_W = "--sg-composer-inspector-w";
 // ── Min/max/joint constraints (px) ──────────────────────────────────────────
 export const MIN_RAIL_W = 220;
 export const MAX_RAIL_W = 480;
+/**
+ * Fresh-session default width for the tree rail (Composer Polish S3, #265) —
+ * distinct from MIN_RAIL_W, which stays the drag/keyboard floor. 220px truncated
+ * common component names ('SectionHeading') at depth; 280px lets them fit
+ * untruncated while long names still ellipsize. Only the tree defaults to this;
+ * the inspector still falls back to MIN_RAIL_W. Users can still resize down to
+ * MIN_RAIL_W — this only changes where an un-persisted tree rail starts.
+ */
+export const DEFAULT_TREE_W = 280;
 /** The canvas must always keep at least this much width — "a useful center". */
 export const MIN_CANVAS_W = 320;
 /** Rough width reserved by the two resizer grid tracks themselves. */

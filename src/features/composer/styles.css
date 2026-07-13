@@ -29,7 +29,10 @@
   /* Rail widths — the resizer scripts (resizer-scripts-source.ts) override
    * these per-user in px at runtime; these are just the first-paint
    * defaults for a session with nothing persisted yet. */
-  --sg-composer-tree-w: 18rem;
+  /* 17.5rem (280px) matches DEFAULT_TREE_W in resizer-contract.ts so the
+     first paint and the restore-script's fresh-session default agree — wide
+     enough that common component names fit untruncated (#265). */
+  --sg-composer-tree-w: 17.5rem;
   --sg-composer-inspector-w: 20rem;
   /* Visual (not hit-area) width of each resizer track. */
   --sg-composer-resizer-w: 0.75rem;
@@ -380,7 +383,10 @@ html[data-sg-composer-doc] body {
 
 .sg-composer-tree {
   padding: var(--spacing-vsp-2xs) var(--spacing-hsp-xs);
-  font-size: var(--text-small);
+  /* 14px functional-text floor (#265): labels inherit this; subtitles/counts/
+     badges/slot-headers step down to --text-micro (12px) individually. Was
+     --text-small (16px), which truncated common names like "SectionHeading". */
+  font-size: var(--text-caption);
 }
 
 .sg-composer-tree-list,
@@ -391,7 +397,7 @@ html[data-sg-composer-doc] body {
 }
 
 .sg-composer-tree-list-nested {
-  padding-inline-start: var(--spacing-hsp-md);
+  padding-inline-start: var(--spacing-hsp-sm);
 }
 
 .sg-composer-tree-row {
@@ -401,8 +407,19 @@ html[data-sg-composer-doc] body {
   border-radius: var(--radius-md);
 }
 
+/* Selected row = accent tint (a whitelisted accent role — the one place the
+   tree spends accent). Text stays --color-fg and reads fine over a 12% tint. */
 .sg-composer-tree-row[data-sg-selected="true"] {
   background: color-mix(in oklch, var(--color-accent) 12%, transparent);
+}
+
+/* Hover = NEUTRAL tint, not accent (#265; accent-budget rule — hover is not a
+   whitelisted accent role). Selected rows are excluded so their accent tint is
+   never overpainted by the neutral hover. */
+@media (hover: hover) {
+  .sg-composer-tree-row:not([data-sg-selected="true"]):hover {
+    background: color-mix(in oklch, var(--color-fg) 6%, transparent);
+  }
 }
 
 .sg-composer-tree-row-root {
@@ -416,8 +433,10 @@ html[data-sg-composer-doc] body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 1.75rem;
-  min-height: 2.75rem;
+  width: 1.5rem;
+  /* Compact ~32px rows (#265). The ≥44px WCAG 2.5.5 hit target is restored for
+     coarse pointers only, in the @media (pointer: coarse) block below. */
+  min-height: 2rem;
 }
 
 .sg-composer-tree-disclosure {
@@ -443,7 +462,7 @@ html[data-sg-composer-doc] body {
   display: flex;
   align-items: baseline;
   gap: var(--spacing-hsp-2xs);
-  min-height: 2.75rem;
+  min-height: 2rem;
   padding-inline: var(--spacing-hsp-2xs);
   border: none;
   border-radius: var(--radius-md);
@@ -452,11 +471,8 @@ html[data-sg-composer-doc] body {
   text-align: start;
   cursor: pointer;
 }
-@media (hover: hover) {
-  .sg-composer-tree-select:hover {
-    background: color-mix(in oklch, var(--color-accent) 8%, transparent);
-  }
-}
+/* Hover feedback lives on the whole row (neutral tint, above) so the select
+   button itself stays transparent — no accent hover wash (#265). */
 .sg-composer-tree-select:focus-visible {
   outline: 2px solid var(--color-focus);
   outline-offset: -2px;
@@ -508,19 +524,22 @@ html[data-sg-composer-doc] body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 2.75rem;
-  min-height: 2.75rem;
+  /* Compact glyph controls (#265): 24px meets WCAG 2.5.8 (AA) for fine
+     pointers and keeps the action cluster from crowding the label. The ≥44px
+     WCAG 2.5.5 target is restored for coarse pointers in the block below. */
+  min-width: 1.5rem;
+  min-height: 2rem;
   border: none;
   border-radius: var(--radius-sm);
   background: transparent;
   color: var(--color-muted);
-  font-size: var(--text-small);
+  font-size: var(--text-caption);
   cursor: pointer;
 }
 @media (hover: hover) {
   .sg-composer-tree-action:hover:not(:disabled) {
     color: var(--color-fg);
-    background: color-mix(in oklch, var(--color-accent) 10%, transparent);
+    background: color-mix(in oklch, var(--color-fg) 8%, transparent);
   }
 }
 .sg-composer-tree-action:focus-visible {
@@ -531,8 +550,16 @@ html[data-sg-composer-doc] body {
   opacity: 0.35;
   cursor: not-allowed;
 }
-.sg-composer-tree-action-danger:not(:disabled) {
+/* Destructive glyph is muted at rest (accent/state budget — a red × on every
+   row reads as constant alarm); it turns danger-colored only on hover/focus. */
+.sg-composer-tree-action-danger:focus-visible {
   color: var(--color-danger);
+}
+@media (hover: hover) {
+  .sg-composer-tree-action-danger:hover:not(:disabled) {
+    color: var(--color-danger);
+    background: color-mix(in oklch, var(--color-danger) 12%, transparent);
+  }
 }
 .sg-composer-tree-add {
   width: auto;
@@ -586,24 +613,36 @@ html[data-sg-composer-doc] body {
   color: var(--color-fg);
 }
 
+/* Nesting guide (#265): one vertical hairline brackets a container node's
+   expanded slot groups, drawn with the structural border token (never accent).
+   The slot groups stack as a flex column whose between-group gap (--vsp-2xs)
+   clearly exceeds the ~0 within-slot row gap — the proximity-ratio rule that
+   makes LEFT and RIGHT read as separate groups. */
 .sg-composer-tree-slots {
-  padding-inline-start: var(--spacing-hsp-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-vsp-2xs);
+  padding-inline-start: var(--spacing-hsp-md);
+  border-inline-start: 1px solid var(--color-border);
 }
 
 .sg-composer-tree-slot {
-  padding-block: var(--spacing-vsp-3xs);
+  min-width: 0;
 }
 
+/* Slot-group label ('LEFT (1)'): normal-case muted 12px. The prior
+   UPPERCASE + letter-spaced micro treatment was the least legible text in the
+   rail (#265). Its small opener gap binds it to its own rows and stays smaller
+   than the between-group gap above it. */
 .sg-composer-tree-slot-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--spacing-hsp-2xs);
+  margin-bottom: var(--spacing-vsp-3xs);
   padding-inline: var(--spacing-hsp-2xs);
   color: var(--color-muted);
   font-size: var(--text-micro);
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
 }
 
 .sg-composer-tree-empty {
@@ -612,6 +651,22 @@ html[data-sg-composer-doc] body {
   color: var(--color-muted);
   font-size: var(--text-micro);
   font-style: italic;
+}
+
+/* Coarse pointers (touch): restore the ≥44px WCAG 2.5.5 hit target the compact
+   desktop rows trade away. Rows relax to ~44px; only the sizing changes — the
+   density, typography, guides, and states above are shared across pointers. */
+@media (pointer: coarse) {
+  .sg-composer-tree-disclosure,
+  .sg-composer-tree-disclosure-spacer,
+  .sg-composer-tree-select {
+    min-height: 2.75rem;
+  }
+
+  .sg-composer-tree-action {
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+  }
 }
 
 /* ── Component chooser dialog ────────────────────────────────────────────── */
