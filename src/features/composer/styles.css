@@ -178,18 +178,24 @@ html[data-sg-composer-doc] body {
     grid-column: 4;
   }
 
+  /* Accent budget (#267): hover/drag were both the same accent-30% flash —
+     neither is a whitelisted accent role (drag is interaction feedback, not a
+     pressed/selected control), so both move to a neutral fg tint, same idiom
+     as the tree row/action hover below. Dragging reads as the "committed"
+     state, so it gets a stronger tint than a plain hover. */
   @media (hover: hover) {
     .sg-composer-resizer:hover {
-      background: color-mix(in oklch, var(--color-accent) 30%, transparent);
+      background: color-mix(in oklch, var(--color-fg) 8%, transparent);
     }
   }
   .sg-composer-resizer[data-sg-dragging] {
-    background: color-mix(in oklch, var(--color-accent) 30%, transparent);
+    background: color-mix(in oklch, var(--color-fg) 14%, transparent);
   }
+  /* Outline only, matching every other focus-visible rule in this file — the
+     accent-tinted background this used to add was the odd one out. */
   .sg-composer-resizer:focus-visible {
     outline: 2px solid var(--color-focus);
     outline-offset: -2px;
-    background: color-mix(in oklch, var(--color-accent) 20%, transparent);
   }
 
   .sg-composer-narrow-note {
@@ -273,6 +279,33 @@ html[data-sg-composer-doc] body {
   opacity: 0.5;
 }
 
+/* Reset's inline confirm (#269) restyled for the toolbar row (#267) — the
+   generic `InlineConfirm` also renders inside the tree/menu with the
+   `.sg-composer-tree-confirm*` classes (that pairing stays as S3/S6 left it);
+   this is the toolbar-only variant, sized to sit inline with the other
+   toolbar controls instead of a tree row. */
+.sg-composer-toolbar-confirm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-hsp-sm);
+  min-height: 2.75rem;
+  padding-inline: var(--spacing-hsp-sm);
+  border-radius: var(--radius-md);
+  background: color-mix(in oklch, var(--color-danger) 10%, transparent);
+}
+
+.sg-composer-toolbar-confirm-text {
+  flex: 1 1 12rem;
+  font-size: var(--text-small);
+  color: var(--color-fg);
+}
+
+.sg-composer-toolbar-confirm-danger {
+  color: var(--color-danger);
+  border-color: var(--color-danger);
+}
+
 .sg-composer-save-status {
   display: inline-flex;
   align-items: center;
@@ -345,6 +378,33 @@ html[data-sg-composer-doc] body {
 .sg-composer-inspector-remove {
   color: var(--color-danger);
   border-color: var(--color-danger);
+}
+
+/* Section separators (#267): breadcrumb / identity / move-remove actions /
+   fields / slots each become their own `.sg-composer-inspector-section`, with
+   the border + padding supplying the BETWEEN-section gap. That gap (2x
+   padding-block, ~2.5rem total) clearly exceeds the small `gap-*` utilities
+   each section sets on its own children (the ratio-rule spacing the issue
+   asks for) — see css-wisdom's spacing-philosophy article. First/last
+   sections drop the outer padding/border since the panel's own `py-vsp-md`
+   and the panel's bottom edge already supply that space. */
+.sg-composer-inspector-section {
+  padding-block: var(--spacing-vsp-sm);
+  border-bottom: 1px solid var(--color-border);
+}
+.sg-composer-inspector-section:first-child {
+  padding-top: 0;
+}
+.sg-composer-inspector-section:last-child {
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+/* 'Slots' section heading (#267): normal-case (was 12px uppercase+tracked) —
+   a short rule under the label replaces letter-spacing as the emphasis cue. */
+.sg-composer-inspector-slots-heading {
+  padding-bottom: var(--spacing-vsp-3xs);
+  border-bottom: 1px solid var(--color-border);
 }
 
 /* Shared "this node/export can't be used as-is" diagnostics box — reused by
@@ -928,9 +988,16 @@ html[data-sg-composer-doc] body {
   font-size: var(--text-small);
   cursor: pointer;
 }
+/* Accent budget (#267): hover is not a whitelisted accent role — neutral fg
+   tint, same idiom as the tree row/action hover. Delete keeps its own
+   danger-tinted hover (functional-state color, outside the accent budget —
+   same "danger" precedent as .sg-composer-tree-action-danger's hover). */
 @media (hover: hover) {
   .sg-composer-menu-item:hover:not(:disabled) {
-    background: color-mix(in oklch, var(--color-accent) 10%, transparent);
+    background: color-mix(in oklch, var(--color-fg) 8%, transparent);
+  }
+  .sg-composer-menu-item-danger:not(:disabled):hover {
+    background: color-mix(in oklch, var(--color-danger) 12%, transparent);
   }
 }
 .sg-composer-menu-item:focus-visible {

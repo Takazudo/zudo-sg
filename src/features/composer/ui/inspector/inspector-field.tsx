@@ -35,7 +35,8 @@ function assertNever(field: never): never {
   throw new Error(`Unhandled Composer field kind: ${JSON.stringify(field)}`);
 }
 
-const FIELD_LABEL_CLASS = "block text-xs font-medium text-muted";
+// 14px floor for functional text (#267) — was text-xs (12px, --text-micro).
+const FIELD_LABEL_CLASS = "block text-caption font-medium text-muted";
 const FIELD_INPUT_CLASS =
   "sg-composer-inspector-control w-full rounded-md border border-border bg-surface px-hsp-xs text-small text-fg disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-danger";
 
@@ -232,7 +233,7 @@ function NumberField({ field, value, disabled, onCommit, inputId, errorId }: Num
         onBlur={onBlur}
       />
       {error !== null && (
-        <p id={errorId} class="text-xs text-danger" role="alert">
+        <p id={errorId} class="text-caption text-danger" role="alert">
           {error}
         </p>
       )}
