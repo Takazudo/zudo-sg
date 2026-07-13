@@ -150,6 +150,23 @@ function findNodeById(nodes: readonly CompositionNode[], id: string): Compositio
 }
 
 /**
+ * The on-screen value of an inline-editable field: the component's declared
+ * defaults overlaid with the node's own props, coerced to a string. Shared by
+ * session ENTRY (`enterInlineSession`) and the #288 ground-check so both read
+ * the field IDENTICALLY — the ground-check compares this against the session's
+ * captured `initialValue`, so it is only sound if the two derive the value the
+ * same way.
+ */
+function effectiveFieldValue(
+  node: CompositionNode | null | undefined,
+  entry: ComposerEntry | undefined,
+  fieldKey: string,
+): string {
+  const raw = { ...(entry?.definition.defaults ?? {}), ...(node?.props ?? {}) }[fieldKey];
+  return typeof raw === "string" ? raw : raw == null ? "" : String(raw);
+}
+
+/**
  * Inline-level element tags (issue #288). None of these start a new line on
  * their own — `<strong>Loud</strong> word` reads as one continuous line, not
  * two — so `readEditableValue` must not prepend a `\n` before one of these
@@ -432,12 +449,7 @@ export function CompositionCanvas(props: CompositionCanvasProps): JSX.Element {
       const entry = entryById.get(targetNode.componentId);
       const editable = inlineEditableForEntry(entry);
       if (!editable || !entry) return false;
-      const effective: Record<string, unknown> = {
-        ...(entry.definition.defaults ?? {}),
-        ...targetNode.props,
-      };
-      const raw = effective[editable.field];
-      const initialValue = typeof raw === "string" ? raw : raw == null ? "" : String(raw);
+      const initialValue = effectiveFieldValue(targetNode, entry, editable.field);
       setSession({
         nodeId,
         fieldKey: editable.field,
@@ -578,12 +590,7 @@ export function CompositionCanvas(props: CompositionCanvasProps): JSX.Element {
     if (!active || previousDocument === document) return;
     const targetNode = findNodeById(document.root, active.nodeId);
     const entry = targetNode ? entryById.get(targetNode.componentId) : undefined;
-    const effective: Record<string, unknown> = {
-      ...(entry?.definition.defaults ?? {}),
-      ...(targetNode?.props ?? {}),
-    };
-    const raw = effective[active.fieldKey];
-    const currentValue = typeof raw === "string" ? raw : raw == null ? "" : String(raw);
+    const currentValue = effectiveFieldValue(targetNode, entry, active.fieldKey);
     if (!targetNode || currentValue !== active.initialValue) cancelInline();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only a document IDENTITY change gates this check
   }, [document]);

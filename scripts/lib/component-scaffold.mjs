@@ -260,16 +260,22 @@ const VALUE_EXPORT_RE = /^export\s*\{([^}]*)\}\s*from\s*["']([^"']+)["'];?\s*$/;
  * and the label of the enclosing `// ── <Category> ──` section, or
  * `undefined` if `pascalName` isn't exported anywhere in the barrel yet.
  */
+// The BOUND names an `export { … }` brace introduces: `A, default as B` → ["A", "B"].
+// Shared so the collision scan and the sort key agree on what a block "exports".
+function parseBoundNames(braceContents) {
+  return braceContents
+    .split(",")
+    .map((spec) => spec.trim())
+    .filter(Boolean)
+    .map((spec) => (spec.includes(" as ") ? spec.split(" as ").pop().trim() : spec));
+}
+
 function findExistingPascalExport(lines, pascalName) {
   const headerIndexes = getHeaderIndexes(lines);
   for (let i = 0; i < lines.length; i++) {
     const match = lines[i].match(VALUE_EXPORT_RE);
     if (!match) continue;
-    const names = match[1]
-      .split(",")
-      .map((spec) => spec.trim())
-      .filter(Boolean)
-      .map((spec) => (spec.includes(" as ") ? spec.split(" as ").pop().trim() : spec));
+    const names = parseBoundNames(match[1]);
     if (!names.includes(pascalName)) continue;
     const headerIdx = [...headerIndexes].reverse().find((h) => h < i);
     return {
@@ -309,12 +315,7 @@ function blockSortKey(block) {
   // `default as` re-exports; the trimmed test fixture did not).
   const match = block[0].match(VALUE_EXPORT_RE);
   if (!match) return block[0];
-  const first = match[1]
-    .split(",")
-    .map((spec) => spec.trim())
-    .filter(Boolean)
-    .map((spec) => (spec.includes(" as ") ? spec.split(" as ").pop().trim() : spec))[0];
-  return first ?? block[0];
+  return parseBoundNames(match[1])[0] ?? block[0];
 }
 
 /**
