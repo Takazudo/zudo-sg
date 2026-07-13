@@ -2,12 +2,19 @@
 /** @jsxImportSource preact */
 import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, within } from "@testing-library/preact";
+import { createManifest } from "@/composer";
 import { ComposerTree } from "../composer-tree";
 import { fixtureCatalog, fixtureDocument, fixtureNode, makeAbcDocument, resetFixtureIds, FIXTURE_IDS } from "./fixtures";
 
+// One shared derivation, mirroring the app layer's single `createManifest`
+// call (issue #290) — every test below passes this same manifest + the raw
+// catalog array, rather than re-deriving inside `ComposerTree` itself.
+const fixtureManifest = createManifest(fixtureCatalog);
+
 function baseProps() {
   return {
-    manifest: fixtureCatalog,
+    manifest: fixtureManifest,
+    entries: fixtureCatalog,
     selectedId: null as string | null,
     expandedIds: new Set<string>(),
     onSelect: vi.fn(),

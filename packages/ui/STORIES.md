@@ -181,16 +181,22 @@ export names came straight from the original flat components; it was rebuilt
 from scratch once the new component set fully replaced the old one, so there
 was never a need to resolve name collisions incrementally.
 
-**New rule going forward: `pnpm new:component --nested` (§8) never touches the
-barrel.** A category-nested scaffold is still fully catalog-visible and
-testable the moment it's created — the registry (`sg-registry.ts` /
-`story-modules.ts`) imports every story via its package subpath
-(`@zudo-sg/ui/src/<category>/<name>/<name>.stories.tsx`), **never** via the
-barrel — but it isn't reachable from `@zudo-sg/ui`'s top-level import until
-someone adds it by hand. Add a component to the barrel only when it should
-also be part of the package's public export surface: insert its
-`export { … }` / `export type { … }` pair alphabetically into the matching
-`// ── <Category> ──` section (see `index.ts`'s own header comment).
+**Settled policy: `pnpm new:component --nested` (§8) auto-inserts into the
+barrel, same as a flat scaffold.** A category-nested scaffold is fully
+catalog-visible and testable the moment it's created regardless — the
+registry (`sg-registry.ts` / `story-modules.ts`) imports every story via its
+package subpath (`@zudo-sg/ui/src/<category>/<name>/<name>.stories.tsx`),
+**never** via the barrel — but by default it's *also* reachable from
+`@zudo-sg/ui`'s top-level import the moment it's scaffolded: the scaffolder
+inserts its `export { … }` / `export type { … }` pair alphabetically into the
+matching `// ── <Category> ──` section (see `index.ts`'s own header comment),
+importing from the nested path `./<category-slug>/<name>/<name>`. Pass
+`--skip-barrel` to opt out and add the export by hand later (e.g. to place it
+in a non-default position). Because two different categories may scaffold a
+same-named component (above) but the barrel can't hold two exports of the
+same Pascal name, the scaffolder fails with an actionable error instead of
+writing a colliding export when that happens — alias one of the two
+manually.
 
 ---
 
@@ -448,13 +454,16 @@ pnpm new:component demo-widget --category Layout --nested
 - `--nested` scaffolds into `packages/ui/src/<category-slug>/<name>/` instead
   of the flat `packages/ui/src/<name>/`, where `<category-slug>` is
   `<Category>` lowercased with spaces replaced by hyphens (e.g.
-  `"Data Display"` → `data-display`). A nested scaffold **never** touches the
-  barrel (`packages/ui/src/index.ts`), regardless of `--skip-barrel` — see
-  "The barrel: organized by `StoryCategory`, not by directory" in §2.
-- `--skip-barrel` (optional, flat mode only) skips the barrel-export insert
-  step (below) — use it when you want to add the export by hand, e.g. to
-  place it in a non-default position. It's a no-op alongside `--nested`
-  (nested scaffolds already always skip the barrel).
+  `"Data Display"` → `data-display`). A nested scaffold auto-inserts into the
+  barrel (`packages/ui/src/index.ts`) exactly like a flat scaffold, importing
+  from the nested path `./<category-slug>/<name>/<name>` — see "The barrel:
+  organized by `StoryCategory`, not by directory" in §2. Scaffolding a name
+  that's already exported from the barrel under a different category fails
+  with an actionable error instead of writing a colliding export.
+- `--skip-barrel` skips the barrel-export insert step (below) — use it when
+  you want to add the export by hand, e.g. to place it in a non-default
+  position, or to work around a duplicate-name collision by aliasing it
+  yourself. Works the same for flat and `--nested` scaffolds.
 
 It creates, following the existing house pattern (variant union + `Record`
 class map + `class?` passthrough + the shared focus-visible outline classes):
@@ -466,9 +475,9 @@ class map + `class?` passthrough + the shared focus-visible outline classes):
   variant with a controls skeleton (§3/§4).
 - …`/__tests__/<name>.test.tsx` — a starter test suite.
 - The barrel export in `packages/ui/src/index.ts`, inserted alphabetically
-  into the matching `// ── <Category> ──` section — **flat mode only**,
-  unless `--skip-barrel` is passed or this project has no barrel-file
-  convention (see below). `--nested` always skips this step.
+  into the matching `// ── <Category> ──` section — for both flat and
+  `--nested` scaffolds, unless `--skip-barrel` is passed or this project has
+  no barrel-file convention (see below).
 - A `gen:sg-registry` run, so the component is registered in the S6 catalog
   immediately (§2) — no separate step needed, for either layout.
 

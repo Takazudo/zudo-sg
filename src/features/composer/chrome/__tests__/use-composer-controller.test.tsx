@@ -121,6 +121,8 @@ describe("useComposerController — typed callback seams", () => {
       "lastError",
       "add",
       "updateProps",
+      "updatePropsDebounced",
+      "flushPropUpdates",
       "reorder",
       "remove",
       "copy",

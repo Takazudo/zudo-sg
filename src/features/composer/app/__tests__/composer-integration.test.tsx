@@ -20,6 +20,7 @@ import {
   requestNodeMenuMessage,
   selectMessage,
 } from "@/features/composer/preview/protocol";
+import { INSPECTOR_COMMIT_DEBOUNCE_MS } from "@/features/composer/chrome/use-composer-controller";
 import { ComposerIntegration } from "../composer-integration";
 import { makeTestBridge } from "../test-support/preview-harness";
 import { LS_COMPOSER_VIEWPORT } from "../viewport";
@@ -166,7 +167,15 @@ describe("ComposerIntegration — mutations reflect everywhere (#251)", () => {
     const boxId = s.canvasDoc().root[0]!.id;
 
     const label = within(s.inspector()).getByLabelText("Label") as HTMLInputElement;
-    fireEvent.input(label, { target: { value: "Renamed" } });
+    // Keystream commits are debounced (#291) — advance to the trailing edge.
+    // The dedicated flush/burst coverage lives in composer-integration-debounce.test.tsx.
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    try {
+      fireEvent.input(label, { target: { value: "Renamed" } });
+      act(() => vi.advanceTimersByTime(INSPECTOR_COMMIT_DEBOUNCE_MS));
+    } finally {
+      vi.useRealTimers();
+    }
 
     expect(s.canvasDoc().root[0]!.props.label).toBe("Renamed");
     expect(s.canvasDoc().root[0]!.id).toBe(boxId); // same stable node, not a remount

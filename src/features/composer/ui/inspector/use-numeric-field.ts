@@ -41,8 +41,17 @@ export function useNumericField({ value, min, max, onCommit }: UseNumericFieldOp
   const [draft, setDraft] = useState(() => String(value));
   const [error, setError] = useState<string | null>(null);
   const focusedRef = useRef(false);
+  // The last value handed to `onCommit` that the `value` prop has not yet
+  // caught up with. With a DEBOUNCED commit channel (issue #291) the incoming
+  // `value` lags the keystream, so deduping against `value` alone would
+  // swallow a correction typed inside the debounce window (e.g. "55" then
+  // backspace to "5" — 5 equals the stale prop, but 55 is what's pending).
+  const inFlightRef = useRef<number | null>(null);
 
   useEffect(() => {
+    // The document caught up (our commit landed) or moved externally — either
+    // way the fresh `value` is the truth to dedupe against again.
+    inFlightRef.current = null;
     if (focusedRef.current) return;
     setDraft(String(value));
     setError(null);
@@ -56,10 +65,13 @@ export function useNumericField({ value, min, max, onCommit }: UseNumericFieldOp
       const result = validateDraft(text, min, max);
       if (result.ok) {
         setError(null);
-        // Never commit a value equal to what's already there — avoids a
-        // redundant document mutation (and redundant autosave) on every
-        // keystroke that doesn't actually change the parsed number.
-        if (result.value !== value) onCommit(result.value);
+        // Never commit a value equal to what's already there (or already in
+        // flight) — avoids a redundant document mutation (and redundant
+        // autosave) on every keystroke that doesn't change the parsed number.
+        if (result.value !== (inFlightRef.current ?? value)) {
+          inFlightRef.current = result.value;
+          onCommit(result.value);
+        }
       } else {
         setError(result.message);
       }

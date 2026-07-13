@@ -40,6 +40,7 @@
 import { z } from "zod";
 import type { CompositionDocument, CompositionNode, InsertionTarget } from "@/composer";
 import { COMPOSITION_SCHEMA_VERSION } from "@/composer";
+import { RESERVED_PROP_KEYS } from "@/composer/model/reserved-keys";
 import { jsonValueSchema } from "@/styleguide/data/composer-schema";
 
 /** Envelope discriminator — keeps Composer traffic off other message buses. */
@@ -78,31 +79,14 @@ export const previewSessionSchema = z
 /**
  * Prop names a Composition node may NEVER carry.
  *
- * JSON-safety is not the same as safety. `dangerouslySetInnerHTML: { __html }`
- * is perfectly JSON-safe, and several cohort components spread their rest props
- * straight onto a DOM element (`ProseP` renders `<p {...rest} />`), so a
- * document carrying that key would get raw HTML injected into a document that is
- * SAME-ORIGIN with `/composer`. That is exactly the "nothing crossing this bridge
- * is ever evaluated" invariant this protocol exists to hold, so the key is
- * refused at the boundary rather than sanitized downstream.
- *
- * `key`/`ref` are Preact-reserved: `key` would hijack the renderer's own keying
- * (the DOM-identity guarantee) and `ref` would hand a document out a live DOM
- * handle. The prototype names are refused on principle — a JSON-parsed object
- * can carry them as own properties.
- *
- * None of these are reachable from the authoring contract (#244): a Composer
- * field is a scalar text/select/boolean/number/color prop, so no legitimate
- * document can ever need one.
+ * Defined at the MODEL layer (`@/composer/model/reserved-keys`, issue #287)
+ * so `updateProps` can reject these keys too — not just this wire schema and
+ * `renderer.ts`'s `safeProps`. Re-exported here so existing preview-side
+ * consumers (this module's own schema below, `renderer.ts`, `index.ts`,
+ * `protocol.test.ts`) keep importing it from `./protocol` unchanged. See that
+ * module for the full rationale.
  */
-export const RESERVED_PROP_KEYS: ReadonlySet<string> = new Set([
-  "dangerouslySetInnerHTML",
-  "key",
-  "ref",
-  "__proto__",
-  "constructor",
-  "prototype",
-]);
+export { RESERVED_PROP_KEYS };
 
 /**
  * Reject the reserved keys, then parse.

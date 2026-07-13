@@ -1,7 +1,7 @@
 /** @jsxRuntime automatic */
 /** @jsxImportSource preact */
 import { describe, expect, it, vi } from "vitest";
-import { render } from "@testing-library/preact";
+import { render, renderHook } from "@testing-library/preact";
 import {
   isEditableEventTarget,
   useComposerKeyboard,
@@ -118,5 +118,63 @@ describe("useComposerKeyboard — the guard matrix (#251)", () => {
     const { fire } = setup({ mode: "edit", selectedId: "n1", onRemoveSelected: vi.fn(), onEscape, menuOpen: true });
     fire("Escape");
     expect(onEscape).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("useComposerKeyboard — effect does not rebind on unrelated rerenders (#286)", () => {
+  it("does not remove/re-add the keydown listener when every option is referentially stable", () => {
+    const host: KeyboardHost = {
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    };
+    const onRemoveSelected = vi.fn();
+    const onEscape = vi.fn();
+    const options: ComposerKeyboardOptions = {
+      mode: "edit",
+      selectedId: "n1",
+      onRemoveSelected,
+      onEscape,
+      host,
+    };
+
+    const { rerender } = renderHook((opts: ComposerKeyboardOptions) => useComposerKeyboard(opts), {
+      initialProps: options,
+    });
+    expect(host.addEventListener).toHaveBeenCalledTimes(1);
+    expect(host.removeEventListener).not.toHaveBeenCalled();
+
+    // Re-render with a NEW options object, but every field inside it is the
+    // same reference/value as before (mirrors a parent rerender where
+    // `onEscape`/`onRemoveSelected` are memoized) — the effect must not tear
+    // down and re-add the listener.
+    rerender({ mode: "edit", selectedId: "n1", onRemoveSelected, onEscape, host });
+
+    expect(host.addEventListener).toHaveBeenCalledTimes(1);
+    expect(host.removeEventListener).not.toHaveBeenCalled();
+  });
+
+  it("DOES rebind when a dep like onEscape actually changes identity", () => {
+    const host: KeyboardHost = {
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    };
+    const onRemoveSelected = vi.fn();
+    const options: ComposerKeyboardOptions = {
+      mode: "edit",
+      selectedId: "n1",
+      onRemoveSelected,
+      onEscape: vi.fn(),
+      host,
+    };
+
+    const { rerender } = renderHook((opts: ComposerKeyboardOptions) => useComposerKeyboard(opts), {
+      initialProps: options,
+    });
+    expect(host.addEventListener).toHaveBeenCalledTimes(1);
+
+    rerender({ mode: "edit", selectedId: "n1", onRemoveSelected, onEscape: vi.fn(), host });
+
+    expect(host.removeEventListener).toHaveBeenCalledTimes(1);
+    expect(host.addEventListener).toHaveBeenCalledTimes(2);
   });
 });

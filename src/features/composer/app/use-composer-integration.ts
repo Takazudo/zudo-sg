@@ -8,15 +8,21 @@
 // without re-deriving any of it.
 //
 // Manifest reconciliation (the one non-obvious wiring detail):
-//   - the tree (#250) and chooser (#250) want the RICHER `ComposerManifestEntry[]`
-//     array (title/category/description);
+//   - the tree (#250) and chooser (#250) want BOTH the RICHER
+//     `ComposerManifestEntry[]` array (title/category/description) AND the
+//     model-side `ComponentManifest` (for slot/traversal/diagnostic helpers);
 //   - the inspector (#249), the export generator (#245), and the controller
-//     model (#245/#247) want the model-side `ComponentManifest` lookup.
+//     model (#245/#247) want only the model-side `ComponentManifest` lookup.
 //   `ComposerManifestEntry` is a structural superset of the model's
 //   `ComponentManifestEntry`, so ONE richer array is the source of truth and the
-//   `ComponentManifest` is DERIVED from it (`createManifest`) — never a second,
-//   drift-prone manifest. The controller is handed that same derived manifest,
-//   so `controller.manifest` is identical to what the inspector/export receive.
+//   `ComponentManifest` is DERIVED from it (`createManifest`) exactly ONCE,
+//   here — never a second, drift-prone (or redundantly re-validated) manifest.
+//   The controller is handed that same derived `manifest`, and `composer-
+//   integration.tsx` passes that identical `controller.manifest` down to the
+//   tree/chooser too (alongside the raw `manifestEntries` array), so
+//   `createManifest` never runs more than once per `manifestEntries` change
+//   (issue #290) and `controller.manifest` is identical to what the
+//   inspector/export/tree/chooser all receive.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "preact/hooks";
 import type { InsertionTarget } from "@/composer";
@@ -145,7 +151,11 @@ export function useComposerIntegration(
   }, []);
   const closeChooser = useCallback(() => setChooser({ open: false, target: null }), []);
 
-  const exportState = useComposerExport(state.document, manifest);
+  // The export hook takes a document RESOLVER, and it's the controller's
+  // `flushPropUpdates` (issue #291): a debounce-pending inspector edit lands —
+  // and the post-flush document is read back in the same tick — before any
+  // JSX generation, so an export can never miss the tail of a typing burst.
+  const exportState = useComposerExport(controller.flushPropUpdates, manifest);
 
   const titleFor = useMemo(() => {
     const byId = new Map(manifestEntries.map((e) => [e.componentId, e.title]));
@@ -199,12 +209,16 @@ export function useComposerIntegration(
 
   // Keep an escape handler whose identity only changes when what it must close
   // changes, so the keyboard hook does not re-bind on every controller update.
+  // Depend on `closeExport` itself (not the whole `exportState` object) so a
+  // stray re-render doesn't destabilize this callback even if `exportState`'s
+  // own memoization were ever loosened (issue #286).
+  const { closeExport } = exportState;
   const openStateRef = useRef({ chooserOpen: chooser.open, exportOpen: exportState.open });
   openStateRef.current = { chooserOpen: chooser.open, exportOpen: exportState.open };
   const handleEscape = useCallback(() => {
     if (openStateRef.current.chooserOpen) closeChooser();
-    if (openStateRef.current.exportOpen) exportState.closeExport();
-  }, [closeChooser, exportState]);
+    if (openStateRef.current.exportOpen) closeExport();
+  }, [closeChooser, closeExport]);
 
   return {
     controller,

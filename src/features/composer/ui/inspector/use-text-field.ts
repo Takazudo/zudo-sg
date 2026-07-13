@@ -13,6 +13,12 @@
 // `${selectedId}:${field.prop}`, so switching the SELECTED node still
 // remounts cleanly instead of reusing stale focus/draft state left over from
 // a different node.
+//
+// This hook still calls `onCommit` on EVERY keystroke — since issue #291 the
+// wired callback is the controller's DEBOUNCED channel
+// (`updatePropsDebounced`), so the expensive dispatch (whole-document
+// stringify + localStorage + preview render) coalesces per typing pause
+// while the draft here stays per-keystroke responsive.
 
 import { useEffect, useRef, useState } from "preact/hooks";
 

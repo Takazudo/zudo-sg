@@ -22,6 +22,7 @@ import { VIRTUAL_ROOT_SLOT_ID } from "./types";
 import type { IdFactory } from "./id-factory";
 import { cloneJson, isJsonSafe } from "./json";
 import { indexDocument } from "./index-model";
+import { RESERVED_PROP_KEYS } from "./reserved-keys";
 import { isNodeOpaque, validateInsertionTarget } from "./validate";
 
 export type CommandResult =
@@ -150,10 +151,13 @@ function validateFieldValue(field: ComposerFieldMeta, value: JsonValue): string 
 /**
  * Merge a JSON-safe prop patch into a node's props. Rejects opaque nodes
  * (their props are read-only), non-JSON-safe values, values that violate a
- * declared field's kind/domain, and any key that names a declared STRUCTURAL
- * slot's `prop` (that prop is reserved for the slot's rendered children — a
- * scalar written there would sit inert in storage yet claim the same prop the
- * generator binds structural children to). Props not described by a field are
+ * declared field's kind/domain, any key in `RESERVED_PROP_KEYS` (issue #287 —
+ * this is the model-layer counterpart of the preview protocol's wire-level
+ * rejection; a direct model caller bypasses that boundary, so the model must
+ * refuse it too), and any key that names a declared STRUCTURAL slot's `prop`
+ * (that prop is reserved for the slot's rendered children — a scalar written
+ * there would sit inert in storage yet claim the same prop the generator
+ * binds structural children to). Props not described by a field are
  * otherwise still accepted as long as they are JSON-safe.
  */
 export function updateProps(
@@ -175,6 +179,12 @@ export function updateProps(
   const slotProps = new Set(entry.slots.map((s) => s.prop));
 
   for (const [prop, value] of Object.entries(patch)) {
+    if (RESERVED_PROP_KEYS.has(prop)) {
+      return {
+        ok: false,
+        error: `Prop "${prop}" is a reserved key and cannot be set`,
+      };
+    }
     if (slotProps.has(prop)) {
       return {
         ok: false,
