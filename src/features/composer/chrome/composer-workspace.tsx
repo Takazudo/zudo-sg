@@ -69,7 +69,7 @@ export function ComposerWorkspace({
       </div>
       {banner}
       <div class="sg-composer-grid" data-sg-composer-grid>
-        <div class="sg-composer-tree" id={ID_TREE_RAIL} aria-label="Structure">
+        <div class="sg-composer-tree-rail" id={ID_TREE_RAIL} aria-label="Structure">
           {tree ?? <ComposerPlaceholderPane label="Structure" note="The tree rail mounts here in a later Composer wave." />}
         </div>
         <div

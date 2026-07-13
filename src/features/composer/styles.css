@@ -93,7 +93,7 @@ html[data-sg-composer-doc] body {
   grid-template-columns: minmax(0, 1fr);
 }
 
-.sg-composer-tree,
+.sg-composer-tree-rail,
 .sg-composer-inspector {
   display: none;
   min-width: 0;
@@ -103,7 +103,7 @@ html[data-sg-composer-doc] body {
   background: var(--color-bg);
 }
 
-.sg-composer-tree {
+.sg-composer-tree-rail {
   border-right: 1px solid var(--color-border);
 }
 
@@ -154,7 +154,7 @@ html[data-sg-composer-doc] body {
       var(--sg-composer-inspector-w);
   }
 
-  .sg-composer-tree,
+  .sg-composer-tree-rail,
   .sg-composer-inspector {
     display: block;
   }
@@ -445,6 +445,9 @@ html[data-sg-composer-doc] body {
 /* ── Structure rail ─────────────────────────────────────────────────────── */
 
 .sg-composer-tree {
+  --sg-tree-indent: var(--spacing-hsp-lg);
+  --sg-tree-guide: var(--spacing-hsp-md);
+
   padding: var(--spacing-vsp-10) var(--spacing-hsp-xs);
   /* 14px functional-text floor (#265): labels inherit this; subtitles/counts/
      badges/slot-headers step down to --text-micro (12px) individually. Was
@@ -460,10 +463,11 @@ html[data-sg-composer-doc] body {
 }
 
 .sg-composer-tree-list-nested {
-  padding-inline-start: var(--spacing-hsp-sm);
+  margin-inline-start: var(--sg-tree-indent);
 }
 
 .sg-composer-tree-row {
+  position: relative;
   display: flex;
   align-items: center;
   gap: var(--spacing-hsp-2xs);
@@ -486,7 +490,10 @@ html[data-sg-composer-doc] body {
 }
 
 .sg-composer-tree-row-root {
+  margin-block-end: var(--spacing-vsp-3xs);
   padding-block: var(--spacing-vsp-3xs);
+  border-bottom: 1px solid var(--color-border);
+  border-radius: 0;
   font-weight: 600;
 }
 
@@ -524,7 +531,7 @@ html[data-sg-composer-doc] body {
   flex: 1 1 auto;
   min-width: 0;
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: var(--spacing-hsp-2xs);
   min-height: 1.75rem;
   padding-inline: var(--spacing-hsp-2xs);
@@ -549,15 +556,11 @@ html[data-sg-composer-doc] body {
 /* Node-type glyph (Page/Root, Slot, Container, Leaf — issue #282): NEUTRAL
    only, `currentColor`-inherited from the row's own text color, never accent
    (the tree's one accent role is already spent on row selection — see the
-   accent-budget note on `.sg-composer-tree-row[data-sg-selected]` above).
-   `align-self: center` corrects the icon against the row's own
-   `align-items: baseline` (right for text, wrong for an SVG glyph);
-   `vertical-align: middle` is the equivalent fix for the slot-header
-   placement, which is plain inline content, not a flex child. */
+   accent-budget note on `.sg-composer-tree-row[data-sg-selected]` above). */
 .sg-composer-tree-node-icon {
   flex-shrink: 0;
-  align-self: center;
-  vertical-align: middle;
+  display: inline-flex;
+  align-self: auto;
 }
 
 .sg-composer-tree-select-title {
@@ -697,36 +700,163 @@ html[data-sg-composer-doc] body {
   color: var(--color-fg);
 }
 
-/* Nesting guide (#265): one vertical hairline brackets a container node's
-   expanded slot groups, drawn with the structural border token (never accent).
-   The slot groups stack as a flex column whose between-group gap (--vsp-2xs)
-   clearly exceeds the ~0 within-slot row gap — the proximity-ratio rule that
-   makes LEFT and RIGHT read as separate groups. */
+/* One compact hierarchy step is shared by component→slot and slot→component.
+   Continuing guides live on the non-last sibling's full box, including the
+   slot-group spacing, so the rail never breaks between rows. Each incoming L
+   terminates at the actual row midpoint; open branches continue from that
+   same midpoint into their nested list. */
 .sg-composer-tree-slots {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-vsp-2xs);
-  padding-inline-start: var(--spacing-hsp-md);
-  border-inline-start: 1px solid var(--color-border);
+  margin-inline-start: var(--sg-tree-indent);
 }
 
 .sg-composer-tree-slot {
+  position: relative;
   min-width: 0;
 }
 
-/* Slot-group label ('LEFT (1)'): normal-case muted 12px. The prior
-   UPPERCASE + letter-spaced micro treatment was the least legible text in the
-   rail (#265). Its small opener gap binds it to its own rows and stays smaller
-   than the between-group gap above it. */
+.sg-composer-tree-slot:not(:last-child) {
+  padding-block-end: var(--spacing-vsp-2xs);
+}
+
+.sg-composer-tree-list-nested > .sg-composer-tree-node {
+  position: relative;
+}
+
+.sg-composer-tree-slots > .sg-composer-tree-slot:not(:last-child)::before,
+.sg-composer-tree-list-nested > .sg-composer-tree-node:not(:last-child)::before {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: calc(var(--sg-tree-guide) - var(--sg-tree-indent));
+  border-inline-start: 1px solid var(--color-border);
+  pointer-events: none;
+}
+
+.sg-composer-tree-slots > .sg-composer-tree-slot > .sg-composer-tree-slot-header::before,
+.sg-composer-tree-list-nested > .sg-composer-tree-node > .sg-composer-tree-row::before {
+  content: "";
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: calc(var(--sg-tree-guide) - var(--sg-tree-indent));
+  inline-size: var(--sg-tree-indent);
+  block-size: 50%;
+  border-inline-start: 1px solid var(--color-border);
+  border-block-end: 1px solid var(--color-border);
+  pointer-events: none;
+}
+
+.sg-composer-tree-row[data-sg-tree-branch-open="true"]::after,
+.sg-composer-tree-slot-header[data-sg-tree-branch-open="true"]::after {
+  content: "";
+  position: absolute;
+  inset-block: 50% 0;
+  inset-inline-start: var(--sg-tree-guide);
+  border-inline-start: 1px solid var(--color-border);
+  pointer-events: none;
+}
+
+.sg-composer-tree-list-nested
+  > .sg-composer-tree-node
+  > .sg-composer-tree-row
+  > .sg-composer-tree-disclosure-spacer,
+.sg-composer-tree-slot-spacer {
+  position: relative;
+}
+
+.sg-composer-tree-list-nested
+  > .sg-composer-tree-node
+  > .sg-composer-tree-row
+  > .sg-composer-tree-disclosure-spacer::after,
+.sg-composer-tree-slot-spacer::after {
+  content: "";
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-start: 50%;
+  inset-inline-end: calc(-1 * (var(--spacing-hsp-2xs) + var(--spacing-hsp-2xs)));
+  border-block-start: 1px solid var(--color-border);
+  pointer-events: none;
+}
+
+/* Slots keep the familiar outline-row treatment. A small outlined marker is
+   strong enough to make insertion targets scannable without turning the
+   entire group into the rejected band treatment. */
 .sg-composer-tree-slot-header {
-  display: flex;
+  position: relative;
+  display: grid;
+  grid-template-columns: 1.5rem minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
   gap: var(--spacing-hsp-2xs);
-  margin-bottom: var(--spacing-vsp-3xs);
-  padding-inline: var(--spacing-hsp-2xs);
+  min-height: 1.75rem;
   color: var(--color-muted);
   font-size: var(--text-micro);
+}
+
+.sg-composer-tree-slot-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-hsp-2xs);
+  padding-inline: var(--spacing-hsp-2xs);
+}
+
+.sg-composer-tree-slot-kind {
+  flex-shrink: 0;
+  padding-inline: var(--spacing-hsp-2xs);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-fg);
+  font-size: var(--text-micro);
+  font-weight: 600;
+  line-height: 1.4;
+  text-transform: uppercase;
+}
+
+.sg-composer-tree-slot-name {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--color-fg);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sg-composer-tree-slot-cardinality {
+  flex-shrink: 9999;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sg-composer-tree-slot-cardinality::before {
+  content: "\00b7";
+  margin-inline-end: var(--spacing-hsp-2xs);
+}
+
+.sg-composer-tree-slot-controls {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.sg-composer-tree-slot-controls > .sg-composer-tree-count {
+  min-width: 1.5rem;
+  margin-inline-start: 0;
+  padding-inline: var(--spacing-hsp-2xs);
+  border-radius: var(--radius-full);
+  background: color-mix(in oklch, var(--color-fg) 6%, transparent);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.sg-composer-tree-slot-header .sg-composer-tree-add {
+  border: 1px solid var(--color-border);
+  color: var(--color-fg);
+  font-weight: 600;
 }
 
 .sg-composer-tree-empty {
@@ -735,6 +865,10 @@ html[data-sg-composer-doc] body {
   color: var(--color-muted);
   font-size: var(--text-micro);
   font-style: italic;
+}
+
+.sg-composer-tree-slot > .sg-composer-tree-empty {
+  margin-inline-start: calc(1.5rem + var(--spacing-hsp-2xs));
 }
 
 /* Coarse pointers (touch): restore the ≥44px WCAG 2.5.5 hit target the compact

@@ -53,6 +53,25 @@ describe("ComposerTree — structure", () => {
     expect(titles[1]).toContain("C");
   });
 
+  it("marks every slot explicitly and identifies its cardinality", () => {
+    resetFixtureIds();
+    const document = makeAbcDocument();
+    const { container } = render(
+      <ComposerTree document={document} {...baseProps()} expandedIds={new Set(["split"])} />,
+    );
+
+    const slots = [...container.querySelectorAll<HTMLElement>(".sg-composer-tree-slot-header")];
+    expect(slots).toHaveLength(2);
+    expect(slots.map((slot) => slot.querySelector(".sg-composer-tree-slot-kind")?.textContent)).toEqual([
+      "Slot",
+      "Slot",
+    ]);
+    expect(slots.map((slot) => slot.querySelector(".sg-composer-tree-slot-cardinality")?.textContent)).toEqual([
+      "Single",
+      "Multiple",
+    ]);
+  });
+
   it("shows an empty-slot placeholder when a slot has no children", () => {
     resetFixtureIds();
     const document = fixtureDocument([fixtureNode(FIXTURE_IDS.split, {}, { left: [], right: [] }, "split")]);

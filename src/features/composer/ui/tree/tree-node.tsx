@@ -68,7 +68,11 @@ export function TreeNode(props: TreeNodeProps): JSX.Element {
 
   return (
     <li class="sg-composer-tree-node" data-sg-tree-node-id={node.id}>
-      <div class="sg-composer-tree-row" data-sg-selected={isSelected}>
+      <div
+        class="sg-composer-tree-row"
+        data-sg-selected={isSelected}
+        data-sg-tree-branch-open={hasSlots && isExpanded ? "true" : undefined}
+      >
         {hasSlots ? (
           <button
             type="button"
@@ -149,6 +153,8 @@ export function TreeNode(props: TreeNodeProps): JSX.Element {
             const slotMeta = entry?.slots.find((s) => s.id === slotId);
             const children = node.slots[slotId] ?? [];
             const label = slotMeta?.label ?? `${slotId} (unavailable)`;
+            const cardinalityLabel =
+              slotMeta === undefined ? null : slotMeta.cardinality === "single" ? "Single" : "Multiple";
             const canAdd =
               !readOnly &&
               !summary.opaque &&
@@ -157,37 +163,56 @@ export function TreeNode(props: TreeNodeProps): JSX.Element {
 
             return (
               <div class="sg-composer-tree-slot" key={slotId} data-sg-tree-slot-id={slotId}>
-                <div class="sg-composer-tree-slot-header">
+                <div
+                  class="sg-composer-tree-slot-header"
+                  data-sg-tree-branch-open={children.length > 0 ? "true" : undefined}
+                >
+                  <span
+                    class="sg-composer-tree-disclosure-spacer sg-composer-tree-slot-spacer"
+                    aria-hidden="true"
+                  />
                   <span class="sg-composer-tree-slot-label">
-                    <SlotIcon size="xs" class="sg-composer-tree-node-icon" /> {label}{" "}
-                    <span class="sg-composer-tree-count">({children.length})</span>
+                    <SlotIcon size="xs" class="sg-composer-tree-node-icon" />
+                    <span class="sg-composer-tree-slot-kind">Slot</span>
+                    <span class="sg-composer-tree-slot-name">{label}</span>
+                    {cardinalityLabel && (
+                      <span class="sg-composer-tree-slot-cardinality">{cardinalityLabel}</span>
+                    )}
                   </span>
-                  {canAdd && (
-                    <span class="sg-composer-tree-slot-add-group">
-                      <button
-                        type="button"
-                        class="sg-composer-tree-action sg-composer-tree-add"
-                        aria-label={`Add component to ${label} in ${displayName}`}
-                        onClick={() => onOpenChooser({ parentId: node.id, slotId, index: children.length })}
-                      >
-                        + Add
-                      </button>
-                      <button
-                        type="button"
-                        class="sg-composer-tree-action sg-composer-tree-insert-menu"
-                        aria-label={`Insert options for ${label} in ${displayName}`}
-                        title="Insert options"
-                        onClick={(event) =>
-                          onOpenInsertMenu(
-                            { parentId: node.id, slotId, index: children.length },
-                            event.currentTarget as HTMLElement,
-                          )
-                        }
-                      >
-                        <EllipsisIcon size="xs" />
-                      </button>
+                  <span class="sg-composer-tree-slot-controls">
+                    <span
+                      class="sg-composer-tree-count"
+                      aria-label={`${children.length} component${children.length === 1 ? "" : "s"}`}
+                    >
+                      {children.length}
                     </span>
-                  )}
+                    {canAdd && (
+                      <span class="sg-composer-tree-slot-add-group">
+                        <button
+                          type="button"
+                          class="sg-composer-tree-action sg-composer-tree-add"
+                          aria-label={`Add component to ${label} in ${displayName}`}
+                          onClick={() => onOpenChooser({ parentId: node.id, slotId, index: children.length })}
+                        >
+                          + Add
+                        </button>
+                        <button
+                          type="button"
+                          class="sg-composer-tree-action sg-composer-tree-insert-menu"
+                          aria-label={`Insert options for ${label} in ${displayName}`}
+                          title="Insert options"
+                          onClick={(event) =>
+                            onOpenInsertMenu(
+                              { parentId: node.id, slotId, index: children.length },
+                              event.currentTarget as HTMLElement,
+                            )
+                          }
+                        >
+                          <EllipsisIcon size="xs" />
+                        </button>
+                      </span>
+                    )}
+                  </span>
                 </div>
 
                 {children.length === 0 ? (
