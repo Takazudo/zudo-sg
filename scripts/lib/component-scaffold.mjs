@@ -214,11 +214,16 @@ export function testTemplate({ pascalName, kebabName }) {
 // packages/ui/src/index.ts.
 const HEADER_RE = /^\/\/ ── .+ ──+$/;
 
-function findCategorySection(lines, category) {
+function getHeaderIndexes(lines) {
   const headerIndexes = [];
   lines.forEach((line, i) => {
     if (HEADER_RE.test(line)) headerIndexes.push(i);
   });
+  return headerIndexes;
+}
+
+function findCategorySection(lines, category) {
+  const headerIndexes = getHeaderIndexes(lines);
   const needle = category.toLowerCase();
   const startIdx = headerIndexes.find((i) => lines[i].toLowerCase().includes(needle));
   if (startIdx === undefined) {
@@ -230,6 +235,49 @@ function findCategorySection(lines, category) {
   const nextHeaderIdx = headerIndexes.find((i) => i > startIdx);
   const endIdx = nextHeaderIdx === undefined ? lines.length : nextHeaderIdx;
   return { startIdx, endIdx };
+}
+
+// Strips the "// ── " / " ──…" decoration off a section header line, e.g.
+// "// ── Data display ─────" → "Data display".
+function headerLabel(line) {
+  return line.replace(/^\/\/ ── /, "").replace(/ ──+\s*$/, "");
+}
+
+// Matches a single-line VALUE export block, e.g.
+// `export { Foo } from "./foo/foo";` or
+// `export { default as Foo, Bar } from "./foo/foo";`. Deliberately excludes
+// `export type { … }` (the `type` keyword breaks the `export\s*\{` match) —
+// preventing the value export from colliding also prevents its co-located
+// `*Props`/`*Variant` type exports from colliding.
+const VALUE_EXPORT_RE = /^export\s*\{([^}]*)\}\s*from\s*["']([^"']+)["'];?\s*$/;
+
+/**
+ * Scans `lines` (the barrel source, already split) for an existing value
+ * export whose binding name is exactly `pascalName` — as a bare name
+ * (`export { Foo }`) or the target of a `default as` rename
+ * (`export { default as Foo }`), including when it's one of several
+ * comma-separated names in the same block. Returns the exporting module path
+ * and the label of the enclosing `// ── <Category> ──` section, or
+ * `undefined` if `pascalName` isn't exported anywhere in the barrel yet.
+ */
+function findExistingPascalExport(lines, pascalName) {
+  const headerIndexes = getHeaderIndexes(lines);
+  for (let i = 0; i < lines.length; i++) {
+    const match = lines[i].match(VALUE_EXPORT_RE);
+    if (!match) continue;
+    const names = match[1]
+      .split(",")
+      .map((spec) => spec.trim())
+      .filter(Boolean)
+      .map((spec) => (spec.includes(" as ") ? spec.split(" as ").pop().trim() : spec));
+    if (!names.includes(pascalName)) continue;
+    const headerIdx = [...headerIndexes].reverse().find((h) => h < i);
+    return {
+      path: match[2],
+      sectionLabel: headerIdx !== undefined ? headerLabel(lines[headerIdx]) : "(unknown section)",
+    };
+  }
+  return undefined;
 }
 
 // A section body is one or more export blocks (1-2 contiguous `export …`
@@ -261,17 +309,44 @@ function blockSortKey(block) {
  * Appends the new component's barrel export into `indexSource` (the text of
  * packages/ui/src/index.ts), inserted alphabetically by component name among
  * the other exports already in that `category`'s "// ── <Category> ──"
- * section. Returns the updated source; throws if no section matches.
+ * section. Returns the updated source.
+ *
+ * `nested` (default `false`) selects the import specifier: a flat scaffold
+ * imports from `./<name>/<name>`; a category-nested scaffold (no
+ * per-component index files) imports from
+ * `./<category-slug>/<name>/<name>`, matching the on-disk layout §2/§8
+ * describe.
+ *
+ * Throws if no section matches `category`, or if `pascalName` is already
+ * exported anywhere else in the barrel — two different categories may each
+ * scaffold a same-named component (STORIES.md §2), but the barrel can't hold
+ * two exports of the same binding name, so that case needs a manual alias
+ * instead of a silent auto-insert.
  */
-export function insertBarrelExport(indexSource, { pascalName, kebabName, category }) {
+export function insertBarrelExport(indexSource, { pascalName, kebabName, category, nested = false }) {
   const lines = indexSource.split("\n");
+
+  const collision = findExistingPascalExport(lines, pascalName);
+  if (collision) {
+    throw new Error(
+      `insertBarrelExport: "${pascalName}" is already exported from "${collision.path}" in the ` +
+        `"${collision.sectionLabel}" section of index.ts. The barrel can't hold two exports named ` +
+        `"${pascalName}" — pass --skip-barrel and add this one to the barrel by hand under an alias ` +
+        `(e.g. \`export { ${pascalName} as ${pascalName}FromWhichever } from "...";\`).`,
+    );
+  }
+
   const { startIdx, endIdx } = findCategorySection(lines, category);
 
   const blocks = parseBlocks(lines.slice(startIdx + 1, endIdx));
 
+  const importPath = nested
+    ? `./${categorySlug(category)}/${kebabName}/${kebabName}`
+    : `./${kebabName}/${kebabName}`;
+
   const newBlock = [
-    `export { ${pascalName} } from "./${kebabName}/${kebabName}";`,
-    `export type { ${pascalName}Props, ${pascalName}Variant } from "./${kebabName}/${kebabName}";`,
+    `export { ${pascalName} } from "${importPath}";`,
+    `export type { ${pascalName}Props, ${pascalName}Variant } from "${importPath}";`,
   ];
 
   let insertAt = blocks.findIndex((block) => blockSortKey(block) > pascalName);
