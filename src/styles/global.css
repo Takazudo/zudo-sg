@@ -34,12 +34,22 @@
    (this widened from the old {surface, accent, success, danger} when the ui
    palette adopted the reference's bg/fg/muted/accent-hover/warning/info names).
 
-   The remaining NEW ui-only names — surface-2, border, focus, on-accent,
-   loading-scrim, and the rail family — are intentionally NOT re-asserted:
-   doc-chrome consumes none of them (verified: no bg-surface-2, border-border,
-   text-rail- utilities anywhere under src|pages, nor in the zudo-doc package
-   CSS), so leaving them at their ui values activates no doc-chrome utility. The
-   compat aliases (ink/paper/line/brand/…) are likewise unused by doc-chrome.
+   `border` is ALSO re-asserted below, but as a DELIBERATE LITERAL, not to a
+   `var(--zd-*)` role: the upstream SemanticKey set is closed, so there is no
+   `--zd-border` to map to (Composer Polish S1, #263). Unlike the `--zd-*` set
+   above this is a real value change — `--color-border` is consumed by the
+   styleguide catalog chrome (`src/features/styleguide/**`, `pages/components/**`:
+   variant-frame, code-panel, catalog cards) and by the composer chrome, so those
+   borders move onto the deliberate ladder. Genuine docs pages (`.zd-content`, the
+   zudo-doc package chrome) bind no `border-border`/`var(--color-border)`, so they
+   are unchanged. `--color-border-strong` is a new host-only ladder token (no ui
+   equivalent), consumed by later Composer Polish waves.
+
+   The remaining NEW ui-only names — surface-2, focus, on-accent, loading-scrim,
+   and the rail family — are intentionally left at their @zudo-sg/ui values (NOT
+   re-asserted). Where a consumer does bind one (e.g. bg-surface-2 in the catalog)
+   it simply keeps the ui value — no change, since this block does not touch them.
+   The compat aliases (ink/paper/line/brand/…) are likewise unused by doc-chrome.
 
    See packages/ui/STORIES.md §1 "Required style imports". */
 @import "@zudo-sg/ui/styles/colors.css";
@@ -208,6 +218,38 @@
   --color-mermaid-note-bg: var(--zd-mermaid-note-bg);
   --color-matched-keyword-bg: var(--zd-matched-keyword-bg);
   --color-matched-keyword-fg: var(--zd-matched-keyword-fg);
+
+  /* ========================================
+   * Structural chrome tokens — border ladder + composer panel separation
+   * (Composer Polish S1, #263)
+   *
+   * Literal oklch on the warm hue-65 base ramp (src/config/color-schemes.ts:
+   * .965 / .705 / .480 / .300 / .185), per-mode via light-dark(). `color-scheme`
+   * is set by @zudo-sg/ui/styles/colors.css and pinned by [data-theme], so
+   * light-dark() resolves to the active mode on every route. These are LOCAL
+   * @theme tokens, NOT --zd-* roles: the upstream SemanticKey set is closed, so
+   * no --zd-border/--zd-focus can be emitted — do NOT add border/focus roles to
+   * src/config/color-schemes.ts.
+   *
+   * Border ladder (SITEWIDE): re-asserts --color-border to a deliberate value
+   * (it was an accidental leak of @zudo-sg/ui's --color-border via import order)
+   * and adds --color-border-strong for major divisions. dark = .480 / .705 grades
+   * (clearly visible on the .185 dark bg); light = analogous hairlines. Consumed
+   * by the styleguide catalog + composer chrome; docs pages consume neither.
+   *
+   * Composer panel separation + quiet guide (composer-scoped by CONSUMPTION —
+   * only .sg-composer-* / .zc-* chrome binds these; the sitewide surface==bg
+   * minimization for docs pages is untouched). panel-bg is tonally distinct from
+   * canvas-backdrop by ΔL ≈ 0.045 in both modes (panels lighter than the backdrop
+   * — the prototype grammar). guide is the resting muted tone for insert markers /
+   * handles / resizers (NOT accent). These three are DEFINED here but not yet
+   * bound — wave-2/3 sub-issues rebind the chrome onto them.
+   * ======================================== */
+  --color-border:        light-dark(oklch(.855 .006 65), oklch(.480 .008 65));
+  --color-border-strong: light-dark(oklch(.720 .006 65), oklch(.705 .008 65));
+  --sg-composer-panel-bg:        light-dark(oklch(.985 .003 65), oklch(.230 .007 65));
+  --sg-composer-canvas-backdrop: light-dark(oklch(.940 .004 65), oklch(.185 .005 65));
+  --sg-composer-guide:           light-dark(oklch(.680 .008 65), oklch(.560 .008 65));
 
   /* ========================================
    * Element sizes — semantic icon dimensions (root-specific)

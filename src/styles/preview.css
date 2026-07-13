@@ -28,10 +28,20 @@
  *   The values below mirror the canonical Tier-2 tokens in
  *   packages/ui/styles/colors.css (before the host `@theme` shadows them) and
  *   reference the same `--palette-*` rungs, which ARE present in the bundle. The
- *   ui-only names the host does NOT re-assert (surface-2, border, rail-*, focus,
+ *   ui-only names the host does NOT re-assert (surface-2, rail-*, focus,
  *   on-accent, loading-scrim) already resolve to the ui palette here — no need
  *   to restore them. Keep this list in sync with the host re-assertion collision
  *   set in global.css until the Wave-6 atomic swap removes the whole dance.
+ *
+ *   Composer Polish S1 (#263) added two names to this scope. The host now
+ *   re-asserts `--color-border` to a DELIBERATE doc-ramp literal, so this scope
+ *   restores it to the @zudo-sg/ui value — otherwise the previewed components
+ *   (which bind `border-border`) would inherit the host's chrome border instead
+ *   of their own. `--sg-composer-guide` is the composer's quiet-chrome tone; it
+ *   is a no-op in this styleguide preview (no consumer here) but is kept
+ *   IDENTICAL to the composer preview's scope so the shared drift-guard test
+ *   (`preview-styles.test.ts`, which derives its expected set from this block)
+ *   stays green.
  */
 
 html[data-sg-preview-doc] {
@@ -41,6 +51,11 @@ html[data-sg-preview-doc] {
   --color-muted:        light-dark(var(--palette-base-5), var(--palette-base-4));
   --color-accent:       light-dark(var(--palette-accent-2), var(--palette-accent-1));
   --color-accent-hover: light-dark(var(--palette-accent-3), var(--palette-accent-0));
+  /* Composer Polish S1 (#263) — see header. --color-border restored to the ui
+     value (the host now re-asserts it to a doc-ramp literal); --sg-composer-guide
+     kept identical to the composer preview scope for the drift-guard test. */
+  --color-border:      light-dark(var(--palette-base-3), var(--palette-base-7));
+  --sg-composer-guide: light-dark(oklch(.680 .008 65), oklch(.560 .008 65));
   --color-success: light-dark(var(--palette-state-success), var(--palette-state-success-dark));
   --color-danger:  light-dark(var(--palette-state-danger),  var(--palette-state-danger-dark));
   --color-warning: light-dark(var(--palette-state-warning), var(--palette-state-warning-dark));

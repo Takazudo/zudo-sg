@@ -62,6 +62,13 @@ html[${COMPOSER_PREVIEW_DOC_ATTR}] {
   --color-muted:        light-dark(var(--palette-base-5), var(--palette-base-4));
   --color-accent:       light-dark(var(--palette-accent-2), var(--palette-accent-1));
   --color-accent-hover: light-dark(var(--palette-accent-3), var(--palette-accent-0));
+  /* Composer Polish S1 (#263). --color-border: the host now re-asserts it to a
+     doc-ramp literal, so restore the ui value the previewed components expect
+     (they bind border-border). --sg-composer-guide: the composer's quiet-chrome
+     tone — the insert markers below rebind onto it in a later wave. Both are kept
+     IDENTICAL to src/styles/preview.css (the drift-guard test derives from it). */
+  --color-border:      light-dark(var(--palette-base-3), var(--palette-base-7));
+  --sg-composer-guide: light-dark(oklch(.680 .008 65), oklch(.560 .008 65));
   --color-success: light-dark(var(--palette-state-success), var(--palette-state-success-dark));
   --color-danger:  light-dark(var(--palette-state-danger),  var(--palette-state-danger-dark));
   --color-warning: light-dark(var(--palette-state-warning), var(--palette-state-warning-dark));
