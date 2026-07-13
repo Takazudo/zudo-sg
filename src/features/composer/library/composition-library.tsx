@@ -19,6 +19,11 @@ export interface CompositionLibraryProps {
   providers: readonly CompositionLibraryProviderCapability[];
   initialProviderId: CompositionProviderId;
   intents: CompositionLibraryIntents;
+  /** Production composition callback after a provider result is committed. */
+  onInitializationApplied?: (
+    providerId: CompositionProviderId,
+    outcome: CompositionInitializationOutcome,
+  ) => void;
 }
 
 type BusyOperation =
@@ -68,6 +73,7 @@ export function CompositionLibrary({
   providers,
   initialProviderId,
   intents,
+  onInitializationApplied,
 }: CompositionLibraryProps): JSX.Element {
   const availableProviders = useMemo(
     () => providers.filter((provider) => provider.available),
@@ -115,6 +121,11 @@ export function CompositionLibrary({
         return false;
       }
 
+      try {
+        onInitializationApplied?.(providerId, outcome);
+      } catch {
+        // Observers cannot turn a committed provider result into a false UI failure.
+      }
       setActiveProviderId(providerId);
       setError(null);
       setLoaded(true);
@@ -134,7 +145,7 @@ export function CompositionLibrary({
       );
       return true;
     },
-    [],
+    [onInitializationApplied],
   );
 
   const loadProvider = useCallback(
@@ -447,6 +458,16 @@ export function CompositionLibrary({
                 Start fresh
               </button>
             </div>
+          )}
+          {recovery.kind !== "quarantined" && (
+            <button
+              type="button"
+              class="sg-composer-library-button"
+              disabled={controlsDisabled}
+              onClick={() => activeProviderId && void loadProvider(activeProviderId, "retry")}
+            >
+              Retry recovery
+            </button>
           )}
           {confirmation?.kind === "start-fresh" && (
             <InlineConfirm
