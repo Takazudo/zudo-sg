@@ -29,7 +29,9 @@ The API token needs Workers edit access and enough zone permission for custom do
 
 Main-branch deployment builds the static sites, deploys the Workers, and runs smoke checks against the custom domains. First deploys can need a short DNS and certificate propagation window, so smoke checks use retry behavior instead of assuming the first request will resolve.
 
-Preview deployment uses Worker version preview URLs where configured. PR checks build and validate artifacts but do not publish production deployments.
+Pull requests from this repository into `main` deploy GitHub's synthetic merge ref to stable `pr-<number>` Worker preview aliases, representing the proposed changes applied to `main` when the workflow run starts. The workflow posts one updated PR comment with links to the styleguide, Composer, demo, and documentation previews. Fork and Dependabot pull requests skip deployment because those runs cannot access the Cloudflare secrets; ordinary PR checks still validate them.
+
+Pushes to the dedicated preview branches retain branch-based aliases. Neither kind of preview publishes a production Worker version or changes a custom domain.
 
 ## Local validation
 

@@ -33,7 +33,7 @@ describe("Composer workspace CSS geometry (src/features/composer/styles.css)", (
 
   it("hides the rails and resizers by default (narrow) and shows them only at >=64rem", () => {
     const narrowBlock = css.slice(0, css.indexOf("@media (min-width: 64rem)"));
-    expect(narrowBlock).toMatch(/\.sg-composer-tree,\s*\n\.sg-composer-inspector\s*\{\s*\n\s*display:\s*none;/);
+    expect(narrowBlock).toMatch(/\.sg-composer-tree-rail,\s*\n\.sg-composer-inspector\s*\{\s*\n\s*display:\s*none;/);
     expect(narrowBlock).toMatch(/\.sg-composer-resizer\s*\{\s*\n\s*display:\s*none;/);
   });
 
@@ -48,7 +48,7 @@ describe("Composer workspace CSS geometry (src/features/composer/styles.css)", (
   });
 
   it("gives tree/canvas/inspector independent overflow and overscroll containment", () => {
-    for (const selector of [".sg-composer-tree,", ".sg-composer-canvas {"]) {
+    for (const selector of [".sg-composer-tree-rail,", ".sg-composer-canvas {"]) {
       expect(css).toContain(selector);
     }
     // min-width:0 / min-height:0 + overscroll-behavior: contain appear on the

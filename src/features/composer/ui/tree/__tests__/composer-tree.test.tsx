@@ -32,8 +32,9 @@ describe("ComposerTree — structure", () => {
   it("renders the virtual document-root row as an insertion target only", () => {
     resetFixtureIds();
     const document = makeAbcDocument();
-    render(<ComposerTree document={document} {...baseProps()} />);
+    const { container } = render(<ComposerTree document={document} {...baseProps()} />);
     expect(screen.getByText("Document root")).toBeInTheDocument();
+    expect(container.querySelector("[data-sg-tree-section-header]")).toHaveClass("sg-composer-tree-row-root");
   });
 
   it("renders named left/right slots with B then C in right, in exact order", () => {
@@ -51,6 +52,45 @@ describe("ComposerTree — structure", () => {
       .map((btn) => btn.textContent);
     expect(titles[0]).toContain("B");
     expect(titles[1]).toContain("C");
+  });
+
+  it("distinguishes container rows from nested leaf rows", () => {
+    resetFixtureIds();
+    const document = makeAbcDocument();
+    const { container } = render(
+      <ComposerTree document={document} {...baseProps()} expandedIds={new Set(["split"])} />,
+    );
+
+    const splitRow = container.querySelector(
+      '[data-sg-tree-node-id="split"] > .sg-composer-tree-row',
+    );
+    const leafRow = container.querySelector(
+      '[data-sg-tree-node-id="A"] > .sg-composer-tree-row',
+    );
+
+    expect(splitRow).toHaveClass("sg-composer-tree-row-container");
+    expect(splitRow).not.toHaveClass("sg-composer-tree-row-leaf");
+    expect(leafRow).toHaveClass("sg-composer-tree-row-leaf");
+    expect(leafRow).not.toHaveClass("sg-composer-tree-row-container");
+  });
+
+  it("marks every slot explicitly and identifies its cardinality", () => {
+    resetFixtureIds();
+    const document = makeAbcDocument();
+    const { container } = render(
+      <ComposerTree document={document} {...baseProps()} expandedIds={new Set(["split"])} />,
+    );
+
+    const slots = [...container.querySelectorAll<HTMLElement>(".sg-composer-tree-slot-header")];
+    expect(slots).toHaveLength(2);
+    expect(slots.map((slot) => slot.querySelector(".sg-composer-tree-slot-kind")?.textContent)).toEqual([
+      "Slot",
+      "Slot",
+    ]);
+    expect(slots.map((slot) => slot.querySelector(".sg-composer-tree-slot-cardinality")?.textContent)).toEqual([
+      "Single",
+      "Multiple",
+    ]);
   });
 
   it("shows an empty-slot placeholder when a slot has no children", () => {

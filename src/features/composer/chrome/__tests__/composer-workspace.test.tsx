@@ -33,7 +33,9 @@ describe("ComposerWorkspace", () => {
 
   it("the tree/inspector/canvas rails carry their contract ids and default to labeled placeholders", () => {
     const { container } = render(<ComposerWorkspace toolbar={<span>Toolbar</span>} />);
-    expect(container.querySelector(`#${ID_TREE_RAIL}`)).not.toBeNull();
+    const treeRail = container.querySelector(`#${ID_TREE_RAIL}`);
+    expect(treeRail).toHaveClass("sg-composer-tree-rail");
+    expect(treeRail).not.toHaveClass("sg-composer-tree");
     expect(container.querySelector(`#${ID_INSPECTOR_RAIL}`)).not.toBeNull();
     expect(container.querySelector("[data-sg-composer-canvas]")).not.toBeNull();
     expect(screen.getByText("Structure")).toBeInTheDocument();

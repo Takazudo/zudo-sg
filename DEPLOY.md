@@ -44,8 +44,6 @@ this checklist implements. If a Worker name or domain ever changes, update every
 - `DEPLOY.md` (this file) — the Sites table (§Sites) and the DNS records table (§3)
 - `.github/workflows/main-deploy.yml` — the header comment (lines 6–8) and every
   `scripts/smoke-url.sh` URL argument
-- `.github/workflows/preview-deploy.yml` — the header comment's `preview-zudo-sg.<acct>.workers.dev`
-  example (only illustrates the root Worker's preview alias naming, not the demo/doc names)
 - `README.md` — the four-artifact bullet list under "What this is"
 - `CLAUDE.md` (root) — the one-line mention of the doc site's deployed URL
 - `doc/src/content/docs/development/deploy.mdx` — the "Public sites" table, which mirrors
@@ -96,6 +94,26 @@ The `CLOUDFLARE_API_TOKEN` (§2) must be able to manage the zone's DNS for this 
 Push to `main` to trigger `main-deploy.yml`. On the very first deploy, wrangler provisions the Workers, creates the custom domain bindings, and creates the DNS records + TLS certs (§3). Subsequent pushes to `main` update all three Workers in parallel.
 
 DNS + cert propagation on that first deploy is not instant (it can take a minute or two before the hostname resolves), so the post-deploy smoke gates retry with backoff via `scripts/smoke-url.sh` instead of failing on the first `curl`. A first deploy is therefore green once provisioning completes, not red on the propagation window.
+
+---
+
+## Pull request previews
+
+Every pull request from a branch in this repository into `main` triggers
+`preview-deploy.yml`. GitHub checks out the pull request's synthetic merge ref,
+so the preview includes the proposed changes applied to `main` at the time that
+workflow run starts.
+
+The workflow uploads the styleguide, demo, and documentation builds as Worker
+versions under a stable `pr-<number>` alias. A sticky PR comment links all three
+deployments and the Composer route directly. Later pushes to the same pull
+request update those URLs instead of creating new aliases or comments.
+
+Fork and Dependabot pull requests skip this deployment workflow because
+Cloudflare secrets and a write-capable GitHub token are intentionally
+unavailable to those runs. The ordinary PR checks still validate those
+contributions. Preview uploads do not publish a production Worker version or
+change a custom domain.
 
 ---
 

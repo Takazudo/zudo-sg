@@ -11,9 +11,9 @@ name = "zudo-sg"
 compatibility_date = "2024-12-01"
 
 # workers_dev = false prevents serving on *.workers.dev production route.
-# preview_urls = true enables version-preview URLs for staging (used by
-# preview-deploy.yml via `wrangler versions upload`; pr-checks.yml builds and
-# checks PRs but does not deploy).
+# preview_urls = true enables version-preview URLs used by preview-deploy.yml
+# for same-repository PRs and dedicated preview branches via
+# `wrangler versions upload`. pr-checks.yml handles quality checks separately.
 preview_urls = true
 workers_dev = false
 
