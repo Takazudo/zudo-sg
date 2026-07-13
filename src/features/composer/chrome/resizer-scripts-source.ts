@@ -24,6 +24,7 @@ import {
   ATTR_TREE_RESIZER,
   CSS_VAR_INSPECTOR_W,
   CSS_VAR_TREE_W,
+  DEFAULT_TREE_W,
   LS_INSPECTOR_WIDTH,
   LS_TREE_WIDTH,
   MAX_RAIL_W,
@@ -40,7 +41,7 @@ export const RESTORE_SCRIPT = `(function(){
     function clampFor(otherW){ return Math.max(MIN, Math.min(MAX, window.innerWidth - otherW - MIN_CANVAS - TRACK)); }
     var tw = parseFloat(ls.getItem('${LS_TREE_WIDTH}'));
     var iw = parseFloat(ls.getItem('${LS_INSPECTOR_WIDTH}'));
-    if (!isFinite(tw)) tw = MIN;
+    if (!isFinite(tw)) tw = ${DEFAULT_TREE_W};
     if (!isFinite(iw)) iw = MIN;
     tw = Math.max(MIN, Math.min(clampFor(iw), tw));
     iw = Math.max(MIN, Math.min(clampFor(tw), iw));
