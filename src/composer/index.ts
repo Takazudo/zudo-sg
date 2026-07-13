@@ -71,6 +71,9 @@ export { loadCompositionDocument, resetToSample } from "./model/recovery";
 // ── Composition library records + provider boundary ─────────────────────────
 export * from "./library";
 
+// Revision-aware persistence coordination (framework and provider independent).
+export * from "./persistence";
+
 // ── Native sample ────────────────────────────────────────────────────────────
 export { createSampleDocument, SAMPLE_DOCUMENT } from "./sample/sample-document";
 export {
