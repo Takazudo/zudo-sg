@@ -426,7 +426,8 @@ test.describe("Composer Polish S7 contracts", () => {
       const rightIn = getComputedStyle(document.querySelector(rightHeaderSelector)!, "::before");
       const rightRail = getComputedStyle(document.querySelector(rightSlotSelector)!, "::before");
       const headingIn = getComputedStyle(document.querySelector(headingRowSelector)!, "::before");
-      const rootRow = getComputedStyle(document.querySelector(".sg-composer-tree-row-root")!);
+      const rootHeader = document.querySelector("[data-sg-tree-section-header]")!;
+      const rootRow = getComputedStyle(rootHeader);
       const iconCenterError = (rowSelector: string) => {
         const row = rect(rowSelector);
         const icon = rect(`${rowSelector} .sg-composer-tree-node-icon`);
@@ -472,6 +473,7 @@ test.describe("Composer Polish S7 contracts", () => {
         connectorColor: leftIn.borderInlineStartColor,
         rootDividerWidth: rootRow.borderBlockEndWidth,
         rootDividerColor: rootRow.borderBlockEndColor,
+        rootIsSectionHeader: rootHeader.classList.contains("sg-composer-tree-row-root"),
         slotKinds: [
           ...document.querySelectorAll(
             '[data-sg-tree-node-id="split-1"] > .sg-composer-tree-slots > .sg-composer-tree-slot > .sg-composer-tree-slot-header .sg-composer-tree-slot-kind',
@@ -541,6 +543,7 @@ test.describe("Composer Polish S7 contracts", () => {
     expect(geo.connectorColor, "hierarchy guide uses --color-border").toBe(geo.colorBorder);
     expect(parseFloat(geo.rootDividerWidth), "document root is separated as a header").toBe(1);
     expect(geo.rootDividerColor, "document-root divider uses --color-border").toBe(geo.colorBorder);
+    expect(geo.rootIsSectionHeader, "virtual root is explicitly marked as the section header").toBe(true);
     expect(geo.slotKinds, "slot rows are named explicitly").toEqual(["Slot", "Slot"]);
     expect(Math.abs(align.p1 - align.p2), "same-depth siblings share a left edge").toBeLessThanOrEqual(1);
 

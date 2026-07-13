@@ -6,11 +6,11 @@
 // drift out of sync (see `TreeNode`'s per-row derivation via `tree-helpers.ts`).
 //
 // ── The virtual-root pseudo-row ─────────────────────────────────────────────
-// `document.root`'s children render under one always-expanded "Document root"
-// row. That row is an INSERTION TARGET ONLY (`{ parentId: null, slotId:
+// `document.root`'s children render below one "Document root" section header.
+// That header is an INSERTION TARGET ONLY (`{ parentId: null, slotId:
 // VIRTUAL_ROOT_SLOT_ID }`) — it is never a `CompositionNode`, is never itself
-// movable/removable, and cannot be collapsed (there is no id to track in
-// `expandedIds`). Selecting it calls `onSelect(null)` — the same "clear to
+// a nested hierarchy level, movable/removable, or collapsible (there is no id
+// to track in `expandedIds`). Selecting it calls `onSelect(null)` — the same "clear to
 // virtual-root context" state `removeNode`'s selection repair (#245) falls
 // back to when nothing remains selected.
 //
@@ -105,7 +105,11 @@ export function ComposerTree({
 
   return (
     <div class="sg-composer-tree">
-      <div class="sg-composer-tree-row sg-composer-tree-row-root" data-sg-selected={rootSelected}>
+      <div
+        class="sg-composer-tree-row sg-composer-tree-row-root"
+        data-sg-selected={rootSelected}
+        data-sg-tree-section-header
+      >
         <span class="sg-composer-tree-disclosure-spacer" aria-hidden="true" />
         <button
           type="button"

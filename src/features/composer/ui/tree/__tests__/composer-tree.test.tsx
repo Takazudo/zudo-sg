@@ -32,8 +32,9 @@ describe("ComposerTree — structure", () => {
   it("renders the virtual document-root row as an insertion target only", () => {
     resetFixtureIds();
     const document = makeAbcDocument();
-    render(<ComposerTree document={document} {...baseProps()} />);
+    const { container } = render(<ComposerTree document={document} {...baseProps()} />);
     expect(screen.getByText("Document root")).toBeInTheDocument();
+    expect(container.querySelector("[data-sg-tree-section-header]")).toHaveClass("sg-composer-tree-row-root");
   });
 
   it("renders named left/right slots with B then C in right, in exact order", () => {

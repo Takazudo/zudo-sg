@@ -489,6 +489,8 @@ html[data-sg-composer-doc] body {
   }
 }
 
+/* The virtual document root is an insertion-target section header rather than
+   another visible nesting depth, matching the familiar outline treatment. */
 .sg-composer-tree-row-root {
   margin-block-end: var(--spacing-vsp-3xs);
   padding-block: var(--spacing-vsp-3xs);
