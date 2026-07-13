@@ -17,7 +17,7 @@
  *     (tight/snug/normal/relaxed)
  *   - Radius: DEFAULT / sm / md / lg / full
  *   - Shadows: card / raised / overlay
- *   - Breakpoints: sm / lg / xl
+ *   - Breakpoints: sm / md / lg / xl
  *   - Transition defaults
  *   - Z-index: the semantic --z-index-ui-* scale (see the block below)
  *
@@ -170,10 +170,11 @@
     0 24px  48px oklch(.185 .005 65 / 0.10);
 
   /* ========================================
-   * Breakpoints (3 steps)
+   * Breakpoints (4 steps)
    * ======================================== */
 
   --breakpoint-sm: 640px;
+  --breakpoint-md: 768px;
   --breakpoint-lg: 1024px;
   --breakpoint-xl: 1280px;
 
