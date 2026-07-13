@@ -68,6 +68,9 @@ export {
 export type { LoadOutcome } from "./model/recovery";
 export { loadCompositionDocument, resetToSample } from "./model/recovery";
 
+// ── Composition library records + provider boundary ─────────────────────────
+export * from "./library";
+
 // ── Native sample ────────────────────────────────────────────────────────────
 export { createSampleDocument, SAMPLE_DOCUMENT } from "./sample/sample-document";
 export {
