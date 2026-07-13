@@ -69,7 +69,9 @@ export function TreeNode(props: TreeNodeProps): JSX.Element {
   return (
     <li class="sg-composer-tree-node" data-sg-tree-node-id={node.id}>
       <div
-        class="sg-composer-tree-row"
+        class={`sg-composer-tree-row ${
+          hasSlots ? "sg-composer-tree-row-container" : "sg-composer-tree-row-leaf"
+        }`}
         data-sg-selected={isSelected}
         data-sg-tree-branch-open={hasSlots && isExpanded ? "true" : undefined}
       >

@@ -54,6 +54,26 @@ describe("ComposerTree — structure", () => {
     expect(titles[1]).toContain("C");
   });
 
+  it("distinguishes container rows from nested leaf rows", () => {
+    resetFixtureIds();
+    const document = makeAbcDocument();
+    const { container } = render(
+      <ComposerTree document={document} {...baseProps()} expandedIds={new Set(["split"])} />,
+    );
+
+    const splitRow = container.querySelector(
+      '[data-sg-tree-node-id="split"] > .sg-composer-tree-row',
+    );
+    const leafRow = container.querySelector(
+      '[data-sg-tree-node-id="A"] > .sg-composer-tree-row',
+    );
+
+    expect(splitRow).toHaveClass("sg-composer-tree-row-container");
+    expect(splitRow).not.toHaveClass("sg-composer-tree-row-leaf");
+    expect(leafRow).toHaveClass("sg-composer-tree-row-leaf");
+    expect(leafRow).not.toHaveClass("sg-composer-tree-row-container");
+  });
+
   it("marks every slot explicitly and identifies its cardinality", () => {
     resetFixtureIds();
     const document = makeAbcDocument();

@@ -428,11 +428,38 @@ test.describe("Composer Polish S7 contracts", () => {
       const headingIn = getComputedStyle(document.querySelector(headingRowSelector)!, "::before");
       const rootHeader = document.querySelector("[data-sg-tree-section-header]")!;
       const rootRow = getComputedStyle(rootHeader);
-      const iconCenterError = (rowSelector: string) => {
+      const contentCenterError = (rowSelector: string, contentSelector: string) => {
         const row = rect(rowSelector);
-        const icon = rect(`${rowSelector} .sg-composer-tree-node-icon`);
-        return Math.abs(row.top + row.height / 2 - (icon.top + icon.height / 2));
+        const content = rect(`${rowSelector} ${contentSelector}`);
+        return Math.abs(row.top + row.height / 2 - (content.top + content.height / 2));
       };
+      const iconCenterError = (rowSelector: string) =>
+        contentCenterError(rowSelector, ".sg-composer-tree-node-icon");
+      const headingIcon = rect(`${headingRowSelector} .sg-composer-tree-node-icon`);
+      const leftSlotIcon = rect(`${leftHeaderSelector} .sg-composer-tree-node-icon`);
+      const leafSpacer = rect(
+        `${headingRowSelector} > .sg-composer-tree-disclosure-spacer`,
+      );
+      const slotSpacer = rect(`${leftHeaderSelector} > .sg-composer-tree-slot-spacer`);
+      const rootSpacer = rect(
+        `[data-sg-tree-section-header] > .sg-composer-tree-disclosure-spacer`,
+      );
+      const containerDisclosure = rect(
+        `${splitRowSelector} > .sg-composer-tree-disclosure`,
+      );
+      // The native sample has no empty slot. Mount the production placeholder
+      // class into a real slot long enough to measure its text inset.
+      const emptySlotProbe = document.createElement("p");
+      emptySlotProbe.className = "sg-composer-tree-empty";
+      emptySlotProbe.textContent = "Empty slot";
+      document.querySelector(leftSlotSelector)!.append(emptySlotProbe);
+      const emptySlotProbeRect = emptySlotProbe.getBoundingClientRect();
+      const emptySlotProbeStyle = getComputedStyle(emptySlotProbe);
+      const emptySlotTextToIconDelta =
+        emptySlotProbeRect.left +
+        px(emptySlotProbeStyle.paddingInlineStart) -
+        leftSlotIcon.left;
+      emptySlotProbe.remove();
 
       // Same-depth siblings share a left edge (prose-1 / prose-2, both in the
       // Stack children slot). They require the split-1 right slot + stack-1 to
@@ -452,6 +479,28 @@ test.describe("Composer Polish S7 contracts", () => {
         splitIconCenterError: iconCenterError(splitRowSelector),
         slotIconCenterError: iconCenterError(leftHeaderSelector),
         headingIconCenterError: iconCenterError(headingRowSelector),
+        splitTitleCenterError: contentCenterError(
+          splitRowSelector,
+          ".sg-composer-tree-select-title",
+        ),
+        slotNameCenterError: contentCenterError(
+          leftHeaderSelector,
+          ".sg-composer-tree-slot-name",
+        ),
+        headingTitleCenterError: contentCenterError(
+          headingRowSelector,
+          ".sg-composer-tree-select-title",
+        ),
+        leafSpacerWidth: leafSpacer.width,
+        slotSpacerWidth: slotSpacer.width,
+        rootSpacerWidth: rootSpacer.width,
+        containerDisclosureWidth: containerDisclosure.width,
+        leafElbowToIconGap:
+          headingIcon.left - (headingRect.left + px(headingIn.left) + px(headingIn.width)),
+        slotElbowToIconGap:
+          leftSlotIcon.left - (leftHeaderRect.left + px(leftIn.left) + px(leftIn.width)),
+        emptySlotTextToIconDelta,
+        visibleInterSlotGap: rightHeaderRect.top - headingRect.bottom,
         parentOutX: splitRect.left + px(splitOut.left),
         firstSlotInX: leftHeaderRect.left + px(leftIn.left),
         parentOutBottom: splitRect.bottom - px(splitOut.bottom),
@@ -509,6 +558,9 @@ test.describe("Composer Polish S7 contracts", () => {
     console.log(
       `CONTRACT: S3 indent component→slot=${geo.componentToSlotIndent.toFixed(1)} slot→component=${geo.slotToComponentIndent.toFixed(1)} | icon center errors=${geo.splitIconCenterError.toFixed(2)}/${geo.slotIconCenterError.toFixed(2)}/${geo.headingIconCenterError.toFixed(2)} | sibling left edges prose-1=${align.p1.toFixed(1)} prose-2=${align.p2.toFixed(1)}`,
     );
+    console.log(
+      `CONTRACT: S3 familiar outline leaf/slot spacer widths=${geo.leafSpacerWidth.toFixed(1)}/${geo.slotSpacerWidth.toFixed(1)} elbow→icon gaps=${geo.leafElbowToIconGap.toFixed(1)}/${geo.slotElbowToIconGap.toFixed(1)} empty-text alignment=${geo.emptySlotTextToIconDelta.toFixed(1)} inter-slot visible gap=${geo.visibleInterSlotGap.toFixed(1)} | title center errors=${geo.splitTitleCenterError.toFixed(2)}/${geo.slotNameCenterError.toFixed(2)}/${geo.headingTitleCenterError.toFixed(2)}`,
+    );
 
     // Composer UI Parity (#281): tree rows tightened 32px → 28px per the A1
     // locked density spec (#277); still ≥ the 14px functional-text floor (asserted next).
@@ -526,6 +578,20 @@ test.describe("Composer Polish S7 contracts", () => {
     expect(geo.splitIconCenterError, "container icon is centered on its row").toBeLessThanOrEqual(1);
     expect(geo.slotIconCenterError, "slot icon is centered on its row").toBeLessThanOrEqual(1);
     expect(geo.headingIconCenterError, "leaf icon is centered on its row").toBeLessThanOrEqual(1);
+    expect(
+      geo.splitTitleCenterError,
+      "container title is centered on its row",
+    ).toBeLessThanOrEqual(1);
+    expect(geo.slotNameCenterError, "slot name is centered on its row").toBeLessThanOrEqual(1);
+    expect(geo.headingTitleCenterError, "leaf title is centered on its row").toBeLessThanOrEqual(1);
+    expect(geo.leafSpacerWidth, "leaf rows collapse the empty disclosure track").toBe(0);
+    expect(geo.slotSpacerWidth, "slot rows collapse the empty disclosure track").toBe(0);
+    expect(geo.rootSpacerWidth, "document root keeps its section-header icon track").toBe(24);
+    expect(geo.containerDisclosureWidth, "containers keep their disclosure track").toBe(24);
+    expect(geo.leafElbowToIconGap, "leaf guide stops 4px before its icon").toBe(4);
+    expect(geo.slotElbowToIconGap, "slot guide stops 4px before its icon").toBe(4);
+    expect(geo.emptySlotTextToIconDelta, "empty-slot text aligns with the slot icon").toBe(0);
+    expect(geo.visibleInterSlotGap, "adjacent slot groups have no visible vertical gap").toBe(0);
     expect(Math.abs(geo.parentOutX - geo.firstSlotInX), "parent and first-slot guides share an x axis").toBeLessThanOrEqual(1);
     expect(Math.abs(geo.parentOutBottom - geo.firstSlotInTop), "parent guide touches the first slot").toBeLessThanOrEqual(1);
     expect(Math.abs(geo.firstSlotRailBottom - geo.secondSlotInTop), "guide stays continuous between slots").toBeLessThanOrEqual(1);

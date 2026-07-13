@@ -703,10 +703,9 @@ html[data-sg-composer-doc] body {
 }
 
 /* One compact hierarchy step is shared by component→slot and slot→component.
-   Continuing guides live on the non-last sibling's full box, including the
-   slot-group spacing, so the rail never breaks between rows. Each incoming L
-   terminates at the actual row midpoint; open branches continue from that
-   same midpoint into their nested list. */
+   Continuing guides live on the non-last sibling's full box so the rail never
+   breaks between rows. Each incoming L terminates at the actual row midpoint;
+   open branches continue from that same midpoint into their nested list. */
 .sg-composer-tree-slots {
   display: flex;
   flex-direction: column;
@@ -716,10 +715,6 @@ html[data-sg-composer-doc] body {
 .sg-composer-tree-slot {
   position: relative;
   min-width: 0;
-}
-
-.sg-composer-tree-slot:not(:last-child) {
-  padding-block-end: var(--spacing-vsp-2xs);
 }
 
 .sg-composer-tree-list-nested > .sg-composer-tree-node {
@@ -749,6 +744,20 @@ html[data-sg-composer-doc] body {
   pointer-events: none;
 }
 
+/* Non-expandable rows do not reserve the container-chevron track. Their
+   incoming elbow ends at the row edge, leaving only the normal 4px
+   gap+padding before the icon — the confirmed familiar-outline prototype. */
+.sg-composer-tree-row-leaf > .sg-composer-tree-disclosure-spacer,
+.sg-composer-tree-slot-spacer {
+  width: 0;
+  min-width: 0;
+}
+
+.sg-composer-tree-slots > .sg-composer-tree-slot > .sg-composer-tree-slot-header::before,
+.sg-composer-tree-list-nested > .sg-composer-tree-node > .sg-composer-tree-row-leaf::before {
+  inline-size: calc(var(--sg-tree-indent) - var(--sg-tree-guide));
+}
+
 .sg-composer-tree-row[data-sg-tree-branch-open="true"]::after,
 .sg-composer-tree-slot-header[data-sg-tree-branch-open="true"]::after {
   content: "";
@@ -759,35 +768,13 @@ html[data-sg-composer-doc] body {
   pointer-events: none;
 }
 
-.sg-composer-tree-list-nested
-  > .sg-composer-tree-node
-  > .sg-composer-tree-row
-  > .sg-composer-tree-disclosure-spacer,
-.sg-composer-tree-slot-spacer {
-  position: relative;
-}
-
-.sg-composer-tree-list-nested
-  > .sg-composer-tree-node
-  > .sg-composer-tree-row
-  > .sg-composer-tree-disclosure-spacer::after,
-.sg-composer-tree-slot-spacer::after {
-  content: "";
-  position: absolute;
-  inset-block-start: 50%;
-  inset-inline-start: 50%;
-  inset-inline-end: calc(-1 * (var(--spacing-hsp-2xs) + var(--spacing-hsp-2xs)));
-  border-block-start: 1px solid var(--color-border);
-  pointer-events: none;
-}
-
 /* Slots keep the familiar outline-row treatment. A small outlined marker is
    strong enough to make insertion targets scannable without turning the
    entire group into the rejected band treatment. */
 .sg-composer-tree-slot-header {
   position: relative;
   display: grid;
-  grid-template-columns: 1.5rem minmax(0, 1fr) auto;
+  grid-template-columns: 0 minmax(0, 1fr) auto;
   align-items: center;
   gap: var(--spacing-hsp-2xs);
   min-height: 1.75rem;
@@ -870,7 +857,7 @@ html[data-sg-composer-doc] body {
 }
 
 .sg-composer-tree-slot > .sg-composer-tree-empty {
-  margin-inline-start: calc(1.5rem + var(--spacing-hsp-2xs));
+  margin-inline-start: var(--spacing-hsp-2xs);
 }
 
 /* Coarse pointers (touch): restore the ≥44px WCAG 2.5.5 hit target the compact
