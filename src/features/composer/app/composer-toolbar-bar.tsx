@@ -9,7 +9,15 @@
 // action is a typed callback the integration composes against the one
 // controller. The status indicator keeps its `children` seam open for wave-6's
 // clipboard chip (#255).
+//
+// Reset requires an explicit confirm (issue #269, folding in #260 — Reset
+// used to wipe the whole document on a single click). The confirm state lives
+// HERE rather than inside `ComposerToolbarActions`, which is deliberately kept
+// a pure-callback component with no internal state (see its own header
+// comment) — `onReset` passed down just flips `confirmingReset`, and the real
+// `onReset` prop only fires once the reused `InlineConfirm` bar is confirmed.
 
+import { useState } from "preact/hooks";
 import type { JSX } from "preact";
 import type { CompositionNode } from "@/composer";
 import type {
@@ -17,6 +25,7 @@ import type {
   ComposerMode,
   ComposerSaveStatus,
 } from "@/features/composer/chrome/controller-model";
+import { InlineConfirm } from "@/features/composer/ui/shared/inline-confirm";
 import { ComposerModeToggle } from "@/features/composer/ui/toolbar/mode-toggle";
 import { ComposerStatusIndicator } from "@/features/composer/ui/toolbar/status-indicator";
 import { ComposerToolbarActions } from "@/features/composer/ui/toolbar/toolbar-actions";
@@ -52,6 +61,8 @@ export function ComposerToolbarBar({
   clipboard = null,
   titleFor = () => undefined,
 }: ComposerToolbarBarProps): JSX.Element {
+  const [confirmingReset, setConfirmingReset] = useState(false);
+
   return (
     <>
       <div class="flex items-center gap-hsp-md min-w-0">
@@ -86,7 +97,24 @@ export function ComposerToolbarBar({
 
         <ComposerModeToggle mode={mode} onSetMode={onSetMode} />
 
-        <ComposerToolbarActions onReset={onReset} onExport={onExport} exportDisabled={exportDisabled} />
+        {confirmingReset ? (
+          <InlineConfirm
+            ariaLabel="Confirm resetting the sample"
+            message="Reset the sample? This discards the current document and can't be undone."
+            confirmLabel="Confirm reset"
+            onCancel={() => setConfirmingReset(false)}
+            onConfirm={() => {
+              setConfirmingReset(false);
+              onReset();
+            }}
+          />
+        ) : (
+          <ComposerToolbarActions
+            onReset={() => setConfirmingReset(true)}
+            onExport={onExport}
+            exportDisabled={exportDisabled}
+          />
+        )}
       </div>
     </>
   );

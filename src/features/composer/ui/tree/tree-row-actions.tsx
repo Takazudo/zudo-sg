@@ -9,8 +9,9 @@
 // immediately. Kept as its own component so the confirmation's local state
 // doesn't live on the (already complex) recursive row renderer.
 
-import { useEffect, useRef, useState } from "preact/hooks";
+import { useState } from "preact/hooks";
 import type { JSX } from "preact";
+import { InlineConfirm } from "@/features/composer/ui/shared/inline-confirm";
 
 export interface SubtreeRemovalConfirmProps {
   nodeTitle: string;
@@ -25,6 +26,11 @@ export interface SubtreeRemovalConfirmProps {
  * context menu can reuse the EXACT same copy/behavior for its Delete item
  * (rendered as the menu's `children`, in place of its item list) instead of
  * re-deriving a second confirmation flow — see `use-composer-menus.ts`.
+ *
+ * A thin wrapper around the generic `InlineConfirm` (issue #269/#260, which
+ * also unified this component's initial focus to land on Cancel — the SAFE
+ * action — for both entry points, where before the menu path and this
+ * component's own default disagreed).
  */
 export function SubtreeRemovalConfirm({
   nodeTitle,
@@ -32,39 +38,14 @@ export function SubtreeRemovalConfirm({
   onCancel,
   onConfirm,
 }: SubtreeRemovalConfirmProps): JSX.Element {
-  const confirmButtonRef = useRef<HTMLButtonElement | null>(null);
-
-  useEffect(() => {
-    confirmButtonRef.current?.focus();
-  }, []);
-
   return (
-    <div class="sg-composer-tree-confirm" role="group" aria-label={`Confirm removing ${nodeTitle}`}>
-      <span class="sg-composer-tree-confirm-text">
-        Remove {nodeTitle} and its {descendantCount} nested component{descendantCount === 1 ? "" : "s"}?
-      </span>
-      <button
-        type="button"
-        class="sg-composer-tree-action"
-        onClick={onCancel}
-        onKeyDown={(e) => {
-          if (e.key === "Escape") onCancel();
-        }}
-      >
-        Cancel
-      </button>
-      <button
-        ref={confirmButtonRef}
-        type="button"
-        class="sg-composer-tree-action sg-composer-tree-action-danger"
-        onClick={onConfirm}
-        onKeyDown={(e) => {
-          if (e.key === "Escape") onCancel();
-        }}
-      >
-        Confirm removal
-      </button>
-    </div>
+    <InlineConfirm
+      ariaLabel={`Confirm removing ${nodeTitle}`}
+      message={`Remove ${nodeTitle} and its ${descendantCount} nested component${descendantCount === 1 ? "" : "s"}?`}
+      confirmLabel="Confirm removal"
+      onCancel={onCancel}
+      onConfirm={onConfirm}
+    />
   );
 }
 
