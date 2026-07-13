@@ -120,11 +120,11 @@ export function InspectorPanel({
 
   return (
     <div
-      class="flex h-full flex-col gap-vsp-sm overflow-y-auto p-hsp-md py-vsp-md"
+      class="flex h-full flex-col overflow-y-auto p-hsp-md py-vsp-md"
       data-sg-inspector-state={diagnostic.opaque ? "opaque" : "editable"}
     >
-      <nav aria-label="Selected component location">
-        <ol class="flex flex-wrap items-center gap-hsp-3xs text-xs text-muted">
+      <nav class="sg-composer-inspector-section" aria-label="Selected component location">
+        <ol class="flex flex-wrap items-center gap-hsp-3xs text-caption text-muted">
           {breadcrumb.map((step, i) => (
             <li key={step.key} class="flex items-center gap-hsp-3xs">
               {i > 0 && <span aria-hidden="true">/</span>}
@@ -134,31 +134,31 @@ export function InspectorPanel({
         </ol>
       </nav>
 
-      <div data-sg-inspector-identity>
+      <div class="sg-composer-inspector-section flex flex-col gap-vsp-3xs" data-sg-inspector-identity>
         <p class="truncate text-small font-semibold text-fg">{title}</p>
-        <p class="text-xs text-muted">
+        <p class="text-caption text-muted">
           {node.componentId} · v{node.componentVersion}
         </p>
+
+        {readOnly && (
+          <p class="text-caption text-muted" role="status">
+            Preview mode — properties are read-only.
+          </p>
+        )}
+
+        {diagnostic.opaque && (
+          <div class="sg-composer-inspector-diagnostics" role="alert">
+            <p class="sg-composer-inspector-diagnostics-title">This component can't be edited.</p>
+            <ul class="list-disc pl-hsp-md">
+              {diagnostic.reasons.map((reason, i) => (
+                <li key={`${reason.code}-${i}`}>{reason.message}</li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
 
-      {readOnly && (
-        <p class="text-xs text-muted" role="status">
-          Preview mode — properties are read-only.
-        </p>
-      )}
-
-      {diagnostic.opaque && (
-        <div class="sg-composer-inspector-diagnostics" role="alert">
-          <p class="sg-composer-inspector-diagnostics-title">This component can't be edited.</p>
-          <ul class="list-disc pl-hsp-md">
-            {diagnostic.reasons.map((reason, i) => (
-              <li key={`${reason.code}-${i}`}>{reason.message}</li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      <div class="flex flex-wrap items-center gap-hsp-xs">
+      <div class="sg-composer-inspector-section flex flex-wrap items-center gap-hsp-xs">
         <button
           type="button"
           class="sg-composer-toolbar-button"
@@ -186,7 +186,7 @@ export function InspectorPanel({
       </div>
 
       {!diagnostic.opaque && entry && entry.fields.length > 0 && (
-        <div class="flex flex-col gap-vsp-sm">
+        <div class="sg-composer-inspector-section flex flex-col gap-vsp-sm">
           {entry.fields.map((field) => (
             <InspectorField
               key={`${selectedId}:${field.prop}`}
@@ -200,9 +200,9 @@ export function InspectorPanel({
       )}
 
       {slotIds.length > 0 && (
-        <div data-sg-inspector-slots>
-          <p class="text-xs font-semibold uppercase tracking-wide text-muted">Slots</p>
-          <ul class="mt-vsp-3xs flex flex-col gap-vsp-3xs text-small text-fg">
+        <div class="sg-composer-inspector-section" data-sg-inspector-slots>
+          <p class="sg-composer-inspector-slots-heading text-small font-semibold text-fg">Slots</p>
+          <ul class="mt-vsp-xs flex flex-col gap-vsp-3xs text-small text-fg">
             {slotIds.map((slotId) => {
               const slot = entry?.slots.find((s) => s.id === slotId);
               const count = (node.slots[slotId] ?? []).length;

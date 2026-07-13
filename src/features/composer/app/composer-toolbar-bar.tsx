@@ -99,6 +99,7 @@ export function ComposerToolbarBar({
 
         {confirmingReset ? (
           <InlineConfirm
+            tone="toolbar"
             ariaLabel="Confirm resetting the sample"
             message="Reset the sample? This discards the current document and can't be undone."
             confirmLabel="Confirm reset"
