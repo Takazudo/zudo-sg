@@ -939,11 +939,16 @@ html[data-sg-composer-doc] body {
   gap: var(--spacing-hsp-2xs);
 }
 
+/* Neutralized (S7 dialog-open census #270 → A4 #280): this badge accounted
+   for 11 of the 15 dialog-open accent hits — it is not a whitelisted accent
+   role (not selected/pressed/hovered), so it recedes to the same neutral
+   fg-mix wash idiom the file already uses for subtle surfaces (e.g. the tree
+   row hover at 6%, above). Muted text keeps it legible as pure meta. */
 .sg-composer-chooser-card-category {
   padding-inline: var(--spacing-hsp-2xs);
   border-radius: var(--radius-full);
-  background: color-mix(in oklch, var(--color-accent) 12%, transparent);
-  color: var(--color-accent);
+  background: color-mix(in oklch, var(--color-fg) 6%, transparent);
+  color: var(--color-muted);
   font-size: var(--text-micro);
 }
 
