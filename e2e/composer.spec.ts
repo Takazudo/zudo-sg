@@ -98,10 +98,13 @@ function chooserDialog(page: Page): Locator {
 
 /**
  * The Export JSX modal, scoped by its accessible name ("Export — <doc name>").
- * The chooser `<dialog.sg-composer-chooser>` is always in the DOM and, while
- * closed, renders `display:flex` (not the UA `display:none`), so a bare
- * `getByRole("dialog")` matches BOTH it and the open export modal — a strict-
- * mode collision. Scoping by name selects only the export modal.
+ * Kept name-scoped rather than a bare `getByRole("dialog")` even though the
+ * closed chooser `<dialog.sg-composer-chooser>` no longer renders as a
+ * strict-mode collision candidate: it used to stay `display:flex` (not the
+ * UA `display:none`) while closed, because the chooser's own CSS set
+ * `display:flex` unconditionally rather than gating it on `[open]` — fixed
+ * in #264 (`src/features/composer/styles.css`'s `.sg-composer-chooser[open]`
+ * rule). Scoping by name is still the more precise selector regardless.
  */
 function exportModal(page: Page): Locator {
   return page.getByRole("dialog", { name: /Export/ });
