@@ -36,6 +36,7 @@
 import { Component, Fragment, h } from "preact";
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "preact/hooks";
 import type { ComponentChildren, JSX } from "preact";
+import { EllipsisIcon, PlusIcon } from "@/components/icons";
 import type {
   ComponentManifest,
   CompositionDocument,
@@ -721,17 +722,26 @@ export function CompositionCanvas(props: CompositionCanvasProps): JSX.Element {
   };
 
   /**
-   * One insert point: the existing direct "+" add button (unchanged — same
-   * class/attributes/behavior existing callers and tests depend on) PLUS a
-   * companion "⋯" that opens the richer insert MENU (issue #256's "Add
-   * component…" AND "Paste here", both always present). Two SIBLING
-   * `<button>`s inside a non-interactive wrapper — never nested buttons.
+   * One insert point: the direct "+" add button PLUS a companion "⋯" that
+   * opens the richer insert MENU (issue #256's "Add component…" AND "Paste
+   * here", both always present). Two SIBLING `<button>`s inside a
+   * non-interactive wrapper — never nested buttons.
+   *
+   * `isEnd` (issue #283) is true for the LAST insert point of a slot
+   * (`index === children.length`) — the one this issue enlarges into a
+   * labeled button (min-height 2rem, ≥3rem empty) with the dots companion
+   * overlapping its trailing edge, porting the prototype's `.insert-end`
+   * geometry. Every OTHER insert point (between two children, or before the
+   * first) keeps the original slim dashed-bar markup untouched — an `empty`
+   * slot's sole insert point is always ALSO the end point (there is nothing
+   * to be "between"), so the two flags never disagree.
    */
   function insertPoint(
     target: InsertionTarget,
     label: string,
     flow: SlotFlow,
     empty: boolean,
+    isEnd: boolean,
   ): JSX.Element {
     const position = empty ? `empty ${label}` : `${label}, position ${target.index + 1}`;
     const focusToken = insertMenuFocusToken(target);
@@ -770,11 +780,26 @@ export function CompositionCanvas(props: CompositionCanvasProps): JSX.Element {
           },
         }
       : null;
+    // The END point (#283) gets the enlarged `.zc-insert-end-btn` geometry —
+    // full-width in column flow, compact/auto-width in row flow — with the
+    // dots companion absolutely overlapping its trailing edge
+    // (`.zc-insert-menu--end`). Every other insert point keeps the ORIGINAL
+    // `.zc-insert-group--${flow}` / `.zc-insert--${flow}` markup untouched.
+    // Toning (neutral dashed at rest, accent only on hover/focus-visible) is
+    // shared via the base `.zc-insert` class either way — this issue changes
+    // geometry, never color.
+    const groupClass = isEnd
+      ? `zc-insert-group zc-insert-end--${flow}`
+      : `zc-insert-group zc-insert-group--${flow}`;
+    const addButtonClass = isEnd
+      ? `zc-insert zc-insert-end-btn${empty ? " zc-insert--empty" : ""}`
+      : `zc-insert zc-insert--${flow}`;
+    const menuButtonClass = isEnd ? "zc-insert-menu zc-insert-menu--end" : "zc-insert-menu";
     return h(
       "div",
       {
         key: dropKeyStr,
-        class: `zc-insert-group zc-insert-group--${flow}`,
+        class: groupClass,
         "data-zc-drop-valid": dragActive && valid ? "" : undefined,
         "data-zc-drop-active": dropKey === dropKeyStr ? "" : undefined,
         ...dropHandlers,
@@ -783,22 +808,28 @@ export function CompositionCanvas(props: CompositionCanvasProps): JSX.Element {
         "button",
         {
           type: "button",
-          class: `zc-insert zc-insert--${flow}${empty ? " zc-insert--empty" : ""}`,
+          class: addButtonClass,
           "data-zc-affordance": "",
           // Presentational/debug hook only — the click closes over the real target
           // object. Empty parent segment == the virtual root (a real node id is
           // never empty), so it cannot collide with a node literally named "root".
           "data-zc-insert": `${target.parentId ?? ""}:${target.slotId}:${target.index}`,
-          "aria-label": `Add a component to ${position}`,
+          // "Add component" (the END button's visible label) must be a SUBSTRING
+          // of the accessible name — WCAG 2.5.3 Label in Name — so speech input
+          // ("click Add component") resolves. The article "a" broke that match.
+          "aria-label": `Add component to ${position}`,
           onClick: () => onRequestAdd(target),
         },
-        h("span", { class: "zc-insert-plus", "aria-hidden": "true" }, "+"),
+        h(PlusIcon, { class: "zc-insert-plus", width: 12, height: 12 }),
+        // The visible "Add component" label is END-only (issue #283) — the
+        // between-children bar stays icon-only, same as before.
+        isEnd ? h("span", null, "Add component") : null,
       ),
       h(
         "button",
         {
           type: "button",
-          class: "zc-insert-menu",
+          class: menuButtonClass,
           "data-zc-affordance": "",
           "data-zc-focus-token": focusToken,
           "aria-label": `Insert options for ${position}`,
@@ -808,7 +839,9 @@ export function CompositionCanvas(props: CompositionCanvasProps): JSX.Element {
             onRequestInsertMenu(target, rect, focusToken);
           },
         },
-        h("span", { "aria-hidden": "true" }, "⋯"),
+        // 12px (icon ladder xs) — matches the host kebabs and the node-chrome
+        // ellipsis below; 14 was off the 12/16/20/24 --spacing-icon-* ladder.
+        h(EllipsisIcon, { width: 12, height: 12 }),
       ),
     );
   }
@@ -835,7 +868,18 @@ export function CompositionCanvas(props: CompositionCanvasProps): JSX.Element {
     const addable = !single || children.length === 0;
     for (let index = 0; index <= children.length; index += 1) {
       if (addable) {
-        out.push(insertPoint({ parentId, slotId, index }, label, flow, children.length === 0));
+        // The LAST addable index (index === children.length) is the slot's
+        // END point (issue #283) — an empty slot's only index (0) is always
+        // also its end, so `empty` never disagrees with `isEnd`.
+        out.push(
+          insertPoint(
+            { parentId, slotId, index },
+            label,
+            flow,
+            children.length === 0,
+            index === children.length,
+          ),
+        );
       }
       const child = children[index];
       if (child) out.push(renderNode(child));
@@ -971,7 +1015,7 @@ export function CompositionCanvas(props: CompositionCanvasProps): JSX.Element {
                 onRequestNodeMenu(node.id, rect, nodeMenuFocusToken(node.id));
               },
             },
-            h("span", { "aria-hidden": "true" }, "⋯"),
+            h(EllipsisIcon, { width: 12, height: 12 }),
           ),
         ]
       : label;

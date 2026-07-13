@@ -45,6 +45,7 @@
 import { useEffect, useId, useMemo, useRef, useState } from "preact/hooks";
 import type { JSX } from "preact";
 import type { ComponentManifest, CompositionDocument, InsertionTarget } from "@/composer";
+import { ExpandIcon } from "@/components/icons";
 import type { ComposerManifestEntry } from "@/styleguide/data/composer-registry";
 import type {
   ComposerPreviewLocation,
@@ -279,7 +280,12 @@ export function ComposerChooser({
                 title={enlarged ? "Restore size" : "Enlarge"}
                 onClick={() => setEnlarged((value) => !value)}
               >
-                <span aria-hidden="true">{enlarged ? "⤡" : "⤢"}</span>
+                {/* Same glyph in both states (issue #282 review): the icon module has no
+                    dedicated collapse/restore icon, and reusing `XMarkIcon` (documented as
+                    "dialog close") for "restore to default size" reads as dismissing the
+                    dialog. The pressed state is already communicated by `aria-pressed`'s
+                    accent styling above and the differing aria-label/title. */}
+                <ExpandIcon size="sm" />
               </button>
               <p class="sg-composer-chooser-target">
                 Adding to: <strong>{targetLabel}</strong>

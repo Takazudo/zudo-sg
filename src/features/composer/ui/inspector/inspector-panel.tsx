@@ -29,6 +29,7 @@ import type {
   JsonObject,
 } from "@/composer";
 import { classifyNode, findLocation, orderedSlotIds } from "@/composer";
+import { ChevronDownIcon, ChevronUpIcon, TrashIcon } from "@/components/icons";
 import type { ComposerMode } from "@/features/composer/chrome/controller-model";
 import { InspectorField } from "./inspector-field";
 
@@ -106,7 +107,7 @@ export function InspectorPanel({
 
   if (selectedId === null || !location) {
     return (
-      <div class="flex h-full flex-col gap-vsp-2xs p-hsp-md py-vsp-md" data-sg-inspector-state="empty">
+      <div class="flex h-full flex-col gap-vsp-2xs p-hsp-md py-vsp-10" data-sg-inspector-state="empty">
         <p class="text-small font-semibold text-fg">Nothing selected</p>
         <p class="text-small text-muted">
           {document.root.length === 0
@@ -133,7 +134,7 @@ export function InspectorPanel({
 
   return (
     <div
-      class="flex h-full flex-col overflow-y-auto p-hsp-md py-vsp-md"
+      class="flex h-full flex-col overflow-y-auto p-hsp-md py-vsp-10"
       data-sg-inspector-state={diagnostic.opaque ? "opaque" : "editable"}
     >
       <nav class="sg-composer-inspector-section" aria-label="Selected component location">
@@ -174,32 +175,35 @@ export function InspectorPanel({
       <div class="sg-composer-inspector-section flex flex-wrap items-center gap-hsp-xs">
         <button
           type="button"
-          class="sg-composer-toolbar-button"
+          class="sg-composer-toolbar-button gap-hsp-3xs"
           disabled={readOnly || !canMoveUp}
           onClick={() => onReorder(node.id, "up")}
         >
+          <ChevronUpIcon size="sm" />
           Move up
         </button>
         <button
           type="button"
-          class="sg-composer-toolbar-button"
+          class="sg-composer-toolbar-button gap-hsp-3xs"
           disabled={readOnly || !canMoveDown}
           onClick={() => onReorder(node.id, "down")}
         >
+          <ChevronDownIcon size="sm" />
           Move down
         </button>
         <button
           type="button"
-          class="sg-composer-toolbar-button sg-composer-inspector-remove"
+          class="sg-composer-toolbar-button sg-composer-inspector-remove gap-hsp-3xs"
           disabled={readOnly}
           onClick={() => onRemove(node.id)}
         >
+          <TrashIcon size="sm" />
           Remove
         </button>
       </div>
 
       {!diagnostic.opaque && entry && entry.fields.length > 0 && (
-        <div class="sg-composer-inspector-section flex flex-col gap-vsp-sm">
+        <div class="sg-composer-inspector-section flex flex-col gap-vsp-xs">
           {entry.fields.map((field) => (
             <InspectorField
               key={`${selectedId}:${field.prop}`}

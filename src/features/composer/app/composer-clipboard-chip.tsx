@@ -9,6 +9,7 @@
 
 import type { JSX } from "preact";
 import type { CompositionNode } from "@/composer";
+import { CopyIcon } from "@/components/icons";
 
 export interface ComposerClipboardChipProps {
   /** The session clipboard's snapshot, or `null` when empty. */
@@ -25,7 +26,7 @@ export function ComposerClipboardChip({ clipboard, titleFor }: ComposerClipboard
       class="sg-composer-clipboard-chip inline-flex items-center gap-hsp-3xs text-small text-muted"
       data-sg-clipboard-component={clipboard.componentId}
     >
-      <span aria-hidden="true">⧉</span>
+      <CopyIcon size="sm" />
       <span>{label}</span>
     </span>
   );

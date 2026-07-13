@@ -69,3 +69,27 @@ describe("Composer workspace CSS geometry (src/features/composer/styles.css)", (
     expect(css).toMatch(/\.sg-composer-resizer:focus-visible\s*\{/);
   });
 });
+
+/** Pull a selector's declaration block out of the Composer stylesheet. */
+function blockFor(selector: string): string {
+  const start = css.indexOf(`${selector} {`);
+  expect(start, `expected a "${selector}" block`).toBeGreaterThanOrEqual(0);
+  const open = css.indexOf("{", start);
+  const end = css.indexOf("}", open);
+  return css.slice(open + 1, end);
+}
+
+describe("accent budget — chooser card-category badge (S7 census #270 → A4 #280)", () => {
+  it("neutralizes the badge to a muted fg-mix wash, not accent, at rest", () => {
+    const badge = blockFor(".sg-composer-chooser-card-category");
+    expect(badge).toContain("color: var(--color-muted)");
+    expect(badge).toContain("background: color-mix(in oklch, var(--color-fg) 6%, transparent)");
+    expect(badge).not.toContain("var(--color-accent)");
+  });
+
+  it("keeps the micro type size and full pill radius", () => {
+    const badge = blockFor(".sg-composer-chooser-card-category");
+    expect(badge).toContain("font-size: var(--text-micro)");
+    expect(badge).toContain("border-radius: var(--radius-full)");
+  });
+});

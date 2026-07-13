@@ -534,7 +534,7 @@ test.describe.serial("Composer 14-step walkthrough (#252) — steps 1-6, 8-13", 
     const frame = canvasFrame(page);
     // "Right, position 1" = index 0 of split-1's right slot (which currently
     // holds [stack-1, cta-1]) — see renderer.ts's insertPoint()'s `position`.
-    const insertBtn = frame.getByRole("button", { name: "Add a component to Right, position 1" });
+    const insertBtn = frame.getByRole("button", { name: "Add component to Right, position 1" });
     await insertBtn.click();
 
     const dialog = chooserDialog(page);

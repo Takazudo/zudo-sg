@@ -33,10 +33,13 @@ export const MAX_RAIL_W = 480;
  * Sized against the WIDEST font-rendering environment, not local: 'SectionHeading'
  * at depth-2 measures ~96px on local (WSL) fonts but ~110px on the CI Linux
  * runner's fonts. 280px left only ~101px for the title area there, so the
- * #270 untruncation contract failed CI-only. 300px gives ~121px (≈11px margin
- * over the CI width) so the contract holds across both font environments.
+ * #270 untruncation contract failed CI-only. 300px gave ~121px (≈11px CI margin)
+ * — but the Composer UI Parity epic (#282) then added a leading node-type glyph
+ * (12px + gap) to every tree row, consuming ~14px of the title column and
+ * re-truncating 'SectionHeading' on CI. 320px restores a comfortable CI margin
+ * (~17px) with the glyph present; keep it in sync with `--sg-composer-tree-w`.
  */
-export const DEFAULT_TREE_W = 300;
+export const DEFAULT_TREE_W = 320;
 /** The canvas must always keep at least this much width — "a useful center". */
 export const MIN_CANVAS_W = 320;
 /** Rough width reserved by the two resizer grid tracks themselves. */

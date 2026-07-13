@@ -123,7 +123,7 @@ export function ComposerExportDialog({
     >
       {open && (
         <div class="flex h-full flex-col overflow-hidden bg-surface sm:rounded-lg sm:border sm:border-border">
-          <div class="flex items-center justify-between gap-hsp-sm border-b border-border px-hsp-lg py-vsp-sm">
+          <div class="flex items-center justify-between gap-hsp-sm border-b border-border px-hsp-lg py-vsp-xs">
             <h2 id={titleId} class="text-small font-semibold text-fg">
               Export — {documentName}
             </h2>
@@ -132,7 +132,7 @@ export function ComposerExportDialog({
             </button>
           </div>
 
-          <div class="flex-1 overflow-y-auto px-hsp-lg py-vsp-md">
+          <div class="flex-1 overflow-y-auto px-hsp-lg py-vsp-xs">
             {result === null && <p class="text-small text-muted">Generating…</p>}
 
             {result !== null && result.blocked && (

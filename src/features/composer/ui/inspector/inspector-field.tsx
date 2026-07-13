@@ -46,7 +46,7 @@ function assertNever(field: never): never {
 // 14px floor for functional text (#267) — was text-xs (12px, --text-micro).
 const FIELD_LABEL_CLASS = "block text-caption font-medium text-muted";
 const FIELD_INPUT_CLASS =
-  "sg-composer-inspector-control w-full rounded-md border border-border bg-surface px-hsp-xs text-small text-fg disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-danger";
+  "sg-composer-inspector-control w-full rounded-md border border-border bg-surface px-hsp-sm text-small text-fg disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-danger";
 
 export function InspectorField({
   field,
@@ -200,7 +200,7 @@ function TextField({
         {multiline ? (
           <textarea
             id={inputId}
-            class="w-full rounded-md border border-border bg-surface px-hsp-xs py-vsp-3xs text-small text-fg disabled:cursor-not-allowed disabled:opacity-50"
+            class="w-full rounded-md border border-border bg-surface px-hsp-sm py-vsp-2xs text-small text-fg disabled:cursor-not-allowed disabled:opacity-50"
             value={draft}
             disabled={disabled}
             rows={3}
