@@ -94,3 +94,7 @@ export type {
   JsxGenerationResult,
 } from "./source/generate-jsx";
 export { generateJsx } from "./source/generate-jsx";
+
+// Dev-only browser file-provider capability. The factory returns undefined in
+// production because its virtual configuration is build-gated by zfb.
+export * from "./storage/file-provider";

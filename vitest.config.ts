@@ -27,6 +27,10 @@ export default defineConfig({
       // zfb-only virtual module (see vitest-stubs/zdtp-apply-config.ts) —
       // plain Vite has no resolver for a "virtual:" specifier.
       "virtual:zdtp-apply-config": resolve(__dirname, "vitest-stubs/zdtp-apply-config.ts"),
+      "virtual:composer-file-provider-config": resolve(
+        __dirname,
+        "vitest-stubs/composer-file-provider-config.ts",
+      ),
       // React → Preact compat aliases (mirrors production zfb/vite build).
       // Most-specific keys first so `react/jsx-runtime` is not swallowed by `react`.
       "react/jsx-runtime": "preact/jsx-runtime",
