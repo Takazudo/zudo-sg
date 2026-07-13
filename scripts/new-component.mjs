@@ -22,11 +22,13 @@
 //            unique WITHIN that category directory when nested — two
 //            categories may each scaffold a same-named component (the S6
 //            catalog and gen-sg-registry.mjs both key off the full nested
-//            path, not the bare name; see STORIES.md). Per the epic's
-//            transition rule, a nested scaffold NEVER touches the barrel
-//            (packages/ui/src/index.ts) — new components stay out of it
-//            until the atomic-swap sub rebuilds it — so --skip-barrel is a
-//            no-op alongside --nested.
+//            path, not the bare name; see STORIES.md). A nested scaffold
+//            auto-inserts its export into the barrel
+//            (packages/ui/src/index.ts) exactly like a flat scaffold does
+//            (#289) — pass --skip-barrel to opt out. Scaffolding a name
+//            that's already exported from the barrel under a different
+//            category fails with an actionable error rather than writing a
+//            colliding export.
 //
 // See packages/ui/STORIES.md → "Scaffolding a new component" for what gets
 // generated and what to do next. Pure helpers (validation, templates, the
@@ -86,7 +88,8 @@ function printUsage() {
     `Usage: pnpm new:component <name> --category <Category> [--skip-barrel] [--nested]\n` +
       `  <Category> must be one of: ${VALID_CATEGORIES.join(", ")}\n` +
       `  --skip-barrel skips inserting the export into ${BARREL_INDEX ?? "the barrel file"}.\n` +
-      `  --nested scaffolds packages/ui/src/<category-slug>/<name>/ and never touches the barrel.`,
+      `  --nested scaffolds packages/ui/src/<category-slug>/<name>/ — still inserts into the\n` +
+      `    barrel by default (import path adjusted for the nesting); --skip-barrel opts out.`,
   );
 }
 
@@ -112,6 +115,10 @@ function main() {
     ? `${COMPONENTS_ROOT}/${categorySlug(category)}/${name}`
     : `${COMPONENTS_ROOT}/${name}`;
 
+  const pascalName = toPascalCase(name);
+  const shouldInsertBarrel = INDEX_PATH !== null && !skipBarrel;
+  let newIndexSrc;
+
   try {
     assertValidName(name);
     assertValidCategory(category);
@@ -121,12 +128,21 @@ function main() {
           .map((entry) => entry.name)
       : [];
     assertUnusedName(name, existingNames);
+
+    // Compute (and validate) the barrel insertion BEFORE writing any
+    // component files. insertBarrelExport throws when pascalName already
+    // names an export in a different category section (STORIES.md §2's
+    // same-name-across-categories case) — fail early here rather than
+    // leaving a half-scaffolded component directory on disk.
+    if (shouldInsertBarrel) {
+      const indexSrc = readFileSync(INDEX_PATH, "utf8");
+      newIndexSrc = insertBarrelExport(indexSrc, { pascalName, kebabName: name, category, nested });
+    }
   } catch (err) {
     console.error(`new-component: ${err.message}`);
     return 1;
   }
 
-  const pascalName = toPascalCase(name);
   const testsDir = resolve(componentDir, "__tests__");
   mkdirSync(testsDir, { recursive: true });
 
@@ -143,26 +159,13 @@ function main() {
     testTemplate({ pascalName, kebabName: name }),
   );
 
-  // Transition rule (STORIES.md, epic #222): new components stay OUT of the
-  // barrel until the atomic-swap sub rebuilds it — a nested scaffold never
-  // inserts into INDEX_PATH, regardless of --skip-barrel.
-  const shouldInsertBarrel = !nested && INDEX_PATH !== null && !skipBarrel;
   if (shouldInsertBarrel) {
-    const indexSrc = readFileSync(INDEX_PATH, "utf8");
-    writeFileSync(
-      INDEX_PATH,
-      insertBarrelExport(indexSrc, { pascalName, kebabName: name, category }),
-    );
+    writeFileSync(INDEX_PATH, newIndexSrc);
   }
 
   console.log(`Scaffolded ${pascalName} at ${relComponentDir}/`);
   if (shouldInsertBarrel) {
     console.log(`Added the barrel export to ${BARREL_INDEX}.`);
-  } else if (nested) {
-    console.log(
-      "Nested (category-dir) scaffold — skipped the barrel-export step (new components " +
-        "stay out of the barrel until the atomic-swap rebuild; see STORIES.md).",
-    );
   } else if (INDEX_PATH === null) {
     console.log("No BARREL_INDEX configured — skipped the barrel-export step.");
   } else {
@@ -187,7 +190,7 @@ function main() {
   const steps = [
     `Fill in the TODOs in ${relComponentDir}/${name}.tsx and ${name}.stories.tsx.`,
   ];
-  if (!nested && !shouldInsertBarrel && INDEX_PATH !== null) {
+  if (!shouldInsertBarrel && INDEX_PATH !== null) {
     steps.push(`Add the barrel export to ${BARREL_INDEX} by hand (skipped via --skip-barrel).`);
   }
   steps.push(`Run \`pnpm lint:tokens\`, \`pnpm check\`, and \`pnpm test:unit\`.`);

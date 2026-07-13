@@ -277,4 +277,109 @@ describe("insertBarrelExport", () => {
       `// ── Actions ──────────────────────────────────────────────────────────────\nexport { Avatar }`,
     );
   });
+
+  // #289 — a --nested scaffold auto-inserts into the barrel (the `!nested`
+  // gate that used to skip this entirely is gone), using the nested
+  // `./<category-slug>/<name>/<name>` import specifier instead of the flat
+  // `./<name>/<name>` one.
+  describe("nested: true (category-nested import specifier)", () => {
+    it("imports from ./<category-slug>/<name>/<name>, alphabetically in the matching section", () => {
+      const result = insertBarrelExport(FIXTURE, {
+        pascalName: "Stat",
+        kebabName: "stat",
+        category: "Data Display",
+        nested: true,
+      });
+      expect(result).toContain(
+        `export { Badge } from "./badge/badge";\nexport type { BadgeProps, BadgeTone, BadgeVariant } from "./badge/badge";\n\n` +
+          `export { Stat } from "./data-display/stat/stat";\n` +
+          `export type { StatProps, StatVariant } from "./data-display/stat/stat";\n\n` +
+          `// ── Utilities`,
+      );
+    });
+
+    it("still sorts alphabetically among the section's existing (flat-imported) exports", () => {
+      const result = insertBarrelExport(FIXTURE, {
+        pascalName: "Avatar",
+        kebabName: "avatar",
+        category: "Actions",
+        nested: true,
+      });
+      const avatarIdx = result.indexOf('export { Avatar }');
+      const buttonIdx = result.indexOf('export { Button }');
+      expect(result).toContain(`export { Avatar } from "./actions/avatar/avatar";`);
+      expect(avatarIdx).toBeGreaterThan(-1);
+      expect(avatarIdx).toBeLessThan(buttonIdx);
+    });
+
+    it("defaults nested to false (flat import specifier) when omitted", () => {
+      const result = insertBarrelExport(FIXTURE, {
+        pascalName: "Stat",
+        kebabName: "stat",
+        category: "Data Display",
+      });
+      expect(result).toContain(`export { Stat } from "./stat/stat";`);
+      expect(result).not.toContain("./data-display/stat/stat");
+    });
+  });
+
+  // #289 — the barrel cannot hold two exports of the same Pascal name, even
+  // though two different categories may each scaffold a same-named component
+  // on disk (STORIES.md §2). insertBarrelExport must fail loudly instead of
+  // silently producing a colliding export.
+  describe("duplicate Pascal name across categories", () => {
+    it("throws a clear, actionable error instead of inserting a colliding export", () => {
+      expect(() =>
+        insertBarrelExport(FIXTURE, {
+          pascalName: "Badge",
+          kebabName: "badge",
+          category: "Actions",
+          nested: true,
+        }),
+      ).toThrow(/"Badge" is already exported from ".\/badge\/badge" in the "Data display" section/);
+    });
+
+    it("names the existing export's path and section, and suggests a manual alias", () => {
+      try {
+        insertBarrelExport(FIXTURE, { pascalName: "Button", kebabName: "button", category: "Data Display" });
+        throw new Error("expected insertBarrelExport to throw");
+      } catch (err) {
+        expect((err as Error).message).toContain("./button/button");
+        expect((err as Error).message).toContain("Actions");
+        expect((err as Error).message).toMatch(/alias/i);
+      }
+    });
+
+    it("detects a collision via a `default as` rename, not just a bare export name", () => {
+      const fixtureWithDefaultAs = [
+        `// ── Navigation ───────────────────────────────────────────────────────────`,
+        `export { default as NavEnhancer } from "./chrome/nav-enhancer/nav-enhancer";`,
+        ``,
+        `// ── Data display ─────────────────────────────────────────────────────────`,
+        `export { Badge } from "./badge/badge";`,
+        `export type { BadgeProps } from "./badge/badge";`,
+        ``,
+      ].join("\n");
+      expect(() =>
+        insertBarrelExport(fixtureWithDefaultAs, {
+          pascalName: "NavEnhancer",
+          kebabName: "nav-enhancer",
+          category: "Data Display",
+          nested: true,
+        }),
+      ).toThrow(/"NavEnhancer" is already exported/);
+    });
+
+    it("does not throw for a name that only appears in a type export", () => {
+      // Guards against over-matching: a *Props/*Variant type export sharing a
+      // token with pascalName must not be mistaken for a value-export
+      // collision.
+      const result = insertBarrelExport(FIXTURE, {
+        pascalName: "ButtonProps",
+        kebabName: "button-props",
+        category: "Actions",
+      });
+      expect(result).toContain(`export { ButtonProps } from "./button-props/button-props";`);
+    });
+  });
 });
