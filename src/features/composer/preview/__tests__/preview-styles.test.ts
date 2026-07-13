@@ -163,3 +163,56 @@ describe("drag & drop chrome (issue #258)", () => {
     expect(COMPOSER_PREVIEW_CSS).toContain("[data-zc-drop-active]");
   });
 });
+
+describe("accent budget — canvas quiet chrome (issue #266)", () => {
+  it("mutes insert markers to the guide tone at rest, never accent", () => {
+    // The "+" bar and its "⋯" companion were the biggest at-rest orange source
+    // (6+ markers in the sample doc). At rest they recede to --sg-composer-guide
+    // (chroma ~0.008 → NOT orange) at reduced opacity.
+    const insert = blockFor(COMPOSER_PREVIEW_CSS, ".zc-insert");
+    expect(insert).toContain("color: var(--sg-composer-guide)");
+    expect(insert).toMatch(/opacity:\s*0?\.\d+/);
+    expect(insert).not.toContain("var(--color-accent)");
+  });
+
+  it("spends accent only on interaction: a marker turns accent on hover/focus", () => {
+    expect(COMPOSER_PREVIEW_CSS).toMatch(
+      /\.zc-insert:hover,\s*\.zc-insert:focus-visible\s*\{[^}]*color:\s*var\(--color-accent\)/,
+    );
+  });
+
+  it("keeps selection THE loud element and a plain hover label neutral", () => {
+    // The resting/hover chrome chip is neutral; only the SELECTED node's label
+    // carries the accent fill — and the 2px accent selection outline stays.
+    const chrome = blockFor(COMPOSER_PREVIEW_CSS, ".zc-chrome");
+    expect(chrome).not.toContain("background: var(--color-accent)");
+    expect(COMPOSER_PREVIEW_CSS).toMatch(
+      /\.zc-node\[data-zc-selected\]\s*>\s*\.zc-chrome\s*\{[^}]*background:\s*var\(--color-accent\)/,
+    );
+    expect(COMPOSER_PREVIEW_CSS).toMatch(
+      /\[data-zc-selected\]\s*\{\s*outline:\s*2px solid var\(--color-accent\)/,
+    );
+  });
+
+  it("makes drop CANDIDATES neutral and only the ACTIVE target accent", () => {
+    expect(COMPOSER_PREVIEW_CSS).toMatch(
+      /\[data-zc-drop-valid\]\s*\{[^}]*outline:\s*1px dashed var\(--sg-composer-guide\)/,
+    );
+    expect(COMPOSER_PREVIEW_CSS).toMatch(
+      /\[data-zc-drop-active\]\s*\{[^}]*outline:\s*2px solid var\(--color-accent\)/,
+    );
+  });
+
+  it("drives every functional font-size off the token scale (no sub-12px rem)", () => {
+    // Kills the old 0.6875rem (11px) type label and every other hardcoded rem
+    // font-size; the label now comes off --text-micro (12px floor).
+    expect(COMPOSER_PREVIEW_CSS).not.toMatch(/font-size:\s*0?\.\d+rem/);
+    expect(blockFor(COMPOSER_PREVIEW_CSS, ".zc-chrome")).toContain("font-size: var(--text-micro)");
+  });
+
+  it("floats the composition on the panel-bg sheet token", () => {
+    expect(blockFor(COMPOSER_PREVIEW_CSS, ".zc-canvas")).toContain(
+      "background: var(--sg-composer-panel-bg)",
+    );
+  });
+});

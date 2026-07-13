@@ -201,7 +201,7 @@ describe("ComposerTree — structural actions", () => {
     expect(props.onRemove).toHaveBeenCalledWith("B");
   });
 
-  it("requires explicit confirmation before removing a populated container, and cancel makes no removal", () => {
+  it("requires explicit confirmation before removing a populated container, initially focused on Cancel, and cancel makes no removal", () => {
     resetFixtureIds();
     const document = makeAbcDocument();
     const props = baseProps();
@@ -210,6 +210,9 @@ describe("ComposerTree — structural actions", () => {
     fireEvent.click(screen.getByRole("button", { name: "Remove Split Layout" }));
     expect(props.onRemove).not.toHaveBeenCalled();
     expect(screen.getByText(/Remove Split Layout and its 3 nested components\?/)).toBeInTheDocument();
+    // Unified with the menu-triggered Delete confirmation (issue #260/#269):
+    // initial focus lands on the SAFE action, not the danger button.
+    expect(screen.getByRole("button", { name: "Cancel" })).toHaveFocus();
 
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
     expect(props.onRemove).not.toHaveBeenCalled();

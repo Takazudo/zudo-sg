@@ -5,7 +5,7 @@
 // composer-integration.test.tsx (issue #251).
 
 import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/preact";
+import { fireEvent, render, screen } from "@testing-library/preact";
 import type { CompositionNode } from "@/composer";
 import { ComposerToolbarBar } from "../composer-toolbar-bar";
 
@@ -39,5 +39,30 @@ describe("ComposerToolbarBar — clipboard chip", () => {
     expect(screen.getByText("Saved locally")).toBeInTheDocument();
     expect(screen.getByText("Box")).toBeInTheDocument();
     expect(titleFor).toHaveBeenCalledWith("test.box");
+  });
+});
+
+describe("ComposerToolbarBar — Reset sample confirm (issue #260/#269)", () => {
+  it("does not call onReset immediately — requires an explicit confirm, focused on Cancel", () => {
+    const onReset = vi.fn();
+    render(<ComposerToolbarBar {...baseProps()} onReset={onReset} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Reset sample" }));
+    expect(onReset).not.toHaveBeenCalled();
+    expect(screen.getByText(/Reset the sample\?/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Cancel" })).toHaveFocus();
+
+    fireEvent.click(screen.getByRole("button", { name: "Confirm reset" }));
+    expect(onReset).toHaveBeenCalledOnce();
+  });
+
+  it("Cancel dismisses the confirm without calling onReset", () => {
+    const onReset = vi.fn();
+    render(<ComposerToolbarBar {...baseProps()} onReset={onReset} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Reset sample" }));
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(onReset).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Reset sample" })).toBeInTheDocument();
   });
 });

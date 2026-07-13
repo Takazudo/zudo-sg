@@ -62,6 +62,13 @@ html[${COMPOSER_PREVIEW_DOC_ATTR}] {
   --color-muted:        light-dark(var(--palette-base-5), var(--palette-base-4));
   --color-accent:       light-dark(var(--palette-accent-2), var(--palette-accent-1));
   --color-accent-hover: light-dark(var(--palette-accent-3), var(--palette-accent-0));
+  /* Composer Polish S1 (#263). --color-border: the host now re-asserts it to a
+     doc-ramp literal, so restore the ui value the previewed components expect
+     (they bind border-border). --sg-composer-guide: the composer's quiet-chrome
+     tone — the insert markers below rebind onto it in a later wave. Both are kept
+     IDENTICAL to src/styles/preview.css (the drift-guard test derives from it). */
+  --color-border:      light-dark(var(--palette-base-3), var(--palette-base-7));
+  --sg-composer-guide: light-dark(oklch(.680 .008 65), oklch(.560 .008 65));
   --color-success: light-dark(var(--palette-state-success), var(--palette-state-success-dark));
   --color-danger:  light-dark(var(--palette-state-danger),  var(--palette-state-danger-dark));
   --color-warning: light-dark(var(--palette-state-warning), var(--palette-state-warning-dark));
@@ -72,7 +79,12 @@ html[${COMPOSER_PREVIEW_DOC_ATTR}] {
 .zc-canvas {
   min-height: 100vh;
   padding: 1.5rem;
-  background: var(--color-bg);
+  /* The page sheet (#266): the composition floats on this tonally-distinct panel
+     surface; the quiet gray backdrop it sits over is painted host-side on
+     .sg-composer-canvas-host (src/features/composer/styles.css). panel-bg is
+     ~ΔL 0.045 lighter than the backdrop in both modes — the prototype grammar
+     (S1 #263). Light: near-white sheet on gray; dark: subtly lighter sheet. */
+  background: var(--sg-composer-panel-bg);
   color: var(--color-fg);
 }
 .zc-canvas[data-mode="edit"] { padding-top: 2.25rem; }
@@ -130,9 +142,13 @@ html[${COMPOSER_PREVIEW_DOC_ATTR}] {
   overflow: hidden;
   padding: 0 0.375rem;
   border-radius: 3px;
-  background: var(--color-accent);
-  color: var(--color-on-accent);
-  font-size: 0.6875rem;
+  /* Accent budget (#266): the HOVER label is a QUIET neutral chip. Accent is
+     reserved for the SELECTED node — the loud, whitelisted role (below). The old
+     hardcoded 0.6875rem (11px) label is replaced by --text-micro (12px floor). */
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-2);
+  color: var(--color-fg);
+  font-size: var(--text-micro);
   line-height: 1.4rem;
   white-space: nowrap;
   pointer-events: none;
@@ -142,6 +158,15 @@ html[${COMPOSER_PREVIEW_DOC_ATTR}] {
 .zc-node:hover > .zc-chrome,
 .zc-node[data-zc-selected] > .zc-chrome {
   opacity: 1;
+}
+/* Selection is THE loud element (whitelisted): the selected node's label carries
+   the accent so it reads as active; a plain hover stays neutral (above). Only a
+   selected node ever shows the grip/menu buttons, so their inherited color and
+   on-accent hover wash always resolve against this accent fill. */
+.zc-node[data-zc-selected] > .zc-chrome {
+  border-color: transparent;
+  background: var(--color-accent);
+  color: var(--color-on-accent);
 }
 
 /* The SELECTED node's "⋯" menu trigger (issue #256) — chrome itself keeps
@@ -216,17 +241,25 @@ html[${COMPOSER_PREVIEW_DOC_ATTR}] {
   align-items: center;
   justify-content: center;
   padding: 0;
-  border: 1px dashed transparent;
+  /* Accent budget (#266): insert markers RECEDE until reached for — a muted,
+     guide-toned dashed bar at reduced opacity, NOT accent, at rest. This is the
+     single biggest at-rest orange source (6+ markers in the sample doc). Accent
+     appears only on hover/focus (below) and on the active drop target. */
+  border: 1px dashed var(--sg-composer-guide);
   border-radius: 3px;
   background: transparent;
-  color: var(--color-accent);
+  color: var(--sg-composer-guide);
+  opacity: 0.5;
   cursor: copy;
-  transition: background-color 120ms ease-out, border-color 120ms ease-out;
+  transition: background-color 120ms ease-out, border-color 120ms ease-out,
+    color 120ms ease-out, opacity 120ms ease-out;
 }
 .zc-insert:hover,
 .zc-insert:focus-visible {
   border-color: var(--color-accent);
   background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+  color: var(--color-accent);
+  opacity: 1;
 }
 .zc-insert:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 1px; }
 
@@ -241,8 +274,11 @@ html[${COMPOSER_PREVIEW_DOC_ATTR}] {
   min-height: 3rem;
   border-color: var(--color-border);
   color: var(--color-muted);
+  /* The SOLE affordance for an empty container — stays fully visible (neutral),
+     never muted like the between-child bars. */
+  opacity: 1;
 }
-.zc-insert-plus { font-size: 0.875rem; line-height: 1; }
+.zc-insert-plus { font-size: var(--text-caption); line-height: 1; }
 
 /* The insert point's "⋯" companion — opens the insert MENU (Add
    component…/Paste here) alongside the direct "+" add shortcut. */
@@ -253,18 +289,24 @@ html[${COMPOSER_PREVIEW_DOC_ATTR}] {
   justify-content: center;
   min-width: 1.125rem;
   padding: 0 0.125rem;
+  /* Muted at rest, accent on interaction — same budget as the "+" bar above. */
   border: 1px dashed transparent;
   border-radius: 3px;
   background: transparent;
-  color: var(--color-accent);
+  color: var(--sg-composer-guide);
+  opacity: 0.5;
   cursor: pointer;
-  font-size: 0.75rem;
+  font-size: var(--text-micro);
   line-height: 1;
+  transition: background-color 120ms ease-out, border-color 120ms ease-out,
+    color 120ms ease-out, opacity 120ms ease-out;
 }
 .zc-insert-menu:hover,
 .zc-insert-menu:focus-visible {
   border-color: var(--color-accent);
   background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+  color: var(--color-accent);
+  opacity: 1;
 }
 .zc-insert-menu:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 1px; }
 
@@ -275,12 +317,14 @@ html[${COMPOSER_PREVIEW_DOC_ATTR}] {
 .zc-canvas[data-zc-dragging] .zc-insert-group > * { pointer-events: none; }
 
 /* Every VALID insert point highlights during a drag; the hovered one gets a
-   stronger state. Invalid targets (inside the dragged subtree) get neither. */
+   stronger state. Invalid targets (inside the dragged subtree) get neither.
+   Accent budget (#266): a valid CANDIDATE is a NEUTRAL guide dash — the accent
+   is spent only on the ONE active drop target below. */
 .zc-canvas[data-zc-dragging] .zc-insert-group[data-zc-drop-valid] {
-  outline: 1px dashed var(--color-accent);
+  outline: 1px dashed var(--sg-composer-guide);
   outline-offset: 2px;
   border-radius: 3px;
-  background: color-mix(in srgb, var(--color-accent) 8%, transparent);
+  background: color-mix(in srgb, var(--sg-composer-guide) 12%, transparent);
 }
 .zc-canvas[data-zc-dragging] .zc-insert-group[data-zc-drop-valid].zc-insert-group--vertical {
   min-height: 1.25rem;
@@ -296,7 +340,7 @@ html[${COMPOSER_PREVIEW_DOC_ATTR}] {
   border-radius: 4px;
   padding: 0.75rem;
   background: color-mix(in srgb, var(--color-warning) 8%, transparent);
-  font-size: 0.8125rem;
+  font-size: var(--text-caption);
 }
 .zc-opaque-title { margin: 0; font-weight: 600; }
 .zc-opaque-reasons { margin: 0.375rem 0 0; padding-inline-start: 1.25rem; color: var(--color-muted); }
@@ -309,7 +353,7 @@ html[${COMPOSER_PREVIEW_DOC_ATTR}] {
   padding: 0.5rem;
   border-radius: 3px;
   background: var(--color-surface-2);
-  font-size: 0.75rem;
+  font-size: var(--text-micro);
 }
 
 /* ── Recoverable failures ─────────────────────────────────────────────────── */
@@ -319,7 +363,7 @@ html[${COMPOSER_PREVIEW_DOC_ATTR}] {
   border-radius: 4px;
   padding: 0.75rem;
   background: color-mix(in srgb, var(--color-danger) 8%, transparent);
-  font-size: 0.8125rem;
+  font-size: var(--text-caption);
 }
 .zc-node-error-title, .zc-error-title { margin: 0; font-weight: 600; }
 .zc-node-error-detail, .zc-error-detail { margin: 0.375rem 0 0; color: var(--color-muted); }
@@ -338,7 +382,7 @@ html[${COMPOSER_PREVIEW_DOC_ATTR}] {
 .zc-empty {
   padding: 2rem;
   color: var(--color-muted);
-  font-size: 0.875rem;
+  font-size: var(--text-caption);
   text-align: center;
 }
 `;

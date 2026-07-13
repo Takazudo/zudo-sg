@@ -262,12 +262,28 @@ describe("ComposerIntegration — mode, viewport, persistence, export (#251)", (
     expect(s.frame().style.width).toBe("390px");
   });
 
-  it("Reset sample returns to the native sample document", () => {
+  it("Reset sample requires an explicit confirm, and returns to the native sample document", () => {
     const s = setup();
     s.addAt(ROOT, "Box");
     expect(s.canvasDoc().root).toHaveLength(1);
+
     fireEvent.click(within(s.toolbar()).getByRole("button", { name: "Reset sample" }));
+    expect(s.canvasDoc().root).toHaveLength(1); // no mutation yet — confirm pending
+    expect(within(s.toolbar()).getByText(/Reset the sample\?/)).toBeInTheDocument();
+    expect(document.activeElement).toBe(within(s.toolbar()).getByRole("button", { name: "Cancel" }));
+
+    fireEvent.click(within(s.toolbar()).getByRole("button", { name: "Confirm reset" }));
     expect(s.canvasDoc().root).toHaveLength(0);
+    expect(within(s.toolbar()).queryByText(/Reset the sample\?/)).not.toBeInTheDocument();
+  });
+
+  it("Reset sample: cancelling the confirm makes no changes", () => {
+    const s = setup();
+    s.addAt(ROOT, "Box");
+    fireEvent.click(within(s.toolbar()).getByRole("button", { name: "Reset sample" }));
+    fireEvent.click(within(s.toolbar()).getByRole("button", { name: "Cancel" }));
+    expect(s.canvasDoc().root).toHaveLength(1);
+    expect(within(s.toolbar()).getByRole("button", { name: "Reset sample" })).toBeInTheDocument();
   });
 
   it("export renders exactly the generator output for the current document/manifest", () => {
@@ -350,12 +366,15 @@ describe("ComposerIntegration — context menus + menu bridge (#256)", () => {
     expect(within(s.menu()!).getAllByRole("menuitem").map((el) => el.textContent)).toEqual(["Delete"]);
   });
 
-  it("Delete on a populated subtree shows #250's exact subtree-removal confirmation instead of removing immediately", () => {
+  it("Delete on a populated subtree shows #250's exact subtree-removal confirmation instead of removing immediately, focused on Cancel (issue #260/#269)", () => {
     const s = setup(undefined, makeAbcDocument());
     fireEvent.click(within(s.tree()).getByRole("button", { name: "Open menu for Split Layout" }));
     fireEvent.click(within(s.menu()!).getByRole("menuitem", { name: "Delete" }));
 
     expect(within(s.menu()!).getByText(/Remove Split Layout and its 3 nested components\?/)).toBeInTheDocument();
+    // Unified with the tree row's own inline confirmation (below): initial
+    // focus lands on the SAFE action, not the danger "Confirm removal" button.
+    expect(document.activeElement).toBe(within(s.menu()!).getByRole("button", { name: "Cancel" }));
     expect(s.canvasDoc().root).toHaveLength(1); // no mutation yet
 
     fireEvent.click(within(s.menu()!).getByRole("button", { name: "Confirm removal" }));

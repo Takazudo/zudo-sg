@@ -98,10 +98,13 @@ function chooserDialog(page: Page): Locator {
 
 /**
  * The Export JSX modal, scoped by its accessible name ("Export — <doc name>").
- * The chooser `<dialog.sg-composer-chooser>` is always in the DOM and, while
- * closed, renders `display:flex` (not the UA `display:none`), so a bare
- * `getByRole("dialog")` matches BOTH it and the open export modal — a strict-
- * mode collision. Scoping by name selects only the export modal.
+ * Kept name-scoped rather than a bare `getByRole("dialog")` even though the
+ * closed chooser `<dialog.sg-composer-chooser>` no longer renders as a
+ * strict-mode collision candidate: it used to stay `display:flex` (not the
+ * UA `display:none`) while closed, because the chooser's own CSS set
+ * `display:flex` unconditionally rather than gating it on `[open]` — fixed
+ * in #264 (`src/features/composer/styles.css`'s `.sg-composer-chooser[open]`
+ * rule). Scoping by name is still the more precise selector regardless.
  */
 function exportModal(page: Page): Locator {
   return page.getByRole("dialog", { name: /Export/ });
@@ -439,6 +442,10 @@ test.describe.serial("Composer 14-step walkthrough (#252) — steps 1-6, 8-13", 
     await splitRow.getByRole("button", { name: "Remove SplitLayout" }).click();
     const confirm = splitRow.locator(".sg-composer-tree-confirm");
     await expect(confirm).toContainText("Remove SplitLayout and its 3 nested components?");
+    // Initial focus lands on the SAFE action (Cancel), unified with the
+    // context-menu Delete confirmation and the toolbar Reset confirm
+    // (issue #260/#269).
+    await expect(confirm.getByRole("button", { name: "Cancel", exact: true })).toBeFocused();
     await confirm.getByRole("button", { name: "Confirm removal", exact: true }).click();
 
     await expect(treeNode(page, splitId)).toHaveCount(0);
@@ -809,6 +816,9 @@ test.describe.serial("Composer 14-step walkthrough (#252) — steps 1-6, 8-13", 
 // ---------------------------------------------------------------------------
 // Step 7 + the opaque-node half of step 8 — each needs a FRESH page (storage
 // is seeded before the app's first read), so these are independent tests.
+// Also hosts the menu-path removal-confirm check (issue #260/#269) below,
+// which never mutates the document and so is likewise safe on its own page
+// rather than risking the shared 14-step walkthrough's state.
 // ---------------------------------------------------------------------------
 
 test.describe("Composer storage & recovery matrix (step 7 + opaque export block)", () => {
@@ -829,7 +839,26 @@ test.describe("Composer storage & recovery matrix (step 7 + opaque export block)
     await expect(canvasFrame(page).locator("[data-composer-canvas]")).toBeVisible({ timeout: 15_000 });
     await expect(topLevelTreeRows(page)).toHaveCount(2);
 
+    // Reset now requires an explicit confirm (issue #260/#269) — clicking
+    // "Reset sample" alone must NOT wipe the document.
     await page.getByRole("button", { name: "Reset sample", exact: true }).click();
+    // #269/#267 moved the Reset confirm from the tree-row confirm into the
+    // toolbar's own inline-confirm variant (`.sg-composer-toolbar-confirm`,
+    // tone="toolbar"). Same Cancel-focused / Escape-cancels behavior, new class.
+    const resetConfirm = page.locator(".sg-composer-toolbar-confirm", { hasText: "Reset the sample?" });
+    await expect(resetConfirm).toBeVisible();
+    await expect(topLevelTreeRows(page)).toHaveCount(2);
+    // Initial focus lands on the SAFE action (Cancel), unified with the
+    // tree-row/context-menu removal confirms.
+    await expect(resetConfirm.getByRole("button", { name: "Cancel", exact: true })).toBeFocused();
+
+    // Escape cancels, leaving the document untouched.
+    await page.keyboard.press("Escape");
+    await expect(resetConfirm).not.toBeVisible();
+    await expect(topLevelTreeRows(page)).toHaveCount(2);
+
+    await page.getByRole("button", { name: "Reset sample", exact: true }).click();
+    await page.getByRole("button", { name: "Confirm reset", exact: true }).click();
     await expect(topLevelTreeRows(page)).toHaveCount(1);
     await expect(page.locator(".sg-composer-save-status")).toHaveAttribute("data-sg-status", "saved");
   });
@@ -876,6 +905,7 @@ test.describe("Composer storage & recovery matrix (step 7 + opaque export block)
     await expect(status).toHaveText(quarantinedText ?? "");
 
     await page.getByRole("button", { name: "Reset sample", exact: true }).click();
+    await page.getByRole("button", { name: "Confirm reset", exact: true }).click();
     await expect(status).toHaveAttribute("data-sg-status", "saved");
     await expect(banner).not.toBeVisible();
   });
@@ -961,6 +991,31 @@ test.describe("Composer storage & recovery matrix (step 7 + opaque export block)
     await expect(dialog).toContainText("Export is blocked");
     await expect(dialog).toContainText("ui.nonexistent-widget");
     await dialog.getByRole("button", { name: "Close", exact: true }).click();
+  });
+
+  // Context-menu Delete confirmation (issue #256) — the SECOND removal-confirm
+  // entry point, kept unified with the tree row's own inline confirm (step 05d
+  // above): same copy/behavior, and initial focus on Cancel (issue #260/#269).
+  // Runs on its own fresh page and never actually confirms, so the native
+  // sample stays intact — no interference with the shared 14-step walkthrough.
+  test("step 05b (menu path) - node context-menu Delete on a populated subtree confirms, focused on Cancel", async ({
+    page,
+  }) => {
+    await gotoComposer(page);
+    const splitRow = treeNode(page, "split-1");
+    await splitRow.locator(".sg-composer-tree-menu-trigger").first().click();
+
+    const menu = contextMenu(page);
+    await expect(menu).toBeVisible();
+    await menu.getByRole("menuitem", { name: "Delete" }).click();
+
+    const confirm = menu.locator(".sg-composer-tree-confirm");
+    await expect(confirm).toContainText(/Remove SplitLayout and its \d+ nested components?\?/);
+    await expect(confirm.getByRole("button", { name: "Cancel", exact: true })).toBeFocused();
+
+    await confirm.getByRole("button", { name: "Cancel", exact: true }).click();
+    await expect(menu).not.toBeVisible();
+    await expect(splitRow).toBeVisible();
   });
 });
 

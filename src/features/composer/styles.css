@@ -29,7 +29,10 @@
   /* Rail widths — the resizer scripts (resizer-scripts-source.ts) override
    * these per-user in px at runtime; these are just the first-paint
    * defaults for a session with nothing persisted yet. */
-  --sg-composer-tree-w: 18rem;
+  /* 17.5rem (280px) matches DEFAULT_TREE_W in resizer-contract.ts so the
+     first paint and the restore-script's fresh-session default agree — wide
+     enough that common component names fit untruncated (#265). */
+  --sg-composer-tree-w: 17.5rem;
   --sg-composer-inspector-w: 20rem;
   /* Visual (not hit-area) width of each resizer track. */
   --sg-composer-resizer-w: 0.75rem;
@@ -77,7 +80,7 @@ html[data-sg-composer-doc] body {
   gap: var(--spacing-hsp-sm);
   padding-inline: var(--spacing-hsp-lg);
   padding-block: var(--spacing-vsp-sm);
-  border-bottom: 1px solid var(--color-muted);
+  border-bottom: 1px solid var(--color-border);
   background: var(--color-bg);
 }
 
@@ -100,11 +103,11 @@ html[data-sg-composer-doc] body {
 }
 
 .sg-composer-tree {
-  border-right: 1px solid var(--color-muted);
+  border-right: 1px solid var(--color-border);
 }
 
 .sg-composer-inspector {
-  border-left: 1px solid var(--color-muted);
+  border-left: 1px solid var(--color-border);
 }
 
 .sg-composer-canvas {
@@ -126,7 +129,7 @@ html[data-sg-composer-doc] body {
   bottom: var(--spacing-vsp-md);
   max-width: 16rem;
   padding: var(--spacing-vsp-2xs) var(--spacing-hsp-sm);
-  border: 1px solid var(--color-muted);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   background: color-mix(in oklch, var(--color-surface) 92%, transparent);
   color: var(--color-muted);
@@ -175,18 +178,24 @@ html[data-sg-composer-doc] body {
     grid-column: 4;
   }
 
+  /* Accent budget (#267): hover/drag were both the same accent-30% flash —
+     neither is a whitelisted accent role (drag is interaction feedback, not a
+     pressed/selected control), so both move to a neutral fg tint, same idiom
+     as the tree row/action hover below. Dragging reads as the "committed"
+     state, so it gets a stronger tint than a plain hover. */
   @media (hover: hover) {
     .sg-composer-resizer:hover {
-      background: color-mix(in oklch, var(--color-accent) 30%, transparent);
+      background: color-mix(in oklch, var(--color-fg) 8%, transparent);
     }
   }
   .sg-composer-resizer[data-sg-dragging] {
-    background: color-mix(in oklch, var(--color-accent) 30%, transparent);
+    background: color-mix(in oklch, var(--color-fg) 14%, transparent);
   }
+  /* Outline only, matching every other focus-visible rule in this file — the
+     accent-tinted background this used to add was the odd one out. */
   .sg-composer-resizer:focus-visible {
     outline: 2px solid var(--color-focus);
     outline-offset: -2px;
-    background: color-mix(in oklch, var(--color-accent) 20%, transparent);
   }
 
   .sg-composer-narrow-note {
@@ -210,7 +219,7 @@ html[data-sg-composer-doc] body {
 
 .sg-composer-mode-toggle {
   display: inline-flex;
-  border: 1px solid var(--color-muted);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   overflow: hidden;
 }
@@ -245,7 +254,7 @@ html[data-sg-composer-doc] body {
   align-items: center;
   min-height: 2.75rem;
   padding: var(--spacing-vsp-3xs) var(--spacing-hsp-sm);
-  border: 1px solid var(--color-muted);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   background: var(--color-surface);
   color: var(--color-muted);
@@ -268,6 +277,33 @@ html[data-sg-composer-doc] body {
 .sg-composer-toolbar-button:disabled {
   cursor: not-allowed;
   opacity: 0.5;
+}
+
+/* Reset's inline confirm (#269) restyled for the toolbar row (#267) — the
+   generic `InlineConfirm` also renders inside the tree/menu with the
+   `.sg-composer-tree-confirm*` classes (that pairing stays as S3/S6 left it);
+   this is the toolbar-only variant, sized to sit inline with the other
+   toolbar controls instead of a tree row. */
+.sg-composer-toolbar-confirm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-hsp-sm);
+  min-height: 2.75rem;
+  padding-inline: var(--spacing-hsp-sm);
+  border-radius: var(--radius-md);
+  background: color-mix(in oklch, var(--color-danger) 10%, transparent);
+}
+
+.sg-composer-toolbar-confirm-text {
+  flex: 1 1 12rem;
+  font-size: var(--text-small);
+  color: var(--color-fg);
+}
+
+.sg-composer-toolbar-confirm-danger {
+  color: var(--color-danger);
+  border-color: var(--color-danger);
 }
 
 .sg-composer-save-status {
@@ -336,12 +372,39 @@ html[data-sg-composer-doc] body {
   width: 1.25rem;
   height: 1.25rem;
   border-radius: var(--radius-sm);
-  border: 1px solid var(--color-muted);
+  border: 1px solid var(--color-border);
 }
 
 .sg-composer-inspector-remove {
   color: var(--color-danger);
   border-color: var(--color-danger);
+}
+
+/* Section separators (#267): breadcrumb / identity / move-remove actions /
+   fields / slots each become their own `.sg-composer-inspector-section`, with
+   the border + padding supplying the BETWEEN-section gap. That gap (2x
+   padding-block, ~2.5rem total) clearly exceeds the small `gap-*` utilities
+   each section sets on its own children (the ratio-rule spacing the issue
+   asks for) — see css-wisdom's spacing-philosophy article. First/last
+   sections drop the outer padding/border since the panel's own `py-vsp-md`
+   and the panel's bottom edge already supply that space. */
+.sg-composer-inspector-section {
+  padding-block: var(--spacing-vsp-sm);
+  border-bottom: 1px solid var(--color-border);
+}
+.sg-composer-inspector-section:first-child {
+  padding-top: 0;
+}
+.sg-composer-inspector-section:last-child {
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+/* 'Slots' section heading (#267): normal-case (was 12px uppercase+tracked) —
+   a short rule under the label replaces letter-spacing as the emphasis cue. */
+.sg-composer-inspector-slots-heading {
+  padding-bottom: var(--spacing-vsp-3xs);
+  border-bottom: 1px solid var(--color-border);
 }
 
 /* Shared "this node/export can't be used as-is" diagnostics box — reused by
@@ -380,7 +443,10 @@ html[data-sg-composer-doc] body {
 
 .sg-composer-tree {
   padding: var(--spacing-vsp-2xs) var(--spacing-hsp-xs);
-  font-size: var(--text-small);
+  /* 14px functional-text floor (#265): labels inherit this; subtitles/counts/
+     badges/slot-headers step down to --text-micro (12px) individually. Was
+     --text-small (16px), which truncated common names like "SectionHeading". */
+  font-size: var(--text-caption);
 }
 
 .sg-composer-tree-list,
@@ -391,7 +457,7 @@ html[data-sg-composer-doc] body {
 }
 
 .sg-composer-tree-list-nested {
-  padding-inline-start: var(--spacing-hsp-md);
+  padding-inline-start: var(--spacing-hsp-sm);
 }
 
 .sg-composer-tree-row {
@@ -401,8 +467,19 @@ html[data-sg-composer-doc] body {
   border-radius: var(--radius-md);
 }
 
+/* Selected row = accent tint (a whitelisted accent role — the one place the
+   tree spends accent). Text stays --color-fg and reads fine over a 12% tint. */
 .sg-composer-tree-row[data-sg-selected="true"] {
   background: color-mix(in oklch, var(--color-accent) 12%, transparent);
+}
+
+/* Hover = NEUTRAL tint, not accent (#265; accent-budget rule — hover is not a
+   whitelisted accent role). Selected rows are excluded so their accent tint is
+   never overpainted by the neutral hover. */
+@media (hover: hover) {
+  .sg-composer-tree-row:not([data-sg-selected="true"]):hover {
+    background: color-mix(in oklch, var(--color-fg) 6%, transparent);
+  }
 }
 
 .sg-composer-tree-row-root {
@@ -416,8 +493,10 @@ html[data-sg-composer-doc] body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 1.75rem;
-  min-height: 2.75rem;
+  width: 1.5rem;
+  /* Compact ~32px rows (#265). The ≥44px WCAG 2.5.5 hit target is restored for
+     coarse pointers only, in the @media (pointer: coarse) block below. */
+  min-height: 2rem;
 }
 
 .sg-composer-tree-disclosure {
@@ -443,7 +522,7 @@ html[data-sg-composer-doc] body {
   display: flex;
   align-items: baseline;
   gap: var(--spacing-hsp-2xs);
-  min-height: 2.75rem;
+  min-height: 2rem;
   padding-inline: var(--spacing-hsp-2xs);
   border: none;
   border-radius: var(--radius-md);
@@ -452,11 +531,8 @@ html[data-sg-composer-doc] body {
   text-align: start;
   cursor: pointer;
 }
-@media (hover: hover) {
-  .sg-composer-tree-select:hover {
-    background: color-mix(in oklch, var(--color-accent) 8%, transparent);
-  }
-}
+/* Hover feedback lives on the whole row (neutral tint, above) so the select
+   button itself stays transparent — no accent hover wash (#265). */
 .sg-composer-tree-select:focus-visible {
   outline: 2px solid var(--color-focus);
   outline-offset: -2px;
@@ -478,6 +554,12 @@ html[data-sg-composer-doc] body {
   white-space: nowrap;
   color: var(--color-muted);
   font-size: var(--text-micro);
+  /* The component NAME (title) outranks the prop-derived subtitle: yield space
+     to the title first so common names like "SectionHeading" stay untruncated
+     at the default rail. Without this the two share the flex row equally and a
+     long subtitle squeezes the title to an ellipsis (S7 #270). */
+  flex-shrink: 9999;
+  min-width: 0;
 }
 
 .sg-composer-tree-badge {
@@ -508,19 +590,22 @@ html[data-sg-composer-doc] body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 2.75rem;
-  min-height: 2.75rem;
+  /* Compact glyph controls (#265): 24px meets WCAG 2.5.8 (AA) for fine
+     pointers and keeps the action cluster from crowding the label. The ≥44px
+     WCAG 2.5.5 target is restored for coarse pointers in the block below. */
+  min-width: 1.5rem;
+  min-height: 2rem;
   border: none;
   border-radius: var(--radius-sm);
   background: transparent;
   color: var(--color-muted);
-  font-size: var(--text-small);
+  font-size: var(--text-caption);
   cursor: pointer;
 }
 @media (hover: hover) {
   .sg-composer-tree-action:hover:not(:disabled) {
     color: var(--color-fg);
-    background: color-mix(in oklch, var(--color-accent) 10%, transparent);
+    background: color-mix(in oklch, var(--color-fg) 8%, transparent);
   }
 }
 .sg-composer-tree-action:focus-visible {
@@ -531,8 +616,16 @@ html[data-sg-composer-doc] body {
   opacity: 0.35;
   cursor: not-allowed;
 }
-.sg-composer-tree-action-danger:not(:disabled) {
+/* Destructive glyph is muted at rest (accent/state budget — a red × on every
+   row reads as constant alarm); it turns danger-colored only on hover/focus. */
+.sg-composer-tree-action-danger:focus-visible {
   color: var(--color-danger);
+}
+@media (hover: hover) {
+  .sg-composer-tree-action-danger:hover:not(:disabled) {
+    color: var(--color-danger);
+    background: color-mix(in oklch, var(--color-danger) 12%, transparent);
+  }
 }
 .sg-composer-tree-add {
   width: auto;
@@ -586,24 +679,36 @@ html[data-sg-composer-doc] body {
   color: var(--color-fg);
 }
 
+/* Nesting guide (#265): one vertical hairline brackets a container node's
+   expanded slot groups, drawn with the structural border token (never accent).
+   The slot groups stack as a flex column whose between-group gap (--vsp-2xs)
+   clearly exceeds the ~0 within-slot row gap — the proximity-ratio rule that
+   makes LEFT and RIGHT read as separate groups. */
 .sg-composer-tree-slots {
-  padding-inline-start: var(--spacing-hsp-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-vsp-2xs);
+  padding-inline-start: var(--spacing-hsp-md);
+  border-inline-start: 1px solid var(--color-border);
 }
 
 .sg-composer-tree-slot {
-  padding-block: var(--spacing-vsp-3xs);
+  min-width: 0;
 }
 
+/* Slot-group label ('LEFT (1)'): normal-case muted 12px. The prior
+   UPPERCASE + letter-spaced micro treatment was the least legible text in the
+   rail (#265). Its small opener gap binds it to its own rows and stays smaller
+   than the between-group gap above it. */
 .sg-composer-tree-slot-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--spacing-hsp-2xs);
+  margin-bottom: var(--spacing-vsp-3xs);
   padding-inline: var(--spacing-hsp-2xs);
   color: var(--color-muted);
   font-size: var(--text-micro);
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
 }
 
 .sg-composer-tree-empty {
@@ -614,25 +719,63 @@ html[data-sg-composer-doc] body {
   font-style: italic;
 }
 
+/* Coarse pointers (touch): restore the ≥44px WCAG 2.5.5 hit target the compact
+   desktop rows trade away. Rows relax to ~44px; only the sizing changes — the
+   density, typography, guides, and states above are shared across pointers. */
+@media (pointer: coarse) {
+  .sg-composer-tree-disclosure,
+  .sg-composer-tree-disclosure-spacer,
+  .sg-composer-tree-select {
+    min-height: 2.75rem;
+  }
+
+  .sg-composer-tree-action {
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+  }
+}
+
 /* ── Component chooser dialog ────────────────────────────────────────────── */
 
 .sg-composer-chooser {
   z-index: var(--z-index-modal);
-  display: flex;
-  flex-direction: column;
-  width: min(32rem, calc(100vw - var(--spacing-hsp-xl)));
-  max-height: min(34rem, calc(100vh - var(--spacing-vsp-xl)));
   padding: 0;
-  border: none;
+  border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-lg);
-  background: var(--color-bg);
+  background: var(--sg-composer-panel-bg);
   color: var(--color-fg);
-  box-shadow: var(--shadow-lg);
+  /* Stronger than the shared --shadow-lg (that one reads as near-invisible on
+     the dark panel bg) — a two-layer literal like the prototype's, always
+     dark regardless of theme (same "shadows don't flip with mode" precedent
+     as --color-overlay above). */
+  box-shadow:
+    0 20px 50px rgb(0 0 0 / 0.35),
+    0 2px 8px rgb(0 0 0 / 0.24);
   overflow: hidden;
 }
 
+/* Layout is gated on [open] (S2, #264): the UA stylesheet already hides a
+   closed <dialog> (`dialog:not([open]) { display: none }`), but that's a
+   UA-origin rule — an unconditional author `display: flex` here would win
+   regardless of [open] (author always beats UA, irrespective of
+   specificity) and leave the closed dialog occupying layout. Scoping
+   `display` to `[open]` lets the UA rule apply while closed.
+   `margin: auto` restores the top-layer modal's native centering — Tailwind
+   preflight's universal `margin: 0` strips the UA `margin: auto` a
+   `showModal()` dialog relies on (again author-vs-UA, not specificity: this
+   file is imported unlayered, so it wins over preflight's layered reset
+   either way — restated here explicitly since without it nothing sets
+   margin at all). */
+.sg-composer-chooser[open] {
+  display: flex;
+  flex-direction: column;
+  margin: auto;
+  width: min(48rem, calc(100vw - var(--spacing-hsp-xl)));
+  max-height: min(34rem, calc(100vh - var(--spacing-vsp-xl)));
+}
+
 /* Enlarge toggle (issue #254) — near-fullscreen, resets per open (state lives
-   in ComposerChooser, not here). `display:flex` above is what lets the body
+   in ComposerChooser, not here). The `[open]` rule above is what lets the body
    below (`.sg-composer-chooser-body`) grow to fill the extra height. */
 .sg-composer-chooser[data-sg-enlarged="true"] {
   width: 96vw;
@@ -647,10 +790,10 @@ html[data-sg-composer-doc] body {
 .sg-composer-chooser-header {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
+  align-items: center;
   gap: var(--spacing-hsp-sm);
   padding: var(--spacing-vsp-sm) var(--spacing-hsp-lg);
-  border-bottom: 1px solid var(--color-muted);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .sg-composer-chooser-title {
@@ -661,6 +804,11 @@ html[data-sg-composer-doc] body {
 }
 
 .sg-composer-chooser-target {
+  /* `order: 1` (default is 0 on every other header child) sinks this behind
+     the title/enlarge/Cancel row regardless of its DOM position — its own
+     `flex: 1 1 100%` basis then forces it onto its own line below them,
+     keeping title + Cancel together on row one without wrapping (#264). */
+  order: 1;
   margin: 0;
   flex: 1 1 100%;
   color: var(--color-muted);
@@ -686,7 +834,7 @@ html[data-sg-composer-doc] body {
   width: 100%;
   min-height: 2.75rem;
   padding-inline: var(--spacing-hsp-sm);
-  border: 1px solid var(--color-muted);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   background: var(--color-surface);
   color: var(--color-fg);
@@ -706,7 +854,7 @@ html[data-sg-composer-doc] body {
 .sg-composer-chooser-category {
   min-height: 2.75rem;
   padding-inline: var(--spacing-hsp-sm);
-  border: 1px solid var(--color-muted);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-full);
   background: var(--color-surface);
   color: var(--color-muted);
@@ -764,7 +912,7 @@ html[data-sg-composer-doc] body {
   gap: var(--spacing-vsp-3xs);
   width: 100%;
   padding: var(--spacing-vsp-2xs) var(--spacing-hsp-sm);
-  border: 1px solid var(--color-muted);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   background: var(--color-surface);
   color: var(--color-fg);
@@ -801,7 +949,7 @@ html[data-sg-composer-doc] body {
 
 .sg-composer-chooser-card-description {
   color: var(--color-muted);
-  font-size: var(--text-micro);
+  font-size: var(--text-caption);
 }
 
 /* ── Context menu (issue #256) ──────────────────────────────────────────────
@@ -846,9 +994,16 @@ html[data-sg-composer-doc] body {
   font-size: var(--text-small);
   cursor: pointer;
 }
+/* Accent budget (#267): hover is not a whitelisted accent role — neutral fg
+   tint, same idiom as the tree row/action hover. Delete keeps its own
+   danger-tinted hover (functional-state color, outside the accent budget —
+   same "danger" precedent as .sg-composer-tree-action-danger's hover). */
 @media (hover: hover) {
   .sg-composer-menu-item:hover:not(:disabled) {
-    background: color-mix(in oklch, var(--color-accent) 10%, transparent);
+    background: color-mix(in oklch, var(--color-fg) 8%, transparent);
+  }
+  .sg-composer-menu-item-danger:not(:disabled):hover {
+    background: color-mix(in oklch, var(--color-danger) 12%, transparent);
   }
 }
 .sg-composer-menu-item:focus-visible {
@@ -873,6 +1028,15 @@ html[data-sg-composer-doc] body {
   flex-direction: column;
   height: 100%;
   min-height: 0;
+  /* Page-sheet backdrop (#266): the composition renders on a bordered sheet (the
+   * iframe below) that floats over this quiet gray desk
+   * (--sg-composer-canvas-backdrop, S1 #263). The gutter is VERTICAL ONLY — a
+   * horizontal gutter would shrink the Fluid frame's width and change content
+   * widths; instead a constrained viewport (Desktop/Tablet/Mobile) reveals the
+   * backdrop on its sides purely by CENTERING (margin-inline:auto on the frame),
+   * so every viewport's frame width is byte-for-byte unchanged (acceptance #6). */
+  padding-block: var(--spacing-vsp-md);
+  background: var(--sg-composer-canvas-backdrop);
 }
 
 .sg-composer-canvas-frame {
@@ -887,7 +1051,13 @@ html[data-sg-composer-doc] body {
   width: 100%;
   height: 100%;
   border: 0;
-  background: var(--color-bg);
+  /* The sheet's edge + elevation. A box-shadow RING (not a real border) draws the
+   * 1px hairline OUTSIDE the box, so the previewed document's content width is
+   * exactly what it was before the sheet existed (acceptance #6). The iframe
+   * background matches .zc-canvas's sheet fill so no seam shows before paint. */
+  border-radius: var(--radius-md);
+  box-shadow: 0 0 0 1px var(--color-border), var(--shadow-lg);
+  background: var(--sg-composer-panel-bg);
 }
 
 .sg-composer-canvas-error {
@@ -897,7 +1067,7 @@ html[data-sg-composer-doc] body {
   justify-content: space-between;
   gap: var(--spacing-hsp-sm);
   padding: var(--spacing-vsp-2xs) var(--spacing-hsp-md);
-  border-bottom: 1px solid var(--color-muted);
+  border-bottom: 1px solid var(--color-border);
   background: color-mix(in oklch, var(--color-surface) 92%, transparent);
   color: var(--color-fg);
   font-size: var(--text-small);
@@ -907,18 +1077,29 @@ html[data-sg-composer-doc] body {
  * chooser preview (issue #254)
  *
  * Live preview pane + enlarge toggle appended to #250's chooser dialog. The
- * enlarge STATE styling (`[data-sg-enlarged="true"]`) and the `display:flex`
+ * enlarge STATE styling (`[data-sg-enlarged="true"]`) and the `[open]` rule
  * the body layout below depends on live on the base `.sg-composer-chooser`
  * rule above (edited in place, not duplicated here) — everything genuinely
  * NEW to this issue is kept in this one block.
  *
- * `.sg-composer-chooser-body` is a wrapping flex row (catalog | preview) that
- * wraps to a stacked column at the default ~32rem dialog width — no media
- * query needed, `flex-wrap` + `min-width` basis alone handle both the default
- * and the ~96vw enlarged size (see css-wisdom's responsive-grid-patterns).
- * Its own `padding-inline` replaces the horizontal padding the catalog's
- * former direct children (`-controls`/`-count`/`-list`) used to carry
- * individually, now that they are nested one level deeper.
+ * `.sg-composer-chooser-body` lays the catalog | preview panes as a NON-wrapping
+ * flex row that stacks to a column below 40rem (the `@media` rule just below
+ * the base declaration). It used to be a wrapping row (`flex-wrap: wrap`) — but
+ * a wrapping flex container sizes its single line to the tallest child's
+ * CONTENT, not to the body's capped height, so the catalog's flex column never
+ * got a bounded height and the card list's `overflow-y:auto` never engaged: the
+ * dialog silently clipped every component past the fold (S7 #270 — see
+ * `.sg-composer-chooser-list`). `nowrap` keeps that height chain intact so the
+ * list scrolls; the explicit column media query restores the narrow-dialog
+ * stack the wrap used to give for free. Applies at both the default ~48rem
+ * dialog width (S2, #264) and the ~96vw enlarged size (see css-wisdom's
+ * responsive-grid-patterns).
+ *
+ * Horizontal padding moved from this element onto `-catalog` / `-preview`
+ * individually (S2, #264) so a 1px ladder divider can sit flush between
+ * them, prototype two-pane style — `-controls`/`-count`/`-list` still take
+ * it for free from their `-catalog` parent, just one level lower than
+ * before.
  *
  * No new z-index tier: the preview stage sits INSIDE the existing
  * `--z-index-modal` dialog, so `pnpm gen:z-index` was not run.
@@ -934,11 +1115,20 @@ html[data-sg-composer-doc] body {
   flex: 1 1 auto;
   min-height: 0;
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--spacing-hsp-lg);
-  padding-inline: var(--spacing-hsp-lg);
-  padding-block-end: var(--spacing-vsp-md);
+  /* nowrap, NOT wrap: a wrapping flex container sizes its single line to the
+     tallest item's CONTENT (the 1300px+ catalog) rather than to the body's
+     capped height, which left the catalog overflowing and the card list's
+     own `overflow-y:auto` never engaging — the dialog silently clipped every
+     component past the fold (S7 #270). nowrap keeps the height chain intact so
+     the list scrolls; narrow dialogs stack the two panes as a column instead. */
+  flex-wrap: nowrap;
   overflow: hidden;
+}
+
+@media (max-width: 40rem) {
+  .sg-composer-chooser-body {
+    flex-direction: column;
+  }
 }
 
 .sg-composer-chooser-catalog {
@@ -947,6 +1137,8 @@ html[data-sg-composer-doc] body {
   min-height: 0;
   display: flex;
   flex-direction: column;
+  padding-inline: var(--spacing-hsp-lg);
+  padding-block-end: var(--spacing-vsp-md);
 }
 
 .sg-composer-chooser-preview {
@@ -956,7 +1148,12 @@ html[data-sg-composer-doc] body {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-vsp-3xs);
-  padding-block-start: var(--spacing-vsp-2xs);
+  /* 1px ladder divider (S2, #264, prototype two-pane grammar) — own inline
+     padding plus `-catalog`'s matching end padding gives it clearance on
+     both sides instead of sitting flush against either column's content. */
+  padding-inline: var(--spacing-hsp-lg);
+  padding-block: var(--spacing-vsp-2xs) var(--spacing-vsp-md);
+  border-inline-start: 1px solid var(--color-border);
 }
 
 .sg-composer-chooser-preview-label {
@@ -971,7 +1168,7 @@ html[data-sg-composer-doc] body {
   position: relative;
   flex: 1 1 auto;
   min-height: 0;
-  border: 1px solid var(--color-muted);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   background: var(--color-surface);
   overflow: hidden;

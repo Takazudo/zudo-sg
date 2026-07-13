@@ -119,14 +119,14 @@ export default function TokenPlayground(): JSX.Element {
           composed) so the Tailwind v4 scanner emits every utility. */}
       <button
         type="button"
-        class="inline-flex items-center gap-hsp-2xs px-hsp-xs py-vsp-3xs border border-muted rounded text-small text-muted hover:text-fg transition-colors cursor-pointer"
+        class="inline-flex items-center gap-hsp-2xs px-hsp-xs py-vsp-3xs border border-border rounded text-small text-muted hover:text-fg transition-colors cursor-pointer"
         onClick={openTweaker}
       >
         Tweak tokens live →
       </button>
       <button
         type="button"
-        class="inline-flex items-center gap-hsp-2xs px-hsp-xs py-vsp-3xs border border-muted rounded text-small text-muted hover:text-fg transition-colors cursor-pointer"
+        class="inline-flex items-center gap-hsp-2xs px-hsp-xs py-vsp-3xs border border-border rounded text-small text-muted hover:text-fg transition-colors cursor-pointer"
         onClick={openPreviewTweaker}
       >
         Preview tokens →

@@ -88,10 +88,11 @@
 
 /* ── Code panel: right-region layout (fills DocLayout's TOC column) ──
  * Frame VISUALS: the left bar/gutter is owned here so it is guaranteed to
- * render (the element carries no native border utility) — a 1px muted divider
- * + hsp-lg left padding + vsp-md block margin match the reference's right
- * code-area frame (issue #60). Below lg this swaps for a top divider (see the
- * max-width:1023px block). */
+ * render (the element carries no native border utility) — a 1px border-ladder
+ * divider + hsp-lg left padding + vsp-md block margin match the reference's
+ * right code-area frame (issue #60). Below lg this swaps for a top divider
+ * (see the max-width:1023px block). --color-border, not --color-muted (a TEXT
+ * token) — border-ladder correction, Composer Polish S5b/#268. */
 #sg-code-panel {
   position: relative;
   flex-shrink: 0;
@@ -99,7 +100,7 @@
   align-self: stretch;
   margin-block: var(--spacing-vsp-md);
   padding-left: var(--spacing-hsp-lg);
-  border-left: 1px solid var(--color-muted);
+  border-left: 1px solid var(--color-border);
 }
 
 @media (min-width: 1024px) {
@@ -113,8 +114,12 @@
 
 /* Resizer handle — absolutely positioned grab strip at the code panel's edge,
  * targeted by its data-attr (the drag wiring in panel-scripts.tsx uses the same
- * attribute). Hover/drag tint uses the native accent token (→ --zd-accent).
- * (The sidebar's own resizer is provided by DocLayout / SidebarResizerInit.) */
+ * attribute). Accent budget (Composer Polish S5b/#268): hover is a resting/
+ * decorative tint — neutral. The [data-sg-dragging] active-drag state is the
+ * whitelisted pressed-control role, so it keeps the accent tint. The keyboard
+ * focus outline (panel-scripts-source.ts's ACCENT_OUTLINE) is untouched — also
+ * a whitelisted role. (The sidebar's own resizer is provided by DocLayout /
+ * SidebarResizerInit.) */
 #sg-code-panel [data-sg-code-panel-resizer] {
   position: absolute;
   top: 0;
@@ -125,7 +130,9 @@
   z-index: var(--z-index-local-1);
   background: transparent;
 }
-#sg-code-panel [data-sg-code-panel-resizer]:hover,
+#sg-code-panel [data-sg-code-panel-resizer]:hover {
+  background: color-mix(in oklch, var(--color-border-strong) 50%, transparent);
+}
 #sg-code-panel [data-sg-code-panel-resizer][data-sg-dragging] {
   background: color-mix(in oklch, var(--color-accent) 30%, transparent);
 }
@@ -155,7 +162,7 @@
     min-height: 24rem;
     margin-block-start: 0; /* cancel base margin-block so the border-top divider sits flush */
     border-left: 0;
-    border-top: 1px solid var(--color-muted);
+    border-top: 1px solid var(--color-border);
     padding-left: 0;
   }
   #sg-code-panel [data-sg-code-panel-resizer] {
@@ -352,7 +359,9 @@
 }
 @media (hover: hover) {
   .sg-token-card:hover {
-    border-color: var(--color-accent);
+    /* Accent budget (S5b/#268): resting hover is neutral, not accent — the
+     * border-ladder step-up gives the same affordance without spending it. */
+    border-color: var(--color-border-strong);
   }
 }
 .sg-token-card:focus-visible {
