@@ -814,13 +814,16 @@ export function CompositionCanvas(props: CompositionCanvasProps): JSX.Element {
           // object. Empty parent segment == the virtual root (a real node id is
           // never empty), so it cannot collide with a node literally named "root".
           "data-zc-insert": `${target.parentId ?? ""}:${target.slotId}:${target.index}`,
-          "aria-label": `Add a component to ${position}`,
+          // "Add component" (the END button's visible label) must be a SUBSTRING
+          // of the accessible name — WCAG 2.5.3 Label in Name — so speech input
+          // ("click Add component") resolves. The article "a" broke that match.
+          "aria-label": `Add component to ${position}`,
           onClick: () => onRequestAdd(target),
         },
-        h(PlusIcon, { class: "zc-insert-plus", width: 14, height: 14 }),
+        h(PlusIcon, { class: "zc-insert-plus", width: 12, height: 12 }),
         // The visible "Add component" label is END-only (issue #283) — the
         // between-children bar stays icon-only, same as before.
-        isEnd ? h("span", { class: "zc-insert-end-label" }, "Add component") : null,
+        isEnd ? h("span", null, "Add component") : null,
       ),
       h(
         "button",
@@ -836,7 +839,9 @@ export function CompositionCanvas(props: CompositionCanvasProps): JSX.Element {
             onRequestInsertMenu(target, rect, focusToken);
           },
         },
-        h(EllipsisIcon, { width: 14, height: 14 }),
+        // 12px (icon ladder xs) — matches the host kebabs and the node-chrome
+        // ellipsis below; 14 was off the 12/16/20/24 --spacing-icon-* ladder.
+        h(EllipsisIcon, { width: 12, height: 12 }),
       ),
     );
   }
