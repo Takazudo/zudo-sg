@@ -554,6 +554,12 @@ html[data-sg-composer-doc] body {
   white-space: nowrap;
   color: var(--color-muted);
   font-size: var(--text-micro);
+  /* The component NAME (title) outranks the prop-derived subtitle: yield space
+     to the title first so common names like "SectionHeading" stay untruncated
+     at the default rail. Without this the two share the flex row equally and a
+     long subtitle squeezes the title to an ellipsis (S7 #270). */
+  flex-shrink: 9999;
+  min-width: 0;
 }
 
 .sg-composer-tree-badge {
@@ -1076,15 +1082,18 @@ html[data-sg-composer-doc] body {
  * rule above (edited in place, not duplicated here) — everything genuinely
  * NEW to this issue is kept in this one block.
  *
- * `.sg-composer-chooser-body` is a wrapping flex row (catalog | preview) that
- * wraps to a stacked column below the ~36rem combined basis of its two
- * children — no media query needed, `flex-wrap` + `min-width` basis alone
- * handle both the default ~48rem dialog width (S2, #264 — wide enough that
- * this default case never wraps; the old ~32rem default sat BELOW that
- * basis and wrapped unconditionally, which is what left the catalog's flex
- * column without a bounded height and the card list unscrollable — see
- * `.sg-composer-chooser-list`) and the ~96vw enlarged size (see
- * css-wisdom's responsive-grid-patterns).
+ * `.sg-composer-chooser-body` lays the catalog | preview panes as a NON-wrapping
+ * flex row that stacks to a column below 40rem (the `@media` rule just below
+ * the base declaration). It used to be a wrapping row (`flex-wrap: wrap`) — but
+ * a wrapping flex container sizes its single line to the tallest child's
+ * CONTENT, not to the body's capped height, so the catalog's flex column never
+ * got a bounded height and the card list's `overflow-y:auto` never engaged: the
+ * dialog silently clipped every component past the fold (S7 #270 — see
+ * `.sg-composer-chooser-list`). `nowrap` keeps that height chain intact so the
+ * list scrolls; the explicit column media query restores the narrow-dialog
+ * stack the wrap used to give for free. Applies at both the default ~48rem
+ * dialog width (S2, #264) and the ~96vw enlarged size (see css-wisdom's
+ * responsive-grid-patterns).
  *
  * Horizontal padding moved from this element onto `-catalog` / `-preview`
  * individually (S2, #264) so a 1px ladder divider can sit flush between
@@ -1106,8 +1115,20 @@ html[data-sg-composer-doc] body {
   flex: 1 1 auto;
   min-height: 0;
   display: flex;
-  flex-wrap: wrap;
+  /* nowrap, NOT wrap: a wrapping flex container sizes its single line to the
+     tallest item's CONTENT (the 1300px+ catalog) rather than to the body's
+     capped height, which left the catalog overflowing and the card list's
+     own `overflow-y:auto` never engaging — the dialog silently clipped every
+     component past the fold (S7 #270). nowrap keeps the height chain intact so
+     the list scrolls; narrow dialogs stack the two panes as a column instead. */
+  flex-wrap: nowrap;
   overflow: hidden;
+}
+
+@media (max-width: 40rem) {
+  .sg-composer-chooser-body {
+    flex-direction: column;
+  }
 }
 
 .sg-composer-chooser-catalog {

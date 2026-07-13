@@ -56,6 +56,13 @@ export default defineConfig({
       use: { baseURL: `http://localhost:${SMOKE_PORT}` },
     },
     {
+      name: "composer-contracts",
+      // Composer Polish epic (#262) S7 (#270) computed-style contract gate —
+      // dual-mode census/measurement pass over the built /composer (SMOKE_PORT).
+      testMatch: "composer-contracts.spec.ts",
+      use: { baseURL: `http://localhost:${SMOKE_PORT}` },
+    },
+    {
       name: "demo-smoke",
       // Both demo specs serve from the same built demo dist (DEMO_SMOKE_PORT):
       // the render smoke checks and the SPA-transition regression suite.

@@ -842,7 +842,10 @@ test.describe("Composer storage & recovery matrix (step 7 + opaque export block)
     // Reset now requires an explicit confirm (issue #260/#269) — clicking
     // "Reset sample" alone must NOT wipe the document.
     await page.getByRole("button", { name: "Reset sample", exact: true }).click();
-    const resetConfirm = page.locator(".sg-composer-tree-confirm", { hasText: "Reset the sample?" });
+    // #269/#267 moved the Reset confirm from the tree-row confirm into the
+    // toolbar's own inline-confirm variant (`.sg-composer-toolbar-confirm`,
+    // tone="toolbar"). Same Cancel-focused / Escape-cancels behavior, new class.
+    const resetConfirm = page.locator(".sg-composer-toolbar-confirm", { hasText: "Reset the sample?" });
     await expect(resetConfirm).toBeVisible();
     await expect(topLevelTreeRows(page)).toHaveCount(2);
     // Initial focus lands on the SAFE action (Cancel), unified with the
