@@ -301,8 +301,20 @@ function parseBlocks(bodyLines) {
 }
 
 function blockSortKey(block) {
-  const match = block[0].match(/^export \{\s*([A-Za-z0-9_]+)/);
-  return match ? match[1] : block[0];
+  // Sort by the block's first BOUND name, not the first raw token: a
+  // `export { default as ContactFormEnhancer } from …` block must sort as
+  // "ContactFormEnhancer", never "default" — the latter (lowercase) sorts
+  // AFTER every PascalCase name in a case-sensitive compare, which would drag
+  // a new entry to the wrong end of the section (a real `index.ts` has such
+  // `default as` re-exports; the trimmed test fixture did not).
+  const match = block[0].match(VALUE_EXPORT_RE);
+  if (!match) return block[0];
+  const first = match[1]
+    .split(",")
+    .map((spec) => spec.trim())
+    .filter(Boolean)
+    .map((spec) => (spec.includes(" as ") ? spec.split(" as ").pop().trim() : spec))[0];
+  return first ?? block[0];
 }
 
 /**

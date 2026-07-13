@@ -249,6 +249,40 @@ describe("insertBarrelExport", () => {
     expect(buttonIdx).toBeLessThan(linkIdx);
   });
 
+  it("sorts a LAST-alphabetical name to the END even past a `default as` re-export block", () => {
+    // Regression (#292): the real index.ts has `export { default as XEnhancer }`
+    // blocks. The old sort key captured the first raw token ("default"), which
+    // is lowercase and therefore sorts AFTER every PascalCase name in a
+    // case-sensitive compare — so inserting a late name (e.g. "Zebra") matched
+    // the `default`-keyed block first and landed at the TOP of the section
+    // instead of the end. The key must derive from the BOUND name.
+    const withDefaultAs = [
+      `// ── Forms ────────────────────────────────────────────────────────────────`,
+      `export { default as ContactFormEnhancer } from "./contact-form/contact-form-enhancer";`,
+      `export { ContactForm } from "./contact-form/contact-form";`,
+      ``,
+      `export { Textarea } from "./textarea/textarea";`,
+      `export type { TextareaProps } from "./textarea/textarea";`,
+      ``,
+      `// ── Utilities ────────────────────────────────────────────────────────────`,
+      `export { cx } from "./lib/cx";`,
+      ``,
+    ].join("\n");
+    const result = insertBarrelExport(withDefaultAs, {
+      pascalName: "Zebra",
+      kebabName: "zebra",
+      category: "Forms",
+      nested: true,
+    });
+    const zebraIdx = result.indexOf("export { Zebra }");
+    const textareaIdx = result.indexOf("export { Textarea }");
+    const utilitiesIdx = result.indexOf("// ── Utilities");
+    // Lands AFTER Textarea (last existing entry) and BEFORE the next header.
+    expect(zebraIdx).toBeGreaterThan(textareaIdx);
+    expect(zebraIdx).toBeLessThan(utilitiesIdx);
+    expect(result).toContain(`export { Zebra } from "./forms/zebra/zebra";`);
+  });
+
   it("matches the category case-insensitively against a differently-cased header", () => {
     // The real file's header reads "Data display" (lowercase d) for the
     // "Data Display" StoryCategory — the match must not be case-sensitive.
