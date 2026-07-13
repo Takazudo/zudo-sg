@@ -106,7 +106,7 @@ export function InspectorPanel({
 
   if (selectedId === null || !location) {
     return (
-      <div class="flex h-full flex-col gap-vsp-2xs p-hsp-md py-vsp-md" data-sg-inspector-state="empty">
+      <div class="flex h-full flex-col gap-vsp-2xs p-hsp-md py-vsp-10" data-sg-inspector-state="empty">
         <p class="text-small font-semibold text-fg">Nothing selected</p>
         <p class="text-small text-muted">
           {document.root.length === 0
@@ -133,7 +133,7 @@ export function InspectorPanel({
 
   return (
     <div
-      class="flex h-full flex-col overflow-y-auto p-hsp-md py-vsp-md"
+      class="flex h-full flex-col overflow-y-auto p-hsp-md py-vsp-10"
       data-sg-inspector-state={diagnostic.opaque ? "opaque" : "editable"}
     >
       <nav class="sg-composer-inspector-section" aria-label="Selected component location">
@@ -199,7 +199,7 @@ export function InspectorPanel({
       </div>
 
       {!diagnostic.opaque && entry && entry.fields.length > 0 && (
-        <div class="sg-composer-inspector-section flex flex-col gap-vsp-sm">
+        <div class="sg-composer-inspector-section flex flex-col gap-vsp-xs">
           {entry.fields.map((field) => (
             <InspectorField
               key={`${selectedId}:${field.prop}`}

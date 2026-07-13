@@ -67,6 +67,7 @@
   /* Vertical spacing (8 steps — includes 3xs for hairline gaps) */
   --spacing-vsp-3xs: 0.25rem;    /*  4px — hairline gap */
   --spacing-vsp-2xs: 0.4375rem;  /*  7px — tight gap */
+  --spacing-vsp-10: 0.625rem;    /* 10px — numeric infill between 2xs (7px) and xs (14px); dense tool-chrome padding (#277). Future t-shirt-ladder infills follow this px-numeric naming. */
   --spacing-vsp-xs:  0.875rem;   /* 14px — small gap */
   --spacing-vsp-sm:  1.25rem;    /* 20px — compact gap */
   --spacing-vsp-md:  1.5rem;     /* 24px — standard gap */

@@ -79,7 +79,7 @@ html[data-sg-composer-doc] body {
   justify-content: space-between;
   gap: var(--spacing-hsp-sm);
   padding-inline: var(--spacing-hsp-lg);
-  padding-block: var(--spacing-vsp-sm);
+  padding-block: var(--spacing-vsp-10);
   border-bottom: 1px solid var(--color-border);
   background: var(--color-bg);
 }
@@ -225,12 +225,12 @@ html[data-sg-composer-doc] body {
 }
 
 .sg-composer-mode-toggle button {
-  padding: var(--spacing-vsp-3xs) var(--spacing-hsp-sm);
+  padding: var(--spacing-vsp-3xs) var(--spacing-hsp-md);
   font-size: var(--text-small);
   color: var(--color-muted);
   background: transparent;
   cursor: pointer;
-  min-height: 2.75rem;
+  min-height: 2rem;
 }
 
 @media (hover: hover) {
@@ -252,8 +252,8 @@ html[data-sg-composer-doc] body {
 .sg-composer-toolbar-button {
   display: inline-flex;
   align-items: center;
-  min-height: 2.75rem;
-  padding: var(--spacing-vsp-3xs) var(--spacing-hsp-sm);
+  min-height: 2rem;
+  padding: var(--spacing-vsp-3xs) var(--spacing-hsp-md);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   background: var(--color-surface);
@@ -289,7 +289,7 @@ html[data-sg-composer-doc] body {
   flex-wrap: wrap;
   align-items: center;
   gap: var(--spacing-hsp-sm);
-  min-height: 2.75rem;
+  min-height: 2rem;
   padding-inline: var(--spacing-hsp-sm);
   border-radius: var(--radius-md);
   background: color-mix(in oklch, var(--color-danger) 10%, transparent);
@@ -353,8 +353,9 @@ html[data-sg-composer-doc] body {
 /* Component-first: most inspector/toolbar/export markup uses Tailwind
  * utilities directly. These handful of classes cover what utilities can't
  * express cleanly here: a shared touch-target-sizing wrapper (mirrors
- * `.sg-composer-toolbar-button`'s literal 2.75rem minimum above), the color
- * swatch box, and two spots that must override `.sg-composer-toolbar-button`'s
+ * `.sg-composer-toolbar-button`'s literal 2rem minimum above, restored to
+ * 2.75rem under `@media (pointer: coarse)`), the color swatch box, and two
+ * spots that must override `.sg-composer-toolbar-button`'s
  * own (unlayered) color/border — a Tailwind utility on the same element can't
  * win that fight, since `@import "tailwindcss/utilities"` in global.css is
  * layered while this file is not, and unlayered rules always beat layered
@@ -363,7 +364,7 @@ html[data-sg-composer-doc] body {
 .sg-composer-inspector-control {
   display: flex;
   align-items: center;
-  min-height: 2.75rem;
+  min-height: 2rem;
 }
 
 .sg-composer-inspector-swatch {
@@ -383,13 +384,13 @@ html[data-sg-composer-doc] body {
 /* Section separators (#267): breadcrumb / identity / move-remove actions /
    fields / slots each become their own `.sg-composer-inspector-section`, with
    the border + padding supplying the BETWEEN-section gap. That gap (2x
-   padding-block, ~2.5rem total) clearly exceeds the small `gap-*` utilities
-   each section sets on its own children (the ratio-rule spacing the issue
-   asks for) — see css-wisdom's spacing-philosophy article. First/last
-   sections drop the outer padding/border since the panel's own `py-vsp-md`
-   and the panel's bottom edge already supply that space. */
+   padding-block + 1px border, ~1.75rem total) clearly exceeds the small
+   `gap-*` utilities each section sets on its own children (the ratio-rule
+   spacing the issue asks for) — see css-wisdom's spacing-philosophy article.
+   First/last sections drop the outer padding/border since the panel's own
+   `py-vsp-10` and the panel's bottom edge already supply that space. */
 .sg-composer-inspector-section {
-  padding-block: var(--spacing-vsp-sm);
+  padding-block: var(--spacing-vsp-xs);
   border-bottom: 1px solid var(--color-border);
 }
 .sg-composer-inspector-section:first-child {
@@ -430,8 +431,9 @@ html[data-sg-composer-doc] body {
  * deliberately no `role="tree"` (see `ComposerTree`'s header comment: that
  * would require full arrow-key + roving-tabindex semantics this issue does
  * not implement). Icon-only row actions (disclosure, move, remove) keep a
- * 2.75rem (44px) min hit area per WCAG 2.5.5 even though their visible glyph
- * is small — see css-wisdom's touch-target-sizing article.
+ * 1.75rem (28px) min hit area on fine pointers, restored to 2.75rem (44px)
+ * under `@media (pointer: coarse)` per WCAG 2.5.5, even though their visible
+ * glyph is small — see css-wisdom's touch-target-sizing article.
  *
  * Overlay z-index: the chooser `<dialog>` and its `::backdrop` reuse the
  * EXISTING `--z-index-modal` / `--z-index-modal-backdrop` tiers (already
@@ -442,7 +444,7 @@ html[data-sg-composer-doc] body {
 /* ── Structure rail ─────────────────────────────────────────────────────── */
 
 .sg-composer-tree {
-  padding: var(--spacing-vsp-2xs) var(--spacing-hsp-xs);
+  padding: var(--spacing-vsp-10) var(--spacing-hsp-xs);
   /* 14px functional-text floor (#265): labels inherit this; subtitles/counts/
      badges/slot-headers step down to --text-micro (12px) individually. Was
      --text-small (16px), which truncated common names like "SectionHeading". */
@@ -494,9 +496,10 @@ html[data-sg-composer-doc] body {
   align-items: center;
   justify-content: center;
   width: 1.5rem;
-  /* Compact ~32px rows (#265). The ≥44px WCAG 2.5.5 hit target is restored for
-     coarse pointers only, in the @media (pointer: coarse) block below. */
-  min-height: 2rem;
+  /* Compact ~28px rows (#265, densified further #277). The ≥44px WCAG 2.5.5
+     hit target is restored for coarse pointers only, in the
+     @media (pointer: coarse) block below. */
+  min-height: 1.75rem;
 }
 
 .sg-composer-tree-disclosure {
@@ -522,7 +525,7 @@ html[data-sg-composer-doc] body {
   display: flex;
   align-items: baseline;
   gap: var(--spacing-hsp-2xs);
-  min-height: 2rem;
+  min-height: 1.75rem;
   padding-inline: var(--spacing-hsp-2xs);
   border: none;
   border-radius: var(--radius-md);
@@ -594,7 +597,7 @@ html[data-sg-composer-doc] body {
      pointers and keeps the action cluster from crowding the label. The ≥44px
      WCAG 2.5.5 target is restored for coarse pointers in the block below. */
   min-width: 1.5rem;
-  min-height: 2rem;
+  min-height: 1.75rem;
   border: none;
   border-radius: var(--radius-sm);
   background: transparent;
@@ -733,6 +736,18 @@ html[data-sg-composer-doc] body {
     min-width: 2.75rem;
     min-height: 2.75rem;
   }
+
+  /* Restores the WCAG 2.5.5 44px touch target for the toolbar/inspector/
+     chooser controls that were densified to 2rem on fine pointers above
+     (#277). */
+  .sg-composer-mode-toggle button,
+  .sg-composer-toolbar-button,
+  .sg-composer-toolbar-confirm,
+  .sg-composer-inspector-control,
+  .sg-composer-chooser-search,
+  .sg-composer-chooser-category {
+    min-height: 2.75rem;
+  }
 }
 
 /* ── Component chooser dialog ────────────────────────────────────────────── */
@@ -792,7 +807,7 @@ html[data-sg-composer-doc] body {
   flex-wrap: wrap;
   align-items: center;
   gap: var(--spacing-hsp-sm);
-  padding: var(--spacing-vsp-sm) var(--spacing-hsp-lg);
+  padding: var(--spacing-vsp-xs) var(--spacing-hsp-lg);
   border-bottom: 1px solid var(--color-border);
 }
 
@@ -832,7 +847,7 @@ html[data-sg-composer-doc] body {
 
 .sg-composer-chooser-search {
   width: 100%;
-  min-height: 2.75rem;
+  min-height: 2rem;
   padding-inline: var(--spacing-hsp-sm);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
@@ -852,7 +867,7 @@ html[data-sg-composer-doc] body {
 }
 
 .sg-composer-chooser-category {
-  min-height: 2.75rem;
+  min-height: 2rem;
   padding-inline: var(--spacing-hsp-sm);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-full);
@@ -902,7 +917,7 @@ html[data-sg-composer-doc] body {
   padding-block: var(--spacing-vsp-2xs) var(--spacing-vsp-md);
   display: grid;
   align-content: start;
-  gap: var(--spacing-vsp-3xs);
+  gap: var(--spacing-vsp-2xs);
 }
 
 .sg-composer-chooser-card {
@@ -911,7 +926,7 @@ html[data-sg-composer-doc] body {
   align-items: flex-start;
   gap: var(--spacing-vsp-3xs);
   width: 100%;
-  padding: var(--spacing-vsp-2xs) var(--spacing-hsp-sm);
+  padding: var(--spacing-vsp-10) var(--spacing-hsp-md);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   background: var(--color-surface);
@@ -990,7 +1005,7 @@ html[data-sg-composer-doc] body {
 .sg-composer-menu-item {
   display: block;
   width: 100%;
-  padding: var(--spacing-vsp-3xs) var(--spacing-hsp-2xs);
+  padding: var(--spacing-vsp-2xs) var(--spacing-hsp-sm);
   border: none;
   border-radius: var(--radius-sm);
   background: transparent;
