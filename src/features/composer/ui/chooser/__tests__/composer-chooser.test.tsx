@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import { act } from "preact/test-utils";
 import { fireEvent, render, screen } from "@testing-library/preact";
 import { useState } from "preact/hooks";
-import { VIRTUAL_ROOT_SLOT_ID } from "@/composer";
+import { VIRTUAL_ROOT_SLOT_ID, createManifest } from "@/composer";
 import type { InsertionTarget } from "@/composer";
 import type { ComposerManifestEntry } from "@/styleguide/data/composer-registry";
 import type { ComposerPreviewLocation } from "@/features/composer/preview";
@@ -44,13 +44,21 @@ const placeholderFixtureEntry: ComposerManifestEntry = {
 };
 const catalogWithPlaceholder: ComposerManifestEntry[] = [...fixtureCatalog, placeholderFixtureEntry];
 
+// One shared derivation per catalog variant, mirroring the app layer's single
+// `createManifest` call (issue #290) — tests pass this pre-derived manifest
+// alongside the raw entries array, rather than re-deriving inside
+// `ComposerChooser` itself.
+const fixtureManifest = createManifest(fixtureCatalog);
+const manifestWithPlaceholder = createManifest(catalogWithPlaceholder);
+
 function baseProps(overrides: Partial<Parameters<typeof ComposerChooser>[0]> = {}) {
   resetFixtureIds();
   return {
     open: true,
     target: rightTarget,
     document: makeAbcDocument(),
-    manifest: fixtureCatalog,
+    manifest: fixtureManifest,
+    entries: fixtureCatalog,
     onAdd: vi.fn(),
     onExpandAncestors: vi.fn(),
     onClose: vi.fn(),
@@ -140,7 +148,8 @@ describe("ComposerChooser — target capture survives a selection change", () =>
             open
             target={target}
             document={document}
-            manifest={fixtureCatalog}
+            manifest={fixtureManifest}
+            entries={fixtureCatalog}
             onAdd={onAdd}
             onExpandAncestors={vi.fn()}
             onClose={vi.fn()}
@@ -322,7 +331,8 @@ describe("ComposerChooser — live preview pane (issue #254)", () => {
     const harness = makeChooserPreviewBridgeHarness();
     const props = baseProps({
       target: rootTarget,
-      manifest: catalogWithPlaceholder,
+      manifest: manifestWithPlaceholder,
+      entries: catalogWithPlaceholder,
       previewCreateBridge: harness.createBridge,
       previewLocation: harness.location,
     });
@@ -389,7 +399,8 @@ describe("ComposerChooser — enlarge toggle (issue #254)", () => {
             open={open}
             target={rootTarget}
             document={makeAbcDocument()}
-            manifest={fixtureCatalog}
+            manifest={fixtureManifest}
+            entries={fixtureCatalog}
             onAdd={vi.fn()}
             onExpandAncestors={vi.fn()}
             onClose={() => setOpen(false)}

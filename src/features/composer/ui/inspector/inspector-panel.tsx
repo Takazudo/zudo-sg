@@ -38,6 +38,17 @@ export interface InspectorPanelProps {
   selectedId: string | null;
   mode: ComposerMode;
   onUpdateProps: (nodeId: string, patch: JsonObject) => void;
+  /**
+   * Debounced commit channel for PER-KEYSTREAM fields — text/color/number
+   * (issue #291). When absent, those fields fall back to `onUpdateProps`
+   * (immediate), so presentational usage/tests need no extra wiring. Discrete
+   * controls (checkbox/select) always commit through `onUpdateProps` — they
+   * are single commit points with nothing to coalesce, per the resizer's
+   * live-vs-commit philosophy.
+   */
+  onUpdatePropsDebounced?: (nodeId: string, patch: JsonObject) => void;
+  /** Synchronously land any debounce-pending commit (issue #291) — fields call it on blur. */
+  onFlushPendingProps?: () => void;
   onReorder: (nodeId: string, direction: "up" | "down") => void;
   onRemove: (nodeId: string) => void;
   /**
@@ -84,6 +95,8 @@ export function InspectorPanel({
   selectedId,
   mode,
   onUpdateProps,
+  onUpdatePropsDebounced,
+  onFlushPendingProps,
   onReorder,
   onRemove,
   titleFor,
@@ -194,6 +207,11 @@ export function InspectorPanel({
               value={node.props[field.prop] ?? null}
               disabled={readOnly}
               onCommit={(value) => onUpdateProps(node.id, { [field.prop]: value })}
+              onCommitDebounced={
+                onUpdatePropsDebounced &&
+                ((value) => onUpdatePropsDebounced(node.id, { [field.prop]: value }))
+              }
+              onFlushPending={onFlushPendingProps}
             />
           ))}
         </div>

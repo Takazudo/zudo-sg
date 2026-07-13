@@ -33,15 +33,18 @@
 
 import { useEffect, useMemo, useRef } from "preact/hooks";
 import type { JSX } from "preact";
-import type { CompositionDocument, InsertionTarget } from "@/composer";
+import type { ComponentManifest, CompositionDocument, InsertionTarget } from "@/composer";
 import { VIRTUAL_ROOT_SLOT_ID } from "@/composer";
 import type { ComposerManifestEntry } from "@/styleguide/data/composer-registry";
-import { buildCatalogById, buildDocumentIndex, buildManifestIndex, countDescendants } from "./tree-helpers";
+import { buildCatalogById, buildDocumentIndex, countDescendants } from "./tree-helpers";
 import { TreeNode } from "./tree-node";
 
 export interface ComposerTreeProps {
   document: CompositionDocument;
-  manifest: readonly ComposerManifestEntry[];
+  /** The single app-layer `createManifest(entries)` derivation (issue #290) — never re-derived here. */
+  manifest: ComponentManifest;
+  /** The richer catalog backing display metadata (title/category/description) — same array `manifest` was derived from. */
+  entries: readonly ComposerManifestEntry[];
   selectedId: string | null;
   expandedIds: ReadonlySet<string>;
   /** Virtual-root row selection (nodeId is always `null`) — wire to `controller.select`. */
@@ -63,6 +66,7 @@ export interface ComposerTreeProps {
 export function ComposerTree({
   document,
   manifest,
+  entries,
   selectedId,
   expandedIds,
   onSelect,
@@ -75,9 +79,8 @@ export function ComposerTree({
   onOpenInsertMenu,
   readOnly = false,
 }: ComposerTreeProps): JSX.Element {
-  const manifestIndex = useMemo(() => buildManifestIndex(manifest), [manifest]);
-  const catalogById = useMemo(() => buildCatalogById(manifest), [manifest]);
-  const documentIndex = useMemo(() => buildDocumentIndex(document, manifestIndex), [document, manifestIndex]);
+  const catalogById = useMemo(() => buildCatalogById(entries), [entries]);
+  const documentIndex = useMemo(() => buildDocumentIndex(document, manifest), [document, manifest]);
 
   const rowRefs = useRef(new Map<string, HTMLButtonElement>());
   const registerRowRef = (nodeId: string, element: HTMLButtonElement | null) => {
@@ -153,7 +156,7 @@ export function ComposerTree({
               key={node.id}
               node={node}
               document={document}
-              manifest={manifestIndex}
+              manifest={manifest}
               catalogById={catalogById}
               index={documentIndex}
               selectedId={selectedId}

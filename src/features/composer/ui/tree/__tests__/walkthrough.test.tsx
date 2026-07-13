@@ -50,7 +50,8 @@ function Harness() {
     <>
       <ComposerTree
         document={document}
-        manifest={fixtureCatalog}
+        manifest={manifestIndex}
+        entries={fixtureCatalog}
         selectedId={selectedId}
         expandedIds={expandedIds}
         onSelect={setSelectedId}
@@ -88,7 +89,8 @@ function Harness() {
         open={chooser.open}
         target={chooser.target}
         document={document}
-        manifest={fixtureCatalog}
+        manifest={manifestIndex}
+        entries={fixtureCatalog}
         onAdd={(target, componentId) => {
           const result = addNode(document, manifestIndex, target, componentId, idFactory);
           if (result.ok) {
