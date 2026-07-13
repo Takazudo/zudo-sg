@@ -94,6 +94,7 @@ export type CompositionPersistenceOperation =
 export type CompositionPersistenceErrorCode =
   | "unavailable"
   | "blocked"
+  | "versionchange"
   | "unsupported-version"
   | "validation"
   | "read-failed"

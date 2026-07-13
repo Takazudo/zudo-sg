@@ -71,6 +71,9 @@ export { loadCompositionDocument, resetToSample } from "./model/recovery";
 // ── Composition library records + provider boundary ─────────────────────────
 export * from "./library";
 
+// ── Browser persistence ─────────────────────────────────────────────────────
+export * from "./storage/indexeddb";
+
 // ── Native sample ────────────────────────────────────────────────────────────
 export { createSampleDocument, SAMPLE_DOCUMENT } from "./sample/sample-document";
 export {
