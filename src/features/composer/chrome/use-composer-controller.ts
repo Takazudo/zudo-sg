@@ -66,6 +66,28 @@ export interface ComposerController {
   lastError: string | null;
   add: (target: InsertionTarget, componentId: string) => void;
   updateProps: (nodeId: string, patch: JsonObject) => void;
+  /**
+   * Debounced sibling of `updateProps` for PER-KEYSTROKE sources (the
+   * inspector's text/color/number streams, issue #291/#259). Patches are
+   * coalesced per node and dispatched once per typing pause, so the whole
+   * expensive commit path (reducer → whole-document stringify + localStorage
+   * → preview-iframe re-render) runs once per pause instead of once per
+   * keystroke — the same cheap-live-path / expensive-commit-point split the
+   * rail resizer documents (resizer-scripts-source.ts). Deterministic flush
+   * guarantees (a pending patch can never be lost or reordered):
+   *   - any OTHER controller action (select, remove, setMode, …) flushes the
+   *     pending patch FIRST, so the reducer always sees events in user order;
+   *   - `flushPropUpdates` is wired to field blur, export/JSX generation, the
+   *     navigation guard, and controller unmount.
+   */
+  updatePropsDebounced: (nodeId: string, patch: JsonObject) => void;
+  /**
+   * Synchronously dispatch any `updatePropsDebounced` patches still pending.
+   * Returns the post-flush document read from the live state ref — fresh in
+   * the SAME tick, which is what export needs (a re-render hasn't happened
+   * yet when export generates JSX right after flushing).
+   */
+  flushPropUpdates: () => CompositionDocument;
   reorder: (nodeId: string, direction: "up" | "down") => void;
   remove: (nodeId: string) => void;
   /** Session clipboard = a deep-cloned snapshot of the node. Refused for opaque nodes. */
@@ -105,6 +127,9 @@ export interface UseComposerControllerOptions {
 }
 
 const defaultManifest = createManifest(composerManifest);
+
+/** 200ms — just above a fast typist's ~100-180ms inter-key gap (so steady typing coalesces into one trailing commit) yet keeps the trailing persist+preview inside the ~300ms "feels instant" budget; the UX trade is documented in #259. */
+export const INSPECTOR_COMMIT_DEBOUNCE_MS = 200;
 
 /** Resolve the honest {notice, saveStatus, quarantined} triple from one storage read. */
 function resolveLoadResult(
@@ -150,7 +175,7 @@ export function useComposerController(options: UseComposerControllerOptions = {}
   const [state, setState] = useState<ComposerControllerState>(stateRef.current);
   const [lastError, setLastError] = useState<string | null>(null);
 
-  const dispatch = useCallback(
+  const applyAction = useCallback(
     (action: ComposerAction) => {
       const current = stateRef.current!;
       const result = applyComposerAction(current, action, { manifest, idFactory });
@@ -175,10 +200,67 @@ export function useComposerController(options: UseComposerControllerOptions = {}
     [manifest, idFactory],
   );
 
+  // ── Debounced updateProps channel (issue #291) ─────────────────────────────
+  // Per-keystroke inspector commits are coalesced here: the pending patch map
+  // holds the latest merged patch per node, and only the trailing edge of a
+  // typing burst dispatches (→ stringify + localStorage + preview render).
+  const pendingPropsRef = useRef<Map<string, JsonObject>>(new Map());
+  const pendingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const flushPropUpdates = useCallback((): CompositionDocument => {
+    if (pendingTimerRef.current !== null) {
+      clearTimeout(pendingTimerRef.current);
+      pendingTimerRef.current = null;
+    }
+    if (pendingPropsRef.current.size > 0) {
+      const pending = pendingPropsRef.current;
+      pendingPropsRef.current = new Map();
+      for (const [nodeId, patch] of pending) applyAction({ type: "updateProps", nodeId, patch });
+    }
+    return stateRef.current!.document;
+  }, [applyAction]);
+
+  // Every non-debounced action flushes pending keystroke patches FIRST, so the
+  // reducer always sees user events in real order — a pending text edit lands
+  // BEFORE the remove/reorder/mode-switch/reset that followed it, and a patch
+  // can never target a node an interleaved action already removed.
+  const dispatch = useCallback(
+    (action: ComposerAction) => {
+      flushPropUpdates();
+      applyAction(action);
+    },
+    [flushPropUpdates, applyAction],
+  );
+
+  const updatePropsDebounced = useCallback(
+    (nodeId: string, patch: JsonObject) => {
+      const pending = pendingPropsRef.current;
+      pending.set(nodeId, { ...pending.get(nodeId), ...patch });
+      if (pendingTimerRef.current !== null) clearTimeout(pendingTimerRef.current);
+      pendingTimerRef.current = setTimeout(() => {
+        pendingTimerRef.current = null;
+        flushPropUpdates();
+      }, INSPECTOR_COMMIT_DEBOUNCE_MS);
+    },
+    [flushPropUpdates],
+  );
+
+  // Deterministic flush on unmount — a half-typed edit must never evaporate
+  // with the island (the localStorage write inside the flush happens
+  // synchronously; the discarded setState on the unmounted hook is harmless).
+  useEffect(() => () => void flushPropUpdates(), [flushPropUpdates]);
+
   // SPA-router + native beforeunload guard while the document is not "saved".
+  // The guard flushes first: a debounce-pending keystroke is LANDED (and
+  // autosaved) before deciding, so navigating away mid-typing-burst silently
+  // saves instead of losing the tail or raising a spurious prompt.
   useEffect(
-    () => installComposerNavigationGuard(() => hasUnsavedChanges(stateRef.current!)),
-    [],
+    () =>
+      installComposerNavigationGuard(() => {
+        flushPropUpdates();
+        return hasUnsavedChanges(stateRef.current!);
+      }),
+    [flushPropUpdates],
   );
 
   // Mirror the vanilla resizer script's committed widths into typed state
@@ -205,6 +287,8 @@ export function useComposerController(options: UseComposerControllerOptions = {}
       lastError,
       add: (target, componentId) => dispatch({ type: "add", target, componentId }),
       updateProps: (nodeId, patch) => dispatch({ type: "updateProps", nodeId, patch }),
+      updatePropsDebounced,
+      flushPropUpdates,
       reorder: (nodeId, direction) => dispatch({ type: "reorder", nodeId, direction }),
       remove: (nodeId) => dispatch({ type: "remove", nodeId }),
       copy: (nodeId) => dispatch({ type: "copy", nodeId }),
@@ -227,6 +311,10 @@ export function useComposerController(options: UseComposerControllerOptions = {}
         dispatch({ type: "setRightWidth", width });
       },
       reload: () => {
+        // Land any debounce-pending edit BEFORE reading storage (issue #291) —
+        // otherwise the flush inside the loadDocument dispatch below would
+        // write storage AFTER this read, leaving state and storage diverged.
+        flushPropUpdates();
         const init = initializeComposerStorage(sample);
         const { notice, status, quarantined } = resolveLoadResult(init);
         quarantinedRef.current = quarantined;
@@ -236,6 +324,6 @@ export function useComposerController(options: UseComposerControllerOptions = {}
       reset: () => dispatch({ type: "resetToSample", document: resetToSample(sample) }),
       dismissLoadNotice: () => dispatch({ type: "dismissLoadNotice" }),
     }),
-    [state, manifest, lastError, dispatch, sample],
+    [state, manifest, lastError, dispatch, updatePropsDebounced, flushPropUpdates, sample],
   );
 }

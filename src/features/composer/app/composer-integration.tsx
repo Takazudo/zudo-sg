@@ -146,6 +146,8 @@ export function ComposerIntegration(props: ComposerIntegrationProps): JSX.Elemen
             selectedId={state.selectedId}
             mode={state.mode}
             onUpdateProps={controller.updateProps}
+            onUpdatePropsDebounced={controller.updatePropsDebounced}
+            onFlushPendingProps={controller.flushPropUpdates}
             onReorder={controller.reorder}
             onRemove={controller.remove}
             titleFor={titleFor}

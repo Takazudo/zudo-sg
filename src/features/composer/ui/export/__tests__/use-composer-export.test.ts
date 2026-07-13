@@ -11,14 +11,14 @@ beforeEach(() => {
 describe("useComposerExport", () => {
   it("starts closed with no result", () => {
     const doc = makeDocument([makeNode(TEST_COMPONENT_IDS.label, { text: "Hi" })]);
-    const { result } = renderHook(() => useComposerExport(doc, testManifest));
+    const { result } = renderHook(() => useComposerExport(() => doc, testManifest));
     expect(result.current.open).toBe(false);
     expect(result.current.result).toBeNull();
   });
 
   it("openExport generates a result that is byte-for-byte the direct generateJsx() output", () => {
     const doc = makeDocument([makeNode(TEST_COMPONENT_IDS.label, { text: "Hi" })], "Byte parity doc");
-    const { result } = renderHook(() => useComposerExport(doc, testManifest));
+    const { result } = renderHook(() => useComposerExport(() => doc, testManifest));
 
     act(() => result.current.openExport());
 
@@ -30,7 +30,7 @@ describe("useComposerExport", () => {
 
   it("surfaces a blocked result (opaque node) exactly as the generator reports it", () => {
     const doc = makeDocument([makeNode("unknown.thing", {})]);
-    const { result } = renderHook(() => useComposerExport(doc, testManifest));
+    const { result } = renderHook(() => useComposerExport(() => doc, testManifest));
 
     act(() => result.current.openExport());
 
@@ -42,7 +42,7 @@ describe("useComposerExport", () => {
 
   it("closeExport hides the dialog without discarding the last result", () => {
     const doc = makeDocument([makeNode(TEST_COMPONENT_IDS.label, { text: "Hi" })]);
-    const { result } = renderHook(() => useComposerExport(doc, testManifest));
+    const { result } = renderHook(() => useComposerExport(() => doc, testManifest));
 
     act(() => result.current.openExport());
     act(() => result.current.closeExport());

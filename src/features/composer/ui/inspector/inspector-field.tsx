@@ -29,6 +29,14 @@ export interface InspectorFieldProps {
   value: JsonValue;
   disabled: boolean;
   onCommit: (value: JsonValue) => void;
+  /**
+   * Debounced commit channel for keystream fields (text/color/number, issue
+   * #291); falls back to `onCommit` when absent. Checkbox/select stay on the
+   * immediate `onCommit` — a click is already a discrete commit point.
+   */
+  onCommitDebounced?: (value: JsonValue) => void;
+  /** Land any debounce-pending commit now (issue #291) — called on field blur. */
+  onFlushPending?: () => void;
 }
 
 function assertNever(field: never): never {
@@ -40,9 +48,17 @@ const FIELD_LABEL_CLASS = "block text-caption font-medium text-muted";
 const FIELD_INPUT_CLASS =
   "sg-composer-inspector-control w-full rounded-md border border-border bg-surface px-hsp-xs text-small text-fg disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-danger";
 
-export function InspectorField({ field, value, disabled, onCommit }: InspectorFieldProps): JSX.Element {
+export function InspectorField({
+  field,
+  value,
+  disabled,
+  onCommit,
+  onCommitDebounced,
+  onFlushPending,
+}: InspectorFieldProps): JSX.Element {
   const inputId = useId();
   const errorId = useId();
+  const streamCommit = onCommitDebounced ?? onCommit;
 
   switch (field.kind) {
     case "boolean": {
@@ -99,7 +115,8 @@ export function InspectorField({ field, value, disabled, onCommit }: InspectorFi
           field={field}
           value={typeof value === "number" ? value : 0}
           disabled={disabled}
-          onCommit={onCommit}
+          onCommit={streamCommit}
+          onFlushPending={onFlushPending}
           inputId={inputId}
           errorId={errorId}
         />
@@ -111,7 +128,8 @@ export function InspectorField({ field, value, disabled, onCommit }: InspectorFi
           label={field.label}
           value={typeof value === "string" ? value : ""}
           disabled={disabled}
-          onCommit={onCommit}
+          onCommit={streamCommit}
+          onFlushPending={onFlushPending}
           inputId={inputId}
           multiline={false}
           swatch
@@ -124,7 +142,8 @@ export function InspectorField({ field, value, disabled, onCommit }: InspectorFi
           label={field.label}
           value={typeof value === "string" ? value : ""}
           disabled={disabled}
-          onCommit={onCommit}
+          onCommit={streamCommit}
+          onFlushPending={onFlushPending}
           inputId={inputId}
           multiline={field.inlineEdit?.multiline === true}
         />
@@ -140,13 +159,30 @@ interface TextFieldProps {
   value: string;
   disabled: boolean;
   onCommit: (value: JsonValue) => void;
+  onFlushPending?: () => void;
   inputId: string;
   multiline: boolean;
   swatch?: boolean;
 }
 
-function TextField({ label, value, disabled, onCommit, inputId, multiline, swatch }: TextFieldProps): JSX.Element {
+function TextField({
+  label,
+  value,
+  disabled,
+  onCommit,
+  onFlushPending,
+  inputId,
+  multiline,
+  swatch,
+}: TextFieldProps): JSX.Element {
   const { draft, onInput, onFocus, onBlur } = useTextField({ value, onCommit });
+
+  // Blur is a deterministic commit point (issue #291): release the hook's
+  // focused guard first, then land any debounce-pending commit.
+  const handleBlur = () => {
+    onBlur();
+    onFlushPending?.();
+  };
 
   return (
     <div class="flex flex-col gap-vsp-3xs">
@@ -172,7 +208,7 @@ function TextField({ label, value, disabled, onCommit, inputId, multiline, swatc
               if (e.target instanceof HTMLTextAreaElement) onInput(e.target.value);
             }}
             onFocus={onFocus}
-            onBlur={onBlur}
+            onBlur={handleBlur}
           />
         ) : (
           <input
@@ -185,7 +221,7 @@ function TextField({ label, value, disabled, onCommit, inputId, multiline, swatc
               if (e.target instanceof HTMLInputElement) onInput(e.target.value);
             }}
             onFocus={onFocus}
-            onBlur={onBlur}
+            onBlur={handleBlur}
           />
         )}
       </div>
@@ -198,17 +234,33 @@ interface NumberFieldProps {
   value: number;
   disabled: boolean;
   onCommit: (value: JsonValue) => void;
+  onFlushPending?: () => void;
   inputId: string;
   errorId: string;
 }
 
-function NumberField({ field, value, disabled, onCommit, inputId, errorId }: NumberFieldProps): JSX.Element {
+function NumberField({
+  field,
+  value,
+  disabled,
+  onCommit,
+  onFlushPending,
+  inputId,
+  errorId,
+}: NumberFieldProps): JSX.Element {
   const { draft, error, onInput, onFocus, onBlur } = useNumericField({
     value,
     min: field.min,
     max: field.max,
     onCommit,
   });
+
+  // Blur is a deterministic commit point (issue #291): run the hook's own
+  // blur behavior (invalid-draft revert) first, then land any pending commit.
+  const handleBlur = () => {
+    onBlur();
+    onFlushPending?.();
+  };
 
   return (
     <div class="flex flex-col gap-vsp-3xs">
@@ -230,7 +282,7 @@ function NumberField({ field, value, disabled, onCommit, inputId, errorId }: Num
           if (e.target instanceof HTMLInputElement) onInput(e.target.value);
         }}
         onFocus={onFocus}
-        onBlur={onBlur}
+        onBlur={handleBlur}
       />
       {error !== null && (
         <p id={errorId} class="text-caption text-danger" role="alert">

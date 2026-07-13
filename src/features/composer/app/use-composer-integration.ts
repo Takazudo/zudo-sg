@@ -151,7 +151,11 @@ export function useComposerIntegration(
   }, []);
   const closeChooser = useCallback(() => setChooser({ open: false, target: null }), []);
 
-  const exportState = useComposerExport(state.document, manifest);
+  // The export hook takes a document RESOLVER, and it's the controller's
+  // `flushPropUpdates` (issue #291): a debounce-pending inspector edit lands —
+  // and the post-flush document is read back in the same tick — before any
+  // JSX generation, so an export can never miss the tail of a typing burst.
+  const exportState = useComposerExport(controller.flushPropUpdates, manifest);
 
   const titleFor = useMemo(() => {
     const byId = new Map(manifestEntries.map((e) => [e.componentId, e.title]));
