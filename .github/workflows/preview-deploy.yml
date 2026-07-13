@@ -1,11 +1,17 @@
-# Preview deployment for the `preview` and `expreview/**` branches.
+# Preview deployment for pull requests into `main` and the dedicated preview
+# branches.
 #
-# Triggered on pushes to `preview` and `expreview/**` branches.
-# Builds all sites and deploys each to a Cloudflare Workers preview alias
-# so the preview URL is predictable (e.g. preview-zudo-sg.<acct>.workers.dev).
+# Pull requests from this repository build GitHub's synthetic merge ref, so the
+# preview represents the proposed branch applied to `main` at workflow start.
+# Each PR receives a stable Cloudflare Workers preview alias (for example
+# `pr-294`) that is updated on every push. Fork PRs are skipped because deploy
+# secrets are not available to untrusted pull request code. Dependabot PRs are
+# also skipped because GitHub treats their secrets and tokens like those from
+# forks.
 #
-# This is the only workflow that deploys preview aliases — pr-checks.yml
-# builds and checks every PR but does not deploy.
+# Pushes to `preview` and `expreview/**` retain their branch-based aliases.
+# This is the only workflow that deploys preview aliases; pr-checks.yml handles
+# quality checks independently.
 # All sites are fully static — no SSR adapter, no .assetsignore needed.
 
 name: Preview Deploy
@@ -15,20 +21,23 @@ on:
     branches:
       - 'preview'
       - 'expreview/**'
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize, reopened]
 
 concurrency:
-  group: preview-deploy-${{ github.ref }}
+  group: preview-deploy-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.ref }}
   cancel-in-progress: true
 
 permissions:
   contents: read
-  pull-requests: write
-  statuses: write
 
 env:
   # Pin lives here — see DEPLOY.md §5 for the local dry-run commands, which
   # must be bumped in step with this value.
   WRANGLER_VERSION: "4.85.0"
+  PREVIEW_SLUG_SOURCE: ${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.ref_name }}
 
 jobs:
   # ---------------------------------------------------------------------------
@@ -36,12 +45,18 @@ jobs:
   # ---------------------------------------------------------------------------
   build-site:
     name: Build Styleguide Site
+    if: >-
+      github.event_name == 'push' ||
+      (github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.user.login != 'dependabot[bot]')
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
     steps:
       - name: Checkout
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+        with:
+          persist-credentials: false
 
       - name: Setup
         uses: ./.github/actions/setup
@@ -64,12 +79,18 @@ jobs:
   # ---------------------------------------------------------------------------
   build-demo:
     name: Build Demo Site
+    if: >-
+      github.event_name == 'push' ||
+      (github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.user.login != 'dependabot[bot]')
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
     steps:
       - name: Checkout
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+        with:
+          persist-credentials: false
 
       - name: Setup
         uses: ./.github/actions/setup
@@ -92,12 +113,18 @@ jobs:
   # ---------------------------------------------------------------------------
   build-doc:
     name: Build Documentation Site
+    if: >-
+      github.event_name == 'push' ||
+      (github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.user.login != 'dependabot[bot]')
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
     steps:
       - name: Checkout
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+        with:
+          persist-credentials: false
 
       - name: Setup
         uses: ./.github/actions/setup
@@ -121,6 +148,10 @@ jobs:
   deploy-site:
     name: Deploy Styleguide Preview
     needs: [build-site]
+    if: >-
+      github.event_name == 'push' ||
+      (github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.user.login != 'dependabot[bot]')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     outputs:
@@ -129,6 +160,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+        with:
+          persist-credentials: false
 
       - name: Download site build output
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
@@ -139,23 +172,23 @@ jobs:
       - name: Extract site build output
         run: mkdir -p dist && tar -xf "$RUNNER_TEMP/site-dist.tar" -C dist
 
-      - name: Determine branch slug
-        id: branch
+      - name: Determine preview slug
+        id: preview
         run: |
-          BRANCH_NAME="${{ github.ref_name }}"
+          SOURCE_NAME="$PREVIEW_SLUG_SOURCE"
           # wrangler preview aliases must be lowercase [a-z0-9-].
           # Lowercase, replace every invalid char with a hyphen, collapse
           # repeats, and trim leading/trailing hyphens.
-          BRANCH_SLUG=$(echo "$BRANCH_NAME" \
+          PREVIEW_SLUG=$(echo "$SOURCE_NAME" \
             | tr '[:upper:]' '[:lower:]' \
             | sed 's/[^a-z0-9]/-/g; s/-\{2,\}/-/g; s/^-//; s/-$//')
-          echo "slug=$BRANCH_SLUG" >> "$GITHUB_OUTPUT"
-          echo "Branch slug: $BRANCH_SLUG"
+          echo "slug=$PREVIEW_SLUG" >> "$GITHUB_OUTPUT"
+          echo "Preview slug: $PREVIEW_SLUG"
 
       - name: Deploy styleguide preview alias
         id: deploy-site
         run: |
-          SLUG="${{ steps.branch.outputs.slug }}"
+          SLUG="${{ steps.preview.outputs.slug }}"
           DEPLOY_LOG=$(mktemp)
           npx wrangler@${{ env.WRANGLER_VERSION }} versions upload \
             --config wrangler.toml \
@@ -185,6 +218,10 @@ jobs:
   deploy-demo:
     name: Deploy Demo Site Preview
     needs: [build-demo]
+    if: >-
+      github.event_name == 'push' ||
+      (github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.user.login != 'dependabot[bot]')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     outputs:
@@ -193,6 +230,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+        with:
+          persist-credentials: false
 
       - name: Download demo build output
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
@@ -203,20 +242,20 @@ jobs:
       - name: Extract demo build output
         run: mkdir -p apps/demo/dist && tar -xf "$RUNNER_TEMP/demo-dist.tar" -C apps/demo/dist
 
-      - name: Determine branch slug
-        id: branch
+      - name: Determine preview slug
+        id: preview
         run: |
-          BRANCH_NAME="${{ github.ref_name }}"
-          BRANCH_SLUG=$(echo "$BRANCH_NAME" \
+          SOURCE_NAME="$PREVIEW_SLUG_SOURCE"
+          PREVIEW_SLUG=$(echo "$SOURCE_NAME" \
             | tr '[:upper:]' '[:lower:]' \
             | sed 's/[^a-z0-9]/-/g; s/-\{2,\}/-/g; s/^-//; s/-$//')
-          echo "slug=$BRANCH_SLUG" >> "$GITHUB_OUTPUT"
-          echo "Branch slug: $BRANCH_SLUG"
+          echo "slug=$PREVIEW_SLUG" >> "$GITHUB_OUTPUT"
+          echo "Preview slug: $PREVIEW_SLUG"
 
       - name: Deploy demo site preview alias
         id: deploy-demo
         run: |
-          SLUG="${{ steps.branch.outputs.slug }}"
+          SLUG="${{ steps.preview.outputs.slug }}"
           DEPLOY_LOG=$(mktemp)
           npx wrangler@${{ env.WRANGLER_VERSION }} versions upload \
             --config apps/demo/wrangler.toml \
@@ -246,6 +285,10 @@ jobs:
   deploy-doc:
     name: Deploy Documentation Site Preview
     needs: [build-doc]
+    if: >-
+      github.event_name == 'push' ||
+      (github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.user.login != 'dependabot[bot]')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     outputs:
@@ -254,6 +297,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+        with:
+          persist-credentials: false
 
       - name: Download doc build output
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
@@ -264,20 +309,20 @@ jobs:
       - name: Extract doc build output
         run: mkdir -p doc/dist && tar -xf "$RUNNER_TEMP/doc-dist.tar" -C doc/dist
 
-      - name: Determine branch slug
-        id: branch
+      - name: Determine preview slug
+        id: preview
         run: |
-          BRANCH_NAME="${{ github.ref_name }}"
-          BRANCH_SLUG=$(echo "$BRANCH_NAME" \
+          SOURCE_NAME="$PREVIEW_SLUG_SOURCE"
+          PREVIEW_SLUG=$(echo "$SOURCE_NAME" \
             | tr '[:upper:]' '[:lower:]' \
             | sed 's/[^a-z0-9]/-/g; s/-\{2,\}/-/g; s/^-//; s/-$//')
-          echo "slug=$BRANCH_SLUG" >> "$GITHUB_OUTPUT"
-          echo "Branch slug: $BRANCH_SLUG"
+          echo "slug=$PREVIEW_SLUG" >> "$GITHUB_OUTPUT"
+          echo "Preview slug: $PREVIEW_SLUG"
 
       - name: Deploy doc site preview alias
         id: deploy-doc
         run: |
-          SLUG="${{ steps.branch.outputs.slug }}"
+          SLUG="${{ steps.preview.outputs.slug }}"
           DEPLOY_LOG=$(mktemp)
           npx wrangler@${{ env.WRANGLER_VERSION }} versions upload \
             --config doc/wrangler.toml \
@@ -307,9 +352,16 @@ jobs:
   comment-pr:
     name: Comment Preview URLs on PR
     needs: [deploy-site, deploy-demo, deploy-doc]
-    if: success()
+    if: >-
+      always() &&
+      (github.event_name == 'push' ||
+      (github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.user.login != 'dependabot[bot]'))
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: write
 
     steps:
       - name: Comment on associated PR
@@ -318,50 +370,92 @@ jobs:
           SITE_DEPLOY_URL: ${{ needs.deploy-site.outputs.deploy_url }}
           DEMO_DEPLOY_URL: ${{ needs.deploy-demo.outputs.deploy_url }}
           DOC_DEPLOY_URL: ${{ needs.deploy-doc.outputs.deploy_url }}
+          SITE_DEPLOY_RESULT: ${{ needs.deploy-site.result }}
+          DEMO_DEPLOY_RESULT: ${{ needs.deploy-demo.result }}
+          DOC_DEPLOY_RESULT: ${{ needs.deploy-doc.result }}
         with:
           script: |
-            const branch = context.ref.replace('refs/heads/', '');
-            const { data: prs } = await github.rest.pulls.list({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              head: `${context.repo.owner}:${branch}`,
-              state: 'open'
-            });
+            let prNumber;
+            let sourceDescription;
 
-            if (prs.length === 0) {
-              console.log('No open PR found for this branch, skipping comment');
-              return;
+            if (context.eventName === 'pull_request') {
+              const pr = context.payload.pull_request;
+              prNumber = pr.number;
+              sourceDescription = `PR #${pr.number} into \`${pr.base.ref}\``;
+            } else {
+              const branch = context.ref.replace('refs/heads/', '');
+              const { data: prs } = await github.rest.pulls.list({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                head: `${context.repo.owner}:${branch}`,
+                state: 'open'
+              });
+
+              if (prs.length === 0) {
+                console.log('No open PR found for this branch, skipping comment');
+                return;
+              }
+
+              if (prs.some(pr => pr.base.ref === 'main')) {
+                console.log('A main-targeting PR has its own merge-preview comment, skipping branch-preview comment');
+                return;
+              }
+
+              prNumber = prs[0].number;
+              sourceDescription = `branch \`${branch}\``;
             }
 
-            const pr = prs[0];
             const siteUrl = process.env.SITE_DEPLOY_URL;
             const demoUrl = process.env.DEMO_DEPLOY_URL;
             const docUrl = process.env.DOC_DEPLOY_URL;
+            const siteResult = process.env.SITE_DEPLOY_RESULT;
+            const demoResult = process.env.DEMO_DEPLOY_RESULT;
+            const docResult = process.env.DOC_DEPLOY_RESULT;
             const shortSha = context.sha.substring(0, 7);
-            const marker = '<!-- cf-preview-branch -->';
+            const marker = '<!-- cf-preview -->';
+            const legacyMarker = '<!-- cf-preview-branch -->';
+            const allSucceeded = [siteResult, demoResult, docResult].every(
+              result => result === 'success'
+            );
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+
+            const previewRows = [
+              ['Styleguide', siteResult, siteUrl],
+              ['Composer', siteResult, siteUrl && `${siteUrl.replace(/\/$/, '')}/composer`],
+              ['Demo', demoResult, demoUrl],
+              ['Docs', docResult, docUrl],
+            ].map(([name, result, url]) =>
+              `| ${name} | ${result} | ${result === 'success' && url ? url : '—'} |`
+            );
 
             const body = [
               marker,
               `## Cloudflare Workers Assets Preview`,
               '',
-              `Preview deployments are ready.`,
+              allSucceeded
+                ? `Preview deployments are ready.`
+                : `⚠️ Preview deployment did not complete. Stable aliases may temporarily point to different commits until the next successful run.`,
               '',
-              `| Site | URL |`,
-              `|---|---|`,
-              `| Styleguide | ${siteUrl} |`,
-              `| Demo | ${demoUrl} |`,
-              `| Docs | ${docUrl} |`,
+              `| Site | Status | URL |`,
+              `|---|---|---|`,
+              ...previewRows,
               '',
-              `Built from \`${branch}\` @ \`${shortSha}\``,
+              `Built from ${sourceDescription} @ \`${shortSha}\``,
+              '',
+              `[View workflow run](${runUrl})`,
             ].join('\n');
 
-            const { data: comments } = await github.rest.issues.listComments({
+            const comments = await github.paginate(github.rest.issues.listComments, {
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: pr.number,
+              issue_number: prNumber,
+              per_page: 100,
             });
 
-            const existing = comments.find(c => c.body.includes(marker));
+            const existing = comments.find(
+              c => c.user?.login === 'github-actions[bot]' &&
+                (c.body?.includes(marker) || c.body?.includes(legacyMarker))
+            );
 
             if (existing) {
               await github.rest.issues.updateComment({
@@ -374,7 +468,7 @@ jobs:
               await github.rest.issues.createComment({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                issue_number: pr.number,
+                issue_number: prNumber,
                 body,
               });
             }
