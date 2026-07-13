@@ -1,15 +1,18 @@
 // Pure helpers backing the structure rail (issue #250).
 //
-// The tree/chooser consume the derived host registry's RICHER entries
+// The tree/chooser consume BOTH the derived host registry's RICHER entries
 // (`ComposerManifestEntry` — src/styleguide/data/composer-registry.ts, title +
-// category + description on top of the model's slot/field metadata) rather
-// than the controller's narrower `ComponentManifest` accessor, because rows
-// and chooser cards need human-readable titles the model-only
-// `ComponentManifestEntry` (src/composer/model/types.ts) doesn't carry.
-// `ComposerManifestEntry` is a structural SUPERSET of `ComponentManifestEntry`,
-// so the exact same array is assignable to `@/composer`'s `createManifest()`
-// for every model traversal/diagnostic helper (`classifyNode`, `findLocation`,
-// `indexDocument`, ...) — one array, two projections, no adapter needed.
+// category + description on top of the model's slot/field metadata) AND the
+// model's `ComponentManifest`, because rows and chooser cards need
+// human-readable titles the model-only `ComponentManifestEntry`
+// (src/composer/model/types.ts) doesn't carry, while model traversal/
+// diagnostic helpers (`classifyNode`, `findLocation`, `indexDocument`, ...)
+// need the `ComponentManifest` `createManifest()` produces from those same
+// entries. `ComposerManifestEntry` is a structural SUPERSET of
+// `ComponentManifestEntry`, so the exact same array is assignable to
+// `createManifest()` — one array, two projections. `createManifest` itself
+// runs exactly ONCE, at the app layer (issue #290) — see `buildManifestIndex`
+// below for why it is NOT called again here.
 //
 // Everything here is pure and DOM-free so it can be unit-tested directly,
 // independent of the recursive tree-node rendering.
@@ -23,7 +26,16 @@ import type {
 import { classifyNode, createManifest, findLocation, indexDocument } from "@/composer";
 import type { ComposerManifestEntry } from "@/styleguide/data/composer-registry";
 
-/** Build the model's `ComponentManifest` index from the richer catalog array. */
+/**
+ * Build the model's `ComponentManifest` index from the richer catalog array.
+ * A thin `createManifest` pass-through — kept as a test/callsite convenience
+ * for pure-function tests in this directory. NOT used by `ComposerTree` or
+ * `ComposerChooser` themselves: `createManifest` runs ONCE, at the app layer
+ * (`use-composer-integration.ts`), and that single `ComponentManifest` is
+ * passed down as a prop so per-render/per-component re-derivation (and its
+ * per-entry zod validation cost) doesn't happen 3x for identical input
+ * (issue #290).
+ */
 export function buildManifestIndex(entries: readonly ComposerManifestEntry[]): ComponentManifest {
   return createManifest(entries);
 }

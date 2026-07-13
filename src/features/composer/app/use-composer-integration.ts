@@ -8,15 +8,21 @@
 // without re-deriving any of it.
 //
 // Manifest reconciliation (the one non-obvious wiring detail):
-//   - the tree (#250) and chooser (#250) want the RICHER `ComposerManifestEntry[]`
-//     array (title/category/description);
+//   - the tree (#250) and chooser (#250) want BOTH the RICHER
+//     `ComposerManifestEntry[]` array (title/category/description) AND the
+//     model-side `ComponentManifest` (for slot/traversal/diagnostic helpers);
 //   - the inspector (#249), the export generator (#245), and the controller
-//     model (#245/#247) want the model-side `ComponentManifest` lookup.
+//     model (#245/#247) want only the model-side `ComponentManifest` lookup.
 //   `ComposerManifestEntry` is a structural superset of the model's
 //   `ComponentManifestEntry`, so ONE richer array is the source of truth and the
-//   `ComponentManifest` is DERIVED from it (`createManifest`) — never a second,
-//   drift-prone manifest. The controller is handed that same derived manifest,
-//   so `controller.manifest` is identical to what the inspector/export receive.
+//   `ComponentManifest` is DERIVED from it (`createManifest`) exactly ONCE,
+//   here — never a second, drift-prone (or redundantly re-validated) manifest.
+//   The controller is handed that same derived `manifest`, and `composer-
+//   integration.tsx` passes that identical `controller.manifest` down to the
+//   tree/chooser too (alongside the raw `manifestEntries` array), so
+//   `createManifest` never runs more than once per `manifestEntries` change
+//   (issue #290) and `controller.manifest` is identical to what the
+//   inspector/export/tree/chooser all receive.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "preact/hooks";
 import type { InsertionTarget } from "@/composer";

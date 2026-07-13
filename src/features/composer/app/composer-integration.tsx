@@ -108,7 +108,8 @@ export function ComposerIntegration(props: ComposerIntegrationProps): JSX.Elemen
         tree={
           <ComposerTree
             document={state.document}
-            manifest={manifestEntries}
+            manifest={controller.manifest}
+            entries={manifestEntries}
             selectedId={state.selectedId}
             expandedIds={state.expandedIds}
             onSelect={controller.select}
@@ -156,7 +157,8 @@ export function ComposerIntegration(props: ComposerIntegrationProps): JSX.Elemen
         open={chooser.open}
         target={chooser.target}
         document={state.document}
-        manifest={manifestEntries}
+        manifest={controller.manifest}
+        entries={manifestEntries}
         onAdd={api.handleChooserAdd}
         onExpandAncestors={api.handleExpandAncestors}
         onClose={api.closeChooser}

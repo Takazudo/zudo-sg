@@ -44,14 +44,14 @@
 
 import { useEffect, useId, useMemo, useRef, useState } from "preact/hooks";
 import type { JSX } from "preact";
-import type { CompositionDocument, InsertionTarget } from "@/composer";
+import type { ComponentManifest, CompositionDocument, InsertionTarget } from "@/composer";
 import type { ComposerManifestEntry } from "@/styleguide/data/composer-registry";
 import type {
   ComposerPreviewLocation,
   MessageTarget,
   createComposerPreviewBridge,
 } from "@/features/composer/preview";
-import { ancestorChainIds, buildCatalogById, buildManifestIndex } from "../tree/tree-helpers";
+import { ancestorChainIds, buildCatalogById } from "../tree/tree-helpers";
 import { describeInsertionTarget, eligibleEntries, matchesQuery } from "./chooser-helpers";
 import { ChooserPreviewHost } from "./chooser-preview-host";
 
@@ -60,7 +60,10 @@ export interface ComposerChooserProps {
   /** The target to capture on open. Ignored for the rest of the dialog's lifetime once captured. */
   target: InsertionTarget | null;
   document: CompositionDocument;
-  manifest: readonly ComposerManifestEntry[];
+  /** The single app-layer `createManifest(entries)` derivation (issue #290) — never re-derived here. */
+  manifest: ComponentManifest;
+  /** The richer catalog backing search/filter/display (title/category/description) — same array `manifest` was derived from. */
+  entries: readonly ComposerManifestEntry[];
   /** Fired once, with the CAPTURED target, when a component is chosen. */
   onAdd: (target: InsertionTarget, componentId: string) => void;
   /** Fired right after `onAdd`, with the captured target's ancestor chain, so callers can `setExpanded` each id. */
@@ -82,6 +85,7 @@ export function ComposerChooser({
   target,
   document,
   manifest,
+  entries,
   onAdd,
   onExpandAncestors,
   onClose,
@@ -112,8 +116,7 @@ export function ComposerChooser({
 
   const titleId = useId();
 
-  const manifestIndex = useMemo(() => buildManifestIndex(manifest), [manifest]);
-  const catalogById = useMemo(() => buildCatalogById(manifest), [manifest]);
+  const catalogById = useMemo(() => buildCatalogById(entries), [entries]);
 
   useEffect(() => {
     if (open && capturedTarget === null) {
@@ -166,8 +169,8 @@ export function ComposerChooser({
 
   const { entries: eligible, blockedReason } = useMemo(() => {
     if (!capturedTarget) return { entries: [] as ComposerManifestEntry[], blockedReason: null as string | null };
-    return eligibleEntries(document, manifestIndex, manifest, capturedTarget);
-  }, [capturedTarget, document, manifestIndex, manifest]);
+    return eligibleEntries(document, manifest, entries, capturedTarget);
+  }, [capturedTarget, document, manifest, entries]);
 
   const categories = useMemo(() => {
     const set = new Set<string>();
@@ -181,16 +184,14 @@ export function ComposerChooser({
     );
   }, [eligible, category, query]);
 
-  const targetLabel = capturedTarget
-    ? describeInsertionTarget(document, manifestIndex, catalogById, capturedTarget)
-    : "";
+  const targetLabel = capturedTarget ? describeInsertionTarget(document, manifest, catalogById, capturedTarget) : "";
 
   const previewedEntry = previewedComponentId ? (catalogById.get(previewedComponentId) ?? null) : null;
 
   function confirmAdd(componentId: string) {
     if (!capturedTarget) return;
     const entry = catalogById.get(componentId);
-    const ancestors = ancestorChainIds(document, manifestIndex, capturedTarget.parentId);
+    const ancestors = ancestorChainIds(document, manifest, capturedTarget.parentId);
     onAdd(capturedTarget, componentId);
     onExpandAncestors(ancestors);
     setStatus(`${entry?.title ?? componentId} added to ${targetLabel}.`);
