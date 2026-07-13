@@ -278,7 +278,47 @@ html[${COMPOSER_PREVIEW_DOC_ATTR}] {
      never muted like the between-child bars. */
   opacity: 1;
 }
-.zc-insert-plus { font-size: var(--text-caption); line-height: 1; }
+
+/* ── End-of-slot add affordance (issue #283) ───────────────────────────────
+   The slot's LAST insert point (index === children.length) renders as this
+   enlarged, LABELED button instead of the slim between-children bar above —
+   ported from the prototype's .insert-end/.add-btn geometry
+   (_temp-resource/275-composer-ui-parity/composition1/styles.css). Toning
+   is INHERITED from the shared .zc-insert rules above (neutral guide-dashed
+   at rest, accent only on hover/focus-visible) — every rule below is
+   geometry, never a color; the prototype's accent-at-rest styling is
+   deliberately NOT ported (#283's locked toning contract). */
+.zc-insert-end--vertical { width: 100%; }
+.zc-insert-end--horizontal { width: auto; }
+
+.zc-insert-end-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-hsp-xs);
+  width: 100%;
+  font-size: var(--text-caption);
+  white-space: nowrap;
+}
+.zc-insert-end-btn:not(.zc-insert--empty) {
+  min-height: 2rem;
+  padding-block: var(--spacing-vsp-2xs);
+  padding-inline: var(--spacing-hsp-md);
+}
+.zc-insert-end--horizontal .zc-insert-end-btn { width: auto; flex: 0 0 auto; }
+/* Compact (row-flow) variant reserves trailing clearance for the dots
+   companion, which overlaps this button's edge (.zc-insert-menu--end
+   below) rather than sitting inline beside it — inset (--spacing-hsp-sm) +
+   the dots' own width (1.375rem) + a breathing gap (--spacing-hsp-xs). */
+.zc-insert-end--horizontal .zc-insert-end-btn:not(.zc-insert--empty) {
+  padding-inline-end: calc(var(--spacing-hsp-sm) + 1.375rem + var(--spacing-hsp-xs));
+}
+/* Empty-slot variant: KEEPS the existing min-height:3rem / neutral-muted
+   toning from .zc-insert--empty above (unchanged) — this only adds the
+   symmetric breathing padding the prototype's .add-btn.add-empty uses. */
+.zc-insert-end-btn.zc-insert--empty { padding: var(--spacing-vsp-xs); }
+
+.zc-insert-plus { flex-shrink: 0; }
 
 /* The insert point's "⋯" companion — opens the insert MENU (Add
    component…/Paste here) alongside the direct "+" add shortcut. */
@@ -309,6 +349,20 @@ html[${COMPOSER_PREVIEW_DOC_ATTR}] {
   opacity: 1;
 }
 .zc-insert-menu:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 1px; }
+
+/* The end-affordance's dots OVERLAP the add button's trailing edge (prototype
+   .insert-end .ip-dots) instead of sitting inline beside it like the
+   between-bar's companion above — anchored to the group, which (as a
+   .zc-insert-group) is already position: relative. Locked size/inset
+   (#283): 1.375rem x 1.25rem, inset-inline-end --spacing-hsp-sm. */
+.zc-insert-menu--end {
+  position: absolute;
+  inset-inline-end: var(--spacing-hsp-sm);
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1.375rem;
+  height: 1.25rem;
+}
 
 /* ── Drag & drop: insert points as drop zones (issue #258) ────────────────── */
 /* While a drag is active, the insert GROUP is the drop target, so its CHILDREN
