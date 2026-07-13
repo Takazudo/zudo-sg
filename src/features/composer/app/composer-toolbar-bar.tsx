@@ -49,6 +49,9 @@ export interface ComposerToolbarBarProps {
   titleFor?: (componentId: string) => string | undefined;
   /** Record-scoped production navigation; omitted in isolated editor tests. */
   onNavigateToLibrary?: () => void;
+  /** Record-level duplicate; distinct from duplicating a selected tree node. */
+  onDuplicateComposition?: () => void;
+  duplicatingComposition?: boolean;
 }
 
 export function ComposerToolbarBar({
@@ -65,6 +68,8 @@ export function ComposerToolbarBar({
   clipboard = null,
   titleFor = () => undefined,
   onNavigateToLibrary,
+  onDuplicateComposition,
+  duplicatingComposition = false,
 }: ComposerToolbarBarProps): JSX.Element {
   const [confirmingReset, setConfirmingReset] = useState(false);
 
@@ -74,6 +79,16 @@ export function ComposerToolbarBar({
         {onNavigateToLibrary && (
           <button type="button" class="sg-composer-toolbar-button" onClick={onNavigateToLibrary}>
             Library
+          </button>
+        )}
+        {onDuplicateComposition && (
+          <button
+            type="button"
+            class="sg-composer-toolbar-button"
+            disabled={duplicatingComposition}
+            onClick={onDuplicateComposition}
+          >
+            {duplicatingComposition ? "Duplicating composition…" : "Duplicate composition"}
           </button>
         )}
         <div class="min-w-0">

@@ -301,6 +301,91 @@ describe("ProductionComposerApp", () => {
     });
   });
 
+  it("keeps the old detail mounted and retries the exact failed target transition", async () => {
+    const indexeddb = memoryProvider("indexeddb", [
+      record("alpha", "Alpha"),
+      record("bravo", "Bravo"),
+    ]);
+    const navigation = new FakeNavigation("/composer/#/composition/indexeddb/alpha");
+    render(
+      <ProductionComposerApp
+        providers={[indexeddb]}
+        navigation={navigation}
+        preview={PREVIEW}
+      />,
+    );
+    await screen.findByRole("button", { name: "Library" });
+    fireEvent.click(screen.getByRole("button", { name: "Reset sample" }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirm reset" }));
+    await waitFor(() => expect(screen.getByText("Saved")).toBeInTheDocument());
+    vi.mocked(indexeddb.store.get).mockRejectedValueOnce(new Error("Target read is offline."));
+
+    navigation.visit("/composer/#/composition/indexeddb/bravo");
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("Could not load the record \"bravo\"");
+    expect(alert).toHaveTextContent("Target read is offline");
+    expect(screen.getAllByText("Product overview").length).toBeGreaterThan(0);
+    expect(navigation.read()).toEqual({
+      pathname: "/composer/",
+      hash: "#/composition/indexeddb/alpha",
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Retry navigation" }));
+
+    await waitFor(() =>
+      expect(navigation.read()).toEqual({
+        pathname: "/composer/",
+        hash: "#/composition/indexeddb/bravo",
+      }),
+    );
+    expect(screen.getAllByText("Bravo").length).toBeGreaterThan(0);
+    expect(screen.queryByRole("button", { name: "Retry navigation" })).not.toBeInTheDocument();
+  });
+
+  it("duplicates the mounted composition into its active provider and opens its route", async () => {
+    const indexeddb = memoryProvider("indexeddb", [record("same", "Browser copy")]);
+    const files = memoryProvider("files", [record("same", "File copy")]);
+    const navigation = new FakeNavigation("/composer/#/composition/files/same");
+    let nodeId = 0;
+    const view = render(
+      <ProductionComposerApp
+        providers={[indexeddb, files]}
+        navigation={navigation}
+        idFactory={() => "detail-copy"}
+        nodeIdFactory={() => `detail-node-${++nodeId}`}
+        preview={PREVIEW}
+      />,
+    );
+    await screen.findByRole("button", { name: "Duplicate composition" });
+    const tree = view.container.querySelector("#sg-composer-tree") as HTMLElement;
+    const inspector = view.container.querySelector("#sg-composer-inspector") as HTMLElement;
+    fireEvent.click(within(tree).getByRole("button", { name: "Expand SplitLayout" }));
+    fireEvent.click(within(tree).getByRole("button", { name: /^CtaButton/ }));
+    fireEvent.input(within(inspector).getByLabelText("Label"), {
+      target: { value: "Duplicated latest draft" },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Duplicate composition" }));
+
+    await waitFor(() =>
+      expect(navigation.read()).toEqual({
+        pathname: "/composer/",
+        hash: "#/composition/files/detail-copy",
+      }),
+    );
+    expect(screen.getAllByText("File copy copy").length).toBeGreaterThan(0);
+    expect(files.records.get("detail-copy")?.document.name).toBe("File copy copy");
+    expect(files.records.get("detail-copy")?.document.root[0].id).not.toBe("split-1");
+    expect(
+      files.records.get("detail-copy")?.document.root[0].slots.right?.find(
+        (node) => node.componentId === "ui.cta-button",
+      )?.props.children,
+    ).toBe("Duplicated latest draft");
+    expect(indexeddb.records.has("detail-copy")).toBe(false);
+    expect(files.store.get).toHaveBeenCalledWith("detail-copy");
+  });
+
   it("reopens provider-qualified detail routes delivered by browser history", async () => {
     const indexeddb = memoryProvider("indexeddb", [record("alpha", "Alpha")]);
     const files = memoryProvider("files", [record("alpha", "File Alpha")]);

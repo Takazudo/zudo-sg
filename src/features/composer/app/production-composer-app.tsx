@@ -234,6 +234,11 @@ export function ProductionComposerApp({
   );
   const [state, setState] = useState<ComposerCommittedState | null>(null);
   const [transitionError, setTransitionError] = useState<ComposerTransitionError | null>(null);
+  const [failedTransition, setFailedTransition] =
+    useState<ComposerTransitionIntent | null>(null);
+  const [retryingNavigation, setRetryingNavigation] = useState(false);
+  const [detailOperationError, setDetailOperationError] = useState<string | null>(null);
+  const [duplicatingComposition, setDuplicatingComposition] = useState(false);
   const [bootProviderId, setBootProviderId] = useState<CompositionProviderId | null>(null);
   const [initializationNotice, setInitializationNotice] =
     useState<CompositionRecoveryOutcome | null>(null);
@@ -286,7 +291,15 @@ export function ProductionComposerApp({
     async (intent: ComposerTransitionIntent) => {
       setTransitionError(null);
       const result = await coordinator.transition(intent);
-      if (result.status === "rolled-back") setTransitionError(result.error);
+      if (result.status === "rolled-back") {
+        setTransitionError(result.error);
+        setFailedTransition(
+          intent.history === "already-applied" ? { ...intent, history: "push" } : intent,
+        );
+      } else if (result.status === "committed") {
+        setFailedTransition(null);
+        setDetailOperationError(null);
+      }
       return result;
     },
     [coordinator],
@@ -437,6 +450,50 @@ export function ProductionComposerApp({
     }
   }, [providersById, state]);
 
+  const retryFailedTransition = useCallback(async () => {
+    if (!failedTransition) return;
+    setRetryingNavigation(true);
+    try {
+      await transition(failedTransition);
+    } finally {
+      setRetryingNavigation(false);
+    }
+  }, [failedTransition, transition]);
+
+  const duplicateMountedComposition = useCallback(async () => {
+    if (state?.view !== "detail" || duplicatingComposition) return;
+    const session = state.session as ProductionDetailSession;
+    const ref = routeRef(state.route)!;
+    const provider = providersById.get(ref.providerId);
+    if (!provider) return;
+
+    setDetailOperationError(null);
+    setDuplicatingComposition(true);
+    try {
+      await session.flushPendingProps(ref);
+      await session.queue.flush();
+      const duplicate = duplicateCompositionRecord(session.queue.state.draft, {
+        idFactory,
+        nodeIdFactory,
+        now: nowRef.current,
+      });
+      await provider.store.put(duplicate);
+      await navigate({
+        kind: "detail",
+        providerId: ref.providerId,
+        recordId: duplicate.id,
+      });
+    } catch (reason) {
+      setDetailOperationError(
+        reason instanceof Error
+          ? reason.message
+          : "The composition could not be duplicated.",
+      );
+    } finally {
+      setDuplicatingComposition(false);
+    }
+  }, [duplicatingComposition, idFactory, navigate, nodeIdFactory, providersById, state]);
+
   const availableProviders = useMemo(
     () => providers.map(({ descriptor }) => ({ descriptor, available: true })),
     [providers],
@@ -479,7 +536,19 @@ export function ProductionComposerApp({
         }}
         registerFlushPendingProps={session.registerFlushPendingProps}
         onNavigateToLibrary={() => void navigate({ kind: "index" })}
-        navigationError={transitionError ? errorText(transitionError) : null}
+        onDuplicateComposition={() => void duplicateMountedComposition()}
+        duplicatingComposition={duplicatingComposition}
+        navigationError={
+          transitionError
+            ? errorText(transitionError)
+            : detailOperationError
+        }
+        onRetryNavigation={
+          transitionError && failedTransition
+            ? () => void retryFailedTransition()
+            : undefined
+        }
+        navigationRetrying={retryingNavigation}
         recoveryNotice={
           initializationNotice
             ? `${initializationNotice.message} The original source has been preserved.`

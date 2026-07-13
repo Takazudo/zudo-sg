@@ -65,7 +65,11 @@ export interface ComposerIntegrationProps {
   /** Production route coordinator seam for landing debounced props before transitions. */
   registerFlushPendingProps?: (flush: (() => void) | null) => void;
   onNavigateToLibrary?: () => void;
+  onDuplicateComposition?: () => void;
+  duplicatingComposition?: boolean;
   navigationError?: string | null;
+  onRetryNavigation?: () => void;
+  navigationRetrying?: boolean;
   recoveryNotice?: string | null;
   onRetryRecovery?: () => void;
   recoveryRetrying?: boolean;
@@ -104,6 +108,16 @@ export function ComposerIntegration(props: ComposerIntegrationProps): JSX.Elemen
             {props.navigationError && (
               <div class="sg-composer-library-alert sg-composer-library-alert-error" role="alert">
                 <p>{props.navigationError}</p>
+                {props.onRetryNavigation && (
+                  <button
+                    type="button"
+                    class="sg-composer-library-button"
+                    disabled={props.navigationRetrying}
+                    onClick={props.onRetryNavigation}
+                  >
+                    {props.navigationRetrying ? "Retrying navigation…" : "Retry navigation"}
+                  </button>
+                )}
               </div>
             )}
             {props.recoveryNotice && (
@@ -140,6 +154,8 @@ export function ComposerIntegration(props: ComposerIntegrationProps): JSX.Elemen
             clipboard={state.clipboard}
             titleFor={titleFor}
             onNavigateToLibrary={props.onNavigateToLibrary}
+            onDuplicateComposition={props.onDuplicateComposition}
+            duplicatingComposition={props.duplicatingComposition}
           />
         }
         tree={
