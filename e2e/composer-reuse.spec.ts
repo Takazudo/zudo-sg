@@ -82,6 +82,19 @@ async function dialogRect(page: Page, dialog: Locator) {
   });
 }
 
+async function resizeInspectorTo320px(page: Page): Promise<void> {
+  const resizer = page.getByRole("separator", { name: "Resize inspector panel" });
+  await expect(resizer).toBeVisible();
+  await resizer.focus();
+
+  // A fresh Inspector starts at its 220px floor. Drive the public keyboard
+  // separator from its 480px desktop maximum back to 320px in ten 16px steps.
+  await resizer.press("End");
+  await expect(resizer).toHaveAttribute("aria-valuenow", "480");
+  for (let step = 0; step < 10; step += 1) await resizer.press("ArrowRight");
+  await expect(resizer).toHaveAttribute("aria-valuenow", "320");
+}
+
 async function assertReuseControlsFitDesktopAnd320pxInspector(page: Page, action: Locator): Promise<void> {
   const inspector = page.locator(".sg-composer-inspector");
   await expect(inspector).toBeVisible();
@@ -107,8 +120,8 @@ async function assertReuseControlsFitDesktopAnd320pxInspector(page: Page, action
     }),
   ]);
 
-  // The desktop workspace deliberately keeps a 20rem (320px) Inspector.
-  // Check both the page and that narrow rail instead of relying on a screenshot.
+  // The test resized this desktop Inspector through its public separator to
+  // 320px. Check both the page and that narrow rail instead of a screenshot.
   expect(geometry.inspectorWidth).toBeCloseTo(320, 0);
   expect(geometry.inspectorScrollWidth).toBeLessThanOrEqual(geometry.inspectorClientWidth);
   expect(geometry.documentWidth).toBeLessThanOrEqual(geometry.viewportWidth);
@@ -281,6 +294,7 @@ test.describe("Composer reuse cross-feature acceptance", () => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await seedRecords(page, [privatePatternRecord(), patternTargetRecord()]);
     await openRecord(page, "Marketing block");
+    await resizeInspectorTo320px(page);
 
     const sourceBeforePublication = reuseDocument(await currentRecord(page, "marketing-pattern"));
     expect(sourceBeforePublication.publication).toBeUndefined();
