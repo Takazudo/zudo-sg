@@ -187,7 +187,9 @@ test.describe("Composer reuse cross-feature acceptance", () => {
       .filter((entry) => entry.id !== SOURCE_RECORD_ID);
     await replaceComposerRecords(page, withoutSource);
     await openRecord(page, "Broken consumer");
-    await expect(page.getByText("Linked template unavailable", { exact: true })).toBeVisible();
+    const treeUnavailableFrame = page.locator('.sg-composer-tree [data-sg-linked-frame="blocked"]');
+    await expect(treeUnavailableFrame).toHaveCount(1);
+    await expect(treeUnavailableFrame).toContainText("Linked template unavailable");
     await page.getByRole("button", { name: "Export JSX", exact: true }).click();
     await expect(page.getByRole("dialog", { name: /Export/ })).toContainText("Copy JSX is blocked");
     await page.getByRole("button", { name: "Close", exact: true }).click();
@@ -249,7 +251,7 @@ test.describe("Composer reuse cross-feature acceptance", () => {
     const newInitial = await dialogRect(page, newDialog);
     expect(newInitial).toMatchObject({ left: 24, top: 24, width: 1232, height: 852 });
     await newDialog.getByLabel("Search Global templates").fill("no matching template");
-    await expect(newDialog).toContainText("No Global templates match this search");
+    await expect(newDialog).toContainText("No eligible Global templates are available from this provider.");
     const resize = newDialog.getByRole("button", { name: "Resize dialog" });
     await resize.focus();
     await page.keyboard.press("ArrowLeft");
