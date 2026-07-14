@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createSequentialIdFactory } from "@/composer";
 import {
   FIXTURE_COMPONENT_IDS as F,
+  doc,
   fixtureManifest,
   makeAbcDocument,
   resetFixtureIds,
@@ -137,6 +138,59 @@ describe("applyComposerAction — document commands", () => {
   });
 });
 
+describe("applyComposerAction — Composition reuse commands", () => {
+  it("binds through a resolved contract, persists one accepted action, and applies its root policy to later inserts", () => {
+    const empty = createInitialControllerState({
+      document: doc([]),
+      manifest: fixtureManifest,
+      loadNotice: null,
+      saveStatus: { kind: "saved" },
+      leftWidth: 260,
+      rightWidth: 320,
+    });
+    const contract = {
+      sourceRecordId: "source-record",
+      outletId: "outlet-main",
+      sameProvider: true,
+      sourceIsGlobalTemplate: true,
+      sourceHasBinding: false,
+      rootPolicy: { kind: "resolved" as const, accepts: [F.box], cardinality: "single" as const },
+    };
+
+    const bound = applyComposerAction(empty, { type: "bindConsumer", contract }, ctx());
+    expect(bound.error).toBeNull();
+    expect(bound.documentChanged).toBe(true);
+    expect(bound.state.document.binding).toEqual({ sourceRecordId: "source-record", outletId: "outlet-main" });
+
+    const accepted = applyComposerAction(
+      bound.state,
+      { type: "add", target: { parentId: null, slotId: "root", index: 0 }, componentId: F.box },
+      ctx(),
+    );
+    expect(accepted.documentChanged).toBe(true);
+    const rejected = applyComposerAction(
+      accepted.state,
+      { type: "add", target: { parentId: null, slotId: "root", index: 1 }, componentId: F.box },
+      ctx(),
+    );
+    expect(rejected.documentChanged).toBe(false);
+    expect(rejected.error).toMatch(/only one root/i);
+    expect(rejected.state).toBe(accepted.state);
+  });
+
+  it("makes publication actions document mutations and rejects an outlet insert without a save transition", () => {
+    const state = initial();
+    const published = applyComposerAction(
+      state,
+      { type: "publishGlobalTemplate", target: { parentId: "split", slotId: "right" }, label: "Main" },
+      ctx(),
+    );
+    // right is occupied in the A/B/C fixture, so this must be a no-op.
+    expect(published.documentChanged).toBe(false);
+    expect(published.error).toMatch(/empty declared/i);
+  });
+});
+
 describe("applyComposerAction — reset / load", () => {
   it("resetToSample replaces the document, clears selection/expansion/notice, and reports a change", () => {
     const state = { ...initial(), expandedIds: new Set(["split"]), loadNotice: { kind: "recovered" as const, reason: "x" } };
@@ -245,6 +299,12 @@ describe("isDocumentMutation / hasUnsavedChanges", () => {
     expect(isDocumentMutation({ type: "updateProps", nodeId: "x", patch: {} })).toBe(true);
     expect(isDocumentMutation({ type: "reorder", nodeId: "x", direction: "up" })).toBe(true);
     expect(isDocumentMutation({ type: "remove", nodeId: "x" })).toBe(true);
+    expect(isDocumentMutation({ type: "publishPattern" })).toBe(true);
+    expect(isDocumentMutation({ type: "bindConsumer", contract: {
+      sourceRecordId: "source", outletId: "outlet", sameProvider: true, sourceIsGlobalTemplate: true, sourceHasBinding: false,
+      rootPolicy: { kind: "resolved", cardinality: "many" },
+    } })).toBe(true);
+    expect(isDocumentMutation({ type: "setRootPolicy", rootPolicy: { kind: "unresolved" } })).toBe(false);
     expect(isDocumentMutation({ type: "resetToSample", document: makeAbcDocument() })).toBe(true);
     expect(isDocumentMutation({ type: "select", nodeId: null })).toBe(false);
     expect(isDocumentMutation({ type: "setMode", mode: "edit" })).toBe(false);

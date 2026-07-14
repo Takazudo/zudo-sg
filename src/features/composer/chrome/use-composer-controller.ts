@@ -26,9 +26,13 @@ import type {
   CompositionRecord,
   CompositionSaveQueue,
   CompositionSaveQueueState,
+  GlobalTemplateOutletTarget,
   IdFactory,
   InsertionTarget,
   JsonObject,
+  PublicationDependencyGuard,
+  ResolvedGlobalTemplateOutletContract,
+  RootPolicy,
 } from "@/composer";
 import {
   cloneJson,
@@ -119,6 +123,22 @@ export interface ComposerController {
    * `lastError`, never a silent partial change.
    */
   drop: (sourceNodeId: string, target: InsertionTarget, copy: boolean) => void;
+  /** Publish the current non-empty local document as a Pattern. */
+  publishPattern: () => void;
+  /** Publish a real empty component slot as this Global template's stable outlet. */
+  publishGlobalTemplate: (target: GlobalTemplateOutletTarget, label: string) => void;
+  /** Create or update the Global outlet while retaining its id after creation. */
+  setGlobalTemplateOutlet: (target: GlobalTemplateOutletTarget, label: string) => void;
+  renameGlobalTemplateOutlet: (label: string) => void;
+  reassignGlobalTemplateOutlet: (target: GlobalTemplateOutletTarget) => void;
+  /** The owning app must pass its current dependent-count result. */
+  clearPublication: (dependencyGuard: PublicationDependencyGuard) => void;
+  /** Bind through a parent-app resolved source/outlet contract; never performs provider I/O. */
+  bindConsumer: (contract: ResolvedGlobalTemplateOutletContract) => void;
+  /** Remove only the binding and retain all canonical local root nodes. */
+  removeBinding: () => void;
+  /** Update ephemeral bound-root constraints after parent-app resolution. */
+  setRootPolicy: (rootPolicy: RootPolicy) => void;
   select: (nodeId: string | null) => void;
   reveal: (nodeId: string) => void;
   toggleExpanded: (nodeId: string) => void;
@@ -141,6 +161,8 @@ export interface UseComposerControllerOptions {
   /** Record-scoped queue created for the same provider-qualified record. */
   saveQueue?: CompositionSaveQueue;
   sample?: CompositionDocument;
+  /** Optional initial resolver result for a record mounted as a bound consumer. */
+  rootPolicy?: RootPolicy;
   idFactory?: IdFactory;
   now?: () => string;
 }
@@ -235,6 +257,7 @@ export function useComposerController(options: UseComposerControllerOptions = {}
     stateRef.current = createInitialControllerState({
       document,
       manifest,
+      rootPolicy: options.rootPolicy,
       loadNotice: notice,
       saveStatus: status,
       leftWidth: getPersistedWidth(LS_TREE_WIDTH, MIN_RAIL_W),
@@ -476,6 +499,15 @@ export function useComposerController(options: UseComposerControllerOptions = {}
       paste: (target) => dispatch({ type: "paste", target }),
       duplicate: (nodeId) => dispatch({ type: "duplicate", nodeId }),
       drop: (sourceNodeId, target, copy) => dispatch({ type: "drop", sourceNodeId, target, copy }),
+      publishPattern: () => dispatch({ type: "publishPattern" }),
+      publishGlobalTemplate: (target, label) => dispatch({ type: "publishGlobalTemplate", target, label }),
+      setGlobalTemplateOutlet: (target, label) => dispatch({ type: "setGlobalTemplateOutlet", target, label }),
+      renameGlobalTemplateOutlet: (label) => dispatch({ type: "renameGlobalTemplateOutlet", label }),
+      reassignGlobalTemplateOutlet: (target) => dispatch({ type: "reassignGlobalTemplateOutlet", target }),
+      clearPublication: (dependencyGuard) => dispatch({ type: "clearPublication", dependencyGuard }),
+      bindConsumer: (contract) => dispatch({ type: "bindConsumer", contract }),
+      removeBinding: () => dispatch({ type: "removeBinding" }),
+      setRootPolicy: (rootPolicy) => dispatch({ type: "setRootPolicy", rootPolicy }),
       select: (nodeId) => dispatch({ type: "select", nodeId }),
       reveal: (nodeId) => dispatch({ type: "reveal", nodeId }),
       toggleExpanded: (nodeId) => dispatch({ type: "toggleExpanded", nodeId }),

@@ -12,6 +12,7 @@
 import type {
   ComposerConstraints,
   ComposerFieldMeta,
+  ComposerSlotCardinality,
   ComposerSlotMeta,
   ComposerSource,
   JsonValue,
@@ -85,6 +86,44 @@ export type CompositionPublication = GlobalTemplatePublication | PatternPublicat
 export interface CompositionBinding {
   sourceRecordId: CompositionRecordId;
   outletId: string;
+}
+
+/**
+ * Ephemeral constraints for the virtual consumer root.
+ *
+ * This deliberately contains no provider, record, or source-document data.
+ * A later resolver derives the `resolved` variant from the actual exposed
+ * source slot, then hands it to the same pure commands used for ordinary
+ * local edits. It is never persisted in `CompositionDocument`.
+ */
+export type RootPolicy =
+  | { kind: "unrestricted" }
+  | { kind: "unresolved" }
+  | {
+      kind: "resolved";
+      /** Omitted means the exposed slot accepts every available component. */
+      accepts?: readonly string[];
+      cardinality: ComposerSlotCardinality;
+    };
+
+/** A successfully resolved source/outlet contract supplied by the parent app. */
+export interface ResolvedGlobalTemplateOutletContract {
+  sourceRecordId: CompositionRecordId;
+  outletId: string;
+  /** The parent app has confirmed both records belong to its active provider. */
+  sameProvider: boolean;
+  /** The source is currently published as a Global template. */
+  sourceIsGlobalTemplate: boolean;
+  /** v1 Global templates cannot themselves consume a Global template. */
+  sourceHasBinding: boolean;
+  /** The actual exposed source slot, already resolved by the parent app. */
+  rootPolicy: Extract<RootPolicy, { kind: "resolved" }>;
+}
+
+/** Dependency result supplied to publication-changing commands by the owner service. */
+export interface PublicationDependencyGuard {
+  /** Current number of canonical consumers bound to this source record. */
+  dependentCount: number;
 }
 
 /** The full persisted Composition document in the current schema. */
