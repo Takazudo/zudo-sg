@@ -25,8 +25,13 @@
 //   inspector/export/tree/chooser all receive.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "preact/hooks";
-import type { InsertionTarget } from "@/composer";
-import { createManifest } from "@/composer";
+import type {
+  ComposerReuseResolutionOptions,
+  CompositionRecord,
+  GlobalTemplateResolutionOutcome,
+  InsertionTarget,
+} from "@/composer";
+import { compositionRecordRefKey, createManifest } from "@/composer";
 import type { ComposerManifestEntry } from "@/styleguide/data/composer-registry";
 import { composerManifest } from "@/styleguide/data/composer-registry";
 import type { ComposerCanvasViewport } from "@/features/composer/chrome/controller-model";
@@ -48,6 +53,11 @@ export interface UseComposerIntegrationOptions {
   manifestEntries?: readonly ComposerManifestEntry[];
   /** Forwarded to `useComposerController` (sample/idFactory overrides for tests). */
   controllerOptions?: Omit<UseComposerControllerOptions, "manifest">;
+  /**
+   * Optional parent-owned, read-only Global-template resolver. The iframe
+   * never receives this provider-facing capability or its loaded source data.
+   */
+  reuseResolution?: ComposerReuseResolutionOptions;
 }
 
 export interface ComposerChooserState {
@@ -69,6 +79,8 @@ export interface ComposerIntegrationApi {
   openChooser: (target: InsertionTarget) => void;
   closeChooser: () => void;
   exportState: UseComposerExportResult;
+  /** Latest parent-app resolver outcome for this provider-qualified record. */
+  reuseResolution: GlobalTemplateResolutionOutcome | null;
   /** Friendly display name for a component id, from the richer catalog. */
   titleFor: (componentId: string) => string | undefined;
 
@@ -121,6 +133,57 @@ export function useComposerIntegration(
   const manifest = useMemo(() => createManifest(manifestEntries), [manifestEntries]);
   const controller = useComposerController({ manifest, ...options.controllerOptions });
   const { state } = controller;
+  const [reuseResolution, setReuseResolution] = useState<GlobalTemplateResolutionOutcome | null>(null);
+  const reuseRequestGeneration = useRef(0);
+  const setRootPolicyRef = useRef(controller.setRootPolicy);
+  setRootPolicyRef.current = controller.setRootPolicy;
+
+  const reuseConfig = options.reuseResolution;
+  const reuseRefKey = reuseConfig ? compositionRecordRefKey(reuseConfig.ref) : null;
+  const boundSourceKey = state.document.binding
+    ? `${state.document.binding.sourceRecordId}:${state.document.binding.outletId}`
+    : null;
+  const consumerRecord = useMemo<CompositionRecord>(
+    () => ({ ...controller.record, document: state.document }),
+    [controller.record, state.document],
+  );
+
+  // A provider navigation, a consumer refresh, or a relevant source-save
+  // token invalidates the preceding read. Stores currently do not expose
+  // cancellation, so the essential guarantee is that a late result cannot
+  // update this controller's policy after the active document has changed.
+  useEffect(() => {
+    const generation = ++reuseRequestGeneration.current;
+    if (!reuseConfig) {
+      setReuseResolution(null);
+      setRootPolicyRef.current({ kind: "unrestricted" });
+      return;
+    }
+    setReuseResolution(null);
+    void reuseConfig.resolver.resolve(consumerRecord).then(
+      (outcome) => {
+        if (generation !== reuseRequestGeneration.current) return;
+        setReuseResolution(outcome);
+        setRootPolicyRef.current(
+          outcome.status === "resolved" || outcome.status === "incompatible-local-root"
+            ? outcome.rootPolicy
+            : outcome.status === "unbound"
+              ? { kind: "unrestricted" }
+              : { kind: "unresolved" },
+        );
+      },
+      () => {
+        if (generation !== reuseRequestGeneration.current) return;
+        // A custom resolver may reject. Keep the persisted binding/local roots
+        // intact and safely block bound-root writes rather than surfacing a
+        // stale or unrestricted policy.
+        setRootPolicyRef.current({ kind: "unresolved" });
+      },
+    );
+    return () => {
+      if (generation === reuseRequestGeneration.current) reuseRequestGeneration.current += 1;
+    };
+  }, [boundSourceKey, consumerRecord, reuseConfig?.refreshKey, reuseConfig?.resolver, reuseRefKey]);
 
   const theme = useHostTheme();
 
@@ -231,6 +294,7 @@ export function useComposerIntegration(
     openChooser,
     closeChooser,
     exportState,
+    reuseResolution,
     titleFor,
     handleCanvasSelect,
     handleCanvasRequestAdd,

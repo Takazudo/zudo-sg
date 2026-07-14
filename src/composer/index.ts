@@ -110,6 +110,9 @@ export { loadCompositionDocument, resetToSample } from "./model/recovery";
 // ── Composition library records + provider boundary ─────────────────────────
 export * from "./library";
 
+// ── Reuse catalog + live Global-template resolution ─────────────────────────
+export * from "./reuse";
+
 // Revision-aware persistence coordination (framework and provider independent).
 export * from "./persistence";
 

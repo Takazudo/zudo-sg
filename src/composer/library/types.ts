@@ -16,6 +16,22 @@ export interface CompositionSummary {
   createdAt: string;
   updatedAt: string;
   nodeCount: number;
+  /**
+   * Reuse-list metadata. It is optional while reading a summary written by an
+   * older provider; current provider summary builders populate it.
+   */
+  publicationKind?: "global-template" | "pattern";
+  /** Stable source-scoped outlet identity for a Global template. */
+  outletId?: string;
+  /** Current human label for the stable Global-template outlet. */
+  outletLabel?: string;
+  /** Direct children of the virtual root (distinct from the recursive node count). */
+  rootCount?: number;
+  /**
+   * Provider-list eligibility known without loading the full source. Missing
+   * values are excluded conservatively by the reusable-source catalog.
+   */
+  reuseStatus?: "eligible" | "empty-pattern" | "invalid";
 }
 
 export const COMPOSITION_PROVIDER_IDS = {
