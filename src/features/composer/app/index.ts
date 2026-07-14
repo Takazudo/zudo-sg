@@ -10,6 +10,12 @@
 export { ComposerIntegration } from "./composer-integration";
 export type { ComposerIntegrationProps } from "./composer-integration";
 
+export { ProductionComposerApp, createProductionComposerProviders } from "./production-composer-app";
+export type {
+  ComposerBrowserNavigation,
+  ProductionComposerAppProps,
+} from "./production-composer-app";
+
 export { useComposerIntegration } from "./use-composer-integration";
 export type {
   UseComposerIntegrationOptions,

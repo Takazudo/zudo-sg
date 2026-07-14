@@ -1,4 +1,5 @@
 import { test, expect, type Page, type Frame } from "@playwright/test";
+import { openComposerRecord } from "./support/composer-persistence";
 
 // ---------------------------------------------------------------------------
 // Composer Polish epic (#262) — S7 (#270) central computed-style CONTRACT gate.
@@ -187,7 +188,7 @@ async function gotoComposer(
     },
     { key: THEME_KEY, mode, twKey: TREE_WIDTH_KEY, clearTw: !!opts.clearTreeWidth },
   );
-  await page.goto(COMPOSER_PATH);
+  await openComposerRecord(page, { path: COMPOSER_PATH });
   // Belt-and-suspenders: pin the scheme regardless of the provider's timing so
   // light-dark() resolves deterministically for the measurement.
   await page.evaluate((m) => {
@@ -195,10 +196,6 @@ async function gotoComposer(
     (document.documentElement.style as CSSStyleDeclaration).colorScheme = m;
   }, mode);
   await page.waitForSelector(IFRAME_SEL, { state: "attached" });
-  await page
-    .frameLocator(IFRAME_SEL)
-    .locator("[data-composer-canvas]")
-    .waitFor({ state: "visible", timeout: 15_000 });
   await page.waitForTimeout(250);
   await injectHelper(page);
 }

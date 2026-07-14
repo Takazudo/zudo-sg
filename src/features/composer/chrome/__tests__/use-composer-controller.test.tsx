@@ -117,12 +117,16 @@ describe("useComposerController — typed callback seams", () => {
     const { result } = setup();
     const expected: Array<keyof ComposerController> = [
       "state",
+      "record",
       "manifest",
       "lastError",
       "add",
+      "rename",
       "updateProps",
       "updatePropsDebounced",
       "flushPropUpdates",
+      "flushPersistence",
+      "retrySave",
       "reorder",
       "remove",
       "copy",

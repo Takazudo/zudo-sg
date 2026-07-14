@@ -1,4 +1,12 @@
 import { test, expect, type Page, type FrameLocator, type Locator } from "@playwright/test";
+import {
+  inspectComposerDatabase,
+  invalidateComposerConnection,
+  openComposerLibrary,
+  openComposerRecord,
+  prepareLegacyMigration,
+  replaceComposerRecords,
+} from "./support/composer-persistence";
 
 // ---------------------------------------------------------------------------
 // Composer end-to-end confirmation (#252) — Wave 10, final.
@@ -65,7 +73,6 @@ import { test, expect, type Page, type FrameLocator, type Locator } from "@playw
 // `Event` constructor init dicts that do not reliably expose it.
 // ---------------------------------------------------------------------------
 
-const STORAGE_KEY = "sg-composer-document";
 const TREE_WIDTH_KEY = "sg-composer-tree-width";
 const CANVAS_IFRAME_SELECTOR = ".sg-composer-canvas-frame iframe";
 const CHOOSER_PREVIEW_IFRAME_SELECTOR = 'iframe[title="Composer chooser live preview"]';
@@ -124,11 +131,7 @@ function topLevelTreeRows(page: Page): Locator {
 
 /** Navigate to `/composer` and wait for the real preview canvas to mount. */
 async function gotoComposer(page: Page): Promise<void> {
-  await page.goto("/composer");
-  await expect(page.locator("html[data-sg-composer-doc]")).toBeAttached();
-  await expect(canvasFrame(page).locator("[data-composer-canvas]")).toBeVisible({
-    timeout: 15_000,
-  });
+  await openComposerRecord(page);
 }
 
 /** The single tree row currently showing `aria-pressed="true"` on its select button. */
@@ -864,71 +867,43 @@ test.describe("Composer storage & recovery matrix (step 7 + opaque export block)
   });
 
   test("step 07c - malformed storage recovers to the sample with an honest notice", async ({ page }) => {
-    await gotoComposer(page);
-    await page.evaluate((key) => localStorage.setItem(key, "{not valid json"), STORAGE_KEY);
-    await page.reload();
-    await expect(canvasFrame(page).locator("[data-composer-canvas]")).toBeVisible({ timeout: 15_000 });
+    await prepareLegacyMigration(page, "{not valid json");
+    await openComposerLibrary(page);
 
-    const banner = page.locator(".sg-composer-load-notice");
+    const banner = page.getByRole("heading", { name: "Recovery notice" }).locator("..");
     await expect(banner).toBeVisible();
-    await expect(banner).toContainText("not valid JSON");
-    await expect(banner).toContainText("recovered the sample");
+    await expect(banner).toContainText("malformed");
+    await expect(banner).toContainText("original source has been preserved");
+
+    await page.locator(".sg-composer-library-open").first().click();
+    await expect(canvasFrame(page).locator("[data-composer-canvas]")).toBeVisible();
     await expect(topLevelTreeRows(page)).toHaveCount(1);
-
-    await banner.getByRole("button", { name: "Dismiss", exact: true }).click();
-    await expect(banner).not.toBeVisible();
   });
 
-  test("step 07d - a newer schema is quarantined until an explicit Reset", async ({ page }) => {
-    await gotoComposer(page);
-    await page.evaluate(
-      (key) => localStorage.setItem(key, JSON.stringify({ schemaVersion: 2 })),
-      STORAGE_KEY,
-    );
-    await page.reload();
-    await expect(canvasFrame(page).locator("[data-composer-canvas]")).toBeVisible({ timeout: 15_000 });
+  test("step 07d - a newer schema is quarantined until explicit Start fresh", async ({ page }) => {
+    await prepareLegacyMigration(page, JSON.stringify({ schemaVersion: 2 }));
+    await openComposerLibrary(page);
 
-    const banner = page.locator(".sg-composer-load-notice");
-    await expect(banner).toContainText("newer Composition (schema v2)");
+    const banner = page.getByRole("heading", { name: "Recovery required" }).locator("..");
+    await expect(banner).toContainText("future schema 2");
+    await expect(page.getByRole("button", { name: "New composition" }).first()).toBeDisabled();
 
-    const status = page.locator(".sg-composer-save-status");
-    await expect(status).toHaveAttribute("data-sg-status", "quarantined");
-    const quarantinedText = await status.textContent();
-
-    // An edit against quarantined storage is never silently written back.
-    await page.getByRole("button", { name: "Add component to document root" }).click();
-    const dialog = chooserDialog(page);
-    await dialog.getByPlaceholder("Search components…").fill("Callout");
-    await dialog.getByRole("button", { name: "Callout", exact: true }).click();
-    await expect(dialog).not.toBeVisible();
-    await expect(status).toHaveAttribute("data-sg-status", "quarantined");
-    await expect(status).toHaveText(quarantinedText ?? "");
-
-    await page.getByRole("button", { name: "Reset sample", exact: true }).click();
-    await page.getByRole("button", { name: "Confirm reset", exact: true }).click();
-    await expect(status).toHaveAttribute("data-sg-status", "saved");
-    await expect(banner).not.toBeVisible();
+    await page.getByRole("button", { name: "Start fresh", exact: true }).click();
+    await page.getByRole("button", { name: "Start fresh", exact: true }).last().click();
+    await expect(page.locator(".sg-composer-library-open")).toHaveCount(1);
+    await page.locator(".sg-composer-library-open").first().click();
+    await expect(page.locator(".sg-composer-save-status")).toHaveAttribute("data-sg-status", "saved");
   });
 
-  test("step 07e - blocked storage writes are reported honestly and the app keeps working", async ({ page }) => {
+  test("step 07e - invalidated IndexedDB writes are reported honestly and the app keeps working", async ({ page, context }) => {
     const pageErrors: string[] = [];
     page.on("pageerror", (err) => pageErrors.push(err.message));
-
-    await page.addInitScript((key) => {
-      const original = Storage.prototype.setItem;
-      Storage.prototype.setItem = function (this: Storage, k: string, v: string) {
-        if (k === key) throw new DOMException("Simulated quota exceeded", "QuotaExceededError");
-        return original.call(this, k, v);
-      };
-    }, STORAGE_KEY);
-
     await gotoComposer(page);
+    const peer = await context.newPage();
+    await invalidateComposerConnection(page, peer);
+    await peer.close();
 
     const status = page.locator(".sg-composer-save-status");
-    await expect(status).toHaveAttribute("data-sg-status", "error");
-    await expect(status).toHaveText("Not saved — local storage is unavailable");
-
-    // The app still works in memory even though every write fails.
     await page.getByRole("button", { name: "Add component to document root" }).click();
     const dialog = chooserDialog(page);
     await dialog.getByPlaceholder("Search components…").fill("Callout");
@@ -936,6 +911,7 @@ test.describe("Composer storage & recovery matrix (step 7 + opaque export block)
     await expect(dialog).not.toBeVisible();
     await expect(topLevelTreeRows(page)).toHaveCount(2);
     await expect(status).toHaveAttribute("data-sg-status", "error");
+    await expect(page.getByRole("button", { name: "Retry", exact: true })).toBeVisible();
 
     expect(pageErrors).toEqual([]);
   });
@@ -967,10 +943,16 @@ test.describe("Composer storage & recovery matrix (step 7 + opaque export block)
         },
       ],
     };
-    await page.evaluate(
-      ({ key, doc }) => localStorage.setItem(key, JSON.stringify(doc)),
-      { key: STORAGE_KEY, doc: seedDoc },
-    );
+    const database = await inspectComposerDatabase(page);
+    const current = database.records[0]!;
+    await replaceComposerRecords(page, [{
+      ...current,
+      document: seedDoc,
+      id: "opaque-check",
+      createdAt: current.createdAt,
+      updatedAt: current.updatedAt,
+    }]);
+    await page.goto("/composer/#/composition/indexeddb/opaque-check");
     await page.reload();
     await expect(canvasFrame(page).locator("[data-composer-canvas]")).toBeVisible({ timeout: 15_000 });
 
@@ -1025,21 +1007,11 @@ test.describe("Composer storage & recovery matrix (step 7 + opaque export block)
 // ---------------------------------------------------------------------------
 
 test.describe("Composer SPA navigation guard (step 14)", () => {
-  test("with unsaved edits, leaving via the shared header triggers the guard", async ({ page }) => {
-    // Autosave writes to localStorage synchronously after every mutation, so
-    // in a real browser the document is "saved" again almost immediately —
-    // there is no reliable window to catch a transient "unsaved" state.
-    // Blocking storage writes (same technique as step 07e) produces a
-    // genuinely, durably unsaved document to exercise the guard against.
-    await page.addInitScript((key) => {
-      const original = Storage.prototype.setItem;
-      Storage.prototype.setItem = function (this: Storage, k: string, v: string) {
-        if (k === key) throw new DOMException("Simulated quota exceeded", "QuotaExceededError");
-        return original.call(this, k, v);
-      };
-    }, STORAGE_KEY);
-
+  test("with unsaved edits, leaving via the shared header triggers the guard", async ({ page, context }) => {
     await gotoComposer(page);
+    const peer = await context.newPage();
+    await invalidateComposerConnection(page, peer);
+    await peer.close();
     await page.getByRole("button", { name: "Add component to document root" }).click();
     const dialog = chooserDialog(page);
     await dialog.getByPlaceholder("Search components…").fill("Callout");
@@ -1063,8 +1035,9 @@ test.describe("Composer SPA navigation guard (step 14)", () => {
       .click();
 
     await expect.poll(() => dialogType).toBe("beforeunload");
-    // Dismissing the prompt means "stay" — still on /composer.
-    await expect(page).toHaveURL(/\/composer\/?$/);
+    // Dismissing the prompt means "stay" — still on the provider-qualified
+    // Composer detail route.
+    await expect(page).toHaveURL(/\/composer\/#\/composition\/indexeddb\/[^/]+$/);
   });
 });
 

@@ -179,7 +179,7 @@ describe("ComposerIntegration — mutations reflect everywhere (#251)", () => {
 
     expect(s.canvasDoc().root[0]!.props.label).toBe("Renamed");
     expect(s.canvasDoc().root[0]!.id).toBe(boxId); // same stable node, not a remount
-    expect(within(s.toolbar()).getByText("Saved locally")).toBeInTheDocument();
+    expect(within(s.toolbar()).getByText("Saved")).toBeInTheDocument();
   });
 
   it("a canvas inline-edit commit routes through updateProps; the inspector reflects it live (#257)", () => {

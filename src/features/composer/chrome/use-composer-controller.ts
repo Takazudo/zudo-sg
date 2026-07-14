@@ -1,20 +1,18 @@
 "use client";
 
-// The Composer's client-side controller hook (issue #247) — the one typed
-// integration seam #248 (preview bridge), #249 (inspector), #250 (tree /
-// chooser), and #251 (central integration) build on. Glues three pure
-// modules into one Preact hook:
+// The Composer's record-scoped client controller. It keeps the synchronous
+// reducer/preview/export ordering established by #247 while handing immutable
+// record revisions to #300's async save queue:
 //
 //   controller-model.ts  — the document + session-state reducer
-//   storage.ts            — versioned localStorage load/save (#245 recovery)
+//   persistence/save-queue.ts — serialized, revision-aware record writes
 //   navigation-guard.ts   — the SPA-router "unsaved edits" guard
 //   resizer-contract.ts   — the vanilla-JS resizer script's width bridge
 //
-// Persistence policy (mirrors storage.ts's file header): every action that
-// changes `document` triggers an autosave attempt UNLESS the current session
-// started from a quarantined (future-schema) load — in that case nothing is
-// written back until an explicit `reset()`, which is the one path allowed to
-// overwrite quarantined storage.
+// A supported CompositionRecord is loaded before this hook is mounted; the
+// record-scoped path performs no provider read. The optional sample-only path
+// remains temporarily for the pre-library production mount and is replaced by
+// the provider/route composition in #305.
 //
 // State is kept in a ref (not just `useState`) so `dispatch` can always act
 // on the latest value without depending on `state` (which would otherwise
@@ -25,11 +23,20 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "preact/hooks"
 import type {
   ComponentManifest,
   CompositionDocument,
+  CompositionRecord,
+  CompositionSaveQueue,
+  CompositionSaveQueueState,
   IdFactory,
   InsertionTarget,
   JsonObject,
 } from "@/composer";
-import { createManifest, createSampleDocument, createUuidIdFactory, resetToSample } from "@/composer";
+import {
+  cloneJson,
+  createManifest,
+  createSampleDocument,
+  createUuidIdFactory,
+  resetToSample,
+} from "@/composer";
 import { composerManifest } from "@/styleguide/data/composer-registry";
 import {
   applyComposerAction,
@@ -61,16 +68,19 @@ import { initializeComposerStorage, saveComposerDocument, type ComposerStorageIn
  */
 export interface ComposerController {
   state: ComposerControllerState;
+  /** The live record draft. Its id/createdAt stay fixed for this mounted controller. */
+  record: CompositionRecord;
   manifest: ComponentManifest;
   /** Non-null right after a rejected command (e.g. cardinality/accepts) until the next successful action. */
   lastError: string | null;
   add: (target: InsertionTarget, componentId: string) => void;
+  rename: (name: string) => void;
   updateProps: (nodeId: string, patch: JsonObject) => void;
   /**
    * Debounced sibling of `updateProps` for PER-KEYSTROKE sources (the
    * inspector's text/color/number streams, issue #291/#259). Patches are
    * coalesced per node and dispatched once per typing pause, so the whole
-   * expensive commit path (reducer → whole-document stringify + localStorage
+   * expensive commit path (reducer → immutable record snapshot + save queue
    * → preview-iframe re-render) runs once per pause instead of once per
    * keystroke — the same cheap-live-path / expensive-commit-point split the
    * rail resizer documents (resizer-scripts-source.ts). Deterministic flush
@@ -88,6 +98,10 @@ export interface ComposerController {
    * yet when export generates JSX right after flushing).
    */
   flushPropUpdates: () => CompositionDocument;
+  /** Commit pending props synchronously, then await persistence of the newest record revision. */
+  flushPersistence: () => Promise<void>;
+  /** Retry the newest retained draft after a persistence error. */
+  retrySave: () => void;
   reorder: (nodeId: string, direction: "up" | "down") => void;
   remove: (nodeId: string) => void;
   /** Session clipboard = a deep-cloned snapshot of the node. Refused for opaque nodes. */
@@ -113,17 +127,22 @@ export interface ComposerController {
   setViewport: (viewport: ComposerCanvasViewport) => void;
   setLeftWidth: (width: number) => void;
   setRightWidth: (width: number) => void;
-  /** Re-reads localStorage (e.g. after another tab changed it) without discarding an in-flight edit's UI state. */
+  /** Legacy localStorage reload. Record-scoped controllers leave loading to the route coordinator. */
   reload: () => void;
-  /** The only action allowed to overwrite quarantined storage — see storage.ts. */
+  /** Restore the sample body while preserving a record-scoped controller's identity. */
   reset: () => void;
   dismissLoadNotice: () => void;
 }
 
 export interface UseComposerControllerOptions {
   manifest?: ComponentManifest;
+  /** Already-loaded supported record. Must be paired with `saveQueue`. */
+  record?: CompositionRecord;
+  /** Record-scoped queue created for the same provider-qualified record. */
+  saveQueue?: CompositionSaveQueue;
   sample?: CompositionDocument;
   idFactory?: IdFactory;
+  now?: () => string;
 }
 
 const defaultManifest = createManifest(composerManifest);
@@ -151,19 +170,70 @@ function resolveLoadResult(
   return { notice: null, status, quarantined: false };
 }
 
+function saveStatusFromQueue(state: CompositionSaveQueueState): ComposerSaveStatus {
+  switch (state.status) {
+    case "saved":
+      return { kind: "saved" };
+    case "dirty":
+      return { kind: "dirty" };
+    case "saving":
+      return { kind: "saving" };
+    case "error":
+      return { kind: "error", reason: state.error.message };
+  }
+}
+
 export function useComposerController(options: UseComposerControllerOptions = {}): ComposerController {
   const manifest = options.manifest ?? defaultManifest;
   const sample = useMemo(() => options.sample ?? createSampleDocument(), [options.sample]);
   const idFactory = useMemo(() => options.idFactory ?? createUuidIdFactory(), [options.idFactory]);
+  const now = options.now ?? (() => new Date().toISOString());
+
+  if ((options.record === undefined) !== (options.saveQueue === undefined)) {
+    throw new Error("useComposerController requires record and saveQueue together.");
+  }
 
   const quarantinedRef = useRef(false);
+  const queueRef = useRef<CompositionSaveQueue | null>(options.saveQueue ?? null);
+  const nowRef = useRef(now);
+  const recordRef = useRef<CompositionRecord | null>(null);
   const stateRef = useRef<ComposerControllerState | null>(null);
   if (stateRef.current === null) {
-    const init = initializeComposerStorage(sample);
-    const { notice, status, quarantined } = resolveLoadResult(init);
-    quarantinedRef.current = quarantined;
+    let document: CompositionDocument;
+    let notice: ComposerLoadNotice | null;
+    let status: ComposerSaveStatus;
+    if (options.record && options.saveQueue) {
+      const record = cloneJson(options.record);
+      if (
+        record.id !== record.document.id ||
+        options.saveQueue.ref.recordId !== record.id
+      ) {
+        throw new Error("The loaded Composition record does not match its save queue identity.");
+      }
+      recordRef.current = record;
+      document = record.document;
+      notice = null;
+      status = saveStatusFromQueue(options.saveQueue.state);
+    } else {
+      // Transitional adapter for the pre-library production mount and its
+      // existing tests. Provider-aware routing replaces this in #305. The
+      // record-scoped path above never reads a persistence API during render.
+      const init = initializeComposerStorage(sample);
+      const resolved = resolveLoadResult(init);
+      quarantinedRef.current = resolved.quarantined;
+      document = init.outcome.document;
+      notice = resolved.notice;
+      status = resolved.status;
+      const timestamp = nowRef.current();
+      recordRef.current = {
+        id: document.id,
+        createdAt: timestamp,
+        updatedAt: timestamp,
+        document,
+      };
+    }
     stateRef.current = createInitialControllerState({
-      document: init.outcome.document,
+      document,
       manifest,
       loadNotice: notice,
       saveStatus: status,
@@ -174,24 +244,68 @@ export function useComposerController(options: UseComposerControllerOptions = {}
 
   const [state, setState] = useState<ComposerControllerState>(stateRef.current);
   const [lastError, setLastError] = useState<string | null>(null);
+  const pendingPropsRef = useRef<Map<string, JsonObject>>(new Map());
+  const pendingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingBaseSaveStatusRef = useRef<ComposerSaveStatus | null>(null);
 
   const applyAction = useCallback(
     (action: ComposerAction) => {
       const current = stateRef.current!;
       const result = applyComposerAction(current, action, { manifest, idFactory });
       setLastError(result.error);
-      if (result.error) return;
+      if (result.error) {
+        const restoredStatus = queueRef.current
+          ? saveStatusFromQueue(queueRef.current.state)
+          : pendingBaseSaveStatusRef.current;
+        if (restoredStatus && current.saveStatus.kind === "dirty") {
+          const next = { ...current, saveStatus: restoredStatus };
+          stateRef.current = next;
+          setState(next);
+        }
+        return;
+      }
 
       let next = result.state;
       // resetToSample is the one action allowed to overwrite quarantined
       // storage — see storage.ts's file header.
       if (action.type === "resetToSample") quarantinedRef.current = false;
 
-      if (result.documentChanged && !quarantinedRef.current) {
-        const write = saveComposerDocument(next.document);
+      if (result.documentChanged) {
+        recordRef.current = {
+          ...recordRef.current!,
+          updatedAt: nowRef.current(),
+          document: next.document,
+        };
+
+        const queue = queueRef.current;
+        if (queue) {
+          try {
+            queue.edit(queue.ref, recordRef.current);
+            next = { ...next, saveStatus: saveStatusFromQueue(queue.state) };
+          } catch (error) {
+            next = {
+              ...next,
+              saveStatus: {
+                kind: "error",
+                reason: error instanceof Error ? error.message : "Composition persistence failed.",
+              },
+            };
+          }
+        } else if (!quarantinedRef.current) {
+          const write = saveComposerDocument(next.document);
+          next = {
+            ...next,
+            saveStatus: write.ok ? { kind: "saved" } : { kind: "error", reason: write.error ?? "Storage write failed" },
+          };
+        } else if (pendingBaseSaveStatusRef.current) {
+          next = { ...next, saveStatus: pendingBaseSaveStatusRef.current };
+        }
+      } else if (action.type === "updateProps" && pendingBaseSaveStatusRef.current) {
         next = {
           ...next,
-          saveStatus: write.ok ? { kind: "saved" } : { kind: "error", reason: write.error ?? "Storage write failed" },
+          saveStatus: queueRef.current
+            ? saveStatusFromQueue(queueRef.current.state)
+            : pendingBaseSaveStatusRef.current,
         };
       }
       stateRef.current = next;
@@ -203,10 +317,7 @@ export function useComposerController(options: UseComposerControllerOptions = {}
   // ── Debounced updateProps channel (issue #291) ─────────────────────────────
   // Per-keystroke inspector commits are coalesced here: the pending patch map
   // holds the latest merged patch per node, and only the trailing edge of a
-  // typing burst dispatches (→ stringify + localStorage + preview render).
-  const pendingPropsRef = useRef<Map<string, JsonObject>>(new Map());
-  const pendingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
+  // typing burst dispatches (→ record snapshot + save queue + preview render).
   const flushPropUpdates = useCallback((): CompositionDocument => {
     if (pendingTimerRef.current !== null) {
       clearTimeout(pendingTimerRef.current);
@@ -216,6 +327,7 @@ export function useComposerController(options: UseComposerControllerOptions = {}
       const pending = pendingPropsRef.current;
       pendingPropsRef.current = new Map();
       for (const [nodeId, patch] of pending) applyAction({ type: "updateProps", nodeId, patch });
+      pendingBaseSaveStatusRef.current = null;
     }
     return stateRef.current!.document;
   }, [applyAction]);
@@ -235,7 +347,14 @@ export function useComposerController(options: UseComposerControllerOptions = {}
   const updatePropsDebounced = useCallback(
     (nodeId: string, patch: JsonObject) => {
       const pending = pendingPropsRef.current;
+      if (pending.size === 0) pendingBaseSaveStatusRef.current = stateRef.current!.saveStatus;
       pending.set(nodeId, { ...pending.get(nodeId), ...patch });
+      const current = stateRef.current!;
+      if (current.saveStatus.kind !== "dirty") {
+        const next = { ...current, saveStatus: { kind: "dirty" } as const };
+        stateRef.current = next;
+        setState(next);
+      }
       if (pendingTimerRef.current !== null) clearTimeout(pendingTimerRef.current);
       pendingTimerRef.current = setTimeout(() => {
         pendingTimerRef.current = null;
@@ -245,20 +364,77 @@ export function useComposerController(options: UseComposerControllerOptions = {}
     [flushPropUpdates],
   );
 
-  // Deterministic flush on unmount — a half-typed edit must never evaporate
-  // with the island (the localStorage write inside the flush happens
-  // synchronously; the discarded setState on the unmounted hook is harmless).
-  useEffect(() => () => void flushPropUpdates(), [flushPropUpdates]);
+  const flushPersistence = useCallback(async (): Promise<void> => {
+    flushPropUpdates();
+    const queue = queueRef.current;
+    if (queue) await queue.flush();
+  }, [flushPropUpdates]);
+
+  const flushPropUpdatesRef = useRef(flushPropUpdates);
+  flushPropUpdatesRef.current = flushPropUpdates;
+
+  const retrySave = useCallback((): void => {
+    flushPropUpdates();
+    const queue = queueRef.current;
+    if (!queue) return;
+    try {
+      queue.retry();
+    } catch (error) {
+      const current = stateRef.current!;
+      const next = {
+        ...current,
+        saveStatus: {
+          kind: "error" as const,
+          reason: error instanceof Error ? error.message : "Composition persistence failed.",
+        },
+      };
+      stateRef.current = next;
+      setState(next);
+    }
+  }, [flushPropUpdates]);
+
+  // Queue state is provider-neutral. Pending debounce input remains visibly
+  // dirty even if an older revision finishes while the 200ms timer is open.
+  // On unmount, land pending props, detach immediately, and explicitly consume
+  // close() so teardown can neither claim a late success nor leak a rejection.
+  useEffect(() => {
+    const queue = queueRef.current;
+    if (!queue) return () => void flushPropUpdatesRef.current();
+    const unsubscribe = queue.subscribe((queueState) => {
+      const current = stateRef.current!;
+      const saveStatus: ComposerSaveStatus =
+        pendingPropsRef.current.size > 0 ? { kind: "dirty" } : saveStatusFromQueue(queueState);
+      if (
+        current.saveStatus.kind === saveStatus.kind &&
+        (saveStatus.kind !== "error" ||
+          (current.saveStatus.kind === "error" && current.saveStatus.reason === saveStatus.reason))
+      ) {
+        return;
+      }
+      const next = { ...current, saveStatus };
+      stateRef.current = next;
+      setState(next);
+    });
+    return () => {
+      flushPropUpdatesRef.current();
+      unsubscribe();
+      void queue.close().catch(() => undefined);
+    };
+  }, []);
 
   // SPA-router + native beforeunload guard while the document is not "saved".
-  // The guard flushes first: a debounce-pending keystroke is LANDED (and
-  // autosaved) before deciding, so navigating away mid-typing-burst silently
-  // saves instead of losing the tail or raising a spurious prompt.
+  // The guard flushes first: a debounce-pending keystroke is LANDED before
+  // deciding, then async dirty/in-flight work synchronously blocks navigation.
   useEffect(
     () =>
       installComposerNavigationGuard(() => {
         flushPropUpdates();
-        return hasUnsavedChanges(stateRef.current!);
+        const queue = queueRef.current;
+        return (
+          pendingPropsRef.current.size > 0 ||
+          hasUnsavedChanges(stateRef.current!) ||
+          (queue ? queue.state.dirty || queue.state.saving : false)
+        );
       }),
     [flushPropUpdates],
   );
@@ -283,12 +459,16 @@ export function useComposerController(options: UseComposerControllerOptions = {}
   return useMemo<ComposerController>(
     () => ({
       state,
+      record: recordRef.current!,
       manifest,
       lastError,
       add: (target, componentId) => dispatch({ type: "add", target, componentId }),
+      rename: (name) => dispatch({ type: "rename", name }),
       updateProps: (nodeId, patch) => dispatch({ type: "updateProps", nodeId, patch }),
       updatePropsDebounced,
       flushPropUpdates,
+      flushPersistence,
+      retrySave,
       reorder: (nodeId, direction) => dispatch({ type: "reorder", nodeId, direction }),
       remove: (nodeId) => dispatch({ type: "remove", nodeId }),
       copy: (nodeId) => dispatch({ type: "copy", nodeId }),
@@ -311,6 +491,12 @@ export function useComposerController(options: UseComposerControllerOptions = {}
         dispatch({ type: "setRightWidth", width });
       },
       reload: () => {
+        // Provider-aware loading belongs to the route coordinator. A mounted
+        // record-scoped controller never reaches back into a provider.
+        if (queueRef.current) {
+          flushPropUpdates();
+          return;
+        }
         // Land any debounce-pending edit BEFORE reading storage (issue #291) —
         // otherwise the flush inside the loadDocument dispatch below would
         // write storage AFTER this read, leaving state and storage diverged.
@@ -321,9 +507,23 @@ export function useComposerController(options: UseComposerControllerOptions = {}
         dispatch({ type: "loadDocument", document: init.outcome.document, notice });
         dispatch({ type: "setSaveStatus", status });
       },
-      reset: () => dispatch({ type: "resetToSample", document: resetToSample(sample) }),
+      reset: () => {
+        const document = resetToSample(sample);
+        if (queueRef.current) document.id = recordRef.current!.id;
+        dispatch({ type: "resetToSample", document });
+      },
       dismissLoadNotice: () => dispatch({ type: "dismissLoadNotice" }),
     }),
-    [state, manifest, lastError, dispatch, updatePropsDebounced, flushPropUpdates, sample],
+    [
+      state,
+      manifest,
+      lastError,
+      dispatch,
+      updatePropsDebounced,
+      flushPropUpdates,
+      flushPersistence,
+      retrySave,
+      sample,
+    ],
   );
 }

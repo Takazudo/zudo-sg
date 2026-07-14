@@ -36,3 +36,6 @@ worktrees/
 
 # zfb dev/build writes a transient Tailwind entry into src/styles/
 src/styles/zfb-tailwind-entry-*.css
+
+# Canonical + derived Composer files written only by the dev file provider.
+compositions/

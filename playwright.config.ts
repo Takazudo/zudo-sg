@@ -56,11 +56,37 @@ export default defineConfig({
       use: { baseURL: `http://localhost:${SMOKE_PORT}` },
     },
     {
+      name: "composer-persistence",
+      // Real Chromium IndexedDB/migration lifecycle and provider-qualified
+      // navigation. Kept separate from the long editor walkthrough so fixture
+      // cleanup and serial database mutations remain explicit.
+      testMatch: "composer-persistence.spec.ts",
+      use: { baseURL: `http://localhost:${SMOKE_PORT}` },
+    },
+    {
+      name: "composer-production-boundary",
+      // Static preview must never expose the dev file transport or provider.
+      testMatch: "composer-production-boundary.spec.ts",
+      use: { baseURL: `http://localhost:${SMOKE_PORT}` },
+    },
+    {
       name: "composer-contracts",
       // Composer Polish epic (#262) S7 (#270) computed-style contract gate —
       // dual-mode census/measurement pass over the built /composer (SMOKE_PORT).
       testMatch: "composer-contracts.spec.ts",
       use: { baseURL: `http://localhost:${SMOKE_PORT}` },
+    },
+    {
+      name: "composer-verification",
+      // Final persistence-library matrix: deterministic width/theme/layout,
+      // touch-target, keyboard-name/focus/live-region, state, and error gates.
+      // Screenshots are attached as confirmation artifacts after assertions.
+      testMatch: "composer-verification.spec.ts",
+      use: {
+        baseURL: `http://localhost:${SMOKE_PORT}`,
+        hasTouch: true,
+        isMobile: true,
+      },
     },
     {
       name: "demo-smoke",

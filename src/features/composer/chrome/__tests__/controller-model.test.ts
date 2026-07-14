@@ -48,6 +48,17 @@ describe("createInitialControllerState", () => {
 });
 
 describe("applyComposerAction — document commands", () => {
+  it("renames through the reducer and reports identical input as a no-op", () => {
+    const state = initial();
+    const renamed = applyComposerAction(state, { type: "rename", name: "Renamed" }, ctx());
+    expect(renamed.error).toBeNull();
+    expect(renamed.documentChanged).toBe(true);
+    expect(renamed.state.document.name).toBe("Renamed");
+    expect(applyComposerAction(renamed.state, { type: "rename", name: "Renamed" }, ctx()).documentChanged).toBe(
+      false,
+    );
+  });
+
   it("add uses the shared InsertionTarget shape and selects the inserted node", () => {
     const state = initial();
     const { state: next, error, documentChanged } = applyComposerAction(
@@ -230,6 +241,7 @@ describe("isDocumentMutation / hasUnsavedChanges", () => {
     expect(isDocumentMutation({ type: "add", target: { parentId: null, slotId: "root", index: 0 }, componentId: "x" })).toBe(
       true,
     );
+    expect(isDocumentMutation({ type: "rename", name: "Renamed" })).toBe(true);
     expect(isDocumentMutation({ type: "updateProps", nodeId: "x", patch: {} })).toBe(true);
     expect(isDocumentMutation({ type: "reorder", nodeId: "x", direction: "up" })).toBe(true);
     expect(isDocumentMutation({ type: "remove", nodeId: "x" })).toBe(true);
@@ -242,6 +254,8 @@ describe("isDocumentMutation / hasUnsavedChanges", () => {
   it("hasUnsavedChanges is false only when saveStatus is saved", () => {
     const state = initial();
     expect(hasUnsavedChanges(state)).toBe(false);
+    expect(hasUnsavedChanges({ ...state, saveStatus: { kind: "dirty" } })).toBe(true);
+    expect(hasUnsavedChanges({ ...state, saveStatus: { kind: "saving" } })).toBe(true);
     expect(hasUnsavedChanges({ ...state, saveStatus: { kind: "unsaved" } })).toBe(true);
     expect(hasUnsavedChanges({ ...state, saveStatus: { kind: "error", reason: "x" } })).toBe(true);
     expect(hasUnsavedChanges({ ...state, saveStatus: { kind: "quarantined", foundSchemaVersion: 2 } })).toBe(true);
@@ -249,14 +263,10 @@ describe("isDocumentMutation / hasUnsavedChanges", () => {
 });
 
 describe("describeSaveStatus", () => {
-  it("has one honest, distinct wording per status kind, and every non-saved wording says 'Not saved'", () => {
-    expect(describeSaveStatus({ kind: "saved" })).toBe("Saved locally");
-    for (const status of [
-      { kind: "unsaved" as const },
-      { kind: "error" as const, reason: "quota" },
-      { kind: "quarantined" as const, foundSchemaVersion: 2 },
-    ]) {
-      expect(describeSaveStatus(status)).toMatch(/not saved/i);
-    }
+  it("has concise provider-neutral wording for async persistence states", () => {
+    expect(describeSaveStatus({ kind: "saved" })).toBe("Saved");
+    expect(describeSaveStatus({ kind: "dirty" })).toBe("Unsaved changes");
+    expect(describeSaveStatus({ kind: "saving" })).toBe("Saving…");
+    expect(describeSaveStatus({ kind: "error", reason: "quota" })).toBe("Save failed");
   });
 });

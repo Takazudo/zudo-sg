@@ -68,6 +68,15 @@ export {
 export type { LoadOutcome } from "./model/recovery";
 export { loadCompositionDocument, resetToSample } from "./model/recovery";
 
+// ── Composition library records + provider boundary ─────────────────────────
+export * from "./library";
+
+// Revision-aware persistence coordination (framework and provider independent).
+export * from "./persistence";
+
+// ── Browser persistence ─────────────────────────────────────────────────────
+export * from "./storage/indexeddb";
+
 // ── Native sample ────────────────────────────────────────────────────────────
 export { createSampleDocument, SAMPLE_DOCUMENT } from "./sample/sample-document";
 export {
@@ -85,3 +94,7 @@ export type {
   JsxGenerationResult,
 } from "./source/generate-jsx";
 export { generateJsx } from "./source/generate-jsx";
+
+// Dev-only browser file-provider capability. The factory returns undefined in
+// production because its virtual configuration is build-gated by zfb.
+export * from "./storage/file-provider";
