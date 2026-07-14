@@ -53,7 +53,11 @@ async function addProseToConsumer(page: Page): Promise<void> {
 }
 
 async function openLinkedSource(page: Page): Promise<void> {
-  await page.locator('[data-sg-linked-frame="resolved"]').getByRole("button", { name: "Open source" }).click();
+  const treeSourceLink = page
+    .locator('.sg-composer-tree [data-sg-linked-frame="resolved"]')
+    .getByRole("button", { name: "Open source" });
+  await expect(treeSourceLink).toHaveCount(1);
+  await treeSourceLink.click();
   await expect(page.getByText("Site shell", { exact: true })).toBeVisible();
 }
 
@@ -232,7 +236,11 @@ test.describe("Composer reuse cross-feature acceptance", () => {
     await prepareLegacyMigration(page, JSON.stringify(legacyV1Record()));
     await openComposerLibrary(page);
     const migrated = (await inspectComposerDatabase(page)).records.find((entry) => entry.id === "legacy-v1");
-    expect(reuseDocument(migrated!)).toMatchObject({ schemaVersion: 2, binding: undefined, publication: undefined });
+    expect(migrated).toBeDefined();
+    const migratedDocument = reuseDocument(migrated!);
+    expect(migratedDocument.schemaVersion).toBe(2);
+    expect(migratedDocument).not.toHaveProperty("binding");
+    expect(migratedDocument).not.toHaveProperty("publication");
 
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.getByRole("button", { name: "New composition" }).first().click();
