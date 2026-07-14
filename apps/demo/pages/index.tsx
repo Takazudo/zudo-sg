@@ -17,7 +17,7 @@ import { BUSINESS_LINE_LIST } from "../config/lines";
 
 export const frontmatter = {
   title: "Home",
-  description: "ダミー株式会社（Dummy Co., Ltd.）の企業サイト — 会社情報・製品・サステナビリティ・IR情報をご紹介します。",
+  description: "An English-language sample site for a fictional business.",
 };
 
 // This landing page's own copy — heading/lead/scene/initiative text below —
@@ -26,61 +26,61 @@ export const frontmatter = {
 // data.
 
 const HERO_ACTIONS = [
-  { label: "ダミー分類", href: "/products", variant: "primary" as const },
-  { label: "企業情報", href: "/company", variant: "secondary" as const },
+  { label: "Products", href: "/products", variant: "primary" as const },
+  { label: "Company", href: "/company", variant: "secondary" as const },
 ];
 
 const STATS: BandStat[] = [
-  { value: "1953", unit: "年", label: "設立（昭和28年11月）" },
-  { value: "約81", unit: "億円", label: "資本金" },
-  { value: "約1,500", unit: "名", label: "連結従業員数" },
-  { value: "4", unit: "区分", label: "事業領域" },
+  { value: "—", unit: "", label: "Sample founding date" },
+  { value: "—", unit: "", label: "Sample capital" },
+  { value: "—", unit: "", label: "Sample team size" },
+  { value: "4", unit: "", label: "Sample business areas" },
 ];
 
 const FEATURE_PILLARS: [FeatureSplitPillar, FeatureSplitPillar] = [
   {
     index: "01",
-    title: "ダミー見出し",
-    body: "あのイーハトーヴォのすきとおった風、夏でも底に冷たさをもつ青いそら、うつくしい森で飾られたモリーオ市、郊外のぎらぎらひかる草の波。この物語はダミーテキストであり、実際の内容とは一切関係がありません。",
+    title: "Reliable foundations",
+    body: "A fictional business begins with clear priorities, useful tools, and room to learn.",
   },
   {
     index: "02",
-    title: "サンプルタイトル",
-    body: "彼は背後にひそかな足音を聞いた。それはあまり良い意味を示すものではない。誰がこんな夜更けに、しかもこんな街灯のお粗末な港街の狭い小道で彼をつけて来るというのだ。人生の航路を捻じ曲げ、その獲物と共に立ち去ろうとしている、その丁度今。彼のこの仕事への恐れを和らげるために、数多い仲間の中に同じ考えを抱き、彼を見守り、待っている者がいるというのか。",
+    title: "A practical example",
+    body: "This sample content demonstrates how a concise story can support a product-focused layout.",
   },
 ];
 
 const DISCOVERY_SCENES: DiscoveryScene[] = [
   {
-    title: "車",
-    body: "LiDAR 用光学フィルタや画像処理 LSI、ToF センサが、先進運転支援と快適なカーライフを支えます。",
+    title: "Mobility",
+    body: "Sample components support clear, connected travel experiences.",
   },
   {
-    title: "学校",
-    body: "カメラモジュールやインタラクティブホワイトボードが、教育のデジタル化と学びの場を支えます。",
+    title: "Schools",
+    body: "Sample tools make space for flexible, collaborative learning.",
   },
   {
-    title: "病院",
-    body: "医療機器に組み込まれるダミー区分1や、衛生環境を保つケミカル製品が、医療の現場を支えます。",
+    title: "Hospitals",
+    body: "Sample systems illustrate dependable support for care environments.",
   },
   {
-    title: "太陽光発電",
-    body: "パワーデバイスやパワーコンディショナ向け部品が、再生可能エネルギーの安定運用を支えます。",
+    title: "Solar power",
+    body: "Sample equipment helps explain an efficient energy workflow.",
   },
 ];
 
 const SDGS_INITIATIVES: SdgsInitiative[] = [
   {
-    title: "環境配慮型製品の開発・販売",
-    body: "気候変動対応や資源循環に貢献する製品ラインナップを拡充し、環境配慮型ビジネスを推進します。",
+    title: "Thoughtful product design",
+    body: "This fictional initiative shows how a business might consider products over their full life cycle.",
   },
   {
-    title: "資源・エネルギーの有効活用",
-    body: "国内5拠点の太陽光発電や LED 照明化、社有車の低公害車化でエネルギー効率を高めます。",
+    title: "Efficient operations",
+    body: "This fictional initiative demonstrates practical choices for everyday operations.",
   },
   {
-    title: "社会に貢献する活動の推進",
-    body: "障がいのある方の雇用推進や森林ボランティア活動など、地域・社会と連携した貢献を続けます。",
+    title: "Community partnerships",
+    body: "This fictional initiative illustrates collaboration with local communities.",
   },
 ];
 
@@ -89,33 +89,33 @@ const SDGS_INITIATIVES: SdgsInitiative[] = [
 // only the links passed here are trimmed).
 const SECTION_NAV_LINKS: SectionNavLink[] = [
   {
-    title: "企業情報",
+    title: "Company",
     sub: "Company",
-    body: "ダミーのあゆみ・経営理念・会社概要。複合企業としての姿をご紹介します。",
+    body: "Learn about this fictional business, its purpose, and its sample company profile.",
     href: "/company",
   },
   {
-    title: "ダミー分類",
+    title: "Products",
     sub: "Products",
-    body: "ダミー区分1・ダミー区分2・電子機器・ダミーの 4 領域。",
+    body: "Explore fictional products, components, equipment, and chemical solutions.",
     href: "/products",
   },
   {
-    title: "サステナビリティ",
+    title: "Sustainability",
     sub: "Sustainability",
-    body: "事業を通じた社会課題の解決と、持続可能な未来への取り組み。",
+    body: "See sample approaches to environmental, social, and governance priorities.",
     href: "/sustainability",
   },
   {
-    title: "IR情報",
+    title: "Investor relations",
     sub: "IR",
-    body: "株主・投資家の皆さまへ。業績・決算・IR ライブラリをご案内します。",
+    body: "Browse fictional investor updates, financial materials, and reference documents.",
     href: "/ir",
   },
   {
-    title: "お問い合わせ",
+    title: "Contact us",
     sub: "Contact",
-    body: "製品・取引・採用・IR など、各種お問い合わせはこちらから。",
+    body: "Find the right sample contact path for products, careers, or investor questions.",
     href: "/contact",
   },
 ];
@@ -146,22 +146,22 @@ export default function HomePage() {
         eyebrow="Dummy Tagline"
         heading={
           <>
-            ダミー<span class="text-accent">×</span>サンプル見出しで
+            Ideas for <span class="text-accent">better</span>
             <br class="max-sm:hidden" />
-            これはダミーの見出しです
+            {" "}business
           </>
         }
-        lead="彼は背後にひそかな足音を聞いた。それはあまり良い意味を示すものではない。誰がこんな夜更けに、しかもこんな街灯のお粗末な港街の狭い小道で彼をつけて来るというのだ。人生の航路を捻じ曲げ、その獲物と共に立ち去ろうとしている、その丁度今。彼のこの仕事への恐れを和らげるために、数多い仲間の中に同じ考えを抱き、彼を見守り、待っている者がいるというのか。それとも背後の足音の主は、この街に無数にいる法監視役で、強靭な罰をすぐにも彼の手首にガシャンと下すというのか。"
+        lead="This fictional demo shows how a focused business site can introduce products, people, and long-term priorities."
         actions={HERO_ACTIONS}
       />
 
       <Container class="py-vsp-lg">
-        <NewsTeaser heading="お知らせ" items={newsItems} viewAllHref="/news" viewAllLabel="すべて見る" />
+        <NewsTeaser heading="News" items={newsItems} viewAllHref="/news" viewAllLabel="View all" />
       </Container>
 
       <section class="border-y border-border bg-surface py-vsp-lg">
         <Container>
-          <NewsTeaser heading="IRニュース" items={irNewsItems} viewAllHref="/ir/news" viewAllLabel="すべて見る" />
+          <NewsTeaser heading="Investor news" items={irNewsItems} viewAllHref="/ir/news" viewAllLabel="View all" />
         </Container>
       </section>
 
@@ -172,33 +172,33 @@ export default function HomePage() {
       <Container class="pb-vsp-2xl">
         <FeatureSplit
           eyebrow="Dummy Tagline"
-          heading="ダミー見出し"
-          lead="彼のこの仕事への恐れを和らげるために、数多い仲間の中に同じ考えを抱き、彼を見守り、待っている者がいるというのか。それとも背後の足音の主は、この街に無数にいる法監視役で、強靭な罰をすぐにも彼の手首にガシャンと下すというのか。"
+          heading="Reliable foundations"
+          lead="Clear information and practical details help a fictional business tell a useful story."
           pillars={FEATURE_PILLARS}
         />
       </Container>
 
       <section class="border-y border-border bg-surface py-vsp-2xl">
         <Container>
-          <BusinessSegments heading="ダミー見出し" intro="あのイーハトーヴォのすきとおった風、夏でも底に冷たさをもつ青いそら、うつくしい森で飾られたモリーオ市、郊外のぎらぎらひかる草の波。この物語はダミーテキストであり、実際の内容とは一切関係がありません。" segments={segments} />
+          <BusinessSegments heading="Product categories" intro="Explore a fictional product portfolio arranged around clear, familiar business needs." segments={segments} />
         </Container>
       </section>
 
       <Container class="py-vsp-2xl">
         <DiscoveryTeaser
-          heading="こんなところにダミー"
-          intro="暮らしや社会のさまざまな場所で、ダミーのダミー区分1・ダミー区分2・電子電気機器・ダミーが活躍しています。"
+          heading="Where we help"
+          intro="Fictional products and services can support everyday places, from schools to energy sites."
           scenes={DISCOVERY_SCENES}
           href="/company/discovery"
-          linkLabel="すべてのシーンを見る"
+          linkLabel="View all sample scenes"
         />
       </Container>
 
       <section class="border-y border-border bg-surface py-vsp-2xl">
         <Container>
           <BusinessLinePortal
-            heading="事業ライン一覧"
-            intro="5 つの事業ラインで、幅広い分野に価値を届けています。"
+            heading="Business lines"
+            intro="Five fictional business lines show how the same content system can adapt to distinct audiences."
             lines={lines}
           />
         </Container>
@@ -207,24 +207,24 @@ export default function HomePage() {
       <Container class="py-vsp-2xl">
         <SdgsHighlight
           eyebrow="Sustainability"
-          heading="持続可能な未来への取り組み"
-          lead="「人と技術と自然環境の共生」というビジョンのもと、事業を通じて環境・社会・経済の持続可能な発展に貢献します。"
+          heading="Building a sustainable future"
+          lead="This fictional program uses simple examples to show how sustainability content can be organized clearly."
           initiatives={SDGS_INITIATIVES}
           href="/sustainability/sdgs"
-          linkLabel="SDGsへの取り組みを見る"
+          linkLabel="Explore sustainability"
         />
       </Container>
 
       <RecruitBand
         eyebrow="Recruit"
-        heading="未来をつくる仲間を募集しています"
-        lead="エレクトロニクスとケミカル、二つの力で社会の課題に挑む。新卒・キャリア採用の情報とエントリーは、採用情報ページでご案内しています。"
+        heading="Build the next sample with us"
+        lead="Explore fictional graduate and experienced-hire paths designed to demonstrate a clear careers journey."
         href="/recruit"
-        ctaLabel="採用情報を見る"
+        ctaLabel="Explore careers"
       />
 
       <Container class="py-vsp-2xl">
-        <SectionNav heading="サイト案内" links={SECTION_NAV_LINKS} />
+        <SectionNav heading="Explore the site" links={SECTION_NAV_LINKS} />
       </Container>
     </DefaultLayout>
   );

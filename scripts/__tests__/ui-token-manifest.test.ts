@@ -112,7 +112,7 @@ describe("buildUiTokenManifest", () => {
       id: "ui-color-bg",
       label: "color-bg",
       control: "text",
-      default: "light-dark(var(--palette-base-0), var(--palette-base-10))",
+      default: "light-dark(var(--palette-neutral-0), var(--palette-neutral-3))",
     });
   });
 
@@ -157,8 +157,8 @@ describe("buildUiTokenManifest", () => {
 
   it("throws when a palette color referenced by the spec is missing", () => {
     expect(() =>
-      buildPaletteColors(parseCssCustomProperties(`:root { --palette-base-0: oklch(1 0 0); }`)),
-    ).toThrow(/--palette-base-1/);
+      buildPaletteColors(parseCssCustomProperties(`:root { --palette-neutral-0: oklch(1 0 0); }`)),
+    ).toThrow(/--palette-neutral-1/);
   });
 
   it("keeps every semantic palette reference backed by a declared palette token", () => {
@@ -182,12 +182,49 @@ describe("buildUiTokenManifest", () => {
     expect(missingRefs).toEqual([]);
   });
 
-  it("keeps required semantic color pairs at AA text contrast in light and dark", () => {
+  it("keeps the locked four-stop neutral mappings and required text pairs", () => {
     const colorsCss = readFileSync(
       resolve(__dirname, "../../packages/ui/styles/colors.css"),
       "utf8",
     );
     const vars = parseCssCustomProperties(colorsCss);
+    expect([
+      ["--palette-neutral-0", "oklch(0.970 0.006 75)"],
+      ["--palette-neutral-1", "oklch(0.885 0.009 75)"],
+      ["--palette-neutral-2", "oklch(0.410 0.012 75)"],
+      ["--palette-neutral-3", "oklch(0.235 0.010 75)"],
+    ]).toEqual(
+      Array.from(vars.entries())
+        .filter(([name]) => name.startsWith("--palette-neutral-"))
+        .sort(([a], [b]) => a.localeCompare(b)),
+    );
+    expect({
+      "--color-bg": vars.get("--color-bg"),
+      "--color-surface": vars.get("--color-surface"),
+      "--color-surface-2": vars.get("--color-surface-2"),
+      "--color-border": vars.get("--color-border"),
+      "--color-fg": vars.get("--color-fg"),
+      "--color-muted": vars.get("--color-muted"),
+      "--color-rail-bg": vars.get("--color-rail-bg"),
+      "--color-rail-bg-strong": vars.get("--color-rail-bg-strong"),
+      "--color-rail-hover-bg": vars.get("--color-rail-hover-bg"),
+      "--color-rail-border": vars.get("--color-rail-border"),
+      "--color-rail-fg": vars.get("--color-rail-fg"),
+      "--color-rail-muted": vars.get("--color-rail-muted"),
+    }).toEqual({
+      "--color-bg": "light-dark(var(--palette-neutral-0), var(--palette-neutral-3))",
+      "--color-surface": "light-dark(var(--palette-neutral-0), var(--palette-neutral-3))",
+      "--color-surface-2": "light-dark(var(--palette-neutral-1), var(--palette-neutral-2))",
+      "--color-border": "light-dark(var(--palette-neutral-1), var(--palette-neutral-2))",
+      "--color-fg": "light-dark(var(--palette-neutral-3), var(--palette-neutral-0))",
+      "--color-muted": "light-dark(var(--palette-neutral-2), var(--palette-neutral-1))",
+      "--color-rail-bg": "var(--palette-neutral-3)",
+      "--color-rail-bg-strong": "var(--palette-neutral-3)",
+      "--color-rail-hover-bg": "var(--palette-neutral-2)",
+      "--color-rail-border": "var(--palette-neutral-2)",
+      "--color-rail-fg": "var(--palette-neutral-0)",
+      "--color-rail-muted": "var(--palette-neutral-1)",
+    });
     const pairs = [
       ["--color-fg", "--color-bg"],
       ["--color-fg", "--color-surface"],
@@ -208,7 +245,8 @@ describe("buildUiTokenManifest", () => {
         const fg = resolveColorToken(vars, fgVar, mode);
         const bg = resolveColorToken(vars, bgVar, mode);
         const ratio = contrastRatio(fg, bg);
-        if (ratio < 4.5) {
+        const threshold = fgVar === "--color-fg" ? 7 : 4.5;
+        if (ratio < threshold) {
           failures.push(`${mode}: ${fgVar} on ${bgVar} = ${ratio.toFixed(2)}`);
         }
       }

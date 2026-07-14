@@ -3,7 +3,7 @@
  * prop-driven `@zudo-sg/ui` section components with this demo's own
  * fictional dummy dataset, registered under the same tag names the content
  * collection already uses (`<CompanyProfileTable />`, `<HistoryTimeline />`,
- * ...) — see `_mdx-components.ts`, which registers these (not the raw
+ * ..) — see `_mdx-components.ts`, which registers these (not the raw
  * `@zudo-sg/ui` components) into the MDX component map.
  *
  * `@zudo-sg/ui`'s ported section components take no default data (unlike
@@ -54,16 +54,16 @@ import { getNews } from "../lib/news";
 /* ---------------------------------------------------------------------- */
 
 const COMPANY_PROFILE_ROWS: CompanyProfileRow[] = [
-  { label: "会社名", value: "ダミー株式会社（Dummy Co., Ltd.）" },
-  { label: "設立", value: "――" },
-  { label: "資本金", value: "00億円" },
-  { label: "代表者", value: "ダミー" },
-  { label: "本社所在地", value: "〒000-0000　ダミー都ダミー区ダミー1-1-1" },
-  { label: "上場市場", value: "サンプル" },
-  { label: "従業員数", value: "連結 1,234名 / 単体 99名" },
-  { label: "売上高", value: "連結 00億円 / 単体 00億円" },
-  { label: "事業内容", value: "サンプル本文がここに入ります" },
-  { label: "主要取引銀行", value: "ダミー、サンプル、――" },
+  { label: "Company name", value: "Demo Company" },
+  { label: "Founded", value: "Sample date" },
+  { label: "Capital", value: "Sample amount" },
+  { label: "Representative", value: "Sample executive" },
+  { label: "Head office", value: "Sample City, Example Country" },
+  { label: "Market", value: "Sample market" },
+  { label: "Employees", value: "Sample workforce" },
+  { label: "Revenue", value: "Sample revenue" },
+  { label: "Business areas", value: "Electronic devices, components, equipment, and chemical products" },
+  { label: "Banking partners", value: "Sample Bank and Example Bank" },
 ];
 
 export function CompanyProfileTable({ class: cls }: { class?: string }) {
@@ -75,47 +75,47 @@ export function CompanyProfileTable({ class: cls }: { class?: string }) {
 /* ---------------------------------------------------------------------- */
 
 const HISTORY_ENTRIES: HistoryEntry[] = [
-  { year: "1953", event: "彼は背後にひそかな足音を聞いた。それはあまり良い意味を示すものではない。" },
+  { year: "1953", event: "The quick brown fox jumps over the lazy dog." },
   {
     year: "1958",
-    event: "彼のこの仕事への恐れを和らげるために、数多い仲間の中に同じ考えを抱き、彼を見守り、待っている者がいるというのか。",
+    event: "The quick brown fox jumps over the lazy dog.",
   },
   {
     year: "1961",
-    event: "それとも背後の足音の主は、この街に無数にいる法監視役で、強靭な罰をすぐにも彼の手首にガシャンと下すというのか。",
+    event: "The quick brown fox jumps over the lazy dog.",
   },
-  { year: "1963", event: "ダミー見出し" },
+  { year: "1963", event: "Reliable foundations" },
   {
     year: "1970",
     event:
-      "あのイーハトーヴォのすきとおった風、夏でも底に冷たさをもつ青いそら、うつくしい森で飾られたモリーオ市、郊外のぎらぎらひかる草の波。この物語はダミーテキストであり、実際の内容とは一切関係がありません。",
+      "The quick brown fox jumps over the lazy dog.",
   },
-  { year: "1973", event: "ダミーテキスト" },
-  { year: "1974", event: "サンプルタイトル" },
-  { year: "1977", event: "これはダミーのテキストです" },
-  { year: "1980", event: "見出しダミー" },
-  { year: "1991", event: "ダミー項目" },
+  { year: "1973", event: "Sample copy" },
+  { year: "1974", event: "A practical example" },
+  { year: "1977", event: "This is sample copy" },
+  { year: "1980", event: "Working together" },
+  { year: "1991", event: "Key point" },
   {
     year: "1995",
     event:
-      "誰がこんな夜更けに、しかもこんな街灯のお粗末な港街の狭い小道で彼をつけて来るというのだ。人生の航路を捻じ曲げ、その獲物と共に立ち去ろうとしている、その丁度今。",
+      "The quick brown fox jumps over the lazy dog.",
   },
-  { year: "1999", event: "サンプル本文がここに入ります" },
+  { year: "1999", event: "Sample body copy goes here" },
   {
     year: "2000",
-    event: "彼のこの仕事への恐れを和らげるために、数多い仲間の中に同じ考えを抱き、彼を見守り、待っている者がいるというのか。",
+    event: "The quick brown fox jumps over the lazy dog.",
   },
   {
     year: "2002",
-    event: "それとも背後の足音の主は、この街に無数にいる法監視役で、強靭な罰をすぐにも彼の手首にガシャンと下すというのか。",
+    event: "The quick brown fox jumps over the lazy dog.",
   },
-  { year: "2003", event: "ダミー見出し" },
-  { year: "2016", event: "ダミーテキスト" },
-  { year: "2018", event: "サンプルタイトル" },
-  { year: "2022", event: "これはダミーのテキストです" },
-  { year: "2024", event: "見出しダミー" },
-  { year: "2025", event: "ダミー項目" },
-  { year: "2026", event: "サンプル本文がここに入ります" },
+  { year: "2003", event: "Reliable foundations" },
+  { year: "2016", event: "Sample copy" },
+  { year: "2018", event: "A practical example" },
+  { year: "2022", event: "This is sample copy" },
+  { year: "2024", event: "Working together" },
+  { year: "2025", event: "Key point" },
+  { year: "2026", event: "Sample body copy goes here" },
 ];
 
 export function HistoryTimeline({ class: cls }: { class?: string }) {
@@ -128,38 +128,38 @@ export function HistoryTimeline({ class: cls }: { class?: string }) {
 
 const LOCATION_GROUPS: LocationGroup[] = [
   {
-    heading: "ダミー見出し",
+    heading: "Domestic offices",
     locations: [
-      { name: "関西支店", postal: "〒000-0000", place: "ダミー県ダミー市ダミー1-1-1 ダミービル" },
-      { name: "名古屋支店", postal: "〒000-0000", place: "ダミー県ダミー市ダミー1-1-1 ダミービル" },
-      { name: "福岡営業所", postal: "〒000-0000", place: "ダミー県ダミー市ダミー1-1-1 ダミービル" },
-      { name: "第二事業所", postal: "〒000-0000", place: "ダミー県ダミー市ダミー1-1" },
+      { name: "North Office", postal: "ZIP 000-0000", place: "Sample City, Example Country" },
+      { name: "Central Office", postal: "ZIP 000-0000", place: "Sample City, Example Country" },
+      { name: "West Office", postal: "ZIP 000-0000", place: "Sample City, Example Country" },
+      { name: "South Office", postal: "ZIP 000-0000", place: "Sample City, Example Country" },
     ],
   },
   {
-    heading: "サンプルタイトル",
+    heading: "Research and production",
     locations: [
-      { name: "四日市研究所", postal: "〒000-0000", place: "ダミー県ダミー市ダミー1-1-1" },
-      { name: "四日市工場", postal: "〒000-0000", place: "ダミー県ダミー市ダミー1-2-1" },
-      { name: "中部営業所", postal: "〒000-0000", place: "ダミー県ダミー市ダミー1-3-1" },
-      { name: "千葉営業所", postal: "〒000-0000", place: "ダミー県ダミー市ダミー1-1-1" },
-      { name: "神奈川営業所", postal: "〒000-0000", place: "ダミー県ダミー市ダミー1-1-1 ダミービル" },
-      { name: "大阪営業所", postal: "〒000-0000", place: "ダミー県ダミー市ダミー1-1-1 ダミービル" },
-      { name: "水島営業所", postal: "〒000-0000", place: "ダミー県ダミー市ダミー1-1-1" },
-      { name: "岩国営業所", postal: "〒000-0000", place: "ダミー県ダミー市ダミー1-1-1 ダミービル" },
-      { name: "大分営業所", postal: "〒000-0000", place: "ダミー県ダミー市ダミー1-1-1" },
+      { name: "Sample Research Center", postal: "ZIP 000-0000", place: "Sample City, Example Country" },
+      { name: "Sample Manufacturing Center", postal: "ZIP 000-0000", place: "Sample City, Example Country" },
+      { name: "East Sales Office", postal: "ZIP 000-0000", place: "Sample City, Example Country" },
+      { name: "Coastal Sales Office", postal: "ZIP 000-0000", place: "Sample City, Example Country" },
+      { name: "Metro Sales Office", postal: "ZIP 000-0000", place: "Sample City, Example Country" },
+      { name: "Harbor Sales Office", postal: "ZIP 000-0000", place: "Sample City, Example Country" },
+      { name: "River Sales Office", postal: "ZIP 000-0000", place: "Sample City, Example Country" },
+      { name: "Hillside Sales Office", postal: "ZIP 000-0000", place: "Sample City, Example Country" },
+      { name: "Island Sales Office", postal: "ZIP 000-0000", place: "Sample City, Example Country" },
     ],
   },
   {
-    heading: "見出しダミー",
+    heading: "International network",
     locations: [
-      { name: "Dummy Enterprises Ltd.", place: "ダミー" },
-      { name: "Dummy Taiwan Ltd.", place: "サンプル" },
-      { name: "Dummy Singapore Pte. Ltd.", place: "――" },
-      { name: "Dummy Enterprises (Shanghai) Ltd.", place: "ダミー" },
-      { name: "Dummy America Inc.", place: "サンプル" },
-      { name: "Dummy Czech s.r.o.", place: "――" },
-      { name: "Dummy India Pvt. Ltd.", place: "ダミー" },
+      { name: "Dummy Enterprises Ltd.", place: "Demo" },
+      { name: "Dummy Taiwan Ltd.", place: "Sample" },
+      { name: "Dummy Singapore Pte. Ltd.", place: "—" },
+      { name: "Dummy Enterprises (Shanghai) Ltd.", place: "Demo" },
+      { name: "Dummy America Inc.", place: "Sample" },
+      { name: "Dummy Czech s.r.o.", place: "—" },
+      { name: "Dummy India Pvt. Ltd.", place: "Demo" },
     ],
   },
 ];
@@ -174,22 +174,21 @@ export function LocationList({ class: cls }: { class?: string }) {
 
 const GROUP_COMPANIES: GroupCompany[] = [
   {
-    name: "ダミー精密成形株式会社",
-    business: "サンプル本文がここに入ります",
-    established: "0000年設立",
-    location: "ダミー県ダミー市",
+    name: "Demo Precision Ltd.",
+    business: "Fictional precision-manufacturing support.",
+    established: "Sample founding date",
+    location: "Sample City, Example Country",
   },
   {
-    name: "ダミーロジスティクス株式会社",
-    business:
-      "あのイーハトーヴォのすきとおった風、夏でも底に冷たさをもつ青いそら、うつくしい森で飾られたモリーオ市、郊外のぎらぎらひかる草の波。この物語はダミーテキストであり、実際の内容とは一切関係がありません。",
-    established: "0000年設立",
+    name: "Demo Logistics Ltd.",
+    business: "Fictional logistics and supply-chain support.",
+    established: "Sample founding date",
   },
   {
-    name: "株式会社ダミーラボ",
-    business: "ダミーテキスト",
-    established: "0000年設立",
-    location: "ダミー県ダミー市",
+    name: "Demo Laboratory Ltd.",
+    business: "Fictional research and testing support.",
+    established: "Sample founding date",
+    location: "Sample City, Example Country",
   },
 ];
 
@@ -233,23 +232,23 @@ export function ProductCategoryGrid(props: ProductCategoryGridSectionProps) {
 const STRENGTHS: Strength[] = [
   {
     no: "01",
-    title: "ダミー見出し",
-    body: "彼は背後にひそかな足音を聞いた。それはあまり良い意味を示すものではない。誰がこんな夜更けに、しかもこんな街灯のお粗末な港街の狭い小道で彼をつけて来るというのだ。人生の航路を捻じ曲げ、その獲物と共に立ち去ろうとしている、その丁度今。彼のこの仕事への恐れを和らげるために、数多い仲間の中に同じ考えを抱き、彼を見守り、待っている者がいるというのか。それとも背後の足音の主は、この街に無数にいる法監視役で、強靭な罰をすぐにも彼の手首にガシャンと下すというのか。",
+    title: "Integrated perspective",
+    body: "A fictional portfolio shows how related capabilities can be explained in one clear story.",
   },
   {
     no: "02",
-    title: "ダミーテキスト",
-    body: "あのイーハトーヴォのすきとおった風、夏でも底に冷たさをもつ青いそら、うつくしい森で飾られたモリーオ市、郊外のぎらぎらひかる草の波。この物語はダミーテキストであり、実際の内容とは一切関係がありません。",
+    title: "Practical expertise",
+    body: "Sample content makes room for technical details without overwhelming the reader.",
   },
   {
     no: "03",
-    title: "サンプルタイトル",
-    body: "彼は背後にひそかな足音を聞いた。それはあまり良い意味を示すものではない。誰がこんな夜更けに、しかもこんな街灯のお粗末な港街の狭い小道で彼をつけて来るというのだ。人生の航路を捻じ曲げ、その獲物と共に立ち去ろうとしている、その丁度今。彼のこの仕事への恐れを和らげるために、数多い仲間の中に同じ考えを抱き、彼を見守り、待っている者がいるというのか。それとも背後の足音の主は、この街に無数にいる法監視役で、強靭な罰をすぐにも彼の手首にガシャンと下すというのか。",
+    title: "Adaptable operations",
+    body: "A flexible system can present the same fictional business in different contexts.",
   },
   {
     no: "04",
-    title: "見出しダミー",
-    body: "あのイーハトーヴォのすきとおった風、夏でも底に冷たさをもつ青いそら、うつくしい森で飾られたモリーオ市、郊外のぎらぎらひかる草の波。この物語はダミーテキストであり、実際の内容とは一切関係がありません。",
+    title: "Long-term partnerships",
+    body: "Clear navigation helps visitors find the right next step in a fictional customer journey.",
   },
 ];
 
@@ -291,12 +290,12 @@ export function BusinessLinePortal(props: BusinessLinePortalSectionProps) {
 /* ---------------------------------------------------------------------- */
 
 const FINANCIAL_METRICS: FinancialMetric[] = [
-  { label: "ダミー見出し", unit: "百万円" },
-  { label: "ダミーテキスト", unit: "百万円" },
-  { label: "サンプルタイトル", unit: "百万円" },
-  { label: "これはダミーのテキストです", unit: "百万円" },
-  { label: "見出しダミー", unit: "円" },
-  { label: "ダミー項目", unit: "円" },
+  { label: "Revenue", unit: "Sample units" },
+  { label: "Operating profit", unit: "Sample units" },
+  { label: "Net income", unit: "Sample units" },
+  { label: "Total assets", unit: "Sample units" },
+  { label: "Earnings per share", unit: "Sample units" },
+  { label: "Dividend per share", unit: "Sample units" },
 ];
 
 export type FinancialHighlightsSectionProps = {
@@ -317,14 +316,14 @@ export function FinancialHighlights(props: FinancialHighlightsSectionProps) {
 
 const CERTS: Cert[] = [
   {
-    code: "サンプル",
-    name: "ダミー見出し",
-    scope: "彼は背後にひそかな足音を聞いた。それはあまり良い意味を示すものではない。",
+    code: "Sample",
+    name: "Reliable foundations",
+    scope: "The quick brown fox jumps over the lazy dog.",
   },
   {
-    code: "ダミー",
-    name: "見出しダミー",
-    scope: "これはダミーのテキストです。",
+    code: "Demo",
+    name: "Working together",
+    scope: "This is sample copy.",
   },
 ];
 
@@ -344,18 +343,18 @@ export function CertList(props: CertListSectionProps) {
 
 const INITIATIVES: Initiative[] = [
   {
-    title: "ダミー見出し",
-    body: "あのイーハトーヴォのすきとおった風、夏でも底に冷たさをもつ青いそら、うつくしい森で飾られたモリーオ市、郊外のぎらぎらひかる草の波。この物語はダミーテキストであり、実際の内容とは一切関係がありません。",
+    title: "Product stewardship",
+    body: "A fictional example of considering materials, use, and end-of-life together.",
   },
-  { title: "ダミーテキスト", body: "彼は背後にひそかな足音を聞いた。それはあまり良い意味を示すものではない。" },
+  { title: "Resource awareness", body: "A fictional example of making everyday operations easier to understand." },
   {
-    title: "サンプルタイトル",
-    body: "あのイーハトーヴォのすきとおった風、夏でも底に冷たさをもつ青いそら、うつくしい森で飾られたモリーオ市、郊外のぎらぎらひかる草の波。この物語はダミーテキストであり、実際の内容とは一切関係がありません。",
+    title: "Workplace well-being",
+    body: "A fictional example of creating a supportive place to do useful work.",
   },
-  { title: "これはダミーのテキストです", body: "彼は背後にひそかな足音を聞いた。それはあまり良い意味を示すものではない。" },
+  { title: "Ethical governance", body: "A fictional example of sharing accountability clearly and consistently." },
   {
-    title: "見出しダミー",
-    body: "あのイーハトーヴォのすきとおった風、夏でも底に冷たさをもつ青いそら、うつくしい森で飾られたモリーオ市、郊外のぎらぎらひかる草の波。この物語はダミーテキストであり、実際の内容とは一切関係がありません。",
+    title: "Community dialogue",
+    body: "A fictional example of listening to the people and places around a business.",
   },
 ];
 
@@ -376,16 +375,16 @@ export function InitiativeGrid(props: InitiativeGridSectionProps) {
 
 const VALUE_PILLARS: ValuePillar[] = [
   {
-    title: "ダミー見出し",
-    body: "彼は背後にひそかな足音を聞いた。それはあまり良い意味を示すものではない。誰がこんな夜更けに、しかもこんな街灯のお粗末な港街の狭い小道で彼をつけて来るというのだ。人生の航路を捻じ曲げ、その獲物と共に立ち去ろうとしている、その丁度今。彼のこの仕事への恐れを和らげるために、数多い仲間の中に同じ考えを抱き、彼を見守り、待っている者がいるというのか。それとも背後の足音の主は、この街に無数にいる法監視役で、強靭な罰をすぐにも彼の手首にガシャンと下すというのか。",
+    title: "Curiosity",
+    body: "Fictional teams start with thoughtful questions and the willingness to test an idea.",
   },
   {
-    title: "見出しダミー",
-    body: "あのイーハトーヴォのすきとおった風、夏でも底に冷たさをもつ青いそら、うつくしい森で飾られたモリーオ市、郊外のぎらぎらひかる草の波。この物語はダミーテキストであり、実際の内容とは一切関係がありません。",
+    title: "Collaboration",
+    body: "Fictional teams bring different perspectives together around a shared next step.",
   },
   {
-    title: "サンプルタイトル",
-    body: "彼は背後にひそかな足音を聞いた。それはあまり良い意味を示すものではない。誰がこんな夜更けに、しかもこんな街灯のお粗末な港街の狭い小道で彼をつけて来るというのだ。人生の航路を捻じ曲げ、その獲物と共に立ち去ろうとしている、その丁度今。",
+    title: "Practical experimentation",
+    body: "Fictional teams learn by turning a small, useful experiment into a clearer decision.",
   },
 ];
 

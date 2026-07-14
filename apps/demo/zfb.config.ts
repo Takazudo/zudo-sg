@@ -38,6 +38,16 @@ export default defineConfig({
       schema: contentSchemaJson,
     },
   ],
+  // zfb does not copy project public/ assets into dist/ itself. Keep the
+  // local dummy-image catalog available at its resolver URLs after a build.
+  plugins: [
+    {
+      name: "../../plugins/copy-public-plugin.mjs",
+      options: {
+        publicDir: "public",
+      },
+    },
+  ],
   stripMdExt: true,
   trailingSlash: false,
 });

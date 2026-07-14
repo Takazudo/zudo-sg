@@ -11,11 +11,13 @@
  * manifest uses) and resolves each semantic token's light + dark side back to a
  * raw oklch literal before running the same WCAG math.
  *
- * Coverage: fg/muted/accent text pairs, on-accent button labels, the four
- * state colors, the persistent dark `rail` surface (scheme-independent), and
- * the five business-line accents (raw Tier-1 rungs consumed later by the port
- * batches' `[data-line]` overrides — audited here as accent-on-bg + label-on-
- * accent for both schemes). All text/accent pairs require AA ≥ 4.5:1.
+ * Coverage: the locked neutral text roles, links and their actual tinted
+ * `color-mix()` backgrounds, on-accent labels for every filled action/state,
+ * focus indicators, the persistent dark `rail` surface (scheme-independent),
+ * and the five business-line accents (raw Tier-1 rungs consumed later by the
+ * port batches' `[data-line]` overrides). Forced light and dark schemes are
+ * evaluated separately. Text pairs meet AA (or AAA for `fg`); focus/non-text
+ * indicators meet 3:1.
  */
 
 import { readFileSync } from "node:fs";
@@ -23,7 +25,7 @@ import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { parseCssCustomProperties } from "./lib/css-var-parser.mjs";
-import { contrastRatio } from "../src/config/contrast-utils";
+import { colorMixSrgb, contrastRatio } from "../src/config/contrast-utils";
 import type { PairResult, SchemeReport } from "./contrast-pair-matrix";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -77,31 +79,58 @@ function evaluateMode(mode: Mode, vars: Map<string, string>): SchemeReport {
   const surface2 = s("surface-2");
 
   const specs: Array<{ key: string; label: string; fg: string; bg: string; threshold: number }> = [
-    { key: "fg-vs-bg", label: "fg / bg", fg: s("fg"), bg, threshold: 4.5 },
-    { key: "fg-vs-surface", label: "fg / surface", fg: s("fg"), bg: surface, threshold: 4.5 },
-    { key: "fg-vs-surface-2", label: "fg / surface-2", fg: s("fg"), bg: surface2, threshold: 4.5 },
+    { key: "fg-vs-bg", label: "fg / bg", fg: s("fg"), bg, threshold: 7 },
+    { key: "fg-vs-surface", label: "fg / surface", fg: s("fg"), bg: surface, threshold: 7 },
+    { key: "fg-vs-surface-2", label: "fg / surface-2", fg: s("fg"), bg: surface2, threshold: 7 },
     { key: "muted-vs-bg", label: "muted / bg", fg: s("muted"), bg, threshold: 4.5 },
     { key: "muted-vs-surface", label: "muted / surface", fg: s("muted"), bg: surface, threshold: 4.5 },
     { key: "muted-vs-surface-2", label: "muted / surface-2", fg: s("muted"), bg: surface2, threshold: 4.5 },
     { key: "accent-vs-bg", label: "accent / bg", fg: s("accent"), bg, threshold: 4.5 },
     { key: "accent-vs-surface", label: "accent / surface", fg: s("accent"), bg: surface, threshold: 4.5 },
+    {
+      key: "accent-vs-accent-tint",
+      label: "accent / 12% accent tint",
+      fg: s("accent"),
+      bg: colorMixSrgb(s("accent"), bg, 12),
+      threshold: 4.5,
+    },
     { key: "accent-hover-vs-bg", label: "accentHover / bg", fg: s("accent-hover"), bg, threshold: 4.5 },
     { key: "on-accent-vs-accent", label: "onAccent / accent", fg: s("on-accent"), bg: s("accent"), threshold: 4.5 },
-    { key: "focus-vs-bg", label: "focus / bg", fg: s("focus"), bg, threshold: 4.5 },
-    { key: "success-vs-bg", label: "success / bg", fg: s("success"), bg, threshold: 4.5 },
-    { key: "danger-vs-bg", label: "danger / bg", fg: s("danger"), bg, threshold: 4.5 },
-    { key: "warning-vs-bg", label: "warning / bg", fg: s("warning"), bg, threshold: 4.5 },
-    { key: "info-vs-bg", label: "info / bg", fg: s("info"), bg, threshold: 4.5 },
-    // Rail — scheme-independent dark panel; evaluated under both modes.
-    { key: "rail-fg-vs-rail-bg", label: "railFg / railBg", fg: s("rail-fg"), bg: s("rail-bg"), threshold: 4.5 },
-    { key: "rail-muted-vs-rail-bg", label: "railMuted / railBg", fg: s("rail-muted"), bg: s("rail-bg"), threshold: 4.5 },
-    { key: "rail-fg-vs-rail-bg-strong", label: "railFg / railBgStrong", fg: s("rail-fg"), bg: s("rail-bg-strong"), threshold: 4.5 },
+    { key: "on-accent-vs-accent-hover", label: "onAccent / accentHover", fg: s("on-accent"), bg: s("accent-hover"), threshold: 4.5 },
+    { key: "on-accent-vs-success", label: "onAccent / success", fg: s("on-accent"), bg: s("success"), threshold: 4.5 },
+    { key: "on-accent-vs-danger", label: "onAccent / danger", fg: s("on-accent"), bg: s("danger"), threshold: 4.5 },
+    { key: "on-accent-vs-warning", label: "onAccent / warning", fg: s("on-accent"), bg: s("warning"), threshold: 4.5 },
+    { key: "on-accent-vs-info", label: "onAccent / info", fg: s("on-accent"), bg: s("info"), threshold: 4.5 },
+    { key: "focus-vs-bg", label: "focus / bg", fg: s("focus"), bg, threshold: 3 },
+    { key: "focus-vs-surface", label: "focus / surface", fg: s("focus"), bg: surface, threshold: 3 },
+    { key: "focus-vs-surface-2", label: "focus / surface-2", fg: s("focus"), bg: surface2, threshold: 3 },
   ];
 
-  // Business-line accents (raw Tier-1 rungs). Light mode uses the base rungs;
+  for (const [name, railBg] of [
+    ["rail-bg", s("rail-bg")],
+    ["rail-bg-strong", s("rail-bg-strong")],
+    ["rail-hover-bg", s("rail-hover-bg")],
+  ] as const) {
+    specs.push({
+      key: `rail-fg-vs-${name}`,
+      label: `railFg / ${name}`,
+      fg: s("rail-fg"),
+      bg: railBg,
+      threshold: 7,
+    });
+    specs.push({
+      key: `rail-muted-vs-${name}`,
+      label: `railMuted / ${name}`,
+      fg: s("rail-muted"),
+      bg: railBg,
+      threshold: 4.5,
+    });
+  }
+
+  // Business-line accents (raw Tier-1 rungs). Light mode uses the base values;
   // dark mode uses the *-dark rungs. Each is checked as accent-on-bg AND as the
   // fill under an on-accent label (white in light, near-black in dark).
-  const onAccent = mode === "light" ? palette("base-0", vars) : palette("base-10", vars);
+  const onAccent = s("on-accent");
   for (const key of LINE_KEYS) {
     const accent = palette(mode === "light" ? `line-${key}-accent` : `line-${key}-accent-dark`, vars);
     const hover = palette(mode === "light" ? `line-${key}-hover` : `line-${key}-hover-dark`, vars);

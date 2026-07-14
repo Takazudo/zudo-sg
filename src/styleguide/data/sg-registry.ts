@@ -200,7 +200,7 @@ export const storyExportOrder: Record<string, string[]> = {
   "./ui/src/chrome/nav-enhancer/nav-enhancer.stories.tsx": ["Default"],
   "./ui/src/chrome/search-toggle-enhancer/search-toggle-enhancer.stories.tsx": ["Default"],
   "./ui/src/chrome/site-footer/site-footer.stories.tsx": ["Default", "FewSections", "ManySections"],
-  "./ui/src/chrome/site-header/site-header.stories.tsx": ["CorporateContext", "LineContext"],
+  "./ui/src/chrome/site-header/site-header.stories.tsx": ["CategoryWalk", "EmptyTree"],
   "./ui/src/chrome/site-nav/site-nav.stories.tsx": ["Default", "ActiveSection", "SectionWithoutTopLink", "ManySections"],
   "./ui/src/content/prose-a/prose-a.stories.tsx": ["Default", "HashLink"],
   "./ui/src/content/prose-blockquote/prose-blockquote.stories.tsx": ["Default"],

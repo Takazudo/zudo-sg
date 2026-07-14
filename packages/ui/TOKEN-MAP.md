@@ -26,7 +26,7 @@ Two things to internalise before porting:
 ## 1. Color utilities — 1:1 (no rename)
 
 Every color utility used by the reference components keeps its class name. The
-values now come from the warm grouped palette (amber accent, warm-gray base,
+values now come from the warm grouped palette (amber accent, four-stop warm-neutral,
 warm dark rail) instead of the reference's blue/navy, but the token _names_ are
 identical, so the classes are unchanged.
 

@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/preact";
 import { describe, expect, it } from "vitest";
+import { ThemeControl } from "../../../shared/theme-control/theme-control";
 import { SiteNav, type NavSection } from "../site-nav";
 
 const SECTIONS: NavSection[] = [
@@ -55,17 +56,11 @@ describe("SiteNav", () => {
     expect(otherItem.open).toBe(false);
   });
 
-  it("renders the mobile switcher only when switcherItems is given", () => {
-    const { rerender } = render(<SiteNav sections={SECTIONS} />);
+  it("mounts the mobile top-bar theme control without adding a second navigation panel", () => {
+    render(<SiteNav sections={SECTIONS} mobileThemeControl={<ThemeControl />} />);
+    const control = document.querySelector('[data-theme-control="mobile"] button');
+    expect(control).toHaveAttribute("aria-pressed", "false");
     expect(screen.queryByRole("group", { name: "Switch business context" })).not.toBeInTheDocument();
-
-    rerender(
-      <SiteNav
-        sections={SECTIONS}
-        switcherItems={[{ key: "corporate", label: "Corporate", href: "/", mark: "○", description: "d", domain: "acme.example", current: true }]}
-      />,
-    );
-    expect(screen.getByRole("group", { name: "Switch business context" })).toBeInTheDocument();
   });
 
   it("wires the toggle checkbox to the drawer via matching ids", () => {

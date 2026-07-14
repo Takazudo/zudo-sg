@@ -1,11 +1,16 @@
 import { fireEvent, render } from "@testing-library/preact";
 import { describe, expect, it } from "vitest";
-import { SiteHeader, type BrandSwitcherItem } from "../../site-header/site-header";
+import type { NavSection } from "../../site-nav/site-nav";
+import { SiteHeader } from "../../site-header/site-header";
 import ContextSwitcherEnhancer from "../context-switcher-enhancer";
 
-const ITEMS: BrandSwitcherItem[] = [
-  { key: "corporate", label: "Corporate", href: "/", mark: "○", description: "d", domain: "acme.example", current: true },
-  { key: "vacuum", label: "Line A", href: "/lines/vacuum", mark: "A", description: "d", domain: "line-a.example", current: false },
+const SECTIONS: NavSection[] = [
+  {
+    label: "Company",
+    href: "/company",
+    order: 1,
+    children: [{ label: "About", href: "/company/about", slug: "company/about", order: 1 }],
+  },
 ];
 
 // aria-expanded sync runs inside a queueMicrotask (see context-switcher-enhancer.tsx),
@@ -15,14 +20,14 @@ const flush = () => Promise.resolve();
 function setup() {
   render(
     <>
-      <SiteHeader switcherItems={ITEMS} />
+      <SiteHeader sections={SECTIONS} />
       <ContextSwitcherEnhancer />
     </>,
   );
   const trigger = document.querySelector("[data-ctx-trigger]") as HTMLElement;
   const panel = document.querySelector("[data-ctx-panel]") as HTMLElement;
-  const card = panel.querySelector("[data-ctx-card-key]") as HTMLElement;
-  return { trigger, panel, card };
+  const destination = panel.querySelector('a[href="/company/about"]') as HTMLElement;
+  return { trigger, panel, destination };
 }
 
 describe("ContextSwitcherEnhancer", () => {
@@ -31,6 +36,7 @@ describe("ContextSwitcherEnhancer", () => {
     expect(trigger).toHaveAttribute("aria-expanded", "false");
     fireEvent.click(trigger);
     expect(panel.style.visibility).toBe("visible"); // inline style applies synchronously
+    expect(panel.style.translate).toBe("-50% 0");
     await flush();
     expect(trigger).toHaveAttribute("aria-expanded", "true");
   });
@@ -45,10 +51,10 @@ describe("ContextSwitcherEnhancer", () => {
   });
 
   it("closes on Escape and returns focus to the trigger when focus was inside", async () => {
-    const { trigger, panel, card } = setup();
+    const { trigger, panel, destination } = setup();
     fireEvent.click(trigger); // open + pin
     await flush();
-    card.focus();
+    destination.focus();
     fireEvent.keyDown(document, { key: "Escape" });
     expect(panel.style.visibility).toBe("hidden");
     expect(document.activeElement).toBe(trigger);
@@ -69,24 +75,36 @@ describe("ContextSwitcherEnhancer", () => {
   });
 
   it("does not close on a click inside the panel", async () => {
-    const { trigger, panel, card } = setup();
+    const { trigger, panel, destination } = setup();
     fireEvent.click(trigger); // open + pin
     await flush();
-    fireEvent.pointerDown(card);
+    fireEvent.pointerDown(destination);
     expect(panel.style.visibility).toBe("visible");
     await flush();
     expect(trigger).toHaveAttribute("aria-expanded", "true");
   });
 
-  it("clears the pinned state when focus leaves the switcher entirely", async () => {
-    const { trigger, panel, card } = setup();
+  it("clears the pinned state when focus leaves the disclosure entirely", async () => {
+    const { trigger, panel, destination } = setup();
     fireEvent.click(trigger); // open + pin
     await flush();
-    card.focus();
+    destination.focus();
     const outside = document.createElement("button");
     document.body.appendChild(outside);
-    outside.focus(); // real focus move — fires focusout on `card` with relatedTarget=outside
+    outside.focus(); // real focus move — fires focusout on the destination with relatedTarget=outside
     // Cleared back to CSS-driven ("none"), not force-closed via inline styles.
+    expect(panel.style.visibility).toBe("");
+    await flush();
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("returns a force-closed panel to the CSS baseline when the pointer re-enters", async () => {
+    const { trigger, panel } = setup();
+    fireEvent.click(trigger); // open + pin
+    fireEvent.click(trigger); // visibly open -> force closed
+    expect(panel.style.visibility).toBe("hidden");
+
+    fireEvent.pointerEnter(trigger.parentElement as HTMLElement);
     expect(panel.style.visibility).toBe("");
     await flush();
     expect(trigger).toHaveAttribute("aria-expanded", "false");
@@ -95,7 +113,7 @@ describe("ContextSwitcherEnhancer", () => {
   it("does not double-bind when mounted twice (idempotency guard)", async () => {
     render(
       <>
-        <SiteHeader switcherItems={ITEMS} />
+        <SiteHeader sections={SECTIONS} />
         <ContextSwitcherEnhancer />
         <ContextSwitcherEnhancer />
       </>,

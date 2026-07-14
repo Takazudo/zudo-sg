@@ -1,50 +1,68 @@
 import { render, screen } from "@testing-library/preact";
 import { describe, expect, it } from "vitest";
-import { SiteHeader, type BrandSwitcherItem } from "../site-header";
+import { ThemeControl } from "../../../shared/theme-control/theme-control";
+import type { NavSection } from "../../site-nav/site-nav";
+import { SiteHeader } from "../site-header";
 
-const ITEMS: BrandSwitcherItem[] = [
-  { key: "corporate", label: "Corporate", href: "/", mark: "○", description: "Corporate tagline.", domain: "acme.example", current: true },
-  { key: "vacuum", label: "Line A", href: "/lines/vacuum", mark: "A", description: "Line A tagline.", domain: "line-a.example", current: false },
+const SECTIONS: NavSection[] = [
+  {
+    label: "Company",
+    href: "/company",
+    order: 1,
+    children: [
+      { label: "About", href: "/company/about", slug: "company/about", order: 1 },
+      { label: "Leadership", href: "/company/leadership", slug: "company/leadership", order: 2 },
+    ],
+  },
+  {
+    label: "News",
+    order: 2,
+    children: [{ label: "Latest news", href: "/news", slug: "news", order: 1 }],
+  },
 ];
 
 describe("SiteHeader", () => {
   it("renders the brand lockup linking to brandHref", () => {
-    render(<SiteHeader switcherItems={ITEMS} brand="Acme" brandHref="/home" />);
+    render(<SiteHeader sections={SECTIONS} brand="Acme" brandHref="/home" />);
     const link = screen.getByRole("link", { name: /Acme/ });
     expect(link).toHaveAttribute("href", "/home");
   });
 
-  it("labels the context-switcher trigger with the current item", () => {
-    render(<SiteHeader switcherItems={ITEMS} />);
-    const trigger = document.querySelector("[data-ctx-trigger]");
-    expect(trigger).toHaveTextContent("Corporate");
-  });
-
-  it("falls back to the first item when none is marked current", () => {
-    const noCurrent = ITEMS.map((item) => ({ ...item, current: false }));
-    render(<SiteHeader switcherItems={noCurrent} />);
-    const trigger = document.querySelector("[data-ctx-trigger]");
-    expect(trigger).toHaveTextContent("Corporate");
-  });
-
-  it("renders a switcher card per item, marking the current one", () => {
-    render(<SiteHeader switcherItems={ITEMS} />);
-    const currentCard = screen.getByRole("link", { name: /Corporate/, current: "location" });
-    expect(currentCard).toHaveAttribute("data-ctx-card-key", "corporate");
-    const otherCard = screen.getByRole("link", { name: /Line A/ });
-    expect(otherCard).not.toHaveAttribute("aria-current");
-  });
-
-  it("exposes the context-switcher a11y hooks with matching ids", () => {
-    render(<SiteHeader switcherItems={ITEMS} />);
-    const trigger = document.querySelector("[data-ctx-trigger]");
+  it("renders a Browse trigger with an accessible name and matching panel hook", () => {
+    render(<SiteHeader sections={SECTIONS} />);
+    const trigger = screen.getByRole("button", { name: "Browse site sections" });
     const panel = document.querySelector("[data-ctx-panel]");
+    expect(trigger).toHaveTextContent("Browse");
     expect(trigger).toHaveAttribute("aria-expanded", "false");
     expect(trigger).toHaveAttribute("aria-controls", panel?.getAttribute("id"));
+    expect(trigger).toHaveClass("min-h-[44px]", "min-w-[44px]");
+  });
+
+  it("walks the supplied section tree in source order with real route targets", () => {
+    render(<SiteHeader sections={SECTIONS} />);
+    const panel = document.querySelector("[data-ctx-panel]") as HTMLElement;
+    const headings = Array.from(panel.querySelectorAll("h2")).map((heading) => heading.textContent);
+    expect(headings).toEqual(["Company", "News"]);
+    expect(screen.getByRole("link", { name: "Company" })).toHaveAttribute("href", "/company");
+    expect(screen.getByRole("link", { name: "News" })).toHaveAttribute("href", "/news");
+    expect(screen.getByRole("link", { name: "About" })).toHaveAttribute("href", "/company/about");
+    expect(screen.getByRole("link", { name: "Latest news" })).toHaveAttribute("href", "/news");
+  });
+
+  it("does not render a Browse trigger or panel for an empty tree", () => {
+    render(<SiteHeader sections={[]} />);
+    expect(screen.queryByRole("button", { name: "Browse site sections" })).not.toBeInTheDocument();
+    expect(document.querySelector("[data-ctx-panel]")).not.toBeInTheDocument();
+  });
+
+  it("mounts the desktop theme control in the header utility group", () => {
+    render(<SiteHeader sections={SECTIONS} desktopThemeControl={<ThemeControl />} />);
+    const control = document.querySelector('[data-theme-control="desktop"] button');
+    expect(control).toHaveAttribute("aria-pressed", "false");
   });
 
   it("exposes the search toggle a11y hooks with matching ids", () => {
-    render(<SiteHeader switcherItems={ITEMS} />);
+    render(<SiteHeader sections={SECTIONS} />);
     const form = document.querySelector("[data-search-form]");
     const trigger = form?.querySelector("[data-search-trigger]");
     const input = form?.querySelector("[data-search-input]");
@@ -53,7 +71,7 @@ describe("SiteHeader", () => {
   });
 
   it("submits search as a plain GET form (works with no JS)", () => {
-    render(<SiteHeader switcherItems={ITEMS} />);
+    render(<SiteHeader sections={SECTIONS} />);
     const form = document.querySelector("[data-search-form]");
     expect(form).toHaveAttribute("action", "/search");
     expect(form).toHaveAttribute("method", "get");
@@ -61,7 +79,7 @@ describe("SiteHeader", () => {
   });
 
   it("merges an extra class onto the header", () => {
-    render(<SiteHeader switcherItems={ITEMS} class="extra-class" />);
+    render(<SiteHeader sections={SECTIONS} class="extra-class" />);
     expect(document.querySelector("header")).toHaveClass("extra-class");
   });
 });

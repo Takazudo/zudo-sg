@@ -188,43 +188,29 @@ describe("panel config isolation", () => {
     // when no cluster is resolved from the tab.
     expect(paletteTab?.colorExtras).toBeUndefined();
 
-    // One TierConfig per --palette-{group}-{step-or-role} group (base/accent/
+    // One TierConfig per --palette-{group}-{step-or-role} group (neutral/accent/
     // state/line), matching UI_PALETTE_COLORS in ui-design-tokens-manifest.ts —
     // NOT one flat tier, since the curve editor derives every step in a tier
     // from one shared curve.
     const tierIds = paletteTab?.tiers.map((t) => t.id).sort();
     expect(tierIds).toEqual(
-      ["palette-accent", "palette-base", "palette-line", "palette-state"].sort(),
+      ["palette-accent", "palette-line", "palette-neutral", "palette-state"].sort(),
     );
-    // base(11) + accent(4) + state(8) + line(20) = 43.
+    // neutral(4) + accent(4) + state(8) + line(20) = 36.
     const totalItems = paletteTab?.tiers.reduce((n, t) => n + t.items.length, 0);
-    expect(totalItems).toBe(43);
-    const baseTier = paletteTab?.tiers.find((t) => t.id === "palette-base");
-    expect(baseTier?.items.map((item) => item.id)).toEqual([
-      "palette-base-0",
-      "palette-base-1",
-      "palette-base-2",
-      "palette-base-3",
-      "palette-base-4",
-      "palette-base-5",
-      "palette-base-6",
-      "palette-base-7",
-      "palette-base-8",
-      "palette-base-9",
-      "palette-base-10",
+    expect(totalItems).toBe(36);
+    const neutralTier = paletteTab?.tiers.find((t) => t.id === "palette-neutral");
+    expect(neutralTier?.items.map((item) => item.id)).toEqual([
+      "palette-neutral-0",
+      "palette-neutral-1",
+      "palette-neutral-2",
+      "palette-neutral-3",
     ]);
-    expect(baseTier?.items.map((item) => item.cssVar)).toEqual([
-      "--palette-base-0",
-      "--palette-base-1",
-      "--palette-base-2",
-      "--palette-base-3",
-      "--palette-base-4",
-      "--palette-base-5",
-      "--palette-base-6",
-      "--palette-base-7",
-      "--palette-base-8",
-      "--palette-base-9",
-      "--palette-base-10",
+    expect(neutralTier?.items.map((item) => item.cssVar)).toEqual([
+      "--palette-neutral-0",
+      "--palette-neutral-1",
+      "--palette-neutral-2",
+      "--palette-neutral-3",
     ]);
     const stateTier = paletteTab?.tiers.find((t) => t.id === "palette-state");
     expect(stateTier?.items.map((item) => item.id)).toEqual([
