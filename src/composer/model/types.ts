@@ -16,12 +16,17 @@ import type {
   ComposerSource,
   JsonValue,
 } from "@zudo-sg/ui";
+import type { CompositionRecordId } from "./record-identity";
 
 /** A JSON object — the shape of a node's `props`. */
 export type JsonObject = { [key: string]: JsonValue };
 
+/** The prior persisted schema accepted by the lossless v1 decoder. */
+export const COMPOSITION_SCHEMA_V1 = 1 as const;
+export type CompositionSchemaV1 = typeof COMPOSITION_SCHEMA_V1;
+
 /** The only Composition document schema version this build understands. */
-export const COMPOSITION_SCHEMA_VERSION = 1 as const;
+export const COMPOSITION_SCHEMA_VERSION = 2 as const;
 export type CompositionSchemaVersion = typeof COMPOSITION_SCHEMA_VERSION;
 
 /** A single persisted node in a Composition tree. */
@@ -38,7 +43,51 @@ export interface CompositionNode {
   slots: Record<string, CompositionNode[]>;
 }
 
-/** The full persisted Composition document. */
+/** The real component slot a Global template exposes to its consumers. */
+export interface GlobalTemplateOutletTarget {
+  /** Id of the component node that owns the exposed slot. Never the virtual root. */
+  parentId: string;
+  /** Stable manifest slot id on `parentId`. */
+  slotId: string;
+}
+
+/**
+ * The single named projection point a Global template exposes in schema v2.
+ * `id` is machine-stable; changing the human label or target never reissues it.
+ */
+export interface GlobalTemplateOutlet {
+  id: string;
+  label: string;
+  target: GlobalTemplateOutletTarget;
+}
+
+/** Publish this Composition as a live, one-outlet Global template. */
+export interface GlobalTemplatePublication {
+  kind: "global-template";
+  outlet: GlobalTemplateOutlet;
+}
+
+/** Publish this Composition as a detached-clone Pattern. */
+export interface PatternPublication {
+  kind: "pattern";
+}
+
+/**
+ * Reuse role persisted on a Composition. Absence means an ordinary local-only
+ * Composition. The union deliberately contains no generic reference node.
+ */
+export type CompositionPublication = GlobalTemplatePublication | PatternPublication;
+
+/**
+ * A consumer's stable link to one source outlet. Provider identity is omitted:
+ * the containing record's active provider supplies that at resolution time.
+ */
+export interface CompositionBinding {
+  sourceRecordId: CompositionRecordId;
+  outletId: string;
+}
+
+/** The full persisted Composition document in the current schema. */
 export interface CompositionDocument {
   schemaVersion: CompositionSchemaVersion;
   id: string;
@@ -47,6 +96,18 @@ export interface CompositionDocument {
    * The virtual root's children. `root` is an insertion slot only — the array
    * itself is NOT a node and has no id/props/component.
    */
+  root: CompositionNode[];
+  /** Optional reusable-source role. Mutually exclusive with `binding` semantically. */
+  publication?: CompositionPublication;
+  /** Optional live source binding. The local `root` remains canonical. */
+  binding?: CompositionBinding;
+}
+
+/** The exact persisted v1 document shape, before reuse metadata existed. */
+export interface CompositionDocumentV1 {
+  schemaVersion: CompositionSchemaV1;
+  id: string;
+  name: string;
   root: CompositionNode[];
 }
 

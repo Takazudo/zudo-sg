@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   COMPOSITION_PROVIDERS,
+  COMPOSITION_SCHEMA_V1,
   COMPOSITION_SCHEMA_VERSION,
   CompositionPersistenceError,
   compareCompositionSummariesNewestFirst,
@@ -98,7 +99,10 @@ describe("composition record validation and loading", () => {
   });
 
   it("reports malformed structured documents without inventing recovery data", () => {
-    const malformed = { ...record(), document: { schemaVersion: 1, id: "composition-a", root: {} } };
+    const malformed = {
+      ...record(),
+      document: { schemaVersion: COMPOSITION_SCHEMA_VERSION, id: "composition-a", root: {} },
+    };
     const outcome = loadCompositionRecord(malformed);
     expect(outcome).toMatchObject({
       status: "invalid",
@@ -120,9 +124,30 @@ describe("composition record validation and loading", () => {
     };
     expect(loadCompositionRecord(future)).toEqual({
       status: "future-schema",
-      foundSchemaVersion: 2,
+      foundSchemaVersion: COMPOSITION_SCHEMA_VERSION + 1,
       raw: future,
     });
+  });
+
+  it("decodes a valid v1 record without changing record metadata or identity", () => {
+    const legacy = record();
+    legacy.document = {
+      ...legacy.document,
+      schemaVersion: COMPOSITION_SCHEMA_V1,
+    } as unknown as CompositionRecord["document"];
+
+    const outcome = loadCompositionRecord(legacy);
+    expect(outcome).toMatchObject({
+      status: "loaded",
+      decodedFromSchemaVersion: COMPOSITION_SCHEMA_V1,
+      record: {
+        id: legacy.id,
+        createdAt: legacy.createdAt,
+        updatedAt: legacy.updatedAt,
+        document: { schemaVersion: COMPOSITION_SCHEMA_VERSION, id: legacy.document.id },
+      },
+    });
+    expect(legacy.document.schemaVersion).toBe(COMPOSITION_SCHEMA_V1);
   });
 });
 

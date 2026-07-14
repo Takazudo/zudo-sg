@@ -38,8 +38,16 @@
 // before it would ever reach that fold — see both files' comments.
 
 import { z } from "zod";
-import type { CompositionDocument, CompositionNode, InsertionTarget } from "@/composer";
-import { COMPOSITION_SCHEMA_VERSION } from "@/composer";
+import type {
+  CompositionBinding,
+  CompositionDocument,
+  CompositionNode,
+  CompositionPublication,
+  GlobalTemplateOutlet,
+  GlobalTemplateOutletTarget,
+  InsertionTarget,
+} from "@/composer";
+import { COMPOSITION_RECORD_ID_PATTERN, COMPOSITION_SCHEMA_VERSION } from "@/composer";
 import { RESERVED_PROP_KEYS } from "@/composer/model/reserved-keys";
 import { jsonValueSchema } from "@/styleguide/data/composer-schema";
 
@@ -130,6 +138,39 @@ export const compositionNodeSchema: z.ZodType<CompositionNode> = z.lazy(() =>
     .strict(),
 );
 
+/** Strict wire shape for the one real slot exposed by a Global template. */
+export const globalTemplateOutletTargetSchema: z.ZodType<GlobalTemplateOutletTarget> = z
+  .object({
+    parentId: z.string().min(1),
+    slotId: z.string().min(1),
+  })
+  .strict();
+
+export const globalTemplateOutletSchema: z.ZodType<GlobalTemplateOutlet> = z
+  .object({
+    id: z.string().min(1),
+    label: z.string(),
+    target: globalTemplateOutletTargetSchema,
+  })
+  .strict();
+
+const compositionPublicationSchema: z.ZodType<CompositionPublication> = z.discriminatedUnion("kind", [
+  z
+    .object({
+      kind: z.literal("global-template"),
+      outlet: globalTemplateOutletSchema,
+    })
+    .strict(),
+  z.object({ kind: z.literal("pattern") }).strict(),
+]);
+
+export const compositionBindingSchema: z.ZodType<CompositionBinding> = z
+  .object({
+    sourceRecordId: z.string().regex(COMPOSITION_RECORD_ID_PATTERN),
+    outletId: z.string().min(1),
+  })
+  .strict();
+
 /** Wire-level zod schema for #245's `CompositionDocument`. */
 export const compositionDocumentSchema: z.ZodType<CompositionDocument> = z
   .object({
@@ -137,6 +178,8 @@ export const compositionDocumentSchema: z.ZodType<CompositionDocument> = z
     id: z.string().min(1),
     name: z.string(),
     root: z.array(compositionNodeSchema),
+    publication: compositionPublicationSchema.optional(),
+    binding: compositionBindingSchema.optional(),
   })
   .strict();
 

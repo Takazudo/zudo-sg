@@ -8,18 +8,35 @@
 // ── Document model ───────────────────────────────────────────────────────────
 export type {
   JsonObject,
+  CompositionSchemaV1,
   CompositionSchemaVersion,
   CompositionNode,
+  GlobalTemplateOutletTarget,
+  GlobalTemplateOutlet,
+  GlobalTemplatePublication,
+  PatternPublication,
+  CompositionPublication,
+  CompositionBinding,
+  CompositionDocumentV1,
   CompositionDocument,
   InsertionTarget,
   ComponentManifestEntry,
   ComponentManifest,
 } from "./model/types";
 export {
+  COMPOSITION_SCHEMA_V1,
   COMPOSITION_SCHEMA_VERSION,
   VIRTUAL_ROOT_SLOT_ID,
   createManifest,
 } from "./model/types";
+
+export type { CompositionRecordId } from "./model/record-identity";
+
+export type { CompositionDocumentDecodeOutcome } from "./model/codec";
+export {
+  decodeCompositionDocumentV1,
+  decodeCompositionDocument,
+} from "./model/codec";
 
 export { isJsonSafe, isPlainObject, cloneJson } from "./model/json";
 
@@ -39,6 +56,9 @@ export {
 export type {
   DiagnosticCode,
   DiagnosticReason,
+  ReuseDiagnosticCode,
+  ReuseDiagnosticReason,
+  DiagnoseDocumentOptions,
   NodeDiagnostic,
   DocumentDiagnostics,
   TargetValidation,

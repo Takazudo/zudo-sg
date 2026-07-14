@@ -1,8 +1,9 @@
 import type { CompositionDocument } from "../model/types";
+import type { CompositionRecordId } from "../model/record-identity";
 
 /** A persisted composition and its storage metadata. */
 export interface CompositionRecord {
-  id: string;
+  id: CompositionRecordId;
   createdAt: string;
   updatedAt: string;
   document: CompositionDocument;
@@ -48,7 +49,7 @@ export const COMPOSITION_PROVIDERS = {
 /** A provider-qualified identity. Record ids are unique only inside a provider. */
 export interface CompositionRecordRef {
   providerId: CompositionProviderId;
-  recordId: string;
+  recordId: CompositionRecordId;
 }
 
 export type CompositionRecordValidationCode =
@@ -69,12 +70,12 @@ export interface CompositionRecordValidationIssue {
 }
 
 export type CompositionRecordValidation =
-  | { ok: true; record: CompositionRecord }
+  | { ok: true; record: CompositionRecord; decodedFromSchemaVersion?: 1 }
   | { ok: false; issue: CompositionRecordValidationIssue };
 
 /** Result of decoding provider data. Storage failures are represented separately. */
 export type CompositionLoadOutcome =
-  | { status: "loaded"; record: CompositionRecord }
+  | { status: "loaded"; record: CompositionRecord; decodedFromSchemaVersion?: 1 }
   | { status: "not-found"; id: string }
   | { status: "invalid"; issue: CompositionRecordValidationIssue; raw: unknown }
   | {

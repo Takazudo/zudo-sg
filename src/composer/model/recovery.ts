@@ -1,10 +1,13 @@
-// Storage recovery + future-schema quarantine.
+// Storage recovery + schema decoding + future-schema quarantine.
 //
 // Loading persisted Composition storage has three interesting failure modes,
 // each handled WITHOUT destroying user data:
 //
+//  - VALID V1 → decode losslessly to v2 before current-version structural
+//    validation. The caller can use `decodedFromSchemaVersion` to decide when
+//    its persistence boundary should safely rewrite the source.
 //  - MALFORMED (unparseable, wrong shape, duplicate ids, non-JSON props) under a
-//    SUPPORTED schema version → recover to the native production sample.
+//    supported schema version → recover to the native production sample.
 //  - FUTURE schema (a numeric `schemaVersion` newer than this build supports) →
 //    QUARANTINE: surface the sample to work in, but keep the raw storage
 //    untouched (`quarantinedRaw`) so a newer build can still read it. Reset is
@@ -15,13 +18,13 @@
 // decides whether to write. A `quarantined` outcome must NOT be written back.
 
 import type { CompositionDocument } from "./types";
-import { COMPOSITION_SCHEMA_VERSION } from "./types";
 import { cloneJson, isPlainObject } from "./json";
+import { decodeCompositionDocument } from "./codec";
 import { isStructurallyValidDocument } from "./validate";
 
 export type LoadOutcome =
   | { status: "fresh"; document: CompositionDocument }
-  | { status: "ok"; document: CompositionDocument }
+  | { status: "ok"; document: CompositionDocument; decodedFromSchemaVersion?: 1 }
   | { status: "recovered"; document: CompositionDocument; reason: string }
   | {
       status: "quarantined";
@@ -29,13 +32,6 @@ export type LoadOutcome =
       quarantinedRaw: string;
       foundSchemaVersion: number;
     };
-
-/** Reads the `schemaVersion` of a parsed blob, or null when it is not a number. */
-function readSchemaVersion(parsed: unknown): number | null {
-  if (!isPlainObject(parsed)) return null;
-  const version = (parsed as { schemaVersion?: unknown }).schemaVersion;
-  return typeof version === "number" && Number.isFinite(version) ? version : null;
-}
 
 /**
  * Load persisted storage against a native `sample`. Never throws and never
@@ -61,29 +57,33 @@ export function loadCompositionDocument(
     };
   }
 
-  const foundSchemaVersion = readSchemaVersion(parsed);
-  if (foundSchemaVersion !== null && foundSchemaVersion > COMPOSITION_SCHEMA_VERSION) {
+  const decoded = decodeCompositionDocument(parsed);
+  if (decoded.status === "future-schema") {
     // Future schema — quarantine without overwrite.
     return {
       status: "quarantined",
       document: cloneJson(sample),
       quarantinedRaw: raw,
-      foundSchemaVersion,
+      foundSchemaVersion: decoded.foundSchemaVersion,
     };
   }
 
-  if (!isStructurallyValidDocument(parsed)) {
+  if (decoded.status === "malformed" || !isStructurallyValidDocument(decoded.document)) {
     return {
       status: "recovered",
       document: cloneJson(sample),
       reason:
-        foundSchemaVersion === null
+        !isPlainObject(parsed) || typeof parsed.schemaVersion !== "number"
           ? "Stored Composition has no supported schemaVersion."
           : "Stored Composition is malformed under the supported schema.",
     };
   }
 
-  return { status: "ok", document: parsed };
+  return {
+    status: "ok",
+    document: decoded.document,
+    ...(decoded.status === "decoded" ? { decodedFromSchemaVersion: decoded.sourceSchemaVersion } : {}),
+  };
 }
 
 /** The explicit reset action — a fresh clone of the native sample. */

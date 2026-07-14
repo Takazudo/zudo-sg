@@ -14,15 +14,29 @@
 
 import type {
   ComponentManifest,
+  CompositionBinding,
   CompositionDocument,
   CompositionNode,
+  CompositionPublication,
+  GlobalTemplateOutlet,
   InsertionTarget,
 } from "./types";
 import { COMPOSITION_SCHEMA_VERSION, VIRTUAL_ROOT_SLOT_ID } from "./types";
 import { isJsonSafe, isPlainObject } from "./json";
 import { orderedSlotIds } from "./index-model";
+import { isSafeCompositionRecordId } from "./record-identity";
 
 // ── Structural validation (manifest-agnostic) ───────────────────────────────
+
+function hasOnlyKeys(
+  value: Record<string, unknown>,
+  required: readonly string[],
+  optional: readonly string[] = [],
+): boolean {
+  const allowed = new Set([...required, ...optional]);
+  return required.every((key) => Object.hasOwn(value, key))
+    && Object.keys(value).every((key) => allowed.has(key));
+}
 
 function isValidNodeShape(
   value: unknown,
@@ -34,11 +48,16 @@ function isValidNodeShape(
   seenRefs.add(value);
 
   const node = value as Record<string, unknown>;
+  if (!hasOnlyKeys(node, ["id", "componentId", "componentVersion", "props", "slots"])) return false;
   if (typeof node.id !== "string" || node.id.length === 0) return false;
   if (seenIds.has(node.id)) return false; // duplicate id
   seenIds.add(node.id);
   if (typeof node.componentId !== "string" || node.componentId.length === 0) return false;
-  if (typeof node.componentVersion !== "number" || !Number.isInteger(node.componentVersion)) {
+  if (
+    typeof node.componentVersion !== "number"
+    || !Number.isInteger(node.componentVersion)
+    || node.componentVersion < 0
+  ) {
     return false;
   }
   if (!isPlainObject(node.props) || !isJsonSafe(node.props)) return false;
@@ -53,6 +72,34 @@ function isValidNodeShape(
   return true;
 }
 
+function isValidOutletTarget(value: unknown): boolean {
+  if (!isPlainObject(value) || !hasOnlyKeys(value, ["parentId", "slotId"])) return false;
+  return typeof value.parentId === "string" && value.parentId.length > 0
+    && typeof value.slotId === "string" && value.slotId.length > 0;
+}
+
+function isValidOutlet(value: unknown): value is GlobalTemplateOutlet {
+  if (!isPlainObject(value) || !hasOnlyKeys(value, ["id", "label", "target"])) return false;
+  return typeof value.id === "string" && value.id.length > 0
+    && typeof value.label === "string"
+    && isValidOutletTarget(value.target);
+}
+
+function isValidPublication(value: unknown): value is CompositionPublication {
+  if (!isPlainObject(value) || typeof value.kind !== "string") return false;
+  if (value.kind === "global-template") {
+    return hasOnlyKeys(value, ["kind", "outlet"]) && isValidOutlet(value.outlet);
+  }
+  return value.kind === "pattern" && hasOnlyKeys(value, ["kind"]);
+}
+
+function isValidBinding(value: unknown): value is CompositionBinding {
+  if (!isPlainObject(value) || !hasOnlyKeys(value, ["sourceRecordId", "outletId"])) return false;
+  return isSafeCompositionRecordId(value.sourceRecordId)
+    && typeof value.outletId === "string"
+    && value.outletId.length > 0;
+}
+
 /**
  * True when `value` is a well-formed `CompositionDocument` of the SUPPORTED
  * schema version: correct shape, JSON-safe props, globally unique node ids, and
@@ -61,9 +108,14 @@ function isValidNodeShape(
 export function isStructurallyValidDocument(value: unknown): value is CompositionDocument {
   if (!isPlainObject(value)) return false;
   const doc = value as Record<string, unknown>;
+  if (!hasOnlyKeys(doc, ["schemaVersion", "id", "name", "root"], ["publication", "binding"])) {
+    return false;
+  }
   if (doc.schemaVersion !== COMPOSITION_SCHEMA_VERSION) return false;
-  if (typeof doc.id !== "string" || typeof doc.name !== "string") return false;
+  if (typeof doc.id !== "string" || doc.id.length === 0 || typeof doc.name !== "string") return false;
   if (!Array.isArray(doc.root)) return false;
+  if (Object.hasOwn(doc, "publication") && !isValidPublication(doc.publication)) return false;
+  if (Object.hasOwn(doc, "binding") && !isValidBinding(doc.binding)) return false;
 
   const seenIds = new Set<string>();
   const seenRefs = new Set<object>();
@@ -82,6 +134,13 @@ export type DiagnosticCode =
   | "cardinality-violation"
   | "unaccepted-child";
 
+/** Reuse-role diagnostics that preserve structurally valid local content. */
+export type ReuseDiagnosticCode =
+  | "publication-binding-conflict"
+  | "self-binding"
+  | "empty-pattern-root"
+  | "stale-outlet-target";
+
 export interface DiagnosticReason {
   code: DiagnosticCode;
   message: string;
@@ -97,6 +156,19 @@ export interface NodeDiagnostic {
   reasons: DiagnosticReason[];
 }
 
+export interface ReuseDiagnosticReason {
+  code: ReuseDiagnosticCode;
+  message: string;
+}
+
+export interface DiagnoseDocumentOptions {
+  /**
+   * The containing record's id, when it differs from the document id in a
+   * caller's temporary model. Omitted values use `document.id`.
+   */
+  containingRecordId?: string;
+}
+
 export interface DocumentDiagnostics {
   byId: Map<string, NodeDiagnostic>;
   /** Ids of all opaque nodes, in traversal order. */
@@ -104,6 +176,9 @@ export interface DocumentDiagnostics {
   hasOpaque: boolean;
   /** False when any opaque node exists — JSX export must be refused. */
   canExport: boolean;
+  /** Semantic reuse diagnostics; they never mutate or sample-recover the document. */
+  reuseReasons: ReuseDiagnosticReason[];
+  hasReuseIssues: boolean;
 }
 
 /** Classify a single node against the manifest. Pure; ignores children. */
@@ -179,14 +254,17 @@ export function classifyNode(
 export function diagnoseDocument(
   document: CompositionDocument,
   manifest: ComponentManifest,
+  options: DiagnoseDocumentOptions = {},
 ): DocumentDiagnostics {
   const byId = new Map<string, NodeDiagnostic>();
+  const nodesById = new Map<string, CompositionNode>();
   const opaqueIds: string[] = [];
 
   const walk = (children: CompositionNode[]): void => {
     for (const node of children) {
       const diagnostic = classifyNode(node, manifest);
       byId.set(node.id, diagnostic);
+      nodesById.set(node.id, node);
       if (diagnostic.opaque) opaqueIds.push(node.id);
       const entry = manifest.get(node.componentId);
       for (const slotId of orderedSlotIds(node, entry)) {
@@ -196,11 +274,50 @@ export function diagnoseDocument(
   };
   walk(document.root);
 
+  const reuseReasons: ReuseDiagnosticReason[] = [];
+  const containingRecordId = options.containingRecordId ?? document.id;
+  if (document.publication && document.binding) {
+    reuseReasons.push({
+      code: "publication-binding-conflict",
+      message: "A Composition cannot be both a reusable source and a live consumer binding.",
+    });
+  }
+  if (
+    document.binding
+    && document.binding.sourceRecordId === containingRecordId
+  ) {
+    reuseReasons.push({
+      code: "self-binding",
+      message: "A Composition cannot bind to itself as its Global template source.",
+    });
+  }
+  if (document.publication?.kind === "pattern" && document.root.length === 0) {
+    reuseReasons.push({
+      code: "empty-pattern-root",
+      message: "A Pattern must retain at least one root component before it can be offered for insertion.",
+    });
+  }
+  if (document.publication?.kind === "global-template") {
+    const { parentId, slotId } = document.publication.outlet.target;
+    const parent = nodesById.get(parentId);
+    const entry = parent ? manifest.get(parent.componentId) : undefined;
+    const targetDeclared = entry?.slots.some((slot) => slot.id === slotId) ?? false;
+    const targetChildren = parent?.slots[slotId];
+    if (!parent || !targetDeclared || (targetChildren !== undefined && targetChildren.length > 0)) {
+      reuseReasons.push({
+        code: "stale-outlet-target",
+        message: `Global template outlet target "${parentId}/${slotId}" is no longer a declared empty component slot.`,
+      });
+    }
+  }
+
   return {
     byId,
     opaqueIds,
     hasOpaque: opaqueIds.length > 0,
     canExport: opaqueIds.length === 0,
+    reuseReasons,
+    hasReuseIssues: reuseReasons.length > 0,
   };
 }
 
