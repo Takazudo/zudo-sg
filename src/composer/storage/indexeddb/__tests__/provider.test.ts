@@ -12,6 +12,7 @@ import {
   COMPOSITION_SCHEMA_VERSION,
   createIndexedDbCompositionProvider,
   createSampleDocument,
+  isCompositionLifecycleStore,
 } from "../../../index";
 import type {
   CleanupMeta,
@@ -209,6 +210,77 @@ describe("IndexedDB composition CRUD", () => {
     expect(await provider.store.get("missing")).toEqual({ status: "not-found", id: "missing" });
     expect(await provider.store.delete("a")).toBe(true);
     expect(await provider.store.delete("a")).toBe(false);
+  });
+
+  it("rechecks Global-template consumers and source publication in one read-write transaction", async () => {
+    const factory = new FDBFactory();
+    const provider = createIndexedDbCompositionProvider({
+      idbFactory: factory,
+      legacyStorage: new MemoryLegacyStorage(null),
+      idFactory: sequentialIds(),
+      now: () => T2,
+    });
+    await provider.initialization.initialize();
+    if (!isCompositionLifecycleStore(provider.store)) throw new Error("expected lifecycle store");
+
+    const source = record("source");
+    source.document.publication = {
+      kind: "global-template",
+      outlet: { id: "outlet-main", label: "Main", target: { parentId: "split-1", slotId: "left" } },
+    };
+    const consumer = record("consumer");
+    consumer.document.binding = { sourceRecordId: "source", outletId: "outlet-main" };
+    await provider.store.put(source);
+    await provider.store.put(consumer);
+
+    await expect(provider.store.deleteWithDependencyCheck("source")).resolves.toMatchObject({
+      status: "blocked",
+      dependents: [{ summary: { id: "consumer", name: "Name consumer" }, binding: consumer.document.binding }],
+    });
+    await expect(provider.store.unpublishWithDependencyCheck("source")).resolves.toMatchObject({
+      status: "blocked",
+      dependents: [{ summary: { id: "consumer" } }],
+    });
+    expect(await provider.store.get("source")).toMatchObject({
+      status: "loaded",
+      record: { document: { publication: { kind: "global-template" } } },
+    });
+    expect(await provider.store.get("consumer")).toMatchObject({
+      status: "loaded",
+      record: { document: { binding: { sourceRecordId: "source" } } },
+    });
+
+    await provider.store.delete("consumer");
+    await expect(provider.store.unpublishWithDependencyCheck("source")).resolves.toEqual({ status: "unpublished" });
+    const unpublished = await provider.store.get("source");
+    expect(unpublished).toMatchObject({ status: "loaded", record: { updatedAt: T2 } });
+    if (unpublished.status !== "loaded") throw new Error("expected source record");
+    expect(unpublished.record.document).not.toHaveProperty("publication");
+  });
+
+  it("rejects a consumer queued after its source was deleted instead of committing an orphan", async () => {
+    const factory = new FDBFactory();
+    const provider = createIndexedDbCompositionProvider({
+      idbFactory: factory,
+      legacyStorage: new MemoryLegacyStorage(null),
+      idFactory: sequentialIds(),
+      now: () => T2,
+    });
+    await provider.initialization.initialize();
+    if (!isCompositionLifecycleStore(provider.store)) throw new Error("expected lifecycle store");
+
+    const source = record("source");
+    source.document.publication = {
+      kind: "global-template",
+      outlet: { id: "outlet-main", label: "Main", target: { parentId: "split-1", slotId: "left" } },
+    };
+    await provider.store.put(source);
+    await expect(provider.store.deleteWithDependencyCheck("source")).resolves.toEqual({ status: "deleted" });
+
+    const lateConsumer = record("late-consumer");
+    lateConsumer.document.binding = { sourceRecordId: "source", outletId: "outlet-main" };
+    await expect(provider.store.put(lateConsumer)).rejects.toMatchObject({ operation: "put", code: "conflict" });
+    await expect(provider.store.get("late-consumer")).resolves.toEqual({ status: "not-found", id: "late-consumer" });
   });
 
   it("validates writes and exposes invalid records read directly from the database", async () => {

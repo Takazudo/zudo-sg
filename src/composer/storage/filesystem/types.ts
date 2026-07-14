@@ -27,4 +27,6 @@ export interface FilesystemCompositionStoreOptions {
   operations?: Partial<FilesystemStoreOperations>;
   /** Test-only random source seam; values must contain only URL-safe characters. */
   randomToken?: () => string;
+  /** Clock used when a provider-owned lifecycle operation changes a record. */
+  now?: () => string;
 }
