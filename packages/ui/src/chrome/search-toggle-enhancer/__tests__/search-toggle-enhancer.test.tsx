@@ -1,11 +1,7 @@
 import { fireEvent, render } from "@testing-library/preact";
 import { describe, expect, it } from "vitest";
-import { SiteHeader, type BrandSwitcherItem } from "../../site-header/site-header";
+import { SiteHeader } from "../../site-header/site-header";
 import SearchToggleEnhancer from "../search-toggle-enhancer";
-
-const ITEMS: BrandSwitcherItem[] = [
-  { key: "corporate", label: "Corporate", href: "/", mark: "○", description: "d", domain: "acme.example", current: true },
-];
 
 // aria-expanded sync runs inside a queueMicrotask (see search-toggle-enhancer.tsx),
 // so assertions on it must wait a tick for that microtask to flush.
@@ -14,7 +10,7 @@ const flush = () => Promise.resolve();
 function setup() {
   render(
     <>
-      <SiteHeader switcherItems={ITEMS} />
+      <SiteHeader />
       <SearchToggleEnhancer />
     </>,
   );
@@ -87,7 +83,7 @@ describe("SearchToggleEnhancer", () => {
   it("does not double-bind when mounted twice (idempotency guard)", async () => {
     render(
       <>
-        <SiteHeader switcherItems={ITEMS} />
+        <SiteHeader />
         <SearchToggleEnhancer />
         <SearchToggleEnhancer />
       </>,

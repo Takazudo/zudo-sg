@@ -1,8 +1,8 @@
 "use client";
 
 /**
- * ContextSwitcherEnhancer — a11y layer on top of SiteHeader's business-context
- * switcher panel (chrome/site-header), which discloses via pure CSS
+ * ContextSwitcherEnhancer — a11y layer on top of SiteHeader's Browse category
+ * panel (chrome/site-header), which discloses via pure CSS
  * (`group/ctx` hover / focus-within). Without this island the panel still
  * opens on hover/focus. What JS adds:
  *   1. Sync the trigger's `aria-expanded` to the real visible state — CSS
@@ -29,7 +29,7 @@
  *
  * Idempotency: this project's SPA client-router can re-run islands on a soft
  * navigation without a full page reload, so re-running `enhance()` on the
- * same DOM must not double-bind. A `data-ctx-enhanced` guard on the switcher's
+ * same DOM must not double-bind. A `data-ctx-enhanced` guard on the disclosure's
  * common-ancestor scope (`.group\/ctx`) makes a second call a no-op; every
  * listener is tied to one `AbortController` so cleanup (which clears the
  * guard) always fully un-binds before a next mount re-enhances.
@@ -149,7 +149,7 @@ function enhance(): () => void {
   );
 
   // Escape closes if currently open, only returning focus to the trigger
-  // when focus was already inside the switcher (don't steal it from a
+  // when focus was already inside the disclosure (don't steal it from a
   // pinned-open panel the user is interacting with elsewhere).
   const onKeyDown = (e: KeyboardEvent) => {
     if (e.key !== "Escape") return;

@@ -6,7 +6,7 @@ import "../styles/global.css";
 
 // Site chrome, consumed via @zudo-sg/ui subpaths (the barrel is rebuilt in a
 // later wave — see the epic's "new components stay OUT of index.ts" rule).
-import { SiteHeader, type BrandSwitcherItem } from "@zudo-sg/ui/src/chrome/site-header/site-header.tsx";
+import { SiteHeader } from "@zudo-sg/ui/src/chrome/site-header/site-header.tsx";
 import { SiteNav } from "@zudo-sg/ui/src/chrome/site-nav/site-nav.tsx";
 import { SiteFooter } from "@zudo-sg/ui/src/chrome/site-footer/site-footer.tsx";
 import { Breadcrumbs } from "@zudo-sg/ui/src/chrome/breadcrumbs/breadcrumbs.tsx";
@@ -14,6 +14,7 @@ import NavEnhancer from "@zudo-sg/ui/src/chrome/nav-enhancer/nav-enhancer.tsx";
 import MobileNavEnhancer from "@zudo-sg/ui/src/chrome/mobile-nav-enhancer/mobile-nav-enhancer.tsx";
 import ContextSwitcherEnhancer from "@zudo-sg/ui/src/chrome/context-switcher-enhancer/context-switcher-enhancer.tsx";
 import SearchToggleEnhancer from "@zudo-sg/ui/src/chrome/search-toggle-enhancer/search-toggle-enhancer.tsx";
+import { THEME_PREPAINT_SCRIPT } from "@zudo-sg/ui/src/shared/theme-control/theme-state.ts";
 
 import { getSiteTree, getBreadcrumbs } from "../lib/site-tree";
 import { composeMetaTitle, absoluteUrl } from "../lib/meta";
@@ -23,6 +24,7 @@ import { siteMeta } from "../config/site-meta";
 // @zudo-sg/ui (which stays zfb-free — see the epic's key architectural rules).
 import ClientRouterBootstrap from "../components/router/client-router-bootstrap";
 import PageLoadingOverlay from "../components/router/page-loading-overlay";
+import { ThemeControlIsland } from "../components/chrome/theme-control-island";
 
 type Props = {
   title?: string;
@@ -45,27 +47,6 @@ type Props = {
 const DEFAULT_TITLE = siteMeta.siteName;
 const DEFAULT_DESCRIPTION =
   "A demo content site composed from the shared @zudo-sg/ui component library.";
-
-/**
- * Single-entry brand-switcher list standing in for "corporate + business
- * lines" until a richer per-line registry lands (config/lines.ts — see
- * lib/site-tree.ts's module doc for why that's out of this wave's scope).
- * SiteHeader/SiteNav's switcher UI renders fine with one always-current
- * entry; a later wave adds more.
- */
-function buildSwitcherItems(): BrandSwitcherItem[] {
-  return [
-    {
-      key: "corporate",
-      label: siteMeta.siteName,
-      href: "/",
-      mark: siteMeta.siteName.charAt(0) || "D",
-      description: "",
-      domain: "",
-      current: true,
-    },
-  ];
-}
 
 /**
  * Shared page chrome: document shell (grid rail + main column), SiteHeader/
@@ -113,15 +94,17 @@ export default function DefaultLayout({
 }: Props) {
   const tree = getSiteTree(line);
   const crumbs = getBreadcrumbs(slug, tree, line);
-  const switcherItems = buildSwitcherItems();
   const brand = siteMeta.siteName;
 
   const canonicalAbsolute = canonical ? absoluteUrl(canonical) : undefined;
   const metaTitle = composeMetaTitle(title);
 
   return (
-    <html lang="en" data-line={line}>
+    <html lang="en" data-theme="light" data-line={line}>
       <head>
+        {/* Restores only the valid persisted theme before the first visible paint.
+            Its own exception handling leaves the light SSR baseline in place. */}
+        <script data-theme-prepaint dangerouslySetInnerHTML={{ __html: THEME_PREPAINT_SCRIPT }} />
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="description" content={description} />
@@ -155,7 +138,16 @@ export default function DefaultLayout({
         </a>
 
         <div data-zfb-transition-persist={`header-${line ?? "main"}`}>
-          <SiteHeader switcherItems={switcherItems} brand={brand} brandHref="/" />
+          <SiteHeader
+            sections={tree.sections}
+            brand={brand}
+            brandHref="/"
+            desktopThemeControl={
+              <Island when="load" ssrFallback={null}>
+                {(<ThemeControlIsland />) as unknown as IslandProps["children"]}
+              </Island>
+            }
+          />
         </div>
 
         <div class="grid min-h-screen grid-cols-[13rem_minmax(0,1fr)] max-sm:grid-cols-[minmax(0,1fr)]">
@@ -165,7 +157,11 @@ export default function DefaultLayout({
               brand={brand}
               brandHref="/"
               currentSlug={slug}
-              switcherItems={switcherItems}
+              mobileThemeControl={
+                <Island when="load" ssrFallback={null}>
+                  {(<ThemeControlIsland />) as unknown as IslandProps["children"]}
+                </Island>
+              }
             />
           </div>
 
