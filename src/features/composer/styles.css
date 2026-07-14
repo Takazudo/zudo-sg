@@ -996,6 +996,45 @@ html[data-sg-composer-doc] body {
   color: var(--color-fg);
 }
 
+/* The Add surface deliberately keeps one shell while switching source kinds:
+   tabs are compact controls rather than a second modal or Pattern-card view. */
+.sg-composer-chooser-tabs {
+  flex: 0 0 auto;
+  display: flex;
+  gap: var(--spacing-hsp-2xs);
+  padding-inline: var(--spacing-hsp-lg);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.sg-composer-chooser-tab {
+  min-height: 2.5rem;
+  padding-inline: var(--spacing-hsp-sm);
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--color-muted);
+  font: inherit;
+  font-size: var(--text-small);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.sg-composer-chooser-tab[aria-selected="true"] {
+  border-bottom-color: var(--color-accent);
+  color: var(--color-fg);
+}
+
+@media (hover: hover) {
+  .sg-composer-chooser-tab:hover {
+    color: var(--color-fg);
+  }
+}
+
+.sg-composer-chooser-tab:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: -2px;
+}
+
 .sg-composer-tool-dialog-grip,
 .sg-composer-tool-dialog-resize {
   display: inline-flex;
@@ -1184,6 +1223,76 @@ html[data-sg-composer-doc] body {
   font-size: var(--text-caption);
 }
 
+/* Saved Patterns are dense metadata rows, not component-style cards. */
+.sg-composer-chooser-pattern-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--spacing-hsp-sm);
+  width: 100%;
+  min-height: 2.5rem;
+  padding: var(--spacing-vsp-2xs) var(--spacing-hsp-sm);
+  border: 1px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  color: var(--color-fg);
+  text-align: start;
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .sg-composer-chooser-pattern-row:hover {
+    background: color-mix(in oklch, var(--color-fg) 6%, transparent);
+  }
+}
+
+.sg-composer-chooser-pattern-row[aria-pressed="true"] {
+  border-color: var(--color-accent);
+}
+
+.sg-composer-chooser-pattern-row:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: -2px;
+}
+
+.sg-composer-chooser-pattern-meta,
+.sg-composer-chooser-pattern-error {
+  color: var(--color-muted);
+  font-size: var(--text-micro);
+}
+
+.sg-composer-chooser-pattern-detail {
+  flex: 2 1 14rem;
+  min-width: 0;
+  min-height: 12rem;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-vsp-3xs);
+  padding-inline: var(--spacing-hsp-lg);
+  padding-block: var(--spacing-vsp-2xs) var(--spacing-vsp-md);
+  border-inline-start: 1px solid var(--color-border);
+}
+
+.sg-composer-chooser-pattern-detail > .sg-composer-chooser-preview {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+}
+
+.sg-composer-chooser-pattern-detail > .sg-composer-chooser-preview-empty,
+.sg-composer-chooser-pattern-detail > .sg-composer-chooser-pattern-error {
+  position: static;
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: var(--spacing-vsp-sm);
+  text-align: center;
+  background: var(--color-surface);
+}
+
 /* ── Context menu (issue #256) ──────────────────────────────────────────────
    ONE host-side popover (`ComposerMenu`) reused for the node menu (Copy/Cut/
    Duplicate/Delete), the insert menu (Add component…/Paste here), and the
@@ -1361,6 +1470,12 @@ html[data-sg-composer-doc] body {
 @media (max-width: 40rem) {
   .sg-composer-chooser-body {
     flex-direction: column;
+  }
+
+  .sg-composer-chooser-preview,
+  .sg-composer-chooser-pattern-detail {
+    border-inline-start: 0;
+    border-block-start: 1px solid var(--color-border);
   }
 }
 

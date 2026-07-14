@@ -4,8 +4,8 @@
 // independent of the dialog's focus/capture mechanics — see
 // `composer-chooser.tsx` for how these compose into the rendered dialog.
 
-import type { ComponentManifest, CompositionDocument, InsertionTarget } from "@/composer";
-import { findLocation, isNodeOpaque } from "@/composer";
+import type { ComponentManifest, CompositionDocument, CompositionNode, InsertionTarget, RootPolicy } from "@/composer";
+import { findLocation, insertForest, isNodeOpaque } from "@/composer";
 import type { ComposerManifestEntry } from "@/styleguide/data/composer-registry";
 
 export interface ChooserEligibility {
@@ -64,6 +64,58 @@ export function matchesQuery(entry: ComposerManifestEntry, query: string): boole
   if (!q) return true;
   const haystack = `${entry.title} ${entry.category} ${entry.description}`.toLowerCase();
   return haystack.includes(q);
+}
+
+export interface PatternForestEligibility {
+  eligible: boolean;
+  /** The exact atomic-command rejection shown before an attempted insertion. */
+  reason?: string;
+}
+
+/**
+ * Ask the same atomic forest command used for submit whether this complete
+ * Pattern root forest can currently be inserted. The disposable id factory is
+ * deliberately collision-free against both inputs, so this dry run neither
+ * changes a document nor consumes the real controller's node ids.
+ *
+ * The submit callback must still invoke `insertForest` through the controller:
+ * a target, root policy, or manifest can change after this advisory check.
+ */
+export function assessPatternForestInsertion(
+  document: CompositionDocument,
+  manifest: ComponentManifest,
+  target: InsertionTarget,
+  sourceRoots: readonly CompositionNode[],
+  rootPolicy?: RootPolicy,
+): PatternForestEligibility {
+  const occupiedIds = new Set<string>();
+  const collect = (nodes: readonly CompositionNode[]): void => {
+    for (const node of nodes) {
+      occupiedIds.add(node.id);
+      for (const children of Object.values(node.slots)) collect(children);
+    }
+  };
+  collect(document.root);
+  collect(sourceRoots);
+
+  let sequence = 0;
+  const result = insertForest(
+    document,
+    manifest,
+    target,
+    sourceRoots,
+    () => {
+      let id = "";
+      do {
+        sequence += 1;
+        id = `chooser-pattern-validation-${sequence}`;
+      } while (occupiedIds.has(id));
+      occupiedIds.add(id);
+      return id;
+    },
+    rootPolicy,
+  );
+  return result.ok ? { eligible: true } : { eligible: false, reason: result.error };
 }
 
 /** A human-readable label for the dialog title/status: "Document root" or "Parent › Slot". */

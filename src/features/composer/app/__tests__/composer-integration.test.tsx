@@ -9,7 +9,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { act } from "preact/test-utils";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/preact";
-import type { CompositionDocument, InsertionTarget } from "@/composer";
+import type {
+  CompositionDocument,
+  CompositionRecord,
+  InsertionTarget,
+  ReuseCatalogOutcome,
+  ReuseSelectionOutcome,
+} from "@/composer";
 import { VIRTUAL_ROOT_SLOT_ID, createSequentialIdFactory } from "@/composer";
 import {
   commitInlineEditMessage,
@@ -49,6 +55,10 @@ function setup(
   seedViewport?: string,
   sample: CompositionDocument = emptyDoc(),
   getPublicationDependencies?: () => Promise<{ status: "ready"; dependentCount: number }>,
+  patternCallbacks?: {
+    listPatternCatalog?: () => Promise<ReuseCatalogOutcome>;
+    loadPattern?: (ref: { providerId: "indexeddb" | "files"; recordId: string }) => Promise<ReuseSelectionOutcome>;
+  },
 ) {
   if (seedViewport) localStorage.setItem(LS_COMPOSER_VIEWPORT, seedViewport);
   const bridge = makeTestBridge();
@@ -59,6 +69,7 @@ function setup(
       createBridge={bridge.createBridge}
       previewLocation={bridge.location}
       getPublicationDependencies={getPublicationDependencies}
+      {...patternCallbacks}
     />,
   );
   act(() => bridge.deliver(readyMessage()));
@@ -169,6 +180,62 @@ describe("ComposerIntegration — cross-surface wiring (#251)", () => {
     // Tree shows it, inspector selected it.
     expect(s.tree().querySelector(`[data-sg-tree-node-id="${boxId}"]`)).not.toBeNull();
     expect(within(s.inspector()).getByText("Box")).toBeInTheDocument();
+  });
+
+  it("loads an active-provider Pattern on demand and inserts its full forest atomically", async () => {
+    const patternDocument = fixtureDocument([
+      fixtureNode(FIXTURE_IDS.stack, { gap: "lg" }, {}, "pattern-stack"),
+      fixtureNode(FIXTURE_IDS.box, { label: "Pattern box" }, {}, "pattern-box"),
+    ], "Feature Pattern");
+    patternDocument.id = "feature-pattern";
+    patternDocument.publication = { kind: "pattern" };
+    const patternRecord: CompositionRecord = {
+      id: "feature-pattern",
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-01T00:00:00.000Z",
+      document: patternDocument,
+    };
+    const listPatternCatalog = vi.fn(async (): Promise<ReuseCatalogOutcome> => ({
+      status: "listed",
+      entries: [
+        {
+          ref: { providerId: "indexeddb", recordId: patternRecord.id },
+          kind: "pattern",
+          summary: {
+            id: patternRecord.id,
+            name: patternDocument.name,
+            createdAt: patternRecord.createdAt,
+            updatedAt: patternRecord.updatedAt,
+            nodeCount: 2,
+            rootCount: 2,
+            publicationKind: "pattern",
+            reuseStatus: "eligible",
+          },
+        },
+      ],
+    }));
+    const loadPattern = vi.fn(async (): Promise<ReuseSelectionOutcome> => ({
+      status: "loaded",
+      kind: "pattern",
+      record: patternRecord,
+    }));
+    const s = setup(undefined, emptyDoc(), undefined, { listPatternCatalog, loadPattern });
+
+    act(() => s.bridge.deliver(requestAddMessage(rev++, ROOT)));
+    fireEvent.click(within(s.chooser()).getByRole("tab", { name: "Patterns" }));
+
+    const patternRow = await within(s.chooser()).findByRole("button", { name: /Feature Pattern/i });
+    expect(listPatternCatalog).toHaveBeenCalledOnce();
+    fireEvent.click(patternRow);
+
+    await waitFor(() => expect(loadPattern).toHaveBeenCalledWith({ providerId: "indexeddb", recordId: "feature-pattern" }));
+    const insert = await within(s.chooser()).findByRole("button", { name: "Insert Pattern" });
+    expect((insert as HTMLButtonElement).disabled).toBe(false);
+    fireEvent.click(insert);
+
+    await waitFor(() => expect(s.canvasDoc().root.map((node) => node.componentId)).toEqual([FIXTURE_IDS.stack, FIXTURE_IDS.box]));
+    expect(s.canvasDoc().root.map((node) => node.id)).not.toEqual(["pattern-stack", "pattern-box"]);
+    expect(s.chooser().hasAttribute("open")).toBe(false);
   });
 
   it("a canvas selection reveals + expands the node's ancestors in the tree", () => {

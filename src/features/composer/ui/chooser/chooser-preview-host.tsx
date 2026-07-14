@@ -99,6 +99,10 @@ export function buildChooserPreviewDocument(
 export interface ChooserPreviewHostProps {
   /** The catalog entry currently previewed. Null before the first hover/focus. */
   entry: ComposerManifestEntry | null;
+  /** A fully loaded Pattern source document, rendered intact rather than as a single component sample. */
+  sourceDocument?: CompositionDocument | null;
+  /** Keeps the shared isolated-preview shell correctly labelled in each chooser tab. */
+  label?: string;
   /** Full catalog lookup, for resolving the PlaceholderBox sample child. */
   catalogById: ReadonlyMap<string, ComposerManifestEntry>;
 
@@ -111,6 +115,8 @@ export interface ChooserPreviewHostProps {
 export function ChooserPreviewHost(props: ChooserPreviewHostProps): JSX.Element {
   const {
     entry,
+    sourceDocument,
+    label = "Live preview",
     catalogById,
     createBridge = createComposerPreviewBridge,
     location: locationProp,
@@ -119,12 +125,19 @@ export function ChooserPreviewHost(props: ChooserPreviewHostProps): JSX.Element 
 
   const frameRef = useRef<HTMLIFrameElement | null>(null);
   const bridgeRef = useRef<ComposerPreviewBridge | null>(null);
+  const renderedDocumentRef = useRef<CompositionDocument | null>(null);
 
   const location = useMemo(() => locationProp ?? buildComposerPreviewUrl(), [locationProp]);
   const frameProps = useMemo(
     () => composerPreviewFrameProps(location, PREVIEW_IFRAME_TITLE),
     [location],
   );
+  const previewDocument = useMemo(
+    () => sourceDocument ?? (entry ? buildChooserPreviewDocument(entry, catalogById) : null),
+    [catalogById, entry, sourceDocument],
+  );
+  const latestPreviewDocumentRef = useRef(previewDocument);
+  latestPreviewDocumentRef.current = previewDocument;
 
   // Created on mount, disposed on unmount — this pane's whole lifetime is the
   // dialog being open, which is exactly the "ephemeral" contract (#254): no
@@ -134,28 +147,43 @@ export function ChooserPreviewHost(props: ChooserPreviewHostProps): JSX.Element 
     if (!frame) return;
     const bridge = createBridge({ frame, location, hostWindow: hostWindow ?? window });
     bridgeRef.current = bridge;
+    renderedDocumentRef.current = null;
+    // A Pattern host can mount only after an asynchronous source load. Render
+    // the latest document here as well as in the update effect so the initial
+    // snapshot cannot be lost to effect ordering during that transition.
+    const initialDocument = latestPreviewDocumentRef.current;
+    if (initialDocument) {
+      bridge.render(initialDocument, {
+        mode: "preview",
+        theme: resolveChooserPreviewTheme(),
+        selectedId: null,
+      });
+      renderedDocumentRef.current = initialDocument;
+    }
     return () => {
       bridge.dispose();
       bridgeRef.current = null;
+      renderedDocumentRef.current = null;
     };
   }, [createBridge, location, hostWindow]);
 
   useEffect(() => {
     const bridge = bridgeRef.current;
-    if (!bridge || !entry) return;
+    if (!bridge || !previewDocument || renderedDocumentRef.current === previewDocument) return;
     const session: PreviewSession = {
       mode: "preview",
       theme: resolveChooserPreviewTheme(),
       selectedId: null,
     };
-    bridge.render(buildChooserPreviewDocument(entry, catalogById), session);
-  }, [entry, catalogById]);
+    bridge.render(previewDocument, session);
+    renderedDocumentRef.current = previewDocument;
+  }, [previewDocument]);
 
   return (
     <div class="sg-composer-chooser-preview">
-      <p class="sg-composer-chooser-preview-label">Live preview</p>
+      <p class="sg-composer-chooser-preview-label">{label}</p>
       <div class="sg-composer-chooser-preview-stage">
-        {!entry && (
+        {!previewDocument && (
           <p class="sg-composer-chooser-preview-empty">Hover or focus a component to preview it here.</p>
         )}
         <iframe ref={frameRef} class="sg-composer-preview-iframe" {...frameProps} />

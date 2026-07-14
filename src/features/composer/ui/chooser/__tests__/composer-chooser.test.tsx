@@ -2,15 +2,22 @@
 /** @jsxImportSource preact */
 import { describe, expect, it, vi } from "vitest";
 import { act } from "preact/test-utils";
-import { fireEvent, render, screen } from "@testing-library/preact";
+import { fireEvent, render, screen, waitFor } from "@testing-library/preact";
 import { useState } from "preact/hooks";
 import { VIRTUAL_ROOT_SLOT_ID, createManifest } from "@/composer";
-import type { InsertionTarget } from "@/composer";
+import type { CompositionDocument, InsertionTarget, ReuseCatalogOutcome } from "@/composer";
 import type { ComposerManifestEntry } from "@/styleguide/data/composer-registry";
 import type { ComposerPreviewLocation } from "@/features/composer/preview";
 import { ComposerChooser } from "../composer-chooser";
 import { CHOOSER_PREVIEW_PLACEHOLDER_ID } from "../chooser-preview-host";
-import { FIXTURE_IDS, fixtureCatalog, makeAbcDocument, resetFixtureIds } from "../../tree/__tests__/fixtures";
+import {
+  FIXTURE_IDS,
+  fixtureCatalog,
+  fixtureDocument,
+  fixtureNode,
+  makeAbcDocument,
+  resetFixtureIds,
+} from "../../tree/__tests__/fixtures";
 import { makeChooserPreviewBridgeHarness } from "./preview-bridge-test-harness";
 
 const rightTarget: InsertionTarget = { parentId: "split", slotId: "right", index: 2 };
@@ -67,13 +74,43 @@ function baseProps(overrides: Partial<Parameters<typeof ComposerChooser>[0]> = {
   };
 }
 
+function savedPattern(name = "Feature row"): CompositionDocument {
+  const document = fixtureDocument([
+    fixtureNode(FIXTURE_IDS.box, { label: "Pattern lead" }, {}, "pattern-lead"),
+    fixtureNode(FIXTURE_IDS.text, { children: "Pattern detail" }, {}, "pattern-detail"),
+  ], name);
+  document.id = "feature-pattern";
+  document.publication = { kind: "pattern" };
+  return document;
+}
+
+const patternCatalog: ReuseCatalogOutcome = {
+  status: "listed",
+  entries: [
+    {
+      ref: { providerId: "files", recordId: "feature-pattern" },
+      summary: {
+        id: "feature-pattern",
+        name: "Feature row",
+        createdAt: "2026-07-14T01:00:00.000Z",
+        updatedAt: "2026-07-14T02:00:00.000Z",
+        nodeCount: 2,
+        rootCount: 2,
+        publicationKind: "pattern",
+        reuseStatus: "eligible",
+      },
+      kind: "pattern",
+    },
+  ],
+};
+
 describe("ComposerChooser — modal behavior", () => {
   it("shows as an open, labelled dialog with an accessible title", () => {
     const props = baseProps();
     render(<ComposerChooser {...props} />);
     const dialog = screen.getByRole("dialog", { hidden: true }) as HTMLDialogElement;
     expect(dialog.open).toBe(true);
-    expect(screen.getByRole("heading", { name: "Add a component" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Add to Split Layout › Right" })).toBeInTheDocument();
   });
 
   it("focuses the search input on open", () => {
@@ -160,12 +197,12 @@ describe("ComposerChooser — target capture survives a selection change", () =>
     }
 
     render(<Harness />);
-    expect(screen.getByText("Split Layout › Right")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Add to Split Layout › Right" })).toBeInTheDocument();
 
     // Simulate a selection change elsewhere in the app redirecting the live
     // `target` prop WHILE the dialog is still open.
     fireEvent.click(screen.getByRole("button", { name: "Simulate selection change" }));
-    expect(screen.getByText("Split Layout › Right")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Add to Split Layout › Right" })).toBeInTheDocument();
     expect(screen.queryByText("Document root")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /^Box/ }));
@@ -178,7 +215,7 @@ describe("ComposerChooser — search / category / constraint filters", () => {
   it("shows the destination label and every eligible component with a result count", () => {
     const props = baseProps();
     render(<ComposerChooser {...props} />);
-    expect(screen.getByText("Split Layout › Right")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Add to Split Layout › Right" })).toBeInTheDocument();
     expect(screen.getByText(/\d+ of \d+ components?/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /^Box/ })).toBeInTheDocument();
   });
@@ -255,6 +292,86 @@ describe("ComposerChooser — Enter / Escape and successful add", () => {
     render(<ComposerChooser {...props} />);
     fireEvent.click(screen.getByRole("button", { name: /^Box/ }));
     expect(screen.getByRole("status")).toHaveTextContent(/Box added to Split Layout › Right/);
+  });
+});
+
+describe("ComposerChooser — published Pattern insertion", () => {
+  it("keeps Components as the default, then loads a full multi-root Pattern for the isolated preview", async () => {
+    const source = savedPattern();
+    const loadPattern = vi.fn(async () => ({
+      status: "loaded" as const,
+      kind: "pattern" as const,
+      record: {
+        id: "feature-pattern",
+        createdAt: "2026-07-14T01:00:00.000Z",
+        updatedAt: "2026-07-14T02:00:00.000Z",
+        document: source,
+      },
+    }));
+    const props = baseProps({
+      patternCatalog,
+      loadPattern,
+      onInsertPattern: vi.fn(() => ({ status: "inserted" as const })),
+    });
+    render(<ComposerChooser {...props} />);
+
+    expect(screen.getByRole("tab", { name: "Components" })).toHaveAttribute("aria-selected", "true");
+    fireEvent.click(screen.getByRole("tab", { name: "Patterns" }));
+    expect(screen.getByRole("tab", { name: "Patterns" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("button", { name: /^Feature row/ })).toHaveTextContent("2 roots · 2 nodes");
+
+    fireEvent.click(screen.getByRole("button", { name: /^Feature row/ }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Insert Pattern" })).toBeEnabled());
+    expect(loadPattern).toHaveBeenCalledWith({ providerId: "files", recordId: "feature-pattern" });
+    expect(screen.getByText("Pattern preview")).toBeInTheDocument();
+  });
+
+  it("preserves the captured target, selected Pattern, search, and dialog after an atomic insertion rejection", async () => {
+    const source = savedPattern();
+    const onInsertPattern = vi.fn(() => ({ status: "rejected" as const, message: "The destination changed." }));
+    const props = baseProps({
+      patternCatalog,
+      loadPattern: async () => ({
+        status: "loaded" as const,
+        kind: "pattern" as const,
+        record: {
+          id: "feature-pattern",
+          createdAt: "2026-07-14T01:00:00.000Z",
+          updatedAt: "2026-07-14T02:00:00.000Z",
+          document: source,
+        },
+      }),
+      onInsertPattern,
+    });
+    render(<ComposerChooser {...props} />);
+
+    fireEvent.click(screen.getByRole("tab", { name: "Patterns" }));
+    const search = screen.getByPlaceholderText("Search Patterns…") as HTMLInputElement;
+    fireEvent.input(search, { target: { value: "feature" } });
+    fireEvent.click(screen.getByRole("button", { name: /^Feature row/ }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Insert Pattern" })).toBeEnabled());
+    fireEvent.click(screen.getByRole("button", { name: "Insert Pattern" }));
+
+    await waitFor(() => expect(screen.getByText("The destination changed.")).toBeInTheDocument());
+    expect(onInsertPattern).toHaveBeenCalledWith(rightTarget, source.root);
+    expect(search.value).toBe("feature");
+    expect(screen.getByRole("dialog", { hidden: true })).toHaveProperty("open", true);
+    expect(props.onClose).not.toHaveBeenCalled();
+  });
+
+  it("keeps an unavailable or changed Pattern source actionable without closing the dialog", async () => {
+    const props = baseProps({
+      patternCatalog,
+      loadPattern: async () => ({ status: "invalid" as const, reason: "not-reusable" as const }),
+      onInsertPattern: vi.fn(() => ({ status: "inserted" as const })),
+    });
+    render(<ComposerChooser {...props} />);
+
+    fireEvent.click(screen.getByRole("tab", { name: "Patterns" }));
+    fireEvent.click(screen.getByRole("button", { name: /^Feature row/ }));
+    await waitFor(() => expect(screen.getByText(/no longer published as a Pattern/i)).toBeInTheDocument());
+    expect(screen.queryByRole("button", { name: "Insert Pattern" })).not.toBeInTheDocument();
+    expect(props.onClose).not.toHaveBeenCalled();
   });
 });
 

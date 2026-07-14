@@ -13,6 +13,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { act } from "preact/test-utils";
 import { render, screen } from "@testing-library/preact";
+import { COMPOSITION_SCHEMA_VERSION } from "@/composer";
 import type { ComposerManifestEntry } from "@/styleguide/data/composer-registry";
 import {
   ChooserPreviewHost,
@@ -129,6 +130,37 @@ describe("ChooserPreviewHost — empty state before first hover", () => {
 });
 
 describe("ChooserPreviewHost — live document over its OWN bridge", () => {
+  it("renders a fully loaded multi-root Pattern source unchanged through the isolated bridge", () => {
+    const harness = makeChooserPreviewBridgeHarness();
+    const source = {
+      schemaVersion: COMPOSITION_SCHEMA_VERSION,
+      id: "feature-pattern",
+      name: "Feature row",
+      publication: { kind: "pattern" as const },
+      root: [
+        { id: "pattern-one", componentId: leafEntry.componentId, componentVersion: leafEntry.version, props: {}, slots: {} },
+        { id: "pattern-two", componentId: leafEntry.componentId, componentVersion: leafEntry.version, props: {}, slots: {} },
+      ],
+    };
+    render(
+      <ChooserPreviewHost
+        entry={null}
+        sourceDocument={source}
+        label="Pattern preview"
+        catalogById={catalogById}
+        createBridge={harness.createBridge}
+        location={harness.location}
+      />,
+    );
+
+    act(() => harness.deliverReady());
+    expect(harness.posts).toHaveLength(1);
+    const posted = harness.posts[0]!.message as { document: typeof source; session: { mode: string } };
+    expect(posted.document).toBe(source);
+    expect(posted.document.root.map((node) => node.id)).toEqual(["pattern-one", "pattern-two"]);
+    expect(posted.session.mode).toBe("preview");
+  });
+
   it("sends a single-node render for the previewed entry, addressed to the exact preview origin", () => {
     const { harness } = mount(leafEntry);
     act(() => harness.deliverReady());
