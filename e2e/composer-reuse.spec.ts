@@ -266,6 +266,7 @@ test.describe("Composer reuse cross-feature acceptance", () => {
     await openRecord(page, "Legacy composition");
     await page.getByRole("button", { name: "Add component to document root" }).click();
     const addDialog = chooser(page);
+    await expect(addDialog).toBeVisible();
     await expect(addDialog.getByRole("button", { name: "Resize dialog" })).toHaveCount(0);
     const addInitial = await dialogRect(page, addDialog);
     const moveGrip = addDialog.getByRole("button", { name: "Move dialog" });
