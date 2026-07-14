@@ -31,7 +31,7 @@ Sample body copy goes here.
 
 "The quick brown fox jumps over the lazy dog."([A practical example](/lines/beauty))
 
-![Chemical products sample](placeholder-chemical.jpg)
+![Chemical products sample](/images/dummy/corporate.webp)
 
 ## A practical example
 
