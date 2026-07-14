@@ -17,11 +17,9 @@
  * A few AA-tuned OKLCH literals appear only where a shared ramp rung cannot hit
  * the required contrast (each carries a `why` comment).
  *
- * Palette values are keyed off THIS site's own warm color scheme
- * (src/config/color-schemes.ts) — a warm-neutral `base` ramp (hue ~65) and the
- * amber `accent` ramp — NOT a cold blue/navy scheme. Where the older ui palette
- * drifted from color-schemes.ts (e.g. dark danger .640 vs .655), color-schemes.ts
- * is the source of truth and wins.
+ * Palette values are keyed off THIS site's own warm color scheme — four locked
+ * warm-neutral stops plus separate accent, state, and per-line groups. The
+ * neutral stop names are stable handles, not component-facing roles.
  *
  * The Tier-1 palette is inlined at the TOP of this file (a plain :root block)
  * rather than a sibling file: the single-consumer contract requires every
@@ -43,9 +41,8 @@
  *   - `color-scheme: light dark` is set on :root so light-dark() resolves and
  *     UA-styled controls (inputs, scrollbars) follow the active scheme.
  *   - The `rail` role (persistent dark nav surface) is intentionally NOT a
- *     light-dark() pair: it stays a dark warm panel in BOTH schemes, mirroring
- *     the reference implementation's persistent navy rail (which likewise did
- *     not invert in dark mode) — re-hued here to warm tones from the base ramp.
+ *     light-dark() pair: it stays a dark warm panel in BOTH schemes, using the
+ *     locked neutral-3 stop rather than an inverted per-component style.
  *   - Dark values are NOT naive inversions: surfaces are warm dark gray (not
  *     pure black), fg is off-white (not pure white), and accent/state hues gain
  *     lightness + lose a touch of chroma so they don't vibrate on dark.
@@ -71,9 +68,9 @@
  * components NEVER do.
  *
  * Groups:
- *   base    warm-neutral grayscale ramp (hue ~65), 11 rungs light → dark. Sized
- *           to supply bg / surface / surface-2 / border / muted / fg AND the
- *           dark warm rail in BOTH light and dark schemes from one ramp.
+ *   neutral four locked warm-neutral stops, light (0) → dark (3). Their
+ *           intentionally shared semantic mappings keep the theme quiet and
+ *           make the palette swappable without component changes.
  *   accent  amber action ramp, 4 rungs (light accent+hover, dark accent+hover)
  *   state   danger / success / warning / info — a light + a dark rung per role
  *   line-*  5 business lines (vacuum/process/laser/meeting/beauty), each an
@@ -82,30 +79,11 @@
  *           harmonious with the warm scheme (NOT the reference's cold hues).
  * ======================================== */
 :root {
-  /* ── base — warm-neutral ramp, light (0) → dark (10), hue ~65 ──
-     Rung usage (L=light scheme, D=dark scheme):
-       0  L bg
-       1  L surface
-       2  L surface-2 · D fg · rail fg
-       3  L border
-       4  D muted · rail muted
-       5  L muted
-       6  rail border
-       7  L border(dark side) · D border · rail hover-bg
-       8  L fg · D surface-2 · rail bg
-       9  D surface · rail bg-strong
-       10 D bg */
-  --palette-base-0:  oklch(.985 .003 65);
-  --palette-base-1:  oklch(.958 .004 65);
-  --palette-base-2:  oklch(.923 .005 65);
-  --palette-base-3:  oklch(.878 .006 65);
-  --palette-base-4:  oklch(.708 .012 65);
-  --palette-base-5:  oklch(.508 .014 65);
-  --palette-base-6:  oklch(.400 .014 65);
-  --palette-base-7:  oklch(.342 .013 65);
-  --palette-base-8:  oklch(.285 .011 65);
-  --palette-base-9:  oklch(.232 .009 65);
-  --palette-base-10: oklch(.185 .006 65);
+  /* ── neutral — canonical warm-neutral palette, light (0) → dark (3) ── */
+  --palette-neutral-0: oklch(0.970 0.006 75); /* paper / off-white */
+  --palette-neutral-1: oklch(0.885 0.009 75); /* quiet surface / divider */
+  --palette-neutral-2: oklch(0.410 0.012 75); /* subdued ink / strong divider */
+  --palette-neutral-3: oklch(0.235 0.010 75); /* warm ink / dark surface */
 
   /* ── accent — amber action ramp (from color-schemes.ts accent stops,
      extended with the light-hover rung) ── */
@@ -131,7 +109,7 @@
      scheme; each line keeps its identity hue but every rung is AA both as
      accent text on its scheme's bg AND as the fill under on-accent text.
      Consumed later by the port batches' `[data-line="<key>"]` Tier-2 overrides. */
-  --palette-line-vacuum-accent:       oklch(.538 .100 200);
+  --palette-line-vacuum-accent:       oklch(.525 .100 200);
   --palette-line-vacuum-accent-dark:  oklch(.760 .085 200);
   --palette-line-vacuum-hover:        oklch(.460 .088 200);
   --palette-line-vacuum-hover-dark:   oklch(.830 .070 200);
@@ -146,7 +124,7 @@
   --palette-line-laser-hover:         oklch(.478 .168 28);
   --palette-line-laser-hover-dark:    oklch(.775 .140 28);
 
-  --palette-line-meeting-accent:      oklch(.536 .132 150);
+  --palette-line-meeting-accent:      oklch(.525 .132 150);
   --palette-line-meeting-accent-dark: oklch(.740 .125 150);
   --palette-line-meeting-hover:       oklch(.458 .116 150);
   --palette-line-meeting-hover-dark:  oklch(.815 .105 150);
@@ -170,19 +148,17 @@
    * (rail is scheme-independent).
    * ======================================== */
 
-  /* ── Surfaces & dividers — page bg, two raised surfaces, hairline border.
-     Light scheme steps down from near-white; dark scheme steps up from the
-     warm near-black. ── */
-  --color-bg:        light-dark(var(--palette-base-0),  var(--palette-base-10));
-  --color-surface:   light-dark(var(--palette-base-1),  var(--palette-base-9));
-  --color-surface-2: light-dark(var(--palette-base-2),  var(--palette-base-8));
-  --color-border:    light-dark(var(--palette-base-3),  var(--palette-base-7));
+  /* ── Surfaces & dividers — locked aliases keep both schemes warm and quiet. ── */
+  --color-bg:        light-dark(var(--palette-neutral-0), var(--palette-neutral-3));
+  --color-surface:   light-dark(var(--palette-neutral-0), var(--palette-neutral-3));
+  --color-surface-2: light-dark(var(--palette-neutral-1), var(--palette-neutral-2));
+  --color-border:    light-dark(var(--palette-neutral-1), var(--palette-neutral-2));
 
   /* ── Text — body fg (off-black / off-white) and muted auxiliary text.
      muted is AA (≥4.5:1) on bg/surface/surface-2 in both schemes; reserve it
      for labels/meta, not long-form reading. ── */
-  --color-fg:    light-dark(var(--palette-base-8), var(--palette-base-2));
-  --color-muted: light-dark(var(--palette-base-5), var(--palette-base-4));
+  --color-fg:    light-dark(var(--palette-neutral-3), var(--palette-neutral-0));
+  --color-muted: light-dark(var(--palette-neutral-2), var(--palette-neutral-1));
 
   /* ── Accent — primary action / link hue (amber). ── */
   --color-accent:       light-dark(var(--palette-accent-2), var(--palette-accent-1));
@@ -190,21 +166,19 @@
 
   /* Foreground for text/icons sitting ON a filled accent/state surface. Light
      accent is dark → white text; dark accent is bright → near-black text. */
-  --color-on-accent: light-dark(var(--palette-base-0), var(--palette-base-10));
+  --color-on-accent: light-dark(var(--palette-neutral-0), var(--palette-neutral-3));
 
   /* Focus ring — shared by all interactive components; resolves identically to
      --color-accent so it reuses the same amber rungs. */
   --color-focus: light-dark(var(--palette-accent-2), var(--palette-accent-1));
 
-  /* ── Rail — persistent dark warm nav surface. NOT a light-dark() pair: it
-     stays dark in both schemes (the reference's navy rail likewise did not
-     invert). rail-fg/rail-muted are AA on rail-bg. ── */
-  --color-rail-bg:        var(--palette-base-8);
-  --color-rail-bg-strong: var(--palette-base-9);
-  --color-rail-fg:        var(--palette-base-2);
-  --color-rail-muted:     var(--palette-base-4);
-  --color-rail-border:    var(--palette-base-6);
-  --color-rail-hover-bg:  var(--palette-base-7);
+  /* ── Rail — persistent warm-dark navigation surface in both schemes. ── */
+  --color-rail-bg:        var(--palette-neutral-3);
+  --color-rail-bg-strong: var(--palette-neutral-3);
+  --color-rail-fg:        var(--palette-neutral-0);
+  --color-rail-muted:     var(--palette-neutral-1);
+  --color-rail-border:    var(--palette-neutral-2);
+  --color-rail-hover-bg:  var(--palette-neutral-2);
 
   /* Loading-overlay scrim — a translucent frost derived from the page bg (NOT a
      black veil), so it follows the active scheme's surface color. The indicator

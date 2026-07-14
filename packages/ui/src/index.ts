@@ -26,6 +26,24 @@
 export { CtaButton } from "./shared/cta-button/cta-button";
 export type { CtaButtonVariant, CtaButtonProps } from "./shared/cta-button/cta-button";
 
+export { ThemeControl } from "./shared/theme-control/theme-control";
+export type { ThemeControlProps } from "./shared/theme-control/theme-control";
+export {
+  applyStoredTheme,
+  applyTheme,
+  createThemePrepaintScript,
+  isTheme,
+  nextTheme,
+  readStoredTheme,
+  storeTheme,
+  themeFromRoot,
+  DEFAULT_THEME,
+  THEME_PREPAINT_SCRIPT,
+  THEME_STORAGE_KEY,
+  THEME_VALUES,
+} from "./shared/theme-control/theme-state";
+export type { Theme, ThemeStorage } from "./shared/theme-control/theme-state";
+
 // ── Typography ───────────────────────────────────────────────────────────
 export { ProseA } from "./content/prose-a/prose-a";
 export type { ProseAProps } from "./content/prose-a/prose-a";

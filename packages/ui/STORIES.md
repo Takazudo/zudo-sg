@@ -60,6 +60,13 @@ work**. A host that wants a manual toggle pins the scheme with
 `:root[data-theme="light"|"dark"]` (overrides already in `colors.css`); no
 component markup changes.
 
+For a manual demo-site toggle, use the reusable exports rather than creating a
+second theme state implementation. Emit `THEME_PREPAINT_SCRIPT` in the document
+head before visible styles, then mount `<ThemeControl />` where the host's chrome
+needs it. The only persisted values are `light` and `dark`, under the public
+`zudo-sg-demo-theme` storage key; the root attribute is the runtime source of
+truth and the light fallback is safe when storage is unavailable.
+
 #### Three-tier color system
 
 Colors follow the **three-tier strategy** (zudo-css-wisdom: *Three-Tier Color
@@ -68,7 +75,7 @@ roles:
 
 | Tier | What | Where |
 |---|---|---|
-| **1 — Palette** | Raw oklch values, named `--palette-{group}-{step-or-role}` (groups `base`, `accent`, `state`, and a `line-*` ramp per business line) | `styles/colors.css` (top `:root` block) |
+| **1 — Palette** | Raw oklch values, named `--palette-{group}-{step-or-role}` (the locked four-stop `neutral` group plus `accent`, `state`, and `line-*` groups) | `styles/colors.css` (top `:root` block) |
 | **2 — Semantic** | Roles → palette: `--color-*` tokens are semantic values backed by palette refs, with a few zudo-doc-style AA-tuned light-mode literals | `styles/colors.css` (`@theme`) |
 | **3 — Component** | Scoped overrides — rarely needed under Tailwind utilities | per-component |
 

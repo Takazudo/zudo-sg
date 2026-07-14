@@ -105,12 +105,12 @@ function tierFromGroup(
 
 /**
  * Split a `UI_PALETTE_COLORS` name into its group family and step/role:
- *   "base-4"              → { family: "base",  step: "4" }
+ *   "neutral-2"           → { family: "neutral", step: "2" }
  *   "state-danger-dark"   → { family: "state", step: "danger-dark" }
  *   "line-vacuum-accent"  → { family: "line",  step: "vacuum-accent" }
  * Names with no recognized grouping are kept as single-item families for
  * defensive compatibility, but the committed @zudo-sg/ui palette uses grouped
- * names (base / accent / state / line).
+ * names (neutral / accent / state / line).
  */
 function splitPaletteName(name: string): { family: string; step: string | null } {
   const lineMatch = /^line-(.+)$/.exec(name);

@@ -61,14 +61,13 @@ const FONT_WEIGHT_OPTIONS = [
 
 /**
  * Tier-1 raw palette — every `--palette-*` in colors.css's `:root` block.
- * Order matches the section order in colors.css (base, accent, state, line)
+ * Order matches the section order in colors.css (neutral, accent, state, line)
  * purely for readability; has no functional effect. The panel's PALETTE_TAB
- * groups these into base / accent / state / line families (see
+ * groups these into neutral / accent / state / line families (see
  * `splitPaletteName` in preview-token-panel-config.ts).
  */
 export const PALETTE_NAMES = [
-  "base-0", "base-1", "base-2", "base-3", "base-4", "base-5",
-  "base-6", "base-7", "base-8", "base-9", "base-10",
+  "neutral-0", "neutral-1", "neutral-2", "neutral-3",
   "accent-0", "accent-1", "accent-2", "accent-3",
   "state-danger", "state-danger-dark",
   "state-success", "state-success-dark",
@@ -381,7 +380,7 @@ const FONT_WEIGHT_OPTIONS = [
  * Coverage: ${manifest.paletteColors.length} colors.
  */
 export interface UiPaletteColor {
-  /** Palette key without the \`--palette-\` prefix, e.g. "base-4". */
+  /** Palette key without the \`--palette-\` prefix, e.g. "neutral-2". */
   name: string;
   /** Raw oklch value, from colors.css. */
   value: string;
