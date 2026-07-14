@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { VIRTUAL_ROOT_SLOT_ID } from "@/composer";
-import { describeInsertionTarget, eligibleEntries, matchesQuery } from "../chooser-helpers";
+import {
+  assessPatternForestInsertion,
+  describeInsertionTarget,
+  eligibleEntries,
+  matchesQuery,
+} from "../chooser-helpers";
 import { buildCatalogById, buildManifestIndex } from "../../tree/tree-helpers";
 import {
   FIXTURE_IDS,
@@ -101,6 +106,48 @@ describe("matchesQuery", () => {
   it("an empty query matches everything", () => {
     const box = fixtureCatalog.find((e) => e.componentId === FIXTURE_IDS.box)!;
     expect(matchesQuery(box, "   ")).toBe(true);
+  });
+});
+
+describe("assessPatternForestInsertion", () => {
+  it("checks the whole forest against slot acceptance and cardinality before submit", () => {
+    resetFixtureIds();
+    const document = fixtureDocument([fixtureNode(FIXTURE_IDS.gallery, {}, { items: [] }, "gallery")]);
+    const manifest = buildManifestIndex(fixtureCatalog);
+    const roots = [
+      fixtureNode(FIXTURE_IDS.box, {}, {}, "pattern-box"),
+      fixtureNode(FIXTURE_IDS.text, {}, {}, "pattern-text"),
+    ];
+
+    const result = assessPatternForestInsertion(
+      document,
+      manifest,
+      { parentId: "gallery", slotId: "items", index: 0 },
+      roots,
+    );
+    expect(result).toMatchObject({ eligible: false, reason: expect.stringMatching(/does not accept/i) });
+  });
+
+  it("honors a resolved bound-root policy and never changes either input during its dry run", () => {
+    resetFixtureIds();
+    const document = fixtureDocument([]);
+    document.binding = { sourceRecordId: "template", outletId: "main" };
+    const sourceRoots = [fixtureNode(FIXTURE_IDS.box, {}, {}, "pattern-box")];
+    const beforeDocument = structuredClone(document);
+    const beforeRoots = structuredClone(sourceRoots);
+    const manifest = buildManifestIndex(fixtureCatalog);
+
+    expect(
+      assessPatternForestInsertion(
+        document,
+        manifest,
+        { parentId: null, slotId: VIRTUAL_ROOT_SLOT_ID, index: 0 },
+        sourceRoots,
+        { kind: "unresolved" },
+      ),
+    ).toMatchObject({ eligible: false, reason: expect.stringMatching(/until its Global template outlet is resolved/i) });
+    expect(document).toEqual(beforeDocument);
+    expect(sourceRoots).toEqual(beforeRoots);
   });
 });
 
