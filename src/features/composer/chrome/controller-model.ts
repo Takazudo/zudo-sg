@@ -20,6 +20,7 @@ import type {
   CommandResult,
   ComponentManifest,
   CompositionDocument,
+  CompositionDerivedOutputOutcome,
   CompositionNode,
   GlobalTemplateOutletTarget,
   IdFactory,
@@ -97,6 +98,11 @@ export interface ComposerControllerState {
   leftWidth: number;
   rightWidth: number;
   saveStatus: ComposerSaveStatus;
+  /**
+   * File-provider generated output is derived, never canonical document data.
+   * A blocked outcome therefore sits beside Saved rather than replacing it.
+   */
+  derivedOutput: CompositionDerivedOutputOutcome | null;
   loadNotice: ComposerLoadNotice | null;
   /**
    * Session-only clipboard: a deep-cloned JSON subtree payload, NEVER a live
@@ -232,10 +238,11 @@ export function createInitialControllerState(options: {
   rootPolicy?: RootPolicy;
   loadNotice: ComposerLoadNotice | null;
   saveStatus: ComposerSaveStatus;
+  derivedOutput?: CompositionDerivedOutputOutcome | null;
   leftWidth: number;
   rightWidth: number;
 }): ComposerControllerState {
-  const { document, manifest, rootPolicy, loadNotice, saveStatus, leftWidth, rightWidth } = options;
+  const { document, manifest, rootPolicy, loadNotice, saveStatus, derivedOutput = null, leftWidth, rightWidth } = options;
   return {
     document,
     selectedId: repairSelection(document, manifest, null),
@@ -245,6 +252,7 @@ export function createInitialControllerState(options: {
     leftWidth,
     rightWidth,
     saveStatus,
+    derivedOutput,
     loadNotice,
     clipboard: null,
     rootPolicy: effectiveRootPolicy(document, rootPolicy),

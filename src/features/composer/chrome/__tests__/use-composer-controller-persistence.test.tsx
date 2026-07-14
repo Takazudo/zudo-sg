@@ -261,4 +261,34 @@ describe("useComposerController — record persistence", () => {
     await advancePromises();
     expect(queue.state).toMatchObject({ closed: true, dirty: true, savedRevision: 0 });
   });
+
+  it("keeps canonical Saved while exposing a separate blocked generated-output outcome", async () => {
+    const initialRecord = record();
+    const queue = createCompositionSaveQueue({
+      ref,
+      initialRecord,
+      write: async () => ({
+        canonical: { status: "saved" },
+        derived: {
+          status: "blocked",
+          records: [{ recordId: ref.recordId, status: "blocked", reason: "The linked source is unavailable." }],
+        },
+      }),
+    });
+    const hook = renderHook(() => useComposerController({
+      manifest: fixtureManifest,
+      record: initialRecord,
+      saveQueue: queue,
+      now: () => "2026-01-02T04:04:05.000Z",
+    }));
+
+    act(() => hook.result.current.rename("Canonical local edit"));
+    await act(async () => hook.result.current.flushPersistence());
+
+    expect(hook.result.current.state.saveStatus).toEqual({ kind: "saved" });
+    expect(hook.result.current.state.derivedOutput).toMatchObject({
+      status: "blocked",
+      records: [{ recordId: ref.recordId, reason: "The linked source is unavailable." }],
+    });
+  });
 });

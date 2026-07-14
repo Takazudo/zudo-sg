@@ -40,4 +40,20 @@ describe("ComposerStatusIndicator", () => {
     expect(screen.getByText("Saved")).toBeInTheDocument();
     expect(screen.getByText("Copied")).toBeInTheDocument();
   });
+
+  it("keeps canonical Saved visible alongside a separate blocked generated-output warning", () => {
+    render(
+      <ComposerStatusIndicator
+        saveStatus={{ kind: "saved" }}
+        derivedOutput={{
+          status: "blocked",
+          records: [{ recordId: "consumer", status: "blocked", reason: "The linked source is unavailable." }],
+        }}
+      />,
+    );
+    expect(screen.getByText("Saved")).toBeInTheDocument();
+    const warning = screen.getByText("Generated output blocked");
+    expect(warning).toHaveAttribute("data-sg-generated-output", "blocked");
+    expect(warning).toHaveAttribute("title", "The linked source is unavailable.");
+  });
 });

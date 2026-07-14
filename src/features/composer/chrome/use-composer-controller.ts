@@ -23,6 +23,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "preact/hooks"
 import type {
   ComponentManifest,
   CompositionDocument,
+  CompositionDerivedOutputOutcome,
   CompositionNode,
   CompositionRecord,
   CompositionSaveQueue,
@@ -213,6 +214,11 @@ function saveStatusFromQueue(state: CompositionSaveQueueState): ComposerSaveStat
   }
 }
 
+/** A generated-output warning belongs only to the revision known as saved. */
+function derivedOutputFromQueue(state: CompositionSaveQueueState): CompositionDerivedOutputOutcome | null {
+  return state.status === "saved" ? state.outcome?.derived ?? null : null;
+}
+
 export function useComposerController(options: UseComposerControllerOptions = {}): ComposerController {
   const manifest = options.manifest ?? defaultManifest;
   const sample = useMemo(() => options.sample ?? createSampleDocument(), [options.sample]);
@@ -268,6 +274,7 @@ export function useComposerController(options: UseComposerControllerOptions = {}
       rootPolicy: options.rootPolicy,
       loadNotice: notice,
       saveStatus: status,
+      derivedOutput: options.saveQueue ? derivedOutputFromQueue(options.saveQueue.state) : null,
       leftWidth: getPersistedWidth(LS_TREE_WIDTH, MIN_RAIL_W),
       rightWidth: getPersistedWidth(LS_INSPECTOR_WIDTH, MIN_RAIL_W),
     });
@@ -312,7 +319,7 @@ export function useComposerController(options: UseComposerControllerOptions = {}
         if (queue) {
           try {
             queue.edit(queue.ref, recordRef.current);
-            next = { ...next, saveStatus: saveStatusFromQueue(queue.state) };
+            next = { ...next, saveStatus: saveStatusFromQueue(queue.state), derivedOutput: null };
           } catch (error) {
             next = {
               ...next,
@@ -320,6 +327,7 @@ export function useComposerController(options: UseComposerControllerOptions = {}
                 kind: "error",
                 reason: error instanceof Error ? error.message : "Composition persistence failed.",
               },
+              derivedOutput: null,
             };
           }
         } else if (!quarantinedRef.current) {
@@ -327,6 +335,7 @@ export function useComposerController(options: UseComposerControllerOptions = {}
           next = {
             ...next,
             saveStatus: write.ok ? { kind: "saved" } : { kind: "error", reason: write.error ?? "Storage write failed" },
+            derivedOutput: null,
           };
         } else if (pendingBaseSaveStatusRef.current) {
           next = { ...next, saveStatus: pendingBaseSaveStatusRef.current };
@@ -383,7 +392,7 @@ export function useComposerController(options: UseComposerControllerOptions = {}
       pending.set(nodeId, { ...pending.get(nodeId), ...patch });
       const current = stateRef.current!;
       if (current.saveStatus.kind !== "dirty") {
-        const next = { ...current, saveStatus: { kind: "dirty" } as const };
+        const next = { ...current, saveStatus: { kind: "dirty" } as const, derivedOutput: null };
         stateRef.current = next;
         setState(next);
       }
@@ -436,14 +445,16 @@ export function useComposerController(options: UseComposerControllerOptions = {}
       const current = stateRef.current!;
       const saveStatus: ComposerSaveStatus =
         pendingPropsRef.current.size > 0 ? { kind: "dirty" } : saveStatusFromQueue(queueState);
+      const derivedOutput = pendingPropsRef.current.size > 0 ? null : derivedOutputFromQueue(queueState);
       if (
         current.saveStatus.kind === saveStatus.kind &&
         (saveStatus.kind !== "error" ||
           (current.saveStatus.kind === "error" && current.saveStatus.reason === saveStatus.reason))
+        && current.derivedOutput === derivedOutput
       ) {
         return;
       }
-      const next = { ...current, saveStatus };
+      const next = { ...current, saveStatus, derivedOutput };
       stateRef.current = next;
       setState(next);
     });

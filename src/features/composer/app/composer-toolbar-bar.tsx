@@ -19,7 +19,7 @@
 
 import { useState } from "preact/hooks";
 import type { JSX } from "preact";
-import type { CompositionNode, CompositionPublication } from "@/composer";
+import type { CompositionDerivedOutputOutcome, CompositionNode, CompositionPublication } from "@/composer";
 import type {
   ComposerCanvasViewport,
   ComposerMode,
@@ -37,6 +37,7 @@ export interface ComposerToolbarBarProps {
   /** Reuse remains a role on this same document, not a second record type. */
   publication?: CompositionPublication;
   saveStatus: ComposerSaveStatus;
+  derivedOutput?: CompositionDerivedOutputOutcome | null;
   mode: ComposerMode;
   viewport: ComposerCanvasViewport;
   onSetMode: (mode: ComposerMode) => void;
@@ -60,6 +61,7 @@ export function ComposerToolbarBar({
   documentName,
   publication,
   saveStatus,
+  derivedOutput = null,
   mode,
   viewport,
   onSetMode,
@@ -105,7 +107,7 @@ export function ComposerToolbarBar({
             </span>
           )}
         </div>
-        <ComposerStatusIndicator saveStatus={saveStatus} onRetry={onRetrySave}>
+        <ComposerStatusIndicator saveStatus={saveStatus} derivedOutput={derivedOutput} onRetry={onRetrySave}>
           <ComposerClipboardChip clipboard={clipboard} titleFor={titleFor} />
         </ComposerStatusIndicator>
       </div>

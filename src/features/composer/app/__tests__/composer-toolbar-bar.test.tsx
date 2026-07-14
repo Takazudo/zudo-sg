@@ -53,6 +53,23 @@ describe("ComposerToolbarBar — clipboard chip", () => {
     expect(screen.getByText("Box")).toBeInTheDocument();
     expect(titleFor).toHaveBeenCalledWith("test.box");
   });
+
+  it("keeps Saved visible while showing a separate generated-output warning", () => {
+    render(
+      <ComposerToolbarBar
+        {...baseProps()}
+        derivedOutput={{
+          status: "blocked",
+          records: [{ recordId: "consumer", status: "blocked", reason: "Linked source is unavailable." }],
+        }}
+      />,
+    );
+    expect(screen.getByText("Saved")).toBeInTheDocument();
+    expect(screen.getByText("Generated output blocked")).toHaveAttribute(
+      "data-sg-generated-output",
+      "blocked",
+    );
+  });
 });
 
 describe("ComposerToolbarBar — Reset sample confirm (issue #260/#269)", () => {
