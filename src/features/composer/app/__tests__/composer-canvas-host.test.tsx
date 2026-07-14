@@ -15,6 +15,7 @@ import {
   dropNodeMessage,
   errorMessage,
   modeMessage,
+  openSourceMessage,
   readyMessage,
   requestAddMessage,
   requestInsertMenuMessage,
@@ -135,6 +136,15 @@ describe("ComposerCanvasHost — bridge lifecycle (#251)", () => {
     act(() => bridge.deliver(readyMessage()));
     act(() => bridge.deliver(selectMessage(3, "node-x")));
     expect(onSelect).toHaveBeenCalledWith("node-x");
+  });
+
+  it("routes the explicit linked-source affordance without reusing local selection", () => {
+    const onOpenSource = vi.fn();
+    const { bridge, onSelect } = mount({ onOpenSource });
+    act(() => bridge.deliver(readyMessage()));
+    act(() => bridge.deliver(openSourceMessage("source-record")));
+    expect(onOpenSource).toHaveBeenCalledWith("source-record");
+    expect(onSelect).not.toHaveBeenCalled();
   });
 
   it("on request-add focuses the iframe (focus-return seam) and forwards the target", () => {

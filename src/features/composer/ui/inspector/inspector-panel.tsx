@@ -27,6 +27,8 @@ import type {
   CompositionDocument,
   CompositionNode,
   JsonObject,
+  LinkedEditorLifecycleActions,
+  LinkedEditorPresentation,
 } from "@/composer";
 import { classifyNode, findLocation, orderedSlotIds } from "@/composer";
 import { ChevronDownIcon, ChevronUpIcon, TrashIcon } from "@/components/icons";
@@ -67,6 +69,10 @@ export interface InspectorPanelProps {
    * back to the raw, stable `componentId`.
    */
   titleFor?: (componentId: string) => string | undefined;
+  /** Document-level link state; selection and fields remain local-only. */
+  linkedPresentation?: LinkedEditorPresentation;
+  /** Lifecycle callbacks are injected by the provider-owning app. */
+  linkedActions?: LinkedEditorLifecycleActions;
 }
 
 interface BreadcrumbStep {
@@ -98,6 +104,57 @@ function buildBreadcrumb(
   return [{ key: "root", label: "Root" }, ...steps];
 }
 
+function LinkedInspectorStatus({
+  presentation,
+  actions,
+}: {
+  presentation: LinkedEditorPresentation;
+  actions?: LinkedEditorLifecycleActions;
+}): JSX.Element | null {
+  if (presentation.state === "local") return null;
+  if (presentation.state === "resolved") {
+    return (
+      <section class="sg-composer-linked-frame sg-composer-inspector-section" data-sg-linked-frame="resolved">
+        <p class="text-small font-semibold text-fg">Linked Global template</p>
+        <p class="text-caption text-muted">
+          {presentation.sourceName} · Outlet: {presentation.outletLabel || presentation.outletId} · Locked
+        </p>
+        <div class="mt-vsp-3xs flex flex-wrap gap-hsp-2xs">
+          {actions?.onOpenSource && (
+            <button type="button" class="sg-composer-toolbar-button" onClick={() => actions.onOpenSource?.(presentation.sourceRecordId)}>
+              Open source
+            </button>
+          )}
+          {actions?.onDetach && (
+            <button type="button" class="sg-composer-toolbar-button" onClick={() => actions.onDetach?.()}>
+              Detach
+            </button>
+          )}
+        </div>
+      </section>
+    );
+  }
+  return (
+    <section class="sg-composer-linked-frame sg-composer-inspector-section" data-sg-linked-frame="blocked" role="status">
+      <p class="text-small font-semibold text-fg">Linked template unavailable</p>
+      <p class="text-caption text-muted">{presentation.message}</p>
+      <div class="mt-vsp-3xs flex flex-wrap gap-hsp-2xs">
+        {actions?.onRetry && <button type="button" class="sg-composer-toolbar-button" onClick={() => actions.onRetry?.()}>Retry</button>}
+        {actions?.onOpenSource && (
+          <button type="button" class="sg-composer-toolbar-button" onClick={() => actions.onOpenSource?.(presentation.sourceRecordId)}>
+            Open source
+          </button>
+        )}
+        {actions?.onRemoveBrokenBinding && (
+          <button type="button" class="sg-composer-toolbar-button sg-composer-inspector-remove" onClick={() => actions.onRemoveBrokenBinding?.()}>
+            Remove broken binding
+          </button>
+        )}
+      </div>
+    </section>
+  );
+}
+
 export function InspectorPanel({
   document,
   manifest,
@@ -115,6 +172,8 @@ export function InspectorPanel({
   }),
   lastError = null,
   titleFor,
+  linkedPresentation = { state: "local" },
+  linkedActions,
 }: InspectorPanelProps): JSX.Element {
   const readOnly = mode === "preview";
   const location = selectedId !== null ? findLocation(document, manifest, selectedId) : undefined;
@@ -122,6 +181,7 @@ export function InspectorPanel({
   if (selectedId === null || !location) {
     return (
       <div class="flex h-full flex-col gap-vsp-2xs p-hsp-md py-vsp-10" data-sg-inspector-state="empty">
+        <LinkedInspectorStatus presentation={linkedPresentation} actions={linkedActions} />
         <ReuseControls
           document={document}
           manifest={manifest}
@@ -159,6 +219,7 @@ export function InspectorPanel({
       class="flex h-full flex-col overflow-y-auto p-hsp-md py-vsp-10"
       data-sg-inspector-state={diagnostic.opaque ? "opaque" : "editable"}
     >
+      <LinkedInspectorStatus presentation={linkedPresentation} actions={linkedActions} />
       <ReuseControls
         document={document}
         manifest={manifest}

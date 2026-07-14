@@ -107,6 +107,10 @@ export default function ComposerPreviewApp(): JSX.Element {
     clientRef.current?.emitRequestAdd(target);
   }, []);
 
+  const onOpenSource = useCallback((sourceRecordId: string) => {
+    clientRef.current?.emitOpenSource(sourceRecordId);
+  }, []);
+
   const onRequestNodeMenu = useCallback((nodeId: string, rect: SerializedRect, focusToken: string) => {
     clientRef.current?.emitRequestNodeMenu(nodeId, rect, focusToken);
   }, []);
@@ -171,11 +175,14 @@ export default function ComposerPreviewApp(): JSX.Element {
   const body = state.document
     ? h(CompositionCanvas, {
         document: state.document,
+        localRecordId: state.localRecordId ?? state.document.id,
+        linked: state.linked,
         entries: composerEntries,
         session: state.session,
         revision: state.revision,
         onSelect,
         onRequestAdd,
+        onOpenSource,
         onRequestNodeMenu,
         onRequestInsertMenu,
         onCommitInlineEdit,

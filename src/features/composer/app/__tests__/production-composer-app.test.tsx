@@ -56,31 +56,46 @@ function memoryProvider(
   overrides: {
     initialize?: () => Promise<CompositionInitializationOutcome>;
     put?: (value: CompositionRecord) => Promise<void>;
+    lifecycle?: boolean;
   } = {},
 ): CompositionProvider & { records: Map<string, CompositionRecord> } {
   const records = new Map(initial.map((value) => [value.id, structuredClone(value)]));
   const descriptor = COMPOSITION_PROVIDERS[providerId];
   const initialize = overrides.initialize ?? (async () => ready(records));
+  const store = {
+    provider: descriptor,
+    list: vi.fn(async () => [...records.values()].map(summarizeComposition)),
+    get: vi.fn(async (id) => {
+      const value = records.get(id);
+      return value
+        ? { status: "loaded" as const, record: structuredClone(value) }
+        : { status: "not-found" as const, id };
+    }),
+    put: vi.fn(async (value) => {
+      if (overrides.put) await overrides.put(value);
+      records.set(value.id, structuredClone(value));
+    }),
+    delete: vi.fn(async (id) => records.delete(id)),
+    clear: vi.fn(async () => records.clear()),
+  };
+  if (overrides.lifecycle) {
+    Object.assign(store, {
+      deleteWithDependencyCheck: vi.fn(async (id: string) => (
+        records.delete(id) ? { status: "deleted" as const } : { status: "not-found" as const }
+      )),
+      unpublishWithDependencyCheck: vi.fn(async (id: string) => (
+        records.has(id) ? { status: "unpublished" as const } : { status: "not-found" as const }
+      )),
+      saveLifecycleRecord: vi.fn(async (value: CompositionRecord) => {
+        records.set(value.id, structuredClone(value));
+      }),
+    });
+  }
   return {
     records,
     descriptor,
     initialization: { initialize, retry: initialize, startFresh: initialize },
-    store: {
-      provider: descriptor,
-      list: vi.fn(async () => [...records.values()].map(summarizeComposition)),
-      get: vi.fn(async (id) => {
-        const value = records.get(id);
-        return value
-          ? { status: "loaded" as const, record: structuredClone(value) }
-          : { status: "not-found" as const, id };
-      }),
-      put: vi.fn(async (value) => {
-        if (overrides.put) await overrides.put(value);
-        records.set(value.id, structuredClone(value));
-      }),
-      delete: vi.fn(async (id) => records.delete(id)),
-      clear: vi.fn(async () => records.clear()),
-    },
+    store,
   };
 }
 
@@ -224,6 +239,51 @@ describe("ProductionComposerApp", () => {
       root: [],
       binding: { sourceRecordId: "site-shell", outletId: "main" },
     });
+  });
+
+  it("resolves a linked source through the active provider and remounts from its detached snapshot", async () => {
+    const source = record("site-shell", "Site shell");
+    source.document.root[0]!.slots.right = [];
+    source.document.publication = {
+      kind: "global-template",
+      outlet: {
+        id: "main",
+        label: "Main content",
+        target: { parentId: "split-1", slotId: "right" },
+      },
+    };
+    const consumer = record("bound-page", "Bound page");
+    consumer.document.binding = { sourceRecordId: source.id, outletId: "main" };
+    const indexeddb = memoryProvider("indexeddb", [source, consumer], { lifecycle: true });
+    const navigation = new FakeNavigation("/composer/#/composition/indexeddb/bound-page");
+    let nodeId = 0;
+    const view = render(
+      <ProductionComposerApp
+        providers={[indexeddb]}
+        navigation={navigation}
+        nodeIdFactory={() => `detached-${++nodeId}`}
+        now={() => TIMESTAMP}
+        preview={PREVIEW}
+      />,
+    );
+
+    expect(await screen.findByText("Linked template")).toBeInTheDocument();
+    expect(view.container.querySelector('[data-sg-linked-frame="resolved"]')).not.toBeNull();
+    fireEvent.click(await screen.findByRole("button", { name: "Detach" }));
+
+    await waitFor(() => {
+      const detached = indexeddb.records.get("bound-page")!;
+      expect(detached.document.binding).toBeUndefined();
+      expect(detached.document.root[0]?.id).toMatch(/^detached-/);
+    });
+    expect((indexeddb.store as { saveLifecycleRecord: ReturnType<typeof vi.fn> }).saveLifecycleRecord).toHaveBeenCalledOnce();
+    await waitFor(() =>
+      expect(navigation.read()).toEqual({
+        pathname: "/composer/",
+        hash: "#/composition/indexeddb/bound-page",
+      }),
+    );
+    expect(screen.queryByRole("button", { name: "Detach" })).not.toBeInTheDocument();
   });
 
   it("keeps the New dialog open and does not save when the selected template is deleted before submit", async () => {

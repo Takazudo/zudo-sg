@@ -3,6 +3,7 @@ import {
   createManifest,
   createSequentialIdFactory,
   isStructurallyValidDocument,
+  linkedEditorPresentation,
   materializeBrokenBindingRemoval,
   materializeGlobalTemplateView,
   materializeStandaloneSnapshot,
@@ -314,5 +315,32 @@ describe("standalone Global-template snapshots", () => {
     expect(removed.document).not.toHaveProperty("binding");
     expect(removed.document).not.toHaveProperty("publication");
     expect(removed.document.root[0]).not.toBe(bound.document.root[0]);
+  });
+});
+
+describe("linked editor presentation", () => {
+  it("exposes only source identity/status, never source nodes or a provider capability", () => {
+    const template = source();
+    const bound = consumer();
+    const resolution = resolveGlobalTemplate({ consumer: bound, source: template, manifest });
+    const view = materializeGlobalTemplateView(bound, resolution);
+    expect(linkedEditorPresentation(view)).toEqual({
+      state: "resolved",
+      sourceRecordId: "source",
+      sourceName: "source",
+      outletId: "outlet-main",
+      outletLabel: "Main content",
+    });
+  });
+
+  it("keeps a broken binding visible and local content independent", () => {
+    const bound = consumer();
+    const failed = resolveGlobalTemplate({ consumer: bound, source: record("other"), manifest });
+    const view = materializeGlobalTemplateView(bound, failed);
+    expect(linkedEditorPresentation(view)).toMatchObject({
+      state: "blocked",
+      sourceRecordId: "source",
+      diagnostic: "missing-template",
+    });
   });
 });

@@ -37,6 +37,8 @@ export type {
   StandaloneSnapshotBlockReason,
   StandaloneSnapshotMaterialization,
   BrokenBindingRemovalMaterialization,
+  LinkedEditorPresentation,
+  LinkedEditorLifecycleActions,
 } from "./materialize";
 export {
   createLocalRuntimeOwner,
@@ -45,4 +47,5 @@ export {
   materializeGlobalTemplateView,
   materializeStandaloneSnapshot,
   materializeBrokenBindingRemoval,
+  linkedEditorPresentation,
 } from "./materialize";

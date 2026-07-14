@@ -9,6 +9,7 @@ import {
   COMPOSITION_SCHEMA_VERSION,
   CompositionPersistenceError,
   createCompositionRecord,
+  createCompositionReuseLifecycleService,
   createCompositionSaveQueue,
   createFileProviderCompositionStore,
   createIndexedDbCompositionProvider,
@@ -16,6 +17,7 @@ import {
   createManifest,
   createUuidIdFactory,
   duplicateCompositionRecord,
+  isCompositionLifecycleStore,
   summarizeComposition,
   type CompositionInitializationOutcome,
   type CompositionDocument,
@@ -28,6 +30,7 @@ import {
   type CompositionSaveQueue,
   type CompositionStore,
   type IdFactory,
+  type ReuseConsumerLifecycleOutcome,
 } from "@/composer";
 import { composerManifest } from "@/styleguide/data/composer-registry";
 import { normalizedBase } from "@/utils/base";
@@ -112,6 +115,13 @@ async function publicationDependencies(
   return outcome.status === "listed"
     ? { status: "ready", dependentCount: outcome.dependents.length }
     : outcome;
+}
+
+function lifecycleOutcomeMessage(outcome: Exclude<ReuseConsumerLifecycleOutcome, { status: "detached" }>): string {
+  if (outcome.status === "not-found") {
+    return "This Composition no longer exists in the active provider.";
+  }
+  return outcome.message;
 }
 
 function browserNavigation(): ComposerBrowserNavigation {
@@ -283,10 +293,33 @@ export function ProductionComposerApp({
   const [initializationNotice, setInitializationNotice] =
     useState<CompositionRecoveryOutcome | null>(null);
   const [retryingRecovery, setRetryingRecovery] = useState(false);
+  const [lifecycleChanging, setLifecycleChanging] = useState(false);
   const locationGenerationRef = useRef(0);
   const recoveryGenerationRef = useRef(0);
   const stateRef = useRef(state);
   stateRef.current = state;
+  const activeRef = state?.view === "detail" ? routeRef(state.route) : null;
+  const activeProvider = activeRef ? providersById.get(activeRef.providerId) : undefined;
+  const activeReuseService = useMemo(
+    () => (activeProvider ? createCompositionReuseService(activeProvider.store, reuseManifest) : null),
+    [activeProvider],
+  );
+  const activeLifecycleService = useMemo(
+    () => activeProvider
+      ? createCompositionReuseLifecycleService(activeProvider, {
+          manifest: reuseManifest,
+          nodeIdFactory,
+          now: () => nowRef.current(),
+        })
+      : null,
+    [activeProvider, nodeIdFactory],
+  );
+  const activeReuseResolution = useMemo(
+    () => activeRef && activeReuseService
+      ? { ref: activeRef, resolver: activeReuseService }
+      : undefined,
+    [activeRef?.providerId, activeRef?.recordId, activeReuseService],
+  );
 
   const coordinator = useMemo(
     () =>
@@ -425,6 +458,72 @@ export function ProductionComposerApp({
       });
     },
     [routeConfig, transition],
+  );
+
+  const openLinkedSource = useCallback(
+    (sourceRecordId: string) => {
+      if (!activeRef) return;
+      void navigate({
+        kind: "detail",
+        providerId: activeRef.providerId,
+        recordId: sourceRecordId,
+      });
+    },
+    [activeRef, navigate],
+  );
+
+  const reloadLinkedConsumer = useCallback(
+    async (ref: CompositionRecordRef) => {
+      // A detail-to-same-detail transition is intentionally a no-op in the
+      // route coordinator. Move through the provider-scoped index with
+      // replace history so the persisted lifecycle result receives a new
+      // queue and a freshly mounted record-scoped controller.
+      const exited = await navigate({ kind: "index" }, "replace", ref.providerId);
+      if (exited.status !== "committed") return false;
+      const reloaded = await navigate(
+        { kind: "detail", providerId: ref.providerId, recordId: ref.recordId },
+        "replace",
+      );
+      return reloaded.status === "committed";
+    },
+    [navigate],
+  );
+
+  const runLinkedLifecycle = useCallback(
+    async (kind: "detach" | "remove-broken-binding") => {
+      if (
+        lifecycleChanging
+        || state?.view !== "detail"
+        || !activeRef
+        || !activeLifecycleService
+      ) return;
+      const session = state.session as ProductionDetailSession;
+      setDetailOperationError(null);
+      setLifecycleChanging(true);
+      try {
+        // The lifecycle service reads the provider's saved consumer. Flush the
+        // live editor first so it never materializes an older persisted draft.
+        await session.flushPendingProps(activeRef);
+        await session.queue.flush();
+        const outcome = kind === "detach"
+          ? await activeLifecycleService.detachAsSnapshot(activeRef)
+          : await activeLifecycleService.removeBrokenBinding(activeRef);
+        if (outcome.status !== "detached") {
+          setDetailOperationError(lifecycleOutcomeMessage(outcome));
+          return;
+        }
+        await reloadLinkedConsumer(activeRef);
+      } catch (reason) {
+        setDetailOperationError(
+          reason instanceof Error
+            ? reason.message
+            : "The linked Composition lifecycle change could not be completed.",
+        );
+      } finally {
+        setLifecycleChanging(false);
+      }
+    },
+    [activeLifecycleService, activeRef, lifecycleChanging, reloadLinkedConsumer, state],
   );
 
   const libraryIntents = useMemo<CompositionLibraryIntents>(() => {
@@ -639,6 +738,26 @@ export function ProductionComposerApp({
           record: state.record,
           saveQueue: session.queue,
           now: nowRef.current,
+        }}
+        reuseResolution={activeReuseResolution}
+        listPatternCatalog={
+          activeReuseService
+            ? () => activeReuseService.listCatalog(ref)
+            : undefined
+        }
+        loadPattern={
+          activeReuseService
+            ? (patternRef) => activeReuseService.loadSelection(patternRef, ref)
+            : undefined
+        }
+        linkedActions={{
+          onOpenSource: openLinkedSource,
+          ...(activeProvider && isCompositionLifecycleStore(activeProvider.store)
+            ? {
+                onDetach: () => void runLinkedLifecycle("detach"),
+                onRemoveBrokenBinding: () => void runLinkedLifecycle("remove-broken-binding"),
+              }
+            : {}),
         }}
         registerFlushPendingProps={session.registerFlushPendingProps}
         onNavigateToLibrary={() => void navigate({ kind: "index" })}
