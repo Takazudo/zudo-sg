@@ -5,6 +5,7 @@ const STATIC_PORT = 4704;
 export default defineConfig({
   testDir: "./e2e",
   workers: 1,
+  preserveOutput: "always",
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI
     ? [["list"], ["json", { outputFile: "playwright-report/composer-verification.json" }]]
@@ -20,6 +21,7 @@ export default defineConfig({
     {
       name: "composer-verification",
       testMatch: "composer-verification.spec.ts",
+      use: { hasTouch: true, isMobile: true },
     },
     {
       name: "composer-contracts",

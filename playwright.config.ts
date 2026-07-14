@@ -82,7 +82,11 @@ export default defineConfig({
       // touch-target, keyboard-name/focus/live-region, state, and error gates.
       // Screenshots are attached as confirmation artifacts after assertions.
       testMatch: "composer-verification.spec.ts",
-      use: { baseURL: `http://localhost:${SMOKE_PORT}` },
+      use: {
+        baseURL: `http://localhost:${SMOKE_PORT}`,
+        hasTouch: true,
+        isMobile: true,
+      },
     },
     {
       name: "demo-smoke",

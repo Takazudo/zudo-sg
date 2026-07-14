@@ -1,4 +1,4 @@
-import { expect, test, type Locator, type Page, type TestInfo } from "@playwright/test";
+import { chromium, expect, test, type Locator, type Page, type TestInfo } from "@playwright/test";
 import {
   COMPOSER_CANVAS_IFRAME,
   captureUnexpectedBrowserErrors,
@@ -65,10 +65,38 @@ async function assertTouchTargets(scope: Locator): Promise<void> {
   expect(count, "the checked surface must expose touch controls").toBeGreaterThan(0);
   for (let index = 0; index < count; index += 1) {
     const control = controls.nth(index);
-    const box = await control.boundingBox();
-    expect(box, `control ${index} must have a box`).not.toBeNull();
-    expect(box!.width, `control ${index} touch width`).toBeGreaterThanOrEqual(44);
-    expect(box!.height, `control ${index} touch height`).toBeGreaterThanOrEqual(44);
+    const measurement = await control.evaluate((element) => {
+      const box = element.getBoundingClientRect();
+      return {
+        box: { width: box.width, height: box.height },
+        label: element.getAttribute("aria-label") ?? element.textContent?.trim() ?? element.tagName,
+        coarse: matchMedia("(pointer: coarse)").matches,
+      };
+    });
+    expect(measurement.coarse, "touch-target checks require coarse-pointer emulation").toBe(true);
+    expect(measurement.box.width, `${measurement.label} touch width`).toBeGreaterThanOrEqual(44);
+    expect(measurement.box.height, `${measurement.label} touch height`).toBeGreaterThanOrEqual(44);
+  }
+}
+
+async function assertControlsInsideViewport(scope: Locator): Promise<void> {
+  const controls = scope.locator("button:visible, input:visible, select:visible");
+  const viewportWidth = await scope.page().evaluate(() => document.documentElement.clientWidth);
+  const count = await controls.count();
+  for (let index = 0; index < count; index += 1) {
+    const control = controls.nth(index);
+    const measurement = await control.evaluate((element) => {
+      const box = element.getBoundingClientRect();
+      return {
+        left: box.left,
+        right: box.right,
+        label: element.getAttribute("aria-label") ?? element.textContent?.trim() ?? element.tagName,
+      };
+    });
+    expect(measurement.left, `${measurement.label} starts inside the viewport`).toBeGreaterThanOrEqual(0);
+    expect(measurement.right, `${measurement.label} ends inside the viewport`).toBeLessThanOrEqual(
+      viewportWidth,
+    );
   }
 }
 
@@ -86,13 +114,28 @@ async function attachCapture(
 }
 
 test.describe("Composer viewport, theme, and accessibility matrix", () => {
-  test.use({ hasTouch: true });
-
   for (const width of WIDTHS) {
     for (const theme of THEMES) {
-      test(`${width}px ${theme}: index and loaded detail contracts`, async ({ page }, testInfo) => {
+      test(`${width}px ${theme}: index and loaded detail contracts`, async ({ baseURL }, testInfo) => {
+        expect(baseURL, "the Composer verification config must provide a base URL").toBeTruthy();
+        // Create the context at its target width. This keeps Chromium's
+        // coarse-pointer emulation deterministic across every matrix row;
+        // the default runner browser is also shared with fine-pointer contract
+        // projects, so use an isolated launch for this touch-specific matrix.
+        const browser = await chromium.launch({
+          args: [
+            "--touch-events=enabled",
+            "--blink-settings=primaryPointerType=2,availablePointerTypes=2",
+          ],
+        });
+        const context = await browser.newContext({
+          baseURL,
+          hasTouch: true,
+          isMobile: true,
+          viewport: { width, height: 900 },
+        });
+        const page = await context.newPage();
         const errors = captureUnexpectedBrowserErrors(page);
-        await page.setViewportSize({ width, height: 900 });
         await setTheme(page, theme);
         await resetComposerPersistence(page);
 
@@ -109,6 +152,7 @@ test.describe("Composer viewport, theme, and accessibility matrix", () => {
         await assertNoPageOverflow(page);
         await assertNamedKeyboardControls(page.locator(".sg-composer-shell"));
         await assertTouchTargets(page.locator(".sg-composer-toolbar"));
+        await assertControlsInsideViewport(page.locator(".sg-composer-toolbar"));
         await expect(page.locator('.sg-composer-save-status[aria-live="polite"]')).toBeVisible();
         await expect(page.locator(".sg-composer-tree-rail")).toHaveCSS(
           "display",
@@ -125,6 +169,8 @@ test.describe("Composer viewport, theme, and accessibility matrix", () => {
         await attachCapture(page, testInfo, `composer-detail-${width}-${theme}`);
 
         expect(errors).toEqual({ pageErrors: [], consoleErrors: [] });
+        await context.close();
+        await browser.close();
       });
     }
   }
@@ -188,6 +234,9 @@ test.describe("Composer interaction and state semantics", () => {
     await expect(page.getByRole("heading", { name: "No compositions yet" })).toBeVisible();
     await expect(page.getByRole("button", { name: "New composition" }).last()).toBeEnabled();
 
+    // Leave the mounted index first: a hash-only navigation intentionally
+    // rolls back to that index and repairs the URL on failure.
+    await page.goto("/composer/preview");
     await page.goto("/composer/#/composition/indexeddb/missing-record");
     await expect(page.getByRole("heading", { name: "Composition could not be opened" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Retry" })).toBeVisible();
@@ -211,10 +260,12 @@ test.describe("Composer interaction and state semantics", () => {
     });
     const unavailablePage = await unavailableContext.newPage();
     await unavailablePage.goto("/composer/");
-    await expect(unavailablePage.getByRole("heading", { name: "Something went wrong" })).toBeVisible();
-    await expect(unavailablePage.getByRole("button", { name: "Retry library" })).toBeVisible();
-    await expect(unavailablePage.getByRole("heading", { name: "Composition library unavailable" }))
-      .toBeVisible();
+    await expect(
+      unavailablePage.getByRole("heading", { name: "Composition could not be opened" }),
+    ).toBeVisible();
+    await expect(unavailablePage.getByText(/IndexedDB is unavailable/i)).toBeVisible();
+    await expect(unavailablePage.getByRole("button", { name: "Retry" })).toBeVisible();
+    await expect(unavailablePage.getByRole("button", { name: "Back to library" })).toBeVisible();
     await unavailableContext.close();
   });
 });

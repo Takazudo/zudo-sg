@@ -100,7 +100,7 @@ export function ComposerToolbarBar({
         </ComposerStatusIndicator>
       </div>
 
-      <div class="flex items-center gap-hsp-sm">
+      <div class="flex flex-wrap items-center gap-hsp-sm">
         <label class="flex items-center gap-hsp-2xs text-small text-muted">
           <span class="sr-only">Canvas viewport</span>
           <select
