@@ -868,12 +868,15 @@ test.describe("Composer storage & recovery matrix (step 7 + opaque export block)
 
   test("step 07c - malformed storage recovers to the sample with an honest notice", async ({ page }) => {
     await prepareLegacyMigration(page, "{not valid json");
-    await gotoComposer(page);
+    await openComposerLibrary(page);
 
-    const banner = page.locator('[aria-label="Composition recovery notice"]');
+    const banner = page.getByRole("heading", { name: "Recovery notice" }).locator("..");
     await expect(banner).toBeVisible();
     await expect(banner).toContainText("malformed");
     await expect(banner).toContainText("original source has been preserved");
+
+    await page.locator(".sg-composer-library-open").first().click();
+    await expect(canvasFrame(page).locator("[data-composer-canvas]")).toBeVisible();
     await expect(topLevelTreeRows(page)).toHaveCount(1);
   });
 

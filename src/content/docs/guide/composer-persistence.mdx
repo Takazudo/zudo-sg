@@ -77,10 +77,12 @@ Initialization handles every legacy-source outcome without silently discarding b
 | Future schema | Quarantines the source and does not create an editable replacement | Exact raw bytes remain in localStorage and `meta.migration.rawBackup`; choose Retry recovery or explicitly Start fresh |
 
 A valid import can finish its IndexedDB transaction even when localStorage cleanup fails. In that
-case the UI reports **cleanup pending** and Retry recovery attempts removal again. Cleanup compares
-the current source with the imported snapshot immediately before removal. If another tab or tool
-changed it, the state becomes **source changed** and the new value is retained; Retry never deletes a
-different value.
+case the UI reports **cleanup pending** and Retry recovery attempts removal again. Cleanup
+synchronously compares the current source with the imported snapshot immediately before removal.
+An observed change becomes **source changed** and retains the new value. Web Storage does not expose
+an atomic compare-and-delete operation, so do not edit this legacy key from an old tab or DevTools
+while cleanup is running; retaining the key indefinitely is the only strict policy against an
+uncooperative writer in that final interval.
 
 **Retry library** repeats a failed provider initialization. **Retry recovery** retries cleanup or
 re-evaluates quarantined state without replacing the raw source. **Start fresh** is shown only for a
