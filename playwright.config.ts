@@ -77,6 +77,14 @@ export default defineConfig({
       use: { baseURL: `http://localhost:${SMOKE_PORT}` },
     },
     {
+      name: "composer-verification",
+      // Final persistence-library matrix: deterministic width/theme/layout,
+      // touch-target, keyboard-name/focus/live-region, state, and error gates.
+      // Screenshots are attached as confirmation artifacts after assertions.
+      testMatch: "composer-verification.spec.ts",
+      use: { baseURL: `http://localhost:${SMOKE_PORT}` },
+    },
+    {
       name: "demo-smoke",
       // Both demo specs serve from the same built demo dist (DEMO_SMOKE_PORT):
       // the render smoke checks and the SPA-transition regression suite.
