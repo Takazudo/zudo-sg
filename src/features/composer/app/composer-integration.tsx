@@ -51,6 +51,10 @@ import { ComposerToolbarBar } from "./composer-toolbar-bar";
 import { useComposerIntegration } from "./use-composer-integration";
 import { useComposerKeyboard } from "./use-composer-keyboard";
 import { useComposerMenus } from "./use-composer-menus";
+import type {
+  ReuseAuthoringActionResult,
+  ReuseDependencyCheck,
+} from "@/features/composer/ui/shared/reuse-authoring-contract";
 
 export interface ComposerIntegrationProps {
   /** The richer catalog. Defaults to the real derived `composerManifest`. */
@@ -73,6 +77,8 @@ export interface ComposerIntegrationProps {
   recoveryNotice?: string | null;
   onRetryRecovery?: () => void;
   recoveryRetrying?: boolean;
+  /** Parent-owned provider relationship query used before changing a published source. */
+  getPublicationDependencies?: (sourceRecordId: string) => Promise<ReuseDependencyCheck>;
 }
 
 export function ComposerIntegration(props: ComposerIntegrationProps): JSX.Element {
@@ -84,6 +90,62 @@ export function ComposerIntegration(props: ComposerIntegrationProps): JSX.Elemen
   const { state } = controller;
   const readOnly = state.mode === "preview";
   const menus = useComposerMenus(api);
+
+  const checkPublicationDependencies = async (): Promise<ReuseDependencyCheck> => {
+    if (!props.getPublicationDependencies) {
+      return {
+        status: "unavailable",
+        message: "The current Composition provider cannot verify template consumers yet.",
+      };
+    }
+    try {
+      return await props.getPublicationDependencies(controller.record.id);
+    } catch (reason) {
+      return {
+        status: "load-error",
+        message: reason instanceof Error ? reason.message : "Template consumer relationships could not be loaded.",
+      };
+    }
+  };
+
+  const clearPublication = async (): Promise<ReuseAuthoringActionResult> => {
+    if (state.document.publication?.kind === "pattern") {
+      controller.clearPublication({ dependentCount: 0 });
+      return { status: "applied" };
+    }
+    const check = await checkPublicationDependencies();
+    if (check.status !== "ready") return { status: "unavailable", message: check.message };
+    if (check.dependentCount > 0) {
+      return {
+        status: "blocked",
+        message: `Cannot unpublish this Global template while ${check.dependentCount} consumer${check.dependentCount === 1 ? " is" : "s are"} still bound to it.`,
+      };
+    }
+    controller.clearPublication({ dependentCount: check.dependentCount });
+    return { status: "applied" };
+  };
+
+  const setGlobalTemplateOutlet = async (
+    target: { parentId: string; slotId: string },
+    label: string,
+  ): Promise<ReuseAuthoringActionResult> => {
+    const current = state.document.publication;
+    const reassigning = current?.kind === "global-template"
+      && (current.outlet.target.parentId !== target.parentId || current.outlet.target.slotId !== target.slotId);
+    if (reassigning) {
+      const check = await checkPublicationDependencies();
+      if (check.status !== "ready") return { status: "unavailable", message: check.message };
+      controller.setGlobalTemplateOutlet(target, label);
+      return check.dependentCount > 0
+        ? {
+          status: "applied",
+          message: `${check.dependentCount} existing consumer${check.dependentCount === 1 ? " keeps" : "s keep"} the stable outlet ID and will follow this reassignment.`,
+        }
+        : { status: "applied" };
+    }
+    controller.setGlobalTemplateOutlet(target, label);
+    return { status: "applied" };
+  };
 
   useEffect(() => {
     props.registerFlushPendingProps?.(controller.flushPropUpdates);
@@ -143,6 +205,7 @@ export function ComposerIntegration(props: ComposerIntegrationProps): JSX.Elemen
         toolbar={
           <ComposerToolbarBar
             documentName={state.document.name}
+            publication={state.document.publication}
             saveStatus={state.saveStatus}
             mode={state.mode}
             viewport={viewport}
@@ -174,6 +237,7 @@ export function ComposerIntegration(props: ComposerIntegrationProps): JSX.Elemen
             onOpenNodeMenu={menus.handleTreeOpenNodeMenu}
             onOpenInsertMenu={menus.handleTreeOpenInsertMenu}
             readOnly={readOnly}
+            onSetGlobalTemplateOutlet={setGlobalTemplateOutlet}
           />
         }
         canvas={
@@ -203,6 +267,9 @@ export function ComposerIntegration(props: ComposerIntegrationProps): JSX.Elemen
             onFlushPendingProps={controller.flushPropUpdates}
             onReorder={controller.reorder}
             onRemove={controller.remove}
+            onPublishPattern={controller.publishPattern}
+            onClearPublication={clearPublication}
+            lastError={controller.lastError}
             titleFor={titleFor}
           />
         }

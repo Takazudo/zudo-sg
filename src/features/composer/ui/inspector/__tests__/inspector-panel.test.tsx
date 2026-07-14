@@ -1,7 +1,7 @@
 /** @jsxRuntime automatic */
 /** @jsxImportSource preact */
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, within } from "@testing-library/preact";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/preact";
 import {
   TEST_COMPONENT_IDS,
   makeDocument,
@@ -52,6 +52,61 @@ describe("InspectorPanel — root/empty state", () => {
     const doc = makeDocument([makeNode(TEST_COMPONENT_IDS.label, { text: "Hi" }, {}, "a")]);
     renderPanel({ document: doc, selectedId: "does-not-exist" });
     expect(screen.getByText("Nothing selected")).toBeInTheDocument();
+  });
+});
+
+describe("InspectorPanel — document reuse controls", () => {
+  it("disables empty Pattern publication with an accessible reason", () => {
+    renderPanel({ document: makeDocument([]), selectedId: null });
+    expect(screen.getByRole("radio", { name: /Pattern/i })).toBeDisabled();
+    expect(screen.getByText(/needs at least one root component/i)).toBeInTheDocument();
+  });
+
+  it("publishes a non-empty Pattern only through the explicit role control", () => {
+    const onPublishPattern = vi.fn();
+    const doc = makeDocument([makeNode(TEST_COMPONENT_IDS.label, { text: "Hello" }, {}, "label")]);
+    renderPanel({ document: doc, selectedId: null, onPublishPattern });
+
+    fireEvent.click(screen.getByRole("radio", { name: /Pattern/i }));
+    expect(onPublishPattern).toHaveBeenCalledOnce();
+    expect(screen.getByText("Saved composition")).toBeInTheDocument();
+  });
+
+  it("keeps a bound consumer from being published and explains the conflict", () => {
+    const doc = makeDocument([makeNode(TEST_COMPONENT_IDS.label, { text: "Hello" })]);
+    doc.binding = { sourceRecordId: "source", outletId: "outlet-main" };
+    renderPanel({ document: doc, selectedId: null });
+
+    expect(screen.getByRole("radio", { name: /Pattern/i })).toBeDisabled();
+    expect(screen.getByRole("radio", { name: /Global template/i })).toBeDisabled();
+    expect(screen.getByText(/bound to a Global template/i)).toBeInTheDocument();
+  });
+
+  it("shows a stale outlet diagnostic with a reassign or unpublish path", () => {
+    const doc = makeDocument([makeNode(TEST_COMPONENT_IDS.panel, {}, { left: [], right: [] }, "panel")]);
+    doc.publication = {
+      kind: "global-template",
+      outlet: { id: "outlet-main", label: "Main", target: { parentId: "missing", slotId: "content" } },
+    };
+    renderPanel({ document: doc, selectedId: null });
+
+    expect(screen.getByRole("alert")).toHaveTextContent(/no longer a declared empty component slot/i);
+    expect(screen.getByText(/Choose another valid empty slot/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Unpublish" })).toBeInTheDocument();
+  });
+
+  it("waits for the guarded relationship result before clearing a role", async () => {
+    const onClearPublication = vi.fn(async () => ({ status: "blocked" as const, message: "2 consumers are still bound." }));
+    const doc = makeDocument([makeNode(TEST_COMPONENT_IDS.label, { text: "Hello" })]);
+    doc.publication = { kind: "pattern" };
+    renderPanel({ document: doc, selectedId: null, onClearPublication });
+
+    fireEvent.click(screen.getByRole("button", { name: "Unpublish" }));
+    expect(screen.getByRole("button", { name: "Cancel" })).toHaveFocus();
+    fireEvent.click(screen.getByRole("button", { name: "Unpublish" }));
+
+    await waitFor(() => expect(onClearPublication).toHaveBeenCalledOnce());
+    expect(screen.getByRole("status")).toHaveTextContent("2 consumers are still bound.");
   });
 });
 
