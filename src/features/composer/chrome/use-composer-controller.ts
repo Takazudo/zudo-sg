@@ -116,7 +116,7 @@ export interface ComposerController {
   /** Clone-with-new-ids + insert-subtree at `target`, then select + reveal it. Errors (e.g. an incompatible slot) surface via `lastError`, never a silent no-op. */
   paste: (target: InsertionTarget) => void;
   /** Atomically clone and insert every root from a saved Pattern, then select and reveal its first inserted root. */
-  insertForest: (sourceRoots: readonly CompositionNode[], target: InsertionTarget) => void;
+  insertForest: (sourceRoots: readonly CompositionNode[], target: InsertionTarget) => ComposerForestInsertionOutcome;
   /** Clone-with-new-ids + insert immediately after the source, then select + reveal it. Refused for opaque nodes. */
   duplicate: (nodeId: string) => void;
   /**
@@ -156,6 +156,11 @@ export interface ComposerController {
   reset: () => void;
   dismissLoadNotice: () => void;
 }
+
+/** The chooser needs a synchronous command outcome so it never closes after a rejected atomic mutation. */
+export type ComposerForestInsertionOutcome =
+  | { status: "inserted" }
+  | { status: "rejected"; message: string };
 
 export interface UseComposerControllerOptions {
   manifest?: ComponentManifest;
@@ -275,7 +280,7 @@ export function useComposerController(options: UseComposerControllerOptions = {}
   const pendingBaseSaveStatusRef = useRef<ComposerSaveStatus | null>(null);
 
   const applyAction = useCallback(
-    (action: ComposerAction) => {
+    (action: ComposerAction): string | null => {
       const current = stateRef.current!;
       const result = applyComposerAction(current, action, { manifest, idFactory });
       setLastError(result.error);
@@ -288,7 +293,7 @@ export function useComposerController(options: UseComposerControllerOptions = {}
           stateRef.current = next;
           setState(next);
         }
-        return;
+        return result.error;
       }
 
       let next = result.state;
@@ -336,6 +341,7 @@ export function useComposerController(options: UseComposerControllerOptions = {}
       }
       stateRef.current = next;
       setState(next);
+      return null;
     },
     [manifest, idFactory],
   );
@@ -365,7 +371,7 @@ export function useComposerController(options: UseComposerControllerOptions = {}
   const dispatch = useCallback(
     (action: ComposerAction) => {
       flushPropUpdates();
-      applyAction(action);
+      return applyAction(action);
     },
     [flushPropUpdates, applyAction],
   );
@@ -500,7 +506,10 @@ export function useComposerController(options: UseComposerControllerOptions = {}
       copy: (nodeId) => dispatch({ type: "copy", nodeId }),
       cut: (nodeId) => dispatch({ type: "cut", nodeId }),
       paste: (target) => dispatch({ type: "paste", target }),
-      insertForest: (sourceRoots, target) => dispatch({ type: "insertForest", sourceRoots, target }),
+      insertForest: (sourceRoots, target) => {
+        const error = dispatch({ type: "insertForest", sourceRoots, target });
+        return error ? { status: "rejected", message: error } : { status: "inserted" };
+      },
       duplicate: (nodeId) => dispatch({ type: "duplicate", nodeId }),
       drop: (sourceNodeId, target, copy) => dispatch({ type: "drop", sourceNodeId, target, copy }),
       publishPattern: () => dispatch({ type: "publishPattern" }),

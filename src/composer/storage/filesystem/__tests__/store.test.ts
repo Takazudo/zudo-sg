@@ -102,6 +102,90 @@ describe("filesystem composition store safety", () => {
     });
   });
 
+  it("serializes final dependency checks for Global-template source mutations", async () => {
+    const store = await createStore({ now: () => T2 });
+    const source = record("source");
+    source.document.publication = {
+      kind: "global-template",
+      outlet: { id: "outlet-main", label: "Main", target: { parentId: "split-1", slotId: "left" } },
+    };
+    const consumer = record("consumer");
+    consumer.document.binding = { sourceRecordId: "source", outletId: "outlet-main" };
+    await store.put(source, "source jsx");
+    await store.put(consumer, "consumer jsx");
+
+    await expect(store.deleteWithDependencyCheck("source")).resolves.toMatchObject({
+      status: "blocked",
+      dependents: [{ summary: { id: "consumer" }, binding: consumer.document.binding }],
+    });
+    await expect(store.unpublishWithDependencyCheck("source")).resolves.toMatchObject({
+      status: "blocked",
+      dependents: [{ summary: { name: "Product overview" } }],
+    });
+    await expect(store.clear()).rejects.toMatchObject({ operation: "clear", code: "blocked" });
+    expect(JSON.parse(await readFile(jsonPath("source"), "utf8"))).toMatchObject({
+      document: { publication: { kind: "global-template" } },
+    });
+
+    await store.delete("consumer");
+    await expect(store.unpublishWithDependencyCheck("source")).resolves.toEqual({ status: "unpublished" });
+    const unpublished = JSON.parse(await readFile(jsonPath("source"), "utf8"));
+    expect(unpublished).toMatchObject({ updatedAt: T2 });
+    expect(unpublished.document).not.toHaveProperty("publication");
+  });
+
+  it("keeps canonical binding intact when a lifecycle save cannot replace derived output", async () => {
+    const initial = await createStore();
+    const source = record("source");
+    source.document.publication = {
+      kind: "global-template",
+      outlet: { id: "outlet-main", label: "Main", target: { parentId: "split-1", slotId: "left" } },
+    };
+    const bound = record("consumer", T1);
+    bound.document.binding = { sourceRecordId: "source", outletId: "outlet-main" };
+    await initial.put(source, "source jsx");
+    await initial.put(bound, "bound jsx");
+
+    const failing = await createStore({
+      operations: {
+        rename: async (from, to) => {
+          if (to.endsWith(".tsx")) throw Object.assign(new Error("injected JSX rename failure"), { code: "EIO" });
+          await rename(from, to);
+        },
+      },
+    });
+    const detached = structuredClone(bound);
+    detached.updatedAt = T2;
+    delete detached.document.binding;
+    await expect(failing.saveLifecycleRecord(detached)).rejects.toMatchObject({
+      operation: "put",
+      code: "write-failed",
+    });
+    expect(JSON.parse(await readFile(jsonPath("consumer"), "utf8"))).toMatchObject({
+      updatedAt: T1,
+      document: { binding: { sourceRecordId: "source", outletId: "outlet-main" } },
+    });
+  });
+
+  it("rejects a consumer queued after a Global-template source has been deleted", async () => {
+    const store = await createStore();
+    const source = record("source");
+    source.document.publication = {
+      kind: "global-template",
+      outlet: { id: "outlet-main", label: "Main", target: { parentId: "split-1", slotId: "left" } },
+    };
+    await store.put(source, "source jsx");
+    await expect(store.deleteWithDependencyCheck("source")).resolves.toEqual({ status: "deleted" });
+
+    const lateConsumer = record("late-consumer");
+    lateConsumer.document.binding = { sourceRecordId: "source", outletId: "outlet-main" };
+    await expect(store.put(lateConsumer, "late consumer jsx")).rejects.toMatchObject({
+      operation: "put",
+      code: "conflict",
+    });
+    expect((await names()).some((name) => name.includes("late-consumer"))).toBe(false);
+  });
+
   it("rejects a symlink root and a symlink file that resolves outside the root", async () => {
     const outside = join(sandbox, "outside");
     await mkdir(outside);

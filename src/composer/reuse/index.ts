@@ -9,11 +9,17 @@ export type {
   ReuseReadProvider,
   CompositionReuseResolver,
   CompositionReuseService,
+  ReuseLifecycleProvider,
+  ReuseDeleteOutcome,
+  ReuseUnpublishOutcome,
+  ReuseConsumerLifecycleOutcome,
+  CompositionReuseLifecycleService,
   ComposerReuseResolutionOptions,
   ResolveGlobalTemplateOptions,
 } from "./types";
 export { resolveGlobalTemplate, resolveGlobalTemplateLoad } from "./resolver";
 export { catalogEntryFromSummary, createCompositionReuseService } from "./service";
+export { createCompositionReuseLifecycleService } from "./lifecycle";
 export type {
   MaterializedRuntimeOwner,
   MaterializedViewNode,
