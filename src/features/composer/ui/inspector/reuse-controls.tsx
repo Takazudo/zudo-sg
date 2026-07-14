@@ -86,9 +86,10 @@ export function ReuseControls({
 
       <fieldset class="flex flex-col gap-vsp-3xs" disabled={readOnly || busy}>
         <legend class="sr-only">Composition reuse role</legend>
-        <label class="flex items-start gap-hsp-2xs text-small text-fg">
+        <label class="flex items-start gap-hsp-2xs text-caption text-fg">
           <input
             type="radio"
+            class="h-4 w-4 flex-none appearance-none rounded-full border border-border bg-surface checked:bg-accent focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-2"
             name={radioName}
             checked={intendedRole === "none"}
             disabled={publication === undefined}
@@ -99,9 +100,10 @@ export function ReuseControls({
             <span class="block text-caption text-muted">Not available as a reusable source.</span>
           </span>
         </label>
-        <label class="flex items-start gap-hsp-2xs text-small text-fg">
+        <label class="flex items-start gap-hsp-2xs text-caption text-fg">
           <input
             type="radio"
+            class="h-4 w-4 flex-none appearance-none rounded-full border border-border bg-surface checked:bg-accent focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-2"
             name={radioName}
             checked={intendedRole === "pattern"}
             disabled={patternReason !== null || publication?.kind === "pattern"}
@@ -116,9 +118,10 @@ export function ReuseControls({
             <span class="block text-caption text-muted">Saved composition</span>
           </span>
         </label>
-        <label class="flex items-start gap-hsp-2xs text-small text-fg">
+        <label class="flex items-start gap-hsp-2xs text-caption text-fg">
           <input
             type="radio"
+            class="h-4 w-4 flex-none appearance-none rounded-full border border-border bg-surface checked:bg-accent focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-2"
             name={radioName}
             checked={intendedRole === "global-template"}
             disabled={globalReason !== null}

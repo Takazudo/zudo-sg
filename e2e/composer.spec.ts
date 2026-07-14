@@ -894,11 +894,11 @@ test.describe("Composer storage & recovery matrix (step 7 + opaque export block)
   });
 
   test("step 07d - a newer schema is quarantined until explicit Start fresh", async ({ page }) => {
-    await prepareLegacyMigration(page, JSON.stringify({ schemaVersion: 2 }));
+    await prepareLegacyMigration(page, JSON.stringify({ schemaVersion: 3 }));
     await openComposerLibrary(page);
 
     const banner = page.getByRole("heading", { name: "Recovery required" }).locator("..");
-    await expect(banner).toContainText("future schema 2");
+    await expect(banner).toContainText("future schema 3");
     await expect(page.getByRole("button", { name: "New composition" }).first()).toBeDisabled();
 
     await page.getByRole("button", { name: "Start fresh", exact: true }).click();

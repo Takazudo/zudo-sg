@@ -60,6 +60,9 @@ test.describe("Composer real-browser IndexedDB lifecycle", () => {
 
     await expect(page.locator(".sg-composer-library-open")).toHaveCount(1);
     await page.getByRole("button", { name: "New composition" }).first().click();
+    const dialog = page.getByRole("dialog", { name: "New composition" });
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole("button", { name: "Create composition", exact: true }).click();
     await expect(page.frameLocator(COMPOSER_CANVAS_IFRAME).locator("[data-composer-canvas]")).toBeVisible();
 
     const createdUrl = page.url();
@@ -78,11 +81,11 @@ test.describe("Composer real-browser IndexedDB lifecycle", () => {
     database = await inspectComposerDatabase(page);
     expect(database.records).toHaveLength(3);
     const duplicate = database.records.find(({ document }) => document.name.endsWith(" copy"));
-    expect(duplicate?.document.root).toHaveLength(2);
+    expect(duplicate?.document.root).toHaveLength(1);
 
     await page.getByRole("button", { name: "Library", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Composition library" })).toBeVisible();
-    await page.getByRole("button", { name: /^Delete Product overview copy$/ }).click();
+    await page.getByRole("button", { name: /^Delete Untitled composition copy$/ }).click();
     await page.getByRole("button", { name: "Delete composition", exact: true }).click();
     await expect(page.locator(".sg-composer-library-open")).toHaveCount(2);
 

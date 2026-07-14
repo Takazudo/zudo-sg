@@ -50,6 +50,9 @@ export async function openComposerRecord(
     await requested.click();
   } else {
     await page.getByRole("button", { name: "New composition" }).first().click();
+    const dialog = page.getByRole("dialog", { name: "New composition" });
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole("button", { name: "Create composition", exact: true }).click();
   }
 
   await expect(page).toHaveURL(/#\/composition\/(?:indexeddb|files)\/[^/]+$/);

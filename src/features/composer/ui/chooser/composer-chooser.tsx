@@ -464,6 +464,9 @@ export function ComposerChooser({
               >
                 Cancel
               </button>
+              <p class="sg-composer-chooser-target">
+                Adding to <strong>{targetLabel}</strong>
+              </p>
               <p id={`${titleId}-move-help`} class="sr-only">
                 Use Arrow keys to move the dialog 16 pixels, Shift plus Arrow keys to move it 48 pixels, or Home
                 to restore its default position and size.
