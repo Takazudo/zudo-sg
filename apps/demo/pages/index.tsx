@@ -148,7 +148,7 @@ export default function HomePage() {
           <>
             Ideas for <span class="text-accent">better</span>
             <br class="max-sm:hidden" />
-            business
+            {" "}business
           </>
         }
         lead="This fictional demo shows how a focused business site can introduce products, people, and long-term priorities."

@@ -33,7 +33,9 @@ test("key layout landmarks are visible", async ({ page }) => {
   await expect(page.getByRole("banner")).toBeVisible();
 
   // Hero renders the page's single <h1>.
-  await expect(page.locator("h1").first()).toBeVisible();
+  const heroHeading = page.locator("h1").first();
+  await expect(heroHeading).toBeVisible();
+  await expect(heroHeading).toHaveText("Ideas for better business");
 
   // SiteFooter renders a <footer> (implicit contentinfo landmark).
   await expect(page.getByRole("contentinfo")).toBeVisible();
