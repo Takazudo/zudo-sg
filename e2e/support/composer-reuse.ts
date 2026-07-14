@@ -95,8 +95,8 @@ export function boundConsumerRecord(
 }
 
 /** A multi-root Pattern makes the insertion test prove an atomic forest clone. */
-export function patternRecord(id = PATTERN_RECORD_ID): BrowserCompositionRecord {
-  return record({
+function patternDocument(id = PATTERN_RECORD_ID): ReuseDocument {
+  return {
     schemaVersion: 2,
     id,
     name: "Marketing block",
@@ -113,6 +113,17 @@ export function patternRecord(id = PATTERN_RECORD_ID): BrowserCompositionRecord 
         children: "Pattern call to action",
       }),
     ],
+  };
+}
+
+/** A private multi-root source exercises publication through the browser UI. */
+export function privatePatternRecord(id = PATTERN_RECORD_ID): BrowserCompositionRecord {
+  return record(patternDocument(id));
+}
+
+export function patternRecord(id = PATTERN_RECORD_ID): BrowserCompositionRecord {
+  return record({
+    ...patternDocument(id),
     publication: { kind: "pattern" },
   });
 }
