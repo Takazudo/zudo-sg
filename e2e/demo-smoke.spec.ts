@@ -49,6 +49,6 @@ test("primary nav and hero CTA render", async ({ page }) => {
 
   // Landing hero's primary CTA (from the demo landing config → /products).
   await expect(
-    page.getByRole("link", { name: "ダミー分類" }).first(),
+    page.getByRole("link", { name: "Products" }).first(),
   ).toBeVisible();
 });

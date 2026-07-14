@@ -13,8 +13,8 @@
  * frontmatter contract (content/news/<slug>.md(x) YAML):
  *   date:      string  Article date. ISO ("2026-06-19") expected — the
  *                       descending-sort key.
- *   category:  string  Category label (e.g. 企業 / 製品 / サステナビリティ /
- *                       展示会 / IR).
+ // English dummy-copy note.
+ // English dummy-copy note.
  *   title:     string  Heading (falls back to frontmatter.title, then the
  *                       slug's last segment).
  *   href:      string? Explicit link to an external article/other URL,

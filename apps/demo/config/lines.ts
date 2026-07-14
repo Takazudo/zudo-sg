@@ -4,8 +4,8 @@
  *
  * Design intent:
  *   The demo has two content dimensions: the corporate site (everything
- *   outside `lines/`) and 5 business lines under `content/lines/<key>/...`
- *   (→ route `/lines/<key>/...`). `BusinessLinePortal` (landing page +
+ *   outside `lines/`) and 5 business lines under `content/lines/<key>/..`
+ *   (→ route `/lines/<key>/..`). `BusinessLinePortal` (landing page +
  *   `content/products/equipment.mdx`) derives its card data from
  *   `BUSINESS_LINE_LIST` so both call sites stay in sync — see
  *   `pages/_mdx-content-sections.tsx` and `pages/index.tsx`.
@@ -55,49 +55,49 @@ export type BusinessLine = {
 export const BUSINESS_LINES: Record<LineKey, BusinessLine> = {
   vacuum: {
     key: "vacuum",
-    brand: "ダミー分野A",
-    label: "ダミー分野A",
+    brand: "Vacuum Solutions",
+    label: "Vacuum Solutions",
     homeHref: "/lines/vacuum",
     domain: "dummy-vacuum.jp",
-    description: "彼は背後にひそかな足音を聞いた。それはあまり良い意味を示すものではない。",
+    description: "The quick brown fox jumps over the lazy dog.",
     accent: "vacuum",
   },
   process: {
     key: "process",
-    brand: "ダミー分野B",
-    label: "ダミー分野B",
+    brand: "Process Systems",
+    label: "Process Systems",
     homeHref: "/lines/process",
     domain: "process.dummy.co.jp",
     description:
-      "あのイーハトーヴォのすきとおった風、夏でも底に冷たさをもつ青いそら、うつくしい森で飾られたモリーオ市、郊外のぎらぎらひかる草の波。この物語はダミーテキストであり、実際の内容とは一切関係がありません。",
+      "The quick brown fox jumps over the lazy dog.",
     accent: "process",
   },
   laser: {
     key: "laser",
-    brand: "ダミー分野C",
-    label: "ダミー分野C",
+    brand: "Laser Systems",
+    label: "Laser Systems",
     homeHref: "/lines/laser",
     domain: "laser-dummy.jp",
-    description: "彼は背後にひそかな足音を聞いた。それはあまり良い意味を示すものではない。",
+    description: "The quick brown fox jumps over the lazy dog.",
     accent: "laser",
   },
   meeting: {
     key: "meeting",
-    brand: "ダミー分野D",
-    label: "ダミー分野D",
+    brand: "Meeting Systems",
+    label: "Meeting Systems",
     homeHref: "/lines/meeting",
     domain: "dummy-meeting.jp",
     description:
-      "あのイーハトーヴォのすきとおった風、夏でも底に冷たさをもつ青いそら、うつくしい森で飾られたモリーオ市、郊外のぎらぎらひかる草の波。この物語はダミーテキストであり、実際の内容とは一切関係がありません。",
+      "The quick brown fox jumps over the lazy dog.",
     accent: "meeting",
   },
   beauty: {
     key: "beauty",
-    brand: "ダミーブランド skincare",
-    label: "ダミー分野E",
+    brand: "Demo Brand skincare",
+    label: "Beauty Solutions",
     homeHref: "/lines/beauty",
     domain: "dummy-beauty.jp",
-    description: "彼は背後にひそかな足音を聞いた。それはあまり良い意味を示すものではない。",
+    description: "The quick brown fox jumps over the lazy dog.",
     accent: "beauty",
   },
 };

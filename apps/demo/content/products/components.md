@@ -1,46 +1,46 @@
 ---
-title: ダミー区分2
-description: ダミー株式会社が取り扱うダミー区分2。コネクタ・電気部品・光コンポーネント・ケーブルソリューションなど、プラスアルファの提案を実現する豊富なラインナップをご紹介します。
-section: ダミー分類
-navLabel: ダミー区分2
+title: Components
+description: A concise introduction to Demo Company and its sample business solutions.
+section: Products
+navLabel: Components
 navOrder: 3
 sectionOrder: 2
 ---
 
-「あのイーハトーヴォのすきとおった風、夏でも底に冷たさをもつ青いそら、うつくしい森で飾られたモリーオ市、郊外のぎらぎらひかる草の波。この物語はダミーテキストであり、実際の内容とは一切関係がありません。」
+"The quick brown fox jumps over the lazy dog."
 
-## ダミー見出し
+## Reliable foundations
 
-| カテゴリ | 主な製品 |
+| Sample detail | Sample detail |
 | --- | --- |
-| ダミー | サンプル |
-| サンプル | ―― |
-| ダミー | サンプル |
-| サンプル | ―― |
-| ダミー | サンプル |
-| サンプル | ―― |
-| ダミー | サンプル |
-| サンプル | ―― |
-| ダミー | サンプル |
+| Demo | Sample |
+| Sample | — |
+| Demo | Sample |
+| Sample | — |
+| Demo | Sample |
+| Sample | — |
+| Demo | Sample |
+| Sample | — |
+| Demo | Sample |
 
-## 見出しダミー
+## Working together
 
-「彼は背後にひそかな足音を聞いた。それはあまり良い意味を示すものではない。誰がこんな夜更けに、しかもこんな街灯のお粗末な港街の狭い小道で彼をつけて来るというのだ。」
+"The quick brown fox jumps over the lazy dog."
 
-## ダミー項目
+## Key point
 
-「あのイーハトーヴォのすきとおった風、夏でも底に冷たさをもつ青いそら、うつくしい森で飾られたモリーオ市、郊外のぎらぎらひかる草の波。」
+The quick brown fox jumps over the lazy dog.
 
-## サンプルタイトル
+## A practical example
 
-「人生の航路を捻じ曲げ、その獲物と共に立ち去ろうとしている、その丁度今。彼のこの仕事への恐れを和らげるために、数多い仲間の中に同じ考えを抱き、彼を見守り、待っている者がいるというのか。」
+"The quick brown fox jumps over the lazy dog."
 
-## これはダミーのテキストです
+## This is sample copy
 
-「それとも背後の足音の主は、この街に無数にいる法監視役で、強靭な罰をすぐにも彼の手首にガシャンと下すというのか。」サンプル本文のご相談は[お問い合わせ](/contact)よりご相談ください。
+The quick brown fox jumps over the lazy dog.
 
-![ダミー区分2製品イメージ](placeholder-components.jpg)
+![Components product](placeholder-components.jpg)
 
-## お問い合わせ
+## Contact us
 
-サンプル本文のご依頼は[お問い合わせページ](/contact)からご連絡ください。
+The quick brown fox jumps over the lazy dog.

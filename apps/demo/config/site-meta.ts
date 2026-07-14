@@ -14,6 +14,6 @@ export const siteMeta: {
   /** No trailing slash. Empty string means canonical/OG URLs are not emitted. */
   siteUrl: string;
 } = {
-  siteName: "ダミー株式会社",
+  siteName: "Demo Company",
   siteUrl: "",
 };
