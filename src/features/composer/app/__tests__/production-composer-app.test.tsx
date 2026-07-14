@@ -24,6 +24,21 @@ const PREVIEW = {
   previewLocation: { src: "about:blank", targetOrigin: "https://composer.test" },
 } as const;
 
+interface Deferred<T> {
+  promise: Promise<T>;
+  resolve(value: T): void;
+}
+
+function deferred<T>(): Deferred<T> {
+  let resolve!: (value: T) => void;
+  return {
+    promise: new Promise<T>((done) => {
+      resolve = done;
+    }),
+    resolve: (value) => resolve(value),
+  };
+}
+
 function record(id: string, name: string): CompositionRecord {
   const document = createSampleDocument();
   document.id = id;
@@ -438,6 +453,32 @@ describe("ProductionComposerApp", () => {
     expect(navigation.replacements.at(-1)).toBe("/composer/#/");
   });
 
+  it("does not let slow direct-detail initialization override newer history", async () => {
+    const initialization = deferred<CompositionInitializationOutcome>();
+    const alpha = record("alpha", "Alpha");
+    const indexeddb = memoryProvider("indexeddb", [alpha], {
+      initialize: () => initialization.promise,
+    });
+    const navigation = new FakeNavigation("/composer/#/composition/indexeddb/alpha");
+    render(
+      <ProductionComposerApp
+        providers={[indexeddb]}
+        navigation={navigation}
+        preview={PREVIEW}
+      />,
+    );
+
+    navigation.visit("/composer/#/");
+    expect(await screen.findByRole("heading", { name: "Loading compositions…" })).toBeInTheDocument();
+    initialization.resolve(ready(indexeddb.records));
+
+    expect(await screen.findByRole("heading", { name: "Compositions" })).toBeInTheDocument();
+    await Promise.resolve();
+    expect(navigation.read()).toEqual({ pathname: "/composer/", hash: "#/" });
+    expect(indexeddb.store.get).not.toHaveBeenCalled();
+    expect(screen.queryByRole("button", { name: "Library" })).not.toBeInTheDocument();
+  });
+
   it("keeps a non-blocking migration notice visible while opening a supported direct detail", async () => {
     const migrated = record("safe-id", "Migrated composition");
     const indexeddb = memoryProvider("indexeddb", [migrated], {
@@ -473,5 +514,67 @@ describe("ProductionComposerApp", () => {
     expect(screen.getAllByText("Migrated composition").length).toBeGreaterThan(0);
     fireEvent.click(screen.getByRole("button", { name: "Retry recovery" }));
     await waitFor(() => expect(retry).toHaveBeenCalledOnce());
+  });
+
+  it("keeps the current detail mounted when recovery retry fails", async () => {
+    const migrated = record("safe-id", "Migrated composition");
+    const recoveryOutcome: CompositionInitializationOutcome = {
+      status: "ready-with-recovery",
+      summaries: [summarizeComposition(migrated)],
+      recovery: {
+        kind: "recovered",
+        reason: "unsafe-id",
+        record: migrated,
+        sourcePreserved: true,
+        message: "The unsafe legacy id was remapped to safe-id.",
+      },
+    };
+    const indexeddb = memoryProvider("indexeddb", [migrated], {
+      initialize: async () => recoveryOutcome,
+    });
+    indexeddb.initialization.retry = vi
+      .fn()
+      .mockResolvedValueOnce({
+        status: "error",
+        error: new CompositionPersistenceError(
+          "initialize",
+          "read-failed",
+          "Recovery metadata is temporarily unavailable.",
+          true,
+        ),
+      })
+      .mockResolvedValueOnce(ready(indexeddb.records));
+    const navigation = new FakeNavigation("/composer/#/composition/indexeddb/safe-id");
+    render(
+      <ProductionComposerApp
+        providers={[indexeddb]}
+        navigation={navigation}
+        preview={PREVIEW}
+      />,
+    );
+    await screen.findByRole("button", { name: "Library" });
+    fireEvent.click(screen.getByRole("button", { name: "Reset sample" }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirm reset" }));
+    await waitFor(() => expect(screen.getByText("Saved")).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole("button", { name: "Retry recovery" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Recovery metadata is temporarily unavailable.",
+    );
+    expect(screen.getByRole("button", { name: "Retry recovery" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Library" })).toBeInTheDocument();
+    expect(screen.getAllByText("Product overview").length).toBeGreaterThan(0);
+    expect(screen.queryByRole("heading", { name: "Compositions" })).not.toBeInTheDocument();
+    expect(navigation.read()).toEqual({
+      pathname: "/composer/",
+      hash: "#/composition/indexeddb/safe-id",
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Retry recovery" }));
+    await waitFor(() =>
+      expect(screen.queryByText("Recovery metadata is temporarily unavailable.")).not.toBeInTheDocument(),
+    );
+    expect(screen.getByRole("button", { name: "Library" })).toBeInTheDocument();
   });
 });

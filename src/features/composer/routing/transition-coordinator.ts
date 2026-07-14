@@ -251,6 +251,15 @@ class LatestIntentComposerTransitionCoordinator implements ComposerTransitionCoo
           ? await this.loadIndex(route, intent, generation)
           : await this.loadDetail(route, intent.url, generation);
       if (!this.isCurrent(generation)) return { status: "stale" };
+      // Target reads and detail-session construction are asynchronous while
+      // the prior editor intentionally remains mounted. Land and persist any
+      // edits made during that wait at the final commit boundary too; the
+      // first flush above only protects edits that existed when loading began.
+      if (prior?.view === "detail") {
+        const finalFlushResult = await this.flushPriorDetail(prior, generation);
+        if (finalFlushResult) return finalFlushResult;
+      }
+      if (!this.isCurrent(generation)) return { status: "stale" };
       return this.commitTarget(state, intent, prior, generation);
     } catch (cause) {
       if (!this.isCurrent(generation)) return { status: "stale" };

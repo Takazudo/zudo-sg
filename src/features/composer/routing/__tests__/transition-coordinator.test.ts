@@ -400,6 +400,81 @@ describe("latest-intent Composer transition coordinator", () => {
     expect(h.files.list).toHaveBeenCalledOnce();
   });
 
+  it("flushes edits made while the target load is pending before committing it", async () => {
+    const old = record("old");
+    const targetGet = deferred<CompositionLoadOutcome>();
+    let lateEdit = false;
+    const observedDrafts: boolean[] = [];
+    const oldSession = fakeSession(
+      { providerId: "indexeddb", recordId: "old" },
+      old,
+      {
+        flushPendingProps: () => {
+          observedDrafts.push(lateEdit);
+        },
+      },
+    );
+    const h = harness({
+      createDetailSession: vi.fn((ref, value) =>
+        ref.providerId === "indexeddb" && ref.recordId === "old"
+          ? oldSession
+          : fakeSession(ref, value),
+      ),
+    });
+    h.indexeddb.get.mockResolvedValueOnce(loaded(old));
+    await h.coordinator.transition(detailIntent("indexeddb", "old"));
+    h.files.get.mockImplementationOnce(() => targetGet.promise);
+
+    const leaving = h.coordinator.transition(detailIntent("files", "target"));
+    await vi.waitFor(() => expect(observedDrafts).toEqual([false]));
+    lateEdit = true;
+    targetGet.resolve(loaded(record("target")));
+
+    await expect(leaving).resolves.toMatchObject({ status: "committed" });
+    expect(observedDrafts).toEqual([false, true]);
+    expect(oldSession.queue.flush).toHaveBeenCalledTimes(2);
+    expect(h.coordinator.state).toMatchObject({ providerId: "files", route: { recordId: "target" } });
+  });
+
+  it("rolls back when the final flush after target loading fails", async () => {
+    const old = record("old", "Mounted draft");
+    let flushCalls = 0;
+    const oldSession = fakeSession(
+      { providerId: "indexeddb", recordId: "old" },
+      old,
+      {
+        flush: async () => {
+          flushCalls += 1;
+          if (flushCalls === 2) throw new Error("late edit write failed");
+        },
+      },
+    );
+    const h = harness({
+      createDetailSession: vi.fn((ref, value) =>
+        ref.providerId === "indexeddb" && ref.recordId === "old"
+          ? oldSession
+          : fakeSession(ref, value),
+      ),
+    });
+    h.indexeddb.get.mockResolvedValueOnce(loaded(old));
+    await h.coordinator.transition(detailIntent("indexeddb", "old"));
+    h.files.get.mockResolvedValueOnce(loaded(record("target")));
+    h.history.replace.mockClear();
+
+    const result = await h.coordinator.transition(
+      detailIntent("files", "target", "already-applied"),
+    );
+
+    expect(result).toMatchObject({ status: "rolled-back", error: { code: "flush-failed" } });
+    expect(h.coordinator.state).toMatchObject({
+      providerId: "indexeddb",
+      route: { recordId: "old" },
+      draft: { document: { name: "Mounted draft" } },
+    });
+    expect(h.preference.write).not.toHaveBeenCalledWith("files");
+    expect(h.history.replace).toHaveBeenCalledWith("/composer/#/composition/indexeddb/old");
+  });
+
   it("restores URL and preserves provider, collection, and latest draft when flush fails", async () => {
     const old = record("old", "Original");
     const draft = record("old", "Typed draft");

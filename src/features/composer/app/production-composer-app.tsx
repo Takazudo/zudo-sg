@@ -243,6 +243,7 @@ export function ProductionComposerApp({
   const [initializationNotice, setInitializationNotice] =
     useState<CompositionRecoveryOutcome | null>(null);
   const [retryingRecovery, setRetryingRecovery] = useState(false);
+  const locationGenerationRef = useRef(0);
 
   const coordinator = useMemo(
     () =>
@@ -307,6 +308,15 @@ export function ProductionComposerApp({
 
   const transitionLocation = useCallback(
     async (location: ComposerRouteLocation, initializeDirectDetail: boolean) => {
+      const locationGeneration = ++locationGenerationRef.current;
+      const isCurrentLocation = () => {
+        const current = navigation.read();
+        return (
+          locationGeneration === locationGenerationRef.current &&
+          current.pathname === location.pathname &&
+          current.hash === location.hash
+        );
+      };
       const target = canonicalResolution(location, routeConfig);
       if (
         initializeDirectDetail &&
@@ -317,6 +327,7 @@ export function ProductionComposerApp({
         const provider = providersById.get(providerId);
         if (provider) {
           const outcome = await provider.initialization.initialize();
+          if (!isCurrentLocation()) return;
           if (outcome.status === "error" || outcome.status === "recovery-required") {
             setInitializationNotice(null);
             setBootProviderId(providerId);
@@ -329,6 +340,7 @@ export function ProductionComposerApp({
       } else {
         setInitializationNotice(null);
       }
+      if (!isCurrentLocation()) return;
       setBootProviderId(null);
       await transition({
         resolution: target.resolution,
@@ -336,7 +348,7 @@ export function ProductionComposerApp({
         history: target.history,
       });
     },
-    [providersById, routeConfig, transition],
+    [navigation, providersById, routeConfig, transition],
   );
 
   useEffect(() => {
@@ -347,6 +359,7 @@ export function ProductionComposerApp({
     });
     return () => {
       active = false;
+      locationGenerationRef.current += 1;
       unsubscribe();
       coordinator.cancel();
     };
@@ -434,16 +447,30 @@ export function ProductionComposerApp({
     if (state?.view !== "detail") return;
     const provider = providersById.get(state.providerId);
     if (!provider) return;
+    setDetailOperationError(null);
     setRetryingRecovery(true);
     try {
       const outcome = await provider.initialization.retry();
-      if (outcome.status === "error" || outcome.status === "recovery-required") {
-        setInitializationNotice(null);
-        setBootProviderId(state.providerId);
+      if (outcome.status === "error") {
+        setDetailOperationError(outcome.error.message);
         return;
       }
+      if (outcome.status === "recovery-required") {
+        setInitializationNotice(outcome.recovery);
+        setDetailOperationError(
+          `${outcome.recovery.message} Return to the library after the current draft is saved to choose Start fresh.`,
+        );
+        return;
+      }
+      setDetailOperationError(null);
       setInitializationNotice(
         outcome.status === "ready-with-recovery" ? outcome.recovery : null,
+      );
+    } catch (reason) {
+      setDetailOperationError(
+        reason instanceof Error
+          ? reason.message
+          : "Composition recovery retry failed.",
       );
     } finally {
       setRetryingRecovery(false);
