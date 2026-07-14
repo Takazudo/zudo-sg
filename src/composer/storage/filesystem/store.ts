@@ -449,6 +449,27 @@ export class FilesystemCompositionStore implements CompositionStore {
         },
       };
     }
+    if (outcome.status === "loaded" && outcome.decodedFromSchemaVersion !== undefined) {
+      // A v1 canonical record is usable only after the shared decoder has
+      // produced its lossless v2 form. Replace its bytes through the normal
+      // no-follow, root-verified atomic path; a failed replacement leaves the
+      // v1 canonical file untouched for a retry.
+      await this.atomicReplace(
+        operation,
+        this.jsonPath(expectedId),
+        `${JSON.stringify(outcome.record, null, 2)}\n`,
+        file.stats,
+      );
+      const migrated = await this.readFileNoFollow(operation, this.jsonPath(expectedId));
+      if (migrated === undefined) {
+        throw operationError(
+          operation,
+          "blocked",
+          `Canonical composition disappeared during migration: ${expectedId}.`,
+        );
+      }
+      return { outcome, stats: migrated.stats };
+    }
     return { outcome, stats: file.stats };
   }
 
@@ -486,6 +507,7 @@ export class FilesystemCompositionStore implements CompositionStore {
   private async assertReplaceablePath(
     operation: CompositionPersistenceOperation,
     path: string,
+    expectedStats?: Stats,
   ): Promise<void> {
     try {
       const stats = await this.operations.lstat(path);
@@ -496,8 +518,23 @@ export class FilesystemCompositionStore implements CompositionStore {
           `Refusing to replace non-regular Composer path: ${basename(path)}`,
         );
       }
+      if (expectedStats !== undefined && !sameFile(stats, expectedStats)) {
+        throw operationError(
+          operation,
+          "blocked",
+          `Composer file changed before it could be migrated: ${basename(path)}`,
+        );
+      }
     } catch (cause) {
-      if (errorCode(cause) === "ENOENT") return;
+      if (errorCode(cause) === "ENOENT" && expectedStats === undefined) return;
+      if (errorCode(cause) === "ENOENT") {
+        throw operationError(
+          operation,
+          "blocked",
+          `Composer file disappeared before it could be migrated: ${basename(path)}`,
+          cause,
+        );
+      }
       if (cause instanceof CompositionPersistenceError) throw cause;
       rethrow(operation, "write-failed", `Could not inspect Composer path: ${basename(path)}`, cause);
     }
@@ -507,9 +544,10 @@ export class FilesystemCompositionStore implements CompositionStore {
     operation: CompositionPersistenceOperation,
     finalPath: string,
     contents: string,
+    expectedStats?: Stats,
   ): Promise<void> {
     await this.assertRoot(operation);
-    await this.assertReplaceablePath(operation, finalPath);
+    await this.assertReplaceablePath(operation, finalPath, expectedStats);
 
     let temporaryPath: string | undefined;
     let handle;
@@ -547,7 +585,7 @@ export class FilesystemCompositionStore implements CompositionStore {
       handle = undefined;
 
       await this.assertRoot(operation);
-      await this.assertReplaceablePath(operation, finalPath);
+      await this.assertReplaceablePath(operation, finalPath, expectedStats);
       await this.operations.rename(temporaryPath, finalPath);
       temporaryPath = undefined;
       await this.assertRoot(operation);

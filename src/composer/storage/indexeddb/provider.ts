@@ -17,10 +17,10 @@ import type {
   CompositionSummary,
 } from "../../library";
 import { createUuidIdFactory } from "../../model/id-factory";
-import { cloneJson, isPlainObject } from "../../model/json";
+import { cloneJson } from "../../model/json";
+import { loadCompositionDocument } from "../../model/recovery";
 import { COMPOSITION_SCHEMA_VERSION } from "../../model/types";
 import type { CompositionDocument } from "../../model/types";
-import { isStructurallyValidDocument } from "../../model/validate";
 import { createSampleDocument } from "../../sample/sample-document";
 import {
   COMPOSER_DATABASE_NAME,
@@ -173,7 +173,7 @@ class IndexedDbProviderRuntime {
       let settled = false;
       let upgradeFailure: CompositionPersistenceError | undefined;
 
-      request.onupgradeneeded = () => {
+      request.onupgradeneeded = (event) => {
         const transaction = request.transaction;
         if (!transaction) {
           upgradeFailure = persistenceError(
@@ -185,7 +185,36 @@ class IndexedDbProviderRuntime {
           return;
         }
         try {
-          this.initializeFreshDatabase(request.result, transaction);
+          const abortUpgrade = (error: unknown): void => {
+            upgradeFailure =
+              error instanceof CompositionPersistenceError
+                ? error
+                : persistenceError(
+                    "initialize",
+                    "transaction-failed",
+                    "Composer database migration failed; no migration data was committed.",
+                    true,
+                    error,
+                  );
+            try {
+              transaction.abort();
+            } catch {
+              // It may already have aborted because a schema request failed.
+            }
+          };
+
+          if (event.oldVersion === 0) {
+            this.initializeFreshDatabase(request.result, transaction);
+          } else if (event.oldVersion === 1) {
+            this.migrateV1Database(transaction, abortUpgrade);
+          } else {
+            throw persistenceError(
+              "initialize",
+              "unsupported-version",
+              `Composer database version ${event.oldVersion} cannot be migrated by this build.`,
+              false,
+            );
+          }
         } catch (error) {
           upgradeFailure =
             error instanceof CompositionPersistenceError
@@ -388,6 +417,96 @@ class IndexedDbProviderRuntime {
     // to the one upgrade transaction supplied by IndexedDB.
     void transaction;
   }
+
+  /**
+   * Upgrade the v1 physical database without opening a second transaction.
+   * Every cursor update and the schema metadata write are part of IndexedDB's
+   * version-change transaction, so a malformed/future record or a failed
+   * update rolls back every preceding rewrite and leaves the database at v1.
+   */
+  private migrateV1Database(
+    transaction: IDBTransaction,
+    abortUpgrade: (error: unknown) => void,
+  ): void {
+    let compositions: IDBObjectStore;
+    let meta: IDBObjectStore;
+    try {
+      compositions = transaction.objectStore(COMPOSITIONS_STORE_NAME);
+      meta = transaction.objectStore(META_STORE_NAME);
+    } catch (error) {
+      abortUpgrade(
+        persistenceError(
+          "initialize",
+          "transaction-failed",
+          "Composer v1 database is missing a required store; the upgrade was aborted without changing stored data.",
+          true,
+          error,
+        ),
+      );
+      return;
+    }
+
+    const updateSchemaMetadata = (): void => {
+      let update: IDBRequest<IDBValidKey>;
+      try {
+        update = meta.put({
+          key: COMPOSER_META_KEYS.schema,
+          databaseVersion: COMPOSER_DATABASE_VERSION,
+          recordSchemaVersion: COMPOSITION_SCHEMA_VERSION,
+        } satisfies ComposerMetaRecord);
+      } catch (error) {
+        abortUpgrade(error);
+        return;
+      }
+      update.onerror = () => abortUpgrade(update.error ?? new Error("Could not update Composer schema metadata."));
+    };
+
+    let cursorRequest: IDBRequest<IDBCursorWithValue | null>;
+    try {
+      cursorRequest = compositions.openCursor();
+    } catch (error) {
+      abortUpgrade(error);
+      return;
+    }
+    cursorRequest.onerror = () =>
+      abortUpgrade(cursorRequest.error ?? new Error("Could not inspect Composer v1 records."));
+    cursorRequest.onsuccess = () => {
+      const cursor = cursorRequest.result;
+      if (cursor === null) {
+        updateSchemaMetadata();
+        return;
+      }
+
+      const loaded = loadCompositionRecord(cursor.value);
+      if (loaded.status !== "loaded") {
+        abortUpgrade(
+          persistenceError(
+            "initialize",
+            "transaction-failed",
+            "Composer database contains malformed or unsupported data. The upgrade was aborted without changing stored data; retry is safe after recovery.",
+            true,
+          ),
+        );
+        return;
+      }
+
+      if (loaded.decodedFromSchemaVersion === undefined) {
+        cursor.continue();
+        return;
+      }
+
+      let update: IDBRequest<IDBValidKey>;
+      try {
+        update = cursor.update(loaded.record);
+      } catch (error) {
+        abortUpgrade(error);
+        return;
+      }
+      update.onerror = () =>
+        abortUpgrade(update.error ?? new Error("Could not migrate a Composer v1 record."));
+      update.onsuccess = () => cursor.continue();
+    };
+  }
 }
 
 function validateCompositionRecordId(id: string): boolean {
@@ -419,25 +538,15 @@ type ClassifiedLegacyDocument =
   | { kind: "future"; foundSchemaVersion: number };
 
 function classifyLegacyDocument(raw: string): ClassifiedLegacyDocument {
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    return { kind: "malformed" };
+  // Keep browser-localStorage import on the same decoder/recovery decision as
+  // the chrome storage seam. In particular, a valid v1 document is imported
+  // as its lossless v2 representation before it enters IndexedDB.
+  const outcome = loadCompositionDocument(raw, createSampleDocument());
+  if (outcome.status === "ok") return { kind: "valid", document: outcome.document };
+  if (outcome.status === "quarantined") {
+    return { kind: "future", foundSchemaVersion: outcome.foundSchemaVersion };
   }
-  if (isPlainObject(parsed)) {
-    const version = parsed.schemaVersion;
-    if (
-      typeof version === "number" &&
-      Number.isFinite(version) &&
-      version > COMPOSITION_SCHEMA_VERSION
-    ) {
-      return { kind: "future", foundSchemaVersion: version };
-    }
-  }
-  return isStructurallyValidDocument(parsed)
-    ? { kind: "valid", document: parsed }
-    : { kind: "malformed" };
+  return { kind: "malformed" };
 }
 
 class IndexedDbCompositionStore implements CompositionStore {

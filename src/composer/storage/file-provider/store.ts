@@ -3,6 +3,7 @@ import { composerManifest } from "@/styleguide/data/composer-registry";
 import {
   COMPOSITION_PROVIDERS,
   CompositionPersistenceError,
+  loadCompositionRecord,
   validateCompositionRecord,
   type CompositionLoadOutcome,
   type CompositionPersistenceErrorCode,
@@ -106,7 +107,9 @@ class BrowserFileProviderCompositionStore implements CompositionStore {
   }
 
   async get(id: string): Promise<CompositionLoadOutcome> {
-    return this.readWithRepair<CompositionLoadOutcome>("get", id);
+    return this.readWithRepair<CompositionLoadOutcome>("get", id, (result) =>
+      this.decodeGetResult(result, id),
+    );
   }
 
   async put(record: CompositionRecord): Promise<void> {
@@ -134,14 +137,18 @@ class BrowserFileProviderCompositionStore implements CompositionStore {
     await this.request<null>("clear");
   }
 
-  private async readWithRepair<T>(operation: "list" | "get", id?: string): Promise<T> {
+  private async readWithRepair<T>(
+    operation: "list" | "get",
+    id?: string,
+    decodeResult: (result: T) => T = (result) => result,
+  ): Promise<T> {
     const jsxById: Record<string, string> = Object.create(null);
     for (let round = 0; round < MAX_REPAIR_ROUNDS; round += 1) {
       const response = await this.fetchJson<T>(operation, {
         ...(id === undefined ? {} : { id }),
         jsxById,
       });
-      if (response.ok) return response.result;
+      if (response.ok) return decodeResult(response.result);
       if (response.error.code !== "jsx-required") {
         throw this.fromServerError(operation, response.error);
       }
@@ -180,6 +187,26 @@ class BrowserFileProviderCompositionStore implements CompositionStore {
       "File-provider repair did not converge. Reduce the number of compositions and retry.",
       true,
     );
+  }
+
+  /**
+   * The development endpoint is a persistence boundary too. Decode a loaded
+   * record again rather than trusting the transport's claimed schema, so an
+   * older server response has the same v1 → v2 outcome as every other reader.
+   */
+  private decodeGetResult(result: CompositionLoadOutcome, requestedId: string): CompositionLoadOutcome {
+    if (result.status !== "loaded") return result;
+    const decoded = loadCompositionRecord(result.record);
+    if (decoded.status !== "loaded") return decoded;
+    if (decoded.record.id !== requestedId) {
+      throw persistenceError(
+        "get",
+        "conflict",
+        "The file provider returned a composition whose id does not match the requested id.",
+        true,
+      );
+    }
+    return decoded;
   }
 
   private async request<T>(operation: Operation, fields: Record<string, unknown> = {}): Promise<T> {

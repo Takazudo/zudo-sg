@@ -13,7 +13,8 @@
 //     at load or from any later autosave — see `use-composer-controller.ts`,
 //     which gates its autosave effect on `loadNotice.kind !== "quarantined"`
 //     until an explicit Reset clears it.
-//   - "ok" — storage already matches; nothing to write.
+//   - "ok" — v2 storage already matches; a losslessly decoded v1 document is
+//     written back immediately as v2.
 //
 // Every localStorage call is wrapped in try/catch: private-mode Safari,
 // full quota, and disabled storage must never prevent the app from starting,
@@ -76,7 +77,7 @@ export function resetComposerStorage(
 
 export interface ComposerStorageInitResult {
   outcome: LoadOutcome;
-  /** Null when the outcome intentionally skipped a write-back (quarantined / already ok). */
+  /** Null when the outcome intentionally skipped a write-back (quarantined / already-current ok). */
   write: ComposerStorageWriteResult | null;
 }
 
@@ -90,10 +91,14 @@ export function initializeComposerStorage(
   key: string = COMPOSER_DOCUMENT_STORAGE_KEY,
 ): ComposerStorageInitResult {
   const outcome = loadComposerDocument(sample, key);
-  if (outcome.status === "fresh" || outcome.status === "recovered") {
+  if (
+    outcome.status === "fresh"
+    || outcome.status === "recovered"
+    || (outcome.status === "ok" && outcome.decodedFromSchemaVersion !== undefined)
+  ) {
     return { outcome, write: saveComposerDocument(outcome.document, key) };
   }
-  // "ok" already matches storage; "quarantined" must never be overwritten
-  // implicitly — see file header.
+  // A current-schema "ok" already matches storage; "quarantined" must never
+  // be overwritten implicitly — see file header.
   return { outcome, write: null };
 }

@@ -15,6 +15,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createSampleDocument } from "../../../sample/sample-document";
+import { COMPOSITION_SCHEMA_V1, COMPOSITION_SCHEMA_VERSION } from "../../../model/types";
 import type { CompositionRecord } from "../../../library";
 import {
   createFilesystemCompositionStore,
@@ -32,6 +33,14 @@ function record(id = "a", timestamp = T1): CompositionRecord {
   const document = createSampleDocument();
   document.id = id;
   return { id, createdAt: T1, updatedAt: timestamp, document };
+}
+
+function legacyRecord(id = "a", timestamp = T1): unknown {
+  const current = record(id, timestamp);
+  return {
+    ...current,
+    document: { ...current.document, schemaVersion: COMPOSITION_SCHEMA_V1 },
+  };
 }
 
 function jsonPath(id: string): string {
@@ -152,6 +161,56 @@ describe("filesystem composition store safety", () => {
 });
 
 describe("filesystem composition store recovery", () => {
+  it("atomically rewrites a valid v1 canonical record as v2 without changing identity or timestamps", async () => {
+    const legacy = legacyRecord("a", T2) as Record<string, unknown>;
+    const original = `${JSON.stringify(legacy, null, 2)}\n`;
+    await mkdir(root, { recursive: true });
+    await writeFile(jsonPath("a"), original);
+    await writeFile(jsxPath("a"), "stale JSX");
+    const store = await createStore();
+
+    expect(await store.get("a")).toMatchObject({
+      status: "loaded",
+      decodedFromSchemaVersion: COMPOSITION_SCHEMA_V1,
+      record: {
+        id: "a",
+        createdAt: T1,
+        updatedAt: T2,
+        document: { id: "a", schemaVersion: COMPOSITION_SCHEMA_VERSION },
+      },
+    });
+    expect(JSON.parse(await readFile(jsonPath("a"), "utf8"))).toEqual({
+      ...legacy,
+      document: { ...(legacy.document as object), schemaVersion: COMPOSITION_SCHEMA_VERSION },
+    });
+    expect(await readFile(jsxPath("a"), "utf8")).toBe(`jsx:a:${T2}`);
+  });
+
+  it("preserves the exact v1 canonical bytes when its atomic migration replacement fails", async () => {
+    const legacy = legacyRecord("a") as Record<string, unknown>;
+    const original = JSON.stringify(legacy);
+    await mkdir(root, { recursive: true });
+    await writeFile(jsonPath("a"), original);
+    await writeFile(jsxPath("a"), "preserve JSX");
+    const provideJsx = vi.fn(() => "must not run");
+    const store = await createStore({
+      provideJsx,
+      operations: {
+        rename: async (from, to) => {
+          if (to.endsWith(".composition.json")) {
+            throw Object.assign(new Error("injected v1 migration failure"), { code: "EIO" });
+          }
+          await rename(from, to);
+        },
+      },
+    });
+
+    await expect(store.get("a")).rejects.toMatchObject({ operation: "get", code: "write-failed" });
+    expect(await readFile(jsonPath("a"), "utf8")).toBe(original);
+    expect(await readFile(jsxPath("a"), "utf8")).toBe("preserve JSX");
+    expect(provideJsx).not.toHaveBeenCalled();
+  });
+
   it("leaves the old pair intact when canonical JSON rename fails", async () => {
     const initial = await createStore();
     await initial.put(record("a", T1), "old jsx");
@@ -234,6 +293,21 @@ describe("filesystem composition store recovery", () => {
 
     await writeFile(jsonPath("a"), JSON.stringify(record("b")));
     expect(await store.get("a")).toMatchObject({ status: "invalid" });
+    expect(provideJsx).not.toHaveBeenCalled();
+
+    const future = JSON.stringify({
+      ...record("a"),
+      document: {
+        ...record("a").document,
+        schemaVersion: COMPOSITION_SCHEMA_VERSION + 1,
+      },
+    });
+    await writeFile(jsonPath("a"), future);
+    expect(await store.get("a")).toMatchObject({
+      status: "future-schema",
+      foundSchemaVersion: COMPOSITION_SCHEMA_VERSION + 1,
+    });
+    expect(await readFile(jsonPath("a"), "utf8")).toBe(future);
     expect(provideJsx).not.toHaveBeenCalled();
   });
 });

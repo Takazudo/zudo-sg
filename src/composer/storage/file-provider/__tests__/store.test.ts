@@ -5,7 +5,11 @@ import {
   type CompositionRecord,
 } from "../../../library";
 import { generateJsx } from "../../../source/generate-jsx";
-import { createManifest } from "../../../model/types";
+import {
+  COMPOSITION_SCHEMA_V1,
+  COMPOSITION_SCHEMA_VERSION,
+  createManifest,
+} from "../../../model/types";
 import { createSampleDocument } from "../../../sample/sample-document";
 import { composerManifest } from "@/styleguide/data/composer-registry";
 
@@ -169,5 +173,24 @@ describe("browser file-provider adapter", () => {
     await expect(store!.clear()).resolves.toBeUndefined();
     expect(fetchMock.mock.calls.map((call) => JSON.parse(String(call[1]?.body)).operation))
       .toEqual(["get", "delete", "clear"]);
+  });
+
+  it("decodes a loaded v1 record from the file-provider boundary as v2", async () => {
+    const value = record();
+    const legacy = {
+      ...value,
+      document: { ...value.document, schemaVersion: COMPOSITION_SCHEMA_V1 },
+    };
+    fetchMock.mockResolvedValue(jsonResponse({
+      ok: true,
+      result: { status: "loaded", record: legacy },
+    }));
+    const store = createFileProviderCompositionStore({ manifest: fixtureManifest, fetch: fetchMock });
+
+    await expect(store!.get("alpha")).resolves.toMatchObject({
+      status: "loaded",
+      decodedFromSchemaVersion: COMPOSITION_SCHEMA_V1,
+      record: { document: { schemaVersion: COMPOSITION_SCHEMA_VERSION } },
+    });
   });
 });

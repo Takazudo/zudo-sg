@@ -1,5 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createSampleDocument } from "@/composer";
+import {
+  COMPOSITION_SCHEMA_V1,
+  COMPOSITION_SCHEMA_VERSION,
+  createSampleDocument,
+} from "@/composer";
 import { doc, node } from "@/composer/__tests__/fixtures";
 import {
   COMPOSER_DOCUMENT_STORAGE_KEY,
@@ -115,6 +119,29 @@ describe("initializeComposerStorage", () => {
     const result = initializeComposerStorage(createSampleDocument(), KEY);
     expect(result.outcome.status).toBe("recovered");
     expect(result.write?.ok).toBe(true);
+  });
+
+  it("writes a losslessly decoded v1 document back as v2", () => {
+    const legacy = createSampleDocument();
+    legacy.id = "legacy-v1";
+    legacy.name = "Legacy v1";
+    localStorage.setItem(
+      KEY,
+      JSON.stringify({ ...legacy, schemaVersion: COMPOSITION_SCHEMA_V1 }),
+    );
+
+    const result = initializeComposerStorage(createSampleDocument(), KEY);
+    expect(result.outcome).toMatchObject({
+      status: "ok",
+      decodedFromSchemaVersion: COMPOSITION_SCHEMA_V1,
+      document: { id: "legacy-v1", name: "Legacy v1", schemaVersion: COMPOSITION_SCHEMA_VERSION },
+    });
+    expect(result.write).toEqual({ ok: true });
+    expect(JSON.parse(localStorage.getItem(KEY)!)).toMatchObject({
+      id: "legacy-v1",
+      name: "Legacy v1",
+      schemaVersion: COMPOSITION_SCHEMA_VERSION,
+    });
   });
 
   it("never writes back a quarantined future schema — raw storage stays untouched", () => {
