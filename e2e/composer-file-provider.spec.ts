@@ -8,6 +8,11 @@ import {
   openComposerLibrary,
   resetComposerPersistence,
 } from "./support/composer-persistence";
+import {
+  boundConsumerRecord,
+  globalTemplateRecord,
+  reuseDocument,
+} from "./support/composer-reuse";
 
 const outputRoot = resolve(process.cwd(), "compositions");
 let fixtureSandbox = "";
@@ -159,6 +164,45 @@ test.describe.serial("Composer development file-provider fixture", () => {
     await expect.poll(async () =>
       (await outputNames()).filter((name) => /^composition-.*\.(?:composition\.json|tsx)$/.test(name))
     ).toEqual([]);
+    expectNoUnexpectedErrors(errors);
+  });
+
+  test("linked Global templates write source-first Files modules without copying their shell into consumer JSON", async ({
+    page,
+  }) => {
+    const errors = captureUnexpectedBrowserErrors(page);
+    const source = globalTemplateRecord("file-site-shell", "File site shell");
+    const consumer = boundConsumerRecord("file-linked-consumer", "File linked consumer", source.id);
+    const sourceJson = resolve(outputRoot, `composition-${source.id}.composition.json`);
+    const consumerJson = resolve(outputRoot, `composition-${consumer.id}.composition.json`);
+    const sourceTsx = resolve(outputRoot, `composition-${source.id}.tsx`);
+    const consumerTsx = resolve(outputRoot, `composition-${consumer.id}.tsx`);
+
+    await writeFile(sourceJson, `${JSON.stringify(source, null, 2)}\n`);
+    await writeFile(consumerJson, `${JSON.stringify(consumer, null, 2)}\n`);
+    await resetComposerPersistence(page);
+    await openComposerLibrary(page);
+    await selectFilesProvider(page);
+
+    await expect(page.getByRole("button", { name: "Open File site shell" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Open File linked consumer" })).toBeVisible();
+    const [sourceModule, consumerModule] = await Promise.all([waitForFile(sourceTsx), waitForFile(consumerTsx)]);
+    expect(sourceModule).toContain("outlets");
+    expect(consumerModule).toContain('import LinkedTemplate from "./composition-file-site-shell";');
+    expect(consumerModule).toContain('"main-content": <LocalCompositionContent />');
+
+    const canonicalConsumer = JSON.parse(await readFile(consumerJson, "utf8"));
+    expect(reuseDocument(canonicalConsumer)).toMatchObject({
+      binding: { sourceRecordId: "file-site-shell", outletId: "main-content" },
+      root: [],
+    });
+    expect(JSON.stringify(canonicalConsumer)).not.toContain("Original source heading");
+
+    // The normal source deletion path is provider-guarded even in Files mode.
+    await page.getByRole("button", { name: "Delete File site shell" }).click();
+    await page.getByRole("button", { name: "Delete composition", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Open File site shell" })).toBeVisible();
+    await expect.poll(async () => (await stat(sourceJson)).isFile()).toBe(true);
     expectNoUnexpectedErrors(errors);
   });
 });
