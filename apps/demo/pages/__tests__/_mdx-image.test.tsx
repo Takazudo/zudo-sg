@@ -10,7 +10,7 @@ describe("MdxImage", () => {
     render(
       <p>
         <MdxImage
-          src="placeholder-vacuum-1.jpg"
+          src="/images/dummy/vacuum.webp"
           alt="Unbranded vacuum components on a warm studio surface"
         />
       </p>,

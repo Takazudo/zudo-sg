@@ -1,10 +1,9 @@
 /**
  * Local catalog used by the demo's MDX image override.
  *
- * MDX keeps its source-image strings so the content remains readable, while
- * this resolver keeps the demo self-contained and maps those strings to the
- * seven original local assets. New or unrecognised strings deliberately use
- * the corporate image instead of requesting a remote asset at runtime.
+ * MDX references these public paths directly. The resolver preserves a
+ * deterministic corporate fallback for an unrecognised source rather than
+ * introducing a runtime remote-asset dependency.
  */
 export const DUMMY_IMAGE_CATEGORIES = [
   "corporate",
@@ -34,35 +33,24 @@ export const DUMMY_IMAGE_MANIFEST = {
   sustainability: { src: "/images/dummy/sustainability.webp", width: 1600, height: 1000 },
 } as const satisfies Record<DummyImageCategory, DummyImageAsset>;
 
-const SOURCE_CATEGORY_PREFIXES = [
-  ["placeholder-vacuum-", "vacuum"],
-  ["placeholder-process-", "process"],
-  ["placeholder-laser-", "laser"],
-  ["placeholder-meeting-", "meeting"],
-  ["placeholder-beauty-", "beauty"],
-] as const satisfies readonly (readonly [string, DummyImageCategory])[];
-
 const SOURCE_CATEGORY_MAP = {
-  "placeholder-co2-graph.jpg": "sustainability",
-  "placeholder-governance.jpg": "sustainability",
-  "placeholder-social.jpg": "sustainability",
-  "placeholder-sustainability.jpg": "sustainability",
+  "/images/dummy/corporate.webp": "corporate",
+  "/images/dummy/vacuum.webp": "vacuum",
+  "/images/dummy/process.webp": "process",
+  "/images/dummy/laser.webp": "laser",
+  "/images/dummy/meeting.webp": "meeting",
+  "/images/dummy/beauty.webp": "beauty",
+  "/images/dummy/sustainability.webp": "sustainability",
 } as const satisfies Readonly<Record<string, DummyImageCategory>>;
 
-function getSourceFilename(source: string | undefined): string {
+function getCanonicalSource(source: string | undefined): string {
   if (!source) return "";
-
-  const withoutQuery = source.split(/[?#]/, 1)[0] ?? "";
-  return withoutQuery.split("/").at(-1) ?? "";
+  return source.split(/[?#]/, 1)[0] ?? "";
 }
 
 /** Resolve a content image source to its deterministic, local demo asset. */
 export function resolveDummyImage(source: string | undefined): DummyImageAsset {
-  const filename = getSourceFilename(source);
-  const mappedCategory = SOURCE_CATEGORY_MAP[filename as keyof typeof SOURCE_CATEGORY_MAP];
-
-  if (mappedCategory) return DUMMY_IMAGE_MANIFEST[mappedCategory];
-
-  const prefixCategory = SOURCE_CATEGORY_PREFIXES.find(([prefix]) => filename.startsWith(prefix))?.[1];
-  return DUMMY_IMAGE_MANIFEST[prefixCategory ?? "corporate"];
+  const canonicalSource = getCanonicalSource(source);
+  const category = SOURCE_CATEGORY_MAP[canonicalSource as keyof typeof SOURCE_CATEGORY_MAP] ?? "corporate";
+  return DUMMY_IMAGE_MANIFEST[category];
 }

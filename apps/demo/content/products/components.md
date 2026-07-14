@@ -39,7 +39,7 @@ The quick brown fox jumps over the lazy dog.
 
 The quick brown fox jumps over the lazy dog.
 
-![Components product](placeholder-components.jpg)
+![Components product](/images/dummy/corporate.webp)
 
 ## Contact us
 
