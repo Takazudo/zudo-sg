@@ -38,9 +38,11 @@ export async function openComposerRecord(
   options: { path?: string; recordName?: string | RegExp } = {},
 ): Promise<void> {
   await page.goto(options.path ?? COMPOSER_PATH);
-  await expect(page.getByRole("heading", { name: "Composition library" })).toBeVisible({
+  const libraryHeading = page.getByRole("heading", { name: "Composition library" });
+  await expect(libraryHeading).toBeVisible({
     timeout: 15_000,
   });
+  await expect(libraryHeading, "the mounted library must start in the viewport").toBeInViewport();
 
   const requested = options.recordName
     ? page.getByRole("button", { name: options.recordName })
@@ -61,9 +63,11 @@ export async function openComposerRecord(
 /** Navigate to the library without opening or implicitly creating a record. */
 export async function openComposerLibrary(page: Page, path = COMPOSER_PATH): Promise<void> {
   await page.goto(path);
-  await expect(page.getByRole("heading", { name: "Composition library" })).toBeVisible({
+  const libraryHeading = page.getByRole("heading", { name: "Composition library" });
+  await expect(libraryHeading).toBeVisible({
     timeout: 15_000,
   });
+  await expect(libraryHeading, "the mounted library must start in the viewport").toBeInViewport();
 }
 
 /**
