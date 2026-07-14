@@ -4,7 +4,12 @@
 // module's own tests for the controller-level lifecycle.
 
 import { describe, expect, it } from "vitest";
-import { cloneSubtreeWithNewIds, insertSubtree } from "../commands";
+import {
+  cloneForestWithNewIds,
+  cloneSubtreeWithNewIds,
+  insertForest,
+  insertSubtree,
+} from "../commands";
 import { createSequentialIdFactory } from "../id-factory";
 import { indexDocument } from "../index-model";
 import { VIRTUAL_ROOT_SLOT_ID } from "../types";
@@ -73,6 +78,178 @@ describe("cloneSubtreeWithNewIds", () => {
     const firstIds = idsOf(first);
     const secondIds = idsOf(second);
     expect(new Set([...firstIds, ...secondIds]).size).toBe(firstIds.length + secondIds.length);
+  });
+});
+
+describe("cloneForestWithNewIds", () => {
+  it("clones every root and descendant with a complete old-to-new id map", () => {
+    const forest = [
+      node(
+        C.stack,
+        { gap: "lg" },
+        {
+          [S.stackChildren]: [
+            node(C.stack, { gap: "sm" }, { [S.stackChildren]: [node(X.box, { label: "deep" }, {}, "deep")] }, "nested"),
+          ],
+        },
+        "first",
+      ),
+      node(X.box, { label: "second" }, {}, "second"),
+    ];
+
+    const cloned = cloneForestWithNewIds(forest, ids());
+    const clonedFirst = cloned.roots[0]!;
+    const clonedNested = clonedFirst.slots[S.stackChildren][0]!;
+    const clonedDeep = clonedNested.slots[S.stackChildren][0]!;
+    const clonedSecond = cloned.roots[1]!;
+
+    expect(cloned.roots.map((root) => root.props)).toEqual([{ gap: "lg" }, { label: "second" }]);
+    expect(cloned.roots.map((root) => root.componentId)).toEqual([C.stack, X.box]);
+    expect(cloned.idMap.get("first")).toBe(clonedFirst.id);
+    expect(cloned.idMap.get("nested")).toBe(clonedNested.id);
+    expect(cloned.idMap.get("deep")).toBe(clonedDeep.id);
+    expect(cloned.idMap.get("second")).toBe(clonedSecond.id);
+    expect(new Set(cloned.idMap.values()).size).toBe(4);
+    expect([...cloned.idMap.values()].every((id) => !["first", "nested", "deep", "second"].includes(id))).toBe(true);
+  });
+
+  it("rejects an empty forest and non-fresh factory ids", () => {
+    expect(() => cloneForestWithNewIds([], ids())).toThrow(/empty/i);
+    const forest = [node(X.box, {}, {}, "source")];
+    expect(() => cloneForestWithNewIds(forest, () => "source")).toThrow(/non-fresh/i);
+  });
+});
+
+describe("insertForest", () => {
+  const rootTarget = (index: number): InsertionTarget => ({
+    parentId: null,
+    slotId: VIRTUAL_ROOT_SLOT_ID,
+    index,
+  });
+
+  it("inserts a deep multi-root Pattern forest in order with no retained source references", () => {
+    const sourceRoots = [
+      node(
+        C.stack,
+        { gap: "lg" },
+        {
+          [S.stackChildren]: [
+            node(C.stack, { gap: "sm" }, { [S.stackChildren]: [node(X.box, { label: "deep" }, {}, "deep")] }, "nested"),
+          ],
+        },
+        "first",
+      ),
+      node(X.box, { label: "second" }, {}, "second"),
+    ];
+    const result = insertForest(doc([]), M, rootTarget(0), sourceRoots, ids());
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.document.root.map((root) => root.componentId)).toEqual([C.stack, X.box]);
+    expect(result.selectedId).toBe(result.document.root[0]!.id);
+    expect(result.document.root[0]!.slots[S.stackChildren][0]!.slots[S.stackChildren][0]!.props.label).toBe("deep");
+
+    sourceRoots[0]!.props.gap = "sm";
+    sourceRoots.splice(1, 1);
+    expect(result.document.root).toHaveLength(2);
+    expect(result.document.root[0]!.props.gap).toBe("lg");
+  });
+
+  it("rejects an empty forest, a stale target index, an unavailable root, and clone/destination id collisions", () => {
+    const stack = node(C.stack, {}, { [S.stackChildren]: [] }, "stack");
+    const before = doc([stack]);
+    const snapshot = JSON.parse(JSON.stringify(before));
+    const root = node(X.box, {}, {}, "pattern-root");
+
+    const empty = insertForest(before, M, { parentId: "stack", slotId: S.stackChildren, index: 0 }, [], ids());
+    expect(empty).toMatchObject({ ok: false, code: "empty-forest" });
+
+    const stale = insertForest(before, M, { parentId: "stack", slotId: S.stackChildren, index: 1 }, [root], ids());
+    expect(stale).toMatchObject({ ok: false, code: "invalid-insertion-target" });
+
+    const unavailable = insertForest(
+      before,
+      M,
+      { parentId: "stack", slotId: S.stackChildren, index: 0 },
+      [node("gone.component", {}, {}, "gone")],
+      ids(),
+    );
+    expect(unavailable).toMatchObject({ ok: false, code: "forest-component-unavailable" });
+
+    const collision = insertForest(
+      doc([node(X.box, {}, {}, "x-box-1")]),
+      M,
+      rootTarget(1),
+      [root],
+      createSequentialIdFactory("clone"),
+    );
+    expect(collision).toMatchObject({ ok: false, code: "forest-node-id-collision" });
+    expect(before).toEqual(snapshot);
+  });
+
+  it("validates every root before insertion, including accepts and single-cardinality", () => {
+    const gallery = node(X.gallery, {}, { items: [] }, "gallery");
+    const before = doc([gallery]);
+    const sourceRoots = [node(X.box, {}, {}, "good"), node(C.stack, {}, { [S.stackChildren]: [] }, "bad")];
+    const rejected = insertForest(
+      before,
+      M,
+      { parentId: "gallery", slotId: "items", index: 0 },
+      sourceRoots,
+      ids(),
+    );
+    expect(rejected).toMatchObject({ ok: false, code: "root-accepts" });
+    expect(before.root[0]!.slots.items).toEqual([]); // no accepted prefix was inserted
+
+    const split = node(C.splitLayout, {}, { [S.splitLeft]: [], [S.splitRight]: [] }, "split");
+    const multiple = insertForest(
+      doc([split]),
+      M,
+      { parentId: "split", slotId: S.splitLeft, index: 0 },
+      [node(X.box, {}, {}, "one"), node(X.box, {}, {}, "two")],
+      ids(),
+    );
+    expect(multiple).toMatchObject({ ok: false, code: "forest-cardinality" });
+
+    const occupied = insertForest(
+      makeAbcDocument(),
+      M,
+      { parentId: "split", slotId: S.splitLeft, index: 1 },
+      [node(X.box, {}, {}, "other")],
+      ids(),
+    );
+    expect(occupied).toMatchObject({ ok: false, code: "forest-cardinality" });
+  });
+
+  it("honors a resolved bound-root policy and refuses an unresolved one", () => {
+    const bound = doc([]);
+    bound.binding = { sourceRecordId: "source-record", outletId: "outlet-main" };
+    const sourceRoots = [node(X.box, {}, {}, "pattern-root")];
+
+    const unresolved = insertForest(bound, M, rootTarget(0), sourceRoots, ids());
+    expect(unresolved).toMatchObject({ ok: false, code: "unresolved-root-policy" });
+
+    const resolved = insertForest(
+      bound,
+      M,
+      rootTarget(0),
+      sourceRoots,
+      ids(),
+      { kind: "resolved", accepts: [X.box], cardinality: "single" },
+    );
+    expect(resolved.ok).toBe(true);
+    if (!resolved.ok) return;
+    expect(resolved.document.root).toHaveLength(1);
+
+    const second = insertForest(
+      resolved.document,
+      M,
+      rootTarget(1),
+      sourceRoots,
+      ids(),
+      { kind: "resolved", accepts: [X.box], cardinality: "single" },
+    );
+    expect(second).toMatchObject({ ok: false, code: "root-cardinality" });
   });
 });
 

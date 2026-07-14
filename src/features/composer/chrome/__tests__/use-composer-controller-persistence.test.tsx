@@ -8,7 +8,13 @@ import {
   type CompositionSaveQueue,
   type CompositionSaveSnapshot,
 } from "@/composer";
-import { fixtureManifest, makeAbcDocument, resetFixtureIds } from "@/composer/__tests__/fixtures";
+import {
+  FIXTURE_COMPONENT_IDS as F,
+  fixtureManifest,
+  makeAbcDocument,
+  node,
+  resetFixtureIds,
+} from "@/composer/__tests__/fixtures";
 import { BEFORE_NAVIGATE_EVENT } from "@takazudo/zudo-doc/transitions";
 import {
   INSPECTOR_COMMIT_DEBOUNCE_MS,
@@ -88,6 +94,20 @@ afterEach(() => {
 });
 
 describe("useComposerController — record persistence", () => {
+  it("queues exactly one revision for one accepted atomic Pattern forest insertion", async () => {
+    const { result, attempts } = setup();
+    const sourceRoots = [node(F.box, { label: "Pattern A" }, {}, "source-a"), node(F.box, { label: "Pattern B" }, {}, "source-b")];
+
+    act(() => result.current.insertForest(sourceRoots, { parentId: "split", slotId: "right", index: 1 }));
+    await advancePromises();
+
+    expect(result.current.lastError).toBeNull();
+    expect(attempts).toHaveLength(1);
+    const right = attempts[0]!.snapshot.record.document.root[0]!.slots.right;
+    expect(right.map((item) => item.props.label)).toEqual(["B", "Pattern A", "Pattern B", "C"]);
+    expect(result.current.state.selectedId).toBe(right[1]!.id);
+  });
+
   it("writes exactly one revision for an accepted binding command and none for a rejected reuse command", async () => {
     const { result, attempts } = setup();
     act(() => result.current.bindConsumer({

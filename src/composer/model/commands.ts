@@ -65,7 +65,12 @@ export type CommandErrorCode =
   | "nested-binding"
   | "unresolved-root-policy"
   | "root-cardinality"
-  | "root-accepts";
+  | "root-accepts"
+  | "invalid-insertion-target"
+  | "empty-forest"
+  | "forest-component-unavailable"
+  | "forest-cardinality"
+  | "forest-node-id-collision";
 
 function commandError(code: CommandErrorCode, error: string): CommandResult {
   return { ok: false, code, error };
@@ -82,6 +87,12 @@ function rootPolicyError(error: string): CommandResult {
 function insertionTargetError(error: string): CommandResult {
   if (/Global template outlet is reserved/i.test(error)) return commandError("outlet-reserved", error);
   return { ok: false, error };
+}
+
+/** Forest insertion promises a typed reason for every rejection. */
+function forestInsertionTargetError(error: string): CommandResult {
+  if (/Global template outlet is reserved/i.test(error)) return commandError("outlet-reserved", error);
+  return commandError("invalid-insertion-target", error);
 }
 
 /** Build a fast id → node lookup over a document. */
@@ -736,15 +747,156 @@ export function removeBinding(document: CompositionDocument): CommandResult {
  * fresh id on every invocation.
  */
 export function cloneSubtreeWithNewIds(node: CompositionNode, idFactory: IdFactory): CompositionNode {
-  const detached = cloneJson(node) as CompositionNode;
-  const reissueIds = (n: CompositionNode): CompositionNode => {
+  return cloneForestWithNewIds([node], idFactory).roots[0]!;
+}
+
+/** A detached root forest plus the complete old-node-id → new-node-id mapping. */
+export interface ClonedForestWithNewIds {
+  roots: CompositionNode[];
+  idMap: ReadonlyMap<string, string>;
+}
+
+/**
+ * Deep-clone a non-empty root forest, re-issuing every node identity exactly
+ * once. The returned map is deliberately part of the primitive: document
+ * duplication uses it to repair metadata that names a cloned node (for
+ * example, a Global template outlet owner).
+ *
+ * A duplicate id in the source or an id factory result that is not genuinely
+ * fresh is an invalid source/factory contract, so this primitive rejects it
+ * before returning a partially cloned forest. `insertForest` turns the same
+ * condition into its typed command error for UI callers.
+ */
+export function cloneForestWithNewIds(
+  roots: readonly CompositionNode[],
+  idFactory: IdFactory,
+): ClonedForestWithNewIds {
+  if (roots.length === 0) {
+    throw new Error("Cannot clone an empty component forest");
+  }
+
+  const sourceIds = new Set<string>();
+  const collectSourceIds = (node: CompositionNode): void => {
+    if (sourceIds.has(node.id)) {
+      throw new Error(`Cannot clone a forest with duplicate source node id "${node.id}"`);
+    }
+    sourceIds.add(node.id);
+    for (const children of Object.values(node.slots)) {
+      for (const child of children) collectSourceIds(child);
+    }
+  };
+  for (const root of roots) collectSourceIds(root);
+
+  const idMap = new Map<string, string>();
+  const clonedIds = new Set<string>();
+  const detached = cloneJson(roots) as CompositionNode[];
+  const reissueIds = (node: CompositionNode): CompositionNode => {
+    const id = idFactory(node.componentId);
+    if (sourceIds.has(id) || clonedIds.has(id)) {
+      throw new Error(`Id factory produced a non-fresh forest node id "${id}"`);
+    }
+    clonedIds.add(id);
+    idMap.set(node.id, id);
     const slots: Record<string, CompositionNode[]> = {};
-    for (const [slotId, children] of Object.entries(n.slots)) {
+    for (const [slotId, children] of Object.entries(node.slots)) {
       slots[slotId] = children.map(reissueIds);
     }
-    return { ...n, id: idFactory(n.componentId), slots };
+    return { ...node, id, slots };
   };
-  return reissueIds(detached);
+
+  return { roots: detached.map(reissueIds), idMap };
+}
+
+/**
+ * Atomically clone and insert a saved Pattern's root forest. Every target,
+ * source-root, cardinality, policy, and identity condition is checked before
+ * the destination document is cloned and spliced, so a failed multi-root
+ * insertion can never leave a valid prefix behind.
+ */
+export function insertForest(
+  document: CompositionDocument,
+  manifest: ComponentManifest,
+  target: InsertionTarget,
+  sourceRoots: readonly CompositionNode[],
+  idFactory: IdFactory,
+  rootPolicy?: RootPolicy,
+): CommandResult {
+  if (sourceRoots.length === 0) {
+    return commandError("empty-forest", "Cannot insert an empty Pattern component forest");
+  }
+
+  const index = indexDocument(document, manifest);
+  const locate = (id: string): CompositionNode | undefined => index.byId.get(id)?.node;
+  const targetValidation = validateInsertionTarget(document, manifest, target, locate);
+  if (!targetValidation.ok) {
+    return forestInsertionTargetError(targetValidation.error ?? "invalid insertion target");
+  }
+
+  for (const root of sourceRoots) {
+    if (!manifest.has(root.componentId)) {
+      return commandError(
+        "forest-component-unavailable",
+        `Cannot insert Pattern root "${root.componentId}" because that component is unavailable`,
+      );
+    }
+  }
+
+  if (target.parentId === null) {
+    const rootValidation = validateRootForest(
+      [...document.root, ...sourceRoots],
+      effectiveRootPolicy(document, rootPolicy),
+    );
+    if (!rootValidation.ok) return rootPolicyError(rootValidation.error ?? "invalid consumer root policy");
+  } else {
+    const parent = locate(target.parentId)!;
+    const parentEntry = manifest.get(parent.componentId)!;
+    const slot = parentEntry.slots.find((candidate) => candidate.id === target.slotId)!;
+    const existing = parent.slots[target.slotId] ?? [];
+    if (slot.accepts) {
+      for (const root of sourceRoots) {
+        if (!slot.accepts.includes(root.componentId)) {
+          return commandError(
+            "root-accepts",
+            `Slot "${target.slotId}" does not accept "${root.componentId}"`,
+          );
+        }
+      }
+    }
+    if (slot.cardinality === "single" && (existing.length !== 0 || sourceRoots.length !== 1)) {
+      return commandError(
+        "forest-cardinality",
+        `Slot "${target.slotId}" is single-child and requires exactly one root in an empty slot`,
+      );
+    }
+  }
+
+  let cloned: ClonedForestWithNewIds;
+  try {
+    cloned = cloneForestWithNewIds(sourceRoots, idFactory);
+  } catch (error) {
+    return commandError(
+      "forest-node-id-collision",
+      error instanceof Error ? error.message : "Could not create fresh node ids for the Pattern forest",
+    );
+  }
+
+  for (const id of cloned.idMap.values()) {
+    if (index.byId.has(id)) {
+      return commandError(
+        "forest-node-id-collision",
+        `Pattern clone node id "${id}" already exists in the destination document`,
+      );
+    }
+  }
+
+  const next = cloneJson(document);
+  const nextIndex = indexDocument(next, manifest);
+  const nextLocate = (id: string): CompositionNode | undefined => nextIndex.byId.get(id)?.node;
+  const array = slotArray(next, target.parentId, target.slotId, nextLocate)!;
+  array.splice(target.index, 0, ...cloned.roots);
+
+  const insertedId = cloned.roots[0]!.id;
+  return { ok: true, document: next, selectedId: insertedId, insertedId, changed: true };
 }
 
 /**

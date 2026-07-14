@@ -5,6 +5,7 @@ import {
   doc,
   fixtureManifest,
   makeAbcDocument,
+  node,
   resetFixtureIds,
 } from "@/composer/__tests__/fixtures";
 import {
@@ -139,6 +140,26 @@ describe("applyComposerAction — document commands", () => {
 });
 
 describe("applyComposerAction — Composition reuse commands", () => {
+  it("inserts a Pattern forest through one reducer transition and selects/reveals its first root", () => {
+    const state = { ...initial(), expandedIds: new Set<string>() };
+    const sourceRoots = [node(F.box, { label: "Pattern A" }, {}, "source-a"), node(F.box, { label: "Pattern B" }, {}, "source-b")];
+    const result = applyComposerAction(
+      state,
+      { type: "insertForest", target: { parentId: "split", slotId: "right", index: 1 }, sourceRoots },
+      ctx(),
+    );
+
+    expect(result.error).toBeNull();
+    expect(result.documentChanged).toBe(true);
+    const right = result.state.document.root[0]!.slots.right;
+    expect(right.map((item) => item.props.label)).toEqual(["B", "Pattern A", "Pattern B", "C"]);
+    expect(result.state.selectedId).toBe(right[1]!.id);
+    expect(result.state.expandedIds.has("split")).toBe(true);
+
+    sourceRoots[0]!.props.label = "mutated source";
+    expect(right[1]!.props.label).toBe("Pattern A");
+  });
+
   it("binds through a resolved contract, persists one accepted action, and applies its root policy to later inserts", () => {
     const empty = createInitialControllerState({
       document: doc([]),
@@ -299,6 +320,7 @@ describe("isDocumentMutation / hasUnsavedChanges", () => {
     expect(isDocumentMutation({ type: "updateProps", nodeId: "x", patch: {} })).toBe(true);
     expect(isDocumentMutation({ type: "reorder", nodeId: "x", direction: "up" })).toBe(true);
     expect(isDocumentMutation({ type: "remove", nodeId: "x" })).toBe(true);
+    expect(isDocumentMutation({ type: "insertForest", target: { parentId: null, slotId: "root", index: 0 }, sourceRoots: [] })).toBe(true);
     expect(isDocumentMutation({ type: "publishPattern" })).toBe(true);
     expect(isDocumentMutation({ type: "bindConsumer", contract: {
       sourceRecordId: "source", outletId: "outlet", sameProvider: true, sourceIsGlobalTemplate: true, sourceHasBinding: false,
