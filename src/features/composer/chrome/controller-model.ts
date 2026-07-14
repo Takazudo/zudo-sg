@@ -21,21 +21,34 @@ import type {
   ComponentManifest,
   CompositionDocument,
   CompositionNode,
+  GlobalTemplateOutletTarget,
   IdFactory,
   InsertionTarget,
   JsonObject,
+  PublicationDependencyGuard,
+  ResolvedGlobalTemplateOutletContract,
+  RootPolicy,
 } from "@/composer";
 import {
   addNode,
+  bindConsumer,
+  clearPublication,
   cloneJson,
   cloneSubtreeWithNewIds,
+  effectiveRootPolicy,
   findLocation,
   insertSubtree,
   isNodeOpaque,
   moveSubtree,
+  publishGlobalTemplate,
+  publishPattern,
+  reassignGlobalTemplateOutlet,
+  removeBinding,
   removeNode,
   reorderNode,
   repairSelection,
+  renameGlobalTemplateOutlet,
+  setGlobalTemplateOutlet,
   updateProps,
 } from "@/composer";
 
@@ -91,6 +104,11 @@ export interface ComposerControllerState {
    * persisted to storage (issue #255).
    */
   clipboard: CompositionNode | null;
+  /**
+   * Resolver-supplied policy for a bound consumer's virtual root. It is
+   * session-only: canonical documents retain only the source/outlet binding.
+   */
+  rootPolicy: RootPolicy;
 }
 
 /**
@@ -110,6 +128,15 @@ export type ComposerAction =
   | { type: "paste"; target: InsertionTarget }
   | { type: "duplicate"; nodeId: string }
   | { type: "drop"; sourceNodeId: string; target: InsertionTarget; copy: boolean }
+  | { type: "publishPattern" }
+  | { type: "publishGlobalTemplate"; target: GlobalTemplateOutletTarget; label: string }
+  | { type: "setGlobalTemplateOutlet"; target: GlobalTemplateOutletTarget; label: string }
+  | { type: "renameGlobalTemplateOutlet"; label: string }
+  | { type: "reassignGlobalTemplateOutlet"; target: GlobalTemplateOutletTarget }
+  | { type: "clearPublication"; dependencyGuard: PublicationDependencyGuard }
+  | { type: "bindConsumer"; contract: ResolvedGlobalTemplateOutletContract }
+  | { type: "removeBinding" }
+  | { type: "setRootPolicy"; rootPolicy: RootPolicy }
   | { type: "select"; nodeId: string | null }
   | { type: "reveal"; nodeId: string }
   | { type: "toggleExpanded"; nodeId: string }
@@ -119,7 +146,7 @@ export type ComposerAction =
   | { type: "setLeftWidth"; width: number }
   | { type: "setRightWidth"; width: number }
   | { type: "resetToSample"; document: CompositionDocument }
-  | { type: "loadDocument"; document: CompositionDocument; notice: ComposerLoadNotice | null }
+  | { type: "loadDocument"; document: CompositionDocument; notice: ComposerLoadNotice | null; rootPolicy?: RootPolicy }
   | { type: "dismissLoadNotice" }
   | { type: "setSaveStatus"; status: ComposerSaveStatus };
 
@@ -146,6 +173,14 @@ const DOCUMENT_MUTATION_TYPES = new Set<ComposerAction["type"]>([
   "paste",
   "duplicate",
   "drop",
+  "publishPattern",
+  "publishGlobalTemplate",
+  "setGlobalTemplateOutlet",
+  "renameGlobalTemplateOutlet",
+  "reassignGlobalTemplateOutlet",
+  "clearPublication",
+  "bindConsumer",
+  "removeBinding",
   "resetToSample",
 ]);
 
@@ -189,12 +224,14 @@ function ancestorIds(
 export function createInitialControllerState(options: {
   document: CompositionDocument;
   manifest: ComponentManifest;
+  /** A resolver may supply this when mounting an already-bound consumer. */
+  rootPolicy?: RootPolicy;
   loadNotice: ComposerLoadNotice | null;
   saveStatus: ComposerSaveStatus;
   leftWidth: number;
   rightWidth: number;
 }): ComposerControllerState {
-  const { document, manifest, loadNotice, saveStatus, leftWidth, rightWidth } = options;
+  const { document, manifest, rootPolicy, loadNotice, saveStatus, leftWidth, rightWidth } = options;
   return {
     document,
     selectedId: repairSelection(document, manifest, null),
@@ -206,6 +243,7 @@ export function createInitialControllerState(options: {
     saveStatus,
     loadNotice,
     clipboard: null,
+    rootPolicy: effectiveRootPolicy(document, rootPolicy),
   };
 }
 
@@ -238,6 +276,7 @@ export function applyComposerAction(
         action.target,
         action.componentId,
         ctx.idFactory,
+        state.rootPolicy,
       );
       if (!result.ok) return { state, error: result.error, documentChanged: false };
       return {
@@ -319,7 +358,7 @@ export function applyComposerAction(
     case "paste": {
       if (!state.clipboard) return { state, error: "Clipboard is empty", documentChanged: false };
       const clone = cloneSubtreeWithNewIds(state.clipboard, ctx.idFactory);
-      const result = insertSubtree(state.document, ctx.manifest, action.target, clone);
+      const result = insertSubtree(state.document, ctx.manifest, action.target, clone, state.rootPolicy);
       if (!result.ok) return { state, error: result.error, documentChanged: false };
       let nextExpanded: ReadonlySet<string> = state.expandedIds;
       for (const id of ancestorIds(result.document, ctx.manifest, result.selectedId!)) {
@@ -352,7 +391,7 @@ export function applyComposerAction(
         slotId: location.slotId,
         index: location.index + 1,
       };
-      const result = insertSubtree(state.document, ctx.manifest, target, clone);
+      const result = insertSubtree(state.document, ctx.manifest, target, clone, state.rootPolicy);
       if (!result.ok) return { state, error: result.error, documentChanged: false };
       let nextExpanded: ReadonlySet<string> = state.expandedIds;
       for (const id of ancestorIds(result.document, ctx.manifest, result.selectedId!)) {
@@ -399,9 +438,9 @@ export function applyComposerAction(
       let result: CommandResult;
       if (action.copy) {
         const clone = cloneSubtreeWithNewIds(location.node, ctx.idFactory);
-        result = insertSubtree(state.document, ctx.manifest, action.target, clone);
+        result = insertSubtree(state.document, ctx.manifest, action.target, clone, state.rootPolicy);
       } else {
-        result = moveSubtree(state.document, ctx.manifest, action.sourceNodeId, action.target);
+        result = moveSubtree(state.document, ctx.manifest, action.sourceNodeId, action.target, state.rootPolicy);
       }
       if (!result.ok) return { state, error: result.error, documentChanged: false };
 
@@ -422,6 +461,100 @@ export function applyComposerAction(
         documentChanged: result.changed,
       };
     }
+    case "publishPattern": {
+      const result = publishPattern(state.document);
+      if (!result.ok) return { state, error: result.error, documentChanged: false };
+      return {
+        state: { ...state, document: result.document },
+        error: null,
+        documentChanged: result.changed,
+      };
+    }
+    case "publishGlobalTemplate": {
+      const result = publishGlobalTemplate(
+        state.document,
+        ctx.manifest,
+        action.target,
+        action.label,
+        ctx.idFactory,
+      );
+      if (!result.ok) return { state, error: result.error, documentChanged: false };
+      return {
+        state: { ...state, document: result.document },
+        error: null,
+        documentChanged: result.changed,
+      };
+    }
+    case "setGlobalTemplateOutlet": {
+      const result = setGlobalTemplateOutlet(
+        state.document,
+        ctx.manifest,
+        action.target,
+        action.label,
+        ctx.idFactory,
+      );
+      if (!result.ok) return { state, error: result.error, documentChanged: false };
+      return {
+        state: { ...state, document: result.document },
+        error: null,
+        documentChanged: result.changed,
+      };
+    }
+    case "renameGlobalTemplateOutlet": {
+      const result = renameGlobalTemplateOutlet(state.document, action.label);
+      if (!result.ok) return { state, error: result.error, documentChanged: false };
+      return {
+        state: { ...state, document: result.document },
+        error: null,
+        documentChanged: result.changed,
+      };
+    }
+    case "reassignGlobalTemplateOutlet": {
+      const result = reassignGlobalTemplateOutlet(state.document, ctx.manifest, action.target);
+      if (!result.ok) return { state, error: result.error, documentChanged: false };
+      return {
+        state: { ...state, document: result.document },
+        error: null,
+        documentChanged: result.changed,
+      };
+    }
+    case "clearPublication": {
+      const result = clearPublication(state.document, action.dependencyGuard);
+      if (!result.ok) return { state, error: result.error, documentChanged: false };
+      return {
+        state: { ...state, document: result.document },
+        error: null,
+        documentChanged: result.changed,
+      };
+    }
+    case "bindConsumer": {
+      const result = bindConsumer(state.document, action.contract);
+      if (!result.ok) return { state, error: result.error, documentChanged: false };
+      return {
+        state: { ...state, document: result.document, rootPolicy: action.contract.rootPolicy },
+        error: null,
+        documentChanged: result.changed,
+      };
+    }
+    case "removeBinding": {
+      const result = removeBinding(state.document);
+      if (!result.ok) return { state, error: result.error, documentChanged: false };
+      return {
+        state: {
+          ...state,
+          document: result.document,
+          rootPolicy: effectiveRootPolicy(result.document, state.rootPolicy),
+        },
+        error: null,
+        documentChanged: result.changed,
+      };
+    }
+    case "setRootPolicy":
+      return {
+        state: { ...state, rootPolicy: effectiveRootPolicy(state.document, action.rootPolicy) },
+        error: null,
+        documentChanged: false,
+      };
     case "resetToSample": {
       return {
         state: {
@@ -430,6 +563,7 @@ export function applyComposerAction(
           selectedId: repairSelection(action.document, ctx.manifest, null),
           expandedIds: new Set<string>(),
           loadNotice: null,
+          rootPolicy: effectiveRootPolicy(action.document),
         },
         error: null,
         documentChanged: true,
@@ -442,6 +576,7 @@ export function applyComposerAction(
           document: action.document,
           selectedId: repairSelection(action.document, ctx.manifest, state.selectedId),
           loadNotice: action.notice,
+          rootPolicy: effectiveRootPolicy(action.document, action.rootPolicy),
         },
         error: null,
         documentChanged: false,

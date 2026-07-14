@@ -20,6 +20,7 @@ import type {
   CompositionPublication,
   GlobalTemplateOutlet,
   InsertionTarget,
+  RootPolicy,
 } from "./types";
 import { COMPOSITION_SCHEMA_VERSION, VIRTUAL_ROOT_SLOT_ID } from "./types";
 import { isJsonSafe, isPlainObject } from "./json";
@@ -334,6 +335,104 @@ export interface TargetValidation {
   error?: string;
 }
 
+/** Root policy for ordinary, unbound Composition documents. */
+export const UNRESTRICTED_ROOT_POLICY: Extract<RootPolicy, { kind: "unrestricted" }> = {
+  kind: "unrestricted",
+};
+
+/** Root policy used until a bound consumer's source/outlet is resolved. */
+export const UNRESOLVED_ROOT_POLICY: Extract<RootPolicy, { kind: "unresolved" }> = {
+  kind: "unresolved",
+};
+
+/**
+ * Choose the only safe effective policy for a document mutation.
+ *
+ * Unbound documents always use their ordinary unrestricted virtual root. A
+ * bound document may use only a resolver-supplied resolved policy; a missing
+ * (or accidentally unrestricted) context is intentionally treated as unknown
+ * so a direct model caller cannot bypass the source outlet's constraints.
+ */
+export function effectiveRootPolicy(
+  document: CompositionDocument,
+  supplied?: RootPolicy,
+): RootPolicy {
+  if (!document.binding) return UNRESTRICTED_ROOT_POLICY;
+  return supplied?.kind === "resolved" ? supplied : UNRESOLVED_ROOT_POLICY;
+}
+
+/** Validate an existing consumer-root forest against a resolved source outlet. */
+export function validateRootForest(
+  roots: readonly CompositionNode[],
+  policy: RootPolicy,
+): TargetValidation {
+  if (policy.kind === "unrestricted") return { ok: true };
+  if (policy.kind === "unresolved") {
+    return {
+      ok: false,
+      error: "Cannot insert at the consumer root until its Global template outlet is resolved",
+    };
+  }
+
+  if (policy.cardinality === "single" && roots.length > 1) {
+    return {
+      ok: false,
+      error: "The bound Global template outlet accepts only one root component",
+    };
+  }
+  if (policy.accepts) {
+    for (const root of roots) {
+      if (!policy.accepts.includes(root.componentId)) {
+        return {
+          ok: false,
+          error: `The bound Global template outlet does not accept "${root.componentId}" at the consumer root`,
+        };
+      }
+    }
+  }
+  return { ok: true };
+}
+
+/** Validate one new component entering a virtual root under its effective policy. */
+export function validateRootInsertion(
+  existingRootCount: number,
+  componentId: string,
+  policy: RootPolicy,
+): TargetValidation {
+  if (policy.kind === "unrestricted") return { ok: true };
+  if (policy.kind === "unresolved") {
+    return {
+      ok: false,
+      error: "Cannot insert at the consumer root until its Global template outlet is resolved",
+    };
+  }
+  if (policy.cardinality === "single" && existingRootCount >= 1) {
+    return {
+      ok: false,
+      error: "The bound Global template outlet accepts only one root component",
+    };
+  }
+  if (policy.accepts && !policy.accepts.includes(componentId)) {
+    return {
+      ok: false,
+      error: `The bound Global template outlet does not accept "${componentId}" at the consumer root`,
+    };
+  }
+  return { ok: true };
+}
+
+/** True when a named slot is reserved for the live consumer projection. */
+export function isPublishedOutletTarget(
+  document: CompositionDocument,
+  parentId: string | null,
+  slotId: string,
+): boolean {
+  const outlet = document.publication?.kind === "global-template"
+    ? document.publication.outlet.target
+    : undefined;
+  return outlet !== undefined && parentId === outlet.parentId && slotId === outlet.slotId;
+}
+
 /**
  * Validates an `InsertionTarget` against the document + manifest: the parent
  * must exist (or be the virtual root), the slot must be declared on the parent,
@@ -347,6 +446,13 @@ export function validateInsertionTarget(
   locate: (id: string) => CompositionNode | undefined,
 ): TargetValidation {
   const { parentId, slotId, index } = target;
+
+  if (isPublishedOutletTarget(document, parentId, slotId)) {
+    return {
+      ok: false,
+      error: "This Global template outlet is reserved for its consumers and cannot receive local children",
+    };
+  }
 
   let slotChildren: CompositionNode[];
 

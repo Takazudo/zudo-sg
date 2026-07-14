@@ -17,6 +17,9 @@ export type {
   PatternPublication,
   CompositionPublication,
   CompositionBinding,
+  RootPolicy,
+  ResolvedGlobalTemplateOutletContract,
+  PublicationDependencyGuard,
   CompositionDocumentV1,
   CompositionDocument,
   InsertionTarget,
@@ -68,11 +71,17 @@ export {
   classifyNode,
   diagnoseDocument,
   isNodeOpaque,
+  UNRESTRICTED_ROOT_POLICY,
+  UNRESOLVED_ROOT_POLICY,
+  effectiveRootPolicy,
+  validateRootForest,
+  validateRootInsertion,
+  isPublishedOutletTarget,
   validateInsertionTarget,
 } from "./model/validate";
 
 // ── Commands ─────────────────────────────────────────────────────────────────
-export type { CommandResult } from "./model/commands";
+export type { CommandResult, CommandErrorCode } from "./model/commands";
 export {
   addNode,
   updateProps,
@@ -82,6 +91,14 @@ export {
   cloneSubtreeWithNewIds,
   insertSubtree,
   moveSubtree,
+  publishPattern,
+  publishGlobalTemplate,
+  setGlobalTemplateOutlet,
+  renameGlobalTemplateOutlet,
+  reassignGlobalTemplateOutlet,
+  clearPublication,
+  bindConsumer,
+  removeBinding,
 } from "./model/commands";
 
 // ── Recovery ─────────────────────────────────────────────────────────────────

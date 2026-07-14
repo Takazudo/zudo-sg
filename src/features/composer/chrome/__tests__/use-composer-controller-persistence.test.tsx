@@ -88,6 +88,28 @@ afterEach(() => {
 });
 
 describe("useComposerController — record persistence", () => {
+  it("writes exactly one revision for an accepted binding command and none for a rejected reuse command", async () => {
+    const { result, attempts } = setup();
+    act(() => result.current.bindConsumer({
+      sourceRecordId: "source-record",
+      outletId: "outlet-main",
+      sameProvider: true,
+      sourceIsGlobalTemplate: true,
+      sourceHasBinding: false,
+      rootPolicy: { kind: "resolved", cardinality: "many" },
+    }));
+    await advancePromises();
+    expect(attempts).toHaveLength(1);
+    expect(attempts[0]!.snapshot.record.document.binding).toEqual({
+      sourceRecordId: "source-record",
+      outletId: "outlet-main",
+    });
+
+    act(() => result.current.publishPattern());
+    expect(result.current.lastError).toMatch(/bound/i);
+    expect(attempts).toHaveLength(1);
+  });
+
   it("serializes overlapping controller edits and saves the newest retained record", async () => {
     const { result, queue, attempts } = setup();
 
