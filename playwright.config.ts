@@ -4,8 +4,11 @@ import { defineConfig } from "@playwright/test";
 // Port 4700 is reserved for the styleguide host's smoke fixture, 4701 for the
 // demo site's, to avoid collisions with zudo-doc fixtures (4500–4504) and the
 // dev server (4321).
-const SMOKE_PORT = 4700;
-const DEMO_SMOKE_PORT = 4701;
+// Override these for an isolated worktree run. The defaults remain stable for
+// local smoke workflows, while concurrent checkouts never accidentally reuse
+// a preview server serving another checkout's dist output.
+const SMOKE_PORT = Number(process.env.ZUDO_SG_SMOKE_PORT ?? 4700);
+const DEMO_SMOKE_PORT = Number(process.env.ZUDO_SG_DEMO_SMOKE_PORT ?? 4701);
 
 export default defineConfig({
   testDir: "./e2e",
@@ -91,8 +94,9 @@ export default defineConfig({
     {
       name: "demo-smoke",
       // Both demo specs serve from the same built demo dist (DEMO_SMOKE_PORT):
-      // the render smoke checks and the SPA-transition regression suite.
-      testMatch: ["demo-smoke.spec.ts", "demo-transition.spec.ts"],
+      // the render smoke checks, the SPA-transition regression suite, and the
+      // complete refresh integration contracts.
+      testMatch: ["demo-smoke.spec.ts", "demo-transition.spec.ts", "demo-refresh.spec.ts"],
       use: { baseURL: `http://localhost:${DEMO_SMOKE_PORT}` },
     },
   ],
