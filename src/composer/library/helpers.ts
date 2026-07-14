@@ -1,4 +1,4 @@
-import { cloneSubtreeWithNewIds } from "../model/commands";
+import { cloneForestWithNewIds } from "../model/commands";
 import type { IdFactory } from "../model/id-factory";
 import { cloneJson } from "../model/json";
 import type { CompositionDocument, CompositionNode } from "../model/types";
@@ -37,19 +37,42 @@ export function duplicateCompositionRecord(
 ): CompositionRecord {
   const id = options.idFactory("composition");
   const timestamp = options.now();
-  const root = source.document.root.map((node) =>
-    cloneSubtreeWithNewIds(node, options.nodeIdFactory),
-  );
+  // A blank ordinary page is a valid record, while Pattern publication itself
+  // requires roots. Keep that valid empty-page case independent of the
+  // non-empty forest primitive, whose map is meaningful only when nodes exist.
+  const clonedForest = source.document.root.length > 0
+    ? cloneForestWithNewIds(source.document.root, options.nodeIdFactory)
+    : { roots: [] as CompositionNode[], idMap: new Map<string, string>() };
+  const document = {
+    ...cloneJson(source.document),
+    id,
+    name: options.name ?? `${source.document.name} copy`,
+    root: clonedForest.roots,
+  };
+
+  // Publication remains a role of the duplicate, but its outlet must point to
+  // the cloned owner rather than the source document's node. Consumer bindings
+  // intentionally need no rewrite: they name an external source record/outlet.
+  if (document.publication?.kind === "global-template") {
+    const previousOwnerId = document.publication.outlet.target.parentId;
+    const clonedOwnerId = clonedForest.idMap.get(previousOwnerId);
+    if (!clonedOwnerId) {
+      throw new Error(`Cannot duplicate Global template with missing outlet owner "${previousOwnerId}"`);
+    }
+    document.publication = {
+      ...document.publication,
+      outlet: {
+        ...document.publication.outlet,
+        target: { ...document.publication.outlet.target, parentId: clonedOwnerId },
+      },
+    };
+  }
+
   return {
     id,
     createdAt: timestamp,
     updatedAt: timestamp,
-    document: {
-      ...cloneJson(source.document),
-      id,
-      name: options.name ?? `${source.document.name} copy`,
-      root,
-    },
+    document,
   };
 }
 
@@ -86,12 +109,26 @@ export function countCompositionNodes(document: CompositionDocument): number {
 }
 
 export function summarizeComposition(record: CompositionRecord): CompositionSummary {
+  const publication = record.document.publication;
+  const reuseStatus = publication === undefined
+    ? undefined
+    : record.document.binding !== undefined
+      ? "invalid"
+      : publication.kind === "pattern" && record.document.root.length === 0
+        ? "empty-pattern"
+        : "eligible";
   return {
     id: record.id,
     name: record.document.name,
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,
     nodeCount: countCompositionNodes(record.document),
+    rootCount: record.document.root.length,
+    ...(publication ? { publicationKind: publication.kind } : {}),
+    ...(publication?.kind === "global-template"
+      ? { outletId: publication.outlet.id, outletLabel: publication.outlet.label }
+      : {}),
+    ...(reuseStatus ? { reuseStatus } : {}),
   };
 }
 

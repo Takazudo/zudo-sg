@@ -8,6 +8,11 @@ import {
   openComposerLibrary,
   resetComposerPersistence,
 } from "./support/composer-persistence";
+import {
+  boundConsumerRecord,
+  globalTemplateRecord,
+  reuseDocument,
+} from "./support/composer-reuse";
 
 const outputRoot = resolve(process.cwd(), "compositions");
 let fixtureSandbox = "";
@@ -33,9 +38,35 @@ async function waitForFile(path: string): Promise<string> {
   return readFile(path, "utf8");
 }
 
+async function expectFileContents(path: string, expected: string): Promise<void> {
+  await expect.poll(async () => {
+    try {
+      return await readFile(path, "utf8");
+    } catch {
+      return null;
+    }
+  }).toBe(expected);
+}
+
+function fileModuleFromBrowserExport(browserExport: string | null): string {
+  expect(browserExport).toMatch(/^export function [A-Za-z_$][\w$]*\(\)/m);
+  return browserExport!.replace(/^export function [A-Za-z_$][\w$]*\(\)/m, "export default function Composition()");
+}
+
 async function selectFilesProvider(page: Page): Promise<void> {
   await page.getByLabel("Provider").selectOption("files");
   await expect(page.getByText("Active database:")).toContainText("Development composition files");
+}
+
+async function createOrdinaryFileComposition(page: Page, name: string): Promise<string> {
+  await page.getByRole("button", { name: "New composition" }).first().click();
+  const dialog = page.getByRole("dialog", { name: "New composition" });
+  await expect(dialog).toBeVisible();
+  await dialog.getByLabel("Name").fill(name);
+  await dialog.getByRole("button", { name: /None/ }).click();
+  await dialog.getByRole("button", { name: "Create composition" }).click();
+  await expect(page).toHaveURL(/#\/composition\/files\/[^/]+$/);
+  return decodeURIComponent(page.url().split("/").at(-1) ?? "");
 }
 
 function expectNoUnexpectedErrors(
@@ -84,19 +115,17 @@ test.describe.serial("Composer development file-provider fixture", () => {
       "Local files",
     ]);
     await selectFilesProvider(page);
-    await page.getByRole("button", { name: "New composition" }).first().click();
-    await expect(page).toHaveURL(/#\/composition\/files\/[^/]+$/);
-    const id = decodeURIComponent(page.url().split("/").at(-1) ?? "");
+    const id = await createOrdinaryFileComposition(page, "Product overview");
     const jsonPath = resolve(outputRoot, `composition-${id}.composition.json`);
     const jsxPath = resolve(outputRoot, `composition-${id}.tsx`);
 
     const canonical = JSON.parse(await waitForFile(jsonPath));
-    expect(canonical).toMatchObject({ id, document: { id, name: "Product overview" } });
+    expect(canonical).toMatchObject({ id, document: { id, name: "Product overview", root: [] } });
     expect(`${JSON.stringify(canonical, null, 2)}\n`).toBe(await readFile(jsonPath, "utf8"));
 
     await page.getByRole("button", { name: "Export JSX", exact: true }).click();
     const exportCode = await page.getByRole("dialog", { name: /Export/ }).locator("pre code").textContent();
-    expect(await waitForFile(jsxPath)).toBe(exportCode);
+    await expectFileContents(jsxPath, fileModuleFromBrowserExport(exportCode));
     await page.getByRole("button", { name: "Close", exact: true }).click();
 
     await page.getByRole("button", { name: "Add component to document root" }).click();
@@ -104,23 +133,24 @@ test.describe.serial("Composer development file-provider fixture", () => {
     await chooser.getByPlaceholder("Search components…").fill("Callout");
     await chooser.getByRole("button", { name: "Callout", exact: true }).click();
     await expect(page.locator(".sg-composer-save-status")).toHaveAttribute("data-sg-status", "saved");
-    await expect.poll(async () => JSON.parse(await readFile(jsonPath, "utf8")).document.root.length).toBe(2);
+    await expect.poll(async () => JSON.parse(await readFile(jsonPath, "utf8")).document.root.length).toBe(1);
 
     await page.getByRole("button", { name: "Export JSX", exact: true }).click();
     const updatedExport = await page.getByRole("dialog", { name: /Export/ }).locator("pre code").textContent();
-    expect(await readFile(jsxPath, "utf8")).toBe(updatedExport);
+    const updatedModule = fileModuleFromBrowserExport(updatedExport);
+    await expectFileContents(jsxPath, updatedModule);
     await page.getByRole("button", { name: "Close", exact: true }).click();
 
     await unlink(jsxPath);
     await page.reload();
     await expect(page.frameLocator(COMPOSER_CANVAS_IFRAME).locator("[data-composer-canvas]")).toBeVisible();
-    expect(await waitForFile(jsxPath)).toBe(updatedExport);
+    await expectFileContents(jsxPath, updatedModule);
 
     await writeFile(jsxPath, "stale derived artifact\n");
     await writeFile(resolve(outputRoot, `.composition-${id}.interrupted.tmp`), "interrupted");
     await page.getByRole("button", { name: "Library", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Composition library" })).toBeVisible();
-    expect(await waitForFile(jsxPath)).toBe(updatedExport);
+    await expectFileContents(jsxPath, updatedModule);
     expect(await readFile(resolve(outputRoot, `.composition-${id}.interrupted.tmp`), "utf8"))
       .toBe("interrupted");
     expectNoUnexpectedErrors(errors);
@@ -148,9 +178,9 @@ test.describe.serial("Composer development file-provider fixture", () => {
       await page.getByRole("button", { name: "Delete composition", exact: true }).click();
     }
 
-    await page.getByRole("button", { name: "New composition" }).first().click();
+    await createOrdinaryFileComposition(page, "Clear library first");
     await page.getByRole("button", { name: "Library", exact: true }).click();
-    await page.getByRole("button", { name: "New composition" }).first().click();
+    await createOrdinaryFileComposition(page, "Clear library second");
     await page.getByRole("button", { name: "Library", exact: true }).click();
     await page.getByRole("button", { name: "Clear library", exact: true }).click();
     await page.getByRole("button", { name: "Clear library", exact: true }).last().click();
@@ -159,6 +189,45 @@ test.describe.serial("Composer development file-provider fixture", () => {
     await expect.poll(async () =>
       (await outputNames()).filter((name) => /^composition-.*\.(?:composition\.json|tsx)$/.test(name))
     ).toEqual([]);
+    expectNoUnexpectedErrors(errors);
+  });
+
+  test("linked Global templates write source-first Files modules without copying their shell into consumer JSON", async ({
+    page,
+  }) => {
+    const errors = captureUnexpectedBrowserErrors(page);
+    const source = globalTemplateRecord("file-site-shell", "File site shell");
+    const consumer = boundConsumerRecord("file-linked-consumer", "File linked consumer", source.id);
+    const sourceJson = resolve(outputRoot, `composition-${source.id}.composition.json`);
+    const consumerJson = resolve(outputRoot, `composition-${consumer.id}.composition.json`);
+    const sourceTsx = resolve(outputRoot, `composition-${source.id}.tsx`);
+    const consumerTsx = resolve(outputRoot, `composition-${consumer.id}.tsx`);
+
+    await writeFile(sourceJson, `${JSON.stringify(source, null, 2)}\n`);
+    await writeFile(consumerJson, `${JSON.stringify(consumer, null, 2)}\n`);
+    await resetComposerPersistence(page);
+    await openComposerLibrary(page);
+    await selectFilesProvider(page);
+
+    await expect(page.getByRole("button", { name: "Open File site shell" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Open File linked consumer" })).toBeVisible();
+    const [sourceModule, consumerModule] = await Promise.all([waitForFile(sourceTsx), waitForFile(consumerTsx)]);
+    expect(sourceModule).toContain("outlets");
+    expect(consumerModule).toContain('import LinkedTemplate from "./composition-file-site-shell";');
+    expect(consumerModule).toContain('"main-content": <LocalCompositionContent />');
+
+    const canonicalConsumer = JSON.parse(await readFile(consumerJson, "utf8"));
+    expect(reuseDocument(canonicalConsumer)).toMatchObject({
+      binding: { sourceRecordId: "file-site-shell", outletId: "main-content" },
+      root: [],
+    });
+    expect(JSON.stringify(canonicalConsumer)).not.toContain("Original source heading");
+
+    // The normal source deletion path is provider-guarded even in Files mode.
+    await page.getByRole("button", { name: "Delete File site shell" }).click();
+    await page.getByRole("button", { name: "Delete composition", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Open File site shell" })).toBeVisible();
+    await expect.poll(async () => (await stat(sourceJson)).isFile()).toBe(true);
     expectNoUnexpectedErrors(errors);
   });
 });

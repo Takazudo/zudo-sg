@@ -27,11 +27,15 @@ import type {
   CompositionDocument,
   CompositionNode,
   JsonObject,
+  LinkedEditorLifecycleActions,
+  LinkedEditorPresentation,
 } from "@/composer";
 import { classifyNode, findLocation, orderedSlotIds } from "@/composer";
 import { ChevronDownIcon, ChevronUpIcon, TrashIcon } from "@/components/icons";
 import type { ComposerMode } from "@/features/composer/chrome/controller-model";
 import { InspectorField } from "./inspector-field";
+import { ReuseControls } from "./reuse-controls";
+import type { ReuseAuthoringActionResult } from "@/features/composer/ui/shared/reuse-authoring-contract";
 
 export interface InspectorPanelProps {
   document: CompositionDocument;
@@ -52,6 +56,12 @@ export interface InspectorPanelProps {
   onFlushPendingProps?: () => void;
   onReorder: (nodeId: string, direction: "up" | "down") => void;
   onRemove: (nodeId: string) => void;
+  /** Publish the current non-empty document as a saved Pattern. */
+  onPublishPattern?: () => void;
+  /** Provider-guarded source-role removal. The caller must not clear optimistically. */
+  onClearPublication?: () => Promise<ReuseAuthoringActionResult>;
+  /** Latest typed controller error (e.g. protected outlet-owner removal). */
+  lastError?: string | null;
   /**
    * Optional friendlier display name for a component id — e.g. sourced from
    * the host's richer `composerManifest` (title/category/description), which
@@ -59,6 +69,10 @@ export interface InspectorPanelProps {
    * back to the raw, stable `componentId`.
    */
   titleFor?: (componentId: string) => string | undefined;
+  /** Document-level link state; selection and fields remain local-only. */
+  linkedPresentation?: LinkedEditorPresentation;
+  /** Lifecycle callbacks are injected by the provider-owning app. */
+  linkedActions?: LinkedEditorLifecycleActions;
 }
 
 interface BreadcrumbStep {
@@ -90,6 +104,57 @@ function buildBreadcrumb(
   return [{ key: "root", label: "Root" }, ...steps];
 }
 
+function LinkedInspectorStatus({
+  presentation,
+  actions,
+}: {
+  presentation: LinkedEditorPresentation;
+  actions?: LinkedEditorLifecycleActions;
+}): JSX.Element | null {
+  if (presentation.state === "local") return null;
+  if (presentation.state === "resolved") {
+    return (
+      <section class="sg-composer-linked-frame sg-composer-inspector-section" data-sg-linked-frame="resolved">
+        <p class="text-small font-semibold text-fg">Linked Global template</p>
+        <p class="text-caption text-muted">
+          {presentation.sourceName} · Outlet: {presentation.outletLabel || presentation.outletId} · Locked
+        </p>
+        <div class="mt-vsp-3xs flex flex-wrap gap-hsp-2xs">
+          {actions?.onOpenSource && (
+            <button type="button" class="sg-composer-toolbar-button" onClick={() => actions.onOpenSource?.(presentation.sourceRecordId)}>
+              Open source
+            </button>
+          )}
+          {actions?.onDetach && (
+            <button type="button" class="sg-composer-toolbar-button" onClick={() => actions.onDetach?.()}>
+              Detach
+            </button>
+          )}
+        </div>
+      </section>
+    );
+  }
+  return (
+    <section class="sg-composer-linked-frame sg-composer-inspector-section" data-sg-linked-frame="blocked" role="status">
+      <p class="text-small font-semibold text-fg">Linked template unavailable</p>
+      <p class="text-caption text-muted">{presentation.message}</p>
+      <div class="mt-vsp-3xs flex flex-wrap gap-hsp-2xs">
+        {actions?.onRetry && <button type="button" class="sg-composer-toolbar-button" onClick={() => actions.onRetry?.()}>Retry</button>}
+        {actions?.onOpenSource && (
+          <button type="button" class="sg-composer-toolbar-button" onClick={() => actions.onOpenSource?.(presentation.sourceRecordId)}>
+            Open source
+          </button>
+        )}
+        {actions?.onRemoveBrokenBinding && (
+          <button type="button" class="sg-composer-toolbar-button sg-composer-inspector-remove" onClick={() => actions.onRemoveBrokenBinding?.()}>
+            Remove broken binding
+          </button>
+        )}
+      </div>
+    </section>
+  );
+}
+
 export function InspectorPanel({
   document,
   manifest,
@@ -100,7 +165,15 @@ export function InspectorPanel({
   onFlushPendingProps,
   onReorder,
   onRemove,
+  onPublishPattern = () => undefined,
+  onClearPublication = async () => ({
+    status: "unavailable" as const,
+    message: "Publication changes need a current relationship check before they can be cleared.",
+  }),
+  lastError = null,
   titleFor,
+  linkedPresentation = { state: "local" },
+  linkedActions,
 }: InspectorPanelProps): JSX.Element {
   const readOnly = mode === "preview";
   const location = selectedId !== null ? findLocation(document, manifest, selectedId) : undefined;
@@ -108,6 +181,15 @@ export function InspectorPanel({
   if (selectedId === null || !location) {
     return (
       <div class="flex h-full flex-col gap-vsp-2xs p-hsp-md py-vsp-10" data-sg-inspector-state="empty">
+        <LinkedInspectorStatus presentation={linkedPresentation} actions={linkedActions} />
+        <ReuseControls
+          document={document}
+          manifest={manifest}
+          mode={mode}
+          lastError={lastError}
+          onPublishPattern={onPublishPattern}
+          onClearPublication={onClearPublication}
+        />
         <p class="text-small font-semibold text-fg">Nothing selected</p>
         <p class="text-small text-muted">
           {document.root.length === 0
@@ -137,6 +219,15 @@ export function InspectorPanel({
       class="flex h-full flex-col overflow-y-auto p-hsp-md py-vsp-10"
       data-sg-inspector-state={diagnostic.opaque ? "opaque" : "editable"}
     >
+      <LinkedInspectorStatus presentation={linkedPresentation} actions={linkedActions} />
+      <ReuseControls
+        document={document}
+        manifest={manifest}
+        mode={mode}
+        lastError={lastError}
+        onPublishPattern={onPublishPattern}
+        onClearPublication={onClearPublication}
+      />
       <nav class="sg-composer-inspector-section" aria-label="Selected component location">
         <ol class="flex flex-wrap items-center gap-hsp-3xs text-caption text-muted">
           {breadcrumb.map((step, i) => (

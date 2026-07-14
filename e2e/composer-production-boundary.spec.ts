@@ -37,6 +37,9 @@ test("built preview exposes IndexedDB but no file capability, endpoint, UI, or d
   expect(endpoint.headers()["content-type"]).not.toContain("application/json");
 
   await page.getByRole("button", { name: "New composition" }).first().click();
+  const dialog = page.getByRole("dialog", { name: "New composition" });
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole("button", { name: "Create composition", exact: true }).click();
   await expect(page).toHaveURL(/#\/composition\/indexeddb\/[^/]+$/);
   await page.reload();
   expect((await inspectComposerDatabase(page)).records).toHaveLength(2);

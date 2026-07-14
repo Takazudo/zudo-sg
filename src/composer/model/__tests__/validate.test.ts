@@ -58,6 +58,67 @@ describe("isStructurallyValidDocument", () => {
     const d = good() as unknown as Record<string, unknown>;
     expect(isStructurallyValidDocument({ ...d, name: 5 })).toBe(false);
   });
+
+  it("accepts ordinary, Global-template, Pattern, and bound v2 documents", () => {
+    const source = doc([node(C.stack, {}, { [S.stackChildren]: [] }, "stack")]);
+    const global = {
+      ...source,
+      publication: {
+        kind: "global-template" as const,
+        outlet: {
+          id: "outlet-main",
+          label: "Main content",
+          target: { parentId: "stack", slotId: S.stackChildren },
+        },
+      },
+    };
+    const pattern = { ...good(), publication: { kind: "pattern" as const } };
+    const consumer = {
+      ...good(),
+      binding: { sourceRecordId: "source-record", outletId: "outlet-main" },
+    };
+
+    expect(isStructurallyValidDocument(good())).toBe(true);
+    expect(isStructurallyValidDocument(global)).toBe(true);
+    expect(isStructurallyValidDocument(pattern)).toBe(true);
+    expect(isStructurallyValidDocument(consumer)).toBe(true);
+  });
+
+  it("rejects malformed reuse metadata and unsafe source record ids", () => {
+    const source = doc([node(C.stack, {}, { [S.stackChildren]: [] }, "stack")]);
+    const global = {
+      ...source,
+      publication: {
+        kind: "global-template",
+        outlet: {
+          id: "",
+          label: "Main",
+          target: { parentId: "stack", slotId: S.stackChildren },
+        },
+      },
+    };
+    const malformedTarget = {
+      ...source,
+      publication: {
+        kind: "global-template",
+        outlet: {
+          id: "outlet-main",
+          label: "Main",
+          target: { parentId: null, slotId: S.stackChildren },
+        },
+      },
+    };
+    const unsafeBinding = {
+      ...source,
+      binding: { sourceRecordId: "../escape", outletId: "outlet-main" },
+    };
+    const nonJsonOptionalField = { ...source, publication: undefined };
+
+    expect(isStructurallyValidDocument(global)).toBe(false);
+    expect(isStructurallyValidDocument(malformedTarget)).toBe(false);
+    expect(isStructurallyValidDocument(unsafeBinding)).toBe(false);
+    expect(isStructurallyValidDocument(nonJsonOptionalField)).toBe(false);
+  });
 });
 
 describe("classifyNode / opaque detection", () => {
@@ -117,6 +178,44 @@ describe("diagnoseDocument", () => {
     const d = doc([node(X.box, { label: "A" }, {}, "a")]);
     expect(diagnoseDocument(d, M).canExport).toBe(true);
   });
+
+  it("reports reusable-role semantic issues without making local content unloadable", () => {
+    const global = doc([node(C.stack, {}, { [S.stackChildren]: [] }, "stack")]);
+    global.publication = {
+      kind: "global-template",
+      outlet: {
+        id: "outlet-main",
+        label: "Main",
+        target: { parentId: "stack", slotId: S.stackChildren },
+      },
+    };
+    global.binding = { sourceRecordId: "fixture", outletId: "outlet-main" };
+
+    const diagnostics = diagnoseDocument(global, M);
+    expect(isStructurallyValidDocument(global)).toBe(true);
+    expect(diagnostics.reuseReasons.map((reason) => reason.code)).toEqual([
+      "publication-binding-conflict",
+      "self-binding",
+    ]);
+  });
+
+  it("reports an empty Pattern and a stale Global-template outlet without mutating either", () => {
+    const pattern = doc([]);
+    pattern.publication = { kind: "pattern" };
+    const stale = doc([node(C.stack, {}, { [S.stackChildren]: [node(X.box, {}, {}, "child")] }, "stack")]);
+    stale.publication = {
+      kind: "global-template",
+      outlet: {
+        id: "outlet-main",
+        label: "Main",
+        target: { parentId: "stack", slotId: S.stackChildren },
+      },
+    };
+
+    expect(diagnoseDocument(pattern, M).reuseReasons[0]?.code).toBe("empty-pattern-root");
+    expect(diagnoseDocument(stale, M).reuseReasons[0]?.code).toBe("stale-outlet-target");
+    expect(stale.root[0].slots[S.stackChildren]).toHaveLength(1);
+  });
 });
 
 describe("validateInsertionTarget", () => {
@@ -149,7 +248,7 @@ describe("validateInsertionTarget", () => {
 });
 
 describe("schema version constant", () => {
-  it("is 1", () => {
-    expect(COMPOSITION_SCHEMA_VERSION).toBe(1);
+  it("is 2", () => {
+    expect(COMPOSITION_SCHEMA_VERSION).toBe(2);
   });
 });

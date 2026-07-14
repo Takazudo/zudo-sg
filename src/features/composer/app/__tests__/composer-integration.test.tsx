@@ -8,8 +8,16 @@
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { act } from "preact/test-utils";
-import { fireEvent, render, screen, within } from "@testing-library/preact";
-import type { CompositionDocument, InsertionTarget } from "@/composer";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/preact";
+import type {
+  CompositionDocument,
+  CompositionRecord,
+  ComposerReuseResolutionOptions,
+  GlobalTemplateResolutionOutcome,
+  InsertionTarget,
+  ReuseCatalogOutcome,
+  ReuseSelectionOutcome,
+} from "@/composer";
 import { VIRTUAL_ROOT_SLOT_ID, createSequentialIdFactory } from "@/composer";
 import {
   commitInlineEditMessage,
@@ -24,7 +32,14 @@ import { INSPECTOR_COMMIT_DEBOUNCE_MS } from "@/features/composer/chrome/use-com
 import { ComposerIntegration } from "../composer-integration";
 import { makeTestBridge } from "../test-support/preview-harness";
 import { LS_COMPOSER_VIEWPORT } from "../viewport";
-import { fixtureCatalog, FIXTURE_IDS, makeAbcDocument, resetFixtureIds } from "../../ui/tree/__tests__/fixtures";
+import {
+  fixtureCatalog,
+  fixtureDocument,
+  fixtureNode,
+  FIXTURE_IDS,
+  makeAbcDocument,
+  resetFixtureIds,
+} from "../../ui/tree/__tests__/fixtures";
 
 function emptyDoc(): CompositionDocument {
   return { schemaVersion: 1, id: "it-doc", name: "Integration Doc", root: [] };
@@ -38,7 +53,15 @@ const asAny = (v: unknown) => v as any;
 
 let rev = 1000;
 
-function setup(seedViewport?: string, sample: CompositionDocument = emptyDoc()) {
+function setup(
+  seedViewport?: string,
+  sample: CompositionDocument = emptyDoc(),
+  getPublicationDependencies?: () => Promise<{ status: "ready"; dependentCount: number }>,
+  patternCallbacks?: {
+    listPatternCatalog?: () => Promise<ReuseCatalogOutcome>;
+    loadPattern?: (ref: { providerId: "indexeddb" | "files"; recordId: string }) => Promise<ReuseSelectionOutcome>;
+  },
+) {
   if (seedViewport) localStorage.setItem(LS_COMPOSER_VIEWPORT, seedViewport);
   const bridge = makeTestBridge();
   const utils = render(
@@ -47,6 +70,8 @@ function setup(seedViewport?: string, sample: CompositionDocument = emptyDoc()) 
       controllerOptions={{ sample, idFactory: createSequentialIdFactory("n") }}
       createBridge={bridge.createBridge}
       previewLocation={bridge.location}
+      getPublicationDependencies={getPublicationDependencies}
+      {...patternCallbacks}
     />,
   );
   act(() => bridge.deliver(readyMessage()));
@@ -89,6 +114,62 @@ function setup(seedViewport?: string, sample: CompositionDocument = emptyDoc()) 
 beforeEach(() => localStorage.clear());
 
 describe("ComposerIntegration — cross-surface wiring (#251)", () => {
+  it("publishes, reassigns, and reserves a Global template outlet through the shared controller", async () => {
+    const dependencies = vi.fn(async () => ({ status: "ready" as const, dependentCount: 2 }));
+    const source = fixtureDocument([
+      fixtureNode(FIXTURE_IDS.split, {}, { left: [], right: [] }, "split"),
+    ]);
+    const s = setup(undefined, source, dependencies);
+
+    fireEvent.click(within(s.tree()).getByRole("button", { name: /expand split layout/i }));
+    fireEvent.click(within(s.tree()).getByRole("button", { name: "Use Left as template outlet" }));
+    fireEvent.input(within(s.tree()).getByLabelText("Outlet label"), { target: { value: "Main content" } });
+    fireEvent.click(within(s.tree()).getByRole("button", { name: "Publish template" }));
+
+    await waitFor(() => {
+      expect(s.canvasDoc().publication).toMatchObject({
+        kind: "global-template",
+        outlet: { label: "Main content", target: { parentId: "split", slotId: "left" } },
+      });
+    });
+    const stableOutletId = s.canvasDoc().publication?.kind === "global-template"
+      ? s.canvasDoc().publication.outlet.id
+      : "";
+    expect(within(s.tree()).getByText("Template outlet: Main content")).toBeInTheDocument();
+    expect(within(s.tree()).queryByRole("button", { name: /Add component to Left/i })).not.toBeInTheDocument();
+
+    fireEvent.click(within(s.tree()).getByRole("button", { name: "Reassign Right as template outlet" }));
+    fireEvent.click(within(s.tree()).getByRole("button", { name: "Save reassignment" }));
+    await waitFor(() => {
+      const publication = s.canvasDoc().publication;
+      expect(publication).toMatchObject({
+        kind: "global-template",
+        outlet: { id: stableOutletId, target: { parentId: "split", slotId: "right" } },
+      });
+    });
+    expect(dependencies).toHaveBeenCalledOnce();
+    expect(within(s.tree()).getByRole("status")).toHaveTextContent(/2 existing consumers keep/i);
+  });
+
+  it("does not clear a published Global template until the parent relationship query reports no consumers", async () => {
+    const dependencies = vi.fn(async () => ({ status: "ready" as const, dependentCount: 1 }));
+    const source = fixtureDocument([
+      fixtureNode(FIXTURE_IDS.split, {}, { left: [], right: [] }, "split"),
+    ]);
+    source.publication = {
+      kind: "global-template",
+      outlet: { id: "outlet-main", label: "Main", target: { parentId: "split", slotId: "left" } },
+    };
+    const s = setup(undefined, source, dependencies);
+
+    fireEvent.click(within(s.inspector()).getByRole("button", { name: "Unpublish" }));
+    fireEvent.click(within(s.inspector()).getByRole("button", { name: "Unpublish" }));
+
+    await waitFor(() => expect(dependencies).toHaveBeenCalledOnce());
+    expect(s.canvasDoc().publication).toMatchObject({ kind: "global-template", outlet: { id: "outlet-main" } });
+    expect(within(s.inspector()).getByRole("status")).toHaveTextContent(/Cannot unpublish.*1 consumer/i);
+  });
+
   it("chooser add drives tree, canvas snapshot, inspector, and selection together", () => {
     const s = setup();
     s.addAt(ROOT, "Box");
@@ -101,6 +182,133 @@ describe("ComposerIntegration — cross-surface wiring (#251)", () => {
     // Tree shows it, inspector selected it.
     expect(s.tree().querySelector(`[data-sg-tree-node-id="${boxId}"]`)).not.toBeNull();
     expect(within(s.inspector()).getByText("Box")).toBeInTheDocument();
+  });
+
+  it("loads an active-provider Pattern on demand and inserts its full forest atomically", async () => {
+    const patternDocument = fixtureDocument([
+      fixtureNode(FIXTURE_IDS.stack, { gap: "lg" }, {}, "pattern-stack"),
+      fixtureNode(FIXTURE_IDS.box, { label: "Pattern box" }, {}, "pattern-box"),
+    ], "Feature Pattern");
+    patternDocument.id = "feature-pattern";
+    patternDocument.publication = { kind: "pattern" };
+    const patternRecord: CompositionRecord = {
+      id: "feature-pattern",
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-01T00:00:00.000Z",
+      document: patternDocument,
+    };
+    const listPatternCatalog = vi.fn(async (): Promise<ReuseCatalogOutcome> => ({
+      status: "listed",
+      entries: [
+        {
+          ref: { providerId: "indexeddb", recordId: patternRecord.id },
+          kind: "pattern",
+          summary: {
+            id: patternRecord.id,
+            name: patternDocument.name,
+            createdAt: patternRecord.createdAt,
+            updatedAt: patternRecord.updatedAt,
+            nodeCount: 2,
+            rootCount: 2,
+            publicationKind: "pattern",
+            reuseStatus: "eligible",
+          },
+        },
+      ],
+    }));
+    const loadPattern = vi.fn(async (): Promise<ReuseSelectionOutcome> => ({
+      status: "loaded",
+      kind: "pattern",
+      record: patternRecord,
+    }));
+    const s = setup(undefined, emptyDoc(), undefined, { listPatternCatalog, loadPattern });
+
+    act(() => s.bridge.deliver(requestAddMessage(rev++, ROOT)));
+    fireEvent.click(within(s.chooser()).getByRole("tab", { name: "Patterns" }));
+
+    const patternRow = await within(s.chooser()).findByRole("button", { name: /Feature Pattern/i });
+    expect(listPatternCatalog).toHaveBeenCalledOnce();
+    fireEvent.click(patternRow);
+
+    await waitFor(() => expect(loadPattern).toHaveBeenCalledWith({ providerId: "indexeddb", recordId: "feature-pattern" }));
+    const insert = await within(s.chooser()).findByRole("button", { name: "Insert Pattern" });
+    expect((insert as HTMLButtonElement).disabled).toBe(false);
+    fireEvent.click(insert);
+
+    await waitFor(() => expect(s.canvasDoc().root.map((node) => node.componentId)).toEqual([FIXTURE_IDS.stack, FIXTURE_IDS.box]));
+    expect(s.canvasDoc().root.map((node) => node.id)).not.toEqual(["pattern-stack", "pattern-box"]);
+    expect(s.chooser().hasAttribute("open")).toBe(false);
+  });
+
+  it("derives one linked preview snapshot while the tree and inspector retain only local nodes", async () => {
+    const sourceDocument = fixtureDocument([
+      fixtureNode(FIXTURE_IDS.split, { ratio: "50-50" }, { left: [], right: [] }, "collision"),
+    ], "Site shell");
+    sourceDocument.id = "site-shell";
+    sourceDocument.publication = {
+      kind: "global-template",
+      outlet: {
+        id: "main",
+        label: "Main content",
+        target: { parentId: "collision", slotId: "right" },
+      },
+    };
+    const consumer = fixtureDocument([
+      fixtureNode(FIXTURE_IDS.box, { label: "Local content" }, {}, "collision"),
+    ], "Bound page");
+    consumer.id = "bound-page";
+    consumer.binding = { sourceRecordId: "site-shell", outletId: "main" };
+    const source: CompositionRecord = {
+      id: "site-shell",
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-01T00:00:00.000Z",
+      document: sourceDocument,
+    };
+    const outcome: GlobalTemplateResolutionOutcome = {
+      status: "resolved",
+      binding: consumer.binding,
+      localRoot: consumer.root,
+      source,
+      outlet: sourceDocument.publication.outlet,
+      rootPolicy: { kind: "resolved", cardinality: "many" },
+    };
+    const resolver: ComposerReuseResolutionOptions["resolver"] = {
+      resolve: vi.fn(async () => outcome),
+    };
+    const onOpenSource = vi.fn();
+    const bridge = makeTestBridge();
+    const view = render(
+      <ComposerIntegration
+        manifestEntries={fixtureCatalog}
+        controllerOptions={{ sample: consumer, idFactory: createSequentialIdFactory("n") }}
+        reuseResolution={{ ref: { providerId: "indexeddb", recordId: "bound-page" }, resolver }}
+        linkedActions={{ onOpenSource, onDetach: vi.fn() }}
+        createBridge={bridge.createBridge}
+        previewLocation={bridge.location}
+      />,
+    );
+    act(() => bridge.deliver(readyMessage()));
+
+    await waitFor(() => {
+      const renderMessage = bridge.posts
+        .map((post) => post.message as { type?: string; document?: CompositionDocument; linked?: unknown })
+        .filter((message) => message.type === "render")
+        .at(-1)!;
+      expect(renderMessage.document).toMatchObject({ id: "bound-page", root: [{ id: "collision" }] });
+      expect(renderMessage.linked).toMatchObject({
+        sourceRecordId: "site-shell",
+        sourceDocument: { id: "site-shell", root: [{ id: "collision" }] },
+        outlet: { id: "main" },
+      });
+    });
+    const tree = view.container.querySelector("#sg-composer-tree") as HTMLElement;
+    expect(tree.querySelectorAll('[data-sg-tree-node-id="collision"]')).toHaveLength(1);
+    expect(within(tree).getByText("Site shell")).toBeInTheDocument();
+    fireEvent.click(within(tree).getByRole("button", { name: "Open source" }));
+    expect(onOpenSource).toHaveBeenCalledWith("site-shell");
+    expect(within(view.container.querySelector("#sg-composer-inspector") as HTMLElement).getByRole("button", {
+      name: "Detach",
+    })).toBeInTheDocument();
   });
 
   it("a canvas selection reveals + expands the node's ancestors in the tree", () => {

@@ -27,5 +27,10 @@ export default defineConfig({
       name: "composer-contracts",
       testMatch: "composer-contracts.spec.ts",
     },
+    {
+      name: "composer-reuse",
+      testMatch: "composer-reuse.spec.ts",
+      use: { hasTouch: true, isMobile: true },
+    },
   ],
 });

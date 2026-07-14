@@ -1,5 +1,10 @@
 import { cloneJson } from "../model/json";
-import type { CompositionRecord, CompositionRecordRef } from "../library/types";
+import type {
+  CompositionPutResult,
+  CompositionRecord,
+  CompositionRecordRef,
+  CompositionSaveOutcome,
+} from "../library/types";
 
 export interface CompositionSaveSnapshot {
   readonly ref: Readonly<CompositionRecordRef>;
@@ -36,6 +41,8 @@ export interface CompositionSaveQueueSavedState extends CompositionSaveQueueStat
   readonly dirty: false;
   readonly saving: false;
   readonly error: null;
+  /** Present only when a provider reports canonical and derived output separately. */
+  readonly outcome?: CompositionSaveOutcome;
 }
 
 export interface CompositionSaveQueueErrorState extends CompositionSaveQueueStateBase {
@@ -53,7 +60,7 @@ export type CompositionSaveQueueState =
   | CompositionSaveQueueErrorState;
 
 export type CompositionSaveQueueListener = (state: CompositionSaveQueueState) => void;
-export type CompositionSaveWriter = (snapshot: CompositionSaveSnapshot) => Promise<void>;
+export type CompositionSaveWriter = (snapshot: CompositionSaveSnapshot) => Promise<CompositionPutResult>;
 
 export interface CompositionSaveQueueOptions {
   readonly ref: CompositionRecordRef;
@@ -148,6 +155,7 @@ class RevisionAwareCompositionSaveQueue implements CompositionSaveQueue {
   private readonly flushWaiters = new Set<FlushWaiter>();
   private latest: CompositionSaveSnapshot;
   private savedRevision = 0;
+  private lastOutcome: CompositionSaveOutcome | undefined;
   private active: Attempt | null = null;
   private failure: { revision: number; error: Error } | null = null;
   private isClosed = false;
@@ -177,6 +185,7 @@ class RevisionAwareCompositionSaveQueue implements CompositionSaveQueue {
     const revision = this.latest.revision + 1;
     this.latest = deepFreeze({ ref: this.ref, revision, record: cloneRecord(record) });
     this.failure = null;
+    this.lastOutcome = undefined;
     this.publish();
     this.startNewestAttempt();
     return revision;
@@ -257,19 +266,20 @@ class RevisionAwareCompositionSaveQueue implements CompositionSaveQueue {
     const settled = Promise.resolve()
       .then(() => this.write(snapshot))
       .then(
-        () => this.finishSuccess(token, snapshot),
+        (result) => this.finishSuccess(token, snapshot, result),
         (reason: unknown) => this.finishFailure(token, snapshot, reason),
       );
     this.active = { token, snapshot, settled };
     this.publish();
   }
 
-  private finishSuccess(token: symbol, snapshot: CompositionSaveSnapshot): void {
+  private finishSuccess(token: symbol, snapshot: CompositionSaveSnapshot, result: CompositionPutResult): void {
     if (!this.active || this.active.token !== token) return;
     this.active = null;
     if (this.isClosed || !sameRef(snapshot.ref, this.ref)) return;
 
     this.savedRevision = Math.max(this.savedRevision, snapshot.revision);
+    this.lastOutcome = result === undefined ? undefined : result;
     this.publish();
     if (this.savedRevision === this.latest.revision) {
       this.resolveFlushWaiters();
@@ -329,6 +339,7 @@ class RevisionAwareCompositionSaveQueue implements CompositionSaveQueue {
         dirty: false,
         saving: false,
         error: null,
+        ...(this.lastOutcome === undefined ? {} : { outcome: this.lastOutcome }),
       });
     }
     return Object.freeze({

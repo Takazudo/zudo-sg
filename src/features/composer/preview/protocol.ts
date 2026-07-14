@@ -38,8 +38,16 @@
 // before it would ever reach that fold — see both files' comments.
 
 import { z } from "zod";
-import type { CompositionDocument, CompositionNode, InsertionTarget } from "@/composer";
-import { COMPOSITION_SCHEMA_VERSION } from "@/composer";
+import type {
+  CompositionBinding,
+  CompositionDocument,
+  CompositionNode,
+  CompositionPublication,
+  GlobalTemplateOutlet,
+  GlobalTemplateOutletTarget,
+  InsertionTarget,
+} from "@/composer";
+import { COMPOSITION_RECORD_ID_PATTERN, COMPOSITION_SCHEMA_VERSION } from "@/composer";
 import { RESERVED_PROP_KEYS } from "@/composer/model/reserved-keys";
 import { jsonValueSchema } from "@/styleguide/data/composer-schema";
 
@@ -130,6 +138,39 @@ export const compositionNodeSchema: z.ZodType<CompositionNode> = z.lazy(() =>
     .strict(),
 );
 
+/** Strict wire shape for the one real slot exposed by a Global template. */
+export const globalTemplateOutletTargetSchema: z.ZodType<GlobalTemplateOutletTarget> = z
+  .object({
+    parentId: z.string().min(1),
+    slotId: z.string().min(1),
+  })
+  .strict();
+
+export const globalTemplateOutletSchema: z.ZodType<GlobalTemplateOutlet> = z
+  .object({
+    id: z.string().min(1),
+    label: z.string(),
+    target: globalTemplateOutletTargetSchema,
+  })
+  .strict();
+
+const compositionPublicationSchema: z.ZodType<CompositionPublication> = z.discriminatedUnion("kind", [
+  z
+    .object({
+      kind: z.literal("global-template"),
+      outlet: globalTemplateOutletSchema,
+    })
+    .strict(),
+  z.object({ kind: z.literal("pattern") }).strict(),
+]);
+
+export const compositionBindingSchema: z.ZodType<CompositionBinding> = z
+  .object({
+    sourceRecordId: z.string().regex(COMPOSITION_RECORD_ID_PATTERN),
+    outletId: z.string().min(1),
+  })
+  .strict();
+
 /** Wire-level zod schema for #245's `CompositionDocument`. */
 export const compositionDocumentSchema: z.ZodType<CompositionDocument> = z
   .object({
@@ -137,8 +178,52 @@ export const compositionDocumentSchema: z.ZodType<CompositionDocument> = z
     id: z.string().min(1),
     name: z.string(),
     root: z.array(compositionNodeSchema),
+    publication: compositionPublicationSchema.optional(),
+    binding: compositionBindingSchema.optional(),
   })
   .strict();
+
+/**
+ * The resolved, read-only source half of a linked Global-template view.
+ *
+ * `document` on a render message is always the consumer's canonical LOCAL
+ * document. This optional context is deliberately a second document rather
+ * than a projected tree: the iframe can mark ownership while retaining the
+ * local document as the only mutation address space. Both documents are JSON
+ * only and every key remains subject to the same strict wire validation.
+ */
+export interface PreviewLinkedSourceContext {
+  sourceRecordId: string;
+  sourceDocument: CompositionDocument;
+  outlet: GlobalTemplateOutlet;
+}
+
+export const previewLinkedSourceContextSchema: z.ZodType<PreviewLinkedSourceContext> = z
+  .object({
+    sourceRecordId: z.string().regex(COMPOSITION_RECORD_ID_PATTERN),
+    sourceDocument: compositionDocumentSchema,
+    outlet: globalTemplateOutletSchema,
+  })
+  .strict();
+
+/**
+ * Parent-side render input. `localRecordId` names the canonical consumer for
+ * owner-qualified runtime keys; older local-only callers may omit it and the
+ * iframe falls back to the document id. `linked` is present only after the
+ * provider-owning app has resolved and validated a Global template.
+ */
+export interface ComposerPreviewSnapshot {
+  document: CompositionDocument;
+  localRecordId?: string;
+  linked?: PreviewLinkedSourceContext;
+}
+
+export function localPreviewSnapshot(
+  document: CompositionDocument,
+  localRecordId: string = document.id,
+): ComposerPreviewSnapshot {
+  return { document, localRecordId };
+}
 
 /**
  * Wire-level schema for #245's shared `InsertionTarget`. The preview emits this
@@ -195,7 +280,12 @@ export const renderMessageSchema = z
     ...envelope,
     type: z.literal("render"),
     revision: revisionSchema,
+    /** Canonical local consumer document — source nodes never enter controller state. */
     document: compositionDocumentSchema,
+    /** Owner namespace for local runtime/DOM keys; optional for legacy local-only snapshots. */
+    localRecordId: z.string().regex(COMPOSITION_RECORD_ID_PATTERN).optional(),
+    /** Optional already-resolved source/outlet context for a linked Global template. */
+    linked: previewLinkedSourceContextSchema.optional(),
     session: previewSessionSchema,
   })
   .strict();
@@ -275,6 +365,18 @@ export const requestAddMessageSchema = z
     type: z.literal("request-add"),
     revision: revisionSchema,
     target: insertionTargetSchema,
+  })
+  .strict();
+
+/**
+ * A linked-source affordance was activated. This is navigation only: it never
+ * selects, edits, or otherwise mutates a source-owned node from the consumer.
+ */
+export const openSourceMessageSchema = z
+  .object({
+    ...envelope,
+    type: z.literal("open-source"),
+    sourceRecordId: z.string().regex(COMPOSITION_RECORD_ID_PATTERN),
   })
   .strict();
 
@@ -380,6 +482,7 @@ export const PREVIEW_TO_PARENT_MEMBERS = [
   readyMessageSchema,
   selectMessageSchema,
   requestAddMessageSchema,
+  openSourceMessageSchema,
   requestNodeMenuMessageSchema,
   requestInsertMenuMessageSchema,
   errorMessageSchema,
@@ -392,6 +495,7 @@ export const previewToParentSchema = z.discriminatedUnion("type", [...PREVIEW_TO
 export type ReadyMessage = z.infer<typeof readyMessageSchema>;
 export type SelectMessage = z.infer<typeof selectMessageSchema>;
 export type RequestAddMessage = z.infer<typeof requestAddMessageSchema>;
+export type OpenSourceMessage = z.infer<typeof openSourceMessageSchema>;
 export type RequestNodeMenuMessage = z.infer<typeof requestNodeMenuMessageSchema>;
 export type RequestInsertMenuMessage = z.infer<typeof requestInsertMenuMessageSchema>;
 export type ErrorMessage = z.infer<typeof errorMessageSchema>;
@@ -479,10 +583,21 @@ export function readPreviewToParent(
 
 export function renderMessage(
   revision: number,
-  document: CompositionDocument,
+  snapshot: ComposerPreviewSnapshot | CompositionDocument,
   session: PreviewSession,
 ): RenderMessage {
-  return { ...envelopeValue(), type: "render", revision, document, session };
+  const normalized: ComposerPreviewSnapshot = "document" in snapshot
+    ? snapshot
+    : localPreviewSnapshot(snapshot);
+  return {
+    ...envelopeValue(),
+    type: "render",
+    revision,
+    document: normalized.document,
+    ...(normalized.localRecordId ? { localRecordId: normalized.localRecordId } : {}),
+    ...(normalized.linked ? { linked: normalized.linked } : {}),
+    session,
+  };
 }
 
 export function modeMessage(revision: number, session: PreviewSession): ModeMessage {
@@ -499,6 +614,10 @@ export function selectMessage(revision: number, nodeId: string | null): SelectMe
 
 export function requestAddMessage(revision: number, target: InsertionTarget): RequestAddMessage {
   return { ...envelopeValue(), type: "request-add", revision, target };
+}
+
+export function openSourceMessage(sourceRecordId: string): OpenSourceMessage {
+  return { ...envelopeValue(), type: "open-source", sourceRecordId };
 }
 
 export function requestNodeMenuMessage(

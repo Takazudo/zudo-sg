@@ -54,6 +54,10 @@ function payload(response: { body?: string }) {
   return JSON.parse(response.body ?? "{}");
 }
 
+function generated(code: string) {
+  return { status: "generated" as const, code };
+}
+
 function makeHandler(options: { maxBodyBytes?: number } = {}) {
   return createComposerFileProviderMiddleware({
     capability: CAPABILITY,
@@ -139,16 +143,16 @@ describe("file-provider request boundary", () => {
     const invalid = record("alpha");
     invalid.document.id = "other";
 
-    const validation = await handler(request({ operation: "put", record: invalid, jsx: "x" }));
+    const validation = await handler(request({ operation: "put", record: invalid, outputsById: {} }));
     expect(validation.status).toBe(422);
 
     for (const field of ["path", "filename", "filePath"]) {
-      const response = await handler(request({ operation: "put", record: record(), jsx: "x", [field]: "../escape" }));
+      const response = await handler(request({ operation: "put", record: record(), outputsById: {}, [field]: "../escape" }));
       expect(response.status).toBe(400);
       expect(payload(response).error.message).toContain("not accepted");
 
       const taintedRecord = { ...record(), [field]: "../escape" };
-      const nested = await handler(request({ operation: "put", record: taintedRecord, jsx: "x" }));
+      const nested = await handler(request({ operation: "put", record: taintedRecord, outputsById: {} }));
       expect(nested.status).toBe(400);
     }
     await expect(readFile(root)).rejects.toThrow();
@@ -170,10 +174,10 @@ describe("file-provider request boundary", () => {
 });
 
 describe("file-provider core integration", () => {
-  it("stores the client JSX byte-for-byte without accepting a path", async () => {
+  it("stores the client batch output byte-for-byte without accepting a path", async () => {
     const handler = makeHandler();
     const jsx = "export const exact = '界';\n";
-    const response = await handler(request({ operation: "put", record: record(), jsx }));
+    const response = await handler(request({ operation: "put", record: record(), outputsById: { alpha: generated(jsx) } }));
 
     expect(response.status).toBe(200);
     expect(await readFile(join(root, "composition-alpha.tsx"), "utf8")).toBe(jsx);
@@ -181,21 +185,21 @@ describe("file-provider core integration", () => {
 
   it("repairs missing and stale output on get before reporting success", async () => {
     const handler = makeHandler();
-    await handler(request({ operation: "put", record: record(), jsx: "old" }));
+    await handler(request({ operation: "put", record: record(), outputsById: { alpha: generated("old") } }));
     await unlink(join(root, "composition-alpha.tsx"));
 
-    const needsJsx = await handler(request({ operation: "get", id: "alpha", jsxById: {} }));
+    const needsJsx = await handler(request({ operation: "get", id: "alpha", outputsById: {} }));
     expect(needsJsx.status).toBe(409);
     expect(payload(needsJsx)).toMatchObject({
-      error: { code: "jsx-required", operation: "get" },
-      record: { id: "alpha" },
+      error: { code: "output-required", operation: "get" },
+      request: { targetIds: ["alpha"] },
     });
-    expect(payload(needsJsx).record).not.toHaveProperty("path");
+    expect(payload(needsJsx).request).not.toHaveProperty("path");
 
     const repaired = await handler(request({
       operation: "get",
       id: "alpha",
-      jsxById: { alpha: "production-exact" },
+      outputsById: { alpha: generated("production-exact") },
     }));
     expect(repaired.status).toBe(200);
     expect(payload(repaired).result.status).toBe("loaded");
@@ -204,7 +208,7 @@ describe("file-provider core integration", () => {
     await writeFile(join(root, "composition-alpha.tsx"), "stale");
     const list = await handler(request({
       operation: "list",
-      jsxById: { alpha: "production-exact" },
+      outputsById: { alpha: generated("production-exact") },
     }));
     expect(list.status).toBe(200);
     expect(payload(list).result).toHaveLength(1);
@@ -252,7 +256,7 @@ describe("file-provider core integration", () => {
       }),
     });
     const response = await handler(request({
-      operation: "get", id: "alpha", jsxById: { alpha: "expected" },
+      operation: "get", id: "alpha", outputsById: { alpha: generated("expected") },
     }));
     expect(response.status).toBe(500);
     expect(payload(response).ok).toBe(false);

@@ -9,18 +9,21 @@ import {
 } from "../../library";
 import type {
   CompositionInitializationOutcome,
+  CompositionDependent,
+  CompositionDeleteOutcome,
   CompositionLoadOutcome,
   CompositionPersistenceOperation,
   CompositionProvider,
   CompositionRecord,
   CompositionStore,
   CompositionSummary,
+  CompositionUnpublishOutcome,
 } from "../../library";
 import { createUuidIdFactory } from "../../model/id-factory";
-import { cloneJson, isPlainObject } from "../../model/json";
+import { cloneJson } from "../../model/json";
+import { loadCompositionDocument } from "../../model/recovery";
 import { COMPOSITION_SCHEMA_VERSION } from "../../model/types";
 import type { CompositionDocument } from "../../model/types";
-import { isStructurallyValidDocument } from "../../model/validate";
 import { createSampleDocument } from "../../sample/sample-document";
 import {
   COMPOSER_DATABASE_NAME,
@@ -173,7 +176,7 @@ class IndexedDbProviderRuntime {
       let settled = false;
       let upgradeFailure: CompositionPersistenceError | undefined;
 
-      request.onupgradeneeded = () => {
+      request.onupgradeneeded = (event) => {
         const transaction = request.transaction;
         if (!transaction) {
           upgradeFailure = persistenceError(
@@ -185,7 +188,36 @@ class IndexedDbProviderRuntime {
           return;
         }
         try {
-          this.initializeFreshDatabase(request.result, transaction);
+          const abortUpgrade = (error: unknown): void => {
+            upgradeFailure =
+              error instanceof CompositionPersistenceError
+                ? error
+                : persistenceError(
+                    "initialize",
+                    "transaction-failed",
+                    "Composer database migration failed; no migration data was committed.",
+                    true,
+                    error,
+                  );
+            try {
+              transaction.abort();
+            } catch {
+              // It may already have aborted because a schema request failed.
+            }
+          };
+
+          if (event.oldVersion === 0) {
+            this.initializeFreshDatabase(request.result, transaction);
+          } else if (event.oldVersion === 1) {
+            this.migrateV1Database(transaction, abortUpgrade);
+          } else {
+            throw persistenceError(
+              "initialize",
+              "unsupported-version",
+              `Composer database version ${event.oldVersion} cannot be migrated by this build.`,
+              false,
+            );
+          }
         } catch (error) {
           upgradeFailure =
             error instanceof CompositionPersistenceError
@@ -388,6 +420,96 @@ class IndexedDbProviderRuntime {
     // to the one upgrade transaction supplied by IndexedDB.
     void transaction;
   }
+
+  /**
+   * Upgrade the v1 physical database without opening a second transaction.
+   * Every cursor update and the schema metadata write are part of IndexedDB's
+   * version-change transaction, so a malformed/future record or a failed
+   * update rolls back every preceding rewrite and leaves the database at v1.
+   */
+  private migrateV1Database(
+    transaction: IDBTransaction,
+    abortUpgrade: (error: unknown) => void,
+  ): void {
+    let compositions: IDBObjectStore;
+    let meta: IDBObjectStore;
+    try {
+      compositions = transaction.objectStore(COMPOSITIONS_STORE_NAME);
+      meta = transaction.objectStore(META_STORE_NAME);
+    } catch (error) {
+      abortUpgrade(
+        persistenceError(
+          "initialize",
+          "transaction-failed",
+          "Composer v1 database is missing a required store; the upgrade was aborted without changing stored data.",
+          true,
+          error,
+        ),
+      );
+      return;
+    }
+
+    const updateSchemaMetadata = (): void => {
+      let update: IDBRequest<IDBValidKey>;
+      try {
+        update = meta.put({
+          key: COMPOSER_META_KEYS.schema,
+          databaseVersion: COMPOSER_DATABASE_VERSION,
+          recordSchemaVersion: COMPOSITION_SCHEMA_VERSION,
+        } satisfies ComposerMetaRecord);
+      } catch (error) {
+        abortUpgrade(error);
+        return;
+      }
+      update.onerror = () => abortUpgrade(update.error ?? new Error("Could not update Composer schema metadata."));
+    };
+
+    let cursorRequest: IDBRequest<IDBCursorWithValue | null>;
+    try {
+      cursorRequest = compositions.openCursor();
+    } catch (error) {
+      abortUpgrade(error);
+      return;
+    }
+    cursorRequest.onerror = () =>
+      abortUpgrade(cursorRequest.error ?? new Error("Could not inspect Composer v1 records."));
+    cursorRequest.onsuccess = () => {
+      const cursor = cursorRequest.result;
+      if (cursor === null) {
+        updateSchemaMetadata();
+        return;
+      }
+
+      const loaded = loadCompositionRecord(cursor.value);
+      if (loaded.status !== "loaded") {
+        abortUpgrade(
+          persistenceError(
+            "initialize",
+            "transaction-failed",
+            "Composer database contains malformed or unsupported data. The upgrade was aborted without changing stored data; retry is safe after recovery.",
+            true,
+          ),
+        );
+        return;
+      }
+
+      if (loaded.decodedFromSchemaVersion === undefined) {
+        cursor.continue();
+        return;
+      }
+
+      let update: IDBRequest<IDBValidKey>;
+      try {
+        update = cursor.update(loaded.record);
+      } catch (error) {
+        abortUpgrade(error);
+        return;
+      }
+      update.onerror = () =>
+        abortUpgrade(update.error ?? new Error("Could not migrate a Composer v1 record."));
+      update.onsuccess = () => cursor.continue();
+    };
+  }
 }
 
 function validateCompositionRecordId(id: string): boolean {
@@ -419,25 +541,22 @@ type ClassifiedLegacyDocument =
   | { kind: "future"; foundSchemaVersion: number };
 
 function classifyLegacyDocument(raw: string): ClassifiedLegacyDocument {
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    return { kind: "malformed" };
+  // Keep browser-localStorage import on the same decoder/recovery decision as
+  // the chrome storage seam. In particular, a valid v1 document is imported
+  // as its lossless v2 representation before it enters IndexedDB.
+  const outcome = loadCompositionDocument(raw, createSampleDocument());
+  if (outcome.status === "ok") return { kind: "valid", document: outcome.document };
+  if (outcome.status === "quarantined") {
+    return { kind: "future", foundSchemaVersion: outcome.foundSchemaVersion };
   }
-  if (isPlainObject(parsed)) {
-    const version = parsed.schemaVersion;
-    if (
-      typeof version === "number" &&
-      Number.isFinite(version) &&
-      version > COMPOSITION_SCHEMA_VERSION
-    ) {
-      return { kind: "future", foundSchemaVersion: version };
-    }
-  }
-  return isStructurallyValidDocument(parsed)
-    ? { kind: "valid", document: parsed }
-    : { kind: "malformed" };
+  return { kind: "malformed" };
+}
+
+function dependentFromRecord(record: CompositionRecord): CompositionDependent | undefined {
+  const binding = record.document.binding;
+  return binding === undefined
+    ? undefined
+    : { summary: summarizeComposition(record), binding: cloneJson(binding) };
 }
 
 class IndexedDbCompositionStore implements CompositionStore {
@@ -476,23 +595,210 @@ class IndexedDbCompositionStore implements CompositionStore {
       throw persistenceError("put", "validation", validation.issue.message, false);
     }
     await this.run("put", "readwrite", async (store) => {
-      await requestResult(store.put(record));
+      await this.assertBindingTransition(store, validation.record);
+      await requestResult(store.put(validation.record));
     });
   }
 
   async delete(id: string): Promise<boolean> {
+    const outcome = await this.deleteWithDependencyCheck(id);
+    return outcome.status === "deleted";
+  }
+
+  /**
+   * Read the candidate source and every canonical binding in the SAME
+   * read-write transaction. IndexedDB's transaction serialization means a
+   * consumer inserted by another tab either appears in this scan or waits
+   * until this source mutation completes; there is no list-then-delete race.
+   */
+  async deleteWithDependencyCheck(id: string): Promise<CompositionDeleteOutcome> {
     return this.run("delete", "readwrite", async (store) => {
-      const existing = await requestResult(store.getKey(id));
-      if (existing === undefined) return false;
+      const sourceRequest = store.get(id);
+      const recordsRequest = store.getAll();
+      const [rawSource, rawRecords] = await Promise.all([
+        requestResult(sourceRequest),
+        requestResult(recordsRequest) as Promise<CompositionRecord[]>,
+      ]);
+      if (rawSource === undefined) return { status: "not-found" };
+
+      const source = loadCompositionRecord(rawSource);
+      if (source.status !== "loaded") {
+        throw persistenceError(
+          "delete",
+          "validation",
+          "Composer storage contains a source record that cannot be deleted safely.",
+          false,
+        );
+      }
+      if (source.record.document.publication?.kind === "global-template") {
+        const dependents = this.dependentsFromRecords(rawRecords, source.record.id);
+        if (dependents.length > 0) return { status: "blocked", dependents };
+      }
       await requestResult(store.delete(id));
-      return true;
+      return { status: "deleted" };
     });
+  }
+
+  /**
+   * Publication removal follows the same transaction discipline as deletion.
+   * Pattern/ordinary records have no consumers, while a Global template is
+   * rechecked immediately before the one-record replacement is queued.
+   */
+  async unpublishWithDependencyCheck(id: string): Promise<CompositionUnpublishOutcome> {
+    return this.run("put", "readwrite", async (store) => {
+      const sourceRequest = store.get(id);
+      const recordsRequest = store.getAll();
+      const [rawSource, rawRecords] = await Promise.all([
+        requestResult(sourceRequest),
+        requestResult(recordsRequest) as Promise<CompositionRecord[]>,
+      ]);
+      if (rawSource === undefined) return { status: "not-found" };
+
+      const source = loadCompositionRecord(rawSource);
+      if (source.status !== "loaded") {
+        throw persistenceError(
+          "put",
+          "validation",
+          "Composer storage contains a source record that cannot be unpublished safely.",
+          false,
+        );
+      }
+      const publication = source.record.document.publication;
+      if (publication === undefined) return { status: "not-published" };
+      if (publication.kind === "global-template") {
+        const dependents = this.dependentsFromRecords(rawRecords, source.record.id);
+        if (dependents.length > 0) return { status: "blocked", dependents };
+      }
+
+      const { publication: _publication, ...document } = cloneJson(source.record.document);
+      const next: CompositionRecord = {
+        ...source.record,
+        updatedAt: this.runtime.now(),
+        document,
+      };
+      const validation = validateCompositionRecord(next);
+      if (!validation.ok) {
+        throw persistenceError("put", "validation", validation.issue.message, false);
+      }
+      await requestResult(store.put(validation.record));
+      return { status: "unpublished" };
+    });
+  }
+
+  /** IndexedDB commits the one replacement record atomically with its transaction. */
+  async saveLifecycleRecord(record: CompositionRecord): Promise<void> {
+    await this.put(record);
   }
 
   async clear(): Promise<void> {
     await this.run("clear", "readwrite", async (store) => {
+      const records = await requestResult(store.getAll()) as CompositionRecord[];
+      for (const raw of records) {
+        const source = loadCompositionRecord(raw);
+        if (source.status !== "loaded") {
+          throw persistenceError(
+            "clear",
+            "validation",
+            "Composer storage contains a record that cannot be cleared safely.",
+            false,
+          );
+        }
+        if (source.record.document.publication?.kind !== "global-template") continue;
+        const dependents = this.dependentsFromRecords(records, source.record.id);
+        if (dependents.length > 0) {
+          throw persistenceError(
+            "clear",
+            "blocked",
+            "Cannot clear Composer storage while a Global template still has bound consumers. Detach or remove bindings individually first.",
+            false,
+          );
+        }
+      }
       await requestResult(store.clear());
     });
+  }
+
+  private dependentsFromRecords(
+    records: readonly CompositionRecord[],
+    sourceRecordId: string,
+  ): CompositionDependent[] {
+    const dependents: CompositionDependent[] = [];
+    for (const raw of records) {
+      const loaded = loadCompositionRecord(raw);
+      if (loaded.status !== "loaded") {
+        throw persistenceError(
+          "delete",
+          "validation",
+          "Composer storage contains a record that prevents dependency-safe source mutation.",
+          false,
+        );
+      }
+      if (loaded.record.id === sourceRecordId || loaded.record.document.binding?.sourceRecordId !== sourceRecordId) {
+        continue;
+      }
+      const dependent = dependentFromRecord(loaded.record);
+      if (dependent) dependents.push(dependent);
+    }
+    return dependents.sort((a, b) => compareCompositionSummariesNewestFirst(a.summary, b.summary));
+  }
+
+  /**
+   * A new/changing binding is a relationship creation, not an ordinary draft
+   * save. Validate it in the same transaction that writes the consumer so a
+   * consumer queued behind a successful source deletion cannot commit an
+   * orphan. Existing bindings intentionally remain saveable when their source
+   * is externally unavailable; those use the explicit broken-binding flow.
+   */
+  private async assertBindingTransition(store: IDBObjectStore, next: CompositionRecord): Promise<void> {
+    const binding = next.document.binding;
+    if (!binding) return;
+
+    const rawPrevious = await requestResult(store.get(next.id));
+    if (rawPrevious !== undefined) {
+      const previous = loadCompositionRecord(rawPrevious);
+      if (previous.status !== "loaded") {
+        throw persistenceError(
+          "put",
+          "validation",
+          "Composer storage contains a consumer record that cannot be updated safely.",
+          false,
+        );
+      }
+      const priorBinding = previous.record.document.binding;
+      if (
+        priorBinding?.sourceRecordId === binding.sourceRecordId
+        && priorBinding.outletId === binding.outletId
+      ) {
+        return;
+      }
+    }
+
+    if (binding.sourceRecordId === next.id) {
+      throw persistenceError("put", "conflict", "A Composition cannot bind to itself as a Global template.", false);
+    }
+    const rawSource = await requestResult(store.get(binding.sourceRecordId));
+    if (rawSource === undefined) {
+      throw persistenceError(
+        "put",
+        "conflict",
+        "The selected Global template is no longer available. Refresh the template list and try again.",
+        true,
+      );
+    }
+    const source = loadCompositionRecord(rawSource);
+    if (
+      source.status !== "loaded"
+      || source.record.document.binding !== undefined
+      || source.record.document.publication?.kind !== "global-template"
+      || source.record.document.publication.outlet.id !== binding.outletId
+    ) {
+      throw persistenceError(
+        "put",
+        "conflict",
+        "The selected Global template changed before this consumer could be saved.",
+        true,
+      );
+    }
   }
 
   private async run<T>(

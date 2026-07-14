@@ -19,7 +19,7 @@
 
 import { useState } from "preact/hooks";
 import type { JSX } from "preact";
-import type { CompositionNode } from "@/composer";
+import type { CompositionDerivedOutputOutcome, CompositionNode, CompositionPublication } from "@/composer";
 import type {
   ComposerCanvasViewport,
   ComposerMode,
@@ -34,7 +34,10 @@ import { COMPOSER_VIEWPORTS, COMPOSER_VIEWPORT_LABELS } from "./viewport";
 
 export interface ComposerToolbarBarProps {
   documentName: string;
+  /** Reuse remains a role on this same document, not a second record type. */
+  publication?: CompositionPublication;
   saveStatus: ComposerSaveStatus;
+  derivedOutput?: CompositionDerivedOutputOutcome | null;
   mode: ComposerMode;
   viewport: ComposerCanvasViewport;
   onSetMode: (mode: ComposerMode) => void;
@@ -56,7 +59,9 @@ export interface ComposerToolbarBarProps {
 
 export function ComposerToolbarBar({
   documentName,
+  publication,
   saveStatus,
+  derivedOutput = null,
   mode,
   viewport,
   onSetMode,
@@ -94,8 +99,15 @@ export function ComposerToolbarBar({
         <div class="min-w-0">
           <p class="text-xs text-muted uppercase tracking-wide">Composition</p>
           <strong class="block truncate text-fg text-small font-semibold">{documentName}</strong>
+          {publication && (
+            <span class="sg-composer-tree-badge" data-sg-composer-publication={publication.kind}>
+              {publication.kind === "pattern"
+                ? "Pattern · Saved composition"
+                : `Global template${publication.outlet.label ? ` · ${publication.outlet.label}` : ""}`}
+            </span>
+          )}
         </div>
-        <ComposerStatusIndicator saveStatus={saveStatus} onRetry={onRetrySave}>
+        <ComposerStatusIndicator saveStatus={saveStatus} derivedOutput={derivedOutput} onRetry={onRetrySave}>
           <ComposerClipboardChip clipboard={clipboard} titleFor={titleFor} />
         </ComposerStatusIndicator>
       </div>

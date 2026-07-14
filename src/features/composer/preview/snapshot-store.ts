@@ -12,7 +12,12 @@
 // reloads and re-announces `ready`.
 
 import type { CompositionDocument } from "@/composer";
-import type { ModeMessage, PreviewSession, RenderMessage } from "./protocol";
+import type {
+  ModeMessage,
+  PreviewLinkedSourceContext,
+  PreviewSession,
+  RenderMessage,
+} from "./protocol";
 
 /** Everything the preview draws from. */
 export interface PreviewState {
@@ -20,6 +25,10 @@ export interface PreviewState {
   revision: number;
   /** `null` until the first `render` arrives (a `mode` message may land first). */
   document: CompositionDocument | null;
+  /** Consumer record identity for local owner-qualified runtime keys. */
+  localRecordId: string | null;
+  /** Resolved read-only source/outlet context, or `null` for a local/broken view. */
+  linked: PreviewLinkedSourceContext | null;
   session: PreviewSession;
 }
 
@@ -31,6 +40,8 @@ export interface PreviewState {
 export const INITIAL_PREVIEW_STATE: PreviewState = {
   revision: -1,
   document: null,
+  localRecordId: null,
+  linked: null,
   session: { mode: "edit", theme: "light", selectedId: null },
 };
 
@@ -57,10 +68,22 @@ export function applyInbound(
 
   switch (message.type) {
     case "render":
-      return { revision: message.revision, document: message.document, session: message.session };
+      return {
+        revision: message.revision,
+        document: message.document,
+        localRecordId: message.localRecordId ?? message.document.id,
+        linked: message.linked ?? null,
+        session: message.session,
+      };
     case "mode":
       // Session-only — the document on screen is kept as-is.
-      return { revision: message.revision, document: state.document, session: message.session };
+      return {
+        revision: message.revision,
+        document: state.document,
+        localRecordId: state.localRecordId,
+        linked: state.linked,
+        session: message.session,
+      };
     default: {
       // Compile-time exhaustiveness over the NARROWED two-member type above.
       // Fails CLOSED — an unhandled type is dropped rather than mistaken for

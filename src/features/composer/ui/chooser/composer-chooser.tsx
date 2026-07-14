@@ -29,7 +29,7 @@
 // expected to be mounted unconditionally, with `open` toggling visibility) so
 // "Added" announcements survive the dialog closing/hiding.
 //
-// ── Live preview + enlarge (issue #254) ─────────────────────────────────────
+// ── Live preview + movable tool shell ───────────────────────────────────────
 // Search/filter/list rendering stayed in this one component (no internal
 // sub-dialog abstraction, per #250's own header note) so this extension could
 // wrap the existing target-capture/focus/keyboard machinery without
@@ -37,15 +37,22 @@
 // STICKY `previewedComponentId` (never cleared by mouseleave/blur — only
 // replaced by the next hover/focus); `ChooserPreviewHost` owns the actual
 // second bridge + iframe (see that module's header for the ephemeral
-// create/dispose contract). The enlarge toggle is local UI state only — it
-// resizes the `<dialog>` via `data-sg-enlarged`; it does not touch #250's
-// focus-containment/Escape/restoration effects, which key off `open` and
-// `capturedTarget`, not this attribute.
+// create/dispose contract). The shared geometry hook makes the shell movable
+// for this open session only; it does not touch #250's focus-containment,
+// Escape, or target-capture effects.
 
 import { useEffect, useId, useMemo, useRef, useState } from "preact/hooks";
 import type { JSX } from "preact";
-import type { ComponentManifest, CompositionDocument, InsertionTarget } from "@/composer";
-import { ExpandIcon } from "@/components/icons";
+import type {
+  ComponentManifest,
+  CompositionDocument,
+  CompositionNode,
+  CompositionRecordRef,
+  InsertionTarget,
+  ReuseCatalogOutcome,
+  ReuseSelectionOutcome,
+  RootPolicy,
+} from "@/composer";
 import type { ComposerManifestEntry } from "@/styleguide/data/composer-registry";
 import type {
   ComposerPreviewLocation,
@@ -53,8 +60,14 @@ import type {
   createComposerPreviewBridge,
 } from "@/features/composer/preview";
 import { ancestorChainIds, buildCatalogById } from "../tree/tree-helpers";
-import { describeInsertionTarget, eligibleEntries, matchesQuery } from "./chooser-helpers";
+import {
+  assessPatternForestInsertion,
+  describeInsertionTarget,
+  eligibleEntries,
+  matchesQuery,
+} from "./chooser-helpers";
 import { ChooserPreviewHost } from "./chooser-preview-host";
+import { toolDialogStyle, useMovableToolDialog, useToolDialogGeometry } from "../shared/tool-dialog-geometry";
 
 export interface ComposerChooserProps {
   open: boolean;
@@ -72,11 +85,72 @@ export interface ComposerChooserProps {
   /** Fired on every close path (Escape, Cancel, backdrop, or after a successful add). */
   onClose: () => void;
 
+  // ── Pattern service boundary ───────────────────────────────────────────
+  // The app owns the active provider and controller. Keeping those operations
+  // injected lets this reusable surface preserve its captured target while an
+  // asynchronous source read is in flight, without teaching UI code about
+  // stores, routes, or persistence queues.
+  /** The active provider's reuse-service catalog outcome. Only Pattern entries are rendered. */
+  patternCatalog?: ReuseCatalogOutcome;
+  /** The active provider catalog is being read for this open chooser session. */
+  patternCatalogLoading?: boolean;
+  /** Load the selected Pattern's full saved record on demand. */
+  loadPattern?: (ref: CompositionRecordRef) => Promise<ReuseSelectionOutcome>;
+  /** Current controller root policy, used for advisory full-forest eligibility. */
+  rootPolicy?: RootPolicy;
+  /**
+   * Revalidate and invoke the controller's one atomic forest command. The
+   * dialog closes only for `inserted`; a rejection keeps the selected Pattern,
+   * filter, captured target, and focus in place for a retry or cancellation.
+   */
+  onInsertPattern?: (
+    target: InsertionTarget,
+    sourceRoots: readonly CompositionNode[],
+  ) => PatternInsertionOutcome | Promise<PatternInsertionOutcome>;
+
   // ── Live preview pane test seams (production defaults) — forwarded to
   // `ChooserPreviewHost`'s OWN, second bridge. Never used by the main canvas. ──
   previewCreateBridge?: typeof createComposerPreviewBridge;
   previewLocation?: ComposerPreviewLocation;
   previewHostWindow?: MessageTarget;
+}
+
+export type PatternInsertionOutcome =
+  | { status: "inserted" }
+  | { status: "rejected"; message: string };
+
+type ChooserTab = "components" | "patterns";
+
+interface LoadedPattern {
+  key: string;
+  name: string;
+  roots: readonly CompositionNode[];
+  document: CompositionDocument;
+}
+
+function patternRefKey(ref: CompositionRecordRef): string {
+  return `${ref.providerId}:${ref.recordId}`;
+}
+
+function selectionError(outcome: Exclude<ReuseSelectionOutcome, { status: "loaded" }>): string {
+  switch (outcome.status) {
+    case "empty":
+      return "This Pattern no longer contains any components.";
+    case "invalid":
+      switch (outcome.reason) {
+        case "current-record":
+          return "The current Composition cannot be inserted as its own Pattern.";
+        case "nested-template":
+          return "A bound Composition cannot be used as a Pattern.";
+        case "missing-outlet":
+          return "This source is no longer a valid reusable Pattern.";
+        default:
+          return "This source is no longer published as a Pattern.";
+      }
+    case "unavailable":
+    case "load-error":
+      return outcome.message;
+  }
 }
 
 const ALL_CATEGORY = "All" as const;
@@ -90,6 +164,11 @@ export function ComposerChooser({
   onAdd,
   onExpandAncestors,
   onClose,
+  patternCatalog,
+  patternCatalogLoading = false,
+  loadPattern,
+  rootPolicy,
+  onInsertPattern,
   previewCreateBridge,
   previewLocation,
   previewHostWindow,
@@ -107,13 +186,20 @@ export function ComposerChooser({
   const [capturedTarget, setCapturedTarget] = useState<InsertionTarget | null>(null);
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<string>(ALL_CATEGORY);
+  const [activeTab, setActiveTab] = useState<ChooserTab>("components");
   const [status, setStatus] = useState("");
   // Sticky: set on hover/focus, never cleared by mouseleave/blur — only ever
   // replaced by the NEXT hover/focus, or reset to null on the next open.
   const [previewedComponentId, setPreviewedComponentId] = useState<string | null>(null);
-  // Resets to false on every open (see the capture effect below) — the
-  // enlarge toggle is per-session UI state, not a persisted preference.
-  const [enlarged, setEnlarged] = useState(false);
+  const [selectedPatternKey, setSelectedPatternKey] = useState<string | null>(null);
+  const [loadedPattern, setLoadedPattern] = useState<LoadedPattern | null>(null);
+  const [patternLoadError, setPatternLoadError] = useState<string | null>(null);
+  const [patternLoading, setPatternLoading] = useState(false);
+  const [patternInsertError, setPatternInsertError] = useState<string | null>(null);
+  const [insertingPattern, setInsertingPattern] = useState(false);
+  const patternRequestGeneration = useRef(0);
+  const geometry = useToolDialogGeometry({ open });
+  const moveGrip = useMovableToolDialog(geometry);
 
   const titleId = useId();
 
@@ -126,10 +212,17 @@ export function ComposerChooser({
         globalThis.document?.activeElement instanceof HTMLElement ? globalThis.document.activeElement : null;
       setQuery("");
       setCategory(ALL_CATEGORY);
+      setActiveTab("components");
       setStatus("");
       setPreviewedComponentId(null);
-      setEnlarged(false);
+      setSelectedPatternKey(null);
+      setLoadedPattern(null);
+      setPatternLoadError(null);
+      setPatternLoading(false);
+      setPatternInsertError(null);
+      setInsertingPattern(false);
     } else if (!open && capturedTarget !== null) {
+      patternRequestGeneration.current += 1;
       setCapturedTarget(null);
     }
   }, [open, target, capturedTarget]);
@@ -185,9 +278,27 @@ export function ComposerChooser({
     );
   }, [eligible, category, query]);
 
+  const patterns = useMemo(() => {
+    if (!patternCatalog || patternCatalog.status !== "listed") return [];
+    return patternCatalog.entries.filter((entry) => entry.kind === "pattern");
+  }, [patternCatalog]);
+
+  const filteredPatterns = useMemo(() => {
+    const needle = query.trim().toLocaleLowerCase();
+    if (!needle) return patterns;
+    return patterns.filter((entry) => {
+      const summary = entry.summary;
+      return `${summary.name} ${summary.nodeCount} ${summary.rootCount ?? 0}`.toLocaleLowerCase().includes(needle);
+    });
+  }, [patterns, query]);
+
   const targetLabel = capturedTarget ? describeInsertionTarget(document, manifest, catalogById, capturedTarget) : "";
 
   const previewedEntry = previewedComponentId ? (catalogById.get(previewedComponentId) ?? null) : null;
+  const patternEligibility = useMemo(() => {
+    if (!capturedTarget || !loadedPattern) return null;
+    return assessPatternForestInsertion(document, manifest, capturedTarget, loadedPattern.roots, rootPolicy);
+  }, [capturedTarget, document, loadedPattern, manifest, rootPolicy]);
 
   function confirmAdd(componentId: string) {
     if (!capturedTarget) return;
@@ -199,12 +310,73 @@ export function ComposerChooser({
     dialogRef.current?.close();
   }
 
+  function selectPattern(ref: CompositionRecordRef, name: string) {
+    const key = patternRefKey(ref);
+    if (key === selectedPatternKey && (patternLoading || loadedPattern?.key === key)) return;
+    setSelectedPatternKey(key);
+    setLoadedPattern(null);
+    setPatternLoadError(null);
+    setPatternInsertError(null);
+    const generation = ++patternRequestGeneration.current;
+
+    if (!loadPattern) {
+      setPatternLoadError("Patterns are unavailable in this editor.");
+      return;
+    }
+
+    setPatternLoading(true);
+    void loadPattern(ref).then(
+      (outcome) => {
+        if (generation !== patternRequestGeneration.current) return;
+        setPatternLoading(false);
+        if (outcome.status !== "loaded" || outcome.kind !== "pattern") {
+          setPatternLoadError(
+            outcome.status === "loaded"
+              ? "This source is no longer published as a Pattern."
+              : selectionError(outcome),
+          );
+          return;
+        }
+        setLoadedPattern({
+          key,
+          name,
+          roots: outcome.record.document.root,
+          document: outcome.record.document,
+        });
+      },
+      (reason) => {
+        if (generation !== patternRequestGeneration.current) return;
+        setPatternLoading(false);
+        setPatternLoadError(reason instanceof Error ? reason.message : "The Pattern could not be loaded.");
+      },
+    );
+  }
+
+  async function confirmPatternInsertion() {
+    if (!capturedTarget || !loadedPattern || !patternEligibility?.eligible || !onInsertPattern || insertingPattern) return;
+    setPatternInsertError(null);
+    setInsertingPattern(true);
+    try {
+      const outcome = await onInsertPattern(capturedTarget, loadedPattern.roots);
+      if (outcome.status !== "inserted") {
+        setPatternInsertError(outcome.message);
+        return;
+      }
+      setStatus(`${loadedPattern.name} added to ${targetLabel}.`);
+      dialogRef.current?.close();
+    } catch (reason) {
+      setPatternInsertError(reason instanceof Error ? reason.message : "The Pattern could not be inserted.");
+    } finally {
+      setInsertingPattern(false);
+    }
+  }
+
   // Enter only confirms when the current filter narrows to exactly ONE
   // component — with several matches still showing, silently adding
   // whichever happens to sort first would be a surprising, easy-to-mistrigger
   // footgun rather than a helpful shortcut.
   function handleSearchKeyDown(event: JSX.TargetedKeyboardEvent<HTMLInputElement>) {
-    if (event.key === "Enter" && filtered.length === 1) {
+    if (activeTab === "components" && event.key === "Enter" && filtered.length === 1) {
       event.preventDefault();
       confirmAdd(filtered[0]!.componentId);
     }
@@ -251,10 +423,10 @@ export function ComposerChooser({
     <>
       <dialog
         ref={dialogRef}
-        class="sg-composer-chooser"
-        data-sg-enlarged={enlarged}
+        class="sg-composer-chooser sg-composer-tool-dialog"
         aria-modal="true"
         aria-labelledby={titleId}
+        style={toolDialogStyle(geometry.rect)}
         onKeyDown={handleDialogKeyDown}
         onClick={(event) => {
           if (event.target === dialogRef.current) dialogRef.current?.close();
@@ -269,27 +441,22 @@ export function ComposerChooser({
         {capturedTarget && (
           <>
             <div class="sg-composer-chooser-header">
-              <h2 id={titleId} class="sg-composer-chooser-title">
-                Add a component
-              </h2>
               <button
                 type="button"
-                class="sg-composer-toolbar-button sg-composer-chooser-enlarge"
-                aria-pressed={enlarged}
-                aria-label={enlarged ? "Restore chooser to default size" : "Enlarge chooser"}
-                title={enlarged ? "Restore size" : "Enlarge"}
-                onClick={() => setEnlarged((value) => !value)}
+                class="sg-composer-tool-dialog-grip"
+                aria-label="Move dialog"
+                aria-describedby={`${titleId}-move-help`}
+                aria-keyshortcuts="ArrowUp ArrowDown ArrowLeft ArrowRight Home Shift+ArrowUp Shift+ArrowDown Shift+ArrowLeft Shift+ArrowRight"
+                title="Move dialog (Arrow keys; Shift moves farther; Home resets)"
+                {...moveGrip}
               >
-                {/* Same glyph in both states (issue #282 review): the icon module has no
-                    dedicated collapse/restore icon, and reusing `XMarkIcon` (documented as
-                    "dialog close") for "restore to default size" reads as dismissing the
-                    dialog. The pressed state is already communicated by `aria-pressed`'s
-                    accent styling above and the differing aria-label/title. */}
-                <ExpandIcon size="sm" />
+                <span aria-hidden="true" class="sg-composer-tool-dialog-grip-dots">
+                  ⠿
+                </span>
               </button>
-              <p class="sg-composer-chooser-target">
-                Adding to: <strong>{targetLabel}</strong>
-              </p>
+              <h2 id={titleId} class="sg-composer-chooser-title">
+                Add to {targetLabel}
+              </h2>
               <button
                 type="button"
                 class="sg-composer-toolbar-button sg-composer-chooser-cancel"
@@ -297,90 +464,201 @@ export function ComposerChooser({
               >
                 Cancel
               </button>
+              <p class="sg-composer-chooser-target">
+                Adding to <strong>{targetLabel}</strong>
+              </p>
+              <p id={`${titleId}-move-help`} class="sr-only">
+                Use Arrow keys to move the dialog 16 pixels, Shift plus Arrow keys to move it 48 pixels, or Home
+                to restore its default position and size.
+              </p>
             </div>
 
-            {blockedReason ? (
-              <p class="sg-composer-chooser-empty" role="status">
-                {blockedReason}
-              </p>
-            ) : (
-              <div class="sg-composer-chooser-body">
-                <div class="sg-composer-chooser-catalog">
+            <div class="sg-composer-chooser-tabs" role="tablist" aria-label="Add source">
+              <button
+                id={`${titleId}-components-tab`}
+                type="button"
+                role="tab"
+                class="sg-composer-chooser-tab"
+                aria-selected={activeTab === "components"}
+                aria-controls={`${titleId}-components-panel`}
+                onClick={() => setActiveTab("components")}
+              >
+                Components
+              </button>
+              <button
+                id={`${titleId}-patterns-tab`}
+                type="button"
+                role="tab"
+                class="sg-composer-chooser-tab"
+                aria-selected={activeTab === "patterns"}
+                aria-controls={`${titleId}-patterns-panel`}
+                onClick={() => setActiveTab("patterns")}
+              >
+                Patterns
+              </button>
+            </div>
+
+            <div class="sg-composer-chooser-body">
+              {activeTab === "components" ? (
+                <div
+                  id={`${titleId}-components-panel`}
+                  class="sg-composer-chooser-catalog"
+                  role="tabpanel"
+                  aria-labelledby={`${titleId}-components-tab`}
+                >
+                  {blockedReason ? (
+                    <p class="sg-composer-chooser-empty" role="status">
+                      {blockedReason}
+                    </p>
+                  ) : (
+                    <>
+                      <div class="sg-composer-chooser-controls">
+                        <label class="sg-composer-chooser-search-label">
+                          <span class="sr-only">Search components</span>
+                          <input
+                            ref={searchRef}
+                            type="search"
+                            class="sg-composer-chooser-search"
+                            placeholder="Search components…"
+                            value={query}
+                            onInput={(e) => setQuery((e.target as HTMLInputElement).value)}
+                            onKeyDown={handleSearchKeyDown}
+                          />
+                        </label>
+
+                        <div class="sg-composer-chooser-categories" role="group" aria-label="Filter by category">
+                          {categories.map((cat) => (
+                            <button
+                              key={cat}
+                              type="button"
+                              class="sg-composer-chooser-category"
+                              aria-pressed={category === cat}
+                              onClick={() => setCategory(cat)}
+                            >
+                              {cat}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <p class="sg-composer-chooser-count" aria-live="polite">
+                        {filtered.length} of {eligible.length} component{eligible.length === 1 ? "" : "s"}
+                      </p>
+
+                      {filtered.length === 0 ? (
+                        <div class="sg-composer-chooser-empty">
+                          <p>No matching components. Try another search or clear the filters.</p>
+                          {hasActiveFilter && (
+                            <button type="button" class="sg-composer-toolbar-button" onClick={clearFilters}>
+                              Clear filters
+                            </button>
+                          )}
+                        </div>
+                      ) : (
+                        <ul class="sg-composer-chooser-list">
+                          {filtered.map((entry) => (
+                            <li key={entry.componentId}>
+                              <button
+                                type="button"
+                                class="sg-composer-chooser-card"
+                                aria-label={entry.title}
+                                aria-describedby={`${entry.componentId}-meta`}
+                                onClick={() => confirmAdd(entry.componentId)}
+                                onMouseEnter={() => setPreviewedComponentId(entry.componentId)}
+                                onFocus={() => setPreviewedComponentId(entry.componentId)}
+                              >
+                                <span class="sg-composer-chooser-card-title" aria-hidden="true">
+                                  {entry.title}
+                                </span>
+                                <span id={`${entry.componentId}-meta`} class="sg-composer-chooser-card-meta">
+                                  <span class="sg-composer-chooser-card-category">{entry.category}</span>
+                                  <span class="sg-composer-chooser-card-description">{entry.description}</span>
+                                </span>
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </>
+                  )}
+                </div>
+              ) : (
+                <div
+                  id={`${titleId}-patterns-panel`}
+                  class="sg-composer-chooser-catalog"
+                  role="tabpanel"
+                  aria-labelledby={`${titleId}-patterns-tab`}
+                >
                   <div class="sg-composer-chooser-controls">
                     <label class="sg-composer-chooser-search-label">
-                      <span class="sr-only">Search components</span>
+                      <span class="sr-only">Search Patterns</span>
                       <input
                         ref={searchRef}
                         type="search"
                         class="sg-composer-chooser-search"
-                        placeholder="Search components…"
+                        placeholder="Search Patterns…"
                         value={query}
                         onInput={(e) => setQuery((e.target as HTMLInputElement).value)}
                         onKeyDown={handleSearchKeyDown}
                       />
                     </label>
-
-                    <div class="sg-composer-chooser-categories" role="group" aria-label="Filter by category">
-                      {categories.map((cat) => (
-                        <button
-                          key={cat}
-                          type="button"
-                          class="sg-composer-chooser-category"
-                          aria-pressed={category === cat}
-                          onClick={() => setCategory(cat)}
-                        >
-                          {cat}
-                        </button>
-                      ))}
-                    </div>
                   </div>
 
-                  <p class="sg-composer-chooser-count" aria-live="polite">
-                    {filtered.length} of {eligible.length} component{eligible.length === 1 ? "" : "s"}
-                  </p>
-
-                  {filtered.length === 0 ? (
+                  {patternCatalogLoading ? (
+                    <div class="sg-composer-chooser-empty" role="status">
+                      <p>Loading Patterns…</p>
+                    </div>
+                  ) : patternCatalog && patternCatalog.status !== "listed" ? (
+                    <div class="sg-composer-chooser-empty" role="status">
+                      <p>{patternCatalog.message}</p>
+                    </div>
+                  ) : !patternCatalog ? (
+                    <div class="sg-composer-chooser-empty" role="status">
+                      <p>Patterns are unavailable in this editor.</p>
+                    </div>
+                  ) : filteredPatterns.length === 0 ? (
                     <div class="sg-composer-chooser-empty">
-                      <p>No matching components. Try another search or clear the filters.</p>
-                      {hasActiveFilter && (
+                      <p>{patterns.length === 0 ? "No published Patterns are available." : "No matching Patterns."}</p>
+                      {query.trim() && (
                         <button type="button" class="sg-composer-toolbar-button" onClick={clearFilters}>
-                          Clear filters
+                          Clear search
                         </button>
                       )}
                     </div>
                   ) : (
-                    <ul class="sg-composer-chooser-list">
-                      {filtered.map((entry) => (
-                        <li key={entry.componentId}>
-                          <button
-                            type="button"
-                            class="sg-composer-chooser-card"
-                            // The accessible NAME is the title alone (not the
-                            // concatenated title+category+description a plain
-                            // button would otherwise compute) — category and
-                            // description are supplementary, linked via
-                            // aria-describedby instead, per the accname vs.
-                            // accdescription split.
-                            aria-label={entry.title}
-                            aria-describedby={`${entry.componentId}-meta`}
-                            onClick={() => confirmAdd(entry.componentId)}
-                            onMouseEnter={() => setPreviewedComponentId(entry.componentId)}
-                            onFocus={() => setPreviewedComponentId(entry.componentId)}
-                          >
-                            <span class="sg-composer-chooser-card-title" aria-hidden="true">
-                              {entry.title}
-                            </span>
-                            <span id={`${entry.componentId}-meta`} class="sg-composer-chooser-card-meta">
-                              <span class="sg-composer-chooser-card-category">{entry.category}</span>
-                              <span class="sg-composer-chooser-card-description">{entry.description}</span>
-                            </span>
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
+                    <>
+                      <p class="sg-composer-chooser-count" aria-live="polite">
+                        {filteredPatterns.length} of {patterns.length} Pattern{patterns.length === 1 ? "" : "s"}
+                      </p>
+                      <ul class="sg-composer-chooser-list sg-composer-chooser-pattern-list">
+                        {filteredPatterns.map((entry) => {
+                          const key = patternRefKey(entry.ref);
+                          const selected = key === selectedPatternKey;
+                          return (
+                            <li key={key}>
+                              <button
+                                type="button"
+                                class="sg-composer-chooser-pattern-row"
+                                aria-pressed={selected}
+                                onClick={() => selectPattern(entry.ref, entry.summary.name)}
+                                onMouseEnter={() => selectPattern(entry.ref, entry.summary.name)}
+                                onFocus={() => selectPattern(entry.ref, entry.summary.name)}
+                              >
+                                <span class="sg-composer-chooser-card-title">{entry.summary.name}</span>
+                                <span class="sg-composer-chooser-pattern-meta">
+                                  {entry.summary.rootCount ?? 0} root{entry.summary.rootCount === 1 ? "" : "s"} · {entry.summary.nodeCount} node{entry.summary.nodeCount === 1 ? "" : "s"}
+                                </span>
+                              </button>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </>
                   )}
                 </div>
+              )}
 
+              {activeTab === "components" ? (
                 <ChooserPreviewHost
                   entry={previewedEntry}
                   catalogById={catalogById}
@@ -388,8 +666,43 @@ export function ComposerChooser({
                   location={previewLocation}
                   hostWindow={previewHostWindow}
                 />
-              </div>
-            )}
+              ) : (
+                <div class="sg-composer-chooser-pattern-detail">
+                  {patternLoading && <p class="sg-composer-chooser-preview-empty">Loading Pattern…</p>}
+                  {patternLoadError && <p class="sg-composer-chooser-pattern-error" role="status">{patternLoadError}</p>}
+                  {loadedPattern && !patternLoading && !patternLoadError && (
+                    <>
+                      <ChooserPreviewHost
+                        entry={null}
+                        sourceDocument={loadedPattern.document}
+                        label="Pattern preview"
+                        catalogById={catalogById}
+                        createBridge={previewCreateBridge}
+                        location={previewLocation}
+                        hostWindow={previewHostWindow}
+                      />
+                      {!patternEligibility?.eligible && (
+                        <p class="sg-composer-chooser-pattern-error" role="status">
+                          {patternEligibility?.reason}
+                        </p>
+                      )}
+                      {patternInsertError && <p class="sg-composer-chooser-pattern-error" role="status">{patternInsertError}</p>}
+                      <button
+                        type="button"
+                        class="sg-composer-toolbar-button"
+                        disabled={!patternEligibility?.eligible || !onInsertPattern || insertingPattern}
+                        onClick={() => void confirmPatternInsertion()}
+                      >
+                        {insertingPattern ? "Inserting…" : "Insert Pattern"}
+                      </button>
+                    </>
+                  )}
+                  {!patternLoading && !patternLoadError && !loadedPattern && (
+                    <p class="sg-composer-chooser-preview-empty">Select a Pattern to preview and insert it.</p>
+                  )}
+                </div>
+              )}
+            </div>
           </>
         )}
       </dialog>

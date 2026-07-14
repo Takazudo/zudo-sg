@@ -1,7 +1,7 @@
 /** @jsxRuntime automatic */
 /** @jsxImportSource preact */
 import { describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, within } from "@testing-library/preact";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/preact";
 import { createManifest } from "@/composer";
 import { ComposerTree } from "../composer-tree";
 import { fixtureCatalog, fixtureDocument, fixtureNode, makeAbcDocument, resetFixtureIds, FIXTURE_IDS } from "./fixtures";
@@ -29,6 +29,35 @@ function baseProps() {
 }
 
 describe("ComposerTree — structure", () => {
+  it("shows a linked frame outside the strictly local document nodes", () => {
+    resetFixtureIds();
+    const onOpenSource = vi.fn();
+    const document = makeAbcDocument();
+    const { container } = render(
+      <ComposerTree
+        document={document}
+        {...baseProps()}
+        linkedPresentation={{
+          state: "resolved",
+          sourceRecordId: "source-record",
+          sourceName: "Site shell",
+          outletId: "outlet-main",
+          outletLabel: "Main content",
+        }}
+        linkedActions={{ onOpenSource }}
+      />,
+    );
+
+    const frame = container.querySelector('[data-sg-linked-frame="resolved"]')!;
+    expect(frame.textContent).toContain("Site shell");
+    expect(frame.textContent).toContain("Main content");
+    // The collapsed local tree still has exactly its one local root node; the
+    // linked source does not become a second tree branch.
+    expect(container.querySelectorAll("[data-sg-tree-node-id]")).toHaveLength(1);
+    fireEvent.click(screen.getByRole("button", { name: "Open source" }));
+    expect(onOpenSource).toHaveBeenCalledWith("source-record");
+  });
+
   it("renders the virtual document-root row as an insertion target only", () => {
     resetFixtureIds();
     const document = makeAbcDocument();
@@ -216,6 +245,89 @@ describe("ComposerTree — component chooser target capture", () => {
     render(<ComposerTree document={document} {...props} />);
     fireEvent.click(screen.getByRole("button", { name: "Add component to document root" }));
     expect(props.onOpenChooser).toHaveBeenCalledWith({ parentId: null, slotId: "root", index: 1 });
+  });
+});
+
+describe("ComposerTree — Global template outlet authoring", () => {
+  it("offers outlet authoring only for real, declared, empty slots and captures a compact label", async () => {
+    resetFixtureIds();
+    const document = fixtureDocument([
+      fixtureNode(
+        FIXTURE_IDS.split,
+        {},
+        { left: [], right: [fixtureNode(FIXTURE_IDS.box, { label: "Filled" }, {}, "filled")] },
+        "split",
+      ),
+    ]);
+    const onSetGlobalTemplateOutlet = vi.fn(async () => ({ status: "applied" as const }));
+    render(
+      <ComposerTree
+        document={document}
+        {...baseProps()}
+        expandedIds={new Set(["split"])}
+        onSetGlobalTemplateOutlet={onSetGlobalTemplateOutlet}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "Use Left as template outlet" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Use Right as template outlet" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Use .*document root as template outlet/i })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Use Left as template outlet" }));
+    const label = screen.getByLabelText("Outlet label") as HTMLInputElement;
+    expect(label.value).toBe("Left");
+    expect(label).toHaveFocus();
+    fireEvent.input(label, { target: { value: "" } });
+    fireEvent.click(screen.getByRole("button", { name: "Publish template" }));
+    expect(onSetGlobalTemplateOutlet).not.toHaveBeenCalled();
+    expect(label).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByRole("alert")).toHaveTextContent(/Enter an outlet label/i);
+    fireEvent.input(label, { target: { value: "Main content" } });
+    fireEvent.click(screen.getByRole("button", { name: "Publish template" }));
+
+    await waitFor(() => {
+      expect(onSetGlobalTemplateOutlet).toHaveBeenCalledWith(
+        { parentId: "split", slotId: "left" },
+        "Main content",
+      );
+    });
+  });
+
+  it("badges the selected outlet, removes its Add/insert controls, and permits a label-only update", async () => {
+    resetFixtureIds();
+    const document = fixtureDocument([
+      fixtureNode(FIXTURE_IDS.split, {}, { left: [], right: [] }, "split"),
+    ]);
+    document.publication = {
+      kind: "global-template",
+      outlet: { id: "outlet-main", label: "Main content", target: { parentId: "split", slotId: "left" } },
+    };
+    const onSetGlobalTemplateOutlet = vi.fn(async () => ({ status: "applied" as const }));
+    render(
+      <ComposerTree
+        document={document}
+        {...baseProps()}
+        expandedIds={new Set(["split"])}
+        onSetGlobalTemplateOutlet={onSetGlobalTemplateOutlet}
+      />,
+    );
+
+    expect(screen.getByText("Template outlet: Main content")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Add component to Left/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Insert options for Left/i })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Rename Left template outlet" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Rename Left template outlet" }));
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Rename Left template outlet" })).toHaveFocus());
+    fireEvent.click(screen.getByRole("button", { name: "Rename Left template outlet" }));
+    fireEvent.input(screen.getByLabelText("Outlet label"), { target: { value: "Body" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save outlet label" }));
+    await waitFor(() => {
+      expect(onSetGlobalTemplateOutlet).toHaveBeenCalledWith(
+        { parentId: "split", slotId: "left" },
+        "Body",
+      );
+    });
   });
 });
 

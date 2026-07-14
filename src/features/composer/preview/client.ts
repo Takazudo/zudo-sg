@@ -22,6 +22,7 @@ import {
   commitInlineEditMessage,
   dropNodeMessage,
   errorMessage,
+  openSourceMessage,
   readParentToPreview,
   readyMessage,
   requestAddMessage,
@@ -59,6 +60,8 @@ export interface PreviewClient {
   emitReady(): void;
   emitSelect(nodeId: string | null): void;
   emitRequestAdd(target: InsertionTarget): void;
+  /** Navigate to the linked source; this never selects or mutates source nodes. */
+  emitOpenSource(sourceRecordId: string): void;
   /** The selected node's chrome "⋯" was activated (issue #256). */
   emitRequestNodeMenu(nodeId: string, rect: SerializedRect, focusToken: string): void;
   /** An insert point's "⋯" was activated (issue #256). */
@@ -137,6 +140,9 @@ export function createPreviewClient(options: PreviewClientOptions): PreviewClien
     },
     emitRequestAdd(target) {
       post(requestAddMessage(outboundRevision(), target));
+    },
+    emitOpenSource(sourceRecordId) {
+      post(openSourceMessage(sourceRecordId));
     },
     emitRequestNodeMenu(nodeId, rect, focusToken) {
       post(requestNodeMenuMessage(outboundRevision(), nodeId, rect, focusToken));

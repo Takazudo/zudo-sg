@@ -8,7 +8,13 @@ import {
   type CompositionSaveQueue,
   type CompositionSaveSnapshot,
 } from "@/composer";
-import { fixtureManifest, makeAbcDocument, resetFixtureIds } from "@/composer/__tests__/fixtures";
+import {
+  FIXTURE_COMPONENT_IDS as F,
+  fixtureManifest,
+  makeAbcDocument,
+  node,
+  resetFixtureIds,
+} from "@/composer/__tests__/fixtures";
 import { BEFORE_NAVIGATE_EVENT } from "@takazudo/zudo-doc/transitions";
 import {
   INSPECTOR_COMMIT_DEBOUNCE_MS,
@@ -88,6 +94,42 @@ afterEach(() => {
 });
 
 describe("useComposerController — record persistence", () => {
+  it("queues exactly one revision for one accepted atomic Pattern forest insertion", async () => {
+    const { result, attempts } = setup();
+    const sourceRoots = [node(F.box, { label: "Pattern A" }, {}, "source-a"), node(F.box, { label: "Pattern B" }, {}, "source-b")];
+
+    act(() => result.current.insertForest(sourceRoots, { parentId: "split", slotId: "right", index: 1 }));
+    await advancePromises();
+
+    expect(result.current.lastError).toBeNull();
+    expect(attempts).toHaveLength(1);
+    const right = attempts[0]!.snapshot.record.document.root[0]!.slots.right;
+    expect(right.map((item) => item.props.label)).toEqual(["B", "Pattern A", "Pattern B", "C"]);
+    expect(result.current.state.selectedId).toBe(right[1]!.id);
+  });
+
+  it("writes exactly one revision for an accepted binding command and none for a rejected reuse command", async () => {
+    const { result, attempts } = setup();
+    act(() => result.current.bindConsumer({
+      sourceRecordId: "source-record",
+      outletId: "outlet-main",
+      sameProvider: true,
+      sourceIsGlobalTemplate: true,
+      sourceHasBinding: false,
+      rootPolicy: { kind: "resolved", cardinality: "many" },
+    }));
+    await advancePromises();
+    expect(attempts).toHaveLength(1);
+    expect(attempts[0]!.snapshot.record.document.binding).toEqual({
+      sourceRecordId: "source-record",
+      outletId: "outlet-main",
+    });
+
+    act(() => result.current.publishPattern());
+    expect(result.current.lastError).toMatch(/bound/i);
+    expect(attempts).toHaveLength(1);
+  });
+
   it("serializes overlapping controller edits and saves the newest retained record", async () => {
     const { result, queue, attempts } = setup();
 
@@ -218,5 +260,35 @@ describe("useComposerController — record persistence", () => {
     attempts[0]!.reject(new Error("late failure"));
     await advancePromises();
     expect(queue.state).toMatchObject({ closed: true, dirty: true, savedRevision: 0 });
+  });
+
+  it("keeps canonical Saved while exposing a separate blocked generated-output outcome", async () => {
+    const initialRecord = record();
+    const queue = createCompositionSaveQueue({
+      ref,
+      initialRecord,
+      write: async () => ({
+        canonical: { status: "saved" },
+        derived: {
+          status: "blocked",
+          records: [{ recordId: ref.recordId, status: "blocked", reason: "The linked source is unavailable." }],
+        },
+      }),
+    });
+    const hook = renderHook(() => useComposerController({
+      manifest: fixtureManifest,
+      record: initialRecord,
+      saveQueue: queue,
+      now: () => "2026-01-02T04:04:05.000Z",
+    }));
+
+    act(() => hook.result.current.rename("Canonical local edit"));
+    await act(async () => hook.result.current.flushPersistence());
+
+    expect(hook.result.current.state.saveStatus).toEqual({ kind: "saved" });
+    expect(hook.result.current.state.derivedOutput).toMatchObject({
+      status: "blocked",
+      records: [{ recordId: ref.recordId, reason: "The linked source is unavailable." }],
+    });
   });
 });

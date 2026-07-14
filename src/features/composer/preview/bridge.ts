@@ -44,7 +44,14 @@ import type {
   PreviewSession,
   SerializedRect,
 } from "./protocol";
-import { modeMessage, readPreviewToParent, renderMessage, restoreFocusMessage } from "./protocol";
+import {
+  localPreviewSnapshot,
+  modeMessage,
+  readPreviewToParent,
+  renderMessage,
+  restoreFocusMessage,
+  type ComposerPreviewSnapshot,
+} from "./protocol";
 
 // ── URL + iframe seam ───────────────────────────────────────────────────────
 
@@ -124,6 +131,8 @@ export interface ComposerPreviewBridgeOptions {
   onReady?: () => void;
   onSelect?: (nodeId: string | null, revision: number) => void;
   onRequestAdd?: (target: InsertionTarget, revision: number) => void;
+  /** Linked-source navigation request; source nodes never route through local selection. */
+  onOpenSource?: (sourceRecordId: string) => void;
   /** The selected node's chrome "⋯" was activated inside the iframe (issue #256). */
   onRequestNodeMenu?: (nodeId: string, rect: SerializedRect, focusToken: string, revision: number) => void;
   /** An insert point's "⋯" was activated inside the iframe (issue #256). */
@@ -150,7 +159,7 @@ export interface ComposerPreviewBridgeOptions {
 
 export interface ComposerPreviewBridge {
   /** Send (or retain, if not ready) a full snapshot. Returns its revision. */
-  render(document: CompositionDocument, session: PreviewSession): number;
+  render(snapshot: ComposerPreviewSnapshot | CompositionDocument, session: PreviewSession): number;
   /** Send (or retain) a session-only change. Returns its revision. */
   updateSession(session: PreviewSession): number;
   /**
@@ -168,7 +177,7 @@ export interface ComposerPreviewBridge {
 }
 
 interface Retained {
-  document: CompositionDocument | null;
+  snapshot: ComposerPreviewSnapshot | null;
   session: PreviewSession;
   revision: number;
 }
@@ -198,8 +207,8 @@ export function createComposerPreviewBridge(
   const send = (): void => {
     if (!ready || !retained) return;
     post(
-      retained.document
-        ? renderMessage(retained.revision, retained.document, retained.session)
+      retained.snapshot
+        ? renderMessage(retained.revision, retained.snapshot, retained.session)
         : modeMessage(retained.revision, retained.session),
     );
   };
@@ -238,6 +247,9 @@ export function createComposerPreviewBridge(
       case "request-add":
         options.onRequestAdd?.(message.target, message.revision);
         return;
+      case "open-source":
+        options.onOpenSource?.(message.sourceRecordId);
+        return;
       case "request-node-menu":
         options.onRequestNodeMenu?.(message.nodeId, message.rect, message.focusToken, message.revision);
         return;
@@ -271,14 +283,18 @@ export function createComposerPreviewBridge(
   hostWindow.addEventListener("message", onMessage);
 
   return {
-    render(document, session) {
-      retained = { document, session, revision: nextRevision() };
+    render(snapshot, session) {
+      retained = {
+        snapshot: "document" in snapshot ? snapshot : localPreviewSnapshot(snapshot),
+        session,
+        revision: nextRevision(),
+      };
       send();
       return retained.revision;
     },
     updateSession(session) {
       retained = {
-        document: retained?.document ?? null,
+        snapshot: retained?.snapshot ?? null,
         session,
         revision: nextRevision(),
       };

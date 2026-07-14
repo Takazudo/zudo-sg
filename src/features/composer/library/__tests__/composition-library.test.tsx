@@ -7,6 +7,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   COMPOSITION_PROVIDERS,
   CompositionPersistenceError,
+  type ReuseCatalogEntry,
   type CompositionInitializationOutcome,
   type CompositionSummary,
 } from "@/composer";
@@ -30,6 +31,19 @@ function summary(
 
 const ALPHA = summary("alpha", "Alpha layout", EARLY);
 const BRAVO = summary("bravo", "Bravo layout", LATE);
+const GLOBAL_TEMPLATE: ReuseCatalogEntry = {
+  ref: { providerId: "indexeddb", recordId: "site-shell" },
+  summary: {
+    ...summary("site-shell", "Site shell", LATE),
+    publicationKind: "global-template",
+    outletId: "main",
+    outletLabel: "Main content",
+    rootCount: 1,
+    reuseStatus: "eligible",
+  },
+  kind: "global-template",
+  outlet: { id: "main", label: "Main content" },
+};
 
 const defaultProviders: CompositionLibraryProviderCapability[] = [
   { descriptor: COMPOSITION_PROVIDERS.indexeddb, available: true },
@@ -47,6 +61,7 @@ function fakeIntents(
     initialize: vi.fn(async () => ready([ALPHA, BRAVO])),
     retry: vi.fn(async () => ready([ALPHA, BRAVO])),
     startFresh: vi.fn(async () => ready([])),
+    listTemplates: vi.fn(async () => ({ status: "listed", entries: [] })),
     create: vi.fn(async () => summary("new", "Untitled composition", LATE)),
     open: vi.fn(async () => ({ status: "opened" })),
     duplicate: vi.fn(async () => summary("copy", "Alpha layout copy", LATE)),
@@ -75,6 +90,25 @@ async function waitForLibrary(): Promise<void> {
 }
 
 describe("CompositionLibrary data and capability states", () => {
+  it("shows concise persisted Global template and Pattern roles without creating another library", async () => {
+    const global = {
+      ...summary("global", "Site shell"),
+      publicationKind: "global-template" as const,
+      outletId: "outlet-main",
+      outletLabel: "Main content",
+    };
+    const pattern = {
+      ...summary("pattern", "Callout", LATE),
+      publicationKind: "pattern" as const,
+    };
+    renderLibrary(fakeIntents({ initialize: vi.fn(async () => ready([global, pattern])) }));
+    await waitForLibrary();
+
+    expect(screen.getByText("Global template · Main content")).toBeInTheDocument();
+    expect(screen.getByText("Pattern · Saved composition")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Composition library" })).toBeInTheDocument();
+  });
+
   it("shows a semantic loading state and polite live progress while initialization is pending", () => {
     renderLibrary(fakeIntents({ initialize: vi.fn(() => new Promise(() => undefined)) }));
 
@@ -248,23 +282,59 @@ describe("CompositionLibrary data and capability states", () => {
 });
 
 describe("CompositionLibrary async operations and focus", () => {
-  it("creates then requests opening the created record; failed create preserves rows", async () => {
+  it("opens one New dialog before creating, then sends the typed intent and opens its saved record", async () => {
     const created = summary("created", "Created composition", "2026-03-01T00:00:00.000Z");
     const intents = fakeIntents({ create: vi.fn(async () => created) });
     renderLibrary(intents);
     await waitForLibrary();
     fireEvent.click(screen.getAllByRole("button", { name: "New composition" })[0]);
 
+    const dialog = await screen.findByRole("dialog", { name: "New composition" });
+    expect(intents.create).not.toHaveBeenCalled();
+    fireEvent.submit(dialog.querySelector("form")!);
+
+    await waitFor(() => expect(intents.create).toHaveBeenCalledWith({
+      providerId: "indexeddb",
+      name: "Untitled composition",
+    }));
     await waitFor(() => expect(intents.open).toHaveBeenCalledWith({ providerId: "indexeddb", recordId: "created" }));
     expect(screen.getByRole("button", { name: "Open Created composition" })).toBeInTheDocument();
     expect(screen.getByRole("status")).toHaveTextContent("created and opened");
+  });
 
+  it("uses the selected same-provider Global-template row as the typed source choice", async () => {
+    const intents = fakeIntents({
+      listTemplates: vi.fn(async () => ({ status: "listed", entries: [GLOBAL_TEMPLATE] })),
+    });
+    renderLibrary(intents);
+    await waitForLibrary();
+    fireEvent.click(screen.getAllByRole("button", { name: "New composition" })[0]);
+
+    const dialog = await screen.findByRole("dialog", { name: "New composition" });
+    fireEvent.input(within(dialog).getByRole("textbox", { name: "Name" }), { target: { value: "Bound page" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: /Site shell/ }));
+    fireEvent.submit(dialog.querySelector("form")!);
+
+    await waitFor(() => expect(intents.create).toHaveBeenCalledWith({
+      providerId: "indexeddb",
+      name: "Bound page",
+      source: { sourceRecordId: "site-shell", outletId: "main" },
+    }));
+  });
+
+  it("keeps the dialog open with its input and selection after a failed create", async () => {
     const failed = fakeIntents({ create: vi.fn(async () => { throw new Error("Create failed safely."); }) });
     renderLibrary(failed);
     await screen.findAllByRole("button", { name: "Open Alpha layout" });
     const newButtons = screen.getAllByRole("button", { name: "New composition" });
     fireEvent.click(newButtons[newButtons.length - 1]);
-    expect(await screen.findByText("Create failed safely.")).toBeInTheDocument();
+    const dialog = await screen.findByRole("dialog", { name: "New composition" });
+    const name = within(dialog).getByRole("textbox", { name: "Name" });
+    fireEvent.input(name, { target: { value: "Keep this name" } });
+    fireEvent.submit(dialog.querySelector("form")!);
+    expect(await within(dialog).findByText("Create failed safely.")).toBeInTheDocument();
+    expect(name).toHaveValue("Keep this name");
+    expect(within(dialog).getByRole("button", { name: "Retry" })).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: "Open Alpha layout" }).length).toBeGreaterThan(0);
   });
 
@@ -290,8 +360,11 @@ describe("CompositionLibrary async operations and focus", () => {
     await waitForLibrary();
 
     fireEvent.click(screen.getAllByRole("button", { name: "New composition" })[0]);
+    const dialog = await screen.findByRole("dialog", { name: "New composition" });
+    fireEvent.submit(dialog.querySelector("form")!);
     expect(await screen.findByRole("button", { name: "Open Untitled composition" })).toBeInTheDocument();
-    expect(screen.getByRole("alert")).toHaveTextContent("was saved, but opening failed");
+    expect(within(dialog).getByRole("alert")).toHaveTextContent("was saved, but opening failed");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
 
     fireEvent.click(screen.getByRole("button", { name: "Duplicate Alpha layout" }));
     expect(await screen.findByRole("button", { name: "Open Alpha layout copy" })).toBeInTheDocument();

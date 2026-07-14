@@ -2,13 +2,17 @@ import { IDBFactory as FDBFactory, IDBObjectStore as FDBObjectStore } from "fake
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   COMPOSER_DATABASE_NAME,
+  COMPOSER_DATABASE_VERSION,
   COMPOSER_META_KEYS,
   COMPOSITIONS_STORE_NAME,
   LEGACY_COMPOSER_STORAGE_KEY,
   META_STORE_NAME,
   CompositionPersistenceError,
+  COMPOSITION_SCHEMA_V1,
+  COMPOSITION_SCHEMA_VERSION,
   createIndexedDbCompositionProvider,
   createSampleDocument,
+  isCompositionLifecycleStore,
 } from "../../../index";
 import type {
   CleanupMeta,
@@ -60,7 +64,7 @@ function legacyDocument(id = "legacy-safe"): string {
   const document = createSampleDocument();
   document.id = id;
   document.name = "Legacy document";
-  return JSON.stringify(document);
+  return JSON.stringify({ ...document, schemaVersion: COMPOSITION_SCHEMA_V1 });
 }
 
 function request<T>(value: IDBRequest<T>): Promise<T> {
@@ -74,7 +78,7 @@ async function inspectDatabase(factory: IDBFactory): Promise<{
   records: CompositionRecord[];
   meta: ComposerMetaRecord[];
 }> {
-  const open = factory.open(COMPOSER_DATABASE_NAME, 1);
+  const open = factory.open(COMPOSER_DATABASE_NAME, COMPOSER_DATABASE_VERSION);
   const db = await request(open);
   const tx = db.transaction([COMPOSITIONS_STORE_NAME, META_STORE_NAME], "readonly");
   const recordsPromise = request(tx.objectStore(COMPOSITIONS_STORE_NAME).getAll());
@@ -92,6 +96,65 @@ function metaRecord<T extends ComposerMetaRecord>(records: ComposerMetaRecord[],
 
 async function openAtVersion(factory: IDBFactory, version: number): Promise<IDBDatabase> {
   return request(factory.open(COMPOSER_DATABASE_NAME, version));
+}
+
+function transactionComplete(transaction: IDBTransaction): Promise<void> {
+  return new Promise((resolve, reject) => {
+    transaction.oncomplete = () => resolve();
+    transaction.onabort = () => reject(transaction.error);
+  });
+}
+
+function legacyRecord(id: string, updatedAt = T1): unknown {
+  const current = record(id, updatedAt);
+  return {
+    ...current,
+    document: { ...current.document, schemaVersion: COMPOSITION_SCHEMA_V1 },
+  };
+}
+
+function legacyRecordWithDocument(id: string, document: unknown): unknown {
+  return { ...(legacyRecord(id) as Record<string, unknown>), document };
+}
+
+async function seedV1Database(factory: IDBFactory, records: readonly unknown[]): Promise<void> {
+  const open = factory.open(COMPOSER_DATABASE_NAME, 1);
+  open.onupgradeneeded = () => {
+    const db = open.result;
+    const compositions = db.createObjectStore(COMPOSITIONS_STORE_NAME, { keyPath: "id" });
+    compositions.createIndex("updatedAt", "updatedAt", { unique: false });
+    db.createObjectStore(META_STORE_NAME, { keyPath: "key" });
+  };
+  const db = await request(open);
+  const transaction = db.transaction([COMPOSITIONS_STORE_NAME, META_STORE_NAME], "readwrite");
+  const compositions = transaction.objectStore(COMPOSITIONS_STORE_NAME);
+  for (const value of records) compositions.put(value);
+  transaction.objectStore(META_STORE_NAME).put({
+    key: COMPOSER_META_KEYS.schema,
+    databaseVersion: 1,
+    recordSchemaVersion: COMPOSITION_SCHEMA_V1,
+  });
+  transaction.objectStore(META_STORE_NAME).put({ key: COMPOSER_META_KEYS.migration, state: "none" });
+  transaction.objectStore(META_STORE_NAME).put({ key: COMPOSER_META_KEYS.cleanup, state: "not-needed" });
+  transaction.objectStore(META_STORE_NAME).put({
+    key: COMPOSER_META_KEYS.initialization,
+    state: "ready",
+    initializedAt: T1,
+  });
+  await transactionComplete(transaction);
+  db.close();
+}
+
+async function inspectV1Database(factory: IDBFactory): Promise<{
+  records: unknown[];
+  meta: unknown[];
+}> {
+  const db = await openAtVersion(factory, 1);
+  const transaction = db.transaction([COMPOSITIONS_STORE_NAME, META_STORE_NAME], "readonly");
+  const records = await request(transaction.objectStore(COMPOSITIONS_STORE_NAME).getAll());
+  const meta = await request(transaction.objectStore(META_STORE_NAME).getAll());
+  db.close();
+  return { records, meta };
 }
 
 afterEach(() => {
@@ -116,17 +179,17 @@ describe("IndexedDB composition CRUD", () => {
     expect(inspected.records).toHaveLength(1);
     expect(inspected.records[0]).toMatchObject({
       id: "composition-1",
-      document: { id: "composition-1" },
+      document: { schemaVersion: COMPOSITION_SCHEMA_VERSION, id: "composition-1" },
     });
     expect(metaRecord(inspected.meta, COMPOSER_META_KEYS.schema)).toMatchObject({
-      databaseVersion: 1,
-      recordSchemaVersion: 1,
+      databaseVersion: COMPOSER_DATABASE_VERSION,
+      recordSchemaVersion: COMPOSITION_SCHEMA_VERSION,
     });
     expect(metaRecord(inspected.meta, COMPOSER_META_KEYS.migration)).toEqual({
       key: "migration",
       state: "none",
     });
-    const schemaDb = await openAtVersion(factory, 1);
+    const schemaDb = await openAtVersion(factory, COMPOSER_DATABASE_VERSION);
     const schemaTx = schemaDb.transaction(COMPOSITIONS_STORE_NAME, "readonly");
     const schemaStore = schemaTx.objectStore(COMPOSITIONS_STORE_NAME);
     expect(schemaStore.keyPath).toBe("id");
@@ -149,6 +212,77 @@ describe("IndexedDB composition CRUD", () => {
     expect(await provider.store.delete("a")).toBe(false);
   });
 
+  it("rechecks Global-template consumers and source publication in one read-write transaction", async () => {
+    const factory = new FDBFactory();
+    const provider = createIndexedDbCompositionProvider({
+      idbFactory: factory,
+      legacyStorage: new MemoryLegacyStorage(null),
+      idFactory: sequentialIds(),
+      now: () => T2,
+    });
+    await provider.initialization.initialize();
+    if (!isCompositionLifecycleStore(provider.store)) throw new Error("expected lifecycle store");
+
+    const source = record("source");
+    source.document.publication = {
+      kind: "global-template",
+      outlet: { id: "outlet-main", label: "Main", target: { parentId: "split-1", slotId: "left" } },
+    };
+    const consumer = record("consumer");
+    consumer.document.binding = { sourceRecordId: "source", outletId: "outlet-main" };
+    await provider.store.put(source);
+    await provider.store.put(consumer);
+
+    await expect(provider.store.deleteWithDependencyCheck("source")).resolves.toMatchObject({
+      status: "blocked",
+      dependents: [{ summary: { id: "consumer", name: "Name consumer" }, binding: consumer.document.binding }],
+    });
+    await expect(provider.store.unpublishWithDependencyCheck("source")).resolves.toMatchObject({
+      status: "blocked",
+      dependents: [{ summary: { id: "consumer" } }],
+    });
+    expect(await provider.store.get("source")).toMatchObject({
+      status: "loaded",
+      record: { document: { publication: { kind: "global-template" } } },
+    });
+    expect(await provider.store.get("consumer")).toMatchObject({
+      status: "loaded",
+      record: { document: { binding: { sourceRecordId: "source" } } },
+    });
+
+    await provider.store.delete("consumer");
+    await expect(provider.store.unpublishWithDependencyCheck("source")).resolves.toEqual({ status: "unpublished" });
+    const unpublished = await provider.store.get("source");
+    expect(unpublished).toMatchObject({ status: "loaded", record: { updatedAt: T2 } });
+    if (unpublished.status !== "loaded") throw new Error("expected source record");
+    expect(unpublished.record.document).not.toHaveProperty("publication");
+  });
+
+  it("rejects a consumer queued after its source was deleted instead of committing an orphan", async () => {
+    const factory = new FDBFactory();
+    const provider = createIndexedDbCompositionProvider({
+      idbFactory: factory,
+      legacyStorage: new MemoryLegacyStorage(null),
+      idFactory: sequentialIds(),
+      now: () => T2,
+    });
+    await provider.initialization.initialize();
+    if (!isCompositionLifecycleStore(provider.store)) throw new Error("expected lifecycle store");
+
+    const source = record("source");
+    source.document.publication = {
+      kind: "global-template",
+      outlet: { id: "outlet-main", label: "Main", target: { parentId: "split-1", slotId: "left" } },
+    };
+    await provider.store.put(source);
+    await expect(provider.store.deleteWithDependencyCheck("source")).resolves.toEqual({ status: "deleted" });
+
+    const lateConsumer = record("late-consumer");
+    lateConsumer.document.binding = { sourceRecordId: "source", outletId: "outlet-main" };
+    await expect(provider.store.put(lateConsumer)).rejects.toMatchObject({ operation: "put", code: "conflict" });
+    await expect(provider.store.get("late-consumer")).resolves.toEqual({ status: "not-found", id: "late-consumer" });
+  });
+
   it("validates writes and exposes invalid records read directly from the database", async () => {
     const factory = new FDBFactory();
     const provider = createIndexedDbCompositionProvider({
@@ -166,7 +300,7 @@ describe("IndexedDB composition CRUD", () => {
       retryable: false,
     });
 
-    const db = await openAtVersion(factory, 1);
+    const db = await openAtVersion(factory, COMPOSER_DATABASE_VERSION);
     const tx = db.transaction(COMPOSITIONS_STORE_NAME, "readwrite");
     await request(tx.objectStore(COMPOSITIONS_STORE_NAME).put({
       ...record("corrupt"),
@@ -228,6 +362,104 @@ describe("IndexedDB composition CRUD", () => {
   });
 });
 
+describe("IndexedDB v1 → v2 migration", () => {
+  it("losslessly upgrades every valid v1 record and schema metadata in one version-change transaction", async () => {
+    const factory = new FDBFactory();
+    await seedV1Database(factory, [legacyRecord("legacy-a", T1), legacyRecord("legacy-b", T2)]);
+
+    const provider = createIndexedDbCompositionProvider({
+      idbFactory: factory,
+      legacyStorage: new MemoryLegacyStorage(null),
+      idFactory: sequentialIds(),
+      now: () => T2,
+    });
+    expect(await provider.initialization.initialize()).toMatchObject({
+      status: "ready",
+      summaries: [{ id: "legacy-b" }, { id: "legacy-a" }],
+    });
+
+    const inspected = await inspectDatabase(factory);
+    expect(inspected.records).toEqual([
+      expect.objectContaining({
+        id: "legacy-a",
+        createdAt: T1,
+        updatedAt: T1,
+        document: expect.objectContaining({ schemaVersion: COMPOSITION_SCHEMA_VERSION, id: "legacy-a" }),
+      }),
+      expect.objectContaining({
+        id: "legacy-b",
+        createdAt: T1,
+        updatedAt: T2,
+        document: expect.objectContaining({ schemaVersion: COMPOSITION_SCHEMA_VERSION, id: "legacy-b" }),
+      }),
+    ]);
+    expect(metaRecord(inspected.meta, COMPOSER_META_KEYS.schema)).toMatchObject({
+      databaseVersion: COMPOSER_DATABASE_VERSION,
+      recordSchemaVersion: COMPOSITION_SCHEMA_VERSION,
+    });
+  });
+
+  it.each([
+    [
+      "malformed",
+      legacyRecordWithDocument("z-bad", {
+        schemaVersion: COMPOSITION_SCHEMA_V1,
+        id: "z-bad",
+        name: "Bad",
+        root: {},
+      }),
+    ],
+    [
+      "future",
+      legacyRecordWithDocument("z-future", {
+        schemaVersion: COMPOSITION_SCHEMA_VERSION + 1,
+        id: "z-future",
+        name: "Future",
+        root: [],
+      }),
+    ],
+  ])("aborts a %s v1 upgrade without changing any record or database version", async (_kind, badRecord) => {
+    const factory = new FDBFactory();
+    await seedV1Database(factory, [legacyRecord("a-valid"), badRecord]);
+    const provider = createIndexedDbCompositionProvider({
+      idbFactory: factory,
+      legacyStorage: new MemoryLegacyStorage(null),
+    });
+
+    expect(await provider.initialization.initialize()).toMatchObject({
+      status: "error",
+      error: { code: "transaction-failed", retryable: true },
+    });
+    const inspected = await inspectV1Database(factory);
+    expect(inspected.records).toHaveLength(2);
+    expect(inspected.records).toEqual(expect.arrayContaining([legacyRecord("a-valid"), badRecord]));
+    expect(inspected.meta).toContainEqual({
+      key: COMPOSER_META_KEYS.schema,
+      databaseVersion: 1,
+      recordSchemaVersion: COMPOSITION_SCHEMA_V1,
+    });
+  });
+
+  it("rolls back earlier cursor rewrites when an upgrade write fails", async () => {
+    const factory = new FDBFactory();
+    const before = legacyRecord("valid");
+    await seedV1Database(factory, [before]);
+    vi.spyOn(FDBObjectStore.prototype, "put").mockImplementationOnce(() => {
+      throw new DOMException("synthetic metadata write failure", "AbortError");
+    });
+    const provider = createIndexedDbCompositionProvider({
+      idbFactory: factory,
+      legacyStorage: new MemoryLegacyStorage(null),
+    });
+
+    expect(await provider.initialization.initialize()).toMatchObject({
+      status: "error",
+      error: { code: "transaction-failed", retryable: true },
+    });
+    expect((await inspectV1Database(factory)).records).toEqual([before]);
+  });
+});
+
 describe("one-time localStorage migration", () => {
   it("imports a valid supported document and discards only its cleanup snapshot", async () => {
     const factory = new FDBFactory();
@@ -254,6 +486,12 @@ describe("one-time localStorage migration", () => {
       state: "removed",
       attempts: 1,
     });
+    expect(inspected.records).toEqual([
+      expect.objectContaining({
+        id: "legacy-safe",
+        document: expect.objectContaining({ schemaVersion: COMPOSITION_SCHEMA_VERSION }),
+      }),
+    ]);
     expect(JSON.stringify(inspected.meta)).not.toContain(raw);
   });
 
@@ -324,7 +562,7 @@ describe("one-time localStorage migration", () => {
   it("quarantines a future schema and records an explicit start-fresh bypass without deleting it", async () => {
     const factory = new FDBFactory();
     const raw = JSON.stringify({
-      schemaVersion: 2,
+      schemaVersion: COMPOSITION_SCHEMA_VERSION + 1,
       id: "future",
       name: "Future",
       root: [],
@@ -339,7 +577,11 @@ describe("one-time localStorage migration", () => {
     });
     expect(await provider.initialization.initialize()).toMatchObject({
       status: "recovery-required",
-      recovery: { kind: "quarantined", foundSchemaVersion: 2, sourcePreserved: true },
+      recovery: {
+        kind: "quarantined",
+        foundSchemaVersion: COMPOSITION_SCHEMA_VERSION + 1,
+        sourcePreserved: true,
+      },
     });
     expect((await inspectDatabase(factory)).records).toEqual([]);
 
@@ -352,7 +594,7 @@ describe("one-time localStorage migration", () => {
     expect(metaRecord<MigrationMeta>(inspected.meta, COMPOSER_META_KEYS.migration)).toEqual({
       key: "migration",
       state: "bypassed",
-      foundSchemaVersion: 2,
+      foundSchemaVersion: COMPOSITION_SCHEMA_VERSION + 1,
       rawBackup: raw,
       recordId: "composition-1",
     });
@@ -405,7 +647,12 @@ describe("one-time localStorage migration", () => {
 
   it("serializes concurrent start-fresh actions after future-schema quarantine", async () => {
     const factory = new FDBFactory();
-    const raw = JSON.stringify({ schemaVersion: 2, id: "future", name: "Future", root: [] });
+    const raw = JSON.stringify({
+      schemaVersion: COMPOSITION_SCHEMA_VERSION + 1,
+      id: "future",
+      name: "Future",
+      root: [],
+    });
     const storage = new MemoryLegacyStorage(raw);
     let generated = 0;
     const options = {
@@ -564,7 +811,7 @@ describe("typed IndexedDB lifecycle failures", () => {
 
   it("reports a newer database version explicitly", async () => {
     const factory = new FDBFactory();
-    (await openAtVersion(factory, 2)).close();
+    (await openAtVersion(factory, COMPOSER_DATABASE_VERSION + 1)).close();
     const provider = createIndexedDbCompositionProvider({ idbFactory: factory });
     expect(await provider.initialization.initialize()).toMatchObject({
       status: "error",

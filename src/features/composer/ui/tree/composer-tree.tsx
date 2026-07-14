@@ -33,12 +33,20 @@
 
 import { useEffect, useMemo, useRef } from "preact/hooks";
 import type { JSX } from "preact";
-import type { ComponentManifest, CompositionDocument, InsertionTarget } from "@/composer";
+import type {
+  ComponentManifest,
+  CompositionDocument,
+  GlobalTemplateOutletTarget,
+  InsertionTarget,
+  LinkedEditorLifecycleActions,
+  LinkedEditorPresentation,
+} from "@/composer";
 import { VIRTUAL_ROOT_SLOT_ID } from "@/composer";
 import { EllipsisIcon, PageIcon } from "@/components/icons";
 import type { ComposerManifestEntry } from "@/styleguide/data/composer-registry";
 import { buildCatalogById, buildDocumentIndex, countDescendants } from "./tree-helpers";
 import { TreeNode } from "./tree-node";
+import type { ReuseAuthoringActionResult } from "@/features/composer/ui/shared/reuse-authoring-contract";
 
 export interface ComposerTreeProps {
   document: CompositionDocument;
@@ -62,6 +70,15 @@ export interface ComposerTreeProps {
   onOpenInsertMenu: (target: InsertionTarget, trigger: HTMLElement) => void;
   /** Hides every mutating affordance (Add/move/remove) — e.g. while in Preview mode. */
   readOnly?: boolean;
+  /** Provider-checked publish/reassign operation for a real empty component slot. */
+  onSetGlobalTemplateOutlet?: (
+    target: GlobalTemplateOutletTarget,
+    label: string,
+  ) => Promise<ReuseAuthoringActionResult>;
+  /** Linked source status sits OUTSIDE this strictly local component tree. */
+  linkedPresentation?: LinkedEditorPresentation;
+  /** Provider-owning caller injects navigation/retry; this tree owns no lifecycle state. */
+  linkedActions?: Pick<LinkedEditorLifecycleActions, "onOpenSource" | "onRetry">;
 }
 
 export function ComposerTree({
@@ -79,6 +96,9 @@ export function ComposerTree({
   onOpenNodeMenu,
   onOpenInsertMenu,
   readOnly = false,
+  onSetGlobalTemplateOutlet,
+  linkedPresentation = { state: "local" },
+  linkedActions,
 }: ComposerTreeProps): JSX.Element {
   const catalogById = useMemo(() => buildCatalogById(entries), [entries]);
   const documentIndex = useMemo(() => buildDocumentIndex(document, manifest), [document, manifest]);
@@ -105,6 +125,46 @@ export function ComposerTree({
 
   return (
     <div class="sg-composer-tree">
+      {linkedPresentation.state === "resolved" && (
+        <section class="sg-composer-linked-frame" data-sg-linked-frame="resolved" aria-label="Linked Global template">
+          <p>
+            <strong>Linked template</strong>
+            <span>{linkedPresentation.sourceName}</span>
+            <span>Outlet: {linkedPresentation.outletLabel || linkedPresentation.outletId}</span>
+            <span>Locked</span>
+          </p>
+          {linkedActions?.onOpenSource && (
+            <button
+              type="button"
+              class="sg-composer-tree-action sg-composer-linked-open"
+              onClick={() => linkedActions.onOpenSource?.(linkedPresentation.sourceRecordId)}
+            >
+              Open source
+            </button>
+          )}
+        </section>
+      )}
+      {linkedPresentation.state === "blocked" && (
+        <section class="sg-composer-linked-frame" data-sg-linked-frame="blocked" role="status">
+          <p><strong>Linked template unavailable</strong> {linkedPresentation.message}</p>
+          <div>
+            {linkedActions?.onRetry && (
+              <button type="button" class="sg-composer-tree-action" onClick={() => linkedActions.onRetry?.()}>
+                Retry
+              </button>
+            )}
+            {linkedActions?.onOpenSource && (
+              <button
+                type="button"
+                class="sg-composer-tree-action sg-composer-linked-open"
+                onClick={() => linkedActions.onOpenSource?.(linkedPresentation.sourceRecordId)}
+              >
+                Open source
+              </button>
+            )}
+          </div>
+        </section>
+      )}
       <div
         class="sg-composer-tree-row sg-composer-tree-row-root"
         data-sg-selected={rootSelected}
@@ -176,6 +236,7 @@ export function ComposerTree({
               registerRowRef={registerRowRef}
               onOpenNodeMenu={onOpenNodeMenu}
               onOpenInsertMenu={onOpenInsertMenu}
+              onSetGlobalTemplateOutlet={onSetGlobalTemplateOutlet}
             />
           ))}
         </ul>

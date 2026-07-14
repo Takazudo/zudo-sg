@@ -1,7 +1,13 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { act, renderHook } from "@testing-library/preact";
 import { createSequentialIdFactory } from "@/composer";
-import { fixtureManifest, makeAbcDocument, resetFixtureIds } from "@/composer/__tests__/fixtures";
+import {
+  FIXTURE_COMPONENT_IDS as F,
+  fixtureManifest,
+  makeAbcDocument,
+  node,
+  resetFixtureIds,
+} from "@/composer/__tests__/fixtures";
 import { useComposerController, type ComposerController } from "../use-composer-controller";
 import { COMPOSER_DOCUMENT_STORAGE_KEY } from "../storage";
 import { LS_INSPECTOR_WIDTH, LS_TREE_WIDTH } from "../resizer-contract";
@@ -49,6 +55,34 @@ describe("useComposerController — save / reload / reset", () => {
     act(() => result.current.add({ parentId: "split", slotId: "right", index: 0 }, "does-not-exist"));
     expect(result.current.lastError).toMatch(/unknown component/i);
     expect(result.current.state.document.root[0]!.slots.right).toHaveLength(2);
+  });
+
+  it("reports accepted and rejected atomic Pattern forest insertions to its caller", () => {
+    const { result } = setup();
+    let accepted!: ReturnType<ComposerController["insertForest"]>;
+    act(() => {
+      accepted = result.current.insertForest(
+        [node(F.box, { label: "Pattern" }, {}, "source-pattern")],
+        { parentId: "split", slotId: "right", index: 1 },
+      );
+    });
+    expect(accepted).toEqual({ status: "inserted" });
+    expect(result.current.state.document.root[0]!.slots.right.map((item) => item.props.label)).toEqual([
+      "B",
+      "Pattern",
+      "C",
+    ]);
+
+    const beforeRejectedInsert = result.current.state.document;
+    let rejected!: ReturnType<ComposerController["insertForest"]>;
+    act(() => {
+      rejected = result.current.insertForest(
+        [node(F.box, { label: "Cannot fit" }, {}, "source-rejected")],
+        { parentId: "split", slotId: "left", index: 1 },
+      );
+    });
+    expect(rejected).toMatchObject({ status: "rejected", message: expect.stringMatching(/single-child/i) });
+    expect(result.current.state.document).toBe(beforeRejectedInsert);
   });
 
   it("reload picks up a change written by another tab", () => {
@@ -132,7 +166,18 @@ describe("useComposerController — typed callback seams", () => {
       "copy",
       "cut",
       "paste",
+      "insertForest",
       "duplicate",
+      "drop",
+      "publishPattern",
+      "publishGlobalTemplate",
+      "setGlobalTemplateOutlet",
+      "renameGlobalTemplateOutlet",
+      "reassignGlobalTemplateOutlet",
+      "clearPublication",
+      "bindConsumer",
+      "removeBinding",
+      "setRootPolicy",
       "select",
       "reveal",
       "toggleExpanded",

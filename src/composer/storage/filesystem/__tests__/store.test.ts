@@ -15,6 +15,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createSampleDocument } from "../../../sample/sample-document";
+import { COMPOSITION_SCHEMA_V1, COMPOSITION_SCHEMA_VERSION } from "../../../model/types";
 import type { CompositionRecord } from "../../../library";
 import {
   createFilesystemCompositionStore,
@@ -32,6 +33,14 @@ function record(id = "a", timestamp = T1): CompositionRecord {
   const document = createSampleDocument();
   document.id = id;
   return { id, createdAt: T1, updatedAt: timestamp, document };
+}
+
+function legacyRecord(id = "a", timestamp = T1): unknown {
+  const current = record(id, timestamp);
+  return {
+    ...current,
+    document: { ...current.document, schemaVersion: COMPOSITION_SCHEMA_V1 },
+  };
 }
 
 function jsonPath(id: string): string {
@@ -93,6 +102,99 @@ describe("filesystem composition store safety", () => {
     });
   });
 
+  it("serializes final dependency checks for Global-template source mutations", async () => {
+    const store = await createStore({ now: () => T2 });
+    const source = record("source");
+    source.document.publication = {
+      kind: "global-template",
+      outlet: { id: "outlet-main", label: "Main", target: { parentId: "split-1", slotId: "left" } },
+    };
+    const consumer = record("consumer");
+    consumer.document.binding = { sourceRecordId: "source", outletId: "outlet-main" };
+    await store.put(source, "source jsx");
+    await store.put(consumer, "consumer jsx");
+
+    await expect(store.deleteWithDependencyCheck("source")).resolves.toMatchObject({
+      status: "blocked",
+      dependents: [{ summary: { id: "consumer" }, binding: consumer.document.binding }],
+    });
+    await expect(store.unpublishWithDependencyCheck("source")).resolves.toMatchObject({
+      status: "blocked",
+      dependents: [{ summary: { name: "Product overview" } }],
+    });
+    await expect(store.clear()).rejects.toMatchObject({ operation: "clear", code: "blocked" });
+    expect(JSON.parse(await readFile(jsonPath("source"), "utf8"))).toMatchObject({
+      document: { publication: { kind: "global-template" } },
+    });
+
+    await store.delete("consumer");
+    await expect(store.unpublishWithDependencyCheck("source")).resolves.toEqual({ status: "unpublished" });
+    const unpublished = JSON.parse(await readFile(jsonPath("source"), "utf8"));
+    expect(unpublished).toMatchObject({ updatedAt: T2 });
+    expect(unpublished.document).not.toHaveProperty("publication");
+  });
+
+  it("keeps canonical binding intact when a lifecycle save cannot replace derived output", async () => {
+    const initial = await createStore();
+    const source = record("source");
+    source.document.publication = {
+      kind: "global-template",
+      outlet: { id: "outlet-main", label: "Main", target: { parentId: "split-1", slotId: "left" } },
+    };
+    const bound = record("consumer", T1);
+    bound.document.binding = { sourceRecordId: "source", outletId: "outlet-main" };
+    await initial.put(source, "source jsx");
+    await initial.put(bound, "bound jsx");
+
+    const failing = await createStore({
+      operations: {
+        rename: async (from, to) => {
+          if (to.endsWith(".tsx")) throw Object.assign(new Error("injected JSX rename failure"), { code: "EIO" });
+          await rename(from, to);
+        },
+      },
+    });
+    const detached = structuredClone(bound);
+    detached.updatedAt = T2;
+    delete detached.document.binding;
+    await expect(failing.saveLifecycleRecord(detached)).rejects.toMatchObject({
+      operation: "put",
+      code: "write-failed",
+    });
+    expect(JSON.parse(await readFile(jsonPath("consumer"), "utf8"))).toMatchObject({
+      updatedAt: T1,
+      document: { binding: { sourceRecordId: "source", outletId: "outlet-main" } },
+    });
+  });
+
+  it("saves a consumer queued after a Global-template source has been deleted and blocks only its output", async () => {
+    const diagnostic = "The linked Global template is unavailable, so its consumer module cannot be generated.";
+    const store = await createStore({
+      provideJsx: (value, request) => request.records.some((candidate) => candidate.id === value.document.binding?.sourceRecordId)
+        ? `jsx:${value.id}`
+        : { status: "blocked", reason: diagnostic },
+    });
+    const source = record("source");
+    source.document.publication = {
+      kind: "global-template",
+      outlet: { id: "outlet-main", label: "Main", target: { parentId: "split-1", slotId: "left" } },
+    };
+    await store.put(source, "source jsx");
+    await expect(store.deleteWithDependencyCheck("source")).resolves.toEqual({ status: "deleted" });
+
+    const lateConsumer = record("late-consumer");
+    lateConsumer.document.binding = { sourceRecordId: "source", outletId: "outlet-main" };
+    await expect(store.put(lateConsumer)).resolves.toMatchObject({
+      canonical: { status: "saved" },
+      derived: { status: "blocked", records: [{ recordId: "late-consumer", status: "blocked", reason: diagnostic }] },
+    });
+    expect(JSON.parse(await readFile(jsonPath("late-consumer"), "utf8"))).toMatchObject({
+      id: "late-consumer",
+      document: { binding: lateConsumer.document.binding },
+    });
+    await expect(readFile(jsxPath("late-consumer"), "utf8")).rejects.toMatchObject({ code: "ENOENT" });
+  });
+
   it("rejects a symlink root and a symlink file that resolves outside the root", async () => {
     const outside = join(sandbox, "outside");
     await mkdir(outside);
@@ -142,9 +244,16 @@ describe("filesystem composition store safety", () => {
     await writeFile(outside, "outside");
     await symlink(outside, jsxPath("a"));
 
-    await expect(store.put(record(), "new jsx")).rejects.toMatchObject({
-      operation: "put",
-      code: "blocked",
+    await expect(store.put(record(), "new jsx")).resolves.toMatchObject({
+      canonical: { status: "saved" },
+      derived: {
+        status: "blocked",
+        records: [{
+          recordId: "a",
+          status: "blocked",
+          staleArtifact: expect.stringContaining("not a regular file"),
+        }],
+      },
     });
     expect(await readFile(outside, "utf8")).toBe("outside");
     expect(JSON.parse(await readFile(jsonPath("a"), "utf8"))).toMatchObject({ id: "a" });
@@ -152,6 +261,142 @@ describe("filesystem composition store safety", () => {
 });
 
 describe("filesystem composition store recovery", () => {
+  it("keeps a valid consumer listable, readable, and saveable when its source JSON is invalid", async () => {
+    const initial = await createStore();
+    const source = record("source");
+    source.document.publication = {
+      kind: "global-template",
+      outlet: { id: "outlet-main", label: "Main", target: { parentId: "split-1", slotId: "left" } },
+    };
+    const consumer = record("consumer", T1);
+    consumer.document.binding = { sourceRecordId: "source", outletId: "outlet-main" };
+    await initial.put(source, "source output");
+    await initial.put(consumer, "stale consumer output");
+    await writeFile(jsonPath("source"), "{ invalid source JSON");
+
+    const diagnostic = "The linked Global template is unavailable, so its consumer module cannot be generated.";
+    const store = await createStore({
+      provideJsx: (value, request) => {
+        const sourceOutcome = request.sourceOutcomes.find((entry) => entry.id === value.document.binding?.sourceRecordId);
+        return sourceOutcome?.outcome.status === "invalid"
+          ? { status: "blocked", reason: diagnostic }
+          : `jsx:${value.id}`;
+      },
+    });
+
+    await expect(store.list()).resolves.toEqual([
+      expect.objectContaining({
+        id: "consumer",
+        derivedOutput: { recordId: "consumer", status: "blocked", reason: diagnostic },
+      }),
+    ]);
+    await expect(store.get("consumer")).resolves.toMatchObject({
+      status: "loaded",
+      record: { id: "consumer" },
+      derivedOutput: { recordId: "consumer", status: "blocked", reason: diagnostic },
+    });
+
+    const edited = structuredClone(consumer);
+    edited.updatedAt = T2;
+    edited.document.name = "Still canonical";
+    await expect(store.put(edited)).resolves.toMatchObject({
+      canonical: { status: "saved" },
+      derived: { status: "blocked", records: [{ recordId: "consumer", status: "blocked", reason: diagnostic }] },
+    });
+    expect(JSON.parse(await readFile(jsonPath("consumer"), "utf8"))).toMatchObject({
+      updatedAt: T2,
+      document: { name: "Still canonical", binding: consumer.document.binding },
+    });
+  });
+
+  it("keeps a linked consumer canonical when its source disappears and removes stale generated output", async () => {
+    const initial = await createStore();
+    const source = record("source");
+    source.document.publication = {
+      kind: "global-template",
+      outlet: { id: "outlet-main", label: "Main", target: { parentId: "split-1", slotId: "left" } },
+    };
+    const consumer = record("consumer", T1);
+    consumer.document.binding = { sourceRecordId: "source", outletId: "outlet-main" };
+    await initial.put(source, "source output");
+    await initial.put(consumer, "old consumer output");
+    await unlink(jsonPath("source"));
+    await unlink(jsxPath("source"));
+
+    const diagnostic = "The linked Global template is unavailable, so its consumer module cannot be generated.";
+    const store = await createStore({
+      provideJsx: (value, request) => {
+        expect(request.records.map((candidate) => candidate.id)).toEqual(["consumer"]);
+        expect(request.targetIds).toEqual(["consumer"]);
+        return value.id === "consumer" ? { status: "blocked", reason: diagnostic } : "unexpected";
+      },
+    });
+    const edited = structuredClone(consumer);
+    edited.updatedAt = T2;
+    edited.document.name = "Local edits survive";
+
+    await expect(store.put(edited)).resolves.toMatchObject({
+      canonical: { status: "saved" },
+      derived: { status: "blocked", records: [{ recordId: "consumer", status: "blocked", reason: diagnostic }] },
+    });
+    await expect(readFile(jsxPath("consumer"), "utf8")).rejects.toMatchObject({ code: "ENOENT" });
+    await expect(store.get("consumer")).resolves.toMatchObject({
+      status: "loaded",
+      record: { document: { name: "Local edits survive", binding: consumer.document.binding } },
+      derivedOutput: { status: "blocked", reason: diagnostic },
+    });
+  });
+
+  it("atomically rewrites a valid v1 canonical record as v2 without changing identity or timestamps", async () => {
+    const legacy = legacyRecord("a", T2) as Record<string, unknown>;
+    const original = `${JSON.stringify(legacy, null, 2)}\n`;
+    await mkdir(root, { recursive: true });
+    await writeFile(jsonPath("a"), original);
+    await writeFile(jsxPath("a"), "stale JSX");
+    const store = await createStore();
+
+    expect(await store.get("a")).toMatchObject({
+      status: "loaded",
+      decodedFromSchemaVersion: COMPOSITION_SCHEMA_V1,
+      record: {
+        id: "a",
+        createdAt: T1,
+        updatedAt: T2,
+        document: { id: "a", schemaVersion: COMPOSITION_SCHEMA_VERSION },
+      },
+    });
+    expect(JSON.parse(await readFile(jsonPath("a"), "utf8"))).toEqual({
+      ...legacy,
+      document: { ...(legacy.document as object), schemaVersion: COMPOSITION_SCHEMA_VERSION },
+    });
+    expect(await readFile(jsxPath("a"), "utf8")).toBe(`jsx:a:${T2}`);
+  });
+
+  it("preserves the exact v1 canonical bytes when its atomic migration replacement fails", async () => {
+    const legacy = legacyRecord("a") as Record<string, unknown>;
+    const original = JSON.stringify(legacy);
+    await mkdir(root, { recursive: true });
+    await writeFile(jsonPath("a"), original);
+    await writeFile(jsxPath("a"), "preserve JSX");
+    const provideJsx = vi.fn(() => "must not run");
+    const store = await createStore({
+      provideJsx,
+      operations: {
+        rename: async (from, to) => {
+          if (to.endsWith(".composition.json")) {
+            throw Object.assign(new Error("injected v1 migration failure"), { code: "EIO" });
+          }
+          await rename(from, to);
+        },
+      },
+    });
+
+    await expect(store.get("a")).rejects.toMatchObject({ operation: "get", code: "write-failed" });
+    expect(await readFile(jsonPath("a"), "utf8")).toBe(original);
+    expect(await readFile(jsxPath("a"), "utf8")).toBe("preserve JSX");
+    expect(provideJsx).not.toHaveBeenCalled();
+  });
+
   it("leaves the old pair intact when canonical JSON rename fails", async () => {
     const initial = await createStore();
     await initial.put(record("a", T1), "old jsx");
@@ -194,12 +439,12 @@ describe("filesystem composition store recovery", () => {
       },
     });
 
-    await expect(failing.put(record("a", T2), "new jsx")).rejects.toMatchObject({
-      operation: "put",
-      code: "write-failed",
+    await expect(failing.put(record("a", T2), "new jsx")).resolves.toMatchObject({
+      canonical: { status: "saved" },
+      derived: { status: "blocked", records: [{ recordId: "a", status: "blocked" }] },
     });
     expect(JSON.parse(await readFile(jsonPath("a"), "utf8"))).toMatchObject({ updatedAt: T2 });
-    expect(await readFile(jsxPath("a"), "utf8")).toBe("old jsx");
+    await expect(readFile(jsxPath("a"), "utf8")).rejects.toMatchObject({ code: "ENOENT" });
 
     const outcome = await failing.get("a");
     expect(outcome).toMatchObject({ status: "loaded", record: { updatedAt: T2 } });
@@ -230,10 +475,26 @@ describe("filesystem composition store recovery", () => {
     expect(await store.get("a")).toMatchObject({ status: "invalid" });
     expect(provideJsx).not.toHaveBeenCalled();
     expect(await readFile(jsxPath("a"), "utf8")).toBe("preserve");
-    await expect(store.list()).rejects.toMatchObject({ operation: "list", code: "validation" });
+    await expect(store.list()).resolves.toEqual([]);
+    expect(provideJsx).not.toHaveBeenCalled();
 
     await writeFile(jsonPath("a"), JSON.stringify(record("b")));
     expect(await store.get("a")).toMatchObject({ status: "invalid" });
+    expect(provideJsx).not.toHaveBeenCalled();
+
+    const future = JSON.stringify({
+      ...record("a"),
+      document: {
+        ...record("a").document,
+        schemaVersion: COMPOSITION_SCHEMA_VERSION + 1,
+      },
+    });
+    await writeFile(jsonPath("a"), future);
+    expect(await store.get("a")).toMatchObject({
+      status: "future-schema",
+      foundSchemaVersion: COMPOSITION_SCHEMA_VERSION + 1,
+    });
+    expect(await readFile(jsonPath("a"), "utf8")).toBe(future);
     expect(provideJsx).not.toHaveBeenCalled();
   });
 });

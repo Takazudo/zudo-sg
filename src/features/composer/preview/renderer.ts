@@ -48,7 +48,13 @@ import type {
 import { VIRTUAL_ROOT_SLOT_ID, classifyNode, createManifest } from "@/composer";
 import type { ComposerEntry } from "@/styleguide/data/composer-registry";
 import { toManifestEntry } from "@/styleguide/data/composer-registry";
-import { RESERVED_PROP_KEYS, serializeRect, type PreviewSession, type SerializedRect } from "./protocol";
+import {
+  RESERVED_PROP_KEYS,
+  serializeRect,
+  type PreviewLinkedSourceContext,
+  type PreviewSession,
+  type SerializedRect,
+} from "./protocol";
 import { slotFlow, type SlotFlow } from "./slot-flow";
 
 // ── Menu focus tokens (issue #256) ──────────────────────────────────────────
@@ -324,6 +330,10 @@ function safeProps(props: JsonObject): Record<string, unknown> {
 
 export interface CompositionCanvasProps {
   document: CompositionDocument;
+  /** Canonical consumer identity for owner-qualified runtime keys. */
+  localRecordId?: string;
+  /** Optional resolved, read-only Global-template source/outlet context. */
+  linked?: PreviewLinkedSourceContext | null;
   /** The TRUSTED runtime registry — retains real component functions. */
   entries: readonly ComposerEntry[];
   session: PreviewSession;
@@ -340,6 +350,8 @@ export interface CompositionCanvasProps {
   onSelect: (nodeId: string | null) => void;
   /** An insert point was activated. Carries #245's insert-at-index target. */
   onRequestAdd: (target: InsertionTarget) => void;
+  /** Explicit linked-source navigation — never a source-node selection. */
+  onOpenSource?: (sourceRecordId: string) => void;
   /** The SELECTED node's chrome "⋯" was activated (issue #256). */
   onRequestNodeMenu: (nodeId: string, rect: SerializedRect, focusToken: string) => void;
   /** An insert point's "⋯" was activated (issue #256). */
@@ -370,6 +382,22 @@ export interface CompositionCanvasProps {
   onNodeError?: (nodeId: string, message: string) => void;
 }
 
+type RuntimeOwner = "local" | "global-template";
+
+interface RuntimeNodeInfo {
+  owner: RuntimeOwner;
+  /** Injective across a local/source collision, safe for Preact and DOM identity. */
+  runtimeKey: string;
+}
+
+function ownerSegment(value: string): string {
+  return Array.from(value, (character) => character.codePointAt(0)!.toString(16).padStart(6, "0")).join("");
+}
+
+function runtimeKey(owner: RuntimeOwner, recordId: string, nodeId: string): string {
+  return `${owner}:${ownerSegment(recordId)}:node:${ownerSegment(nodeId)}`;
+}
+
 /**
  * Renders a whole Composition. Every node gets a stable wrapper carrying its id;
  * in Edit mode it also gets out-of-flow chrome and an insert point at EVERY
@@ -378,11 +406,14 @@ export interface CompositionCanvasProps {
 export function CompositionCanvas(props: CompositionCanvasProps): JSX.Element {
   const {
     document,
+    localRecordId = document.id,
+    linked = null,
     entries,
     session,
     revision = 0,
     onSelect,
     onRequestAdd,
+    onOpenSource,
     onRequestNodeMenu,
     onRequestInsertMenu,
     onCommitInlineEdit,
@@ -390,6 +421,31 @@ export function CompositionCanvas(props: CompositionCanvasProps): JSX.Element {
     onNodeError,
   } = props;
   const edit = session.mode === "edit";
+
+  // Ownership is tracked by object identity, never a raw node id: a source and
+  // consumer may both legitimately contain `node-1`. The controller/session
+  // only ever names local ids; source branches get a distinct runtime key and
+  // are filtered out before any mutation path below.
+  const runtimeNodes = useMemo(() => {
+    const nodes = new WeakMap<CompositionNode, RuntimeNodeInfo>();
+    const register = (forest: readonly CompositionNode[], owner: RuntimeOwner, recordId: string): void => {
+      for (const node of forest) {
+        nodes.set(node, { owner, runtimeKey: runtimeKey(owner, recordId, node.id) });
+        for (const children of Object.values(node.slots)) register(children, owner, recordId);
+      }
+    };
+    register(document.root, "local", localRecordId);
+    if (linked) register(linked.sourceDocument.root, "global-template", linked.sourceRecordId);
+    return nodes;
+  }, [document, linked, localRecordId]);
+
+  const runtimeInfo = (node: CompositionNode): RuntimeNodeInfo =>
+    runtimeNodes.get(node) ?? { owner: "local", runtimeKey: runtimeKey("local", localRecordId, node.id) };
+  const localNode = (node: CompositionNode): boolean => runtimeInfo(node).owner === "local";
+  const resetToken = useMemo(
+    () => (linked ? [document, linked.sourceDocument] : document),
+    [document, linked?.sourceDocument],
+  );
 
   const entryById = useMemo(
     () => new Map(entries.map((entry) => [entry.componentId, entry])),
@@ -473,7 +529,7 @@ export function CompositionCanvas(props: CompositionCanvasProps): JSX.Element {
     finishingRef.current = false;
 
     const wrapper = canvasRef.current?.querySelector<HTMLElement>(
-      `[data-zc-node-id="${escapeAttrValue(active.nodeId)}"]`,
+      `[data-zc-owner="local"][data-zc-node-id="${escapeAttrValue(active.nodeId)}"]`,
     );
     const componentRoot = wrapper
       ? (Array.from(wrapper.children).find((c) => !c.classList.contains("zc-chrome")) as
@@ -676,6 +732,9 @@ export function CompositionCanvas(props: CompositionCanvasProps): JSX.Element {
     if (sessionRef.current && target?.closest(`[${INLINE_EDITING_ATTR}]`)) return;
     if (!swallow(event)) return;
     const host = target?.closest("[data-zc-node-id]");
+    // A source wrapper may have the same raw id as a local wrapper. Only the
+    // explicitly local owner can ever enter the controller selection path.
+    if (host && host.getAttribute("data-zc-owner") !== "local") return;
     const nodeId = host?.getAttribute("data-zc-node-id") ?? null;
     // Click AGAIN on the already-selected node opens its inline editor (if it has
     // one); the first click on an unselected node just selects it.
@@ -693,6 +752,7 @@ export function CompositionCanvas(props: CompositionCanvasProps): JSX.Element {
     const target = event.target as Element | null;
     if (target?.closest("[data-zc-affordance]")) return;
     const host = target?.closest("[data-zc-node-id]");
+    if (host && host.getAttribute("data-zc-owner") !== "local") return;
     const nodeId = host?.getAttribute("data-zc-node-id") ?? null;
     if (nodeId && enterInlineSession(nodeId)) event.preventDefault();
   };
@@ -714,7 +774,16 @@ export function CompositionCanvas(props: CompositionCanvasProps): JSX.Element {
    * that would replace this document has its default suppressed — and only that.
    */
   const onPreviewClickCapture = (event: MouseEvent): void => {
-    const anchor = (event.target as Element | null)?.closest("a[href]");
+    const target = event.target as Element | null;
+    const owner = target?.closest("[data-zc-node-id]")?.getAttribute("data-zc-owner");
+    // A source shell is a visual reference, not a second live application in
+    // the consumer. The dedicated "Open source" control is the only route out.
+    if (owner === "global-template") {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+    const anchor = target?.closest("a[href]");
     if (!anchor) return;
     const href = anchor.getAttribute("href") ?? "";
     if (href === "" || href.startsWith("#")) return; // in-page: harmless
@@ -856,13 +925,15 @@ export function CompositionCanvas(props: CompositionCanvasProps): JSX.Element {
    */
   function renderSlotChildren(
     children: readonly CompositionNode[],
-    parentId: string | null,
-    slotId: string,
+    target: InsertionTarget | undefined,
     label: string,
     flow: SlotFlow,
     single: boolean,
   ): ComponentChildren[] {
-    if (!edit) return children.map((child) => renderNode(child));
+    // Source-owned slots have no target at all. The one exception is the
+    // resolved outlet, which deliberately receives the LOCAL virtual-root
+    // target even though it is projected inside a source component.
+    if (!edit || !target) return children.map((child) => renderNode(child));
 
     const out: ComponentChildren[] = [];
     const addable = !single || children.length === 0;
@@ -873,7 +944,7 @@ export function CompositionCanvas(props: CompositionCanvasProps): JSX.Element {
         // also its end, so `empty` never disagrees with `isEnd`.
         out.push(
           insertPoint(
-            { parentId, slotId, index },
+            { ...target, index },
             label,
             flow,
             children.length === 0,
@@ -900,13 +971,24 @@ export function CompositionCanvas(props: CompositionCanvasProps): JSX.Element {
     // the live text is owned imperatively (see the session layout effect), so a
     // re-render can never reset the caret. Exiting re-keys the body (below),
     // remounting it with the real value and leaving no duplicate text node.
-    if (inlineSession?.nodeId === node.id) componentProps[inlineSession.fieldKey] = "";
+    if (localNode(node) && inlineSession?.nodeId === node.id) componentProps[inlineSession.fieldKey] = "";
     const flow = slotFlow(node);
+    const info = runtimeInfo(node);
 
     for (const slot of definition.slots ?? []) {
-      const children = node.slots[slot.id] ?? [];
+      const isProjectedOutlet =
+        info.owner === "global-template" &&
+        linked !== null &&
+        node.id === linked.outlet.target.parentId &&
+        slot.id === linked.outlet.target.slotId;
+      const children = isProjectedOutlet ? document.root : (node.slots[slot.id] ?? []);
       const single = slot.cardinality === "single";
-      const rendered = renderSlotChildren(children, node.id, slot.id, slot.label, flow, single);
+      const target = isProjectedOutlet
+        ? { parentId: null, slotId: VIRTUAL_ROOT_SLOT_ID, index: 0 }
+        : info.owner === "local"
+          ? { parentId: node.id, slotId: slot.id, index: 0 }
+          : undefined;
+      const rendered = renderSlotChildren(children, target, slot.label, flow, single);
       // A `single` slot takes the child ITSELF (not a 1-element array) so a
       // component that expects one VNode in a named prop gets exactly that —
       // and `undefined` when empty, never a truthy `[]` that would defeat a
@@ -951,11 +1033,13 @@ export function CompositionCanvas(props: CompositionCanvasProps): JSX.Element {
   }
 
   function renderNode(node: CompositionNode): JSX.Element {
+    const info = runtimeInfo(node);
+    const isLocal = info.owner === "local";
     const entry = entryById.get(node.componentId);
     const diagnostic = classifyNode(node, manifest);
     const opaque = diagnostic.opaque || !entry;
     const label = entry?.title ?? node.componentId;
-    const selected = session.selectedId === node.id;
+    const selected = isLocal && session.selectedId === node.id;
 
     const body: ComponentChildren =
       opaque || !entry ? renderOpaque(node, diagnostic) : renderComponent(node, entry);
@@ -972,7 +1056,7 @@ export function CompositionCanvas(props: CompositionCanvasProps): JSX.Element {
     // their only movement), and only when a drop sink is wired. `dragstart`
     // sets the transfer data SYNCHRONOUSLY and DEFERS the drag-state mutation.
     const grip =
-      selected && onDropNode && !opaque
+      isLocal && selected && onDropNode && !opaque
         ? h(
             "button",
             {
@@ -1023,14 +1107,16 @@ export function CompositionCanvas(props: CompositionCanvasProps): JSX.Element {
     return h(
       "div",
       {
-        key: `zc-node-${node.id}`,
-        class: "zc-node",
+        key: info.runtimeKey,
+        class: `zc-node${isLocal ? "" : " zc-node--source"}`,
         "data-zc-node-id": node.id,
+        "data-zc-owner": info.owner,
+        "data-zc-runtime-key": info.runtimeKey,
         "data-zc-selected": selected ? "" : undefined,
         "data-zc-opaque": opaque ? "" : undefined,
       },
       // Both children are KEYED — see the DOM-identity note in the module header.
-      edit
+      edit && isLocal
         ? h(
             "span",
             { key: "zc-chrome", class: "zc-chrome", "aria-hidden": selected ? undefined : "true" },
@@ -1042,21 +1128,34 @@ export function CompositionCanvas(props: CompositionCanvasProps): JSX.Element {
         // Keyed DIFFERENTLY in edit vs read mode: entering/exiting a session
         // remounts the body, so the imperatively-managed editing DOM is fully
         // discarded on exit and can never leave a duplicate text node.
-        { key: inlineSession?.nodeId === node.id ? "zc-body-editing" : "zc-body" },
+        { key: isLocal && inlineSession?.nodeId === node.id ? "zc-body-editing" : "zc-body" },
         h(
           NodeErrorBoundary,
           {
-            nodeId: node.id,
+            // The owner-qualified key keeps a source failure boundary separate
+            // from a colliding local node's boundary.
+            nodeId: info.runtimeKey,
+            // Host diagnostics retain local canonical ids; a source failure is
+            // deliberately owner-qualified so it cannot be mistaken for a
+            // mutable consumer node with the same raw id.
+            reportNodeId: isLocal ? node.id : info.runtimeKey,
             componentId: node.componentId,
             // The DOCUMENT object, not the revision: a session-only message
             // (selection, theme, mode) keeps the same document reference, so
             // clicking around does not churn every latched error boundary.
-            resetToken: document,
+            resetToken,
             onError: onNodeError,
           },
           body,
         ),
       ),
+      !isLocal
+        ? h(
+            "span",
+            { class: "zc-source-lock", "aria-hidden": "true" },
+            "Linked source · locked",
+          )
+        : null,
     );
   }
 
@@ -1077,14 +1176,39 @@ export function CompositionCanvas(props: CompositionCanvasProps): JSX.Element {
       // stopPropagation can keep word-select from restarting the session.
       onDblClick: edit ? onDblClick : undefined,
     },
-    renderSlotChildren(
-      document.root,
-      null,
-      VIRTUAL_ROOT_SLOT_ID,
-      "the document",
-      "vertical",
-      false,
-    ),
+    linked
+      ? h(
+          "div",
+          { class: "zc-linked-frame", "data-zc-linked-frame": "", role: "status" },
+          h("span", { class: "zc-linked-frame-title" }, "Linked Global template"),
+          h("span", { class: "zc-linked-frame-detail" }, linked.sourceDocument.name),
+          h("span", { class: "zc-linked-frame-outlet" }, `Outlet: ${linked.outlet.label || linked.outlet.id}`),
+          h("span", { class: "zc-linked-frame-lock" }, "Locked"),
+          h(
+            "button",
+            {
+              type: "button",
+              class: "zc-linked-frame-open",
+              "data-zc-affordance": "",
+              onClick: () => onOpenSource?.(linked.sourceRecordId),
+            },
+            "Open source",
+          ),
+        )
+      : null,
+    linked
+      ? h(
+          "section",
+          { class: "zc-linked-shell", "data-zc-linked-shell": "", "aria-label": "Linked Global template" },
+          renderSlotChildren(linked.sourceDocument.root, undefined, "linked source", "vertical", false),
+        )
+      : renderSlotChildren(
+          document.root,
+          { parentId: null, slotId: VIRTUAL_ROOT_SLOT_ID, index: 0 },
+          "the document",
+          "vertical",
+          false,
+        ),
   );
 }
 
@@ -1092,6 +1216,7 @@ export function CompositionCanvas(props: CompositionCanvasProps): JSX.Element {
 
 interface NodeErrorBoundaryProps {
   nodeId: string;
+  reportNodeId?: string;
   componentId: string;
   /** Changing this clears a latched error — see `getDerivedStateFromProps`. */
   resetToken: unknown;
@@ -1132,7 +1257,7 @@ class NodeErrorBoundary extends Component<NodeErrorBoundaryProps, NodeErrorBound
   componentDidCatch(error: unknown): void {
     const message = error instanceof Error ? error.message : String(error);
     this.setState({ error: message });
-    this.props.onError?.(this.props.nodeId, message);
+    this.props.onError?.(this.props.reportNodeId ?? this.props.nodeId, message);
   }
 
   render(): ComponentChildren {

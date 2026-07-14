@@ -13,17 +13,29 @@
 import type { ComposerFieldMeta, JsonValue } from "@zudo-sg/ui";
 import type {
   ComponentManifest,
+  CompositionBinding,
   CompositionDocument,
   CompositionNode,
+  GlobalTemplateOutletTarget,
   InsertionTarget,
   JsonObject,
+  PublicationDependencyGuard,
+  ResolvedGlobalTemplateOutletContract,
+  RootPolicy,
 } from "./types";
 import { VIRTUAL_ROOT_SLOT_ID } from "./types";
 import type { IdFactory } from "./id-factory";
 import { cloneJson, isJsonSafe } from "./json";
 import { indexDocument } from "./index-model";
+import { isSafeCompositionRecordId } from "./record-identity";
 import { RESERVED_PROP_KEYS } from "./reserved-keys";
-import { isNodeOpaque, validateInsertionTarget } from "./validate";
+import {
+  effectiveRootPolicy,
+  isNodeOpaque,
+  validateInsertionTarget,
+  validateRootForest,
+  validateRootInsertion,
+} from "./validate";
 
 export type CommandResult =
   | {
@@ -36,7 +48,52 @@ export type CommandResult =
       /** False when a command was a valid no-op (e.g. reorder at a boundary). */
       changed: boolean;
     }
-  | { ok: false; error: string };
+  | { ok: false; error: string; code?: CommandErrorCode };
+
+/** Stable codes for policy/reuse rejections; existing command callers may keep using `error`. */
+export type CommandErrorCode =
+  | "invalid-outlet"
+  | "outlet-reserved"
+  | "outlet-owner-removal"
+  | "publication-conflict"
+  | "empty-pattern-root"
+  | "dependent-bindings"
+  | "invalid-dependency-guard"
+  | "binding-conflict"
+  | "self-binding"
+  | "cross-provider-binding"
+  | "nested-binding"
+  | "unresolved-root-policy"
+  | "root-cardinality"
+  | "root-accepts"
+  | "invalid-insertion-target"
+  | "empty-forest"
+  | "forest-component-unavailable"
+  | "forest-cardinality"
+  | "forest-node-id-collision";
+
+function commandError(code: CommandErrorCode, error: string): CommandResult {
+  return { ok: false, code, error };
+}
+
+function rootPolicyError(error: string): CommandResult {
+  if (/until its Global template outlet is resolved/i.test(error)) {
+    return commandError("unresolved-root-policy", error);
+  }
+  if (/only one root component/i.test(error)) return commandError("root-cardinality", error);
+  return commandError("root-accepts", error);
+}
+
+function insertionTargetError(error: string): CommandResult {
+  if (/Global template outlet is reserved/i.test(error)) return commandError("outlet-reserved", error);
+  return { ok: false, error };
+}
+
+/** Forest insertion promises a typed reason for every rejection. */
+function forestInsertionTargetError(error: string): CommandResult {
+  if (/Global template outlet is reserved/i.test(error)) return commandError("outlet-reserved", error);
+  return commandError("invalid-insertion-target", error);
+}
 
 /** Build a fast id → node lookup over a document. */
 function nodeLookup(document: CompositionDocument, manifest: ComponentManifest) {
@@ -73,20 +130,31 @@ export function addNode(
   target: InsertionTarget,
   componentId: string,
   idFactory: IdFactory,
+  rootPolicy?: RootPolicy,
 ): CommandResult {
   const next = cloneJson(document);
   const index = indexDocument(next, manifest);
   const locate = (id: string): CompositionNode | undefined => index.byId.get(id)?.node;
 
   const validation = validateInsertionTarget(next, manifest, target, locate);
-  if (!validation.ok) return { ok: false, error: validation.error ?? "invalid insertion target" };
+  if (!validation.ok) return insertionTargetError(validation.error ?? "invalid insertion target");
 
   const entry = manifest.get(componentId);
   if (!entry) {
     return { ok: false, error: `Cannot add unknown component "${componentId}"` };
   }
 
-  // Slot-level acceptance + cardinality (the virtual root accepts anything).
+  if (target.parentId === null) {
+    const rootValidation = validateRootInsertion(
+      next.root.length,
+      componentId,
+      effectiveRootPolicy(document, rootPolicy),
+    );
+    if (!rootValidation.ok) return rootPolicyError(rootValidation.error ?? "invalid consumer root policy");
+  }
+
+  // Slot-level acceptance + cardinality. Virtual-root rules come from the
+  // effective consumer policy above rather than an unrestricted shortcut.
   if (target.parentId !== null) {
     const parent = locate(target.parentId)!;
     const parentEntry = manifest.get(parent.componentId)!;
@@ -250,6 +318,52 @@ function subtreeIds(node: CompositionNode, acc: Set<string> = new Set()): Set<st
 }
 
 /**
+ * Reject deleting the exposed outlet's owner or any ancestor. Removing either
+ * would leave persisted publication metadata pointing at a nonexistent slot;
+ * callers must first reassign the outlet or clear publication explicitly.
+ */
+function outletRemovalError(
+  document: CompositionDocument,
+  manifest: ComponentManifest,
+  nodeId: string,
+): CommandResult | null {
+  const publication = document.publication;
+  if (publication?.kind !== "global-template") return null;
+
+  const index = indexDocument(document, manifest);
+  let currentId: string | null = publication.outlet.target.parentId;
+  while (currentId !== null) {
+    if (currentId === nodeId) {
+      return commandError(
+        "outlet-owner-removal",
+        "Cannot remove a Global template outlet owner or its ancestor until the outlet is reassigned or publication is cleared",
+      );
+    }
+    currentId = index.byId.get(currentId)?.parentId ?? null;
+  }
+  return null;
+}
+
+function patternRootRemovalError(
+  document: CompositionDocument,
+  nodeId: string,
+  locationParentId: string | null,
+): CommandResult | null {
+  if (
+    document.publication?.kind === "pattern"
+    && locationParentId === null
+    && document.root.length === 1
+    && document.root[0]?.id === nodeId
+  ) {
+    return commandError(
+      "empty-pattern-root",
+      "A published Pattern must retain at least one root component; clear publication before removing its last root",
+    );
+  }
+  return null;
+}
+
+/**
  * Remove a node (and its whole subtree) from its parent slot. Returns a repaired
  * selection: if the current selection survived the removal it is kept; otherwise
  * it falls back to the sibling that shifts into the removed slot index, then the
@@ -266,6 +380,11 @@ export function removeNode(
   const index = indexDocument(next, manifest);
   const location = index.byId.get(nodeId);
   if (!location) return { ok: false, error: `Node "${nodeId}" not found` };
+
+  const outletGuard = outletRemovalError(document, manifest, nodeId);
+  if (outletGuard) return outletGuard;
+  const patternGuard = patternRootRemovalError(document, nodeId, location.parentId);
+  if (patternGuard) return patternGuard;
 
   const array =
     location.parentId === null
@@ -307,6 +426,308 @@ export function repairSelection(
   return document.root[0]?.id ?? null;
 }
 
+// ── Publication / outlet / binding commands (Composition reuse) ────────────
+
+function outletTargetError(
+  document: CompositionDocument,
+  manifest: ComponentManifest,
+  target: GlobalTemplateOutletTarget,
+): CommandResult | null {
+  const index = indexDocument(document, manifest);
+  const parent = index.byId.get(target.parentId)?.node;
+  if (!parent) {
+    return commandError(
+      "invalid-outlet",
+      `Global template outlet owner "${target.parentId}" was not found`,
+    );
+  }
+  if (isNodeOpaque(parent, manifest)) {
+    return commandError(
+      "invalid-outlet",
+      `Global template outlet owner "${target.parentId}" is unavailable or structurally invalid`,
+    );
+  }
+  const entry = manifest.get(parent.componentId)!;
+  if (!entry.slots.some((slot) => slot.id === target.slotId)) {
+    return commandError(
+      "invalid-outlet",
+      `Global template outlet "${target.slotId}" is not a declared slot on "${parent.componentId}"`,
+    );
+  }
+  if ((parent.slots[target.slotId] ?? []).length > 0) {
+    return commandError(
+      "invalid-outlet",
+      "A Global template outlet must be an empty declared component slot",
+    );
+  }
+  return null;
+}
+
+function withoutPublication(document: CompositionDocument): CompositionDocument {
+  const { publication: _publication, ...next } = document;
+  return next;
+}
+
+function withoutBinding(document: CompositionDocument): CompositionDocument {
+  const { binding: _binding, ...next } = document;
+  return next;
+}
+
+function validDependencyGuard(guard: PublicationDependencyGuard | undefined): boolean {
+  return guard !== undefined && Number.isInteger(guard.dependentCount) && guard.dependentCount >= 0;
+}
+
+/** Explicitly publish a non-empty local Composition as a detached-clone Pattern. */
+export function publishPattern(document: CompositionDocument): CommandResult {
+  if (document.binding) {
+    return commandError(
+      "publication-conflict",
+      "A bound Composition cannot be published; remove its binding first",
+    );
+  }
+  if (document.publication?.kind === "global-template") {
+    return commandError(
+      "publication-conflict",
+      "Clear Global template publication before publishing this Composition as a Pattern",
+    );
+  }
+  if (document.root.length === 0) {
+    return commandError("empty-pattern-root", "A Pattern needs at least one root component before publication");
+  }
+  if (document.publication?.kind === "pattern") {
+    return { ok: true, document: cloneJson(document), selectedId: null, changed: false };
+  }
+  return {
+    ok: true,
+    document: { ...cloneJson(document), publication: { kind: "pattern" } },
+    selectedId: null,
+    changed: true,
+  };
+}
+
+/**
+ * Explicitly publish as a Global template. The outlet id is minted exactly
+ * once here; later label edits and target reassignment retain this id.
+ */
+export function publishGlobalTemplate(
+  document: CompositionDocument,
+  manifest: ComponentManifest,
+  target: GlobalTemplateOutletTarget,
+  label: string,
+  idFactory: IdFactory,
+): CommandResult {
+  if (document.binding) {
+    return commandError(
+      "publication-conflict",
+      "A bound Composition cannot be published; remove its binding first",
+    );
+  }
+  if (document.publication) {
+    return commandError(
+      "publication-conflict",
+      document.publication.kind === "pattern"
+        ? "Clear Pattern publication before publishing this Composition as a Global template"
+        : "This Composition is already a Global template; reassign its outlet instead",
+    );
+  }
+  const targetError = outletTargetError(document, manifest, target);
+  if (targetError) return targetError;
+  const outletId = idFactory("outlet");
+  if (outletId.length === 0) {
+    return commandError("invalid-outlet", "Outlet id factory produced an empty id");
+  }
+  return {
+    ok: true,
+    document: {
+      ...cloneJson(document),
+      publication: {
+        kind: "global-template",
+        outlet: { id: outletId, label, target: cloneJson(target) },
+      },
+    },
+    selectedId: null,
+    changed: true,
+  };
+}
+
+/** Change the human label of a published Global template's stable outlet. */
+export function renameGlobalTemplateOutlet(
+  document: CompositionDocument,
+  label: string,
+): CommandResult {
+  if (document.publication?.kind !== "global-template") {
+    return commandError("invalid-outlet", "This Composition is not published as a Global template");
+  }
+  if (document.publication.outlet.label === label) {
+    return { ok: true, document: cloneJson(document), selectedId: null, changed: false };
+  }
+  return {
+    ok: true,
+    document: {
+      ...cloneJson(document),
+      publication: {
+        ...document.publication,
+        outlet: { ...document.publication.outlet, label },
+      },
+    },
+    selectedId: null,
+    changed: true,
+  };
+}
+
+/** Reassign the outlet target without changing its stable source-scoped id. */
+export function reassignGlobalTemplateOutlet(
+  document: CompositionDocument,
+  manifest: ComponentManifest,
+  target: GlobalTemplateOutletTarget,
+): CommandResult {
+  if (document.publication?.kind !== "global-template") {
+    return commandError("invalid-outlet", "This Composition is not published as a Global template");
+  }
+  const targetError = outletTargetError(document, manifest, target);
+  if (targetError) return targetError;
+  const previous = document.publication.outlet.target;
+  if (previous.parentId === target.parentId && previous.slotId === target.slotId) {
+    return { ok: true, document: cloneJson(document), selectedId: null, changed: false };
+  }
+  return {
+    ok: true,
+    document: {
+      ...cloneJson(document),
+      publication: {
+        ...document.publication,
+        outlet: { ...document.publication.outlet, target: cloneJson(target) },
+      },
+    },
+    selectedId: null,
+    changed: true,
+  };
+}
+
+/**
+ * Create or update a Global template outlet through one explicit command.
+ * Existing Global templates keep their outlet id; this is useful to a compact
+ * authoring UI that changes target and label in one state transition.
+ */
+export function setGlobalTemplateOutlet(
+  document: CompositionDocument,
+  manifest: ComponentManifest,
+  target: GlobalTemplateOutletTarget,
+  label: string,
+  idFactory: IdFactory,
+): CommandResult {
+  if (document.publication?.kind !== "global-template") {
+    return publishGlobalTemplate(document, manifest, target, label, idFactory);
+  }
+  const targetError = outletTargetError(document, manifest, target);
+  if (targetError) return targetError;
+  const outlet = document.publication.outlet;
+  const targetChanged = outlet.target.parentId !== target.parentId || outlet.target.slotId !== target.slotId;
+  const labelChanged = outlet.label !== label;
+  if (!targetChanged && !labelChanged) {
+    return { ok: true, document: cloneJson(document), selectedId: null, changed: false };
+  }
+  return {
+    ok: true,
+    document: {
+      ...cloneJson(document),
+      publication: {
+        ...document.publication,
+        outlet: {
+          ...outlet,
+          label,
+          target: cloneJson(target),
+        },
+      },
+    },
+    selectedId: null,
+    changed: true,
+  };
+}
+
+/** Clear a source role only after the owner service has checked dependents. */
+export function clearPublication(
+  document: CompositionDocument,
+  dependencyGuard: PublicationDependencyGuard,
+): CommandResult {
+  if (!document.publication) {
+    return { ok: true, document: cloneJson(document), selectedId: null, changed: false };
+  }
+  if (!validDependencyGuard(dependencyGuard)) {
+    return commandError(
+      "invalid-dependency-guard",
+      "Clearing publication requires a current dependent-count guard from the owning service",
+    );
+  }
+  const dependentCount = dependencyGuard.dependentCount;
+  if (document.publication.kind === "global-template" && dependentCount > 0) {
+    return commandError(
+      "dependent-bindings",
+      "Cannot clear Global template publication while consumers are still bound to it",
+    );
+  }
+  return { ok: true, document: withoutPublication(cloneJson(document)), selectedId: null, changed: true };
+}
+
+/** Bind this canonical local root to a successfully resolved Global source outlet. */
+export function bindConsumer(
+  document: CompositionDocument,
+  contract: ResolvedGlobalTemplateOutletContract,
+  containingRecordId: string = document.id,
+): CommandResult {
+  if (document.publication) {
+    return commandError(
+      "binding-conflict",
+      "A published Composition cannot bind to a Global template; clear publication first",
+    );
+  }
+  if (document.binding) {
+    return commandError("binding-conflict", "This Composition is already bound; remove its binding before binding again");
+  }
+  if (!contract.sameProvider) {
+    return commandError("cross-provider-binding", "Global template bindings must use the current provider");
+  }
+  if (contract.sourceRecordId === containingRecordId) {
+    return commandError("self-binding", "A Composition cannot bind to itself as a Global template source");
+  }
+  if (!contract.sourceIsGlobalTemplate) {
+    return commandError("binding-conflict", "The resolved source is not published as a Global template");
+  }
+  if (contract.sourceHasBinding) {
+    return commandError("nested-binding", "A Global template source cannot itself be bound to another template");
+  }
+  if (!isSafeCompositionRecordId(contract.sourceRecordId) || !contract.outletId) {
+    return commandError("binding-conflict", "A resolved Global template source and outlet id are required");
+  }
+  if (contract.rootPolicy?.kind !== "resolved") {
+    return commandError(
+      "unresolved-root-policy",
+      "Binding requires the resolved Global template outlet constraints",
+    );
+  }
+  const rootValidation = validateRootForest(document.root, contract.rootPolicy);
+  if (!rootValidation.ok) return rootPolicyError(rootValidation.error ?? "invalid consumer root policy");
+
+  const binding: CompositionBinding = {
+    sourceRecordId: contract.sourceRecordId,
+    outletId: contract.outletId,
+  };
+  return {
+    ok: true,
+    document: { ...cloneJson(document), binding },
+    selectedId: null,
+    changed: true,
+  };
+}
+
+/** Remove a live binding while retaining every canonical local root node. */
+export function removeBinding(document: CompositionDocument): CommandResult {
+  if (!document.binding) {
+    return { ok: true, document: cloneJson(document), selectedId: null, changed: false };
+  }
+  return { ok: true, document: withoutBinding(cloneJson(document)), selectedId: null, changed: true };
+}
+
 // ── clipboard/duplicate foundation (wave 6, issue #255) ──────────────────────
 //
 // Two pure primitives the #247 controller composes into copy/cut/paste/
@@ -326,15 +747,156 @@ export function repairSelection(
  * fresh id on every invocation.
  */
 export function cloneSubtreeWithNewIds(node: CompositionNode, idFactory: IdFactory): CompositionNode {
-  const detached = cloneJson(node) as CompositionNode;
-  const reissueIds = (n: CompositionNode): CompositionNode => {
+  return cloneForestWithNewIds([node], idFactory).roots[0]!;
+}
+
+/** A detached root forest plus the complete old-node-id → new-node-id mapping. */
+export interface ClonedForestWithNewIds {
+  roots: CompositionNode[];
+  idMap: ReadonlyMap<string, string>;
+}
+
+/**
+ * Deep-clone a non-empty root forest, re-issuing every node identity exactly
+ * once. The returned map is deliberately part of the primitive: document
+ * duplication uses it to repair metadata that names a cloned node (for
+ * example, a Global template outlet owner).
+ *
+ * A duplicate id in the source or an id factory result that is not genuinely
+ * fresh is an invalid source/factory contract, so this primitive rejects it
+ * before returning a partially cloned forest. `insertForest` turns the same
+ * condition into its typed command error for UI callers.
+ */
+export function cloneForestWithNewIds(
+  roots: readonly CompositionNode[],
+  idFactory: IdFactory,
+): ClonedForestWithNewIds {
+  if (roots.length === 0) {
+    throw new Error("Cannot clone an empty component forest");
+  }
+
+  const sourceIds = new Set<string>();
+  const collectSourceIds = (node: CompositionNode): void => {
+    if (sourceIds.has(node.id)) {
+      throw new Error(`Cannot clone a forest with duplicate source node id "${node.id}"`);
+    }
+    sourceIds.add(node.id);
+    for (const children of Object.values(node.slots)) {
+      for (const child of children) collectSourceIds(child);
+    }
+  };
+  for (const root of roots) collectSourceIds(root);
+
+  const idMap = new Map<string, string>();
+  const clonedIds = new Set<string>();
+  const detached = cloneJson(roots) as CompositionNode[];
+  const reissueIds = (node: CompositionNode): CompositionNode => {
+    const id = idFactory(node.componentId);
+    if (sourceIds.has(id) || clonedIds.has(id)) {
+      throw new Error(`Id factory produced a non-fresh forest node id "${id}"`);
+    }
+    clonedIds.add(id);
+    idMap.set(node.id, id);
     const slots: Record<string, CompositionNode[]> = {};
-    for (const [slotId, children] of Object.entries(n.slots)) {
+    for (const [slotId, children] of Object.entries(node.slots)) {
       slots[slotId] = children.map(reissueIds);
     }
-    return { ...n, id: idFactory(n.componentId), slots };
+    return { ...node, id, slots };
   };
-  return reissueIds(detached);
+
+  return { roots: detached.map(reissueIds), idMap };
+}
+
+/**
+ * Atomically clone and insert a saved Pattern's root forest. Every target,
+ * source-root, cardinality, policy, and identity condition is checked before
+ * the destination document is cloned and spliced, so a failed multi-root
+ * insertion can never leave a valid prefix behind.
+ */
+export function insertForest(
+  document: CompositionDocument,
+  manifest: ComponentManifest,
+  target: InsertionTarget,
+  sourceRoots: readonly CompositionNode[],
+  idFactory: IdFactory,
+  rootPolicy?: RootPolicy,
+): CommandResult {
+  if (sourceRoots.length === 0) {
+    return commandError("empty-forest", "Cannot insert an empty Pattern component forest");
+  }
+
+  const index = indexDocument(document, manifest);
+  const locate = (id: string): CompositionNode | undefined => index.byId.get(id)?.node;
+  const targetValidation = validateInsertionTarget(document, manifest, target, locate);
+  if (!targetValidation.ok) {
+    return forestInsertionTargetError(targetValidation.error ?? "invalid insertion target");
+  }
+
+  for (const root of sourceRoots) {
+    if (!manifest.has(root.componentId)) {
+      return commandError(
+        "forest-component-unavailable",
+        `Cannot insert Pattern root "${root.componentId}" because that component is unavailable`,
+      );
+    }
+  }
+
+  if (target.parentId === null) {
+    const rootValidation = validateRootForest(
+      [...document.root, ...sourceRoots],
+      effectiveRootPolicy(document, rootPolicy),
+    );
+    if (!rootValidation.ok) return rootPolicyError(rootValidation.error ?? "invalid consumer root policy");
+  } else {
+    const parent = locate(target.parentId)!;
+    const parentEntry = manifest.get(parent.componentId)!;
+    const slot = parentEntry.slots.find((candidate) => candidate.id === target.slotId)!;
+    const existing = parent.slots[target.slotId] ?? [];
+    if (slot.accepts) {
+      for (const root of sourceRoots) {
+        if (!slot.accepts.includes(root.componentId)) {
+          return commandError(
+            "root-accepts",
+            `Slot "${target.slotId}" does not accept "${root.componentId}"`,
+          );
+        }
+      }
+    }
+    if (slot.cardinality === "single" && (existing.length !== 0 || sourceRoots.length !== 1)) {
+      return commandError(
+        "forest-cardinality",
+        `Slot "${target.slotId}" is single-child and requires exactly one root in an empty slot`,
+      );
+    }
+  }
+
+  let cloned: ClonedForestWithNewIds;
+  try {
+    cloned = cloneForestWithNewIds(sourceRoots, idFactory);
+  } catch (error) {
+    return commandError(
+      "forest-node-id-collision",
+      error instanceof Error ? error.message : "Could not create fresh node ids for the Pattern forest",
+    );
+  }
+
+  for (const id of cloned.idMap.values()) {
+    if (index.byId.has(id)) {
+      return commandError(
+        "forest-node-id-collision",
+        `Pattern clone node id "${id}" already exists in the destination document`,
+      );
+    }
+  }
+
+  const next = cloneJson(document);
+  const nextIndex = indexDocument(next, manifest);
+  const nextLocate = (id: string): CompositionNode | undefined => nextIndex.byId.get(id)?.node;
+  const array = slotArray(next, target.parentId, target.slotId, nextLocate)!;
+  array.splice(target.index, 0, ...cloned.roots);
+
+  const insertedId = cloned.roots[0]!.id;
+  return { ok: true, document: next, selectedId: insertedId, insertedId, changed: true };
 }
 
 /**
@@ -351,15 +913,26 @@ export function insertSubtree(
   manifest: ComponentManifest,
   target: InsertionTarget,
   subtree: CompositionNode,
+  rootPolicy?: RootPolicy,
 ): CommandResult {
   const next = cloneJson(document);
   const index = indexDocument(next, manifest);
   const locate = (id: string): CompositionNode | undefined => index.byId.get(id)?.node;
 
   const validation = validateInsertionTarget(next, manifest, target, locate);
-  if (!validation.ok) return { ok: false, error: validation.error ?? "invalid insertion target" };
+  if (!validation.ok) return insertionTargetError(validation.error ?? "invalid insertion target");
 
-  // Slot-level acceptance + cardinality (the virtual root accepts anything).
+  if (target.parentId === null) {
+    const rootValidation = validateRootInsertion(
+      next.root.length,
+      subtree.componentId,
+      effectiveRootPolicy(document, rootPolicy),
+    );
+    if (!rootValidation.ok) return rootPolicyError(rootValidation.error ?? "invalid consumer root policy");
+  }
+
+  // Slot-level acceptance + cardinality. Virtual-root rules are handled by the
+  // effective consumer policy above.
   if (target.parentId !== null) {
     const parent = locate(target.parentId)!;
     const parentEntry = manifest.get(parent.componentId)!;
@@ -432,6 +1005,7 @@ export function moveSubtree(
   manifest: ComponentManifest,
   sourceNodeId: string,
   target: InsertionTarget,
+  rootPolicy?: RootPolicy,
 ): CommandResult {
   const next = cloneJson(document);
   const index = indexDocument(next, manifest);
@@ -448,11 +1022,30 @@ export function moveSubtree(
   }
 
   const validation = validateInsertionTarget(next, manifest, target, locate);
-  if (!validation.ok) return { ok: false, error: validation.error ?? "invalid insertion target" };
+  if (!validation.ok) return insertionTargetError(validation.error ?? "invalid insertion target");
 
   // Same SLOT — not merely same parent (SplitLayout left→right shares a parent
   // but crosses slots, so it must NOT get the same-slot index adjustment).
   const sameSlot = source.parentId === target.parentId && source.slotId === target.slotId;
+
+  // Reordering an existing root stays safe even when the bound policy is
+  // unresolved or an externally evolved source no longer accepts that root.
+  // Crossing INTO the virtual root is a fresh root insertion and must obey the
+  // actual exposed outlet policy before any detach happens.
+  if (!sameSlot && target.parentId === null) {
+    const rootValidation = validateRootInsertion(
+      next.root.length,
+      source.node.componentId,
+      effectiveRootPolicy(document, rootPolicy),
+    );
+    if (!rootValidation.ok) return rootPolicyError(rootValidation.error ?? "invalid consumer root policy");
+  }
+
+  // A published Pattern must not become empty through a root → named-slot move.
+  if (!sameSlot && source.parentId === null && target.parentId !== null) {
+    const patternGuard = patternRootRemovalError(document, sourceNodeId, source.parentId);
+    if (patternGuard) return patternGuard;
+  }
 
   // Slot acceptance and cardinality are both checked ONLY on a CROSS-slot move
   // — a same-slot reorder does not change slot membership (the node already

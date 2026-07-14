@@ -23,12 +23,18 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "preact/hooks"
 import type {
   ComponentManifest,
   CompositionDocument,
+  CompositionDerivedOutputOutcome,
+  CompositionNode,
   CompositionRecord,
   CompositionSaveQueue,
   CompositionSaveQueueState,
+  GlobalTemplateOutletTarget,
   IdFactory,
   InsertionTarget,
   JsonObject,
+  PublicationDependencyGuard,
+  ResolvedGlobalTemplateOutletContract,
+  RootPolicy,
 } from "@/composer";
 import {
   cloneJson,
@@ -110,6 +116,8 @@ export interface ComposerController {
   cut: (nodeId: string) => void;
   /** Clone-with-new-ids + insert-subtree at `target`, then select + reveal it. Errors (e.g. an incompatible slot) surface via `lastError`, never a silent no-op. */
   paste: (target: InsertionTarget) => void;
+  /** Atomically clone and insert every root from a saved Pattern, then select and reveal its first inserted root. */
+  insertForest: (sourceRoots: readonly CompositionNode[], target: InsertionTarget) => ComposerForestInsertionOutcome;
   /** Clone-with-new-ids + insert immediately after the source, then select + reveal it. Refused for opaque nodes. */
   duplicate: (nodeId: string) => void;
   /**
@@ -119,6 +127,22 @@ export interface ComposerController {
    * `lastError`, never a silent partial change.
    */
   drop: (sourceNodeId: string, target: InsertionTarget, copy: boolean) => void;
+  /** Publish the current non-empty local document as a Pattern. */
+  publishPattern: () => void;
+  /** Publish a real empty component slot as this Global template's stable outlet. */
+  publishGlobalTemplate: (target: GlobalTemplateOutletTarget, label: string) => void;
+  /** Create or update the Global outlet while retaining its id after creation. */
+  setGlobalTemplateOutlet: (target: GlobalTemplateOutletTarget, label: string) => void;
+  renameGlobalTemplateOutlet: (label: string) => void;
+  reassignGlobalTemplateOutlet: (target: GlobalTemplateOutletTarget) => void;
+  /** The owning app must pass its current dependent-count result. */
+  clearPublication: (dependencyGuard: PublicationDependencyGuard) => void;
+  /** Bind through a parent-app resolved source/outlet contract; never performs provider I/O. */
+  bindConsumer: (contract: ResolvedGlobalTemplateOutletContract) => void;
+  /** Remove only the binding and retain all canonical local root nodes. */
+  removeBinding: () => void;
+  /** Update ephemeral bound-root constraints after parent-app resolution. */
+  setRootPolicy: (rootPolicy: RootPolicy) => void;
   select: (nodeId: string | null) => void;
   reveal: (nodeId: string) => void;
   toggleExpanded: (nodeId: string) => void;
@@ -134,6 +158,11 @@ export interface ComposerController {
   dismissLoadNotice: () => void;
 }
 
+/** The chooser needs a synchronous command outcome so it never closes after a rejected atomic mutation. */
+export type ComposerForestInsertionOutcome =
+  | { status: "inserted" }
+  | { status: "rejected"; message: string };
+
 export interface UseComposerControllerOptions {
   manifest?: ComponentManifest;
   /** Already-loaded supported record. Must be paired with `saveQueue`. */
@@ -141,6 +170,8 @@ export interface UseComposerControllerOptions {
   /** Record-scoped queue created for the same provider-qualified record. */
   saveQueue?: CompositionSaveQueue;
   sample?: CompositionDocument;
+  /** Optional initial resolver result for a record mounted as a bound consumer. */
+  rootPolicy?: RootPolicy;
   idFactory?: IdFactory;
   now?: () => string;
 }
@@ -181,6 +212,11 @@ function saveStatusFromQueue(state: CompositionSaveQueueState): ComposerSaveStat
     case "error":
       return { kind: "error", reason: state.error.message };
   }
+}
+
+/** A generated-output warning belongs only to the revision known as saved. */
+function derivedOutputFromQueue(state: CompositionSaveQueueState): CompositionDerivedOutputOutcome | null {
+  return state.status === "saved" ? state.outcome?.derived ?? null : null;
 }
 
 export function useComposerController(options: UseComposerControllerOptions = {}): ComposerController {
@@ -235,8 +271,10 @@ export function useComposerController(options: UseComposerControllerOptions = {}
     stateRef.current = createInitialControllerState({
       document,
       manifest,
+      rootPolicy: options.rootPolicy,
       loadNotice: notice,
       saveStatus: status,
+      derivedOutput: options.saveQueue ? derivedOutputFromQueue(options.saveQueue.state) : null,
       leftWidth: getPersistedWidth(LS_TREE_WIDTH, MIN_RAIL_W),
       rightWidth: getPersistedWidth(LS_INSPECTOR_WIDTH, MIN_RAIL_W),
     });
@@ -249,7 +287,7 @@ export function useComposerController(options: UseComposerControllerOptions = {}
   const pendingBaseSaveStatusRef = useRef<ComposerSaveStatus | null>(null);
 
   const applyAction = useCallback(
-    (action: ComposerAction) => {
+    (action: ComposerAction): string | null => {
       const current = stateRef.current!;
       const result = applyComposerAction(current, action, { manifest, idFactory });
       setLastError(result.error);
@@ -262,7 +300,7 @@ export function useComposerController(options: UseComposerControllerOptions = {}
           stateRef.current = next;
           setState(next);
         }
-        return;
+        return result.error;
       }
 
       let next = result.state;
@@ -281,7 +319,7 @@ export function useComposerController(options: UseComposerControllerOptions = {}
         if (queue) {
           try {
             queue.edit(queue.ref, recordRef.current);
-            next = { ...next, saveStatus: saveStatusFromQueue(queue.state) };
+            next = { ...next, saveStatus: saveStatusFromQueue(queue.state), derivedOutput: null };
           } catch (error) {
             next = {
               ...next,
@@ -289,6 +327,7 @@ export function useComposerController(options: UseComposerControllerOptions = {}
                 kind: "error",
                 reason: error instanceof Error ? error.message : "Composition persistence failed.",
               },
+              derivedOutput: null,
             };
           }
         } else if (!quarantinedRef.current) {
@@ -296,6 +335,7 @@ export function useComposerController(options: UseComposerControllerOptions = {}
           next = {
             ...next,
             saveStatus: write.ok ? { kind: "saved" } : { kind: "error", reason: write.error ?? "Storage write failed" },
+            derivedOutput: null,
           };
         } else if (pendingBaseSaveStatusRef.current) {
           next = { ...next, saveStatus: pendingBaseSaveStatusRef.current };
@@ -310,6 +350,7 @@ export function useComposerController(options: UseComposerControllerOptions = {}
       }
       stateRef.current = next;
       setState(next);
+      return null;
     },
     [manifest, idFactory],
   );
@@ -339,7 +380,7 @@ export function useComposerController(options: UseComposerControllerOptions = {}
   const dispatch = useCallback(
     (action: ComposerAction) => {
       flushPropUpdates();
-      applyAction(action);
+      return applyAction(action);
     },
     [flushPropUpdates, applyAction],
   );
@@ -351,7 +392,7 @@ export function useComposerController(options: UseComposerControllerOptions = {}
       pending.set(nodeId, { ...pending.get(nodeId), ...patch });
       const current = stateRef.current!;
       if (current.saveStatus.kind !== "dirty") {
-        const next = { ...current, saveStatus: { kind: "dirty" } as const };
+        const next = { ...current, saveStatus: { kind: "dirty" } as const, derivedOutput: null };
         stateRef.current = next;
         setState(next);
       }
@@ -404,14 +445,16 @@ export function useComposerController(options: UseComposerControllerOptions = {}
       const current = stateRef.current!;
       const saveStatus: ComposerSaveStatus =
         pendingPropsRef.current.size > 0 ? { kind: "dirty" } : saveStatusFromQueue(queueState);
+      const derivedOutput = pendingPropsRef.current.size > 0 ? null : derivedOutputFromQueue(queueState);
       if (
         current.saveStatus.kind === saveStatus.kind &&
         (saveStatus.kind !== "error" ||
           (current.saveStatus.kind === "error" && current.saveStatus.reason === saveStatus.reason))
+        && current.derivedOutput === derivedOutput
       ) {
         return;
       }
-      const next = { ...current, saveStatus };
+      const next = { ...current, saveStatus, derivedOutput };
       stateRef.current = next;
       setState(next);
     });
@@ -474,8 +517,21 @@ export function useComposerController(options: UseComposerControllerOptions = {}
       copy: (nodeId) => dispatch({ type: "copy", nodeId }),
       cut: (nodeId) => dispatch({ type: "cut", nodeId }),
       paste: (target) => dispatch({ type: "paste", target }),
+      insertForest: (sourceRoots, target) => {
+        const error = dispatch({ type: "insertForest", sourceRoots, target });
+        return error ? { status: "rejected", message: error } : { status: "inserted" };
+      },
       duplicate: (nodeId) => dispatch({ type: "duplicate", nodeId }),
       drop: (sourceNodeId, target, copy) => dispatch({ type: "drop", sourceNodeId, target, copy }),
+      publishPattern: () => dispatch({ type: "publishPattern" }),
+      publishGlobalTemplate: (target, label) => dispatch({ type: "publishGlobalTemplate", target, label }),
+      setGlobalTemplateOutlet: (target, label) => dispatch({ type: "setGlobalTemplateOutlet", target, label }),
+      renameGlobalTemplateOutlet: (label) => dispatch({ type: "renameGlobalTemplateOutlet", label }),
+      reassignGlobalTemplateOutlet: (target) => dispatch({ type: "reassignGlobalTemplateOutlet", target }),
+      clearPublication: (dependencyGuard) => dispatch({ type: "clearPublication", dependencyGuard }),
+      bindConsumer: (contract) => dispatch({ type: "bindConsumer", contract }),
+      removeBinding: () => dispatch({ type: "removeBinding" }),
+      setRootPolicy: (rootPolicy) => dispatch({ type: "setRootPolicy", rootPolicy }),
       select: (nodeId) => dispatch({ type: "select", nodeId }),
       reveal: (nodeId) => dispatch({ type: "reveal", nodeId }),
       toggleExpanded: (nodeId) => dispatch({ type: "toggleExpanded", nodeId }),

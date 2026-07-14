@@ -70,6 +70,30 @@ describe("Composer workspace CSS geometry (src/features/composer/styles.css)", (
   });
 });
 
+describe("Composer tool-dialog CSS geometry (issue #315)", () => {
+  it("declares a 24px desktop inset, explicit border-box dimensions, and a safe narrow fallback", () => {
+    const toolDialog = blockFor(".sg-composer-tool-dialog");
+    expect(toolDialog).toContain("--sg-composer-tool-dialog-gutter: 24px");
+    expect(toolDialog).toContain("box-sizing: border-box");
+    expect(css).toMatch(/\.sg-composer-tool-dialog\[open\]\s*\{[\s\S]*?block-size:\s*calc\(100vh/);
+    expect(css).toContain("@supports (height: 100dvh)");
+    expect(css).toMatch(/@media \(max-width: 40rem\) \{[\s\S]*?--sg-composer-tool-dialog-gutter:\s*8px/);
+  });
+
+  it("keeps the chooser square and removes the obsolete enlarge style branch", () => {
+    expect(blockFor(".sg-composer-chooser")).toContain("border-radius: 0");
+    expect(css).not.toContain("data-sg-enlarged");
+    expect(css).not.toContain("sg-composer-chooser-enlarge");
+  });
+
+  it("provides a coarse-pointer 44px target for the move grip and future resize handle", () => {
+    const coarsePointer = css.match(/@media \(pointer: coarse\) \{([\s\S]*?)\n\}/)?.[1] ?? "";
+    expect(coarsePointer).toContain(".sg-composer-tool-dialog-grip");
+    expect(coarsePointer).toContain(".sg-composer-tool-dialog-resize");
+    expect(coarsePointer).toContain("min-height: 2.75rem");
+  });
+});
+
 /** Pull a selector's declaration block out of the Composer stylesheet. */
 function blockFor(selector: string): string {
   const start = css.indexOf(`${selector} {`);

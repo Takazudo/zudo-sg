@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { loadCompositionDocument, resetToSample } from "../recovery";
 import { createSampleDocument } from "../../sample/sample-document";
-import type { CompositionDocument } from "../types";
+import {
+  COMPOSITION_SCHEMA_V1,
+  COMPOSITION_SCHEMA_VERSION,
+  type CompositionDocument,
+} from "../types";
 
 const sample = (): CompositionDocument => createSampleDocument();
 
@@ -20,6 +24,22 @@ describe("loadCompositionDocument", () => {
     expect(outcome.document.name).toBe("Edited");
   });
 
+  it("losslessly decodes a valid v1 document before validating the v2 shape", () => {
+    const stored = { ...sample(), schemaVersion: COMPOSITION_SCHEMA_V1 };
+    const outcome = loadCompositionDocument(JSON.stringify(stored), sample());
+    expect(outcome).toMatchObject({
+      status: "ok",
+      decodedFromSchemaVersion: COMPOSITION_SCHEMA_V1,
+      document: {
+        schemaVersion: COMPOSITION_SCHEMA_VERSION,
+        id: stored.id,
+        name: stored.name,
+        root: stored.root,
+      },
+    });
+    expect(stored.schemaVersion).toBe(COMPOSITION_SCHEMA_V1);
+  });
+
   it("recovers to the sample on unparseable JSON", () => {
     const outcome = loadCompositionDocument("{not json", sample());
     expect(outcome.status).toBe("recovered");
@@ -29,7 +49,12 @@ describe("loadCompositionDocument", () => {
   });
 
   it("recovers to the sample when the supported-schema document is malformed", () => {
-    const malformed = JSON.stringify({ schemaVersion: 1, id: "x", name: "x", root: "not-an-array" });
+    const malformed = JSON.stringify({
+      schemaVersion: COMPOSITION_SCHEMA_VERSION,
+      id: "x",
+      name: "x",
+      root: "not-an-array",
+    });
     const outcome = loadCompositionDocument(malformed, sample());
     expect(outcome.status).toBe("recovered");
   });
@@ -40,11 +65,16 @@ describe("loadCompositionDocument", () => {
   });
 
   it("quarantines a future schema WITHOUT overwriting the raw storage", () => {
-    const future = JSON.stringify({ schemaVersion: 2, id: "future", name: "Future", root: [] });
+    const future = JSON.stringify({
+      schemaVersion: COMPOSITION_SCHEMA_VERSION + 1,
+      id: "future",
+      name: "Future",
+      root: [],
+    });
     const outcome = loadCompositionDocument(future, sample());
     expect(outcome.status).toBe("quarantined");
     if (outcome.status !== "quarantined") return;
-    expect(outcome.foundSchemaVersion).toBe(2);
+    expect(outcome.foundSchemaVersion).toBe(COMPOSITION_SCHEMA_VERSION + 1);
     expect(outcome.quarantinedRaw).toBe(future); // raw preserved for a newer build
     expect(outcome.document.id).toBe("sample"); // sample surfaced to work in
   });

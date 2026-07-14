@@ -7,6 +7,7 @@ import {
   commitInlineEditMessage,
   dropNodeMessage,
   modeMessage,
+  openSourceMessage,
   readParentToPreview,
   readPreviewToParent,
   readyMessage,
@@ -84,6 +85,80 @@ describe("readParentToPreview — the security gate", () => {
     expect(result.message.type).toBe("mode");
   });
 
+  it("accepts each current v2 reuse shape through the strict document schema", () => {
+    const global = {
+      ...SAMPLE_DOCUMENT,
+      publication: {
+        kind: "global-template" as const,
+        outlet: {
+          id: "outlet-main",
+          label: "Main content",
+          target: { parentId: "split-1", slotId: "right" },
+        },
+      },
+    };
+    const pattern = { ...SAMPLE_DOCUMENT, publication: { kind: "pattern" as const } };
+    const consumer = {
+      ...SAMPLE_DOCUMENT,
+      binding: { sourceRecordId: "source-record", outletId: "outlet-main" },
+    };
+
+    for (const document of [global, pattern, consumer]) {
+      expect(readParentToPreview(event(renderMessage(0, document, SESSION)), EXPECTED).ok).toBe(true);
+    }
+  });
+
+  it("accepts a strict resolved linked-source context while retaining a local document", () => {
+    const result = readParentToPreview(
+      event(
+        renderMessage(
+          0,
+          {
+            document: SAMPLE_DOCUMENT,
+            localRecordId: "consumer-record",
+            linked: {
+              sourceRecordId: "source-record",
+              sourceDocument: {
+                ...SAMPLE_DOCUMENT,
+                name: "Site shell",
+                publication: {
+                  kind: "global-template",
+                  outlet: {
+                    id: "outlet-main",
+                    label: "Main content",
+                    target: { parentId: "split-1", slotId: "right" },
+                  },
+                },
+              },
+              outlet: {
+                id: "outlet-main",
+                label: "Main content",
+                target: { parentId: "split-1", slotId: "right" },
+              },
+            },
+          },
+          SESSION,
+        ),
+      ),
+      EXPECTED,
+    );
+    expect(result.ok).toBe(true);
+  });
+
+  it("REJECTS extra or malformed linked-source context keys", () => {
+    const snapshot = {
+      document: SAMPLE_DOCUMENT,
+      localRecordId: "consumer-record",
+      linked: {
+        sourceRecordId: "source-record",
+        sourceDocument: SAMPLE_DOCUMENT,
+        outlet: { id: "outlet-main", label: "Main", target: { parentId: "split-1", slotId: "right" } },
+      },
+    };
+    expect(readParentToPreview(event({ ...renderMessage(0, snapshot, SESSION), linked: { ...snapshot.linked, provider: {} } }), EXPECTED).ok).toBe(false);
+    expect(readParentToPreview(event({ ...renderMessage(0, snapshot, SESSION), linked: { ...snapshot.linked, sourceRecordId: "../source" } }), EXPECTED).ok).toBe(false);
+  });
+
   it("accepts a host→preview restore-focus response (issue #256, not revision-stamped)", () => {
     const result = readParentToPreview(event(restoreFocusMessage("node-menu:box-1")), EXPECTED);
     expect(result.ok).toBe(true);
@@ -152,6 +227,27 @@ describe("readParentToPreview — the security gate", () => {
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.reason).toBe("invalid-payload");
+  });
+
+  it("REJECTS malformed or smuggled v2 reuse metadata", () => {
+    const malformed = {
+      ...SAMPLE_DOCUMENT,
+      publication: {
+        kind: "global-template",
+        outlet: {
+          id: "outlet-main",
+          label: "Main content",
+          target: { parentId: "split-1", slotId: "right", index: 0 },
+        },
+      },
+    };
+    const unsafeBinding = {
+      ...SAMPLE_DOCUMENT,
+      binding: { sourceRecordId: "../escape", outletId: "outlet-main" },
+    };
+
+    expect(readParentToPreview(event(renderMessage(0, malformed, SESSION)), EXPECTED).ok).toBe(false);
+    expect(readParentToPreview(event(renderMessage(0, unsafeBinding, SESSION)), EXPECTED).ok).toBe(false);
   });
 
   it("REJECTS an unknown message type", () => {
@@ -286,6 +382,7 @@ describe("readPreviewToParent", () => {
       selectMessage(1, "prose-1"),
       selectMessage(1, null),
       requestAddMessage(1, target),
+      openSourceMessage("source-record"),
       requestNodeMenuMessage(1, "box-1", RECT, "node-menu:box-1"),
       requestInsertMenuMessage(1, target, RECT, "insert-menu:stack-1:content:2"),
       commitInlineEditMessage("prose-1", "children", "Edited copy", 1),

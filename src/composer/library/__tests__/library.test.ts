@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   COMPOSITION_PROVIDERS,
+  COMPOSITION_SCHEMA_V1,
   COMPOSITION_SCHEMA_VERSION,
   CompositionPersistenceError,
   compareCompositionSummariesNewestFirst,
@@ -98,7 +99,10 @@ describe("composition record validation and loading", () => {
   });
 
   it("reports malformed structured documents without inventing recovery data", () => {
-    const malformed = { ...record(), document: { schemaVersion: 1, id: "composition-a", root: {} } };
+    const malformed = {
+      ...record(),
+      document: { schemaVersion: COMPOSITION_SCHEMA_VERSION, id: "composition-a", root: {} },
+    };
     const outcome = loadCompositionRecord(malformed);
     expect(outcome).toMatchObject({
       status: "invalid",
@@ -120,9 +124,30 @@ describe("composition record validation and loading", () => {
     };
     expect(loadCompositionRecord(future)).toEqual({
       status: "future-schema",
-      foundSchemaVersion: 2,
+      foundSchemaVersion: COMPOSITION_SCHEMA_VERSION + 1,
       raw: future,
     });
+  });
+
+  it("decodes a valid v1 record without changing record metadata or identity", () => {
+    const legacy = record();
+    legacy.document = {
+      ...legacy.document,
+      schemaVersion: COMPOSITION_SCHEMA_V1,
+    } as unknown as CompositionRecord["document"];
+
+    const outcome = loadCompositionRecord(legacy);
+    expect(outcome).toMatchObject({
+      status: "loaded",
+      decodedFromSchemaVersion: COMPOSITION_SCHEMA_V1,
+      record: {
+        id: legacy.id,
+        createdAt: legacy.createdAt,
+        updatedAt: legacy.updatedAt,
+        document: { schemaVersion: COMPOSITION_SCHEMA_VERSION, id: legacy.document.id },
+      },
+    });
+    expect(legacy.document.schemaVersion).toBe(COMPOSITION_SCHEMA_V1);
   });
 });
 
@@ -180,6 +205,51 @@ describe("composition record helpers", () => {
     expect(copy.document.root).not.toBe(source.document.root);
   });
 
+  it("keeps a duplicate's Pattern role and consumer binding while giving every node a fresh identity", () => {
+    const pattern = record();
+    pattern.document.publication = { kind: "pattern" };
+    const patternCopy = duplicateCompositionRecord(pattern, {
+      idFactory: createSequentialIdFactory("record"),
+      nodeIdFactory: createSequentialIdFactory("node"),
+      now: () => T2,
+    });
+    expect(patternCopy.document.publication).toEqual({ kind: "pattern" });
+    expect(patternCopy.document.root[0]!.id).not.toBe(pattern.document.root[0]!.id);
+
+    const consumer = record();
+    consumer.document.binding = { sourceRecordId: "source-template", outletId: "outlet-main" };
+    const consumerCopy = duplicateCompositionRecord(consumer, {
+      idFactory: createSequentialIdFactory("record"),
+      nodeIdFactory: createSequentialIdFactory("node"),
+      now: () => T2,
+    });
+    expect(consumerCopy.document.binding).toEqual(consumer.document.binding);
+  });
+
+  it("rewrites a duplicated Global template outlet owner to its cloned node", () => {
+    const template = record();
+    template.document.publication = {
+      kind: "global-template",
+      outlet: {
+        id: "outlet-main",
+        label: "Main",
+        target: { parentId: "split-1", slotId: "right" },
+      },
+    };
+
+    const copy = duplicateCompositionRecord(template, {
+      idFactory: createSequentialIdFactory("record"),
+      nodeIdFactory: createSequentialIdFactory("node"),
+      now: () => T2,
+    });
+
+    expect(copy.document.publication).toMatchObject({
+      kind: "global-template",
+      outlet: { id: "outlet-main", target: { parentId: copy.document.root[0]!.id, slotId: "right" } },
+    });
+    expect(copy.document.publication).not.toBe(template.document.publication);
+  });
+
   it("resets the body while preserving supported record identity", () => {
     const source = record("kept-id");
     source.document.name = "Edited";
@@ -203,6 +273,49 @@ describe("composition record helpers", () => {
       "a",
     ]);
     expect(a.nodeCount).toBe(6);
+    expect(a.rootCount).toBe(record("a", T1).document.root.length);
+  });
+
+  it("includes reusable-source metadata without loading the whole record", () => {
+    const global = record("global");
+    global.document.publication = {
+      kind: "global-template",
+      outlet: {
+        id: "outlet-main",
+        label: "Main content",
+        target: { parentId: "split-1", slotId: "right" },
+      },
+    };
+    const pattern = record("pattern");
+    pattern.document.publication = { kind: "pattern" };
+    const emptyPattern = record("empty-pattern");
+    emptyPattern.document.root = [];
+    emptyPattern.document.publication = { kind: "pattern" };
+    const invalid = record("invalid");
+    invalid.document.publication = { kind: "pattern" };
+    invalid.document.binding = { sourceRecordId: "source-template", outletId: "outlet-main" };
+
+    expect(summarizeComposition(global)).toMatchObject({
+      publicationKind: "global-template",
+      outletId: "outlet-main",
+      outletLabel: "Main content",
+      rootCount: global.document.root.length,
+      reuseStatus: "eligible",
+    });
+    expect(summarizeComposition(pattern)).toMatchObject({
+      publicationKind: "pattern",
+      rootCount: pattern.document.root.length,
+      reuseStatus: "eligible",
+    });
+    expect(summarizeComposition(emptyPattern)).toMatchObject({
+      publicationKind: "pattern",
+      rootCount: 0,
+      reuseStatus: "empty-pattern",
+    });
+    expect(summarizeComposition(invalid)).toMatchObject({
+      publicationKind: "pattern",
+      reuseStatus: "invalid",
+    });
   });
 });
 

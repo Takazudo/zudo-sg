@@ -1,6 +1,9 @@
 export type {
   CompositionRecord,
   CompositionSummary,
+  CompositionDependent,
+  CompositionDeleteOutcome,
+  CompositionUnpublishOutcome,
   CompositionProviderId,
   CompositionProviderDescriptor,
   CompositionRecordRef,
@@ -8,9 +11,14 @@ export type {
   CompositionRecordValidationIssue,
   CompositionRecordValidation,
   CompositionLoadOutcome,
+  CompositionDerivedOutputRecordOutcome,
+  CompositionDerivedOutputOutcome,
+  CompositionSaveOutcome,
+  CompositionPutResult,
   CompositionPersistenceOperation,
   CompositionPersistenceErrorCode,
   CompositionStore,
+  CompositionLifecycleStore,
   CompositionRecoveryOutcome,
   CompositionInitializationOutcome,
   CompositionProviderInitializer,
@@ -20,6 +28,7 @@ export {
   COMPOSITION_PROVIDER_IDS,
   COMPOSITION_PROVIDERS,
   CompositionPersistenceError,
+  isCompositionLifecycleStore,
 } from "./types";
 
 export {
