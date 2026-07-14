@@ -100,11 +100,11 @@ export function ComposerToolbarBar({
         </ComposerStatusIndicator>
       </div>
 
-      <div class="flex items-center gap-hsp-sm">
+      <div class="flex flex-wrap items-center gap-hsp-sm">
         <label class="flex items-center gap-hsp-2xs text-small text-muted">
           <span class="sr-only">Canvas viewport</span>
           <select
-            class="border border-border rounded-md bg-surface px-hsp-xs py-vsp-3xs text-fg"
+            class="sg-composer-inspector-control border border-border rounded-md bg-surface px-hsp-xs py-vsp-3xs text-fg"
             value={viewport}
             onChange={(e) => {
               if (e.target instanceof HTMLSelectElement) {

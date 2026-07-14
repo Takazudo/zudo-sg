@@ -31,6 +31,7 @@
     "test:e2e": "playwright test",
     "test:e2e:ci": "playwright test --reporter=list",
     "test:e2e:composer-persistence": "playwright test --config=playwright.composer-persistence.config.ts --project=composer-persistence --project=composer-production-boundary",
+    "test:e2e:composer-verification": "playwright test --config=playwright.composer-verification.config.ts",
     "test:e2e:composer-file": "playwright test --config=playwright.composer-file.config.ts",
     "b4push": "bash scripts/run-b4push.sh",
     "prepare": "lefthook install"

@@ -1,0 +1,166 @@
+---
+title: Composer persistence and recovery
+description: Inspect, recover, and troubleshoot the Composer browser and development-file providers.
+sidebar_position: 3
+---
+
+The Composer library stores independent composition records. Browser storage is the production
+default. A local-file provider is additionally available while running `pnpm dev`; it is not part of
+the static build.
+
+## Record and URL contracts
+
+One canonical record has this shape:
+
+```ts
+{
+  id: string;
+  createdAt: string; // canonical UTC ISO instant
+  updatedAt: string; // canonical UTC ISO instant, not before createdAt
+  document: {
+    schemaVersion: number;
+    id: string;      // exactly equal to the outer record id
+    name: string;
+    root: unknown[]; // validated Composition nodes
+  };
+}
+```
+
+The value must be JSON-safe, and its lower-case `id` may contain only ASCII letters, digits,
+underscores, and hyphens. JSX is not canonical data and is therefore not stored in the record. It is
+derived from the document plus the current production component manifest, so fixes to the generator
+or components do not require a data migration.
+
+Detail locations qualify the record id with its provider:
+
+```text
+/composer/#/composition/indexeddb/<percent-encoded-record-id>
+/composer/#/composition/files/<percent-encoded-record-id>   # pnpm dev only
+```
+
+Records with the same id in different providers are unrelated. Refresh, Back, and Forward preserve
+the provider-qualified route. A malformed route or a missing record displays a contained error with
+Retry and Back to library actions.
+
+## Inspect browser storage
+
+The IndexedDB contract is:
+
+| Item | Name | Purpose |
+| --- | --- | --- |
+| Database | `zudo-sg-composer` | The Composer browser library |
+| Version | `1` | IndexedDB schema version |
+| Object store | `compositions` | Canonical records, keyed by `id` |
+| Index | `updatedAt` | Non-unique updated-time index |
+| Object store | `meta` | Schema, initialization, migration, and cleanup state, keyed by `key` |
+
+In Chromium DevTools, open **Application → Storage → IndexedDB →
+zudo-sg-composer**. Select `compositions` to inspect records or `meta` to inspect recovery state. Use
+the refresh button in the data viewer after a save. Do not edit or delete rows while the Composer is
+open unless deliberately diagnosing recovery: DevTools writes bypass the application validator and
+can make a record unreadable.
+
+The former singleton source is the localStorage key `sg-composer-document`. It is read only when a
+fresh database is initialized and is removed only by the exact-source cleanup described below.
+
+## Migration and recovery matrix
+
+Initialization handles every legacy-source outcome without silently discarding bytes:
+
+| Legacy source | Result | Source and recovery policy |
+| --- | --- | --- |
+| Missing | Creates the sample record and marks migration `none` | Nothing to clean up |
+| Read throws | Opens no usable database and reports a retryable read error | The upgrade transaction aborts; fix access and use Retry library |
+| Valid current document | Imports one canonical record in the same upgrade transaction | Cleanup removes localStorage only if it still exactly matches the imported snapshot |
+| Valid document with an unsafe id | Imports under a fresh safe id and reports recovery | The original id is recorded in metadata; exact-source cleanup still applies |
+| Malformed JSON or document | Creates a separate recovered sample | Exact raw bytes remain in localStorage and in `meta.migration.rawBackup`; Retry is safe |
+| Future schema | Quarantines the source and does not create an editable replacement | Exact raw bytes remain in localStorage and `meta.migration.rawBackup`; choose Retry recovery or explicitly Start fresh |
+
+A valid import can finish its IndexedDB transaction even when localStorage cleanup fails. In that
+case the UI reports **cleanup pending** and Retry recovery attempts removal again. Cleanup compares
+the current source with the imported snapshot immediately before removal. If another tab or tool
+changed it, the state becomes **source changed** and the new value is retained; Retry never deletes a
+different value.
+
+**Retry library** repeats a failed provider initialization. **Retry recovery** retries cleanup or
+re-evaluates quarantined state without replacing the raw source. **Start fresh** is shown only for a
+future-schema quarantine and requires a safe confirmation. It creates a separate writable sample
+while keeping the exact raw backup in migration metadata; it does not pretend that the future record
+was converted. Export or copy the raw backup before deleting the database if it may be needed by a
+newer build.
+
+## Development file mode
+
+Run `pnpm dev`, then choose **Local files** in the library's Provider control. Each record owns this
+pair below the repository root:
+
+```text
+compositions/composition-<id>.composition.json  # canonical record
+compositions/composition-<id>.tsx               # derived production JSX
+```
+
+Canonical JSON is formatted with two-space indentation and a trailing newline. The `.tsx` bytes are
+the exact output of the browser's production `generateJsx` path. On list or open, missing or stale JSX
+triggers a repair handshake: the server returns the validated canonical record, the browser derives
+JSX with the current manifest, and the server atomically replaces the derived file. Invalid canonical
+JSON is preserved and blocks repair. Fix the JSON or restore a known-good copy, then retry.
+
+The request/filesystem boundary is deliberately narrow:
+
+- only same-origin development requests with the per-server capability token are accepted;
+- bodies are JSON, limited to 2 MiB, and contain a fixed operation shape rather than caller paths;
+- ids must pass the canonical path-safe validator;
+- the server owns the `compositions` root and verifies it is a real directory, not a symlink;
+- owned files are written through exclusive temporary files and atomic rename without following
+  symlinks;
+- list, delete, and clear ignore unrelated files, and clear removes only validated owned pairs.
+
+The virtual capability, endpoint middleware, Provider option, and filesystem code are development
+features. `pnpm build` and the static preview expose only Browser storage, do not serve
+`/__zudo_composer_file_provider`, and do not write `compositions/`.
+
+## Troubleshooting
+
+**Upgrade blocked or storage changed version.** Close or reload other tabs for the same origin and
+then choose Retry. A tab receiving `versionchange` closes its old connection; an in-memory draft that
+failed to save remains visible so it can be retried or copied.
+
+**Quota, private-mode, or storage permission failure.** Free origin storage, allow site data, or use a
+normal browser profile. **Not saved** and the adjacent Retry action mean the in-memory draft is newer
+than durable storage. Do not reload until Retry reaches **Saved** or the content has been copied.
+
+**Library read/open failure.** Keep the current page open, inspect the `compositions` and `meta`
+stores, and use Retry library or the route-level Retry. Validation failures are intentionally not
+silently rewritten. Restore a valid canonical record or use a backup.
+
+**File generation or repair failure.** Keep `pnpm dev` running, check terminal diagnostics, directory
+permissions, and free space. Resolve opaque/unsupported component diagnostics in canonical JSON.
+Never hand-edit derived TSX as the fix: it will be regenerated from canonical JSON. A safety-boundary
+error can also mean `compositions/` or an owned path is a symlink; restore it as a real directory/file
+before retrying.
+
+Remote persistence is outside this feature's scope. This epic adds no Turso backend and no remote,
+account, collaboration, or multi-device synchronization.
+
+## Portable verification
+
+Run these from a clean checkout. The browser suites require the preceding production build:
+
+```sh
+pnpm test:unit
+pnpm check
+pnpm build
+pnpm test:e2e:composer-persistence
+pnpm test:e2e:composer-verification
+pnpm test:e2e:composer-file
+pnpm exec vitest run plugins/__tests__/composer-file-provider-plugin.test.ts
+pnpm exec vitest run src/composer/source/__tests__/generated-fixture-typecheck.test.ts
+```
+
+`test:e2e:composer-verification` runs the 390/768/1024/1280 width matrix in light and dark themes for
+both index and loaded-detail views. It asserts overflow, narrow canvas-only behavior, touch target
+size, accessible names, keyboard reachability, focus restoration, live regions, error actions, and
+browser errors. Screenshots are attached to the Playwright result only after those deterministic
+checks; they are confirmation artifacts, not the pass criterion. The same command also retains the
+pre-existing computed-style Composer contract suite, whose helper opens a stored record before
+measuring the editor.
