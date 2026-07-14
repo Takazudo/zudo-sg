@@ -577,4 +577,51 @@ describe("ProductionComposerApp", () => {
     );
     expect(screen.getByRole("button", { name: "Library" })).toBeInTheDocument();
   });
+
+  it("ignores a recovery retry that finishes after navigation", async () => {
+    const migrated = record("safe-id", "Migrated composition");
+    const retryOutcome = deferred<CompositionInitializationOutcome>();
+    const indexeddb = memoryProvider("indexeddb", [migrated], {
+      initialize: async () => ({
+        status: "ready-with-recovery",
+        summaries: [summarizeComposition(migrated)],
+        recovery: {
+          kind: "recovered",
+          reason: "unsafe-id",
+          record: migrated,
+          sourcePreserved: true,
+          message: "The unsafe legacy id was remapped to safe-id.",
+        },
+      }),
+    });
+    indexeddb.initialization.retry = vi.fn(() => retryOutcome.promise);
+    const navigation = new FakeNavigation("/composer/#/composition/indexeddb/safe-id");
+    render(
+      <ProductionComposerApp
+        providers={[indexeddb]}
+        navigation={navigation}
+        preview={PREVIEW}
+      />,
+    );
+
+    await screen.findByRole("button", { name: "Library" });
+    fireEvent.click(screen.getByRole("button", { name: "Retry recovery" }));
+    await waitFor(() => expect(indexeddb.initialization.retry).toHaveBeenCalledOnce());
+    fireEvent.click(screen.getByRole("button", { name: "Library" }));
+    expect(await screen.findByRole("heading", { name: "Compositions" })).toBeInTheDocument();
+
+    retryOutcome.resolve({
+      status: "error",
+      error: new CompositionPersistenceError(
+        "initialize",
+        "read-failed",
+        "Stale recovery failure.",
+        true,
+      ),
+    });
+    await Promise.resolve();
+
+    expect(screen.queryByText("Stale recovery failure.")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Composition recovery notice")).not.toBeInTheDocument();
+  });
 });

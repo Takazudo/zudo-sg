@@ -244,6 +244,9 @@ export function ProductionComposerApp({
     useState<CompositionRecoveryOutcome | null>(null);
   const [retryingRecovery, setRetryingRecovery] = useState(false);
   const locationGenerationRef = useRef(0);
+  const recoveryGenerationRef = useRef(0);
+  const stateRef = useRef(state);
+  stateRef.current = state;
 
   const coordinator = useMemo(
     () =>
@@ -290,6 +293,8 @@ export function ProductionComposerApp({
 
   const transition = useCallback(
     async (intent: ComposerTransitionIntent) => {
+      recoveryGenerationRef.current += 1;
+      setRetryingRecovery(false);
       setTransitionError(null);
       const result = await coordinator.transition(intent);
       if (result.status === "rolled-back") {
@@ -447,10 +452,23 @@ export function ProductionComposerApp({
     if (state?.view !== "detail") return;
     const provider = providersById.get(state.providerId);
     if (!provider) return;
+    const ref = routeRef(state.route);
+    if (!ref) return;
+    const recoveryGeneration = ++recoveryGenerationRef.current;
+    const isCurrentRecovery = () => {
+      const current = stateRef.current;
+      const currentRef = current?.view === "detail" ? routeRef(current.route) : null;
+      return (
+        recoveryGeneration === recoveryGenerationRef.current &&
+        currentRef?.providerId === ref.providerId &&
+        currentRef.recordId === ref.recordId
+      );
+    };
     setDetailOperationError(null);
     setRetryingRecovery(true);
     try {
       const outcome = await provider.initialization.retry();
+      if (!isCurrentRecovery()) return;
       if (outcome.status === "error") {
         setDetailOperationError(outcome.error.message);
         return;
@@ -467,13 +485,14 @@ export function ProductionComposerApp({
         outcome.status === "ready-with-recovery" ? outcome.recovery : null,
       );
     } catch (reason) {
+      if (!isCurrentRecovery()) return;
       setDetailOperationError(
         reason instanceof Error
           ? reason.message
           : "Composition recovery retry failed.",
       );
     } finally {
-      setRetryingRecovery(false);
+      if (isCurrentRecovery()) setRetryingRecovery(false);
     }
   }, [providersById, state]);
 
