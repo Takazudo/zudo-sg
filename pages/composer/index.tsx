@@ -59,7 +59,11 @@ export default function ComposerPage(): JSX.Element {
   // than waiting on visibility/idle, since the workspace IS the page.
   const app = Island({
     when: "load",
-    ssrFallback: <div class="sg-composer-shell" data-sg-composer-loading />,
+    // zfb keeps the skip-SSR fallback in the island container when it mounts
+    // the client tree. Reusing the full-height workspace shell here therefore
+    // left an empty viewport-sized sibling before the library and pushed the
+    // real UI below the fold. Keep this marker inert and zero-sized.
+    ssrFallback: <div aria-hidden="true" data-sg-composer-loading />,
     children: <ComposerApp />,
   }) as unknown as VNode;
 
