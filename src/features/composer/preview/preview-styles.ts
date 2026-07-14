@@ -130,7 +130,6 @@ html[${COMPOSER_PREVIEW_DOC_ATTR}] {
 .zc-linked-frame-detail { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .zc-linked-frame-outlet,
 .zc-linked-frame-lock { color: var(--color-muted); }
-.zc-linked-frame-lock::before { content: "🔒 "; }
 .zc-linked-frame-open {
   margin-inline-start: auto;
   min-height: 1.75rem;

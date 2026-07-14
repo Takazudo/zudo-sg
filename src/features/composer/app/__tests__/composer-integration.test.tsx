@@ -12,6 +12,8 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/pre
 import type {
   CompositionDocument,
   CompositionRecord,
+  ComposerReuseResolutionOptions,
+  GlobalTemplateResolutionOutcome,
   InsertionTarget,
   ReuseCatalogOutcome,
   ReuseSelectionOutcome,
@@ -236,6 +238,77 @@ describe("ComposerIntegration — cross-surface wiring (#251)", () => {
     await waitFor(() => expect(s.canvasDoc().root.map((node) => node.componentId)).toEqual([FIXTURE_IDS.stack, FIXTURE_IDS.box]));
     expect(s.canvasDoc().root.map((node) => node.id)).not.toEqual(["pattern-stack", "pattern-box"]);
     expect(s.chooser().hasAttribute("open")).toBe(false);
+  });
+
+  it("derives one linked preview snapshot while the tree and inspector retain only local nodes", async () => {
+    const sourceDocument = fixtureDocument([
+      fixtureNode(FIXTURE_IDS.split, { ratio: "50-50" }, { left: [], right: [] }, "collision"),
+    ], "Site shell");
+    sourceDocument.id = "site-shell";
+    sourceDocument.publication = {
+      kind: "global-template",
+      outlet: {
+        id: "main",
+        label: "Main content",
+        target: { parentId: "collision", slotId: "right" },
+      },
+    };
+    const consumer = fixtureDocument([
+      fixtureNode(FIXTURE_IDS.box, { label: "Local content" }, {}, "collision"),
+    ], "Bound page");
+    consumer.id = "bound-page";
+    consumer.binding = { sourceRecordId: "site-shell", outletId: "main" };
+    const source: CompositionRecord = {
+      id: "site-shell",
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-01T00:00:00.000Z",
+      document: sourceDocument,
+    };
+    const outcome: GlobalTemplateResolutionOutcome = {
+      status: "resolved",
+      binding: consumer.binding,
+      localRoot: consumer.root,
+      source,
+      outlet: sourceDocument.publication.outlet,
+      rootPolicy: { kind: "resolved", cardinality: "many" },
+    };
+    const resolver: ComposerReuseResolutionOptions["resolver"] = {
+      resolve: vi.fn(async () => outcome),
+    };
+    const onOpenSource = vi.fn();
+    const bridge = makeTestBridge();
+    const view = render(
+      <ComposerIntegration
+        manifestEntries={fixtureCatalog}
+        controllerOptions={{ sample: consumer, idFactory: createSequentialIdFactory("n") }}
+        reuseResolution={{ ref: { providerId: "indexeddb", recordId: "bound-page" }, resolver }}
+        linkedActions={{ onOpenSource, onDetach: vi.fn() }}
+        createBridge={bridge.createBridge}
+        previewLocation={bridge.location}
+      />,
+    );
+    act(() => bridge.deliver(readyMessage()));
+
+    await waitFor(() => {
+      const renderMessage = bridge.posts
+        .map((post) => post.message as { type?: string; document?: CompositionDocument; linked?: unknown })
+        .filter((message) => message.type === "render")
+        .at(-1)!;
+      expect(renderMessage.document).toMatchObject({ id: "bound-page", root: [{ id: "collision" }] });
+      expect(renderMessage.linked).toMatchObject({
+        sourceRecordId: "site-shell",
+        sourceDocument: { id: "site-shell", root: [{ id: "collision" }] },
+        outlet: { id: "main" },
+      });
+    });
+    const tree = view.container.querySelector("#sg-composer-tree") as HTMLElement;
+    expect(tree.querySelectorAll('[data-sg-tree-node-id="collision"]')).toHaveLength(1);
+    expect(within(tree).getByText("Site shell")).toBeInTheDocument();
+    fireEvent.click(within(tree).getByRole("button", { name: "Open source" }));
+    expect(onOpenSource).toHaveBeenCalledWith("site-shell");
+    expect(within(view.container.querySelector("#sg-composer-inspector") as HTMLElement).getByRole("button", {
+      name: "Detach",
+    })).toBeInTheDocument();
   });
 
   it("a canvas selection reveals + expands the node's ancestors in the tree", () => {

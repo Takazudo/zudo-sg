@@ -450,7 +450,6 @@ html[data-sg-composer-doc] body {
   margin: 0;
 }
 .sg-composer-linked-frame p span { color: var(--color-muted); }
-.sg-composer-linked-frame[data-sg-linked-frame="resolved"] p span:last-child::before { content: "🔒 "; }
 .sg-composer-linked-frame[data-sg-linked-frame="blocked"] {
   background: color-mix(in oklch, var(--color-warning) 12%, var(--color-surface));
 }

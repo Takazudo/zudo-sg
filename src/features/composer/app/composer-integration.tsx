@@ -33,7 +33,10 @@ import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import type { JSX } from "preact";
 import {
   generateBrowserJsxExport,
+  linkedEditorPresentation,
+  materializeGlobalTemplateView,
   type ComposerReuseResolutionOptions,
+  type LinkedEditorLifecycleActions,
   type ReuseCatalogOutcome,
   type ReuseSelectionOutcome,
   type CompositionRecordRef,
@@ -50,7 +53,9 @@ import { InspectorPanel } from "@/features/composer/ui/inspector/inspector-panel
 import { ComposerExportDialog } from "@/features/composer/ui/export/export-dialog";
 import {
   createComposerPreviewBridge,
+  localPreviewSnapshot,
   type ComposerPreviewLocation,
+  type ComposerPreviewSnapshot,
   type MessageTarget,
 } from "@/features/composer/preview";
 import { ComposerCanvasHost } from "./composer-canvas-host";
@@ -78,6 +83,11 @@ export interface ComposerIntegrationProps {
   listPatternCatalog?: () => Promise<ReuseCatalogOutcome>;
   /** Load one catalog Pattern through that same active-provider boundary. */
   loadPattern?: (ref: CompositionRecordRef) => Promise<ReuseSelectionOutcome>;
+  /** Provider-owned linked-template actions; this surface never receives the provider itself. */
+  linkedActions?: Pick<
+    LinkedEditorLifecycleActions,
+    "onOpenSource" | "onDetach" | "onRemoveBrokenBinding"
+  >;
 
   // ── Canvas bridge test seams (production defaults) ────────────────────────
   createBridge?: typeof createComposerPreviewBridge;
@@ -99,13 +109,63 @@ export interface ComposerIntegrationProps {
 }
 
 export function ComposerIntegration(props: ComposerIntegrationProps): JSX.Element {
+  const [linkedRetryEpoch, setLinkedRetryEpoch] = useState(0);
+  const effectiveReuseResolution = useMemo(() => {
+    if (!props.reuseResolution) return undefined;
+    return {
+      ...props.reuseResolution,
+      // Retrying a broken link is a fresh provider read even when its parent
+      // record/ref is unchanged. Keep the parent's refresh token intact.
+      refreshKey: [props.reuseResolution.refreshKey, linkedRetryEpoch],
+    };
+  }, [linkedRetryEpoch, props.reuseResolution]);
   const api = useComposerIntegration({
     manifestEntries: props.manifestEntries,
     controllerOptions: props.controllerOptions,
-    reuseResolution: props.reuseResolution,
+    reuseResolution: effectiveReuseResolution,
   });
   const { controller, manifestEntries, session, viewport, setViewport, chooser, exportState, titleFor } = api;
   const { state } = controller;
+  const linkedView = useMemo(() => {
+    if (!api.reuseResolution) return null;
+    return materializeGlobalTemplateView(
+      { ...controller.record, document: state.document },
+      api.reuseResolution,
+    );
+  }, [api.reuseResolution, controller.record, state.document]);
+  const linkedPresentation = useMemo(
+    () => (linkedView ? linkedEditorPresentation(linkedView) : undefined),
+    [linkedView],
+  );
+  const previewSnapshot = useMemo<ComposerPreviewSnapshot>(() => {
+    if (linkedView?.status !== "resolved") {
+      return localPreviewSnapshot(state.document, controller.record.id);
+    }
+    return {
+      document: linkedView.localDocument,
+      localRecordId: linkedView.localRuntime.recordId,
+      linked: {
+        sourceRecordId: linkedView.sourceRuntime.sourceRecordId,
+        sourceDocument: linkedView.sourceDocument,
+        outlet: linkedView.outlet,
+      },
+    };
+  }, [controller.record.id, linkedView, state.document]);
+  const linkedActions = useMemo<LinkedEditorLifecycleActions | undefined>(() => {
+    if (!linkedView || linkedView.status === "local") return undefined;
+    const onOpenSource = props.linkedActions?.onOpenSource;
+    if (linkedView.status === "blocked") {
+      return {
+        onOpenSource,
+        onRetry: () => setLinkedRetryEpoch((epoch) => epoch + 1),
+        onRemoveBrokenBinding: props.linkedActions?.onRemoveBrokenBinding,
+      };
+    }
+    return {
+      onOpenSource,
+      onDetach: props.linkedActions?.onDetach,
+    };
+  }, [linkedView, props.linkedActions]);
   const [patternCatalog, setPatternCatalog] = useState<ReuseCatalogOutcome | undefined>(undefined);
   const [patternCatalogLoading, setPatternCatalogLoading] = useState(false);
   const patternCatalogRequest = useRef(0);
@@ -303,6 +363,8 @@ export function ComposerIntegration(props: ComposerIntegrationProps): JSX.Elemen
             onOpenInsertMenu={menus.handleTreeOpenInsertMenu}
             readOnly={readOnly}
             onSetGlobalTemplateOutlet={setGlobalTemplateOutlet}
+            linkedPresentation={linkedPresentation}
+            linkedActions={linkedActions}
           />
         }
         canvas={
@@ -319,6 +381,8 @@ export function ComposerIntegration(props: ComposerIntegrationProps): JSX.Elemen
             createBridge={props.createBridge}
             location={props.previewLocation}
             hostWindow={props.hostWindow}
+            snapshot={previewSnapshot}
+            onOpenSource={linkedActions?.onOpenSource}
           />
         }
         inspector={
@@ -336,6 +400,8 @@ export function ComposerIntegration(props: ComposerIntegrationProps): JSX.Elemen
             onClearPublication={clearPublication}
             lastError={controller.lastError}
             titleFor={titleFor}
+            linkedPresentation={linkedPresentation}
+            linkedActions={linkedActions}
           />
         }
       />
