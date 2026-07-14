@@ -80,7 +80,7 @@ describe("preview palette scope — structure", () => {
 
   it("restores them from the canonical --palette-* rungs, not hard-coded colors", () => {
     const block = paletteBlock();
-    expect(block).toContain("var(--palette-base-0)");
+    expect(block).toContain("var(--palette-neutral-0)");
     expect(block).toContain("var(--palette-accent-2)");
     // light-dark() is what makes the theme switch work off `color-scheme`.
     const tokenCount = declaredTokens(block).length;
@@ -127,7 +127,7 @@ describe("preview palette scope — live document", () => {
     // The restored tokens reference Tier-1 `--palette-*` rungs, which the real
     // preview gets from the global bundle. Seed two of them here so the
     // computed values are observable.
-    style.textContent = `:root { --palette-base-0: #ffffff; --palette-base-10: #101010; }\n${COMPOSER_PREVIEW_CSS}`;
+    style.textContent = `:root { --palette-neutral-0: #ffffff; --palette-neutral-3: #101010; }\n${COMPOSER_PREVIEW_CSS}`;
     document.head.append(style);
   }
 

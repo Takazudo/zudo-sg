@@ -56,10 +56,10 @@ export const COMPOSER_PREVIEW_DOC_ATTR = "data-composer-preview-doc";
 export const COMPOSER_PREVIEW_CSS = `
 /* ── Palette restoration (see header) ─────────────────────────────────────── */
 html[${COMPOSER_PREVIEW_DOC_ATTR}] {
-  --color-bg:           light-dark(var(--palette-base-0), var(--palette-base-10));
-  --color-surface:      light-dark(var(--palette-base-1), var(--palette-base-9));
-  --color-fg:           light-dark(var(--palette-base-8), var(--palette-base-2));
-  --color-muted:        light-dark(var(--palette-base-5), var(--palette-base-4));
+  --color-bg:           light-dark(var(--palette-neutral-0), var(--palette-neutral-3));
+  --color-surface:      light-dark(var(--palette-neutral-0), var(--palette-neutral-3));
+  --color-fg:           light-dark(var(--palette-neutral-3), var(--palette-neutral-0));
+  --color-muted:        light-dark(var(--palette-neutral-2), var(--palette-neutral-1));
   --color-accent:       light-dark(var(--palette-accent-2), var(--palette-accent-1));
   --color-accent-hover: light-dark(var(--palette-accent-3), var(--palette-accent-0));
   /* Composer Polish S1 (#263). --color-border: the host now re-asserts it to a
@@ -67,7 +67,7 @@ html[${COMPOSER_PREVIEW_DOC_ATTR}] {
      (they bind border-border). --sg-composer-guide: the composer's quiet-chrome
      tone — the insert markers below rebind onto it in a later wave. Both are kept
      IDENTICAL to src/styles/preview.css (the drift-guard test derives from it). */
-  --color-border:      light-dark(var(--palette-base-3), var(--palette-base-7));
+  --color-border:      light-dark(var(--palette-neutral-1), var(--palette-neutral-2));
   --sg-composer-guide: light-dark(oklch(.680 .008 65), oklch(.560 .008 65));
   --color-success: light-dark(var(--palette-state-success), var(--palette-state-success-dark));
   --color-danger:  light-dark(var(--palette-state-danger),  var(--palette-state-danger-dark));
