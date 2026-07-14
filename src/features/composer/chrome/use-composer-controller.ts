@@ -23,6 +23,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "preact/hooks"
 import type {
   ComponentManifest,
   CompositionDocument,
+  CompositionNode,
   CompositionRecord,
   CompositionSaveQueue,
   CompositionSaveQueueState,
@@ -114,6 +115,8 @@ export interface ComposerController {
   cut: (nodeId: string) => void;
   /** Clone-with-new-ids + insert-subtree at `target`, then select + reveal it. Errors (e.g. an incompatible slot) surface via `lastError`, never a silent no-op. */
   paste: (target: InsertionTarget) => void;
+  /** Atomically clone and insert every root from a saved Pattern, then select and reveal its first inserted root. */
+  insertForest: (sourceRoots: readonly CompositionNode[], target: InsertionTarget) => void;
   /** Clone-with-new-ids + insert immediately after the source, then select + reveal it. Refused for opaque nodes. */
   duplicate: (nodeId: string) => void;
   /**
@@ -497,6 +500,7 @@ export function useComposerController(options: UseComposerControllerOptions = {}
       copy: (nodeId) => dispatch({ type: "copy", nodeId }),
       cut: (nodeId) => dispatch({ type: "cut", nodeId }),
       paste: (target) => dispatch({ type: "paste", target }),
+      insertForest: (sourceRoots, target) => dispatch({ type: "insertForest", sourceRoots, target }),
       duplicate: (nodeId) => dispatch({ type: "duplicate", nodeId }),
       drop: (sourceNodeId, target, copy) => dispatch({ type: "drop", sourceNodeId, target, copy }),
       publishPattern: () => dispatch({ type: "publishPattern" }),
