@@ -4,9 +4,8 @@
  * the build fails with a 500 on that page.
  *
  * Registered tags (every custom caps-tag the content collection uses):
- *   img              → PlaceholderBox (no real image assets exist — see
- *                       its own doc for why: ~100 image references are
- *                       deliberately backing-file-less placeholders).
+ *   img              → MdxImage (resolves content sources to local original
+ *                       demo assets while preserving content-owned alt text).
  *   Card / CardGrid  → flat surface card + its responsive grid wrapper.
  *   Callout / Note   → note/aside box; `Note` is the `tone="note"` alias.
  *   LineHero         → shared business-line landing hero (5 lines).
@@ -33,7 +32,6 @@
 import { defaultComponents } from "@takazudo/zfb";
 import type { MdxComponents } from "@takazudo/zfb";
 
-import { PlaceholderBox } from "@zudo-sg/ui/src/media/placeholder-box/placeholder-box.tsx";
 import { Card } from "@zudo-sg/ui/src/cards/card/card.tsx";
 import { CardGrid } from "@zudo-sg/ui/src/cards/card-grid/card-grid.tsx";
 import { Callout, Note } from "@zudo-sg/ui/src/cards/callout/callout.tsx";
@@ -71,11 +69,12 @@ import { ProseLi } from "@zudo-sg/ui/src/content/prose-li/prose-li.tsx";
 import { ProseBlockquote } from "@zudo-sg/ui/src/content/prose-blockquote/prose-blockquote.tsx";
 import { ProseTable, ProseTh, ProseTd } from "@zudo-sg/ui/src/content/prose-table/prose-table.tsx";
 import { ProseDl, ProseDt, ProseDd } from "@zudo-sg/ui/src/content/prose-dl/prose-dl.tsx";
+import { MdxImage } from "./_mdx-image";
 
 export const mdxComponents: MdxComponents = {
   ...defaultComponents,
 
-  img: PlaceholderBox,
+  img: MdxImage,
 
   Card,
   CardGrid,
