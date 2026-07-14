@@ -30,6 +30,7 @@
     "test:unit": "vitest run",
     "test:e2e": "playwright test",
     "test:e2e:ci": "playwright test --reporter=list",
+    "test:e2e:composer-reuse": "playwright test --config=playwright.composer-verification.config.ts --project=composer-reuse",
     "test:e2e:composer-persistence": "playwright test --config=playwright.composer-persistence.config.ts --project=composer-persistence --project=composer-production-boundary --project=composer-adapted",
     "test:e2e:composer-verification": "playwright test --config=playwright.composer-verification.config.ts",
     "test:e2e:composer-file": "playwright test --config=playwright.composer-file.config.ts",
