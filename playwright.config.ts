@@ -56,6 +56,20 @@ export default defineConfig({
       use: { baseURL: `http://localhost:${SMOKE_PORT}` },
     },
     {
+      name: "composer-persistence",
+      // Real Chromium IndexedDB/migration lifecycle and provider-qualified
+      // navigation. Kept separate from the long editor walkthrough so fixture
+      // cleanup and serial database mutations remain explicit.
+      testMatch: "composer-persistence.spec.ts",
+      use: { baseURL: `http://localhost:${SMOKE_PORT}` },
+    },
+    {
+      name: "composer-production-boundary",
+      // Static preview must never expose the dev file transport or provider.
+      testMatch: "composer-production-boundary.spec.ts",
+      use: { baseURL: `http://localhost:${SMOKE_PORT}` },
+    },
+    {
       name: "composer-contracts",
       // Composer Polish epic (#262) S7 (#270) computed-style contract gate —
       // dual-mode census/measurement pass over the built /composer (SMOKE_PORT).
