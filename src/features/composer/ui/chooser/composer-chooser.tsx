@@ -29,7 +29,7 @@
 // expected to be mounted unconditionally, with `open` toggling visibility) so
 // "Added" announcements survive the dialog closing/hiding.
 //
-// ── Live preview + enlarge (issue #254) ─────────────────────────────────────
+// ── Live preview + movable tool shell ───────────────────────────────────────
 // Search/filter/list rendering stayed in this one component (no internal
 // sub-dialog abstraction, per #250's own header note) so this extension could
 // wrap the existing target-capture/focus/keyboard machinery without
@@ -37,15 +37,13 @@
 // STICKY `previewedComponentId` (never cleared by mouseleave/blur — only
 // replaced by the next hover/focus); `ChooserPreviewHost` owns the actual
 // second bridge + iframe (see that module's header for the ephemeral
-// create/dispose contract). The enlarge toggle is local UI state only — it
-// resizes the `<dialog>` via `data-sg-enlarged`; it does not touch #250's
-// focus-containment/Escape/restoration effects, which key off `open` and
-// `capturedTarget`, not this attribute.
+// create/dispose contract). The shared geometry hook makes the shell movable
+// for this open session only; it does not touch #250's focus-containment,
+// Escape, or target-capture effects.
 
 import { useEffect, useId, useMemo, useRef, useState } from "preact/hooks";
 import type { JSX } from "preact";
 import type { ComponentManifest, CompositionDocument, InsertionTarget } from "@/composer";
-import { ExpandIcon } from "@/components/icons";
 import type { ComposerManifestEntry } from "@/styleguide/data/composer-registry";
 import type {
   ComposerPreviewLocation,
@@ -55,6 +53,7 @@ import type {
 import { ancestorChainIds, buildCatalogById } from "../tree/tree-helpers";
 import { describeInsertionTarget, eligibleEntries, matchesQuery } from "./chooser-helpers";
 import { ChooserPreviewHost } from "./chooser-preview-host";
+import { toolDialogStyle, useMovableToolDialog, useToolDialogGeometry } from "../shared/tool-dialog-geometry";
 
 export interface ComposerChooserProps {
   open: boolean;
@@ -111,9 +110,8 @@ export function ComposerChooser({
   // Sticky: set on hover/focus, never cleared by mouseleave/blur — only ever
   // replaced by the NEXT hover/focus, or reset to null on the next open.
   const [previewedComponentId, setPreviewedComponentId] = useState<string | null>(null);
-  // Resets to false on every open (see the capture effect below) — the
-  // enlarge toggle is per-session UI state, not a persisted preference.
-  const [enlarged, setEnlarged] = useState(false);
+  const geometry = useToolDialogGeometry({ open });
+  const moveGrip = useMovableToolDialog(geometry);
 
   const titleId = useId();
 
@@ -128,7 +126,6 @@ export function ComposerChooser({
       setCategory(ALL_CATEGORY);
       setStatus("");
       setPreviewedComponentId(null);
-      setEnlarged(false);
     } else if (!open && capturedTarget !== null) {
       setCapturedTarget(null);
     }
@@ -251,10 +248,10 @@ export function ComposerChooser({
     <>
       <dialog
         ref={dialogRef}
-        class="sg-composer-chooser"
-        data-sg-enlarged={enlarged}
+        class="sg-composer-chooser sg-composer-tool-dialog"
         aria-modal="true"
         aria-labelledby={titleId}
+        style={toolDialogStyle(geometry.rect)}
         onKeyDown={handleDialogKeyDown}
         onClick={(event) => {
           if (event.target === dialogRef.current) dialogRef.current?.close();
@@ -269,24 +266,22 @@ export function ComposerChooser({
         {capturedTarget && (
           <>
             <div class="sg-composer-chooser-header">
+              <button
+                type="button"
+                class="sg-composer-tool-dialog-grip"
+                aria-label="Move dialog"
+                aria-describedby={`${titleId}-move-help`}
+                aria-keyshortcuts="ArrowUp ArrowDown ArrowLeft ArrowRight Home Shift+ArrowUp Shift+ArrowDown Shift+ArrowLeft Shift+ArrowRight"
+                title="Move dialog (Arrow keys; Shift moves farther; Home resets)"
+                {...moveGrip}
+              >
+                <span aria-hidden="true" class="sg-composer-tool-dialog-grip-dots">
+                  ⠿
+                </span>
+              </button>
               <h2 id={titleId} class="sg-composer-chooser-title">
                 Add a component
               </h2>
-              <button
-                type="button"
-                class="sg-composer-toolbar-button sg-composer-chooser-enlarge"
-                aria-pressed={enlarged}
-                aria-label={enlarged ? "Restore chooser to default size" : "Enlarge chooser"}
-                title={enlarged ? "Restore size" : "Enlarge"}
-                onClick={() => setEnlarged((value) => !value)}
-              >
-                {/* Same glyph in both states (issue #282 review): the icon module has no
-                    dedicated collapse/restore icon, and reusing `XMarkIcon` (documented as
-                    "dialog close") for "restore to default size" reads as dismissing the
-                    dialog. The pressed state is already communicated by `aria-pressed`'s
-                    accent styling above and the differing aria-label/title. */}
-                <ExpandIcon size="sm" />
-              </button>
               <p class="sg-composer-chooser-target">
                 Adding to: <strong>{targetLabel}</strong>
               </p>
@@ -297,6 +292,10 @@ export function ComposerChooser({
               >
                 Cancel
               </button>
+              <p id={`${titleId}-move-help`} class="sr-only">
+                Use Arrow keys to move the dialog 16 pixels, Shift plus Arrow keys to move it 48 pixels, or Home
+                to restore its default position and size.
+              </p>
             </div>
 
             {blockedReason ? (

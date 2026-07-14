@@ -883,8 +883,11 @@ html[data-sg-composer-doc] body {
   .sg-composer-toolbar-confirm,
   .sg-composer-inspector-control,
   .sg-composer-chooser-search,
-  .sg-composer-chooser-category {
+  .sg-composer-chooser-category,
+  .sg-composer-tool-dialog-grip,
+  .sg-composer-tool-dialog-resize {
     min-height: 2.75rem;
+    min-width: 2.75rem;
   }
 }
 
@@ -894,7 +897,7 @@ html[data-sg-composer-doc] body {
   z-index: var(--z-index-modal);
   padding: 0;
   border: 1px solid var(--color-border-strong);
-  border-radius: var(--radius-lg);
+  border-radius: 0;
   background: var(--sg-composer-panel-bg);
   color: var(--color-fg);
   /* Stronger than the shared --shadow-lg (that one reads as near-invisible on
@@ -919,20 +922,41 @@ html[data-sg-composer-doc] body {
    file is imported unlayered, so it wins over preflight's layered reset
    either way — restated here explicitly since without it nothing sets
    margin at all). */
-.sg-composer-chooser[open] {
-  display: flex;
-  flex-direction: column;
-  margin: auto;
-  width: min(48rem, calc(100vw - var(--spacing-hsp-xl)));
-  max-height: min(34rem, calc(100vh - var(--spacing-vsp-xl)));
+.sg-composer-tool-dialog {
+  /* The JS geometry helper owns the movable inline values. These explicit CSS
+     dimensions are the no-JS/pre-hydration fallback and the contract future
+     Composer tool dialogs share. */
+  --sg-composer-tool-dialog-gutter: 24px;
+  box-sizing: border-box;
 }
 
-/* Enlarge toggle (issue #254) — near-fullscreen, resets per open (state lives
-   in ComposerChooser, not here). The `[open]` rule above is what lets the body
-   below (`.sg-composer-chooser-body`) grow to fill the extra height. */
-.sg-composer-chooser[data-sg-enlarged="true"] {
-  width: 96vw;
-  max-height: 92vh;
+.sg-composer-tool-dialog[open] {
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  inset: var(--sg-composer-tool-dialog-gutter) auto auto var(--sg-composer-tool-dialog-gutter);
+  margin: 0;
+  inline-size: calc(100vw - var(--sg-composer-tool-dialog-gutter) * 2);
+  block-size: calc(100vh - var(--sg-composer-tool-dialog-gutter) * 2);
+  max-inline-size: calc(100vw - var(--sg-composer-tool-dialog-gutter) * 2);
+  max-block-size: calc(100vh - var(--sg-composer-tool-dialog-gutter) * 2);
+}
+
+/* Dynamic viewport units account for mobile browser chrome. The prior 100vh
+   declarations remain a safe fallback for browsers without dvh/dvw support. */
+@supports (height: 100dvh) {
+  .sg-composer-tool-dialog[open] {
+    inline-size: calc(100dvw - var(--sg-composer-tool-dialog-gutter) * 2);
+    block-size: calc(100dvh - var(--sg-composer-tool-dialog-gutter) * 2);
+    max-inline-size: calc(100dvw - var(--sg-composer-tool-dialog-gutter) * 2);
+    max-block-size: calc(100dvh - var(--sg-composer-tool-dialog-gutter) * 2);
+  }
+}
+
+@media (max-width: 40rem) {
+  .sg-composer-tool-dialog {
+    --sg-composer-tool-dialog-gutter: 8px;
+  }
 }
 
 .sg-composer-chooser::backdrop {
@@ -941,6 +965,7 @@ html[data-sg-composer-doc] body {
 }
 
 .sg-composer-chooser-header {
+  flex: 0 0 auto;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -958,9 +983,9 @@ html[data-sg-composer-doc] body {
 
 .sg-composer-chooser-target {
   /* `order: 1` (default is 0 on every other header child) sinks this behind
-     the title/enlarge/Cancel row regardless of its DOM position — its own
+     the grip/title/Cancel row regardless of its DOM position — its own
      `flex: 1 1 100%` basis then forces it onto its own line below them,
-     keeping title + Cancel together on row one without wrapping (#264). */
+     keeping the controls together on row one without wrapping (#264). */
   order: 1;
   margin: 0;
   flex: 1 1 100%;
@@ -969,6 +994,55 @@ html[data-sg-composer-doc] body {
 }
 .sg-composer-chooser-target strong {
   color: var(--color-fg);
+}
+
+.sg-composer-tool-dialog-grip,
+.sg-composer-tool-dialog-resize {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-width: 2rem;
+  min-height: 2rem;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  color: var(--color-muted);
+}
+
+.sg-composer-tool-dialog-grip {
+  cursor: grab;
+}
+
+.sg-composer-tool-dialog-grip:active {
+  cursor: grabbing;
+}
+
+.sg-composer-tool-dialog-grip-dots {
+  font-size: 1.25rem;
+  letter-spacing: -0.15em;
+  line-height: 1;
+}
+
+.sg-composer-tool-dialog-grip:focus-visible,
+.sg-composer-tool-dialog-resize:focus-visible {
+  border-color: var(--color-focus);
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+/* The primitive is placed by a future dialog, but owns its own accessible
+   target and visual affordance so consumers do not duplicate its contract. */
+.sg-composer-tool-dialog-resize {
+  cursor: nwse-resize;
+}
+
+.sg-composer-tool-dialog-resize-mark {
+  width: 0.75rem;
+  height: 0.75rem;
+  border-right: 2px solid currentcolor;
+  border-bottom: 2px solid currentcolor;
 }
 
 .sg-composer-chooser-controls {
@@ -1244,11 +1318,9 @@ html[data-sg-composer-doc] body {
 /* ============================================================================
  * chooser preview (issue #254)
  *
- * Live preview pane + enlarge toggle appended to #250's chooser dialog. The
- * enlarge STATE styling (`[data-sg-enlarged="true"]`) and the `[open]` rule
- * the body layout below depends on live on the base `.sg-composer-chooser`
- * rule above (edited in place, not duplicated here) — everything genuinely
- * NEW to this issue is kept in this one block.
+ * Live preview pane appended to #250's chooser dialog. The shell's fixed
+ * viewport geometry and `[open]` flex layout live in the shared tool-dialog
+ * rule above; this block owns only the chooser's information-heavy body.
  *
  * `.sg-composer-chooser-body` lays the catalog | preview panes as a NON-wrapping
  * flex row that stacks to a column below 40rem (the `@media` rule just below
@@ -1260,8 +1332,7 @@ html[data-sg-composer-doc] body {
  * `.sg-composer-chooser-list`). `nowrap` keeps that height chain intact so the
  * list scrolls; the explicit column media query restores the narrow-dialog
  * stack the wrap used to give for free. Applies at both the default ~48rem
- * dialog width (S2, #264) and the ~96vw enlarged size (see css-wisdom's
- * responsive-grid-patterns).
+ * near-viewport dialog width.
  *
  * Horizontal padding moved from this element onto `-catalog` / `-preview`
  * individually (S2, #264) so a 1px ladder divider can sit flush between
@@ -1272,12 +1343,6 @@ html[data-sg-composer-doc] body {
  * No new z-index tier: the preview stage sits INSIDE the existing
  * `--z-index-modal` dialog, so `pnpm gen:z-index` was not run.
  * ========================================================================== */
-
-.sg-composer-chooser-enlarge[aria-pressed="true"] {
-  border-color: var(--color-accent);
-  background: color-mix(in oklch, var(--color-accent) 15%, transparent);
-  color: var(--color-accent);
-}
 
 .sg-composer-chooser-body {
   flex: 1 1 auto;
