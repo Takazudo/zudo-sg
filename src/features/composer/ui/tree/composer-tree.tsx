@@ -33,12 +33,13 @@
 
 import { useEffect, useMemo, useRef } from "preact/hooks";
 import type { JSX } from "preact";
-import type { ComponentManifest, CompositionDocument, InsertionTarget } from "@/composer";
+import type { ComponentManifest, CompositionDocument, GlobalTemplateOutletTarget, InsertionTarget } from "@/composer";
 import { VIRTUAL_ROOT_SLOT_ID } from "@/composer";
 import { EllipsisIcon, PageIcon } from "@/components/icons";
 import type { ComposerManifestEntry } from "@/styleguide/data/composer-registry";
 import { buildCatalogById, buildDocumentIndex, countDescendants } from "./tree-helpers";
 import { TreeNode } from "./tree-node";
+import type { ReuseAuthoringActionResult } from "@/features/composer/ui/shared/reuse-authoring-contract";
 
 export interface ComposerTreeProps {
   document: CompositionDocument;
@@ -62,6 +63,11 @@ export interface ComposerTreeProps {
   onOpenInsertMenu: (target: InsertionTarget, trigger: HTMLElement) => void;
   /** Hides every mutating affordance (Add/move/remove) — e.g. while in Preview mode. */
   readOnly?: boolean;
+  /** Provider-checked publish/reassign operation for a real empty component slot. */
+  onSetGlobalTemplateOutlet?: (
+    target: GlobalTemplateOutletTarget,
+    label: string,
+  ) => Promise<ReuseAuthoringActionResult>;
 }
 
 export function ComposerTree({
@@ -79,6 +85,7 @@ export function ComposerTree({
   onOpenNodeMenu,
   onOpenInsertMenu,
   readOnly = false,
+  onSetGlobalTemplateOutlet,
 }: ComposerTreeProps): JSX.Element {
   const catalogById = useMemo(() => buildCatalogById(entries), [entries]);
   const documentIndex = useMemo(() => buildDocumentIndex(document, manifest), [document, manifest]);
@@ -176,6 +183,7 @@ export function ComposerTree({
               registerRowRef={registerRowRef}
               onOpenNodeMenu={onOpenNodeMenu}
               onOpenInsertMenu={onOpenInsertMenu}
+              onSetGlobalTemplateOutlet={onSetGlobalTemplateOutlet}
             />
           ))}
         </ul>

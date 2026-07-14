@@ -32,6 +32,8 @@ import { classifyNode, findLocation, orderedSlotIds } from "@/composer";
 import { ChevronDownIcon, ChevronUpIcon, TrashIcon } from "@/components/icons";
 import type { ComposerMode } from "@/features/composer/chrome/controller-model";
 import { InspectorField } from "./inspector-field";
+import { ReuseControls } from "./reuse-controls";
+import type { ReuseAuthoringActionResult } from "@/features/composer/ui/shared/reuse-authoring-contract";
 
 export interface InspectorPanelProps {
   document: CompositionDocument;
@@ -52,6 +54,12 @@ export interface InspectorPanelProps {
   onFlushPendingProps?: () => void;
   onReorder: (nodeId: string, direction: "up" | "down") => void;
   onRemove: (nodeId: string) => void;
+  /** Publish the current non-empty document as a saved Pattern. */
+  onPublishPattern?: () => void;
+  /** Provider-guarded source-role removal. The caller must not clear optimistically. */
+  onClearPublication?: () => Promise<ReuseAuthoringActionResult>;
+  /** Latest typed controller error (e.g. protected outlet-owner removal). */
+  lastError?: string | null;
   /**
    * Optional friendlier display name for a component id — e.g. sourced from
    * the host's richer `composerManifest` (title/category/description), which
@@ -100,6 +108,12 @@ export function InspectorPanel({
   onFlushPendingProps,
   onReorder,
   onRemove,
+  onPublishPattern = () => undefined,
+  onClearPublication = async () => ({
+    status: "unavailable" as const,
+    message: "Publication changes need a current relationship check before they can be cleared.",
+  }),
+  lastError = null,
   titleFor,
 }: InspectorPanelProps): JSX.Element {
   const readOnly = mode === "preview";
@@ -108,6 +122,14 @@ export function InspectorPanel({
   if (selectedId === null || !location) {
     return (
       <div class="flex h-full flex-col gap-vsp-2xs p-hsp-md py-vsp-10" data-sg-inspector-state="empty">
+        <ReuseControls
+          document={document}
+          manifest={manifest}
+          mode={mode}
+          lastError={lastError}
+          onPublishPattern={onPublishPattern}
+          onClearPublication={onClearPublication}
+        />
         <p class="text-small font-semibold text-fg">Nothing selected</p>
         <p class="text-small text-muted">
           {document.root.length === 0
@@ -137,6 +159,14 @@ export function InspectorPanel({
       class="flex h-full flex-col overflow-y-auto p-hsp-md py-vsp-10"
       data-sg-inspector-state={diagnostic.opaque ? "opaque" : "editable"}
     >
+      <ReuseControls
+        document={document}
+        manifest={manifest}
+        mode={mode}
+        lastError={lastError}
+        onPublishPattern={onPublishPattern}
+        onClearPublication={onClearPublication}
+      />
       <nav class="sg-composer-inspector-section" aria-label="Selected component location">
         <ol class="flex flex-wrap items-center gap-hsp-3xs text-caption text-muted">
           {breadcrumb.map((step, i) => (

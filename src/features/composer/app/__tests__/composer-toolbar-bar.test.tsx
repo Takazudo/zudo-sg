@@ -27,6 +27,19 @@ function baseProps() {
 }
 
 describe("ComposerToolbarBar — clipboard chip", () => {
+  it("shows the document's explicit reusable role beside its header identity", () => {
+    render(
+      <ComposerToolbarBar
+        {...baseProps()}
+        publication={{
+          kind: "global-template",
+          outlet: { id: "outlet-main", label: "Main content", target: { parentId: "shell", slotId: "content" } },
+        }}
+      />,
+    );
+    expect(screen.getByText("Global template · Main content")).toBeInTheDocument();
+  });
+
   it("renders no chip when the clipboard is empty (the default)", () => {
     render(<ComposerToolbarBar {...baseProps()} />);
     expect(screen.queryByText(/⧉/)).toBeNull();
