@@ -29,11 +29,14 @@
 // composition lives in `useComposerIntegration`, layout lives in
 // `ComposerWorkspace`. It is the surface waves 6-9 extend.
 
-import { useEffect, useMemo } from "preact/hooks";
+import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import type { JSX } from "preact";
 import {
   generateBrowserJsxExport,
   type ComposerReuseResolutionOptions,
+  type ReuseCatalogOutcome,
+  type ReuseSelectionOutcome,
+  type CompositionRecordRef,
 } from "@/composer";
 import type { ComposerManifestEntry } from "@/styleguide/data/composer-registry";
 import { ComposerWorkspace } from "@/features/composer/chrome/composer-workspace";
@@ -67,6 +70,14 @@ export interface ComposerIntegrationProps {
   controllerOptions?: Omit<UseComposerControllerOptions, "manifest">;
   /** Parent-owned, provider-scoped resolver used for linked preview/Copy behavior. */
   reuseResolution?: ComposerReuseResolutionOptions;
+  /**
+   * Read the active provider's saved-Pattern catalog for this mounted record.
+   * The owner binds its current provider and record identity into this callback,
+   * keeping provider I/O out of the Composer surface.
+   */
+  listPatternCatalog?: () => Promise<ReuseCatalogOutcome>;
+  /** Load one catalog Pattern through that same active-provider boundary. */
+  loadPattern?: (ref: CompositionRecordRef) => Promise<ReuseSelectionOutcome>;
 
   // ── Canvas bridge test seams (production defaults) ────────────────────────
   createBridge?: typeof createComposerPreviewBridge;
@@ -95,6 +106,9 @@ export function ComposerIntegration(props: ComposerIntegrationProps): JSX.Elemen
   });
   const { controller, manifestEntries, session, viewport, setViewport, chooser, exportState, titleFor } = api;
   const { state } = controller;
+  const [patternCatalog, setPatternCatalog] = useState<ReuseCatalogOutcome | undefined>(undefined);
+  const [patternCatalogLoading, setPatternCatalogLoading] = useState(false);
+  const patternCatalogRequest = useRef(0);
   const browserCopyOutcome = useMemo(() => {
     const exportDocument = exportState.exportDocument;
     if (!exportDocument) return null;
@@ -106,6 +120,41 @@ export function ComposerIntegration(props: ComposerIntegrationProps): JSX.Elemen
   }, [api.reuseResolution, controller.manifest, controller.record, exportState.exportDocument]);
   const readOnly = state.mode === "preview";
   const menus = useComposerMenus(api);
+
+  // A catalog is intentionally re-read for every chooser session. A source
+  // can be unpublished/deleted or changed to another reusable role while the
+  // editor remains mounted; selection still performs a second, full-record
+  // read before the atomic controller command runs.
+  useEffect(() => {
+    const request = ++patternCatalogRequest.current;
+    if (!chooser.open || !props.listPatternCatalog) {
+      setPatternCatalog(undefined);
+      setPatternCatalogLoading(false);
+      return;
+    }
+
+    setPatternCatalog(undefined);
+    setPatternCatalogLoading(true);
+    void props.listPatternCatalog().then(
+      (outcome) => {
+        if (request !== patternCatalogRequest.current) return;
+        setPatternCatalog(outcome);
+        setPatternCatalogLoading(false);
+      },
+      (reason) => {
+        if (request !== patternCatalogRequest.current) return;
+        setPatternCatalog({
+          status: "load-error",
+          message: reason instanceof Error ? reason.message : "Patterns could not be loaded.",
+        });
+        setPatternCatalogLoading(false);
+      },
+    );
+
+    return () => {
+      patternCatalogRequest.current += 1;
+    };
+  }, [chooser.open, props.listPatternCatalog]);
 
   const checkPublicationDependencies = async (): Promise<ReuseDependencyCheck> => {
     if (!props.getPublicationDependencies) {
@@ -300,6 +349,11 @@ export function ComposerIntegration(props: ComposerIntegrationProps): JSX.Elemen
         onAdd={api.handleChooserAdd}
         onExpandAncestors={api.handleExpandAncestors}
         onClose={api.closeChooser}
+        patternCatalog={patternCatalog}
+        patternCatalogLoading={patternCatalogLoading}
+        loadPattern={props.loadPattern}
+        rootPolicy={state.rootPolicy}
+        onInsertPattern={(target, sourceRoots) => controller.insertForest(sourceRoots, target)}
       />
 
       <ComposerMenu

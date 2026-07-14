@@ -92,6 +92,8 @@ export interface ComposerChooserProps {
   // stores, routes, or persistence queues.
   /** The active provider's reuse-service catalog outcome. Only Pattern entries are rendered. */
   patternCatalog?: ReuseCatalogOutcome;
+  /** The active provider catalog is being read for this open chooser session. */
+  patternCatalogLoading?: boolean;
   /** Load the selected Pattern's full saved record on demand. */
   loadPattern?: (ref: CompositionRecordRef) => Promise<ReuseSelectionOutcome>;
   /** Current controller root policy, used for advisory full-forest eligibility. */
@@ -163,6 +165,7 @@ export function ComposerChooser({
   onExpandAncestors,
   onClose,
   patternCatalog,
+  patternCatalogLoading = false,
   loadPattern,
   rootPolicy,
   onInsertPattern,
@@ -598,7 +601,11 @@ export function ComposerChooser({
                     </label>
                   </div>
 
-                  {patternCatalog && patternCatalog.status !== "listed" ? (
+                  {patternCatalogLoading ? (
+                    <div class="sg-composer-chooser-empty" role="status">
+                      <p>Loading Patterns…</p>
+                    </div>
+                  ) : patternCatalog && patternCatalog.status !== "listed" ? (
                     <div class="sg-composer-chooser-empty" role="status">
                       <p>{patternCatalog.message}</p>
                     </div>
