@@ -415,7 +415,7 @@ export function NewCompositionDialog({
               </section>
             </div>
 
-            <footer class="relative flex flex-none flex-wrap items-center justify-between gap-hsp-sm border-t border-border px-hsp-lg py-vsp-xs pr-14">
+            <footer class="relative flex flex-none flex-wrap items-center justify-between gap-hsp-sm border-t border-border px-hsp-lg py-vsp-xs pr-[3.5rem]">
               <p class="m-0 text-small text-muted" role="status">
                 {busy ? "Saving composition…" : selectedSource ? `Binding to ${selectedSource.summary.name}.` : "Creating an ordinary composition."}
               </p>
