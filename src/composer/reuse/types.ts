@@ -6,11 +6,14 @@ import type {
   RootPolicy,
 } from "../model/types";
 import type {
+  CompositionDeleteOutcome,
   CompositionLoadOutcome,
   CompositionProviderDescriptor,
   CompositionRecord,
   CompositionRecordRef,
+  CompositionStore,
   CompositionSummary,
+  CompositionUnpublishOutcome,
 } from "../library/types";
 
 /** A lightweight reusable-source row; `None` is intentionally not a record. */
@@ -121,6 +124,49 @@ export interface CompositionReuseService extends CompositionReuseResolver {
   listCatalog(current?: CompositionRecordRef): Promise<ReuseCatalogOutcome>;
   loadSelection(ref: CompositionRecordRef, current?: CompositionRecordRef): Promise<ReuseSelectionOutcome>;
   listDependents(sourceRecordId: string): Promise<ReuseDependentsOutcome>;
+}
+
+/**
+ * The provider-owned mutation seam used by template lifecycle UI. It is kept
+ * outside the reducer and iframe because dependency scans must be performed by
+ * the provider that owns both the source and its canonical consumers.
+ */
+export interface ReuseLifecycleProvider {
+  readonly descriptor: CompositionProviderDescriptor;
+  readonly store: CompositionStore;
+}
+
+export type ReuseDeleteOutcome =
+  | CompositionDeleteOutcome
+  | { status: "unavailable"; message: string }
+  | { status: "load-error"; message: string };
+
+export type ReuseUnpublishOutcome =
+  | CompositionUnpublishOutcome
+  | { status: "unavailable"; message: string }
+  | { status: "load-error"; message: string };
+
+export type ReuseConsumerLifecycleOutcome =
+  | {
+      status: "detached";
+      kind: "snapshot" | "removed-broken-binding";
+      record: CompositionRecord;
+    }
+  | { status: "not-found" }
+  | {
+      status: "blocked";
+      kind: "snapshot" | "removed-broken-binding";
+      reason: string;
+      message: string;
+    }
+  | { status: "unavailable"; message: string }
+  | { status: "load-error" | "save-failed"; message: string };
+
+export interface CompositionReuseLifecycleService {
+  deleteSource(ref: CompositionRecordRef): Promise<ReuseDeleteOutcome>;
+  unpublishSource(ref: CompositionRecordRef): Promise<ReuseUnpublishOutcome>;
+  detachAsSnapshot(ref: CompositionRecordRef): Promise<ReuseConsumerLifecycleOutcome>;
+  removeBrokenBinding(ref: CompositionRecordRef): Promise<ReuseConsumerLifecycleOutcome>;
 }
 
 /** Narrow hook configuration; the parent app owns provider selection and refresh events. */
