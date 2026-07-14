@@ -364,27 +364,44 @@ describe("ComposerChooser — live preview pane (issue #254)", () => {
   });
 });
 
-describe("ComposerChooser — enlarge toggle (issue #254)", () => {
-  it("toggles the dialog's enlarged geometry attribute and aria-pressed", () => {
+describe("ComposerChooser — movable tool-dialog geometry (issue #315)", () => {
+  it("opens at a stable explicit 24px-inset rect without an enlarge control", () => {
     const props = baseProps();
     render(<ComposerChooser {...props} />);
-    const dialog = screen.getByRole("dialog", { hidden: true });
-    const enlargeButton = screen.getByRole("button", { name: "Enlarge chooser" });
-    expect(enlargeButton).toHaveAttribute("aria-pressed", "false");
-    expect(dialog).toHaveAttribute("data-sg-enlarged", "false");
 
-    fireEvent.click(enlargeButton);
-    expect(dialog).toHaveAttribute("data-sg-enlarged", "true");
-    expect(screen.getByRole("button", { name: "Restore chooser to default size" })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
-
-    fireEvent.click(screen.getByRole("button", { name: "Restore chooser to default size" }));
-    expect(dialog).toHaveAttribute("data-sg-enlarged", "false");
+    const dialog = screen.getByRole("dialog", { hidden: true }) as HTMLDialogElement;
+    expect(dialog.style.left).toBe("24px");
+    expect(dialog.style.top).toBe("24px");
+    expect(dialog.style.width).toBe("976px");
+    expect(dialog.style.height).toBe("720px");
+    expect(dialog).not.toHaveAttribute("data-sg-enlarged");
+    expect(screen.queryByRole("button", { name: /enlarge|restore/i })).not.toBeInTheDocument();
   });
 
-  it("resets to the default size on every fresh open", () => {
+  it("labels and documents the six-dot move grip, then supports keyboard movement and Home reset", () => {
+    const props = baseProps();
+    render(<ComposerChooser {...props} />);
+
+    const dialog = screen.getByRole("dialog", { hidden: true });
+    const grip = screen.getByRole("button", { name: "Move dialog" });
+    expect(grip).toHaveAttribute("aria-keyshortcuts", expect.stringContaining("Shift+ArrowRight"));
+    expect(screen.getByText(/Shift plus Arrow keys to move it 48 pixels/)).toBeInTheDocument();
+
+    fireEvent.keyDown(grip, { key: "ArrowRight" });
+    fireEvent.keyDown(grip, { key: "ArrowDown", shiftKey: true });
+    expect(dialog.style.left).toBe("40px");
+    expect(dialog.style.top).toBe("48px");
+    expect(dialog.style.width).toBe("976px");
+    expect(dialog.style.height).toBe("720px");
+
+    fireEvent.keyDown(grip, { key: "Home" });
+    expect(dialog.style.left).toBe("24px");
+    expect(dialog.style.top).toBe("24px");
+    expect(dialog.style.width).toBe("976px");
+    expect(dialog.style.height).toBe("720px");
+  });
+
+  it("uses pointer capture to drag only the position and resets the rect on a fresh open", () => {
     function Harness() {
       const [open, setOpen] = useState(true);
       return (
@@ -409,48 +426,51 @@ describe("ComposerChooser — enlarge toggle (issue #254)", () => {
         </>
       );
     }
+
     resetFixtureIds();
     render(<Harness />);
-    fireEvent.click(screen.getByRole("button", { name: "Enlarge chooser" }));
-    expect(screen.getByRole("dialog", { hidden: true })).toHaveAttribute("data-sg-enlarged", "true");
+    const dialog = screen.getByRole("dialog", { hidden: true });
+    const grip = screen.getByRole("button", { name: "Move dialog" });
+    const capture = vi.fn();
+    Object.defineProperty(grip, "setPointerCapture", { configurable: true, value: capture });
+
+    fireEvent.pointerDown(grip, { button: 0, pointerId: 7, clientX: 40, clientY: 40 });
+    fireEvent.pointerMove(grip, { pointerId: 7, clientX: 140, clientY: 80 });
+    fireEvent.pointerUp(grip, { pointerId: 7 });
+    expect(capture).toHaveBeenCalledWith(7);
+    expect(dialog.style.left).toBe("48px");
+    expect(dialog.style.top).toBe("48px");
+    expect(dialog.style.width).toBe("976px");
+    expect(dialog.style.height).toBe("720px");
 
     fireEvent.click(screen.getByText("close"));
     fireEvent.click(screen.getByText("open"));
-    expect(screen.getByRole("dialog", { hidden: true })).toHaveAttribute("data-sg-enlarged", "false");
-    expect(screen.getByRole("button", { name: "Enlarge chooser" })).toHaveAttribute("aria-pressed", "false");
+    const reopened = screen.getByRole("dialog", { hidden: true }) as HTMLDialogElement;
+    expect(reopened.style.left).toBe("24px");
+    expect(reopened.style.top).toBe("24px");
+    expect(reopened.style.width).toBe("976px");
+    expect(reopened.style.height).toBe("720px");
   });
 
-  it("does not disturb #250's Tab-wrap focus containment while enlarged", () => {
+  it("clamps a moved chooser after a viewport resize so the grip and close control stay reachable", () => {
+    const width = vi.spyOn(window, "innerWidth", "get").mockReturnValue(1024);
+    const height = vi.spyOn(window, "innerHeight", "get").mockReturnValue(768);
     const props = baseProps();
     render(<ComposerChooser {...props} />);
-    fireEvent.click(screen.getByRole("button", { name: "Enlarge chooser" }));
 
     const dialog = screen.getByRole("dialog", { hidden: true });
-    const focusable = dialog.querySelectorAll("button, input");
-    const firstFocusable = focusable[0] as HTMLElement;
-    const lastFocusable = focusable[focusable.length - 1] as HTMLElement;
+    const grip = screen.getByRole("button", { name: "Move dialog" });
+    fireEvent.keyDown(grip, { key: "ArrowLeft" });
+    fireEvent.keyDown(grip, { key: "ArrowUp" });
+    width.mockReturnValue(390);
+    height.mockReturnValue(300);
+    act(() => window.dispatchEvent(new Event("resize")));
 
-    lastFocusable.focus();
-    fireEvent.keyDown(dialog, { key: "Tab" });
-    expect(firstFocusable).toHaveFocus();
-
-    fireEvent.keyDown(dialog, { key: "Tab", shiftKey: true });
-    expect(lastFocusable).toHaveFocus();
-  });
-
-  it("Escape still closes (and restores focus) while enlarged", () => {
-    const trigger = document.createElement("button");
-    trigger.textContent = "Add";
-    document.body.appendChild(trigger);
-    trigger.focus();
-
-    const props = baseProps();
-    render(<ComposerChooser {...props} />);
-    fireEvent.click(screen.getByRole("button", { name: "Enlarge chooser" }));
-    fireEvent.keyDown(screen.getByRole("dialog", { hidden: true }), { key: "Escape" });
-    expect(props.onAdd).not.toHaveBeenCalled();
-    expect(props.onClose).toHaveBeenCalledTimes(1);
-    expect(trigger).toHaveFocus();
-    trigger.remove();
+    expect(dialog.style.left).toBe("8px");
+    expect(dialog.style.top).toBe("8px");
+    expect(dialog.style.width).toBe("374px");
+    expect(dialog.style.height).toBe("284px");
+    width.mockRestore();
+    height.mockRestore();
   });
 });

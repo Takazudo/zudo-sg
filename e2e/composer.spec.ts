@@ -588,7 +588,7 @@ test.describe.serial("Composer 14-step walkthrough (#252) — steps 1-6, 8-13", 
   });
 
   // ── Step 10 ────────────────────────────────────────────────────────────
-  test("step 10 - chooser hover shows a live preview with slot placeholders; enlarge toggles near-fullscreen with focus intact", async () => {
+  test("step 10 - chooser hover shows a live preview with slot placeholders and movable tool-dialog geometry", async () => {
     await page.getByRole("button", { name: "Add component to document root" }).click();
     const dialog = chooserDialog(page);
     await expect(dialog).toBeVisible();
@@ -604,26 +604,39 @@ test.describe.serial("Composer 14-step walkthrough (#252) — steps 1-6, 8-13", 
     // placeholder per slot in the live preview (chooser-preview-host.tsx).
     await expect(chooserPreviewFrame(page).getByRole("img", { name: "hero-image.png" })).toHaveCount(2);
 
-    const enlargeBtn = dialog.locator(".sg-composer-chooser-enlarge");
-    await expect(enlargeBtn).toHaveAttribute("aria-pressed", "false");
+    const grip = dialog.getByRole("button", { name: "Move dialog", exact: true });
+    await expect(grip).toBeVisible();
+    await expect(dialog.locator(".sg-composer-chooser-enlarge")).toHaveCount(0);
+    await expect(dialog).not.toHaveAttribute("data-sg-enlarged");
     const beforeBox = await dialog.boundingBox();
-
-    await enlargeBtn.click();
-    await expect(dialog).toHaveAttribute("data-sg-enlarged", "true");
-    await expect(enlargeBtn).toHaveAttribute("aria-pressed", "true");
-    await expect(enlargeBtn).toHaveAccessibleName("Restore chooser to default size");
-    // Focus lifecycle: the toggle button itself keeps focus across the resize.
-    await expect(enlargeBtn).toBeFocused();
-
-    const afterBox = await dialog.boundingBox();
     const viewport = page.viewportSize();
-    if (beforeBox && afterBox && viewport) {
-      expect(afterBox.width).toBeGreaterThan(beforeBox.width);
-      expect(afterBox.width).toBeGreaterThan(viewport.width * 0.8);
+    if (beforeBox && viewport) {
+      expect(beforeBox.x).toBeCloseTo(24, 0);
+      expect(beforeBox.y).toBeCloseTo(24, 0);
+      expect(beforeBox.width).toBeCloseTo(viewport.width - 48, 0);
+      expect(beforeBox.height).toBeCloseTo(viewport.height - 48, 0);
     }
 
-    await enlargeBtn.click();
-    await expect(dialog).toHaveAttribute("data-sg-enlarged", "false");
+    // Keyboard movement documents Arrow/Shift behavior, preserves size, and
+    // Home returns to the fresh-open default without closing the modal.
+    await grip.focus();
+    await page.keyboard.press("ArrowRight");
+    await page.keyboard.press("Shift+ArrowDown");
+    const movedBox = await dialog.boundingBox();
+    if (beforeBox && movedBox) {
+      expect(movedBox.width).toBeCloseTo(beforeBox.width, 0);
+      expect(movedBox.height).toBeCloseTo(beforeBox.height, 0);
+      expect(movedBox.x).toBeGreaterThan(beforeBox.x);
+      expect(movedBox.y).toBeGreaterThan(beforeBox.y);
+    }
+    await page.keyboard.press("Home");
+    const resetBox = await dialog.boundingBox();
+    if (beforeBox && resetBox) {
+      expect(resetBox.x).toBeCloseTo(beforeBox.x, 0);
+      expect(resetBox.y).toBeCloseTo(beforeBox.y, 0);
+      expect(resetBox.width).toBeCloseTo(beforeBox.width, 0);
+      expect(resetBox.height).toBeCloseTo(beforeBox.height, 0);
+    }
 
     await dialog.locator(".sg-composer-chooser-cancel").click();
     await expect(dialog).not.toBeVisible();
