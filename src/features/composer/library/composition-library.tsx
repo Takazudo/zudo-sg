@@ -10,6 +10,10 @@ import {
   type CompositionSummary,
 } from "@/composer";
 import { InlineConfirm } from "@/features/composer/ui/shared/inline-confirm";
+import {
+  NewCompositionDialog,
+  type NewCompositionDialogSubmitResult,
+} from "./new-composition-dialog";
 import type {
   CompositionLibraryIntents,
   CompositionLibraryProviderCapability,
@@ -96,6 +100,7 @@ export function CompositionLibrary({
   const [announcement, setAnnouncement] = useState("");
   const [recovery, setRecovery] = useState<CompositionRecoveryOutcome | null>(null);
   const [confirmation, setConfirmation] = useState<Confirmation | null>(null);
+  const [newDialogOpen, setNewDialogOpen] = useState(false);
 
   const startedRef = useRef(false);
   const newButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -105,6 +110,7 @@ export function CompositionLibrary({
   const startFreshButtonRef = useRef<HTMLButtonElement | null>(null);
   const openButtonRefs = useRef(new Map<string, HTMLButtonElement>());
   const deleteButtonRefs = useRef(new Map<string, HTMLButtonElement>());
+  const createdForNavigationRef = useRef<CompositionSummary | null>(null);
 
   const activeProvider = availableProviders.find(
     ({ descriptor }) => descriptor.id === activeProviderId,
@@ -219,35 +225,73 @@ export function CompositionLibrary({
     }
   }
 
-  async function createComposition(): Promise<void> {
-    if (!activeProviderId || busy) return;
+  function openNewCompositionDialog(): void {
+    if (!activeProviderId || busy || confirmation || recovery?.kind === "quarantined") return;
+    createdForNavigationRef.current = null;
+    setError(null);
+    setAnnouncement("Choose how to create the new composition.");
+    setNewDialogOpen(true);
+  }
+
+  async function openCreatedComposition(created: CompositionSummary): Promise<NewCompositionDialogSubmitResult> {
+    if (!activeProviderId) {
+      return { status: "navigation-error", message: "The active composition provider is unavailable." };
+    }
+    setBusy("opening");
+    setAnnouncement("Composition saved. Opening it now.");
+    try {
+      const outcome = await intents.open({ providerId: activeProviderId, recordId: created.id });
+      if (outcome.status === "not-found") {
+        setAnnouncement("Composition was saved, but opening failed.");
+        return {
+          status: "navigation-error",
+          message: "The new composition was saved but could not be opened because it was not found.",
+        };
+      }
+      createdForNavigationRef.current = null;
+      setAnnouncement("Composition created and opened.");
+      return { status: "created" };
+    } catch (reason) {
+      setAnnouncement("Composition was saved, but opening failed.");
+      return {
+        status: "navigation-error",
+        message: `The new composition was saved, but opening failed. ${errorMessage(reason, "")}`.trim(),
+      };
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function submitNewComposition(
+    intent: Parameters<typeof intents.create>[0],
+  ): Promise<NewCompositionDialogSubmitResult> {
+    if (busy) return { status: "create-error", message: "Another composition operation is still running." };
     setBusy("creating");
     setError(null);
     setAnnouncement("Creating and saving composition…");
     try {
-      const created = await intents.create(activeProviderId);
+      const created = await intents.create(intent);
+      createdForNavigationRef.current = created;
       setSummaries((current) => sortSummaries([...current, created]));
-      setBusy("opening");
-      setAnnouncement("Composition created. Opening it now.");
-      try {
-        const outcome = await intents.open({ providerId: activeProviderId, recordId: created.id });
-        if (outcome.status === "not-found") {
-          setError("The new composition was saved but could not be opened because it was not found.");
-          setAnnouncement("Composition was saved, but opening failed.");
-        } else {
-          setAnnouncement("Composition created and opened.");
-        }
-      } catch (reason) {
-        setError(`The new composition was saved, but opening failed. ${errorMessage(reason, "")}`.trim());
-        setAnnouncement("Composition was saved, but opening failed.");
-      }
+      return await openCreatedComposition(created);
     } catch (reason) {
-      setError(errorMessage(reason, "The composition could not be created."));
+      const message = errorMessage(reason, "The composition could not be created.");
       setAnnouncement("Creating composition failed.");
-      focusAfterRender(() => newButtonRef.current);
-    } finally {
       setBusy(null);
+      return { status: "create-error", message };
     }
+  }
+
+  async function retryNewCompositionNavigation(): Promise<NewCompositionDialogSubmitResult> {
+    const created = createdForNavigationRef.current;
+    return created
+      ? openCreatedComposition(created)
+      : { status: "create-error", message: "There is no saved composition to retry opening." };
+  }
+
+  function closeNewCompositionDialog(): void {
+    createdForNavigationRef.current = null;
+    setNewDialogOpen(false);
   }
 
   async function duplicateComposition(id: string): Promise<void> {
@@ -362,7 +406,7 @@ export function CompositionLibrary({
   }
 
   const liveMessage = busy ? BUSY_MESSAGES[busy] : announcement;
-  const controlsDisabled = busy !== null || confirmation !== null;
+  const controlsDisabled = busy !== null || confirmation !== null || newDialogOpen;
 
   return (
     <main class="sg-composer-library" aria-labelledby="sg-composer-library-title" aria-busy={busy !== null}>
@@ -380,7 +424,7 @@ export function CompositionLibrary({
           type="button"
           class="sg-composer-library-button sg-composer-library-button-primary"
           disabled={!activeProviderId || controlsDisabled || recovery?.kind === "quarantined"}
-          onClick={() => void createComposition()}
+          onClick={openNewCompositionDialog}
         >
           New composition
         </button>
@@ -544,7 +588,7 @@ export function CompositionLibrary({
                 type="button"
                 class="sg-composer-library-button sg-composer-library-button-primary"
                 disabled={controlsDisabled}
-                onClick={() => void createComposition()}
+                onClick={openNewCompositionDialog}
               >
                 New composition
               </button>
@@ -622,6 +666,15 @@ export function CompositionLibrary({
           )}
         </section>
       ) : null}
+
+      <NewCompositionDialog
+        open={newDialogOpen}
+        providerId={activeProviderId}
+        intents={intents}
+        onSubmit={submitNewComposition}
+        onRetryNavigation={retryNewCompositionNavigation}
+        onClose={closeNewCompositionDialog}
+      />
     </main>
   );
 }

@@ -6,16 +6,19 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "preact/hooks"
 import type { JSX } from "preact";
 import {
   COMPOSITION_PROVIDERS,
+  COMPOSITION_SCHEMA_VERSION,
   CompositionPersistenceError,
   createCompositionRecord,
   createCompositionSaveQueue,
   createFileProviderCompositionStore,
   createIndexedDbCompositionProvider,
-  createSampleDocument,
+  createCompositionReuseService,
+  createManifest,
   createUuidIdFactory,
   duplicateCompositionRecord,
   summarizeComposition,
   type CompositionInitializationOutcome,
+  type CompositionDocument,
   type CompositionLoadOutcome,
   type CompositionProvider,
   type CompositionProviderId,
@@ -26,6 +29,7 @@ import {
   type CompositionStore,
   type IdFactory,
 } from "@/composer";
+import { composerManifest } from "@/styleguide/data/composer-registry";
 import { normalizedBase } from "@/utils/base";
 import { CompositionLibrary } from "@/features/composer/library";
 import type { CompositionLibraryIntents } from "@/features/composer/library";
@@ -73,6 +77,24 @@ const DEFAULT_ROUTE_CONFIG = {
   basePath: normalizedBase || "/",
   trailingSlash: "always" as const,
 };
+
+// The New-dialog adapter needs only the reuse service's catalog/selection
+// reads. Its manifest is static production registry data; the editor still
+// owns the single live manifest derivation passed to its controller.
+const reuseManifest = createManifest(composerManifest);
+
+function emptyCompositionDocument(
+  name: string,
+  source?: { sourceRecordId: string; outletId: string },
+): CompositionDocument {
+  return {
+    schemaVersion: COMPOSITION_SCHEMA_VERSION,
+    id: "",
+    name,
+    root: [],
+    ...(source ? { binding: source } : {}),
+  };
+}
 
 function browserNavigation(): ComposerBrowserNavigation {
   return {
@@ -397,12 +419,32 @@ export function ProductionComposerApp({
       initialize: (providerId) => provider(providerId).initialization.initialize(),
       retry: (providerId) => provider(providerId).initialization.retry(),
       startFresh: (providerId) => provider(providerId).initialization.startFresh(),
-      create: async (providerId) => {
-        const record = createCompositionRecord(createSampleDocument(), {
+      listTemplates: async (providerId) =>
+        createCompositionReuseService(provider(providerId).store, reuseManifest).listCatalog(),
+      create: async (intent) => {
+        const activeProvider = provider(intent.providerId);
+        let binding: { sourceRecordId: string; outletId: string } | undefined;
+        if (intent.source) {
+          const selection = await createCompositionReuseService(activeProvider.store, reuseManifest).loadSelection({
+            providerId: intent.providerId,
+            recordId: intent.source.sourceRecordId,
+          });
+          const publication = selection.status === "loaded" ? selection.record.document.publication : undefined;
+          if (
+            selection.status !== "loaded" ||
+            selection.kind !== "global-template" ||
+            publication?.kind !== "global-template" ||
+            publication.outlet.id !== intent.source.outletId
+          ) {
+            throw new Error("The selected Global template changed or is no longer available. Refresh the template list and choose it again.");
+          }
+          binding = { sourceRecordId: selection.record.id, outletId: publication.outlet.id };
+        }
+        const record = createCompositionRecord(emptyCompositionDocument(intent.name, binding), {
           idFactory,
           now: nowRef.current,
         });
-        await provider(providerId).store.put(record);
+        await activeProvider.store.put(record);
         return summarizeComposition(record);
       },
       open: async (ref) => {

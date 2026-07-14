@@ -157,6 +157,108 @@ describe("ProductionComposerApp", () => {
     expect(files.store.get).toHaveBeenCalledWith("same");
   });
 
+  it("creates an empty unbound schema-v2 record only after New-dialog confirmation", async () => {
+    const indexeddb = memoryProvider("indexeddb", []);
+    const navigation = new FakeNavigation();
+    render(
+      <ProductionComposerApp
+        providers={[indexeddb]}
+        navigation={navigation}
+        idFactory={() => "ordinary"}
+        now={() => TIMESTAMP}
+        preview={PREVIEW}
+      />,
+    );
+    await screen.findByRole("heading", { name: "Compositions" });
+
+    fireEvent.click(screen.getAllByRole("button", { name: "New composition" })[0]);
+    const dialog = await screen.findByRole("dialog", { name: "New composition" });
+    expect(indexeddb.records.has("ordinary")).toBe(false);
+    fireEvent.input(within(dialog).getByRole("textbox", { name: "Name" }), { target: { value: " Ordinary page " } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Create composition" }));
+
+    expect(await screen.findByRole("button", { name: "Library" })).toBeInTheDocument();
+    expect(indexeddb.records.get("ordinary")?.document).toMatchObject({
+      schemaVersion: 2,
+      id: "ordinary",
+      name: "Ordinary page",
+      root: [],
+    });
+    expect(indexeddb.records.get("ordinary")?.document.binding).toBeUndefined();
+    expect(navigation.pushes.at(-1)).toBe("/composer/#/composition/indexeddb/ordinary");
+  });
+
+  it("re-resolves a selected same-provider Global template, then persists only its source and outlet binding", async () => {
+    const template = record("site-shell", "Site shell");
+    template.document.publication = {
+      kind: "global-template",
+      outlet: {
+        id: "main",
+        label: "Main content",
+        target: { parentId: "split-1", slotId: "right" },
+      },
+    };
+    const indexeddb = memoryProvider("indexeddb", [template]);
+    const navigation = new FakeNavigation();
+    render(
+      <ProductionComposerApp
+        providers={[indexeddb]}
+        navigation={navigation}
+        idFactory={() => "bound-page"}
+        now={() => TIMESTAMP}
+        preview={PREVIEW}
+      />,
+    );
+    await screen.findByRole("heading", { name: "Compositions" });
+    fireEvent.click(screen.getAllByRole("button", { name: "New composition" })[0]);
+    const dialog = await screen.findByRole("dialog", { name: "New composition" });
+    fireEvent.click(within(dialog).getByRole("button", { name: /Site shell/ }));
+    fireEvent.input(within(dialog).getByRole("textbox", { name: "Name" }), { target: { value: "Bound page" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Create composition" }));
+
+    expect(await screen.findByRole("button", { name: "Library" })).toBeInTheDocument();
+    expect(indexeddb.records.get("bound-page")?.document).toMatchObject({
+      schemaVersion: 2,
+      id: "bound-page",
+      name: "Bound page",
+      root: [],
+      binding: { sourceRecordId: "site-shell", outletId: "main" },
+    });
+  });
+
+  it("keeps the New dialog open and does not save when the selected template is deleted before submit", async () => {
+    const template = record("site-shell", "Site shell");
+    template.document.publication = {
+      kind: "global-template",
+      outlet: {
+        id: "main",
+        label: "Main content",
+        target: { parentId: "split-1", slotId: "right" },
+      },
+    };
+    const indexeddb = memoryProvider("indexeddb", [template]);
+    render(
+      <ProductionComposerApp
+        providers={[indexeddb]}
+        navigation={new FakeNavigation()}
+        idFactory={() => "never-saved"}
+        now={() => TIMESTAMP}
+        preview={PREVIEW}
+      />,
+    );
+    await screen.findByRole("heading", { name: "Compositions" });
+    fireEvent.click(screen.getAllByRole("button", { name: "New composition" })[0]);
+    const dialog = await screen.findByRole("dialog", { name: "New composition" });
+    fireEvent.click(within(dialog).getByRole("button", { name: /Site shell/ }));
+    indexeddb.records.delete("site-shell");
+    vi.mocked(indexeddb.store.put).mockClear();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Create composition" }));
+
+    expect(await within(dialog).findByRole("alert")).toHaveTextContent("selected Global template changed");
+    expect(indexeddb.store.put).not.toHaveBeenCalled();
+    expect(indexeddb.records.has("never-saved")).toBe(false);
+  });
+
   it("persists a record-scoped edit before returning to the library", async () => {
     const indexeddb = memoryProvider("indexeddb", [record("alpha", "Alpha")]);
     const navigation = new FakeNavigation("/composer/#/composition/indexeddb/alpha");
