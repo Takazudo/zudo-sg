@@ -1,7 +1,6 @@
 import { expect, type Page } from "@playwright/test";
 
 export const COMPOSER_DATABASE_NAME = "zudo-sg-composer";
-export const COMPOSER_DATABASE_VERSION = 1;
 export const COMPOSER_RECORD_STORE = "compositions";
 export const COMPOSER_META_STORE = "meta";
 export const LEGACY_COMPOSER_STORAGE_KEY = "sg-composer-document";
@@ -104,7 +103,7 @@ export async function prepareLegacyMigration(page: Page, raw: string): Promise<v
 /** Inspect canonical browser records and migration metadata in a real browser. */
 export async function inspectComposerDatabase(page: Page): Promise<BrowserComposerDatabase> {
   return page.evaluate(
-    async ({ databaseName, version, recordStore, metaStore }) => {
+    async ({ databaseName, recordStore, metaStore }) => {
       const requestResult = <T,>(request: IDBRequest<T>): Promise<T> =>
         new Promise((resolve, reject) => {
           request.onsuccess = () => resolve(request.result);
@@ -116,7 +115,10 @@ export async function inspectComposerDatabase(page: Page): Promise<BrowserCompos
           transaction.onabort = () => reject(transaction.error ?? new Error("IndexedDB transaction aborted"));
           transaction.onerror = () => undefined;
         });
-      const request = indexedDB.open(databaseName, version);
+      // The app owns physical schema upgrades. Opening without a version lets
+      // acceptance helpers inspect whichever current version the app created,
+      // rather than failing when that independent schema version changes.
+      const request = indexedDB.open(databaseName);
       const db = await requestResult(request);
       try {
         const transaction = db.transaction([recordStore, metaStore], "readonly");
@@ -135,7 +137,6 @@ export async function inspectComposerDatabase(page: Page): Promise<BrowserCompos
     },
     {
       databaseName: COMPOSER_DATABASE_NAME,
-      version: COMPOSER_DATABASE_VERSION,
       recordStore: COMPOSER_RECORD_STORE,
       metaStore: COMPOSER_META_STORE,
     },
@@ -148,7 +149,7 @@ export async function replaceComposerRecords(
   records: readonly BrowserCompositionRecord[],
 ): Promise<void> {
   await page.evaluate(
-    async ({ databaseName, version, recordStore, nextRecords }) => {
+    async ({ databaseName, recordStore, nextRecords }) => {
       const requestResult = <T,>(request: IDBRequest<T>): Promise<T> =>
         new Promise((resolve, reject) => {
           request.onsuccess = () => resolve(request.result);
@@ -160,7 +161,7 @@ export async function replaceComposerRecords(
           transaction.onabort = () => reject(transaction.error ?? new Error("IndexedDB transaction aborted"));
           transaction.onerror = () => undefined;
         });
-      const db = await requestResult(indexedDB.open(databaseName, version));
+      const db = await requestResult(indexedDB.open(databaseName));
       try {
         const transaction = db.transaction(recordStore, "readwrite");
         const completed = transactionComplete(transaction);
@@ -174,7 +175,6 @@ export async function replaceComposerRecords(
     },
     {
       databaseName: COMPOSER_DATABASE_NAME,
-      version: COMPOSER_DATABASE_VERSION,
       recordStore: COMPOSER_RECORD_STORE,
       nextRecords: records,
     },
