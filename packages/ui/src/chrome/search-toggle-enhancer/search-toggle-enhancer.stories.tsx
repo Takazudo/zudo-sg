@@ -1,6 +1,6 @@
 import type { ComponentChildren } from "preact";
 import type { StoryMeta, Story } from "../../stories/types";
-import { SiteHeader, type BrandSwitcherItem } from "../site-header/site-header";
+import { SiteHeader } from "../site-header/site-header";
 import SearchToggleEnhancer from "./search-toggle-enhancer";
 
 const meta: StoryMeta = {
@@ -11,15 +11,11 @@ const meta: StoryMeta = {
   usage: `import { SiteHeader } from "@zudo-sg/ui";
 import SearchToggleEnhancer from "@zudo-sg/ui/src/chrome/search-toggle-enhancer/search-toggle-enhancer";
 
-<SiteHeader switcherItems={switcherItems} />
+<SiteHeader />
 <Island when="visible" ssrFallback={null}><SearchToggleEnhancer /></Island>`,
 };
 
 export default meta;
-
-const SWITCHER_ITEMS: BrandSwitcherItem[] = [
-  { key: "corporate", label: "Corporate", href: "/", mark: "○", description: "Sample corporate tagline.", domain: "acme.example", current: true },
-];
 
 function HeaderFrame({ children }: { children: ComponentChildren }) {
   return (
@@ -34,11 +30,11 @@ function HeaderFrame({ children }: { children: ComponentChildren }) {
 
 export const Default: Story = {
   name: "Click to focus, Escape to collapse",
-  source: `<SiteHeader switcherItems={switcherItems} />
+  source: `<SiteHeader />
 <SearchToggleEnhancer />`,
   render: () => (
     <HeaderFrame>
-      <SiteHeader switcherItems={SWITCHER_ITEMS} />
+      <SiteHeader />
       <SearchToggleEnhancer />
     </HeaderFrame>
   ),

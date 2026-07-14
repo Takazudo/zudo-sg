@@ -1,6 +1,6 @@
+import type { ComponentChildren } from "preact";
 import { cx } from "../../lib/cx";
-import { AutoGrid } from "../../shared/auto-grid/auto-grid";
-import { PlaceholderBox } from "../../media/placeholder-box/placeholder-box";
+import type { NavSection } from "../site-nav/site-nav";
 
 /**
  * Disclosure a11y-hook contract shared with `context-switcher-enhancer` and
@@ -13,22 +13,8 @@ import { PlaceholderBox } from "../../media/placeholder-box/placeholder-box";
 const CTX_PANEL_ID = "zui-ctx-panel";
 const SEARCH_INPUT_ID = "zui-search-input";
 
-/** One brand-switcher entry: the persistent corporate brand, or a business line. */
-export type BrandSwitcherItem = {
-  /** Stable identifier, e.g. "corporate" or a line key. */
-  key: string;
-  /** Short label shown on the trigger pill and the switcher card. */
-  label: string;
-  href: string;
-  /** 1–2 char glyph shown in the card's logo-stand-in mark. */
-  mark: string;
-  /** One-sentence card descriptor. */
-  description: string;
-  /** Standalone domain, informational only — not rendered by this component. */
-  domain: string;
-  /** Whether this is the active context (drives `aria-current` + accent emphasis). */
-  current: boolean;
-};
+/** @deprecated SiteHeader now receives `sections`; retained as a type-only export for compatibility. */
+export type BrandSwitcherItem = never;
 
 export type SiteHeaderProps = {
   /** Brand name, always the persistent corporate brand (never per-line). */
@@ -36,8 +22,10 @@ export type SiteHeaderProps = {
   brandSubtitle?: string;
   /** Brand link target, always the corporate home. */
   brandHref?: string;
-  /** Corporate + line entries. The first `current: true` item labels the trigger. */
-  switcherItems: BrandSwitcherItem[];
+  /** The current `getSiteTree(line).sections` data, shared with SiteNav. */
+  sections?: NavSection[];
+  /** Client-island control supplied by the host; SiteHeader stays framework-neutral. */
+  desktopThemeControl?: ComponentChildren;
   class?: string;
 };
 
@@ -47,33 +35,22 @@ const UTIL_LINK_CLASS =
   "inline-flex items-center gap-hsp-2xs whitespace-nowrap text-rail-muted no-underline transition-colors hover:text-rail-fg focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-rail-fg";
 
 /**
- * Full-width sticky global header: brand lockup, business-context switcher,
- * and a utility nav (search, IR, careers, contact, locale).
+ * Full-width sticky desktop header: brand lockup, a real site-tree Browse
+ * disclosure, and utility controls. SiteNav owns the only narrow navigation
+ * surface, so this component is hidden below `sm`.
  *
- * Binds only to `rail-*` / `accent` tokens (no navy literals) so a
- * `[data-line]` override (single `--color-accent` swap) re-themes the switcher
- * trigger dot, marks, and current-card emphasis with zero markup changes.
- *
- * The context-switcher panel discloses with pure CSS (`group/ctx` hover /
- * focus-within) — it works with no JS. Mount `ContextSwitcherEnhancer`
- * (chrome/context-switcher-enhancer) anywhere on the page, wrapped in the
- * consumer's own `<Island ssrFallback={null}>`, to add aria-expanded sync,
- * click-to-pin, and Escape/outside-click close. Same for the search toggle
- * and `SearchToggleEnhancer` (chrome/search-toggle-enhancer).
- *
- * Hidden below `sm` — a slim top bar + off-canvas drawer (site-nav.tsx) takes
- * over there so the mega-panel's `z-ui-dropdown` stacking never fights the
- * mobile hamburger.
+ * The Browse panel works without JavaScript: hover and focus-within expose
+ * the actual section links. Mount `ContextSwitcherEnhancer` to layer the
+ * pinned/open/closed intent model over that SSR baseline.
  */
 export function SiteHeader({
   brand = "Acme Corp.",
   brandSubtitle = "Acme Corporation",
   brandHref = "/",
-  switcherItems,
+  sections = [],
+  desktopThemeControl,
   class: cls,
 }: SiteHeaderProps) {
-  const currentItem = switcherItems.find((item) => item.current) ?? switcherItems[0];
-
   return (
     <header
       class={cx(
@@ -82,8 +59,7 @@ export function SiteHeader({
       )}
       aria-label="Global header"
     >
-      <div class="flex h-[4rem] items-center gap-hsp-lg px-hsp-xl max-sm:h-auto max-sm:flex-wrap max-sm:gap-hsp-sm max-sm:py-vsp-xs max-sm:px-hsp-md">
-        {/* 1. Brand lockup — always the corporate brand / home. */}
+      <div class="flex h-[4rem] items-center gap-hsp-lg px-hsp-xl">
         <a class="flex items-center gap-hsp-sm no-underline text-rail-fg hover:text-rail-fg" href={brandHref}>
           <span
             class="grid h-[2.5rem] w-[2.5rem] flex-none place-items-center rounded-[10px] bg-accent text-title font-bold leading-none text-bg shadow-[0_2px_8px_-2px_color-mix(in_srgb,var(--color-accent)_60%,transparent)]"
@@ -97,48 +73,11 @@ export function SiteHeader({
           </span>
         </a>
 
-        {/* 2. Context switcher (pure-CSS disclosure).
-         * `group/ctx` spans the full header height (not just the pill) so the
-         * hover box reaches all the way to the panel's `top-full` edge — with
-         * a shorter group, the gap between pill and panel falls outside
-         * group-hover and moving the pointer from trigger to panel closes it
-         * before it's reached. */}
-        <div class="group/ctx flex h-[4rem] items-center max-sm:hidden">
-          <button
-            type="button"
-            data-ctx-trigger
-            aria-expanded="false"
-            aria-controls={CTX_PANEL_ID}
-            class="inline-flex items-center gap-hsp-xs whitespace-nowrap rounded-full border border-rail-border bg-rail-hover-bg px-hsp-md py-vsp-2xs text-small font-medium text-rail-fg transition-colors hover:bg-rail-hover-bg focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-rail-fg"
-          >
-            <span class="text-rail-muted">Viewing</span>
-            <span
-              class="h-[0.6rem] w-[0.6rem] flex-none rounded-full bg-accent shadow-[0_0_0_2px_color-mix(in_srgb,var(--color-accent)_22%,transparent)]"
-              aria-hidden="true"
-            />
-            <b class="font-bold">{currentItem?.label}</b>
-            <span
-              class="text-caption text-rail-muted transition-transform group-hover/ctx:rotate-180 group-focus-within/ctx:rotate-180"
-              aria-hidden="true"
-            >
-              ▾
-            </span>
-          </button>
+        {sections.length > 0 && <BrowseDisclosure sections={sections} />}
 
-          <ContextPanel items={switcherItems} />
-        </div>
+        <span class="flex-auto" aria-hidden="true" />
 
-        <span class="flex-auto max-sm:hidden" aria-hidden="true" />
-
-        {/* 3. Utility nav (right). */}
-        <nav
-          class="flex items-center gap-hsp-md text-small max-sm:w-full max-sm:gap-hsp-sm max-sm:text-caption"
-          aria-label="Utility"
-        >
-          {/* Search: icon trigger + inline expanding input, both scoped under
-           * `group/search` (separate from `group/ctx` so they never open
-           * together). Baseline disclosure is `focus-within`; submits via a
-           * plain GET form so it works with no JS. */}
+        <nav class="flex items-center gap-hsp-md text-small" aria-label="Utility">
           <div class="group/search flex items-center">
             <form role="search" action="/search" method="get" data-search-form class="flex items-center">
               <button
@@ -166,6 +105,11 @@ export function SiteHeader({
             </form>
           </div>
 
+          {desktopThemeControl && (
+            <div data-theme-control="desktop" class="flex">
+              {desktopThemeControl}
+            </div>
+          )}
           <a class={UTIL_LINK_CLASS} href="/ir">
             Investors
           </a>
@@ -175,7 +119,7 @@ export function SiteHeader({
           <a class={UTIL_LINK_CLASS} href="/contact">
             Contact
           </a>
-          <span class="h-[1.25rem] w-px bg-rail-border max-sm:hidden" aria-hidden="true" />
+          <span class="h-[1.25rem] w-px bg-rail-border" aria-hidden="true" />
           <span class="text-caption tracking-[0.05em] text-rail-muted">
             <b class="font-bold text-rail-fg">EN</b>
             {" / "}
@@ -188,66 +132,85 @@ export function SiteHeader({
 }
 
 /**
- * Context mega-panel. Visible via `group-hover/ctx` or `group-focus-within/ctx`
- * (hidden by default: invisible + opacity-0 + pointer-events-none, so it's
- * also out of tab order and hidden from assistive tech until shown).
- * `data-ctx-panel` is the enhancer's Escape/outside-click + aria-sync target.
+ * The group spans the full header height so there is no hover gap between the
+ * trigger and anchored panel. This is intentionally a normal navigation list,
+ * not a card switcher: every item comes from the same tree as SiteNav.
  */
-function ContextPanel({ items }: { items: BrandSwitcherItem[] }) {
+function BrowseDisclosure({ sections }: { sections: NavSection[] }) {
   return (
-    <div
-      id={CTX_PANEL_ID}
-      data-ctx-panel
-      class="invisible pointer-events-none absolute inset-x-0 top-full z-ui-dropdown -translate-y-[6px] border-b border-rail-border bg-rail-bg-strong px-hsp-xl pb-vsp-lg pt-vsp-md opacity-0 shadow-[0_24px_48px_-24px_color-mix(in_srgb,var(--color-fg)_60%,transparent)] transition-[opacity,transform,visibility]
-        group-hover/ctx:visible group-hover/ctx:pointer-events-auto group-hover/ctx:translate-y-0 group-hover/ctx:opacity-100
-        group-focus-within/ctx:visible group-focus-within/ctx:pointer-events-auto group-focus-within/ctx:translate-y-0 group-focus-within/ctx:opacity-100"
-      role="group"
-      aria-label="Switch business context"
-    >
-      <p class="mb-vsp-sm text-caption font-bold uppercase tracking-[0.08em] text-rail-muted">Browse by business</p>
-      <AutoGrid min="13rem" gap="md">
-        {items.map((item) => (
-          <ContextCard key={item.key} item={item} />
-        ))}
-      </AutoGrid>
+    <div class="group/ctx flex h-[4rem] items-center">
+      <button
+        type="button"
+        data-ctx-trigger
+        aria-expanded="false"
+        aria-controls={CTX_PANEL_ID}
+        aria-label="Browse site sections"
+        class="inline-flex min-h-[44px] min-w-[44px] items-center gap-hsp-xs rounded-md border border-rail-border bg-rail-hover-bg px-hsp-md py-vsp-2xs text-small font-semibold text-rail-fg transition-colors hover:bg-rail-bg hover:underline hover:underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-rail-fg"
+      >
+        Browse
+        <span
+          class="text-caption text-rail-muted transition-transform group-hover/ctx:rotate-180 group-focus-within/ctx:rotate-180"
+          aria-hidden="true"
+        >
+          ▾
+        </span>
+      </button>
+
+      <nav
+        id={CTX_PANEL_ID}
+        data-ctx-panel
+        class="invisible pointer-events-none absolute left-1/2 top-full z-ui-dropdown w-[min(calc(100vw-2rem),72rem)] -translate-x-1/2 -translate-y-[6px] border border-rail-border bg-rail-bg-strong opacity-0 shadow-[0_24px_48px_-24px_color-mix(in_srgb,var(--color-fg)_60%,transparent)] transition-[opacity,transform,visibility]
+          group-hover/ctx:visible group-hover/ctx:pointer-events-auto group-hover/ctx:translate-y-0 group-hover/ctx:opacity-100
+          group-focus-within/ctx:visible group-focus-within/ctx:pointer-events-auto group-focus-within/ctx:translate-y-0 group-focus-within/ctx:opacity-100"
+        aria-label="Browse site sections"
+      >
+        <div class="max-h-[min(32rem,calc(100dvh-4rem))] overflow-y-auto p-hsp-lg">
+          <div class="grid grid-cols-[repeat(auto-fit,minmax(min(100%,16rem),1fr))] gap-x-hsp-xl gap-y-vsp-lg">
+            {sections.map((section, index) => (
+              <BrowseCategory key={`${section.label}-${index}`} section={section} index={index} />
+            ))}
+          </div>
+        </div>
+      </nav>
     </div>
   );
 }
 
-const CARD_BASE =
-  "relative flex flex-col gap-vsp-2xs overflow-hidden rounded-lg border bg-rail-bg px-hsp-md pb-vsp-md pt-vsp-sm no-underline transition-[border-color,box-shadow,transform] hover:-translate-y-[2px] hover:shadow-[0_10px_24px_-12px_color-mix(in_srgb,var(--color-accent)_70%,transparent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
-const CARD_CURRENT = " border-accent shadow-[0_0_0_2px_color-mix(in_srgb,var(--color-accent)_45%,transparent)]";
-const CARD_INACTIVE = " border-rail-border hover:border-accent";
-
-/**
- * One switcher card: photo slot + mark + label + descriptor. The current item
- * gets `aria-current="location"` (the href isn't necessarily the exact page,
- * so `page` would be inaccurate) plus an accent border/ring.
- */
-function ContextCard({ item }: { item: BrandSwitcherItem }) {
-  const current = item.current;
+function BrowseCategory({ section, index }: { section: NavSection; index: number }) {
+  const labelId = `zui-browse-category-${index}`;
+  // SiteNav omits `href` when the section's own index page is already its
+  // first direct child (the rail must not repeat a self-link). The Browse
+  // walk needs a linked category heading, so that first real destination is
+  // the section's effective own href in this representation.
+  const categoryHref = section.href ?? section.children[0]?.href;
   return (
-    <a
-      href={item.href}
-      aria-current={current ? "location" : undefined}
-      data-ctx-card-key={item.key}
-      class={CARD_BASE + (current ? CARD_CURRENT : CARD_INACTIVE)}
-    >
-      <PlaceholderBox
-        label="Product photo"
-        aspect="16/10"
-        class="mb-vsp-xs w-full border-rail-border bg-rail-bg text-rail-muted"
-      />
-      <span class="flex items-center gap-hsp-xs">
-        <span
-          class="grid h-[2rem] w-[2rem] flex-none place-items-center rounded-[8px] bg-accent text-small font-bold text-bg"
-          aria-hidden="true"
-        >
-          {item.mark}
-        </span>
-        <b class="text-body font-bold text-rail-fg">{item.label}</b>
-      </span>
-      <small class="text-caption leading-snug text-rail-muted">{item.description}</small>
-    </a>
+    <section aria-labelledby={labelId}>
+      <h2 id={labelId} class="mb-vsp-xs text-body font-bold text-rail-fg">
+        {categoryHref ? (
+          <a
+            class="rounded text-inherit no-underline underline-offset-4 hover:text-accent hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rail-fg"
+            href={categoryHref}
+          >
+            {section.label}
+          </a>
+        ) : (
+          section.label
+        )}
+      </h2>
+      {section.children.length > 0 && (
+        <ul class="flex list-none flex-col gap-vsp-2xs">
+          {section.children.map((leaf) => (
+            <li key={leaf.slug}>
+              <a
+                class="inline rounded text-small text-rail-muted no-underline underline-offset-4 hover:text-rail-fg hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rail-fg"
+                href={leaf.href}
+              >
+                {leaf.label}
+              </a>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }

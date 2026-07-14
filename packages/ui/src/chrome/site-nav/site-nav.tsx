@@ -1,5 +1,5 @@
+import type { ComponentChildren } from "preact";
 import { cx } from "../../lib/cx";
-import type { BrandSwitcherItem } from "../site-header/site-header";
 
 /**
  * Toggle checkbox id (the off-canvas drawer's single source of open/closed
@@ -35,15 +35,8 @@ export type SiteNavProps = {
   brandHref?: string;
   /** Current page slug — drives active-section highlighting + default-open accordion. */
   currentSlug?: string;
-  /**
-   * Corporate + line entries for the mobile drawer's simplified switcher list.
-   * The desktop mega-panel lives in SiteHeader; on mobile that header is
-   * hidden, so this reproduces just the switch-context affordance (no photo
-   * cards) inside the same drawer subtree mobile-nav-enhancer already
-   * manages (focus trap / Escape / scroll-lock cover it for free). Omit to
-   * skip the mobile switcher entirely.
-   */
-  switcherItems?: BrandSwitcherItem[];
+  /** Client-island control supplied by the host; SiteNav stays framework-neutral. */
+  mobileThemeControl?: ComponentChildren;
   class?: string;
 };
 
@@ -88,7 +81,7 @@ export function SiteNav({
   brand = "Acme Corp.",
   brandHref = "/",
   currentSlug,
-  switcherItems,
+  mobileThemeControl,
   class: cls,
 }: SiteNavProps) {
   return (
@@ -112,14 +105,21 @@ export function SiteNav({
         <a class="text-title font-bold text-rail-fg no-underline hover:text-rail-muted" href={brandHref}>
           {brand}
         </a>
-        <label
-          class="-me-hsp-xs inline-flex h-[2.5rem] w-[2.5rem] cursor-pointer items-center justify-center rounded text-rail-fg hover:text-rail-muted"
-          for={NAV_TOGGLE_ID}
-          data-nav-hamburger
-          aria-hidden="true"
-        >
-          <span class="relative block h-[2px] w-[1.25rem] bg-rail-fg before:absolute before:inset-x-0 before:-top-[6px] before:block before:h-[2px] before:bg-rail-fg before:content-[''] after:absolute after:inset-x-0 after:top-[6px] after:block after:h-[2px] after:bg-rail-fg after:content-['']" aria-hidden="true" />
-        </label>
+        <div class="flex items-center gap-hsp-2xs">
+          {mobileThemeControl && (
+            <div data-theme-control="mobile" class="flex">
+              {mobileThemeControl}
+            </div>
+          )}
+          <label
+            class="-me-hsp-xs inline-flex h-[2.5rem] w-[2.5rem] cursor-pointer items-center justify-center rounded text-rail-fg hover:text-rail-muted focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-rail-fg"
+            for={NAV_TOGGLE_ID}
+            data-nav-hamburger
+            aria-hidden="true"
+          >
+            <span class="relative block h-[2px] w-[1.25rem] bg-rail-fg before:absolute before:inset-x-0 before:-top-[6px] before:block before:h-[2px] before:bg-rail-fg before:content-[''] after:absolute after:inset-x-0 after:top-[6px] after:block after:h-[2px] after:bg-rail-fg after:content-['']" aria-hidden="true" />
+          </label>
+        </div>
       </div>
 
       {/* Overlay (mobile only). A <label> so a plain click closes with no JS. */}
@@ -157,8 +157,6 @@ export function SiteNav({
             </span>
           </label>
         </div>
-
-        {switcherItems && switcherItems.length > 0 && <MobileContextSwitcher items={switcherItems} />}
 
         <ul class="flex-auto list-none py-vsp-xs">
           {sections.map((section) => {
@@ -207,40 +205,6 @@ export function SiteNav({
 
 const LEAF_LINK_CLASS =
   "block rounded px-hsp-xs py-vsp-2xs text-small text-rail-fg no-underline transition-colors hover:bg-rail-hover-bg hover:text-rail-fg focus-visible:bg-rail-hover-bg focus-visible:text-rail-fg focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-rail-fg";
-
-/**
- * Simplified mobile switcher (label + current-item highlight only — no photo
- * cards, unlike the desktop mega-panel). `sm:hidden` removes it from tab
- * order on desktop, where SiteHeader's switcher is used instead.
- */
-function MobileContextSwitcher({ items }: { items: BrandSwitcherItem[] }) {
-  return (
-    <div class="border-b border-rail-border px-hsp-md py-vsp-sm sm:hidden" role="group" aria-label="Switch business context">
-      <p class="mb-vsp-2xs px-hsp-xs text-caption font-bold uppercase tracking-[0.08em] text-rail-muted">
-        Business context
-      </p>
-      <ul class="flex list-none flex-col gap-vsp-2xs">
-        {items.map((item) => (
-          <li key={item.key} class="list-none">
-            <a href={item.href} aria-current={item.current ? "location" : undefined} data-ctx-mobile-key={item.key} class={MOBILE_SWITCHER_LINK_CLASS}>
-              <span class="grid h-[1.6rem] w-[1.6rem] flex-none place-items-center rounded-[6px] bg-accent text-caption font-bold leading-none text-bg" aria-hidden="true">
-                {item.mark}
-              </span>
-              <span class="min-w-0 flex-auto truncate">{item.label}</span>
-              {item.current && <span class="h-[0.5rem] w-[0.5rem] flex-none rounded-full bg-accent" aria-hidden="true" />}
-            </a>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-const MOBILE_SWITCHER_LINK_CLASS =
-  "flex items-center gap-hsp-xs rounded border-s-[3px] border-s-transparent px-hsp-xs py-vsp-2xs text-small font-medium text-rail-fg no-underline transition-colors" +
-  " hover:border-s-accent hover:bg-rail-hover-bg hover:text-rail-fg" +
-  " focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-rail-fg" +
-  " aria-[current=location]:border-s-accent aria-[current=location]:bg-rail-hover-bg aria-[current=location]:text-rail-fg";
 
 const SUMMARY_CLASS =
   "flex w-full cursor-pointer list-none items-center justify-between gap-hsp-xs border-s-[3px] border-s-transparent px-hsp-md py-vsp-xs text-start text-small font-medium text-rail-fg transition-colors" +
