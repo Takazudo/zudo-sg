@@ -424,6 +424,37 @@ html[data-sg-composer-doc] body {
 .sg-composer-inspector-diagnostics-title {
   font-weight: 600;
 }
+
+/* Linked Global-template status deliberately lives OUTSIDE the local tree and
+ * selected-node controls. The provider-owning app injects any Retry/Open
+ * source/Detach lifecycle callbacks; these styles only make ownership and the
+ * lock state legible in both color schemes. */
+.sg-composer-linked-frame {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-hsp-2xs);
+  margin-block-end: var(--spacing-vsp-xs);
+  padding: var(--spacing-vsp-2xs) var(--spacing-hsp-sm);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: color-mix(in oklch, var(--color-info) 10%, var(--color-surface));
+  color: var(--color-fg);
+  font-size: var(--text-micro);
+}
+.sg-composer-linked-frame p {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-hsp-2xs);
+  margin: 0;
+}
+.sg-composer-linked-frame p span { color: var(--color-muted); }
+.sg-composer-linked-frame[data-sg-linked-frame="resolved"] p span:last-child::before { content: "🔒 "; }
+.sg-composer-linked-frame[data-sg-linked-frame="blocked"] {
+  background: color-mix(in oklch, var(--color-warning) 12%, var(--color-surface));
+}
+.sg-composer-linked-open { width: auto; padding-inline: var(--spacing-hsp-2xs); }
 /* ============================================================================
  * Structure rail + component chooser (issue #250)
  *

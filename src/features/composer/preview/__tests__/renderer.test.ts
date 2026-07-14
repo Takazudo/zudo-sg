@@ -1066,6 +1066,53 @@ describe("recoverable failures", () => {
   });
 });
 
+describe("linked Global-template ownership", () => {
+  it("projects local content into the outlet with owner-qualified runtime identity", () => {
+    // The two canonical documents intentionally collide on the raw node id.
+    // The source Stack owns the shell; the local Prose remains the only node
+    // that can be selected or mutated in the consumer.
+    const local = doc([node("collision", "ui.prose-p", { children: "Local content" })]);
+    const source = {
+      ...doc([node("collision", "ui.stack", {}, { content: [] })]),
+      name: "Site shell",
+    };
+    const onSelect = vi.fn();
+    const onRequestAdd = vi.fn();
+    const onOpenSource = vi.fn();
+    const { container } = draw(local, {
+      localRecordId: "consumer-record",
+      linked: {
+        sourceRecordId: "source-record",
+        sourceDocument: source,
+        outlet: { id: "outlet-main", label: "Main content", target: { parentId: "collision", slotId: "content" } },
+      },
+      session: { ...EDIT, selectedId: "collision" },
+      onSelect,
+      onRequestAdd,
+      onOpenSource,
+    });
+
+    const wrappers = [...container.querySelectorAll<HTMLElement>('[data-zc-node-id="collision"]')];
+    expect(wrappers).toHaveLength(2);
+    const sourceWrapper = wrappers.find((node) => node.dataset.zcOwner === "global-template")!;
+    const localWrapper = wrappers.find((node) => node.dataset.zcOwner === "local")!;
+    expect(sourceWrapper.dataset.zcRuntimeKey).not.toBe(localWrapper.dataset.zcRuntimeKey);
+    expect(sourceWrapper.querySelector(":scope > .zc-chrome")).toBeNull();
+    expect(localWrapper.hasAttribute("data-zc-selected")).toBe(true);
+    expect(container.textContent).toContain("Linked Global template");
+    expect(container.textContent).toContain("Locked");
+
+    fireEvent.click(sourceWrapper);
+    expect(onSelect).not.toHaveBeenCalled();
+
+    fireEvent.click(container.querySelector('[data-zc-insert=":root:1"]')!);
+    expect(onRequestAdd).toHaveBeenCalledWith({ parentId: null, slotId: "root", index: 1 });
+
+    fireEvent.click(container.querySelector(".zc-linked-frame-open")!);
+    expect(onOpenSource).toHaveBeenCalledWith("source-record");
+  });
+});
+
 // ── Drag & drop (issue #258) ─────────────────────────────────────────────────
 describe("drag & drop (issue #258)", () => {
   beforeEach(() => vi.useFakeTimers());

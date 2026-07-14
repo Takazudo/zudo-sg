@@ -133,6 +133,57 @@ export type GlobalTemplateMaterializedView =
   | ResolvedGlobalTemplateView
   | BlockedGlobalTemplateView;
 
+/**
+ * Small, serializable editor-facing status derived from a materialized view.
+ * It deliberately carries no provider/store capability and no mutable source
+ * nodes. UI callers inject lifecycle callbacks separately, so presenting a
+ * linked source cannot accidentally create a second mutation route.
+ */
+export type LinkedEditorPresentation =
+  | { state: "local" }
+  | {
+      state: "resolved";
+      sourceRecordId: string;
+      sourceName: string;
+      outletId: string;
+      outletLabel: string;
+    }
+  | {
+      state: "blocked";
+      sourceRecordId: string;
+      message: string;
+      diagnostic: GlobalTemplateViewDiagnosticCode;
+    };
+
+/** UI-only lifecycle injection point. Implementations stay provider-owned. */
+export interface LinkedEditorLifecycleActions {
+  onOpenSource?: (sourceRecordId: string) => void;
+  onRetry?: () => void;
+  /** Rendered only when a caller supplies the post-resolution lifecycle action. */
+  onDetach?: () => void;
+  /** Rendered only when a caller supplies the broken-binding lifecycle action. */
+  onRemoveBrokenBinding?: () => void;
+}
+
+export function linkedEditorPresentation(view: GlobalTemplateMaterializedView): LinkedEditorPresentation {
+  if (view.status === "local") return { state: "local" };
+  if (view.status === "resolved") {
+    return {
+      state: "resolved",
+      sourceRecordId: view.sourceRuntime.sourceRecordId,
+      sourceName: view.sourceDocument.name,
+      outletId: view.outlet.id,
+      outletLabel: view.outlet.label,
+    };
+  }
+  return {
+    state: "blocked",
+    sourceRecordId: view.diagnostic.binding.sourceRecordId,
+    message: view.diagnostic.message,
+    diagnostic: view.diagnostic.code,
+  };
+}
+
 export type StandaloneSnapshotBlockReason =
   | "unbound"
   | "resolution-failed"

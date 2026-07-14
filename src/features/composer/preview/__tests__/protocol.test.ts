@@ -7,6 +7,7 @@ import {
   commitInlineEditMessage,
   dropNodeMessage,
   modeMessage,
+  openSourceMessage,
   readParentToPreview,
   readPreviewToParent,
   readyMessage,
@@ -105,6 +106,57 @@ describe("readParentToPreview — the security gate", () => {
     for (const document of [global, pattern, consumer]) {
       expect(readParentToPreview(event(renderMessage(0, document, SESSION)), EXPECTED).ok).toBe(true);
     }
+  });
+
+  it("accepts a strict resolved linked-source context while retaining a local document", () => {
+    const result = readParentToPreview(
+      event(
+        renderMessage(
+          0,
+          {
+            document: SAMPLE_DOCUMENT,
+            localRecordId: "consumer-record",
+            linked: {
+              sourceRecordId: "source-record",
+              sourceDocument: {
+                ...SAMPLE_DOCUMENT,
+                name: "Site shell",
+                publication: {
+                  kind: "global-template",
+                  outlet: {
+                    id: "outlet-main",
+                    label: "Main content",
+                    target: { parentId: "split-1", slotId: "right" },
+                  },
+                },
+              },
+              outlet: {
+                id: "outlet-main",
+                label: "Main content",
+                target: { parentId: "split-1", slotId: "right" },
+              },
+            },
+          },
+          SESSION,
+        ),
+      ),
+      EXPECTED,
+    );
+    expect(result.ok).toBe(true);
+  });
+
+  it("REJECTS extra or malformed linked-source context keys", () => {
+    const snapshot = {
+      document: SAMPLE_DOCUMENT,
+      localRecordId: "consumer-record",
+      linked: {
+        sourceRecordId: "source-record",
+        sourceDocument: SAMPLE_DOCUMENT,
+        outlet: { id: "outlet-main", label: "Main", target: { parentId: "split-1", slotId: "right" } },
+      },
+    };
+    expect(readParentToPreview(event({ ...renderMessage(0, snapshot, SESSION), linked: { ...snapshot.linked, provider: {} } }), EXPECTED).ok).toBe(false);
+    expect(readParentToPreview(event({ ...renderMessage(0, snapshot, SESSION), linked: { ...snapshot.linked, sourceRecordId: "../source" } }), EXPECTED).ok).toBe(false);
   });
 
   it("accepts a host→preview restore-focus response (issue #256, not revision-stamped)", () => {
@@ -330,6 +382,7 @@ describe("readPreviewToParent", () => {
       selectMessage(1, "prose-1"),
       selectMessage(1, null),
       requestAddMessage(1, target),
+      openSourceMessage("source-record"),
       requestNodeMenuMessage(1, "box-1", RECT, "node-menu:box-1"),
       requestInsertMenuMessage(1, target, RECT, "insert-menu:stack-1:content:2"),
       commitInlineEditMessage("prose-1", "children", "Edited copy", 1),

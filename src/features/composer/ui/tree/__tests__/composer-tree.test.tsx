@@ -29,6 +29,35 @@ function baseProps() {
 }
 
 describe("ComposerTree — structure", () => {
+  it("shows a linked frame outside the strictly local document nodes", () => {
+    resetFixtureIds();
+    const onOpenSource = vi.fn();
+    const document = makeAbcDocument();
+    const { container } = render(
+      <ComposerTree
+        document={document}
+        {...baseProps()}
+        linkedPresentation={{
+          state: "resolved",
+          sourceRecordId: "source-record",
+          sourceName: "Site shell",
+          outletId: "outlet-main",
+          outletLabel: "Main content",
+        }}
+        linkedActions={{ onOpenSource }}
+      />,
+    );
+
+    const frame = container.querySelector('[data-sg-linked-frame="resolved"]')!;
+    expect(frame.textContent).toContain("Site shell");
+    expect(frame.textContent).toContain("Main content");
+    // The collapsed local tree still has exactly its one local root node; the
+    // linked source does not become a second tree branch.
+    expect(container.querySelectorAll("[data-sg-tree-node-id]")).toHaveLength(1);
+    fireEvent.click(screen.getByRole("button", { name: "Open source" }));
+    expect(onOpenSource).toHaveBeenCalledWith("source-record");
+  });
+
   it("renders the virtual document-root row as an insertion target only", () => {
     resetFixtureIds();
     const document = makeAbcDocument();

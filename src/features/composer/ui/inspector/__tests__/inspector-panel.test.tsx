@@ -56,6 +56,53 @@ describe("InspectorPanel — root/empty state", () => {
 });
 
 describe("InspectorPanel — document reuse controls", () => {
+  it("presents linked ownership separately from local selected-node controls", () => {
+    const onOpenSource = vi.fn();
+    const onDetach = vi.fn();
+    const doc = makeDocument([makeNode(TEST_COMPONENT_IDS.label, { text: "Local" }, {}, "local-node")]);
+    renderPanel({
+      document: doc,
+      selectedId: "local-node",
+      linkedPresentation: {
+        state: "resolved",
+        sourceRecordId: "source-record",
+        sourceName: "Site shell",
+        outletId: "outlet-main",
+        outletLabel: "Main content",
+      },
+      linkedActions: { onOpenSource, onDetach },
+    });
+
+    expect(screen.getByText("Linked Global template")).toBeInTheDocument();
+    expect(screen.getByText(/Site shell.*Main content.*Locked/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Open source" }));
+    fireEvent.click(screen.getByRole("button", { name: "Detach" }));
+    expect(onOpenSource).toHaveBeenCalledWith("source-record");
+    expect(onDetach).toHaveBeenCalledOnce();
+    // The actual selected node is still the consumer's local node.
+    expect(screen.getByLabelText("Text")).toBeInTheDocument();
+  });
+
+  it("exposes only injected recovery actions for a broken binding", () => {
+    const onRetry = vi.fn();
+    const onRemoveBrokenBinding = vi.fn();
+    renderPanel({
+      linkedPresentation: {
+        state: "blocked",
+        sourceRecordId: "source-record",
+        diagnostic: "missing-template",
+        message: "The linked Global template is unavailable.",
+      },
+      linkedActions: { onRetry, onRemoveBrokenBinding },
+    });
+
+    expect(screen.getByText("Linked template unavailable")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+    fireEvent.click(screen.getByRole("button", { name: "Remove broken binding" }));
+    expect(onRetry).toHaveBeenCalledOnce();
+    expect(onRemoveBrokenBinding).toHaveBeenCalledOnce();
+  });
+
   it("disables empty Pattern publication with an accessible reason", () => {
     renderPanel({ document: makeDocument([]), selectedId: null });
     expect(screen.getByRole("radio", { name: /Pattern/i })).toBeDisabled();

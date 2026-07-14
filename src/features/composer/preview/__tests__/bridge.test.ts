@@ -11,6 +11,7 @@ import {
   commitInlineEditMessage,
   dropNodeMessage,
   errorMessage,
+  openSourceMessage,
   readyMessage,
   requestAddMessage,
   requestInsertMenuMessage,
@@ -264,6 +265,24 @@ describe("createComposerPreviewBridge — inbound guard", () => {
       2,
     );
     expect(onError).toHaveBeenCalledWith("node threw", true, 2);
+  });
+
+  it("routes explicit linked-source navigation without treating it as local selection", () => {
+    const host = fakeHostWindow();
+    const iframe = fakeFrame();
+    const onOpenSource = vi.fn();
+    const onSelect = vi.fn();
+    createComposerPreviewBridge({
+      frame: iframe.frame,
+      location: LOCATION,
+      hostWindow: host,
+      onOpenSource,
+      onSelect,
+    });
+
+    host.deliver({ data: openSourceMessage("source-record"), origin: ORIGIN, source: iframe.contentWindow });
+    expect(onOpenSource).toHaveBeenCalledWith("source-record");
+    expect(onSelect).not.toHaveBeenCalled();
   });
 
   it("routes commit-inline-edit to onCommitInlineEdit with its documentRevision (issue #257)", () => {

@@ -49,8 +49,10 @@ import {
   buildComposerPreviewUrl,
   composerPreviewFrameProps,
   createComposerPreviewBridge,
+  localPreviewSnapshot,
   type ComposerPreviewBridge,
   type ComposerPreviewLocation,
+  type ComposerPreviewSnapshot,
   type MessageTarget,
   type PreviewSession,
   type SerializedRect,
@@ -70,12 +72,16 @@ function translateRect(rect: SerializedRect, frame: HTMLIFrameElement | null): S
 
 export interface ComposerCanvasHostProps {
   document: CompositionDocument;
+  /** Separate render-only linked source context; the controller remains local. */
+  snapshot?: ComposerPreviewSnapshot;
   session: PreviewSession;
   viewport: ComposerCanvasViewport;
   /** A canvas node (or the empty canvas, `null`) was selected in Edit mode. */
   onSelect: (nodeId: string | null) => void;
   /** An insert point was activated — carries #245's index-bearing target. */
   onRequestAdd: (target: InsertionTarget) => void;
+  /** Explicit navigation for the linked source affordance. */
+  onOpenSource?: (sourceRecordId: string) => void;
   /** The selected node's chrome "⋯" was activated — rect already translated to host coordinates (issue #256). */
   onRequestNodeMenu: (nodeId: string, rect: SerializedRect, restoreFocus: () => void) => void;
   /** An insert point's "⋯" was activated — rect already translated to host coordinates (issue #256). */
@@ -111,10 +117,12 @@ export interface ComposerCanvasHostProps {
 export function ComposerCanvasHost(props: ComposerCanvasHostProps): JSX.Element {
   const {
     document: doc,
+    snapshot: snapshotProp,
     session,
     viewport,
     onSelect,
     onRequestAdd,
+    onOpenSource,
     onRequestNodeMenu,
     onRequestInsertMenu,
     onCommitInlineEdit,
@@ -124,9 +132,14 @@ export function ComposerCanvasHost(props: ComposerCanvasHostProps): JSX.Element 
     hostWindow,
   } = props;
 
+  const snapshot = useMemo(
+    () => snapshotProp ?? localPreviewSnapshot(doc),
+    [doc, snapshotProp],
+  );
+
   const frameRef = useRef<HTMLIFrameElement | null>(null);
   const bridgeRef = useRef<ComposerPreviewBridge | null>(null);
-  const prevDocRef = useRef<CompositionDocument | null>(null);
+  const prevSnapshotRef = useRef<ComposerPreviewSnapshot | null>(null);
   // Revision of the newest DOCUMENT snapshot sent (updated on `render`, NOT on a
   // session-only `updateSession`). An inline-edit commit stamped BELOW this was
   // authored against a document the host has since superseded → stale → dropped.
@@ -137,6 +150,7 @@ export function ComposerCanvasHost(props: ComposerCanvasHostProps): JSX.Element 
   const handlersRef = useRef({
     onSelect,
     onRequestAdd,
+    onOpenSource,
     onRequestNodeMenu,
     onRequestInsertMenu,
     onCommitInlineEdit,
@@ -145,6 +159,7 @@ export function ComposerCanvasHost(props: ComposerCanvasHostProps): JSX.Element 
   handlersRef.current = {
     onSelect,
     onRequestAdd,
+    onOpenSource,
     onRequestNodeMenu,
     onRequestInsertMenu,
     onCommitInlineEdit,
@@ -176,6 +191,7 @@ export function ComposerCanvasHost(props: ComposerCanvasHostProps): JSX.Element 
         frameRef.current?.focus();
         handlersRef.current.onRequestAdd(target);
       },
+      onOpenSource: (sourceRecordId) => handlersRef.current.onOpenSource?.(sourceRecordId),
       onRequestNodeMenu: (nodeId, rect, focusToken) => {
         handlersRef.current.onRequestNodeMenu(nodeId, translateRect(rect, frameRef.current), () =>
           bridgeRef.current?.restoreFocus(focusToken),
@@ -239,17 +255,17 @@ export function ComposerCanvasHost(props: ComposerCanvasHostProps): JSX.Element 
   useEffect(() => {
     const bridge = bridgeRef.current;
     if (!bridge) return;
-    if (prevDocRef.current !== doc) {
-      prevDocRef.current = doc;
+    if (prevSnapshotRef.current !== snapshot) {
+      prevSnapshotRef.current = snapshot;
       setRenderError(null);
       // A fresh document clears any stale-edit notice and advances the revision
       // an inline commit is validated against.
       setStaleNotice(null);
-      lastDocRevisionRef.current = bridge.render(doc, session);
+      lastDocRevisionRef.current = bridge.render(snapshot, session);
     } else {
       bridge.updateSession(session);
     }
-  }, [doc, session]);
+  }, [session, snapshot]);
 
   const width = COMPOSER_VIEWPORT_WIDTHS[viewport];
   const frameStyle = width === null ? undefined : { width: `${width}px`, maxWidth: "100%" };

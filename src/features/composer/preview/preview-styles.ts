@@ -112,6 +112,61 @@ html[${COMPOSER_PREVIEW_DOC_ATTR}] {
   outline-offset: 2px;
 }
 
+/* ── Linked Global-template ownership ────────────────────────────────────── */
+.zc-linked-frame {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem;
+  margin-block-end: 1rem;
+  padding: 0.5rem 0.625rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.375rem;
+  background: color-mix(in srgb, var(--color-surface) 88%, var(--color-info));
+  color: var(--color-fg);
+  font-size: var(--text-micro);
+}
+.zc-linked-frame-title { font-weight: 700; }
+.zc-linked-frame-detail { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.zc-linked-frame-outlet,
+.zc-linked-frame-lock { color: var(--color-muted); }
+.zc-linked-frame-lock::before { content: "🔒 "; }
+.zc-linked-frame-open {
+  margin-inline-start: auto;
+  min-height: 1.75rem;
+  padding: 0.125rem 0.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.25rem;
+  background: var(--color-surface);
+  color: var(--color-fg);
+  cursor: pointer;
+  font: inherit;
+}
+@media (hover: hover) {
+  .zc-linked-frame-open:hover { background: color-mix(in srgb, var(--color-fg) 8%, var(--color-surface)); }
+}
+.zc-linked-frame-open:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+
+.zc-linked-shell {
+  position: relative;
+  padding: 0.375rem;
+  border: 1px dashed var(--color-border);
+  border-radius: 0.375rem;
+}
+.zc-node--source { outline: 1px dashed color-mix(in srgb, var(--color-muted) 55%, transparent); outline-offset: 2px; }
+.zc-source-lock {
+  position: absolute;
+  inset-inline-end: 0;
+  inset-block-start: 0;
+  z-index: var(--z-index-local-2);
+  padding: 0.0625rem 0.25rem;
+  border-radius: 0 0 0 0.1875rem;
+  background: var(--color-surface);
+  color: var(--color-muted);
+  font-size: var(--text-micro);
+  pointer-events: none;
+}
+
 /* ── Inline text editing (issue #257) ─────────────────────────────────────── */
 /* The active contentEditable region: a clear editing affordance and a text
    caret. The outline is out-of-flow, so making a text node editable neither
