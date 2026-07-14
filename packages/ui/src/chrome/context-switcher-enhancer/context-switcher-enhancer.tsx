@@ -70,8 +70,10 @@ function enhance(): () => void {
     panel.style.visibility = "visible";
     panel.style.opacity = "1";
     panel.style.pointerEvents = "auto";
-    panel.style.translate = "none";
-    panel.style.transform = "none";
+    // Preserve the panel's horizontal centering while neutralizing only its
+    // CSS-closed upward offset. `none` would erase `-translate-x-1/2` and
+    // push the 72rem panel off the right edge when it is click-pinned.
+    panel.style.translate = "-50% 0";
   };
   // Force closed: override CSS hover/focus-within so it hides even while
   // still (technically) hovered/focused.

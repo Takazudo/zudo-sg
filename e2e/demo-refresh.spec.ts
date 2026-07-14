@@ -149,6 +149,9 @@ test("desktop Browse is a bounded real site-tree walk with pointer and keyboard 
   await page.keyboard.press("Enter");
   await expect(panel).toBeVisible();
   await expect(trigger).toHaveAttribute("aria-expanded", "true");
+  const pinnedBounds = await panel.boundingBox();
+  expect(pinnedBounds?.x).toBeCloseTo(bounds?.x ?? 0, 0);
+  expect(pinnedBounds?.width).toBeCloseTo(bounds?.width ?? 0, 0);
   await page.keyboard.press("Escape");
   await expect(panel).toBeHidden();
   await expect(trigger).toBeFocused();

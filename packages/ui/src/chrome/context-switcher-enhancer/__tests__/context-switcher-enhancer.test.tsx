@@ -36,6 +36,7 @@ describe("ContextSwitcherEnhancer", () => {
     expect(trigger).toHaveAttribute("aria-expanded", "false");
     fireEvent.click(trigger);
     expect(panel.style.visibility).toBe("visible"); // inline style applies synchronously
+    expect(panel.style.translate).toBe("-50% 0");
     await flush();
     expect(trigger).toHaveAttribute("aria-expanded", "true");
   });
