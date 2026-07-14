@@ -3,7 +3,7 @@
 import { useState } from "preact/hooks";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/preact";
-import { generateJsx } from "@/composer";
+import { generateJsx, type BrowserJsxExportOutcome } from "@/composer";
 import { TEST_COMPONENT_IDS, makeDocument, makeNode, resetTestIds, testManifest } from "../../test-support/composer-fixtures";
 import { ComposerExportDialog } from "../export-dialog";
 
@@ -46,6 +46,39 @@ describe("ComposerExportDialog — content states", () => {
     const result = generateJsx(doc, testManifest);
     render(<ComposerExportDialog open={false} documentName="Doc" result={result} onClose={vi.fn()} />);
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("labels a resolved linked Copy result as a standalone snapshot", () => {
+    const doc = makeDocument([makeNode(TEST_COMPONENT_IDS.label, { text: "Hi" })]);
+    const generation = generateJsx(doc, testManifest);
+    const copyOutcome: BrowserJsxExportOutcome = {
+      status: "ready",
+      kind: "resolved-standalone-snapshot",
+      generation,
+      message: "Resolved standalone snapshot — future Global-template changes will not propagate to this copied code.",
+    };
+    render(<ComposerExportDialog open documentName="Doc" result={generation} copyOutcome={copyOutcome} onClose={vi.fn()} />);
+
+    expect(screen.getByText(/future Global-template changes will not propagate/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /copy resolved standalone snapshot/i })).toBeInTheDocument();
+  });
+
+  it("blocks Copy on an unresolved linked dependency instead of rendering local-only code", () => {
+    const doc = makeDocument([makeNode(TEST_COMPONENT_IDS.label, { text: "Hi" })]);
+    const generation = generateJsx(doc, testManifest);
+    const copyOutcome: BrowserJsxExportOutcome = {
+      status: "blocked",
+      diagnostic: {
+        kind: "dependency",
+        code: "missing-resolution",
+        message: "The linked Global template is still resolving, so Copy JSX is unavailable.",
+      },
+    };
+    render(<ComposerExportDialog open documentName="Doc" result={generation} copyOutcome={copyOutcome} onClose={vi.fn()} />);
+
+    expect(screen.getByText(/copy jsx is blocked/i)).toBeInTheDocument();
+    expect(screen.getByText(/still resolving/i)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /copy jsx/i })).not.toBeInTheDocument();
   });
 });
 

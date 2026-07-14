@@ -11,10 +11,13 @@ import {
   summarizeComposition,
   validateCompositionRecord,
   type CompositionLoadOutcome,
+  type CompositionDependent,
+  type CompositionDeleteOutcome,
   type CompositionPersistenceOperation,
   type CompositionRecord,
   type CompositionStore,
   type CompositionSummary,
+  type CompositionUnpublishOutcome,
 } from "../../library";
 import { cloneJson } from "../../model/json";
 import type {
@@ -55,7 +58,7 @@ function compareNames(a: { name: string }, b: { name: string }): number {
 
 function operationError(
   operation: CompositionPersistenceOperation,
-  code: "blocked" | "validation" | "read-failed" | "write-failed",
+  code: "blocked" | "validation" | "read-failed" | "write-failed" | "conflict",
   message: string,
   cause?: unknown,
 ): CompositionPersistenceError {
@@ -63,7 +66,7 @@ function operationError(
     operation,
     code,
     message,
-    code === "read-failed" || code === "write-failed",
+    code === "read-failed" || code === "write-failed" || code === "conflict",
     cause === undefined ? undefined : { cause },
   );
 }
@@ -112,6 +115,7 @@ export class FilesystemCompositionStore implements CompositionStore {
     private readonly provideJsx: FilesystemCompositionStoreOptions["provideJsx"],
     private readonly operations: FilesystemStoreOperations,
     private readonly randomToken: () => string,
+    private readonly now: () => string,
   ) {}
 
   static async create(
@@ -153,6 +157,7 @@ export class FilesystemCompositionStore implements CompositionStore {
         options.provideJsx,
         operations,
         options.randomToken ?? (() => randomBytes(18).toString("base64url")),
+        options.now ?? (() => new Date().toISOString()),
       );
     } catch (cause) {
       if (cause instanceof CompositionPersistenceError) throw cause;
@@ -230,6 +235,7 @@ export class FilesystemCompositionStore implements CompositionStore {
     const canonical = `${JSON.stringify(snapshotValidation.record, null, 2)}\n`;
 
     await this.run("put", async () => {
+      await this.assertBindingTransition(snapshotValidation.record);
       const productionJsx = jsx ?? await this.getProductionJsx("put", snapshotValidation.record);
       await this.atomicReplace("put", this.jsonPath(id), canonical);
       await this.atomicReplace("put", this.jsxPath(id), productionJsx);
@@ -237,10 +243,21 @@ export class FilesystemCompositionStore implements CompositionStore {
   }
 
   async delete(id: string): Promise<boolean> {
+    const outcome = await this.deleteWithDependencyCheck(id);
+    return outcome.status === "deleted";
+  }
+
+  /**
+   * The root queue serializes every Composer-managed filesystem operation.
+   * The binding scan deliberately happens inside that queue and immediately
+   * before the source pair is removed, so normal UI saves cannot interleave a
+   * new consumer between a helpful preflight and the destructive write.
+   */
+  async deleteWithDependencyCheck(id: string): Promise<CompositionDeleteOutcome> {
     this.assertSafeId("delete", id);
     return this.run("delete", async () => {
-      const canonical = await this.readCanonical("delete", id);
-      if (canonical === undefined) return false;
+      const canonical = await this.readCanonical("delete", id, false);
+      if (canonical === undefined) return { status: "not-found" };
       if (canonical.outcome.status !== "loaded") {
         throw operationError(
           "delete",
@@ -248,8 +265,89 @@ export class FilesystemCompositionStore implements CompositionStore {
           `Canonical composition JSON is invalid for id "${id}"; no files were deleted.`,
         );
       }
+      if (canonical.outcome.record.document.publication?.kind === "global-template") {
+        const dependents = await this.findDependents("delete", id);
+        if (dependents.length > 0) return { status: "blocked", dependents };
+      }
       await this.deleteValidatedPair("delete", id, canonical.stats);
-      return true;
+      return { status: "deleted" };
+    });
+  }
+
+  /**
+   * Clear only the source role after a final serialized dependency scan. JSX
+   * is prepared and replaced before canonical JSON so an injected output
+   * failure cannot detach the source record's publication metadata.
+   */
+  async unpublishWithDependencyCheck(id: string): Promise<CompositionUnpublishOutcome> {
+    this.assertSafeId("put", id);
+    return this.run("put", async () => {
+      const canonical = await this.readCanonical("put", id, false);
+      if (canonical === undefined) return { status: "not-found" };
+      if (canonical.outcome.status !== "loaded") {
+        throw operationError(
+          "put",
+          "validation",
+          `Canonical composition JSON is invalid for id "${id}"; it was preserved.`,
+        );
+      }
+      const source = canonical.outcome.record;
+      if (source.document.publication === undefined) return { status: "not-published" };
+      if (source.document.publication.kind === "global-template") {
+        const dependents = await this.findDependents("put", id);
+        if (dependents.length > 0) return { status: "blocked", dependents };
+      }
+
+      const { publication: _publication, ...document } = cloneJson(source.document);
+      const next: CompositionRecord = {
+        ...source,
+        updatedAt: this.now(),
+        document,
+      };
+      const validation = validateCompositionRecord(next);
+      if (!validation.ok) throw operationError("put", "validation", validation.issue.message);
+      const snapshot = cloneJson(validation.record);
+      const productionJsx = await this.getProductionJsx("put", snapshot);
+      await this.atomicReplace("put", this.jsxPath(id), productionJsx);
+      await this.atomicReplace("put", this.jsonPath(id), `${JSON.stringify(snapshot, null, 2)}\n`, canonical.stats);
+      return { status: "unpublished" };
+    });
+  }
+
+  /**
+   * A detach must not clear a binding in canonical JSON until its derived JSX
+   * has been prepared and durably replaced. A later JSON replacement failure
+   * can leave stale derived output, but preserves the old canonical binding;
+   * the normal read repair will reconcile that artifact on retry.
+   */
+  async saveLifecycleRecord(record: CompositionRecord): Promise<void> {
+    const validation = validateCompositionRecord(record);
+    if (!validation.ok) throw operationError("put", "validation", validation.issue.message);
+    const snapshot = cloneJson(validation.record);
+    const snapshotValidation = validateCompositionRecord(snapshot);
+    if (!snapshotValidation.ok) throw operationError("put", "validation", snapshotValidation.issue.message);
+    const id = snapshotValidation.record.id;
+    const canonical = `${JSON.stringify(snapshotValidation.record, null, 2)}\n`;
+
+    await this.run("put", async () => {
+      const current = await this.readCanonical("put", id, false);
+      if (current === undefined) {
+        throw operationError(
+          "put",
+          "blocked",
+          `Canonical consumer "${id}" disappeared before its lifecycle update could be saved.`,
+        );
+      }
+      if (current.outcome.status !== "loaded") {
+        throw operationError(
+          "put",
+          "validation",
+          `Canonical consumer "${id}" is invalid; its lifecycle update was not attempted.`,
+        );
+      }
+      const productionJsx = await this.getProductionJsx("put", snapshotValidation.record);
+      await this.atomicReplace("put", this.jsxPath(id), productionJsx);
+      await this.atomicReplace("put", this.jsonPath(id), canonical, current.stats);
     });
   }
 
@@ -263,12 +361,12 @@ export class FilesystemCompositionStore implements CompositionStore {
         rethrow("clear", "read-failed", "Could not inspect Composer composition files.", cause);
       }
 
-      const records: Array<{ id: string; stats: Stats }> = [];
+      const records: Array<{ id: string; stats: Stats; record: CompositionRecord }> = [];
       for (const entry of entries.sort(compareNames)) {
         const match = OWNED_JSON_PATTERN.exec(entry.name);
         if (!match || entry.isSymbolicLink() || !entry.isFile()) continue;
         const id = match[1]!;
-        const canonical = await this.readCanonical("clear", id);
+        const canonical = await this.readCanonical("clear", id, false);
         if (canonical === undefined) continue;
         if (canonical.outcome.status !== "loaded") {
           throw operationError(
@@ -277,7 +375,21 @@ export class FilesystemCompositionStore implements CompositionStore {
             `Canonical composition JSON is invalid for id "${id}"; no files were deleted.`,
           );
         }
-        records.push({ id, stats: canonical.stats });
+        records.push({ id, stats: canonical.stats, record: canonical.outcome.record });
+      }
+
+      for (const source of records) {
+        if (source.record.document.publication?.kind !== "global-template") continue;
+        const hasDependent = records.some((candidate) =>
+          candidate.id !== source.id && candidate.record.document.binding?.sourceRecordId === source.id,
+        );
+        if (hasDependent) {
+          throw operationError(
+            "clear",
+            "blocked",
+            "Cannot clear Composer compositions while a Global template still has bound consumers. Detach or remove bindings individually first.",
+          );
+        }
       }
 
       for (const record of records) {
@@ -306,6 +418,86 @@ export class FilesystemCompositionStore implements CompositionStore {
       await this.assertRoot(operation);
       return task();
     });
+  }
+
+  private async findDependents(
+    operation: "delete" | "put",
+    sourceRecordId: string,
+  ): Promise<CompositionDependent[]> {
+    let entries;
+    try {
+      entries = await this.operations.readdir(this.realRoot, { withFileTypes: true });
+      await this.assertRoot(operation);
+    } catch (cause) {
+      rethrow(operation, "read-failed", "Could not inspect Composition bindings before source mutation.", cause);
+    }
+
+    const dependents: CompositionDependent[] = [];
+    for (const entry of entries.sort(compareNames)) {
+      const match = OWNED_JSON_PATTERN.exec(entry.name);
+      if (!match || entry.isSymbolicLink() || !entry.isFile() || match[1] === sourceRecordId) continue;
+      const canonical = await this.readCanonical(operation, match[1]!, false);
+      if (canonical === undefined) continue;
+      if (canonical.outcome.status !== "loaded") {
+        throw operationError(
+          operation,
+          "validation",
+          `Canonical composition JSON is invalid for id "${match[1]}"; source mutation was not attempted.`,
+        );
+      }
+      const binding = canonical.outcome.record.document.binding;
+      if (binding?.sourceRecordId !== sourceRecordId) continue;
+      dependents.push({ summary: summarizeComposition(canonical.outcome.record), binding: cloneJson(binding) });
+    }
+    return dependents.sort((a, b) => compareCompositionSummariesNewestFirst(a.summary, b.summary));
+  }
+
+  /** See the IndexedDB implementation for why only a new/changing binding is revalidated. */
+  private async assertBindingTransition(next: CompositionRecord): Promise<void> {
+    const binding = next.document.binding;
+    if (!binding) return;
+
+    const previous = await this.readCanonical("put", next.id, false);
+    if (previous !== undefined) {
+      if (previous.outcome.status !== "loaded") {
+        throw operationError(
+          "put",
+          "validation",
+          `Canonical consumer "${next.id}" is invalid; its binding update was not attempted.`,
+        );
+      }
+      const priorBinding = previous.outcome.record.document.binding;
+      if (
+        priorBinding?.sourceRecordId === binding.sourceRecordId
+        && priorBinding.outletId === binding.outletId
+      ) {
+        return;
+      }
+    }
+
+    if (binding.sourceRecordId === next.id) {
+      throw operationError("put", "validation", "A Composition cannot bind to itself as a Global template.");
+    }
+    const source = await this.readCanonical("put", binding.sourceRecordId, false);
+    if (source === undefined) {
+      throw operationError(
+        "put",
+        "conflict",
+        "The selected Global template is no longer available. Refresh the template list and try again.",
+      );
+    }
+    if (
+      source.outcome.status !== "loaded"
+      || source.outcome.record.document.binding !== undefined
+      || source.outcome.record.document.publication?.kind !== "global-template"
+      || source.outcome.record.document.publication.outlet.id !== binding.outletId
+    ) {
+      throw operationError(
+        "put",
+        "conflict",
+        "The selected Global template changed before this consumer could be saved.",
+      );
+    }
   }
 
   private assertSafeId(operation: CompositionPersistenceOperation, id: string): void {
@@ -417,6 +609,7 @@ export class FilesystemCompositionStore implements CompositionStore {
   private async readCanonical(
     operation: CompositionPersistenceOperation,
     expectedId: string,
+    migrate = true,
   ): Promise<CanonicalResult | undefined> {
     const file = await this.readFileNoFollow(operation, this.jsonPath(expectedId));
     if (file === undefined) return undefined;
@@ -449,7 +642,7 @@ export class FilesystemCompositionStore implements CompositionStore {
         },
       };
     }
-    if (outcome.status === "loaded" && outcome.decodedFromSchemaVersion !== undefined) {
+    if (migrate && outcome.status === "loaded" && outcome.decodedFromSchemaVersion !== undefined) {
       // A v1 canonical record is usable only after the shared decoder has
       // produced its lossless v2 form. Replace its bytes through the normal
       // no-follow, root-verified atomic path; a failed replacement leaves the

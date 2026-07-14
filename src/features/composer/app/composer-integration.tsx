@@ -29,8 +29,12 @@
 // composition lives in `useComposerIntegration`, layout lives in
 // `ComposerWorkspace`. It is the surface waves 6-9 extend.
 
-import { useEffect } from "preact/hooks";
+import { useEffect, useMemo } from "preact/hooks";
 import type { JSX } from "preact";
+import {
+  generateBrowserJsxExport,
+  type ComposerReuseResolutionOptions,
+} from "@/composer";
 import type { ComposerManifestEntry } from "@/styleguide/data/composer-registry";
 import { ComposerWorkspace } from "@/features/composer/chrome/composer-workspace";
 import { ComposerLoadNoticeBanner } from "@/features/composer/chrome/composer-load-notice";
@@ -61,6 +65,8 @@ export interface ComposerIntegrationProps {
   manifestEntries?: readonly ComposerManifestEntry[];
   /** Forwarded to the controller (sample/idFactory overrides for tests). */
   controllerOptions?: Omit<UseComposerControllerOptions, "manifest">;
+  /** Parent-owned, provider-scoped resolver used for linked preview/Copy behavior. */
+  reuseResolution?: ComposerReuseResolutionOptions;
 
   // ── Canvas bridge test seams (production defaults) ────────────────────────
   createBridge?: typeof createComposerPreviewBridge;
@@ -85,9 +91,19 @@ export function ComposerIntegration(props: ComposerIntegrationProps): JSX.Elemen
   const api = useComposerIntegration({
     manifestEntries: props.manifestEntries,
     controllerOptions: props.controllerOptions,
+    reuseResolution: props.reuseResolution,
   });
   const { controller, manifestEntries, session, viewport, setViewport, chooser, exportState, titleFor } = api;
   const { state } = controller;
+  const browserCopyOutcome = useMemo(() => {
+    const exportDocument = exportState.exportDocument;
+    if (!exportDocument) return null;
+    return generateBrowserJsxExport({
+      record: { ...controller.record, document: exportDocument },
+      manifest: controller.manifest,
+      resolution: api.reuseResolution,
+    });
+  }, [api.reuseResolution, controller.manifest, controller.record, exportState.exportDocument]);
   const readOnly = state.mode === "preview";
   const menus = useComposerMenus(api);
 
@@ -308,6 +324,7 @@ export function ComposerIntegration(props: ComposerIntegrationProps): JSX.Elemen
         onClose={exportState.closeExport}
         documentName={state.document.name}
         result={exportState.result}
+        copyOutcome={browserCopyOutcome}
       />
     </>
   );

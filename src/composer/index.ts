@@ -137,6 +137,26 @@ export type {
 } from "./source/generate-jsx";
 export { generateJsx } from "./source/generate-jsx";
 
+export type {
+  CompositionModuleSpecifier,
+  LinkedJsxModuleKind,
+  LinkedJsxLocalComponentDiagnostic,
+  LinkedJsxDependencyDiagnosticCode,
+  LinkedJsxDependencyDiagnostic,
+  LinkedJsxModuleDiagnostic,
+  GeneratedLinkedJsxModulePlan,
+  BlockedLinkedJsxModulePlan,
+  LinkedJsxModulePlan,
+  LinkedJsxModuleBatchPlan,
+  PlanLinkedJsxModulesOptions,
+  BrowserJsxExportKind,
+  BrowserJsxExportReady,
+  BrowserJsxExportBlocked,
+  BrowserJsxExportOutcome,
+  GenerateBrowserJsxExportOptions,
+} from "./source/plan-linked-jsx";
+export { planLinkedJsxModules, generateBrowserJsxExport } from "./source/plan-linked-jsx";
+
 // Dev-only browser file-provider capability. The factory returns undefined in
 // production because its virtual configuration is build-gated by zfb.
 export * from "./storage/file-provider";

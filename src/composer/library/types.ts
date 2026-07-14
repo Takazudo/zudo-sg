@@ -1,4 +1,4 @@
-import type { CompositionDocument } from "../model/types";
+import type { CompositionBinding, CompositionDocument } from "../model/types";
 import type { CompositionRecordId } from "../model/record-identity";
 
 /** A persisted composition and its storage metadata. */
@@ -33,6 +33,29 @@ export interface CompositionSummary {
    */
   reuseStatus?: "eligible" | "empty-pattern" | "invalid";
 }
+
+/**
+ * A current canonical consumer reported by a dependency-safe source mutation.
+ * It deliberately contains only display metadata and the persisted binding;
+ * callers must open a consumer before deciding whether to detach it.
+ */
+export interface CompositionDependent {
+  summary: CompositionSummary;
+  binding: CompositionBinding;
+}
+
+/** A source record was either removed, absent, or kept intact for its consumers. */
+export type CompositionDeleteOutcome =
+  | { status: "deleted" }
+  | { status: "not-found" }
+  | { status: "blocked"; dependents: readonly CompositionDependent[] };
+
+/** Result of removing a publication role through the provider-owned check. */
+export type CompositionUnpublishOutcome =
+  | { status: "unpublished" }
+  | { status: "not-found" }
+  | { status: "not-published" }
+  | { status: "blocked"; dependents: readonly CompositionDependent[] };
 
 export const COMPOSITION_PROVIDER_IDS = {
   indexeddb: "indexeddb",
@@ -147,6 +170,37 @@ export interface CompositionStore {
   put(record: CompositionRecord): Promise<void>;
   delete(id: string): Promise<boolean>;
   clear(): Promise<void>;
+}
+
+/**
+ * Optional capability implemented by providers that can make the dependency
+ * scan and source mutation one provider-owned operation. Do not emulate this
+ * from `list`/`get`/`put`: that check-then-write sequence races new consumers.
+ *
+ * `CompositionStore.delete` remains the legacy CRUD method for non-template
+ * callers. Reuse UI must use this capability so a Global template never has a
+ * blind deletion path.
+ */
+export interface CompositionLifecycleStore extends CompositionStore {
+  deleteWithDependencyCheck(id: string): Promise<CompositionDeleteOutcome>;
+  unpublishWithDependencyCheck(id: string): Promise<CompositionUnpublishOutcome>;
+  /**
+   * Persist one lifecycle-produced record without exposing a partially saved
+   * canonical document if derived-output work fails. This is intentionally not
+   * a multi-record transaction and must never detach any other consumer.
+   */
+  saveLifecycleRecord(record: CompositionRecord): Promise<void>;
+}
+
+export function isCompositionLifecycleStore(store: CompositionStore): store is CompositionLifecycleStore {
+  return (
+    "deleteWithDependencyCheck" in store
+    && typeof store.deleteWithDependencyCheck === "function"
+    && "unpublishWithDependencyCheck" in store
+    && typeof store.unpublishWithDependencyCheck === "function"
+    && "saveLifecycleRecord" in store
+    && typeof store.saveLifecycleRecord === "function"
+  );
 }
 
 export type CompositionRecoveryOutcome =
