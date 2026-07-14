@@ -18,7 +18,7 @@ One canonical record has this shape:
   createdAt: string; // canonical UTC ISO instant
   updatedAt: string; // canonical UTC ISO instant, not before createdAt
   document: {
-    schemaVersion: number;
+    schemaVersion: 2;
     id: string;      // exactly equal to the outer record id
     name: string;
     root: unknown[]; // validated Composition nodes
@@ -30,6 +30,51 @@ The value must be JSON-safe, and its lower-case `id` may contain only ASCII lett
 underscores, and hyphens. JSX is not canonical data and is therefore not stored in the record. It is
 derived from the document plus the current production component manifest, so fixes to the generator
 or components do not require a data migration.
+
+## Composition reuse (schema v2)
+
+Schema v2 keeps reuse on the same Composition record. It does **not** create a
+separate Template entity or a reference-node type in a Composition tree. A
+Composition is either private (the default) or explicitly published in one of
+these roles:
+
+- A **Global template** is a live, source-owned shell with one real, empty
+  component slot published as its outlet. A bound consumer stores only its
+  source record id, outlet id, and its own local root. The source shell is
+  resolved at runtime, is visibly locked in the consumer, and remains outside
+  the consumer's canonical tree.
+- A **Pattern** is a saved Composition that is cloned into fresh, editable
+  local nodes when inserted. Later edits, unpublication, or deletion of the
+  Pattern source do not propagate to an inserted copy.
+
+The v2 additions are optional `publication` and `binding` fields. An ordinary
+v1 document is decoded losslessly as an unbound v2 Composition; no source
+shell or local content is invented during migration. Current records persist
+the decoded schema-v2 form when the provider next writes them. Future schema
+versions remain quarantined under the recovery policy below rather than being
+guessed at or downgraded.
+
+Global-template relationships are deliberately narrow in v1:
+
+- source and consumer must belong to the same provider;
+- one source publishes exactly one real component-slot outlet, never the
+  virtual document root;
+- a bound consumer cannot publish another Global template or Pattern, and a
+  Global-template source cannot itself be bound; and
+- cross-provider links, nested Global templates, multiple outlets, and
+  Pattern propagation are unsupported.
+
+The library and editor display the persisted role explicitly. A source cannot
+be unpublished or deleted while provider-owned dependency checks find bound
+consumers. From a resolved consumer, **Detach** writes one standalone snapshot
+with fresh node ids; from a broken link, **Remove broken binding** retains only
+the consumer's local content. These are intentionally one-consumer actions,
+not a detach-all operation.
+
+Browser **Export JSX** for a resolved Global-template consumer produces a
+standalone snapshot: future source changes do not affect the copied code. If
+the source or outlet cannot resolve, browser export is blocked rather than
+silently exporting local content as though it were complete.
 
 Detail locations qualify the record id with its provider:
 
@@ -102,10 +147,19 @@ compositions/composition-<id>.tsx               # derived production JSX
 ```
 
 Canonical JSON is formatted with two-space indentation and a trailing newline. The `.tsx` bytes are
-the exact output of the browser's production `generateJsx` path. On list or open, missing or stale JSX
-triggers a repair handshake: the server returns the validated canonical record, the browser derives
-JSX with the current manifest, and the server atomically replaces the derived file. Invalid canonical
-JSON is preserved and blocks repair. Fix the JSON or restore a known-good copy, then retry.
+the exact output of the browser's production `generateJsx` path. For a
+Global-template relationship, the Files provider plans the same-provider
+dependency closure and writes the source module before its linked consumer
+module. A consumer module imports the stable source-record module; it never
+copies the source shell into consumer JSON. A missing, invalid, or unresolved
+source blocks the affected derived module and removes stale output instead of
+leaving a misleading artifact behind.
+
+On list or open, missing or stale JSX triggers a repair handshake: the server
+returns the validated canonical record and dependency closure, the browser
+derives the linked module plan with the current manifest, and the server
+atomically replaces the derived files. Invalid canonical JSON is preserved and
+blocks repair. Fix the JSON or restore a known-good copy, then retry.
 
 The request/filesystem boundary is deliberately narrow:
 
