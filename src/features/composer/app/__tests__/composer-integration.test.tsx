@@ -162,8 +162,8 @@ describe("ComposerIntegration — cross-surface wiring (#251)", () => {
     };
     const s = setup(undefined, source, dependencies);
 
-    fireEvent.click(within(s.inspector()).getByRole("button", { name: "Unpublish" }));
-    fireEvent.click(within(s.inspector()).getByRole("button", { name: "Unpublish" }));
+    fireEvent.click(within(s.inspector()).getByRole("button", { name: "Unpublish Global template" }));
+    fireEvent.click(within(s.inspector()).getByRole("button", { name: "Unpublish Global template" }));
 
     await waitFor(() => expect(dependencies).toHaveBeenCalledOnce());
     expect(s.canvasDoc().publication).toMatchObject({ kind: "global-template", outlet: { id: "outlet-main" } });

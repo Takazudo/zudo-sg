@@ -342,9 +342,9 @@ describe("ProductionComposerApp", () => {
       />,
     );
 
-    fireEvent.click(await screen.findByRole("button", { name: "Unpublish" }));
-    const confirm = screen.getByRole("group", { name: "Confirm clearing publication" });
-    fireEvent.click(within(confirm).getByRole("button", { name: "Unpublish" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Unpublish Global template" }));
+    const confirm = screen.getByRole("group", { name: "Unpublish Global template?" });
+    fireEvent.click(within(confirm).getByRole("button", { name: "Unpublish Global template" }));
 
     await waitFor(() =>
       expect(document.querySelector("[data-sg-reuse-feedback]")).toHaveTextContent(
