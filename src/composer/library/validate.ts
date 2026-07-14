@@ -1,5 +1,9 @@
 import { isJsonSafe, isPlainObject } from "../model/json";
-import { COMPOSITION_SCHEMA_VERSION } from "../model/types";
+import { decodeCompositionDocument } from "../model/codec";
+import {
+  COMPOSITION_RECORD_ID_PATTERN,
+  isSafeCompositionRecordId,
+} from "../model/record-identity";
 import { isStructurallyValidDocument } from "../model/validate";
 import type {
   CompositionLoadOutcome,
@@ -8,17 +12,7 @@ import type {
   CompositionRecordValidationIssue,
 } from "./types";
 
-/**
- * Lower-case, case-stable ids safe to embed in owned filenames and URL paths.
- * Dots, separators, percent escapes, whitespace, and leading/trailing
- * punctuation are deliberately excluded. IDs are capped to keep filenames
- * portable across providers.
- */
-export const COMPOSITION_RECORD_ID_PATTERN = /^[a-z0-9](?:[a-z0-9_-]{0,126}[a-z0-9])?$/;
-
-export function isSafeCompositionRecordId(value: unknown): value is string {
-  return typeof value === "string" && COMPOSITION_RECORD_ID_PATTERN.test(value);
-}
+export { COMPOSITION_RECORD_ID_PATTERN, isSafeCompositionRecordId };
 
 /** Canonical UTC ISO instant emitted by `Date#toISOString`. */
 export function isValidCompositionTimestamp(value: unknown): value is string {
@@ -64,36 +58,44 @@ export function validateCompositionRecord(value: unknown): CompositionRecordVali
     return issue("malformed-document", "Composition record document must be a plain object.");
   }
 
-  const schemaVersion = raw.document.schemaVersion;
-  if (
-    typeof schemaVersion === "number" &&
-    Number.isFinite(schemaVersion) &&
-    schemaVersion > COMPOSITION_SCHEMA_VERSION
-  ) {
+  const decoded = decodeCompositionDocument(raw.document);
+  if (decoded.status === "future-schema") {
     return issue(
       "future-schema",
-      `Composition document schema ${schemaVersion} is newer than supported schema ${COMPOSITION_SCHEMA_VERSION}.`,
-      schemaVersion,
+      `Composition document schema ${decoded.foundSchemaVersion} is newer than the supported schema.`,
+      decoded.foundSchemaVersion,
     );
   }
 
-  if (!isStructurallyValidDocument(raw.document)) {
+  if (decoded.status === "malformed" || !isStructurallyValidDocument(decoded.document)) {
     return issue("malformed-document", "Composition document is malformed or uses an unsupported schema.");
   }
-  if (raw.document.id !== raw.id) {
+  if (decoded.document.id !== raw.id) {
     return issue(
       "record-document-id-mismatch",
       "Composition record id must match its document id.",
     );
   }
 
-  return { ok: true, record: value as unknown as CompositionRecord };
+  return {
+    ok: true,
+    record: { ...raw, document: decoded.document } as CompositionRecord,
+    ...(decoded.status === "decoded" ? { decodedFromSchemaVersion: decoded.sourceSchemaVersion } : {}),
+  };
 }
 
 /** Classifies unknown provider data without mutating or discarding the source. */
 export function loadCompositionRecord(value: unknown): CompositionLoadOutcome {
   const result = validateCompositionRecord(value);
-  if (result.ok) return { status: "loaded", record: result.record };
+  if (result.ok) {
+    return {
+      status: "loaded",
+      record: result.record,
+      ...(result.decodedFromSchemaVersion === undefined
+        ? {}
+        : { decodedFromSchemaVersion: result.decodedFromSchemaVersion }),
+    };
+  }
   if (result.issue.code === "future-schema") {
     return {
       status: "future-schema",

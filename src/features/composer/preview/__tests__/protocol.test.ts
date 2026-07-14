@@ -84,6 +84,29 @@ describe("readParentToPreview — the security gate", () => {
     expect(result.message.type).toBe("mode");
   });
 
+  it("accepts each current v2 reuse shape through the strict document schema", () => {
+    const global = {
+      ...SAMPLE_DOCUMENT,
+      publication: {
+        kind: "global-template" as const,
+        outlet: {
+          id: "outlet-main",
+          label: "Main content",
+          target: { parentId: "split-1", slotId: "right" },
+        },
+      },
+    };
+    const pattern = { ...SAMPLE_DOCUMENT, publication: { kind: "pattern" as const } };
+    const consumer = {
+      ...SAMPLE_DOCUMENT,
+      binding: { sourceRecordId: "source-record", outletId: "outlet-main" },
+    };
+
+    for (const document of [global, pattern, consumer]) {
+      expect(readParentToPreview(event(renderMessage(0, document, SESSION)), EXPECTED).ok).toBe(true);
+    }
+  });
+
   it("accepts a host→preview restore-focus response (issue #256, not revision-stamped)", () => {
     const result = readParentToPreview(event(restoreFocusMessage("node-menu:box-1")), EXPECTED);
     expect(result.ok).toBe(true);
@@ -152,6 +175,27 @@ describe("readParentToPreview — the security gate", () => {
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.reason).toBe("invalid-payload");
+  });
+
+  it("REJECTS malformed or smuggled v2 reuse metadata", () => {
+    const malformed = {
+      ...SAMPLE_DOCUMENT,
+      publication: {
+        kind: "global-template",
+        outlet: {
+          id: "outlet-main",
+          label: "Main content",
+          target: { parentId: "split-1", slotId: "right", index: 0 },
+        },
+      },
+    };
+    const unsafeBinding = {
+      ...SAMPLE_DOCUMENT,
+      binding: { sourceRecordId: "../escape", outletId: "outlet-main" },
+    };
+
+    expect(readParentToPreview(event(renderMessage(0, malformed, SESSION)), EXPECTED).ok).toBe(false);
+    expect(readParentToPreview(event(renderMessage(0, unsafeBinding, SESSION)), EXPECTED).ok).toBe(false);
   });
 
   it("REJECTS an unknown message type", () => {
