@@ -205,6 +205,51 @@ describe("composition record helpers", () => {
     expect(copy.document.root).not.toBe(source.document.root);
   });
 
+  it("keeps a duplicate's Pattern role and consumer binding while giving every node a fresh identity", () => {
+    const pattern = record();
+    pattern.document.publication = { kind: "pattern" };
+    const patternCopy = duplicateCompositionRecord(pattern, {
+      idFactory: createSequentialIdFactory("record"),
+      nodeIdFactory: createSequentialIdFactory("node"),
+      now: () => T2,
+    });
+    expect(patternCopy.document.publication).toEqual({ kind: "pattern" });
+    expect(patternCopy.document.root[0]!.id).not.toBe(pattern.document.root[0]!.id);
+
+    const consumer = record();
+    consumer.document.binding = { sourceRecordId: "source-template", outletId: "outlet-main" };
+    const consumerCopy = duplicateCompositionRecord(consumer, {
+      idFactory: createSequentialIdFactory("record"),
+      nodeIdFactory: createSequentialIdFactory("node"),
+      now: () => T2,
+    });
+    expect(consumerCopy.document.binding).toEqual(consumer.document.binding);
+  });
+
+  it("rewrites a duplicated Global template outlet owner to its cloned node", () => {
+    const template = record();
+    template.document.publication = {
+      kind: "global-template",
+      outlet: {
+        id: "outlet-main",
+        label: "Main",
+        target: { parentId: "split-1", slotId: "right" },
+      },
+    };
+
+    const copy = duplicateCompositionRecord(template, {
+      idFactory: createSequentialIdFactory("record"),
+      nodeIdFactory: createSequentialIdFactory("node"),
+      now: () => T2,
+    });
+
+    expect(copy.document.publication).toMatchObject({
+      kind: "global-template",
+      outlet: { id: "outlet-main", target: { parentId: copy.document.root[0]!.id, slotId: "right" } },
+    });
+    expect(copy.document.publication).not.toBe(template.document.publication);
+  });
+
   it("resets the body while preserving supported record identity", () => {
     const source = record("kept-id");
     source.document.name = "Edited";

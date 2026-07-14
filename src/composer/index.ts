@@ -81,7 +81,7 @@ export {
 } from "./model/validate";
 
 // ── Commands ─────────────────────────────────────────────────────────────────
-export type { CommandResult, CommandErrorCode } from "./model/commands";
+export type { CommandResult, CommandErrorCode, ClonedForestWithNewIds } from "./model/commands";
 export {
   addNode,
   updateProps,
@@ -89,7 +89,9 @@ export {
   removeNode,
   repairSelection,
   cloneSubtreeWithNewIds,
+  cloneForestWithNewIds,
   insertSubtree,
+  insertForest,
   moveSubtree,
   publishPattern,
   publishGlobalTemplate,

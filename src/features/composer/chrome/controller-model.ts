@@ -37,6 +37,7 @@ import {
   cloneSubtreeWithNewIds,
   effectiveRootPolicy,
   findLocation,
+  insertForest,
   insertSubtree,
   isNodeOpaque,
   moveSubtree,
@@ -126,6 +127,8 @@ export type ComposerAction =
   | { type: "copy"; nodeId: string }
   | { type: "cut"; nodeId: string }
   | { type: "paste"; target: InsertionTarget }
+  /** Insert a detached Pattern root forest as one atomic document transition. */
+  | { type: "insertForest"; target: InsertionTarget; sourceRoots: readonly CompositionNode[] }
   | { type: "duplicate"; nodeId: string }
   | { type: "drop"; sourceNodeId: string; target: InsertionTarget; copy: boolean }
   | { type: "publishPattern" }
@@ -171,6 +174,7 @@ const DOCUMENT_MUTATION_TYPES = new Set<ComposerAction["type"]>([
   "remove",
   "cut",
   "paste",
+  "insertForest",
   "duplicate",
   "drop",
   "publishPattern",
@@ -359,6 +363,31 @@ export function applyComposerAction(
       if (!state.clipboard) return { state, error: "Clipboard is empty", documentChanged: false };
       const clone = cloneSubtreeWithNewIds(state.clipboard, ctx.idFactory);
       const result = insertSubtree(state.document, ctx.manifest, action.target, clone, state.rootPolicy);
+      if (!result.ok) return { state, error: result.error, documentChanged: false };
+      let nextExpanded: ReadonlySet<string> = state.expandedIds;
+      for (const id of ancestorIds(result.document, ctx.manifest, result.selectedId!)) {
+        nextExpanded = withExpanded(nextExpanded, id, true);
+      }
+      return {
+        state: {
+          ...state,
+          document: result.document,
+          selectedId: result.selectedId,
+          expandedIds: nextExpanded,
+        },
+        error: null,
+        documentChanged: result.changed,
+      };
+    }
+    case "insertForest": {
+      const result = insertForest(
+        state.document,
+        ctx.manifest,
+        action.target,
+        action.sourceRoots,
+        ctx.idFactory,
+        state.rootPolicy,
+      );
       if (!result.ok) return { state, error: result.error, documentChanged: false };
       let nextExpanded: ReadonlySet<string> = state.expandedIds;
       for (const id of ancestorIds(result.document, ctx.manifest, result.selectedId!)) {
