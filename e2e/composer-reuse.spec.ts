@@ -15,8 +15,12 @@ import {
   legacyV1Record,
   patternRecord,
   patternTargetRecord,
+  privatePatternRecord,
   reuseDocument,
 } from "./support/composer-reuse";
+
+const PATTERN_SCOPE_COPY =
+  "Whole-Composition scope: publishing immediately makes this entire Composition, including every root component, a reusable Pattern. It does not publish the selected subtree.";
 
 async function seedRecords(page: Page, records: readonly BrowserCompositionRecord[]): Promise<void> {
   await resetComposerPersistence(page);
@@ -76,6 +80,40 @@ async function dialogRect(page: Page, dialog: Locator) {
       documentWidth: document.documentElement.scrollWidth,
     };
   });
+}
+
+async function assertReuseControlsFitDesktopAnd320pxInspector(page: Page, action: Locator): Promise<void> {
+  const inspector = page.locator(".sg-composer-inspector");
+  await expect(inspector).toBeVisible();
+  await expect(action).toBeVisible();
+  await expect(action).toBeInViewport();
+
+  const [geometry, actionGeometry] = await Promise.all([
+    inspector.evaluate((element) => {
+      const inspectorRect = element.getBoundingClientRect();
+      return {
+        inspectorWidth: inspectorRect.width,
+        inspectorClientWidth: element.clientWidth,
+        inspectorScrollWidth: element.scrollWidth,
+        inspectorLeft: inspectorRect.left,
+        inspectorRight: inspectorRect.right,
+        documentWidth: document.documentElement.scrollWidth,
+        viewportWidth: document.documentElement.clientWidth,
+      };
+    }),
+    action.evaluate((element) => {
+      const rect = element.getBoundingClientRect();
+      return { left: rect.left, right: rect.right };
+    }),
+  ]);
+
+  // The desktop workspace deliberately keeps a 20rem (320px) Inspector.
+  // Check both the page and that narrow rail instead of relying on a screenshot.
+  expect(geometry.inspectorWidth).toBeCloseTo(320, 0);
+  expect(geometry.inspectorScrollWidth).toBeLessThanOrEqual(geometry.inspectorClientWidth);
+  expect(geometry.documentWidth).toBeLessThanOrEqual(geometry.viewportWidth);
+  expect(actionGeometry.left).toBeGreaterThanOrEqual(geometry.inspectorLeft);
+  expect(actionGeometry.right).toBeLessThanOrEqual(geometry.inspectorRight);
 }
 
 test.describe("Composer reuse cross-feature acceptance", () => {
@@ -146,13 +184,17 @@ test.describe("Composer reuse cross-feature acceptance", () => {
       root: [{ id: "source-header" }],
     });
 
-    // Publication changes go through the same provider-owned dependency scan
-    // as deletion; a live consumer prevents an optimistic unpublish.
+    // Global-template publication remains distinct from Pattern publication,
+    // and clearing it goes through the same provider-owned dependency scan as
+    // deletion; a live consumer prevents an optimistic unpublish.
     await openLinkedSource(page);
-    await page.getByRole("radio", { name: /Private/ }).click();
-    const unpublishConfirm = page.getByRole("group", { name: "Confirm clearing publication" });
+    await expect(page.getByText(/Global templates are published from Structure by choosing a real empty component slot/i)).toBeVisible();
+    await expect(page.getByText("Template outlet: Main content. Managed from Structure.")).toBeVisible();
+    await page.getByRole("button", { name: "Unpublish Global template" }).click();
+    const unpublishConfirm = page.getByRole("group", { name: "Unpublish Global template?" });
     await expect(unpublishConfirm).toBeVisible();
-    await unpublishConfirm.getByRole("button", { name: "Unpublish" }).click();
+    await expect(unpublishConfirm.getByRole("button", { name: "Cancel" })).toBeFocused();
+    await unpublishConfirm.getByRole("button", { name: "Unpublish Global template" }).click();
     await expect(page.locator("[data-sg-reuse-feedback]")).toContainText("Cannot unpublish this Global template while");
     expect(reuseDocument(await currentRecord(page, SOURCE_RECORD_ID)).publication)
       .toMatchObject({ kind: "global-template" });
@@ -229,6 +271,119 @@ test.describe("Composer reuse cross-feature acceptance", () => {
     await openRecord(page, "Pattern target");
     const afterSourceDelete = reuseDocument(await currentRecord(page, "pattern-target"));
     expect(afterSourceDelete.root[0]!.slots.content!.map((node) => node.id)).toEqual(inserted.map((node) => node.id));
+    expect(errors).toEqual({ pageErrors: [], consoleErrors: [] });
+  });
+
+  test("publishes, discovers, inserts, and unpublishes a private multi-root Pattern without changing its inserted copy", async ({
+    page,
+  }) => {
+    const errors = captureUnexpectedBrowserErrors(page);
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await seedRecords(page, [privatePatternRecord(), patternTargetRecord()]);
+    await openRecord(page, "Marketing block");
+
+    const sourceBeforePublication = reuseDocument(await currentRecord(page, "marketing-pattern"));
+    expect(sourceBeforePublication.publication).toBeUndefined();
+    expect(sourceBeforePublication.root).toHaveLength(2);
+
+    const publish = page.getByRole("button", { name: "Publish as Pattern" });
+    await expect(publish).toHaveAccessibleName("Publish as Pattern");
+    await expect(publish).toHaveAccessibleDescription(PATTERN_SCOPE_COPY);
+    await expect(page.getByText(PATTERN_SCOPE_COPY)).toBeVisible();
+    await assertReuseControlsFitDesktopAnd320pxInspector(page, publish);
+    await publish.focus();
+    await page.keyboard.press("Enter");
+
+    await expect(page.getByText("Published as Pattern")).toBeVisible();
+    await expect(page.getByText(
+      "Available as a reusable Pattern in this document. The Composer save status reports whether this change is durably saved.",
+    )).toBeVisible();
+    const unpublish = page.getByRole("button", { name: "Unpublish Pattern" });
+    await expect(unpublish).toBeFocused();
+    await assertReuseControlsFitDesktopAnd320pxInspector(page, unpublish);
+
+    // The accepted UI state is not the persistence authority. Wait for the
+    // existing status indicator, then read the real IndexedDB source record
+    // before treating the Pattern as catalog-ready.
+    await expect(page.locator(".sg-composer-save-status")).toHaveAttribute("data-sg-status", "saved");
+    await expect.poll(async () => reuseDocument(await currentRecord(page, "marketing-pattern")).publication?.kind)
+      .toBe("pattern");
+    await expect(page.locator(".sg-composer-save-status")).toHaveAttribute("data-sg-status", "saved");
+
+    await page.getByRole("button", { name: "Library", exact: true }).click();
+    await openRecord(page, "Pattern target");
+    await page.getByRole("button", { name: "Expand Stack" }).click();
+    await page.getByRole("button", { name: "Add component to Content in Stack" }).click();
+    const insertDialog = chooser(page);
+    await insertDialog.getByRole("tab", { name: "Patterns" }).click();
+    await expect(insertDialog.getByRole("button", { name: /Marketing block/ })).toBeVisible();
+    await insertDialog.getByRole("button", { name: /Marketing block/ }).click();
+    await expect(insertDialog.getByRole("button", { name: "Insert Pattern" })).toBeEnabled();
+    await insertDialog.getByRole("button", { name: "Insert Pattern" }).click();
+    await expect(insertDialog).not.toBeVisible();
+    await expect(page.locator(".sg-composer-save-status")).toHaveAttribute("data-sg-status", "saved");
+    await expect.poll(async () => {
+      const target = reuseDocument(await currentRecord(page, "pattern-target"));
+      return target.root[0]?.slots.content?.length ?? 0;
+    }).toBe(2);
+    await expect(page.locator(".sg-composer-save-status")).toHaveAttribute("data-sg-status", "saved");
+
+    const insertedTarget = reuseDocument(await currentRecord(page, "pattern-target"));
+    const inserted = insertedTarget.root[0]!.slots.content!;
+    const insertedNodeIds = inserted.map((node) => node.id);
+    const insertedContent = inserted.map((node) => ({ componentId: node.componentId, props: node.props }));
+    expect(insertedNodeIds).toHaveLength(2);
+    expect(insertedNodeIds).not.toEqual(sourceBeforePublication.root.map((node) => node.id));
+    expect(insertedContent).toEqual(sourceBeforePublication.root.map((node) => ({
+      componentId: node.componentId,
+      props: node.props,
+    })));
+
+    await page.getByRole("button", { name: "Library", exact: true }).click();
+    await openRecord(page, "Marketing block");
+    const unpublishPattern = page.getByRole("button", { name: "Unpublish Pattern" });
+    await unpublishPattern.focus();
+    await page.keyboard.press("Enter");
+    const confirmation = page.getByRole("group", { name: "Unpublish Pattern?" });
+    const cancel = confirmation.getByRole("button", { name: "Cancel" });
+    await expect(cancel).toBeFocused();
+    await expect(confirmation.getByText(
+      "This immediately removes this Composition’s reusable Pattern status. It does not delete the Composition.",
+    )).toBeVisible();
+    await assertReuseControlsFitDesktopAnd320pxInspector(page, cancel);
+    await page.keyboard.press("Enter");
+    await expect(unpublishPattern).toBeFocused();
+
+    await page.keyboard.press("Enter");
+    await expect(cancel).toBeFocused();
+    const confirm = confirmation.getByRole("button", { name: "Unpublish Pattern" });
+    await page.keyboard.press("Tab");
+    await expect(confirm).toBeFocused();
+    await page.keyboard.press("Space");
+    await expect(publish).toBeFocused();
+    await assertReuseControlsFitDesktopAnd320pxInspector(page, publish);
+    await expect(page.locator(".sg-composer-save-status")).toHaveAttribute("data-sg-status", "saved");
+    await expect.poll(async () => reuseDocument(await currentRecord(page, "marketing-pattern")).publication)
+      .toBeUndefined();
+    await expect(page.locator(".sg-composer-save-status")).toHaveAttribute("data-sg-status", "saved");
+
+    // Reopen the target's catalog after the persisted unpublish. The source
+    // must be absent while the locally cloned forest remains byte-for-byte
+    // independent from the source's publication lifecycle.
+    await page.getByRole("button", { name: "Library", exact: true }).click();
+    await openRecord(page, "Pattern target");
+    await page.getByRole("button", { name: "Expand Stack" }).click();
+    await page.getByRole("button", { name: "Add component to Content in Stack" }).click();
+    const reopenedCatalog = chooser(page);
+    await reopenedCatalog.getByRole("tab", { name: "Patterns" }).click();
+    await expect(reopenedCatalog).toContainText("No published Patterns are available.");
+    await expect(reopenedCatalog.getByRole("button", { name: /Marketing block/ })).toHaveCount(0);
+
+    const targetAfterUnpublish = reuseDocument(await currentRecord(page, "pattern-target"));
+    const persistedInserted = targetAfterUnpublish.root[0]!.slots.content!;
+    expect(persistedInserted.map((node) => node.id)).toEqual(insertedNodeIds);
+    expect(persistedInserted.map((node) => ({ componentId: node.componentId, props: node.props })))
+      .toEqual(insertedContent);
     expect(errors).toEqual({ pageErrors: [], consoleErrors: [] });
   });
 
