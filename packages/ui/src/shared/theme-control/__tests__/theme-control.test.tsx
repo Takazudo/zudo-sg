@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/preact";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/preact";
 import { afterEach, describe, expect, it } from "vitest";
 import { ThemeControl } from "../theme-control";
 import {
@@ -123,5 +123,34 @@ describe("ThemeControl", () => {
       "aria-pressed",
       "true",
     );
+  });
+
+  it("keeps separately mounted controls synchronized through the root attribute", async () => {
+    document.documentElement.dataset.theme = "light";
+    render(
+      <>
+        <ThemeControl />
+        <ThemeControl />
+      </>,
+    );
+    const [first, second] = screen.getAllByRole("button");
+
+    fireEvent.click(first!);
+    await waitFor(() => {
+      expect(second).toHaveAttribute("aria-pressed", "true");
+      expect(second).toHaveAccessibleName("Switch to light theme");
+    });
+  });
+
+  it("syncs controls when an external root update changes the theme", async () => {
+    document.documentElement.dataset.theme = "light";
+    render(<ThemeControl />);
+    const control = screen.getByRole("button");
+
+    document.documentElement.dataset.theme = "dark";
+    await waitFor(() => {
+      expect(control).toHaveAttribute("aria-pressed", "true");
+      expect(control).toHaveAccessibleName("Switch to light theme");
+    });
   });
 });
