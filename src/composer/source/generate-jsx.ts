@@ -64,6 +64,28 @@ export type JsxSourceAdapter = (ctx: JsxSourceAdapterContext) => string;
 export interface GenerateJsxOptions {
   /** Exported component identifier. Defaults to `Composition`. */
   componentName?: string;
+  /**
+   * How the generated component is exported. The established single-document
+   * generator keeps its named export by default; linked file modules opt into
+   * a stable default export.
+   */
+  componentExport?: "named" | "default" | "none";
+  /**
+   * Identifiers already owned by a surrounding generated module. Component
+   * imports are aliased away from these names deterministically.
+   */
+  reservedIdentifiers?: readonly string[];
+  /**
+   * A real source-slot exposed by a linked Global-template module. The
+   * generated component receives an `outlets` object keyed by this stable id
+   * and renders that entry at the selected slot. This is intentionally an
+   * opt-in source-module primitive; ordinary document generation has no
+   * outlet API or generated props.
+   */
+  linkedOutlet?: {
+    id: string;
+    target: { parentId: string; slotId: string };
+  };
   /** Optional per-componentId source overrides. */
   sourceAdapters?: Record<string, JsxSourceAdapter>;
 }
@@ -226,6 +248,8 @@ export function generateJsx(
 ): JsxGenerationResult {
   const diagnostics = diagnoseDocument(document, manifest);
   const componentName = toIdentifier(options.componentName ?? document.name ?? "Composition", "Composition");
+  const componentExport = options.componentExport ?? "named";
+  const linkedOutlet = options.linkedOutlet;
   const adapters = options.sourceAdapters ?? {};
 
   if (!diagnostics.canExport) {
@@ -247,7 +271,9 @@ export function generateJsx(
   };
   collect(document.root);
 
-  const plan = planImports([...usedComponentIds], manifest, new Set([componentName]));
+  const reserved = new Set([componentName, ...(options.reservedIdentifiers ?? [])]);
+  if (linkedOutlet) reserved.add("CompositionOutlets");
+  const plan = planImports([...usedComponentIds], manifest, reserved);
   // De-duplicated by reference: two componentIds sharing the exact same export
   // (see `planImports`) point at the SAME ImportPlan object, so a Set collapses
   // them to one entry for both the emitted import statement and `imports`.
@@ -290,9 +316,22 @@ export function generateJsx(
       const slot = entry.slots.find((s) => s.id === slotId);
       if (!slot) continue; // canExport guarantees no undeclared slots remain
       const children = node.slots[slotId] ?? [];
+      const isLinkedOutlet =
+        linkedOutlet !== undefined
+        && node.id === linkedOutlet.target.parentId
+        && slotId === linkedOutlet.target.slotId;
+      const linkedOutletExpression = isLinkedOutlet ? `outlets[${JSON.stringify(linkedOutlet.id)}]` : undefined;
       if (slot.prop === "children") {
+        if (linkedOutletExpression !== undefined) {
+          structuralChildBlocks.push([`{${linkedOutletExpression}}`]);
+          continue;
+        }
         for (const child of children) structuralChildBlocks.push(renderNode(child));
       } else {
+        if (linkedOutletExpression !== undefined) {
+          namedAttrLines.push([`${slot.prop}={${linkedOutletExpression}}`]);
+          continue;
+        }
         if (children.length === 0) continue; // omit empty named slots (no null props)
         namedAttrLines.push(renderNamedSlotAttr(slot.prop, children));
       }
@@ -360,9 +399,21 @@ export function generateJsx(
       ? ["    <></>"]
       : ["    <>", ...rootBlocks.flatMap((b) => indentLines(b, 6)), "    </>"];
 
+  const componentParameter = linkedOutlet
+    ? `({ outlets = {} }: { outlets?: CompositionOutlets })`
+    : "()";
+  const exportPrefix = componentExport === "default" ? "export default " : componentExport === "named" ? "export " : "";
   const lines = [
     ...(importLines.length ? [...importLines, ""] : []),
-    `export function ${componentName}() {`,
+    ...(linkedOutlet
+      ? [
+          "export type CompositionOutlets = {",
+          `  ${JSON.stringify(linkedOutlet.id)}?: import(\"preact\").ComponentChildren;`,
+          "};",
+          "",
+        ]
+      : []),
+    `${exportPrefix}function ${componentName}${componentParameter} {`,
     "  return (",
     ...body,
     "  );",

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { renderHook, act } from "@testing-library/preact";
-import { generateJsx } from "@/composer";
+import { generateJsx, type CompositionRecord } from "@/composer";
 import { TEST_COMPONENT_IDS, makeDocument, makeNode, resetTestIds, testManifest } from "../../test-support/composer-fixtures";
 import { useComposerExport } from "../use-composer-export";
 
@@ -49,5 +49,26 @@ describe("useComposerExport", () => {
 
     expect(result.current.open).toBe(false);
     expect(result.current.result).not.toBeNull();
+  });
+
+  it("returns a typed dependency block instead of local-only JSX for an unresolved bound record", () => {
+    const doc = makeDocument([makeNode(TEST_COMPONENT_IDS.label, { text: "Local only" })]);
+    doc.binding = { sourceRecordId: "source", outletId: "outlet-main" };
+    const record: CompositionRecord = {
+      id: doc.id,
+      createdAt: "2026-07-14T00:00:00.000Z",
+      updatedAt: "2026-07-14T00:00:00.000Z",
+      document: doc,
+    };
+    const { result } = renderHook(() => useComposerExport(() => doc, testManifest, { record }));
+
+    act(() => result.current.openExport());
+
+    expect(result.current.open).toBe(true);
+    expect(result.current.result).toBeNull();
+    expect(result.current.copyOutcome).toMatchObject({
+      status: "blocked",
+      diagnostic: { kind: "dependency", code: "missing-resolution" },
+    });
   });
 });

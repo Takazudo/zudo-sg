@@ -18,7 +18,7 @@
 
 import type { JSX } from "preact";
 import { useEffect, useId, useLayoutEffect, useRef } from "preact/hooks";
-import type { JsxGenerationResult } from "@/composer";
+import type { BrowserJsxExportOutcome, JsxGenerationResult } from "@/composer";
 import { ComposerCopyButton } from "./copy-button";
 
 export interface ComposerExportDialogProps {
@@ -27,6 +27,11 @@ export interface ComposerExportDialogProps {
   documentName: string;
   /** Null while a result hasn't been generated yet (e.g. mid open-triggering). */
   result: JsxGenerationResult | null;
+  /**
+   * Browser Copy semantics for a linked record. This contains a dependency
+   * block or a materialized snapshot result; ordinary dialogs may omit it.
+   */
+  copyOutcome?: BrowserJsxExportOutcome | null;
 }
 
 const FOCUSABLE_SELECTOR =
@@ -37,6 +42,7 @@ export function ComposerExportDialog({
   onClose,
   documentName,
   result,
+  copyOutcome = null,
 }: ComposerExportDialogProps): JSX.Element {
   const titleId = useId();
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -102,6 +108,10 @@ export function ComposerExportDialog({
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [open, onClose]);
 
+  const effectiveResult = copyOutcome?.status === "ready" ? copyOutcome.generation : result;
+  const dependencyBlock = copyOutcome?.status === "blocked" ? copyOutcome.diagnostic : null;
+  const isSnapshot = copyOutcome?.status === "ready" && copyOutcome.kind === "resolved-standalone-snapshot";
+
   return (
     <dialog
       ref={dialogRef}
@@ -133,16 +143,23 @@ export function ComposerExportDialog({
           </div>
 
           <div class="flex-1 overflow-y-auto px-hsp-lg py-vsp-xs">
-            {result === null && <p class="text-small text-muted">Generating…</p>}
+            {effectiveResult === null && dependencyBlock === null && <p class="text-small text-muted">Generating…</p>}
 
-            {result !== null && result.blocked && (
+            {dependencyBlock !== null && (
+              <div class="sg-composer-inspector-diagnostics" role="alert">
+                <p class="sg-composer-inspector-diagnostics-title">Copy JSX is blocked — the linked dependency is unavailable.</p>
+                <p>{dependencyBlock.message}</p>
+              </div>
+            )}
+
+            {dependencyBlock === null && effectiveResult !== null && effectiveResult.blocked && (
               <div class="sg-composer-inspector-diagnostics" role="alert">
                 <p class="sg-composer-inspector-diagnostics-title">
                   Export is blocked — one or more components can't be exported:
                 </p>
                 <ul>
-                  {result.diagnostics.opaqueIds.map((id) => {
-                    const diag = result.diagnostics.byId.get(id);
+                  {effectiveResult.diagnostics.opaqueIds.map((id) => {
+                    const diag = effectiveResult.diagnostics.byId.get(id);
                     return (
                       <li key={id}>
                         <strong>{diag?.componentId ?? id}</strong>
@@ -158,17 +175,25 @@ export function ComposerExportDialog({
               </div>
             )}
 
-            {result !== null && result.ok && (
+            {dependencyBlock === null && effectiveResult !== null && effectiveResult.ok && (
               <>
+                {isSnapshot && (
+                  <p class="mb-vsp-xs text-small text-muted">
+                    Resolved standalone snapshot — future Global-template changes will not propagate to this copied code.
+                  </p>
+                )}
                 <p class="mb-vsp-xs text-small text-muted">
-                  {result.imports.length} component{result.imports.length === 1 ? "" : "s"} ·{" "}
-                  {result.code.split("\n").length} lines
+                  {effectiveResult.imports.length} component{effectiveResult.imports.length === 1 ? "" : "s"} ·{" "}
+                  {effectiveResult.code.split("\n").length} lines
                 </p>
                 <pre class="m-0 overflow-auto rounded-md bg-surface-2 p-hsp-sm text-xs text-muted">
-                  <code>{result.code}</code>
+                  <code>{effectiveResult.code}</code>
                 </pre>
                 <div class="mt-vsp-sm">
-                  <ComposerCopyButton text={result.code} />
+                  <ComposerCopyButton
+                    text={effectiveResult.code}
+                    label={isSnapshot ? "Copy resolved standalone snapshot" : "Copy JSX"}
+                  />
                 </div>
               </>
             )}
