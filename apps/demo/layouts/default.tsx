@@ -137,7 +137,7 @@ export default function DefaultLayout({
           Skip to content
         </a>
 
-        <div data-zfb-transition-persist={`header-${line ?? "main"}`}>
+        <div class="relative z-ui-dropdown" data-zfb-transition-persist={`header-${line ?? "main"}`}>
           <SiteHeader
             sections={tree.sections}
             brand={brand}

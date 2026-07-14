@@ -130,6 +130,18 @@ test("desktop Browse is a bounded real site-tree walk with pointer and keyboard 
   expect(bounds?.width).toBeLessThanOrEqual(1152 + 1);
   expect(bounds?.width).toBeLessThanOrEqual(1280 - 32 + 1);
 
+  // The centered panel intentionally spans the desktop rail. Its first
+  // category must paint above that rail rather than being clipped behind it.
+  const firstCategoryHit = await page.evaluate(({ x, y }) => {
+    const target = document.elementFromPoint(x, y);
+    const link = target?.closest<HTMLAnchorElement>("a[href]");
+    return {
+      href: link?.getAttribute("href") ?? null,
+      isInsideBrowsePanel: Boolean(target?.closest("[data-ctx-panel]")),
+    };
+  }, { x: (bounds?.x ?? 0) + 48, y: (bounds?.y ?? 0) + 36 });
+  expect(firstCategoryHit).toEqual({ href: "/company", isInsideBrowsePanel: true });
+
   await page.mouse.move(0, 800);
   await expect(panel).toBeHidden();
 
