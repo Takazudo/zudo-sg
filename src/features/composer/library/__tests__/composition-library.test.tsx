@@ -90,6 +90,25 @@ async function waitForLibrary(): Promise<void> {
 }
 
 describe("CompositionLibrary data and capability states", () => {
+  it("shows concise persisted Global template and Pattern roles without creating another library", async () => {
+    const global = {
+      ...summary("global", "Site shell"),
+      publicationKind: "global-template" as const,
+      outletId: "outlet-main",
+      outletLabel: "Main content",
+    };
+    const pattern = {
+      ...summary("pattern", "Callout", LATE),
+      publicationKind: "pattern" as const,
+    };
+    renderLibrary(fakeIntents({ initialize: vi.fn(async () => ready([global, pattern])) }));
+    await waitForLibrary();
+
+    expect(screen.getByText("Global template · Main content")).toBeInTheDocument();
+    expect(screen.getByText("Pattern · Saved composition")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Composition library" })).toBeInTheDocument();
+  });
+
   it("shows a semantic loading state and polite live progress while initialization is pending", () => {
     renderLibrary(fakeIntents({ initialize: vi.fn(() => new Promise(() => undefined)) }));
 

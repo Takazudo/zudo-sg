@@ -69,6 +69,15 @@ function formatTimestamp(timestamp: string): string {
   }).format(new Date(timestamp));
 }
 
+function publicationLabel(summary: CompositionSummary): string | null {
+  if (summary.publicationKind === "global-template") {
+    return summary.outletLabel
+      ? `Global template · ${summary.outletLabel}`
+      : "Global template";
+  }
+  return summary.publicationKind === "pattern" ? "Pattern · Saved composition" : null;
+}
+
 function focusAfterRender(getTarget: () => HTMLElement | null): void {
   setTimeout(() => getTarget()?.focus(), 0);
 }
@@ -620,6 +629,11 @@ export function CompositionLibrary({
                       onClick={() => void openComposition(summary.id)}
                     >
                       <span class="sg-composer-library-row-name">{summary.name}</span>
+                      {publicationLabel(summary) && (
+                        <span class="sg-composer-tree-badge" data-sg-composer-publication={summary.publicationKind}>
+                          {publicationLabel(summary)}
+                        </span>
+                      )}
                       <span class="sg-composer-library-row-id">ID: {summary.id}</span>
                     </button>
                     <dl class="sg-composer-library-meta">

@@ -8,7 +8,7 @@
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { act } from "preact/test-utils";
-import { fireEvent, render, screen, within } from "@testing-library/preact";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/preact";
 import type { CompositionDocument, InsertionTarget } from "@/composer";
 import { VIRTUAL_ROOT_SLOT_ID, createSequentialIdFactory } from "@/composer";
 import {
@@ -24,7 +24,14 @@ import { INSPECTOR_COMMIT_DEBOUNCE_MS } from "@/features/composer/chrome/use-com
 import { ComposerIntegration } from "../composer-integration";
 import { makeTestBridge } from "../test-support/preview-harness";
 import { LS_COMPOSER_VIEWPORT } from "../viewport";
-import { fixtureCatalog, FIXTURE_IDS, makeAbcDocument, resetFixtureIds } from "../../ui/tree/__tests__/fixtures";
+import {
+  fixtureCatalog,
+  fixtureDocument,
+  fixtureNode,
+  FIXTURE_IDS,
+  makeAbcDocument,
+  resetFixtureIds,
+} from "../../ui/tree/__tests__/fixtures";
 
 function emptyDoc(): CompositionDocument {
   return { schemaVersion: 1, id: "it-doc", name: "Integration Doc", root: [] };
@@ -38,7 +45,11 @@ const asAny = (v: unknown) => v as any;
 
 let rev = 1000;
 
-function setup(seedViewport?: string, sample: CompositionDocument = emptyDoc()) {
+function setup(
+  seedViewport?: string,
+  sample: CompositionDocument = emptyDoc(),
+  getPublicationDependencies?: () => Promise<{ status: "ready"; dependentCount: number }>,
+) {
   if (seedViewport) localStorage.setItem(LS_COMPOSER_VIEWPORT, seedViewport);
   const bridge = makeTestBridge();
   const utils = render(
@@ -47,6 +58,7 @@ function setup(seedViewport?: string, sample: CompositionDocument = emptyDoc()) 
       controllerOptions={{ sample, idFactory: createSequentialIdFactory("n") }}
       createBridge={bridge.createBridge}
       previewLocation={bridge.location}
+      getPublicationDependencies={getPublicationDependencies}
     />,
   );
   act(() => bridge.deliver(readyMessage()));
@@ -89,6 +101,62 @@ function setup(seedViewport?: string, sample: CompositionDocument = emptyDoc()) 
 beforeEach(() => localStorage.clear());
 
 describe("ComposerIntegration — cross-surface wiring (#251)", () => {
+  it("publishes, reassigns, and reserves a Global template outlet through the shared controller", async () => {
+    const dependencies = vi.fn(async () => ({ status: "ready" as const, dependentCount: 2 }));
+    const source = fixtureDocument([
+      fixtureNode(FIXTURE_IDS.split, {}, { left: [], right: [] }, "split"),
+    ]);
+    const s = setup(undefined, source, dependencies);
+
+    fireEvent.click(within(s.tree()).getByRole("button", { name: /expand split layout/i }));
+    fireEvent.click(within(s.tree()).getByRole("button", { name: "Use Left as template outlet" }));
+    fireEvent.input(within(s.tree()).getByLabelText("Outlet label"), { target: { value: "Main content" } });
+    fireEvent.click(within(s.tree()).getByRole("button", { name: "Publish template" }));
+
+    await waitFor(() => {
+      expect(s.canvasDoc().publication).toMatchObject({
+        kind: "global-template",
+        outlet: { label: "Main content", target: { parentId: "split", slotId: "left" } },
+      });
+    });
+    const stableOutletId = s.canvasDoc().publication?.kind === "global-template"
+      ? s.canvasDoc().publication.outlet.id
+      : "";
+    expect(within(s.tree()).getByText("Template outlet: Main content")).toBeInTheDocument();
+    expect(within(s.tree()).queryByRole("button", { name: /Add component to Left/i })).not.toBeInTheDocument();
+
+    fireEvent.click(within(s.tree()).getByRole("button", { name: "Reassign Right as template outlet" }));
+    fireEvent.click(within(s.tree()).getByRole("button", { name: "Save reassignment" }));
+    await waitFor(() => {
+      const publication = s.canvasDoc().publication;
+      expect(publication).toMatchObject({
+        kind: "global-template",
+        outlet: { id: stableOutletId, target: { parentId: "split", slotId: "right" } },
+      });
+    });
+    expect(dependencies).toHaveBeenCalledOnce();
+    expect(within(s.tree()).getByRole("status")).toHaveTextContent(/2 existing consumers keep/i);
+  });
+
+  it("does not clear a published Global template until the parent relationship query reports no consumers", async () => {
+    const dependencies = vi.fn(async () => ({ status: "ready" as const, dependentCount: 1 }));
+    const source = fixtureDocument([
+      fixtureNode(FIXTURE_IDS.split, {}, { left: [], right: [] }, "split"),
+    ]);
+    source.publication = {
+      kind: "global-template",
+      outlet: { id: "outlet-main", label: "Main", target: { parentId: "split", slotId: "left" } },
+    };
+    const s = setup(undefined, source, dependencies);
+
+    fireEvent.click(within(s.inspector()).getByRole("button", { name: "Unpublish" }));
+    fireEvent.click(within(s.inspector()).getByRole("button", { name: "Unpublish" }));
+
+    await waitFor(() => expect(dependencies).toHaveBeenCalledOnce());
+    expect(s.canvasDoc().publication).toMatchObject({ kind: "global-template", outlet: { id: "outlet-main" } });
+    expect(within(s.inspector()).getByRole("status")).toHaveTextContent(/Cannot unpublish.*1 consumer/i);
+  });
+
   it("chooser add drives tree, canvas snapshot, inspector, and selection together", () => {
     const s = setup();
     s.addAt(ROOT, "Box");
