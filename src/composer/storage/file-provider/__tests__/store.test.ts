@@ -4,14 +4,8 @@ import {
   CompositionPersistenceError,
   type CompositionRecord,
 } from "../../../library";
-import { generateJsx } from "../../../source/generate-jsx";
-import {
-  COMPOSITION_SCHEMA_V1,
-  COMPOSITION_SCHEMA_VERSION,
-  createManifest,
-} from "../../../model/types";
+import { COMPOSITION_SCHEMA_V1, COMPOSITION_SCHEMA_VERSION } from "../../../model/types";
 import { createSampleDocument } from "../../../sample/sample-document";
-import { composerManifest } from "@/styleguide/data/composer-registry";
 
 const { DEV_CONFIG } = vi.hoisted(() => ({
   DEV_CONFIG: {
@@ -43,6 +37,14 @@ function jsonResponse(payload: unknown, status = 200): Response {
   });
 }
 
+function outputRequest(records: readonly CompositionRecord[], targetIds = records.map((value) => value.id)) {
+  return {
+    records,
+    sourceOutcomes: records.map((value) => ({ id: value.id, outcome: { status: "loaded", record: value } })),
+    targetIds,
+  };
+}
+
 let fetchMock: ReturnType<typeof vi.fn<typeof fetch>>;
 
 beforeEach(() => {
@@ -50,14 +52,22 @@ beforeEach(() => {
 });
 
 describe("browser file-provider adapter", () => {
-  it("generates put JSX byte-for-byte with the production generator", async () => {
-    fetchMock.mockResolvedValue(jsonResponse({ ok: true, result: null }));
-    const store = createFileProviderCompositionStore({ manifest: fixtureManifest, fetch: fetchMock });
+  it("plans put output from the server-supplied closure without exposing paths", async () => {
     const value = record();
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse({
+        ok: false,
+        error: { code: "output-required", operation: "put", message: "plan" },
+        request: outputRequest([value]),
+      }, 409))
+      .mockResolvedValueOnce(jsonResponse({ ok: true, result: {
+        canonical: { status: "saved" }, derived: { status: "repaired", records: [{ recordId: value.id, status: "repaired" }] },
+      } }));
+    const store = createFileProviderCompositionStore({ manifest: fixtureManifest, fetch: fetchMock });
 
-    await store!.put(value);
+    await expect(store!.put(value)).resolves.toMatchObject({ canonical: { status: "saved" }, derived: { status: "repaired" } });
 
-    const [endpoint, init] = fetchMock.mock.calls[0]!;
+    const [endpoint, init] = fetchMock.mock.calls[1]!;
     expect(endpoint).toBe(DEV_CONFIG.endpoint);
     expect(init).toMatchObject({ method: "POST", cache: "no-store", credentials: "same-origin" });
     expect(new Headers(init?.headers).get(DEV_CONFIG.capabilityHeader)).toBe(DEV_CONFIG.capability);
@@ -65,11 +75,11 @@ describe("browser file-provider adapter", () => {
     expect(body.operation).toBe("put");
     expect(body).not.toHaveProperty("path");
     expect(body).not.toHaveProperty("filename");
-    expect(body.jsx).toBe(generateJsx(value.document, fixtureManifest).code);
+    expect(body.outputsById.alpha).toMatchObject({ status: "generated" });
+    expect(body.outputsById.alpha.code).toContain("export default function Composition");
   });
 
-  it("defaults to the real production composerManifest without copying it", async () => {
-    fetchMock.mockResolvedValue(jsonResponse({ ok: true, result: null }));
+  it("defaults to the real production composerManifest for closure planning", async () => {
     const document = createSampleDocument();
     document.id = "sample-real";
     const value: CompositionRecord = {
@@ -78,14 +88,21 @@ describe("browser file-provider adapter", () => {
       updatedAt: T1,
       document,
     };
-    const direct = generateJsx(document, createManifest(composerManifest));
-    expect(direct.ok).toBe(true);
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse({
+        ok: false,
+        error: { code: "output-required", operation: "put", message: "plan" },
+        request: outputRequest([value]),
+      }, 409))
+      .mockResolvedValueOnce(jsonResponse({ ok: true, result: {
+        canonical: { status: "saved" }, derived: { status: "repaired", records: [] },
+      } }));
 
     const store = createFileProviderCompositionStore({ fetch: fetchMock });
     await store!.put(value);
 
-    const body = JSON.parse(String(fetchMock.mock.calls[0]![1]?.body));
-    expect(body.jsx).toBe(direct.code);
+    const body = JSON.parse(String(fetchMock.mock.calls[1]![1]?.body));
+    expect(body.outputsById[document.id].code).toContain("@zudo-sg/ui");
   });
 
   it("generates requested list/get repair bytes then waits for repaired success", async () => {
@@ -97,8 +114,8 @@ describe("browser file-provider adapter", () => {
     fetchMock
       .mockResolvedValueOnce(jsonResponse({
         ok: false,
-        error: { code: "jsx-required", operation: "list", message: "repair" },
-        record: value,
+        error: { code: "output-required", operation: "list", message: "repair" },
+        request: outputRequest([value]),
       }, 409))
       .mockResolvedValueOnce(jsonResponse({ ok: true, result: [summary] }));
     const store = createFileProviderCompositionStore({ manifest: fixtureManifest, fetch: fetchMock });
@@ -107,30 +124,29 @@ describe("browser file-provider adapter", () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
     const first = JSON.parse(String(fetchMock.mock.calls[0]![1]?.body));
     const second = JSON.parse(String(fetchMock.mock.calls[1]![1]?.body));
-    expect(first.jsxById).toEqual({});
-    expect(second.jsxById.alpha).toBe(generateJsx(value.document, fixtureManifest).code);
+    expect(first.outputsById).toEqual({});
+    expect(second.outputsById.alpha).toMatchObject({ status: "generated" });
   });
 
-  it("surfaces generation diagnostics without claiming save or repair success", async () => {
+  it("reports blocked generated output separately from a successful canonical save", async () => {
     const value = record();
     value.document.root[0]!.componentId = "unknown.component";
     const store = createFileProviderCompositionStore({ manifest: fixtureManifest, fetch: fetchMock });
 
-    await expect(store!.put(value)).rejects.toMatchObject({
-      name: "CompositionPersistenceError",
-      operation: "put",
-      code: "validation",
-      retryable: false,
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse({
+        ok: false,
+        error: { code: "output-required", operation: "put", message: "plan" },
+        request: outputRequest([value]),
+      }, 409))
+      .mockResolvedValueOnce(jsonResponse({ ok: true, result: {
+        canonical: { status: "saved" },
+        derived: { status: "blocked", records: [{ recordId: value.id, status: "blocked", reason: "unsupported node" }] },
+      } }));
+    await expect(store!.put(value)).resolves.toMatchObject({
+      canonical: { status: "saved" }, derived: { status: "blocked" },
     });
-    expect(fetchMock).not.toHaveBeenCalled();
 
-    fetchMock.mockResolvedValue(jsonResponse({
-      ok: false,
-      error: { code: "jsx-required", operation: "get", message: "repair" },
-      record: value,
-    }, 409));
-    await expect(store!.get("alpha")).rejects.toBeInstanceOf(CompositionPersistenceError);
-    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it("maps transport and sanitized server failures to the shared error contract", async () => {

@@ -7,12 +7,15 @@
 // the "keep the status seam composable" synthesis note on this issue.
 
 import type { ComponentChildren, JSX } from "preact";
+import type { CompositionDerivedOutputOutcome } from "@/composer";
 import type { ComposerSaveStatus } from "@/features/composer/chrome/controller-model";
 import { describeSaveStatus } from "@/features/composer/chrome/controller-model";
 
 export interface ComposerStatusIndicatorProps {
   saveStatus: ComposerSaveStatus;
   onRetry?: () => void;
+  /** Kept separate from canonical save state so Saved remains truthful. */
+  derivedOutput?: CompositionDerivedOutputOutcome | null;
   /** Composability seam — e.g. wave-6's clipboard status chip renders here. */
   children?: ComponentChildren;
 }
@@ -20,8 +23,10 @@ export interface ComposerStatusIndicatorProps {
 export function ComposerStatusIndicator({
   saveStatus,
   onRetry,
+  derivedOutput = null,
   children,
 }: ComposerStatusIndicatorProps): JSX.Element {
+  const blocked = derivedOutput?.records.find((record) => record.status === "blocked");
   return (
     <div class="flex items-center gap-hsp-2xs">
       <span
@@ -36,6 +41,16 @@ export function ComposerStatusIndicator({
         <button type="button" class="sg-composer-toolbar-button" onClick={onRetry}>
           Retry
         </button>
+      )}
+      {blocked && (
+        <span
+          class="sg-composer-save-status"
+          data-sg-generated-output="blocked"
+          aria-live="polite"
+          title={blocked.staleArtifact === undefined ? blocked.reason : `${blocked.reason} ${blocked.staleArtifact}`}
+        >
+          Generated output blocked
+        </span>
       )}
       {children}
     </div>

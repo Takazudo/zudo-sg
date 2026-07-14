@@ -32,7 +32,47 @@ export interface CompositionSummary {
    * values are excluded conservatively by the reusable-source catalog.
    */
   reuseStatus?: "eligible" | "empty-pattern" | "invalid";
+  /**
+   * Files providers may report the current generated-artifact state without
+   * changing the canonical document. Other providers omit it.
+   */
+  derivedOutput?: CompositionDerivedOutputRecordOutcome;
 }
+
+/** One generated artifact's state after a canonical record was read or saved. */
+export type CompositionDerivedOutputRecordOutcome =
+  | { recordId: CompositionRecordId; status: "current" }
+  | { recordId: CompositionRecordId; status: "repaired" }
+  | {
+      recordId: CompositionRecordId;
+      status: "blocked";
+      /** Actionable, provider-sanitized explanation; never stored in canonical JSON. */
+      reason: string;
+      /** A stale generated artifact could not be removed and is not valid output. */
+      staleArtifact?: string;
+    };
+
+/**
+ * A batch outcome is needed when a source change also re-evaluates its linked
+ * consumers. `status` summarizes the records: blocked outranks repaired,
+ * repaired outranks current.
+ */
+export interface CompositionDerivedOutputOutcome {
+  status: "current" | "repaired" | "blocked";
+  records: readonly CompositionDerivedOutputRecordOutcome[];
+}
+
+/**
+ * Successful persistence has two independent truths. Canonical JSON can be
+ * durably saved while a generated development artifact is blocked. Providers
+ * without derived artifacts may keep returning `void` for compatibility.
+ */
+export interface CompositionSaveOutcome {
+  canonical: { status: "saved" };
+  derived: CompositionDerivedOutputOutcome;
+}
+
+export type CompositionPutResult = void | CompositionSaveOutcome;
 
 /**
  * A current canonical consumer reported by a dependency-safe source mutation.
@@ -114,7 +154,13 @@ export type CompositionRecordValidation =
 
 /** Result of decoding provider data. Storage failures are represented separately. */
 export type CompositionLoadOutcome =
-  | { status: "loaded"; record: CompositionRecord; decodedFromSchemaVersion?: 1 }
+  | {
+      status: "loaded";
+      record: CompositionRecord;
+      decodedFromSchemaVersion?: 1;
+      /** Present for file-provider reads; canonical loading remains successful when blocked. */
+      derivedOutput?: CompositionDerivedOutputRecordOutcome;
+    }
   | { status: "not-found"; id: string }
   | { status: "invalid"; issue: CompositionRecordValidationIssue; raw: unknown }
   | {
@@ -167,7 +213,7 @@ export interface CompositionStore {
   readonly provider: CompositionProviderDescriptor;
   list(): Promise<readonly CompositionSummary[]>;
   get(id: string): Promise<CompositionLoadOutcome>;
-  put(record: CompositionRecord): Promise<void>;
+  put(record: CompositionRecord): Promise<CompositionPutResult>;
   delete(id: string): Promise<boolean>;
   clear(): Promise<void>;
 }

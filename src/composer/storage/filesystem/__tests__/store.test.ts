@@ -167,8 +167,13 @@ describe("filesystem composition store safety", () => {
     });
   });
 
-  it("rejects a consumer queued after a Global-template source has been deleted", async () => {
-    const store = await createStore();
+  it("saves a consumer queued after a Global-template source has been deleted and blocks only its output", async () => {
+    const diagnostic = "The linked Global template is unavailable, so its consumer module cannot be generated.";
+    const store = await createStore({
+      provideJsx: (value, request) => request.records.some((candidate) => candidate.id === value.document.binding?.sourceRecordId)
+        ? `jsx:${value.id}`
+        : { status: "blocked", reason: diagnostic },
+    });
     const source = record("source");
     source.document.publication = {
       kind: "global-template",
@@ -179,11 +184,15 @@ describe("filesystem composition store safety", () => {
 
     const lateConsumer = record("late-consumer");
     lateConsumer.document.binding = { sourceRecordId: "source", outletId: "outlet-main" };
-    await expect(store.put(lateConsumer, "late consumer jsx")).rejects.toMatchObject({
-      operation: "put",
-      code: "conflict",
+    await expect(store.put(lateConsumer)).resolves.toMatchObject({
+      canonical: { status: "saved" },
+      derived: { status: "blocked", records: [{ recordId: "late-consumer", status: "blocked", reason: diagnostic }] },
     });
-    expect((await names()).some((name) => name.includes("late-consumer"))).toBe(false);
+    expect(JSON.parse(await readFile(jsonPath("late-consumer"), "utf8"))).toMatchObject({
+      id: "late-consumer",
+      document: { binding: lateConsumer.document.binding },
+    });
+    await expect(readFile(jsxPath("late-consumer"), "utf8")).rejects.toMatchObject({ code: "ENOENT" });
   });
 
   it("rejects a symlink root and a symlink file that resolves outside the root", async () => {
@@ -235,9 +244,16 @@ describe("filesystem composition store safety", () => {
     await writeFile(outside, "outside");
     await symlink(outside, jsxPath("a"));
 
-    await expect(store.put(record(), "new jsx")).rejects.toMatchObject({
-      operation: "put",
-      code: "blocked",
+    await expect(store.put(record(), "new jsx")).resolves.toMatchObject({
+      canonical: { status: "saved" },
+      derived: {
+        status: "blocked",
+        records: [{
+          recordId: "a",
+          status: "blocked",
+          staleArtifact: expect.stringContaining("not a regular file"),
+        }],
+      },
     });
     expect(await readFile(outside, "utf8")).toBe("outside");
     expect(JSON.parse(await readFile(jsonPath("a"), "utf8"))).toMatchObject({ id: "a" });
@@ -245,6 +261,92 @@ describe("filesystem composition store safety", () => {
 });
 
 describe("filesystem composition store recovery", () => {
+  it("keeps a valid consumer listable, readable, and saveable when its source JSON is invalid", async () => {
+    const initial = await createStore();
+    const source = record("source");
+    source.document.publication = {
+      kind: "global-template",
+      outlet: { id: "outlet-main", label: "Main", target: { parentId: "split-1", slotId: "left" } },
+    };
+    const consumer = record("consumer", T1);
+    consumer.document.binding = { sourceRecordId: "source", outletId: "outlet-main" };
+    await initial.put(source, "source output");
+    await initial.put(consumer, "stale consumer output");
+    await writeFile(jsonPath("source"), "{ invalid source JSON");
+
+    const diagnostic = "The linked Global template is unavailable, so its consumer module cannot be generated.";
+    const store = await createStore({
+      provideJsx: (value, request) => {
+        const sourceOutcome = request.sourceOutcomes.find((entry) => entry.id === value.document.binding?.sourceRecordId);
+        return sourceOutcome?.outcome.status === "invalid"
+          ? { status: "blocked", reason: diagnostic }
+          : `jsx:${value.id}`;
+      },
+    });
+
+    await expect(store.list()).resolves.toEqual([
+      expect.objectContaining({
+        id: "consumer",
+        derivedOutput: { recordId: "consumer", status: "blocked", reason: diagnostic },
+      }),
+    ]);
+    await expect(store.get("consumer")).resolves.toMatchObject({
+      status: "loaded",
+      record: { id: "consumer" },
+      derivedOutput: { recordId: "consumer", status: "blocked", reason: diagnostic },
+    });
+
+    const edited = structuredClone(consumer);
+    edited.updatedAt = T2;
+    edited.document.name = "Still canonical";
+    await expect(store.put(edited)).resolves.toMatchObject({
+      canonical: { status: "saved" },
+      derived: { status: "blocked", records: [{ recordId: "consumer", status: "blocked", reason: diagnostic }] },
+    });
+    expect(JSON.parse(await readFile(jsonPath("consumer"), "utf8"))).toMatchObject({
+      updatedAt: T2,
+      document: { name: "Still canonical", binding: consumer.document.binding },
+    });
+  });
+
+  it("keeps a linked consumer canonical when its source disappears and removes stale generated output", async () => {
+    const initial = await createStore();
+    const source = record("source");
+    source.document.publication = {
+      kind: "global-template",
+      outlet: { id: "outlet-main", label: "Main", target: { parentId: "split-1", slotId: "left" } },
+    };
+    const consumer = record("consumer", T1);
+    consumer.document.binding = { sourceRecordId: "source", outletId: "outlet-main" };
+    await initial.put(source, "source output");
+    await initial.put(consumer, "old consumer output");
+    await unlink(jsonPath("source"));
+    await unlink(jsxPath("source"));
+
+    const diagnostic = "The linked Global template is unavailable, so its consumer module cannot be generated.";
+    const store = await createStore({
+      provideJsx: (value, request) => {
+        expect(request.records.map((candidate) => candidate.id)).toEqual(["consumer"]);
+        expect(request.targetIds).toEqual(["consumer"]);
+        return value.id === "consumer" ? { status: "blocked", reason: diagnostic } : "unexpected";
+      },
+    });
+    const edited = structuredClone(consumer);
+    edited.updatedAt = T2;
+    edited.document.name = "Local edits survive";
+
+    await expect(store.put(edited)).resolves.toMatchObject({
+      canonical: { status: "saved" },
+      derived: { status: "blocked", records: [{ recordId: "consumer", status: "blocked", reason: diagnostic }] },
+    });
+    await expect(readFile(jsxPath("consumer"), "utf8")).rejects.toMatchObject({ code: "ENOENT" });
+    await expect(store.get("consumer")).resolves.toMatchObject({
+      status: "loaded",
+      record: { document: { name: "Local edits survive", binding: consumer.document.binding } },
+      derivedOutput: { status: "blocked", reason: diagnostic },
+    });
+  });
+
   it("atomically rewrites a valid v1 canonical record as v2 without changing identity or timestamps", async () => {
     const legacy = legacyRecord("a", T2) as Record<string, unknown>;
     const original = `${JSON.stringify(legacy, null, 2)}\n`;
@@ -337,12 +439,12 @@ describe("filesystem composition store recovery", () => {
       },
     });
 
-    await expect(failing.put(record("a", T2), "new jsx")).rejects.toMatchObject({
-      operation: "put",
-      code: "write-failed",
+    await expect(failing.put(record("a", T2), "new jsx")).resolves.toMatchObject({
+      canonical: { status: "saved" },
+      derived: { status: "blocked", records: [{ recordId: "a", status: "blocked" }] },
     });
     expect(JSON.parse(await readFile(jsonPath("a"), "utf8"))).toMatchObject({ updatedAt: T2 });
-    expect(await readFile(jsxPath("a"), "utf8")).toBe("old jsx");
+    await expect(readFile(jsxPath("a"), "utf8")).rejects.toMatchObject({ code: "ENOENT" });
 
     const outcome = await failing.get("a");
     expect(outcome).toMatchObject({ status: "loaded", record: { updatedAt: T2 } });
@@ -373,7 +475,8 @@ describe("filesystem composition store recovery", () => {
     expect(await store.get("a")).toMatchObject({ status: "invalid" });
     expect(provideJsx).not.toHaveBeenCalled();
     expect(await readFile(jsxPath("a"), "utf8")).toBe("preserve");
-    await expect(store.list()).rejects.toMatchObject({ operation: "list", code: "validation" });
+    await expect(store.list()).resolves.toEqual([]);
+    expect(provideJsx).not.toHaveBeenCalled();
 
     await writeFile(jsonPath("a"), JSON.stringify(record("b")));
     expect(await store.get("a")).toMatchObject({ status: "invalid" });

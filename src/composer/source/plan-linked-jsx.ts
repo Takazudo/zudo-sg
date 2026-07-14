@@ -9,7 +9,9 @@ import { createUuidIdFactory, type IdFactory } from "../model/id-factory";
 import type { CompositionRecordId } from "../model/record-identity";
 import type { ComponentManifest, CompositionBinding } from "../model/types";
 import type { CompositionRecord } from "../library/types";
+import type { CompositionLoadOutcome } from "../library/types";
 import { materializeStandaloneSnapshot } from "../reuse/materialize";
+import { resolveGlobalTemplateLoad } from "../reuse/resolver";
 import type { GlobalTemplateResolutionOutcome } from "../reuse/types";
 import { generateJsx, type JsxGenerationResult } from "./generate-jsx";
 
@@ -81,8 +83,18 @@ export interface PlanLinkedJsxModulesOptions {
   manifest: ComponentManifest;
   /** An already-loaded, same-provider dependency closure. No provider is accepted here. */
   records: readonly CompositionRecord[];
-  /** Resolver outputs, keyed by the consumer record id they were resolved for. */
-  resolutions: ReadonlyMap<CompositionRecordId, GlobalTemplateResolutionOutcome>;
+  /**
+   * Resolver outputs, keyed by the consumer record id they were resolved for.
+   * Supplying these is useful to callers that already performed resolution.
+   */
+  resolutions?: ReadonlyMap<CompositionRecordId, GlobalTemplateResolutionOutcome>;
+  /**
+   * Already-read canonical source outcomes, keyed by record id. When supplied,
+   * the planner resolves each consumer directly from this immutable snapshot.
+   * It is intentionally a data map, never a provider callback: planning must
+   * not re-enter a store while a provider owns its serialization queue.
+   */
+  sourceOutcomes?: ReadonlyMap<CompositionRecordId, CompositionLoadOutcome>;
   moduleSpecifier: CompositionModuleSpecifier;
 }
 
@@ -248,10 +260,18 @@ function linkedConsumerModule(
   moduleSpecifier: string,
   recordsById: ReadonlyMap<CompositionRecordId, CompositionRecord>,
   sourcePlans: ReadonlyMap<CompositionRecordId, LinkedJsxModulePlan>,
-  resolutions: ReadonlyMap<CompositionRecordId, GlobalTemplateResolutionOutcome>,
+  resolutions: ReadonlyMap<CompositionRecordId, GlobalTemplateResolutionOutcome> | undefined,
+  sourceOutcomes: ReadonlyMap<CompositionRecordId, CompositionLoadOutcome> | undefined,
 ): LinkedJsxModulePlan {
   const binding = record.document.binding!;
-  const resolution = resolutions.get(record.id);
+  const resolution = resolutions?.get(record.id)
+    ?? (sourceOutcomes
+      ? resolveGlobalTemplateLoad(
+        record,
+        sourceOutcomes.get(binding.sourceRecordId) ?? { status: "not-found", id: binding.sourceRecordId },
+        manifest,
+      )
+      : undefined);
   const dependencyFields = { sourceRecordId: binding.sourceRecordId, outletId: binding.outletId };
   if (!resolution) {
     return blocked(
@@ -416,6 +436,7 @@ export function planLinkedJsxModules(options: PlanLinkedJsxModulesOptions): Link
           recordsById,
           sourcePlans,
           options.resolutions,
+          options.sourceOutcomes,
         ),
     );
   }

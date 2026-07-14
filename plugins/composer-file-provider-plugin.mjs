@@ -3,9 +3,9 @@
 //
 // The filesystem core deliberately knows nothing about HTTP or JSX generation.
 // This plugin keeps that split intact: canonical records cross a capability-
-// protected same-origin endpoint and the browser supplies the exact output from
-// the production `generateJsx` function. Reads use a repair handshake so the
-// core never reports list/get success until missing or stale JSX is repaired.
+// protected same-origin endpoint and the browser supplies a pure batch plan
+// over an already-read dependency closure. The core never holds its filesystem
+// queue while awaiting that browser planning round.
 
 import { randomBytes, timingSafeEqual } from "node:crypto";
 import { resolve } from "node:path";
@@ -87,14 +87,22 @@ function isSafeId(value) {
   return typeof value === "string" && /^[a-z0-9](?:[a-z0-9_-]{0,126}[a-z0-9])?$/.test(value);
 }
 
-/** @param {unknown} value @returns {Record<string, string> | undefined} */
-function parseJsxById(value) {
+/** @param {unknown} value @returns {Record<string, {status: "generated", code: string} | {status: "blocked", reason: string}> | undefined} */
+function parseOutputsById(value) {
   if (!isPlainObject(value)) return undefined;
-  /** @type {Record<string, string>} */
+  /** @type {Record<string, {status: "generated", code: string} | {status: "blocked", reason: string}>} */
   const result = Object.create(null);
-  for (const [id, jsx] of Object.entries(value)) {
-    if (!isSafeId(id) || typeof jsx !== "string") return undefined;
-    result[id] = jsx;
+  for (const [id, output] of Object.entries(value)) {
+    if (!isSafeId(id) || !isPlainObject(output)) return undefined;
+    if (hasExactKeys(output, ["status", "code"]) && output.status === "generated" && typeof output.code === "string") {
+      result[id] = { status: "generated", code: output.code };
+      continue;
+    }
+    if (hasExactKeys(output, ["status", "reason"]) && output.status === "blocked" && typeof output.reason === "string" && output.reason.trim() !== "") {
+      result[id] = { status: "blocked", reason: output.reason };
+      continue;
+    }
+    return undefined;
   }
   return result;
 }
@@ -127,21 +135,21 @@ function hasCapability(req, expected) {
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
-class JsxRequiredError extends Error {
-  /** @param {CompositionRecord} record */
-  constructor(record) {
-    super("Browser-generated JSX is required before this read can complete.");
-    this.name = "JsxRequiredError";
-    this.record = record;
+class OutputRequiredError extends Error {
+  /** @param {unknown} request */
+  constructor(request) {
+    super("A browser-generated derived-output batch is required before this operation can complete.");
+    this.name = "OutputRequiredError";
+    this.request = request;
   }
 }
 
-/** @param {unknown} value @returns {JsxRequiredError | undefined} */
-function findJsxRequiredError(value) {
+/** @param {unknown} value @returns {OutputRequiredError | undefined} */
+function findOutputRequiredError(value) {
   let current = value;
   const seen = new Set();
   while (typeof current === "object" && current !== null && !seen.has(current)) {
-    if (current instanceof JsxRequiredError) return current;
+    if (current instanceof OutputRequiredError) return current;
     seen.add(current);
     current = "cause" in current ? current.cause : undefined;
   }
@@ -213,27 +221,27 @@ function validateEnvelope(payload) {
   }
   switch (payload.operation) {
     case "list": {
-      if (!hasExactKeys(payload, ["operation", "jsxById"])) break;
-      const jsxById = parseJsxById(payload.jsxById);
-      if (jsxById !== undefined) return { operation: "list", jsxById };
+      if (!hasExactKeys(payload, ["operation", "outputsById"])) break;
+      const outputsById = parseOutputsById(payload.outputsById);
+      if (outputsById !== undefined) return { operation: "list", outputsById };
       break;
     }
     case "get": {
-      if (!hasExactKeys(payload, ["operation", "id", "jsxById"])) break;
-      const jsxById = parseJsxById(payload.jsxById);
-      if (isSafeId(payload.id) && jsxById !== undefined) {
-        return { operation: "get", id: payload.id, jsxById };
+      if (!hasExactKeys(payload, ["operation", "id", "outputsById"])) break;
+      const outputsById = parseOutputsById(payload.outputsById);
+      if (isSafeId(payload.id) && outputsById !== undefined) {
+        return { operation: "get", id: payload.id, outputsById };
       }
       break;
     }
     case "put":
       if (
-        hasExactKeys(payload, ["operation", "record", "jsx"])
+        hasExactKeys(payload, ["operation", "record", "outputsById"])
         && isPlainObject(payload.record)
         && hasExactKeys(payload.record, ["id", "createdAt", "updatedAt", "document"])
-        && typeof payload.jsx === "string"
       ) {
-        return { operation: "put", record: payload.record, jsx: payload.jsx };
+        const outputsById = parseOutputsById(payload.outputsById);
+        if (outputsById !== undefined) return { operation: "put", record: payload.record, outputsById };
       }
       break;
     case "delete":
@@ -254,17 +262,18 @@ function validateEnvelope(payload) {
 
 /**
  * Testable middleware factory. The supplied store factory receives the only
- * JSX provider the Node core ever sees; it either returns browser-generated
- * bytes from this request or interrupts the read with a validated record.
+ * derived-output provider the Node core ever sees; it either returns a
+ * browser-produced batch item from this request or interrupts with the
+ * already-loaded closure the browser must plan.
  *
  * @param {{
  *   endpoint?: string,
  *   capability: string,
  *   maxBodyBytes?: number,
  *   validateRecord: (value: unknown) => {ok: true, record: CompositionRecord} | {ok: false, issue: {message: string}},
- *   createStore: (options: {provideJsx: (record: CompositionRecord) => string}) => Promise<{
+ *   createStore: (options: {provideJsx: (record: CompositionRecord, request: unknown) => string | {status: "generated", code: string} | {status: "blocked", reason: string}}) => Promise<{
  *     list(): Promise<unknown>, get(id: string): Promise<unknown>,
- *     put(record: CompositionRecord, jsx?: string): Promise<void>,
+ *     put(record: CompositionRecord, jsx?: string): Promise<unknown>,
  *     delete(id: string): Promise<boolean>, clear(): Promise<void>
  *   }>
  * }} options
@@ -309,13 +318,13 @@ export function createComposerFileProviderMiddleware(options) {
       return errorResponse(400, "invalid-request", envelope.error);
     }
 
-    const jsxById = "jsxById" in envelope ? envelope.jsxById : Object.create(null);
+    const outputsById = "outputsById" in envelope ? envelope.outputsById : Object.create(null);
     try {
       const store = await options.createStore({
-        provideJsx(record) {
-          const jsx = jsxById[record.id];
-          if (jsx === undefined) throw new JsxRequiredError(record);
-          return jsx;
+        provideJsx(record, request) {
+          const output = outputsById[record.id];
+          if (output === undefined) throw new OutputRequiredError(request);
+          return output;
         },
       });
 
@@ -329,8 +338,7 @@ export function createComposerFileProviderMiddleware(options) {
           if (!validation.ok) {
             return errorResponse(422, "validation", validation.issue.message, "put");
           }
-          await store.put(validation.record, envelope.jsx);
-          return json(200, { ok: true, result: null });
+          return json(200, { ok: true, result: await store.put(validation.record) });
         }
         case "delete":
           return json(200, { ok: true, result: await store.delete(envelope.id) });
@@ -343,16 +351,16 @@ export function createComposerFileProviderMiddleware(options) {
       // The core wraps provider failures in CompositionPersistenceError so its
       // own API remains operation-specific. Walk the standard Error.cause
       // chain to recover only our private handshake sentinel.
-      const jsxRequired = findJsxRequiredError(cause);
-      if (jsxRequired !== undefined) {
+      const outputRequired = findOutputRequiredError(cause);
+      if (outputRequired !== undefined) {
         return json(409, {
           ok: false,
           error: {
-            code: "jsx-required",
+            code: "output-required",
             operation: envelope.operation,
-            message: "Production JSX is required to verify derived output.",
+            message: "A derived-output batch is required to verify generated files.",
           },
-          record: jsxRequired.record,
+          request: outputRequired.request,
         });
       }
       return sanitizedPersistenceError(cause, envelope.operation);

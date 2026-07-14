@@ -11,10 +11,13 @@ import {
   summarizeComposition,
   validateCompositionRecord,
   type CompositionLoadOutcome,
+  type CompositionDerivedOutputOutcome,
+  type CompositionDerivedOutputRecordOutcome,
   type CompositionDependent,
   type CompositionDeleteOutcome,
   type CompositionPersistenceOperation,
   type CompositionRecord,
+  type CompositionSaveOutcome,
   type CompositionStore,
   type CompositionSummary,
   type CompositionUnpublishOutcome,
@@ -22,6 +25,8 @@ import {
 import { cloneJson } from "../../model/json";
 import type {
   FilesystemCompositionStoreOptions,
+  FilesystemDerivedOutputPlan,
+  FilesystemDerivedOutputRequest,
   FilesystemStoreOperations,
 } from "./types";
 
@@ -105,6 +110,24 @@ interface CanonicalResult {
   stats: Stats;
 }
 
+interface ClosureEntry {
+  id: string;
+  outcome: CompositionLoadOutcome;
+  /** Undefined only for a new put record that is not on disk yet. */
+  stats?: Stats;
+}
+
+/**
+ * A same-provider snapshot read before entering the root queue. The snapshot
+ * is checked again under that queue before any mutation, so a browser planning
+ * round can never make us write against a different canonical dependency.
+ */
+interface DependencyClosure {
+  entries: readonly ClosureEntry[];
+  byId: ReadonlyMap<string, ClosureEntry>;
+  records: readonly CompositionRecord[];
+}
+
 export class FilesystemCompositionStore implements CompositionStore {
   readonly provider = COMPOSITION_PROVIDERS.files;
 
@@ -171,45 +194,50 @@ export class FilesystemCompositionStore implements CompositionStore {
   }
 
   async list(): Promise<readonly CompositionSummary[]> {
-    return this.run("list", async () => {
-      let entries;
-      try {
-        entries = await this.operations.readdir(this.realRoot, { withFileTypes: true });
-        await this.assertRoot("list");
-      } catch (cause) {
-        rethrow("list", "read-failed", "Could not list Composer composition files.", cause);
-      }
+    const closure = await this.loadDependencyClosure("list");
+    const currentClosure = await this.migrateBeforeOutputPlanning("list", closure);
+    const targetIds = currentClosure.records.map((record) => record.id);
+    const plans = await this.prepareDerivedOutputs("list", currentClosure, targetIds);
 
-      const summaries: CompositionSummary[] = [];
-      for (const entry of entries.sort(compareNames)) {
-        const match = OWNED_JSON_PATTERN.exec(entry.name);
-        if (!match || entry.isSymbolicLink() || !entry.isFile()) continue;
-        const id = match[1]!;
-        const canonical = await this.readCanonical("list", id);
-        if (canonical === undefined) continue;
-        if (canonical.outcome.status !== "loaded") {
-          throw operationError(
-            "list",
-            "validation",
-            `Canonical composition JSON is invalid for id "${id}"; it was preserved and JSX was not changed.`,
-          );
-        }
-        await this.repairJsx("list", canonical.outcome.record);
-        summaries.push(summarizeComposition(canonical.outcome.record));
-      }
-      return summaries.sort(compareCompositionSummariesNewestFirst);
+    return this.run("list", async () => {
+      await this.assertClosureUnchanged("list", currentClosure);
+      const outputs = await this.applyDerivedOutputs("list", currentClosure, plans, targetIds);
+      return currentClosure.records
+        .map((record) => ({
+          ...summarizeComposition(record),
+          ...(outputs.get(record.id) === undefined ? {} : { derivedOutput: outputs.get(record.id) }),
+        }))
+        .sort(compareCompositionSummariesNewestFirst);
     });
   }
 
   async get(id: string): Promise<CompositionLoadOutcome> {
     this.assertSafeId("get", id);
+    const closure = await this.loadDependencyClosure("get");
+    const target = closure.byId.get(id)?.outcome;
+    if (target === undefined) {
+      // The closure intentionally skips symlinks; a direct get must still
+      // report a hostile canonical path rather than pretending it is absent.
+      await this.readCanonical("get", id, false);
+      return { status: "not-found", id };
+    }
+    if (target.status !== "loaded") return target;
+
+    const currentClosure = await this.migrateBeforeOutputPlanning("get", closure);
+    const current = currentClosure.byId.get(id)?.outcome;
+    if (current?.status !== "loaded") return current ?? { status: "not-found", id };
+    const targetIds = this.outputTargetsForGet(current.record, currentClosure);
+    const plans = await this.prepareDerivedOutputs("get", currentClosure, targetIds);
     return this.run("get", async () => {
-      const canonical = await this.readCanonical("get", id);
-      if (canonical === undefined) return { status: "not-found", id };
-      if (canonical.outcome.status === "loaded") {
-        await this.repairJsx("get", canonical.outcome.record);
-      }
-      return canonical.outcome;
+      await this.assertClosureUnchanged("get", currentClosure);
+      const outputs = await this.applyDerivedOutputs("get", currentClosure, plans, targetIds);
+      return {
+        ...current,
+        ...(target.decodedFromSchemaVersion === undefined
+          ? {}
+          : { decodedFromSchemaVersion: target.decodedFromSchemaVersion }),
+        ...(outputs.get(id) === undefined ? {} : { derivedOutput: outputs.get(id) }),
+      };
     });
   }
 
@@ -218,7 +246,7 @@ export class FilesystemCompositionStore implements CompositionStore {
    * preserves an already-generated exact production result; otherwise the
    * injected provider is called.
    */
-  async put(record: CompositionRecord, jsx?: string): Promise<void> {
+  async put(record: CompositionRecord, jsx?: string): Promise<CompositionSaveOutcome> {
     const validation = validateCompositionRecord(record);
     if (!validation.ok) {
       throw operationError("put", "validation", validation.issue.message);
@@ -234,11 +262,20 @@ export class FilesystemCompositionStore implements CompositionStore {
     const id = snapshotValidation.record.id;
     const canonical = `${JSON.stringify(snapshotValidation.record, null, 2)}\n`;
 
-    await this.run("put", async () => {
-      await this.assertBindingTransition(snapshotValidation.record);
-      const productionJsx = jsx ?? await this.getProductionJsx("put", snapshotValidation.record);
+    const closure = await this.loadDependencyClosure("put", snapshotValidation.record);
+    const targetIds = jsx === undefined ? closure.records.map((candidate) => candidate.id) : [id];
+    const plans = jsx === undefined
+      ? await this.prepareDerivedOutputs("put", closure, targetIds)
+      : new Map<string, FilesystemDerivedOutputPlan>([[id, { status: "generated", code: jsx }]]);
+
+    return this.run("put", async () => {
+      await this.assertClosureUnchanged("put", closure, new Set([id]));
       await this.atomicReplace("put", this.jsonPath(id), canonical);
-      await this.atomicReplace("put", this.jsxPath(id), productionJsx);
+      const outputs = await this.applyDerivedOutputs("put", closure, plans, targetIds);
+      return {
+        canonical: { status: "saved" },
+        derived: this.summarizeDerivedOutputs(outputs, targetIds),
+      };
     });
   }
 
@@ -410,6 +447,295 @@ export class FilesystemCompositionStore implements CompositionStore {
     });
   }
 
+  /**
+   * Read every same-provider canonical record before acquiring the root queue.
+   * This deliberately performs no migration or derived write: browser planning
+   * can take a network round trip, and holding the queue across that boundary
+   * would deadlock if a caller tried to re-enter list/get for a dependency.
+   */
+  private async loadDependencyClosure(
+    operation: CompositionPersistenceOperation,
+    replacing?: CompositionRecord,
+  ): Promise<DependencyClosure> {
+    let directoryEntries;
+    try {
+      directoryEntries = await this.operations.readdir(this.realRoot, { withFileTypes: true });
+      await this.assertRoot(operation);
+    } catch (cause) {
+      rethrow(operation, "read-failed", "Could not read Composer canonical records for output planning.", cause);
+    }
+
+    const entries: ClosureEntry[] = [];
+    for (const entry of directoryEntries.sort(compareNames)) {
+      const match = OWNED_JSON_PATTERN.exec(entry.name);
+      if (!match || entry.isSymbolicLink() || !entry.isFile()) continue;
+      const canonical = await this.readCanonical(operation, match[1]!, false);
+      if (canonical !== undefined) entries.push({ id: match[1]!, outcome: canonical.outcome, stats: canonical.stats });
+    }
+
+    if (replacing !== undefined) {
+      const existing = entries.find((entry) => entry.id === replacing.id);
+      const replacement: ClosureEntry = {
+        id: replacing.id,
+        outcome: { status: "loaded", record: cloneJson(replacing) },
+        stats: existing?.stats,
+      };
+      const index = entries.findIndex((entry) => entry.id === replacing.id);
+      if (index === -1) entries.push(replacement);
+      else entries[index] = replacement;
+    }
+
+    const byId = new Map(entries.map((entry) => [entry.id, entry]));
+    const records = entries
+      .map((entry) => entry.outcome)
+      .filter((outcome): outcome is Extract<CompositionLoadOutcome, { status: "loaded" }> => outcome.status === "loaded")
+      .map((outcome) => cloneJson(outcome.record));
+    return { entries, byId, records };
+  }
+
+  private async assertClosureUnchanged(
+    operation: CompositionPersistenceOperation,
+    closure: DependencyClosure,
+    mutableIds: ReadonlySet<string> = new Set(),
+  ): Promise<void> {
+    let directoryEntries;
+    try {
+      directoryEntries = await this.operations.readdir(this.realRoot, { withFileTypes: true });
+    } catch (cause) {
+      rethrow(operation, "read-failed", "Could not verify Composer canonical records before writing derived output.", cause);
+    }
+    const knownIds = new Set(closure.entries.map((entry) => entry.id));
+    for (const directoryEntry of directoryEntries) {
+      const match = OWNED_JSON_PATTERN.exec(directoryEntry.name);
+      if (!match || directoryEntry.isSymbolicLink() || !directoryEntry.isFile()) continue;
+      if (!knownIds.has(match[1]!)) {
+        throw operationError(
+          operation,
+          "conflict",
+          `Canonical composition appeared while derived output was being planned: ${match[1]}. Retry the operation.`,
+        );
+      }
+    }
+    for (const entry of closure.entries) {
+      if (mutableIds.has(entry.id)) continue;
+      const current = await this.operations.lstat(this.jsonPath(entry.id)).catch((cause: unknown) => {
+        if (errorCode(cause) === "ENOENT") return undefined;
+        throw cause;
+      });
+      const known = entry.stats;
+      if (
+        (known === undefined && current !== undefined)
+        || (known !== undefined && (
+          current === undefined
+          || current.isSymbolicLink()
+          || !current.isFile()
+          || !sameFile(current, known)
+        ))
+      ) {
+        throw operationError(
+          operation,
+          "conflict",
+          `Canonical composition changed while derived output was being planned: ${entry.id}. Retry the operation.`,
+        );
+      }
+    }
+    await this.assertRoot(operation);
+  }
+
+  /** Migrate decoded v1 bytes only after the closure is safely inside the queue. */
+  private async migrateClosure(
+    operation: CompositionPersistenceOperation,
+    closure: DependencyClosure,
+  ): Promise<void> {
+    for (const entry of closure.entries) {
+      const outcome = entry.outcome;
+      if (outcome.status !== "loaded" || outcome.decodedFromSchemaVersion === undefined) continue;
+      await this.atomicReplace(
+        operation,
+        this.jsonPath(entry.id),
+        `${JSON.stringify(outcome.record, null, 2)}\n`,
+        entry.stats,
+      );
+    }
+  }
+
+  /**
+   * v1 migration is itself a canonical write, so settle it before asking the
+   * browser for any derived plan. This keeps a failed migration from invoking
+   * the output provider and still releases the root queue before browser work.
+   */
+  private async migrateBeforeOutputPlanning(
+    operation: "list" | "get",
+    closure: DependencyClosure,
+  ): Promise<DependencyClosure> {
+    if (!closure.entries.some((entry) =>
+      entry.outcome.status === "loaded"
+      && entry.outcome.decodedFromSchemaVersion !== undefined,
+    )) {
+      return closure;
+    }
+    await this.run(operation, async () => {
+      await this.assertClosureUnchanged(operation, closure);
+      await this.migrateClosure(operation, closure);
+    });
+    return this.loadDependencyClosure(operation);
+  }
+
+  private outputTargetsForGet(record: CompositionRecord, closure: DependencyClosure): string[] {
+    const ids = new Set<string>();
+    const binding = record.document.binding;
+    if (binding !== undefined) ids.add(binding.sourceRecordId);
+    ids.add(record.id);
+    // A missing source cannot be included in `records`, but its not-found
+    // outcome still reaches the pure planner through `sourceOutcomes`.
+    return [...ids].filter((id) => id === record.id || closure.byId.has(id));
+  }
+
+  private makeOutputRequest(
+    closure: DependencyClosure,
+    targetIds: readonly string[],
+  ): FilesystemDerivedOutputRequest {
+    return {
+      records: closure.records.map((record) => cloneJson(record)),
+      sourceOutcomes: closure.entries.map((entry) => ({
+        id: entry.id,
+        outcome: cloneJson(entry.outcome),
+      })),
+      targetIds: [...targetIds],
+    };
+  }
+
+  private async prepareDerivedOutputs(
+    operation: CompositionPersistenceOperation,
+    closure: DependencyClosure,
+    targetIds: readonly string[],
+  ): Promise<Map<string, FilesystemDerivedOutputPlan>> {
+    const request = this.makeOutputRequest(closure, targetIds);
+    const records = new Map(closure.records.map((record) => [record.id, record]));
+    const plans = new Map<string, FilesystemDerivedOutputPlan>();
+    for (const id of targetIds) {
+      const record = records.get(id);
+      if (record === undefined) continue;
+      let supplied: string | FilesystemDerivedOutputPlan;
+      try {
+        supplied = await this.provideJsx(cloneJson(record), request);
+      } catch (cause) {
+        rethrow(
+          operation,
+          "write-failed",
+          `Could not obtain derived output for composition "${record.id}".`,
+          cause,
+        );
+      }
+      if (typeof supplied === "string") {
+        plans.set(id, { status: "generated", code: supplied });
+      } else if (supplied.status === "generated" && typeof supplied.code === "string") {
+        plans.set(id, { status: "generated", code: supplied.code });
+      } else if (supplied.status === "blocked" && typeof supplied.reason === "string" && supplied.reason.trim() !== "") {
+        plans.set(id, { status: "blocked", reason: supplied.reason });
+      } else {
+        throw operationError(
+          operation,
+          "write-failed",
+          `Derived-output planner returned an invalid result for composition "${record.id}".`,
+        );
+      }
+    }
+    return plans;
+  }
+
+  private orderedOutputIds(
+    targetIds: readonly string[],
+    closure: DependencyClosure,
+  ): readonly string[] {
+    const position = new Map(targetIds.map((id, index) => [id, index]));
+    return [...targetIds].sort((a, b) => {
+      const aRecord = closure.records.find((record) => record.id === a);
+      const bRecord = closure.records.find((record) => record.id === b);
+      const aConsumer = aRecord?.document.binding !== undefined;
+      const bConsumer = bRecord?.document.binding !== undefined;
+      if (aConsumer !== bConsumer) return aConsumer ? 1 : -1;
+      return (position.get(a) ?? 0) - (position.get(b) ?? 0);
+    });
+  }
+
+  private async applyDerivedOutputs(
+    operation: CompositionPersistenceOperation,
+    closure: DependencyClosure,
+    plans: ReadonlyMap<string, FilesystemDerivedOutputPlan>,
+    targetIds: readonly string[],
+  ): Promise<Map<string, CompositionDerivedOutputRecordOutcome>> {
+    const outcomes = new Map<string, CompositionDerivedOutputRecordOutcome>();
+    for (const id of this.orderedOutputIds(targetIds, closure)) {
+      const plan = plans.get(id);
+      if (plan === undefined) continue;
+      const path = this.jsxPath(id);
+      if (plan.status === "blocked") {
+        outcomes.set(id, await this.blockDerivedOutput(operation, id, path, plan.reason));
+        continue;
+      }
+
+      try {
+        const existing = await this.readFileNoFollow(operation, path);
+        if (existing?.text === plan.code) {
+          outcomes.set(id, { recordId: id, status: "current" });
+          continue;
+        }
+        await this.atomicReplace(operation, path, plan.code);
+        outcomes.set(id, { recordId: id, status: "repaired" });
+      } catch (cause) {
+        const reason = `Generated output could not be written: ${cause instanceof Error ? cause.message : "unknown filesystem error"}`;
+        outcomes.set(id, await this.blockDerivedOutput(operation, id, path, reason));
+      }
+    }
+    return outcomes;
+  }
+
+  private async blockDerivedOutput(
+    operation: CompositionPersistenceOperation,
+    id: string,
+    path: string,
+    reason: string,
+  ): Promise<CompositionDerivedOutputRecordOutcome> {
+    try {
+      const existing = await this.operations.lstat(path);
+      if (existing.isSymbolicLink() || !existing.isFile()) {
+        return {
+          recordId: id,
+          status: "blocked",
+          reason,
+          staleArtifact: `Generated artifact could not be removed because ${basename(path)} is not a regular file.`,
+        };
+      }
+      await this.operations.unlink(path);
+      await this.assertRoot(operation);
+      return { recordId: id, status: "blocked", reason };
+    } catch (cause) {
+      if (errorCode(cause) === "ENOENT") return { recordId: id, status: "blocked", reason };
+      return {
+        recordId: id,
+        status: "blocked",
+        reason,
+        staleArtifact: `Generated artifact could not be removed: ${cause instanceof Error ? cause.message : "unknown filesystem error"}`,
+      };
+    }
+  }
+
+  private summarizeDerivedOutputs(
+    outputs: ReadonlyMap<string, CompositionDerivedOutputRecordOutcome>,
+    targetIds: readonly string[],
+  ): CompositionDerivedOutputOutcome {
+    const records = targetIds
+      .map((id) => outputs.get(id))
+      .filter((outcome): outcome is CompositionDerivedOutputRecordOutcome => outcome !== undefined);
+    const status = records.some((outcome) => outcome.status === "blocked")
+      ? "blocked"
+      : records.some((outcome) => outcome.status === "repaired")
+        ? "repaired"
+        : "current";
+    return { status, records };
+  }
+
   private async run<T>(
     operation: CompositionPersistenceOperation,
     task: () => Promise<T>,
@@ -450,54 +776,6 @@ export class FilesystemCompositionStore implements CompositionStore {
       dependents.push({ summary: summarizeComposition(canonical.outcome.record), binding: cloneJson(binding) });
     }
     return dependents.sort((a, b) => compareCompositionSummariesNewestFirst(a.summary, b.summary));
-  }
-
-  /** See the IndexedDB implementation for why only a new/changing binding is revalidated. */
-  private async assertBindingTransition(next: CompositionRecord): Promise<void> {
-    const binding = next.document.binding;
-    if (!binding) return;
-
-    const previous = await this.readCanonical("put", next.id, false);
-    if (previous !== undefined) {
-      if (previous.outcome.status !== "loaded") {
-        throw operationError(
-          "put",
-          "validation",
-          `Canonical consumer "${next.id}" is invalid; its binding update was not attempted.`,
-        );
-      }
-      const priorBinding = previous.outcome.record.document.binding;
-      if (
-        priorBinding?.sourceRecordId === binding.sourceRecordId
-        && priorBinding.outletId === binding.outletId
-      ) {
-        return;
-      }
-    }
-
-    if (binding.sourceRecordId === next.id) {
-      throw operationError("put", "validation", "A Composition cannot bind to itself as a Global template.");
-    }
-    const source = await this.readCanonical("put", binding.sourceRecordId, false);
-    if (source === undefined) {
-      throw operationError(
-        "put",
-        "conflict",
-        "The selected Global template is no longer available. Refresh the template list and try again.",
-      );
-    }
-    if (
-      source.outcome.status !== "loaded"
-      || source.outcome.record.document.binding !== undefined
-      || source.outcome.record.document.publication?.kind !== "global-template"
-      || source.outcome.record.document.publication.outlet.id !== binding.outletId
-    ) {
-      throw operationError(
-        "put",
-        "conflict",
-        "The selected Global template changed before this consumer could be saved.",
-      );
-    }
   }
 
   private assertSafeId(operation: CompositionPersistenceOperation, id: string): void {
@@ -671,11 +949,14 @@ export class FilesystemCompositionStore implements CompositionStore {
     record: CompositionRecord,
   ): Promise<string> {
     try {
-      const jsx = await this.provideJsx(cloneJson(record));
-      if (typeof jsx !== "string") {
-        throw new TypeError("Production JSX provider did not return a string.");
-      }
-      return jsx;
+      const supplied = await this.provideJsx(cloneJson(record), {
+        records: [cloneJson(record)],
+        sourceOutcomes: [{ id: record.id, outcome: { status: "loaded", record: cloneJson(record) } }],
+        targetIds: [record.id],
+      });
+      if (typeof supplied === "string") return supplied;
+      if (supplied.status === "generated") return supplied.code;
+      throw new TypeError(supplied.reason);
     } catch (cause) {
       rethrow(
         operation,
@@ -684,17 +965,6 @@ export class FilesystemCompositionStore implements CompositionStore {
         cause,
       );
     }
-  }
-
-  private async repairJsx(
-    operation: CompositionPersistenceOperation,
-    record: CompositionRecord,
-  ): Promise<void> {
-    const expected = await this.getProductionJsx(operation, record);
-    const path = this.jsxPath(record.id);
-    const existing = await this.readFileNoFollow(operation, path);
-    if (existing?.text === expected) return;
-    await this.atomicReplace(operation, path, expected);
   }
 
   private async assertReplaceablePath(

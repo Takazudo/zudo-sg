@@ -6,20 +6,24 @@ import {
   loadCompositionRecord,
   validateCompositionRecord,
   type CompositionLoadOutcome,
+  type CompositionPutResult,
   type CompositionPersistenceErrorCode,
   type CompositionPersistenceOperation,
   type CompositionRecord,
+  type CompositionSaveOutcome,
   type CompositionStore,
   type CompositionSummary,
 } from "../../library";
 import { createManifest, type ComponentManifest } from "../../model/types";
-import { generateJsx } from "../../source/generate-jsx";
+import { planLinkedJsxModules } from "../../source/plan-linked-jsx";
 import type {
+  ComposerFileProviderDerivedOutputPlan,
+  ComposerFileProviderDerivedOutputRequest,
   ComposerFileProviderConfig,
   ComposerFileProviderErrorPayload,
 } from "./types";
 
-const MAX_REPAIR_ROUNDS = 1_024;
+const MAX_OUTPUT_PLAN_ROUNDS = 8;
 
 type Operation = CompositionPersistenceOperation;
 
@@ -27,7 +31,7 @@ type SuccessResponse<T> = { ok: true; result: T };
 type ErrorResponse = {
   ok: false;
   error: ComposerFileProviderErrorPayload;
-  record?: unknown;
+  request?: unknown;
 };
 
 function isProtocolResponse<T>(value: unknown): value is SuccessResponse<T> | ErrorResponse {
@@ -88,6 +92,32 @@ function diagnosticsMessage(record: CompositionRecord, count: number): string {
   return `Could not generate production JSX for composition "${record.id}" (${count} diagnostic${count === 1 ? "" : "s"}). Resolve unsupported or invalid nodes before saving.`;
 }
 
+function isOutputRequest(value: unknown): value is ComposerFileProviderDerivedOutputRequest {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return false;
+  const request = value as Record<string, unknown>;
+  if (!Array.isArray(request.records) || !Array.isArray(request.sourceOutcomes) || !Array.isArray(request.targetIds)) {
+    return false;
+  }
+  if (!request.records.every((record) => validateCompositionRecord(record).ok)) return false;
+  return request.sourceOutcomes.every((entry) => {
+    if (
+      typeof entry !== "object"
+      || entry === null
+      || Array.isArray(entry)
+      || typeof (entry as { id?: unknown }).id !== "string"
+      || !("outcome" in entry)
+    ) {
+      return false;
+    }
+    const outcome = (entry as { outcome: unknown }).outcome;
+    if (typeof outcome !== "object" || outcome === null || !("status" in outcome)) return false;
+    if ((outcome as { status: unknown }).status === "loaded") {
+      return "record" in outcome && validateCompositionRecord((outcome as { record: unknown }).record).ok;
+    }
+    return ["not-found", "invalid", "future-schema"].includes((outcome as { status: string }).status);
+  }) && request.targetIds.every((id) => typeof id === "string");
+}
+
 /**
  * Browser half of the dev-only file provider. Construct this through
  * `createFileProviderCompositionStore()` so production builds, whose virtual
@@ -103,30 +133,21 @@ class BrowserFileProviderCompositionStore implements CompositionStore {
   ) {}
 
   async list(): Promise<readonly CompositionSummary[]> {
-    return this.readWithRepair<readonly CompositionSummary[]>("list");
+    return this.requestWithOutputPlan<readonly CompositionSummary[]>("list");
   }
 
   async get(id: string): Promise<CompositionLoadOutcome> {
-    return this.readWithRepair<CompositionLoadOutcome>("get", id, (result) =>
+    return this.requestWithOutputPlan<CompositionLoadOutcome>("get", { id }, (result) =>
       this.decodeGetResult(result, id),
     );
   }
 
-  async put(record: CompositionRecord): Promise<void> {
+  async put(record: CompositionRecord): Promise<CompositionPutResult> {
     const validation = validateCompositionRecord(record);
     if (!validation.ok) {
       throw persistenceError("put", "validation", validation.issue.message, false);
     }
-    const generated = generateJsx(validation.record.document, this.manifest);
-    if (!generated.ok) {
-      throw persistenceError(
-        "put",
-        "validation",
-        diagnosticsMessage(validation.record, generated.diagnostics.opaqueIds.length),
-        false,
-      );
-    }
-    await this.request<null>("put", { record: validation.record, jsx: generated.code });
+    return this.requestWithOutputPlan<CompositionSaveOutcome>("put", { record: validation.record });
   }
 
   async delete(id: string): Promise<boolean> {
@@ -137,54 +158,58 @@ class BrowserFileProviderCompositionStore implements CompositionStore {
     await this.request<null>("clear");
   }
 
-  private async readWithRepair<T>(
-    operation: "list" | "get",
-    id?: string,
+  private async requestWithOutputPlan<T>(
+    operation: "list" | "get" | "put",
+    fields: Record<string, unknown> = {},
     decodeResult: (result: T) => T = (result) => result,
   ): Promise<T> {
-    const jsxById: Record<string, string> = Object.create(null);
-    for (let round = 0; round < MAX_REPAIR_ROUNDS; round += 1) {
-      const response = await this.fetchJson<T>(operation, {
-        ...(id === undefined ? {} : { id }),
-        jsxById,
-      });
+    const outputsById: Record<string, ComposerFileProviderDerivedOutputPlan> = Object.create(null);
+    for (let round = 0; round < MAX_OUTPUT_PLAN_ROUNDS; round += 1) {
+      const response = await this.fetchJson<T>(operation, { ...fields, outputsById });
       if (response.ok) return decodeResult(response.result);
-      if (response.error.code !== "jsx-required") {
+      if (response.error.code !== "output-required") {
         throw this.fromServerError(operation, response.error);
       }
-
-      const validation = validateCompositionRecord(response.record);
-      if (!validation.ok) {
+      if (!isOutputRequest(response.request)) {
         throw persistenceError(
           operation,
           "validation",
-          "The file provider returned an invalid canonical record for JSX repair.",
+          "The file provider returned an invalid dependency closure for output planning.",
           false,
         );
       }
-      if (jsxById[validation.record.id] !== undefined) {
-        throw persistenceError(
-          operation,
-          "conflict",
-          `The file provider repeatedly requested JSX for composition "${validation.record.id}".`,
-          true,
-        );
+      const sourceOutcomes = new Map(response.request.sourceOutcomes.map((entry) => [entry.id, entry.outcome]));
+      const batch = planLinkedJsxModules({
+        manifest: this.manifest,
+        records: response.request.records,
+        sourceOutcomes,
+        moduleSpecifier: (recordId) => `./composition-${recordId}`,
+      });
+      for (const id of response.request.targetIds) {
+        const plan = batch.byRecordId.get(id);
+        const record = response.request.records.find((candidate) => candidate.id === id);
+        if (plan === undefined || record === undefined) {
+          throw persistenceError(
+            operation,
+            "conflict",
+            `The file provider requested output for unavailable composition "${id}".`,
+            true,
+          );
+        }
+        outputsById[id] = plan.status === "generated"
+          ? { status: "generated", code: plan.code }
+          : {
+            status: "blocked",
+            reason: plan.diagnostic.kind === "dependency"
+              ? plan.diagnostic.message
+              : diagnosticsMessage(record, plan.diagnostic.generation.diagnostics.opaqueIds.length),
+          };
       }
-      const generated = generateJsx(validation.record.document, this.manifest);
-      if (!generated.ok) {
-        throw persistenceError(
-          operation,
-          "validation",
-          diagnosticsMessage(validation.record, generated.diagnostics.opaqueIds.length),
-          false,
-        );
-      }
-      jsxById[validation.record.id] = generated.code;
     }
     throw persistenceError(
       operation,
       "conflict",
-      "File-provider repair did not converge. Reduce the number of compositions and retry.",
+      "File-provider output planning did not converge. Retry the save or reload the Composition.",
       true,
     );
   }
@@ -206,7 +231,10 @@ class BrowserFileProviderCompositionStore implements CompositionStore {
         true,
       );
     }
-    return decoded;
+    return {
+      ...decoded,
+      ...(result.derivedOutput === undefined ? {} : { derivedOutput: result.derivedOutput }),
+    };
   }
 
   private async request<T>(operation: Operation, fields: Record<string, unknown> = {}): Promise<T> {

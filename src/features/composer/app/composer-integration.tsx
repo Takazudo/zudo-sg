@@ -332,6 +332,7 @@ export function ComposerIntegration(props: ComposerIntegrationProps): JSX.Elemen
             documentName={state.document.name}
             publication={state.document.publication}
             saveStatus={state.saveStatus}
+            derivedOutput={state.derivedOutput}
             mode={state.mode}
             viewport={viewport}
             onSetMode={controller.setMode}

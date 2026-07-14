@@ -282,4 +282,26 @@ describe("revision-aware composition save queue", () => {
     expect(await result).toBe(failure);
     expect(queue.state).toMatchObject({ status: "error", error: failure, savedRevision: 0 });
   });
+
+  it("retains a successful canonical save's blocked generated-output outcome without marking the draft unsaved", async () => {
+    const queue = createCompositionSaveQueue({
+      ref,
+      initialRecord: record("initial"),
+      write: async () => ({
+        canonical: { status: "saved" },
+        derived: {
+          status: "blocked",
+          records: [{ recordId: ref.recordId, status: "blocked", reason: "Linked source is missing." }],
+        },
+      }),
+    });
+    queue.edit(ref, record("edited"));
+
+    await queue.flush();
+    expect(queue.state).toMatchObject({
+      status: "saved",
+      dirty: false,
+      outcome: { canonical: { status: "saved" }, derived: { status: "blocked" } },
+    });
+  });
 });

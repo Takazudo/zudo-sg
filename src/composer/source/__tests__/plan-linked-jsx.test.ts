@@ -317,6 +317,23 @@ describe("planLinkedJsxModules", () => {
     expect(receivedIds).toEqual(["source", "consumer"]);
     expect(result.records.map((entry) => entry.moduleSpecifier)).toEqual(["module:source", "module:consumer"]);
   });
+
+  it("resolves a linked consumer from already-loaded source outcomes without a provider callback", () => {
+    const sourceRecord = source();
+    const consumerRecord = consumer();
+    const result = planLinkedJsxModules({
+      manifest,
+      records: [sourceRecord, consumerRecord],
+      sourceOutcomes: new Map([[sourceRecord.id, { status: "loaded", record: sourceRecord }]]),
+      moduleSpecifier: (recordId) => `@compositions/${recordId}`,
+    });
+
+    expect(result.byRecordId.get("consumer")).toMatchObject({
+      status: "generated",
+      kind: "linked-consumer",
+      code: expect.stringContaining('import LinkedTemplate from "@compositions/source";'),
+    });
+  });
 });
 
 describe("generateBrowserJsxExport", () => {
