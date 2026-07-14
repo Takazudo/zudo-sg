@@ -102,6 +102,7 @@ function summary(
     updatedAt: TIMESTAMP,
     nodeCount: 1,
     rootCount: 1,
+    reuseStatus: "eligible",
     ...overrides,
   };
 }
@@ -134,6 +135,11 @@ describe("reuse catalog", () => {
         outletLabel: "Main content",
       }),
       summary("empty-pattern", { publicationKind: "pattern", rootCount: 0 }),
+      summary("invalid", {
+        publicationKind: "global-template",
+        outletId: "outlet-main",
+        reuseStatus: "invalid",
+      }),
       summary("local"),
       summary("current", { publicationKind: "pattern" }),
     ]);

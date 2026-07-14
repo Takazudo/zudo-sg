@@ -109,12 +109,26 @@ export function countCompositionNodes(document: CompositionDocument): number {
 }
 
 export function summarizeComposition(record: CompositionRecord): CompositionSummary {
+  const publication = record.document.publication;
+  const reuseStatus = publication === undefined
+    ? undefined
+    : record.document.binding !== undefined
+      ? "invalid"
+      : publication.kind === "pattern" && record.document.root.length === 0
+        ? "empty-pattern"
+        : "eligible";
   return {
     id: record.id,
     name: record.document.name,
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,
     nodeCount: countCompositionNodes(record.document),
+    rootCount: record.document.root.length,
+    ...(publication ? { publicationKind: publication.kind } : {}),
+    ...(publication?.kind === "global-template"
+      ? { outletId: publication.outlet.id, outletLabel: publication.outlet.label }
+      : {}),
+    ...(reuseStatus ? { reuseStatus } : {}),
   };
 }
 

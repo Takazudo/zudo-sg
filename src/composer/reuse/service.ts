@@ -50,6 +50,7 @@ export function catalogEntryFromSummary(
 ): ReuseCatalogEntry | undefined {
   const ref = refFor(provider, summary.id);
   if (sameRef(current, ref)) return undefined;
+  if (summary.reuseStatus !== "eligible") return undefined;
   if (summary.publicationKind === "pattern") {
     if ((summary.rootCount ?? 0) === 0) return undefined;
     return { ref, summary, kind: "pattern" };

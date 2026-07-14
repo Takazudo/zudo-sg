@@ -273,6 +273,49 @@ describe("composition record helpers", () => {
       "a",
     ]);
     expect(a.nodeCount).toBe(6);
+    expect(a.rootCount).toBe(record("a", T1).document.root.length);
+  });
+
+  it("includes reusable-source metadata without loading the whole record", () => {
+    const global = record("global");
+    global.document.publication = {
+      kind: "global-template",
+      outlet: {
+        id: "outlet-main",
+        label: "Main content",
+        target: { parentId: "split-1", slotId: "right" },
+      },
+    };
+    const pattern = record("pattern");
+    pattern.document.publication = { kind: "pattern" };
+    const emptyPattern = record("empty-pattern");
+    emptyPattern.document.root = [];
+    emptyPattern.document.publication = { kind: "pattern" };
+    const invalid = record("invalid");
+    invalid.document.publication = { kind: "pattern" };
+    invalid.document.binding = { sourceRecordId: "source-template", outletId: "outlet-main" };
+
+    expect(summarizeComposition(global)).toMatchObject({
+      publicationKind: "global-template",
+      outletId: "outlet-main",
+      outletLabel: "Main content",
+      rootCount: global.document.root.length,
+      reuseStatus: "eligible",
+    });
+    expect(summarizeComposition(pattern)).toMatchObject({
+      publicationKind: "pattern",
+      rootCount: pattern.document.root.length,
+      reuseStatus: "eligible",
+    });
+    expect(summarizeComposition(emptyPattern)).toMatchObject({
+      publicationKind: "pattern",
+      rootCount: 0,
+      reuseStatus: "empty-pattern",
+    });
+    expect(summarizeComposition(invalid)).toMatchObject({
+      publicationKind: "pattern",
+      reuseStatus: "invalid",
+    });
   });
 });
 
