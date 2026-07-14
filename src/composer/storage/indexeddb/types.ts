@@ -1,7 +1,12 @@
 import type { IdFactory } from "../../model/id-factory";
 
 export const COMPOSER_DATABASE_NAME = "zudo-sg-composer";
-export const COMPOSER_DATABASE_VERSION = 1;
+/**
+ * IndexedDB's physical schema version is deliberately independent from the
+ * Composition document schema. Version 2 upgrades the persisted records from
+ * document schema v1 to v2 in one version-change transaction.
+ */
+export const COMPOSER_DATABASE_VERSION = 2;
 export const COMPOSITIONS_STORE_NAME = "compositions";
 export const META_STORE_NAME = "meta";
 export const UPDATED_AT_INDEX_NAME = "updatedAt";
