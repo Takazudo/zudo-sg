@@ -1,4 +1,4 @@
-import { useState } from "preact/hooks";
+import { useEffect, useState } from "preact/hooks";
 import { cx } from "../../lib/cx";
 import {
   applyTheme,
@@ -28,8 +28,21 @@ const CONTROL_CLASS =
 export function ThemeControl({ class: className, onThemeChange }: ThemeControlProps) {
   const [theme, setTheme] = useState<Theme>(() => themeFromRoot());
 
+  useEffect(() => {
+    const root = document.documentElement;
+    const syncTheme = () => setTheme(themeFromRoot(root));
+    syncTheme();
+
+    const observer = new MutationObserver(syncTheme);
+    observer.observe(root, { attributes: true, attributeFilter: ["data-theme"] });
+    return () => observer.disconnect();
+  }, []);
+
   const selectNextTheme = () => {
-    const next = nextTheme(theme);
+    // Always calculate from the root rather than this instance's last render.
+    // Desktop and mobile controls hydrate separately, so another control can
+    // change the root before this one observes the mutation.
+    const next = nextTheme(themeFromRoot());
     applyTheme(next);
     storeTheme(next);
     setTheme(next);
