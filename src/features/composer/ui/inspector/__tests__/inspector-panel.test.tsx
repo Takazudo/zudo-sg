@@ -1,7 +1,9 @@
 /** @jsxRuntime automatic */
 /** @jsxImportSource preact */
+import { useState } from "preact/hooks";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/preact";
+import type { CompositionDocument } from "@/composer";
 import {
   TEST_COMPONENT_IDS,
   makeDocument,
@@ -33,6 +35,30 @@ function renderPanel(overrides: Partial<InspectorPanelProps> = {}) {
 beforeEach(() => {
   resetTestIds();
 });
+
+function reusableDocument(): CompositionDocument {
+  return makeDocument([makeNode(TEST_COMPONENT_IDS.label, { text: "Hello" }, {}, "label")]);
+}
+
+function PatternPublicationHarness({ initialDocument = reusableDocument() }: { initialDocument?: CompositionDocument }) {
+  const [document, setDocument] = useState(initialDocument);
+  return (
+    <InspectorPanel
+      document={document}
+      manifest={testManifest}
+      selectedId={null}
+      mode="edit"
+      onUpdateProps={() => {}}
+      onReorder={() => {}}
+      onRemove={() => {}}
+      onPublishPattern={() => setDocument((current) => ({ ...current, publication: { kind: "pattern" } }))}
+      onClearPublication={async () => {
+        setDocument((current) => ({ ...current, publication: undefined }));
+        return { status: "applied" };
+      }}
+    />
+  );
+}
 
 describe("InspectorPanel — root/empty state", () => {
   it("shows an empty-composition note when the document has no nodes", () => {
@@ -105,28 +131,64 @@ describe("InspectorPanel — document reuse controls", () => {
 
   it("disables empty Pattern publication with an accessible reason", () => {
     renderPanel({ document: makeDocument([]), selectedId: null });
-    expect(screen.getByRole("radio", { name: /Pattern/i })).toBeDisabled();
-    expect(screen.getByText(/needs at least one root component/i)).toBeInTheDocument();
+    const publish = screen.getByRole("button", { name: "Publish as Pattern" });
+    expect(publish).toBeDisabled();
+    expect(publish).toHaveAccessibleDescription(
+      /whole-composition scope:.*add at least one root component before publishing a pattern/i,
+    );
+    expect(screen.getByText("Add at least one root component before publishing a Pattern.")).toBeInTheDocument();
   });
 
-  it("publishes a non-empty Pattern only through the explicit role control", () => {
-    const onPublishPattern = vi.fn();
-    const doc = makeDocument([makeNode(TEST_COMPONENT_IDS.label, { text: "Hello" }, {}, "label")]);
-    renderPanel({ document: doc, selectedId: null, onPublishPattern });
+  it("uses a native explicit Pattern button, then reports the accepted in-memory publication without claiming persistence", async () => {
+    render(<PatternPublicationHarness />);
+    const publish = screen.getByRole("button", { name: "Publish as Pattern" });
+    expect(publish.tagName).toBe("BUTTON");
+    expect(screen.queryByRole("radio", { name: /Pattern/i })).not.toBeInTheDocument();
+    expect(publish).toHaveAccessibleDescription(/whole-composition scope:.*does not publish the selected subtree/i);
 
-    fireEvent.click(screen.getByRole("radio", { name: /Pattern/i }));
-    expect(onPublishPattern).toHaveBeenCalledOnce();
-    expect(screen.getByText("Saved composition")).toBeInTheDocument();
+    publish.focus();
+    fireEvent.click(publish);
+
+    await waitFor(() => expect(screen.getByText("Published as Pattern")).toBeInTheDocument());
+    const publishedState = screen.getByText("Published as Pattern");
+    expect(publishedState).not.toHaveAttribute("role", "status");
+    expect(screen.getByText(/available as a reusable pattern in this document/i)).toBeInTheDocument();
+    expect(screen.getAllByRole("status")).toHaveLength(1);
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Pattern published in this document. Check the Composer save status for persistence.",
+    );
+    expect(screen.getByRole("button", { name: "Unpublish Pattern" })).toHaveFocus();
   });
 
   it("keeps a bound consumer from being published and explains the conflict", () => {
-    const doc = makeDocument([makeNode(TEST_COMPONENT_IDS.label, { text: "Hello" })]);
+    const doc = reusableDocument();
     doc.binding = { sourceRecordId: "source", outletId: "outlet-main" };
     renderPanel({ document: doc, selectedId: null });
 
-    expect(screen.getByRole("radio", { name: /Pattern/i })).toBeDisabled();
-    expect(screen.getByRole("radio", { name: /Global template/i })).toBeDisabled();
-    expect(screen.getByText(/bound to a Global template/i)).toBeInTheDocument();
+    const publish = screen.getByRole("button", { name: "Publish as Pattern" });
+    expect(publish).toBeDisabled();
+    expect(publish).toHaveAccessibleDescription(/bound to a global template/i);
+    expect(screen.getByText(/consumer and cannot republish itself/i)).toBeInTheDocument();
+    expect(screen.getByText(/global templates are published from structure/i)).toBeInTheDocument();
+  });
+
+  it("keeps Global-template publication separate, explains its Pattern restriction, and guards its unpublish action", () => {
+    const doc = reusableDocument();
+    doc.publication = {
+      kind: "global-template",
+      outlet: { id: "outlet-main", label: "Main content", target: { parentId: "shell", slotId: "main" } },
+    };
+    renderPanel({ document: doc, selectedId: null });
+
+    const publish = screen.getByRole("button", { name: "Publish as Pattern" });
+    expect(publish).toBeDisabled();
+    expect(publish).toHaveAccessibleDescription(/currently a global template.*unpublish the global template/i);
+    expect(screen.getByText("Published as Global template")).toBeInTheDocument();
+    expect(screen.getByText("Template outlet: Main content. Managed from Structure.")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Unpublish Global template" }));
+    expect(screen.getByText("Unpublish Global template?")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Cancel" })).toHaveFocus();
   });
 
   it("shows a stale outlet diagnostic with a reassign or unpublish path", () => {
@@ -139,21 +201,69 @@ describe("InspectorPanel — document reuse controls", () => {
 
     expect(screen.getByRole("alert")).toHaveTextContent(/no longer a declared empty component slot/i);
     expect(screen.getByText(/Choose another valid empty slot/i)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Unpublish" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Unpublish Global template" })).toBeInTheDocument();
   });
 
-  it("waits for the guarded relationship result before clearing a role", async () => {
-    const onClearPublication = vi.fn(async () => ({ status: "blocked" as const, message: "2 consumers are still bound." }));
+  it("requires an inline confirmation, returns focus on cancel, and restores the publish action after unpublishing", async () => {
+    render(<PatternPublicationHarness initialDocument={{ ...reusableDocument(), publication: { kind: "pattern" } }} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Unpublish Pattern" }));
+    expect(screen.getByText("Unpublish Pattern?")).toBeInTheDocument();
+    expect(screen.getByText("This immediately removes this Composition’s reusable Pattern status. It does not delete the Composition.")).toBeInTheDocument();
+    const cancel = screen.getByRole("button", { name: "Cancel" });
+    expect(cancel).toHaveFocus();
+
+    fireEvent.click(cancel);
+    expect(screen.getByRole("button", { name: "Unpublish Pattern" })).toHaveFocus();
+
+    fireEvent.click(screen.getByRole("button", { name: "Unpublish Pattern" }));
+    fireEvent.click(screen.getByRole("button", { name: "Unpublish Pattern" }));
+
+    await waitFor(() => expect(screen.getByRole("button", { name: "Publish as Pattern" })).toHaveFocus());
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Pattern unpublished in this document. Check the Composer save status for persistence.",
+    );
+  });
+
+  it("waits for the guarded relationship result before clearing a role and disables only its confirmation controls while in flight", async () => {
+    let finishClear: ((result: { status: "blocked"; message: string }) => void) | undefined;
     const doc = makeDocument([makeNode(TEST_COMPONENT_IDS.label, { text: "Hello" })]);
     doc.publication = { kind: "pattern" };
-    renderPanel({ document: doc, selectedId: null, onClearPublication });
+    renderPanel({
+      document: doc,
+      selectedId: null,
+      onClearPublication: vi.fn(() => new Promise((resolve) => {
+        finishClear = resolve;
+      })),
+    });
 
-    fireEvent.click(screen.getByRole("button", { name: "Unpublish" }));
+    fireEvent.click(screen.getByRole("button", { name: "Unpublish Pattern" }));
     expect(screen.getByRole("button", { name: "Cancel" })).toHaveFocus();
-    fireEvent.click(screen.getByRole("button", { name: "Unpublish" }));
+    fireEvent.click(screen.getByRole("button", { name: "Unpublish Pattern" }));
 
-    await waitFor(() => expect(onClearPublication).toHaveBeenCalledOnce());
+    expect(screen.getByRole("button", { name: "Cancel" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Unpublish Pattern" })).toBeDisabled();
+    finishClear?.({ status: "blocked", message: "2 consumers are still bound." });
+
+    await waitFor(() => expect(screen.getByRole("button", { name: "Unpublish Pattern" })).not.toBeDisabled());
     expect(screen.getByRole("status")).toHaveTextContent("2 consumers are still bound.");
+  });
+
+  it("keeps the current reuse state visible but disables its mutation actions in preview", () => {
+    const doc = reusableDocument();
+    doc.publication = { kind: "pattern" };
+    renderPanel({ document: doc, selectedId: null, mode: "preview" });
+
+    const unpublish = screen.getByRole("button", { name: "Unpublish Pattern" });
+    expect(screen.getByText("Published as Pattern")).toBeInTheDocument();
+    expect(unpublish).toBeDisabled();
+    expect(unpublish).toHaveAccessibleDescription(/reuse actions are unavailable in preview/i);
+  });
+
+  it("keeps controller errors visible without treating them as accepted Pattern publication", () => {
+    renderPanel({ document: reusableDocument(), selectedId: null, lastError: "This Composition cannot be published right now." });
+    expect(screen.getByRole("status")).toHaveTextContent("This Composition cannot be published right now.");
+    expect(screen.queryByText("Published as Pattern")).not.toBeInTheDocument();
   });
 });
 
