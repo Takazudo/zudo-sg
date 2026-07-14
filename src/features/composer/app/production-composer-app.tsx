@@ -50,6 +50,7 @@ import {
 } from "@/features/composer/routing";
 import { ComposerIntegration } from "./composer-integration";
 import type { ComposerIntegrationProps } from "./composer-integration";
+import type { ReuseDependencyCheck } from "@/features/composer/ui/shared/reuse-authoring-contract";
 
 export interface ComposerBrowserNavigation extends ComposerTransitionHistory {
   read(): ComposerRouteLocation;
@@ -94,6 +95,23 @@ function emptyCompositionDocument(
     root: [],
     ...(source ? { binding: source } : {}),
   };
+}
+
+/** Translate the provider reuse service result into the editor's small UI contract. */
+async function publicationDependencies(
+  provider: CompositionProvider | undefined,
+  sourceRecordId: string,
+): Promise<ReuseDependencyCheck> {
+  if (!provider) {
+    return {
+      status: "unavailable",
+      message: "The current Composition provider is unavailable.",
+    };
+  }
+  const outcome = await createCompositionReuseService(provider.store, reuseManifest).listDependents(sourceRecordId);
+  return outcome.status === "listed"
+    ? { status: "ready", dependentCount: outcome.dependents.length }
+    : outcome;
 }
 
 function browserNavigation(): ComposerBrowserNavigation {
@@ -626,6 +644,9 @@ export function ProductionComposerApp({
         onNavigateToLibrary={() => void navigate({ kind: "index" })}
         onDuplicateComposition={() => void duplicateMountedComposition()}
         duplicatingComposition={duplicatingComposition}
+        getPublicationDependencies={(sourceRecordId) =>
+          publicationDependencies(providersById.get(ref.providerId), sourceRecordId)
+        }
         navigationError={
           transitionError
             ? errorText(transitionError)

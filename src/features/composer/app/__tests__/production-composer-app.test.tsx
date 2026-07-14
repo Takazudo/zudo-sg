@@ -259,6 +259,47 @@ describe("ProductionComposerApp", () => {
     expect(indexeddb.records.has("never-saved")).toBe(false);
   });
 
+  it("checks only the active provider's consumers before unpublishing a Global template", async () => {
+    const source = record("site-shell", "Site shell");
+    source.document.publication = {
+      kind: "global-template",
+      outlet: {
+        id: "main",
+        label: "Main content",
+        target: { parentId: "split-1", slotId: "right" },
+      },
+    };
+    const consumer = record("bound-page", "Bound page");
+    consumer.document.binding = { sourceRecordId: "site-shell", outletId: "main" };
+    const indexeddb = memoryProvider("indexeddb", [source, consumer]);
+    const files = memoryProvider("files", [record("unrelated", "Unrelated file")]);
+    const navigation = new FakeNavigation("/composer/#/composition/indexeddb/site-shell");
+    render(
+      <ProductionComposerApp
+        providers={[indexeddb, files]}
+        navigation={navigation}
+        preview={PREVIEW}
+      />,
+    );
+
+    fireEvent.click(await screen.findByRole("button", { name: "Unpublish" }));
+    const confirm = screen.getByRole("group", { name: "Confirm clearing publication" });
+    fireEvent.click(within(confirm).getByRole("button", { name: "Unpublish" }));
+
+    await waitFor(() =>
+      expect(document.querySelector("[data-sg-reuse-feedback]")).toHaveTextContent(
+        "Cannot unpublish this Global template while 1 consumer is still bound",
+      ),
+    );
+    expect(indexeddb.store.list).toHaveBeenCalled();
+    expect(indexeddb.store.get).toHaveBeenCalledWith("bound-page");
+    expect(files.store.list).not.toHaveBeenCalled();
+    expect(indexeddb.records.get("site-shell")?.document.publication).toMatchObject({
+      kind: "global-template",
+      outlet: { id: "main" },
+    });
+  });
+
   it("persists a record-scoped edit before returning to the library", async () => {
     const indexeddb = memoryProvider("indexeddb", [record("alpha", "Alpha")]);
     const navigation = new FakeNavigation("/composer/#/composition/indexeddb/alpha");
