@@ -105,8 +105,10 @@ pnpm test:e2e           # Playwright smoke (needs dist/ and apps/demo/dist/)
 ### Composer E2E suites
 
 `playwright.config.ts` (the default config, run by `pnpm test:e2e` / `pnpm test:e2e:ci`)
-includes 6 composer projects alongside `smoke`, `preview-token-panel`, and `demo-smoke`,
-all served from the static `dist/` preview (port 4700):
+includes 6 composer projects alongside `smoke`, `preview-token-panel`, and `demo-smoke`.
+The composer projects, like `smoke` and `preview-token-panel`, are served from the
+styleguide's static `dist/` preview (port 4700) — `demo-smoke` is separate, served from
+`apps/demo/dist` on port 4701:
 
 | Project | Spec | Covers |
 |---------|------|--------|
@@ -118,7 +120,8 @@ all served from the static `dist/` preview (port 4700):
 | `composer-reuse` | `composer-reuse.spec.ts` | Global-template and Pattern reuse — publish, discover, insert, dependency-checked unpublish, detach flows (touch + mobile) |
 
 Three composer-specific config files exist outside the default config, each with its own
-server/port and local-only script:
+server/port and script — `composer-file`'s script runs in CI (see below); the
+`composer-verification` and `composer-persistence` scripts are local-only:
 
 | Config | Port | Server | Projects | Script |
 |--------|------|--------|----------|--------|
@@ -212,5 +215,5 @@ for the concrete T3 implementation pattern.
 ## Adding Tests
 
 - **Logic / data transforms** → add to `src/**/__tests__/` as `*.test.ts`, picked up by vitest automatically.
-- **New E2E flows** → add `*.spec.ts` to `e2e/`. Styleguide flows go in the port-4700 smoke fixture; demo flows go in the port-4701 demo-smoke fixture (see `playwright.config.ts`). Composer flows default to a `composer*` project in `playwright.config.ts` (static `dist/` preview) — only reach for one of the composer-specific configs when the flow needs something the default config can't give it: filesystem-write/dev-transport coverage → `playwright.composer-file.config.ts`; an isolated, single-worker run for touch/reuse/verification debugging → `playwright.composer-verification.config.ts` or `playwright.composer-persistence.config.ts`. See [Composer E2E suites](#composer-e2e-suites).
+- **New E2E flows** → add `*.spec.ts` to `e2e/`. Styleguide flows go in the port-4700 smoke fixture; demo flows go in the port-4701 demo-smoke fixture (see `playwright.config.ts`). Composer flows default to a `composer*` project in `playwright.config.ts` (static `dist/` preview) — only reach for one of the composer-specific configs when the flow needs something the default config can't give it: filesystem-write/dev-transport coverage → `playwright.composer-file.config.ts`; an isolated, single-worker run for verification/contracts/reuse debugging → `playwright.composer-verification.config.ts`; the same for persistence/production-boundary/full-walkthrough debugging → `playwright.composer-persistence.config.ts`. See [Composer E2E suites](#composer-e2e-suites).
 - **Visual regression** → use `/verify-ui` skill ad-hoc; do not add L5 specs to CI until T3 is set up.
