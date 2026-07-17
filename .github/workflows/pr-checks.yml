@@ -14,11 +14,18 @@
 #                          pnpm check:links:demo against apps/demo/dist
 #   build-doc            — pnpm build:doc (doc), then pnpm check:links:doc
 #                          against doc/dist
-#   smoke-e2e            — pnpm test:e2e:ci (Playwright: styleguide + demo smoke
-#                          projects, needs build + build-demo)
+#   smoke-e2e            — pnpm test:e2e:ci (Playwright: styleguide smoke
+#                          [smoke, preview-token-panel] + the 5 composer
+#                          projects [composer, composer-persistence,
+#                          composer-production-boundary, composer-contracts,
+#                          composer-verification] + composer-reuse + demo-smoke,
+#                          needs build + build-demo)
 #   dist-checks          — pnpm check:links + pnpm check:html against dist/
 #                          (needs build job; merged into one job since both
 #                          only need the same dist/ cache restore)
+#   file-provider-e2e    — pnpm test:e2e:composer-file (Playwright, dev-server-
+#                          backed file provider suite; no needs, builds its own
+#                          zfb dev server from source)
 #
 # Node 22 + pnpm via the shared .github/actions/setup composite action (pnpm
 # version comes from the packageManager field in package.json).
@@ -202,9 +209,12 @@ jobs:
 
   # ---------------------------------------------------------------------------
   # Job: Playwright smoke e2e (T1)
-  # Runs the styleguide smoke specs plus the demo-smoke project. playwright.config.ts
-  # declares one webServer per dist (styleguide + demo) and Playwright starts both
-  # regardless of --project filtering, so this job needs both build jobs' output.
+  # Runs the full default playwright.config.ts gate: styleguide smoke (smoke,
+  # preview-token-panel) + the 5 composer projects (composer, composer-persistence,
+  # composer-production-boundary, composer-contracts, composer-verification) +
+  # composer-reuse + demo-smoke. playwright.config.ts declares one webServer per
+  # dist (styleguide + demo) and Playwright starts both regardless of --project
+  # filtering, so this job needs both build jobs' output.
   # ---------------------------------------------------------------------------
   smoke-e2e:
     name: Smoke E2E
@@ -275,3 +285,34 @@ jobs:
 
       - name: HTML validate
         run: pnpm check:html
+
+  # ---------------------------------------------------------------------------
+  # Job: File provider e2e
+  # Runs the composer-file-provider suite, which drives `zfb dev` from source
+  # (not a dist/ preview) and writes to the gitignored compositions/ dir — kept
+  # out of smoke-e2e's static-preview matrix, so no `needs: build`.
+  # ---------------------------------------------------------------------------
+  file-provider-e2e:
+    name: File Provider E2E
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install chromium --with-deps
+
+      - name: Run file provider e2e
+        run: pnpm test:e2e:composer-file
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-file-provider
+          path: playwright-report/
+          retention-days: 7

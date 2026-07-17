@@ -92,6 +92,18 @@ export default defineConfig({
       },
     },
     {
+      name: "composer-reuse",
+      // IndexedDB-only composition reuse flows against the built /composer —
+      // safe to ride the static preview server alongside the other composer
+      // projects (no dev file transport involved).
+      testMatch: "composer-reuse.spec.ts",
+      use: {
+        baseURL: `http://localhost:${SMOKE_PORT}`,
+        hasTouch: true,
+        isMobile: true,
+      },
+    },
+    {
       name: "demo-smoke",
       // Both demo specs serve from the same built demo dist (DEMO_SMOKE_PORT):
       // the render smoke checks, the SPA-transition regression suite, and the
