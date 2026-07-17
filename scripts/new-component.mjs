@@ -152,7 +152,7 @@ function main() {
   );
   writeFileSync(
     resolve(componentDir, `${name}.stories.tsx`),
-    storiesTemplate({ pascalName, kebabName: name, category }),
+    storiesTemplate({ pascalName, kebabName: name, category, nested }),
   );
   writeFileSync(
     resolve(testsDir, `${name}.test.tsx`),

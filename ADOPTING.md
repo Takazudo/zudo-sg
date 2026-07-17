@@ -39,7 +39,7 @@ authors component variants without adopting this catalog's UI at all.
 | [`scripts/new-component.mjs`](./scripts/new-component.mjs) + [`scripts/lib/component-scaffold.mjs`](./scripts/lib/component-scaffold.mjs) + [`scripts/lib/scaffold-config.mjs`](./scripts/lib/scaffold-config.mjs) | The `pnpm new:component` scaffolder — generates a component skeleton, stories file, test file, barrel export, and re-runs the registry codegen in one command. | `scripts/new-component.mjs`, `scripts/lib/component-scaffold.mjs`, `scripts/lib/scaffold-config.mjs`. |
 | _(optional)_ [`scripts/gen-token-manifest.mjs`](./scripts/gen-token-manifest.mjs) + [`scripts/lib/ui-token-manifest.mjs`](./scripts/lib/ui-token-manifest.mjs) | Regenerates the shared UI package's design-token manifest (feeding the token-tweak panel) from `packages/ui/styles/tokens.css` / `colors.css` via a real CSS AST parse (postcss), rather than a hand-maintained copy. | `scripts/gen-token-manifest.mjs`, `scripts/lib/ui-token-manifest.mjs`. |
 | _(optional)_ [`scripts/gen-root-token-manifest.mjs`](./scripts/gen-root-token-manifest.mjs) + [`scripts/lib/root-token-manifest.mjs`](./scripts/lib/root-token-manifest.mjs) + [`scripts/lib/css-var-resolver.mjs`](./scripts/lib/css-var-resolver.mjs) | Regenerates the **root host's own** design-token manifest (`src/config/design-tokens-manifest.ts`) from `src/styles/global.css` plus the two shared `@zudo-sg/ui` files it `@import`s, via a cross-file CSS custom-property resolver — needed because the root manifest mixes shared-package tokens, root-specific `@theme` overrides, and `var()` indirection across files, which `gen-token-manifest.mjs`'s single-file parse can't follow (see #208/#209/#210/#211). | `scripts/gen-root-token-manifest.mjs`, `scripts/lib/root-token-manifest.mjs`, `scripts/lib/css-var-resolver.mjs`, `scripts/lib/css-var-parser.mjs`. |
-| _(optional)_ [`scripts/gen-z-index.mjs`](./scripts/gen-z-index.mjs) | Regenerates a Tailwind v4 `@theme` z-index block from a single `Z_INDEX_TIERS` source array, so z-index layers stay centrally defined. See the parsing caveat in §6. | `scripts/gen-z-index.mjs`. |
+| _(optional)_ [`scripts/gen-z-index.mjs`](./scripts/gen-z-index.mjs) | Regenerates a Tailwind v4 `@theme` z-index block from a single `Z_INDEX_TIERS` source array, so z-index layers stay centrally defined. See the parsing caveat in §7. | `scripts/gen-z-index.mjs`. |
 
 `src/features/styleguide/*` is **host-owned application code, not part of
 `@zudo-sg/ui`** — the shared UI package (`packages/ui`) ships only the
@@ -194,7 +194,152 @@ worth checking those for current status before working around them yourself:
 
 ---
 
-## 6. Related issues
+## 6. Adopting the Composer
+
+The Composer (`/composer`) is a second, independent thing this repo's
+architecture can hand off, on top of the catalog covered in §1-§5: a
+document-model-driven authoring surface that assembles instances of the
+catalog's own components into a composition, backed by a revision-aware save
+queue and rendered live through a sandboxed preview iframe. It follows the
+same "two independent things get adopted" framing from the top of this
+document, but with an added constraint: **the Composer depends on the
+story-authoring contract** — specifically the optional `composer` property
+`defineComposer<P>` adds to `StoryMeta` (see
+[`packages/ui/STORIES.md` §10](./packages/ui/STORIES.md#10-composer-contract-optional-opt-in)) —
+so an adopter can take the catalog without the Composer, but cannot take the
+Composer without first having adopted the story contract from §1/§2. This
+section does not duplicate that contract; read STORIES.md §10 for the
+authoring side.
+
+### Minimum viable subset
+
+Per [#349](https://github.com/Takazudo/zudo-sg/issues/349), the smallest
+adoptable core is five named pieces: **model + commands + codec/recovery +
+save-queue + preview protocol** — i.e. `src/composer/model/` (document model,
+commands, codec, recovery) plus `src/composer/persistence/` (the save queue)
+plus the preview protocol (`src/features/composer/preview/protocol.ts` +
+`bridge.ts` + `client.ts`, see the table below for the full file set). Note
+`src/composer/persistence/save-queue.ts` itself imports its record/ref/outcome
+types from `src/composer/library/types.ts`, so that one file (not the rest of
+`library/`) travels with the minimal cut too — the store/lifecycle
+*implementation* the rest of `library/` provides is still an editor-level
+addition, not part of the five-item minimum. Adding that store/lifecycle
+contract in full (`src/composer/library/`), the `generate-jsx` emitter
+(`src/composer/source/generate-jsx.ts`), and one storage provider (see
+"Environment glue" below) gets you a **headless persistence/export core** — a
+document model that loads, mutates, saves, and exports JSX — but **not yet an
+interactive editor**. The editing surface itself (controller, canvas, renderer,
+preview app, chooser, tree, inspector) lives in `src/features/composer/` and is
+classified as host glue below: a fork that wants a working editing UI must
+reimplement or port that layer, not merely copy the domain modules. Only reuse
+and the dev filesystem transport are genuinely additive — the app UI is required
+for an actual editor.
+
+### What to copy verbatim
+
+Portable domain logic — environment-agnostic, with the same caveat as §1:
+even these still need their `@zudo-sg/ui` imports repointed to the fork's own
+UI package scope.
+
+| Source path | Purpose | Target location (in the adopting project) |
+|---|---|---|
+| [`packages/ui/src/composer/types.ts`](./packages/ui/src/composer/types.ts) | The Composer authoring contract: `defineComposer<P>`, scalar-field and structural-slot descriptors — the Composer analog of `stories/types.ts`. | `<ui-package>/src/composer/types.ts`. |
+| [`src/composer/model/`](./src/composer/model/) | Document model + commands (tree-mutation operations) + codec (lossless v1→v2 decoder) + recovery (future-schema quarantine). | `src/composer/model/`. |
+| [`src/composer/library/`](./src/composer/library/) | Store/lifecycle contract — `CompositionStore` / `CompositionLifecycleStore` / provider descriptors — the seam a storage provider implements against. | `src/composer/library/`. |
+| [`src/composer/persistence/`](./src/composer/persistence/) | The revision-aware save queue. | `src/composer/persistence/`. |
+| [`src/composer/source/generate-jsx.ts`](./src/composer/source/generate-jsx.ts) | The deterministic emitter — turns a document into exportable JSX source. Copy this file alone, **not** the whole `source/` directory: its sibling `plan-linked-jsx.ts` pulls in `src/composer/reuse/` (materialize/resolver), which is product-specific glue (see below), not core doc-model behavior. | `src/composer/source/generate-jsx.ts`. |
+| [`src/features/composer/preview/protocol.ts`](./src/features/composer/preview/protocol.ts) + [`bridge.ts`](./src/features/composer/preview/bridge.ts) + [`client.ts`](./src/features/composer/preview/client.ts) + [`snapshot-store.ts`](./src/features/composer/preview/snapshot-store.ts) | The **preview protocol** — a transport-agnostic, zod-validated postMessage contract between the editor and the preview iframe, plus `snapshot-store.ts`'s DOM-free revision guard that `client.ts` applies inbound messages through. Despite living under `src/features/composer/`, this quartet has no filesystem/IndexedDB/dev-transport coupling, so it is portable domain logic, not host glue. | `src/features/composer/preview/{protocol,bridge,client,snapshot-store}.ts` (or wherever the fork's preview host lives). |
+
+Three loose ends when actually copying the protocol quartet, since none of
+them are self-contained in this repo's current tree:
+
+- `protocol.ts` imports `jsonValueSchema` from
+  [`src/styleguide/data/composer-schema.ts`](./src/styleguide/data/composer-schema.ts)
+  — a small, generic recursive JSON-value zod schema, but it currently lives
+  inside that host-owned schema file (see "Environment glue" below, which
+  otherwise classifies that file as glue). Extract just that one schema; the
+  rest of `composer-schema.ts` is this repo's own registry validation.
+- `bridge.ts` imports the route path/title constants from
+  [`route.ts`](./src/features/composer/preview/route.ts) (trivial to copy or
+  redefine against the fork's own preview route) and, more importantly, calls
+  `withBase()` from [`src/utils/base.ts`](./src/utils/base.ts) to build the
+  iframe URL — a genuine dependency on this repo's zfb site config (base path
+  / trailing slash / locale), not portable as-is. A fork needs its own
+  base-path helper here, or a hardcoded path if it has none.
+- All four files import shared types through the `@/composer` barrel
+  (`src/composer/index.ts`). That barrel is **not** model-only — it also
+  re-exports `library/`, `persistence/`, `reuse/`, `sample/`, `source/`, and
+  both `storage/` providers (`indexeddb`, `file-provider`), several of which are
+  explicitly excluded from this minimal cut. The symbols the quartet actually
+  needs all originate in `model/` (already in this table), so import them
+  **directly from `model/`** (or expose a new model-only barrel) rather than
+  pulling them through the full `@/composer` barrel, which would drag the
+  excluded modules into the fork.
+
+`src/composer/library/types.ts` also isn't purely environment-agnostic:
+`CompositionProviderId` is a closed union over this repo's own two providers
+(`indexeddb`, `files`), and `COMPOSITION_PROVIDERS` hardcodes the
+project-specific `storageLabel` string `"IndexedDB: zudo-sg-composer"`. Treat
+that one file as an adaptation point — add/remove provider ids and edit the
+labels for whatever storage backend(s) the fork ships — rather than assuming
+the whole `library/` directory needs no changes.
+
+The preview *host* UI that mounts around the protocol — the canvas host,
+iframe mounting, `renderer.ts`, `preview-app.ts` — is host-owned chrome (see
+"Environment glue" below), not part of this table.
+
+### Sample to re-derive
+
+[`src/composer/sample/`](./src/composer/sample/) is **not** copy-verbatim.
+It's this repo's native production sample composition, and it hardcodes this
+repo's own `ui.*` component ids, props, and slots — a fork has to re-derive
+its own sample document against whatever components it has registered, using
+this one only as a worked example of the shape.
+
+### Environment glue you must re-implement or drop
+
+- `src/composer/storage/indexeddb/` — browser IndexedDB storage provider.
+- `src/composer/storage/filesystem/` — `node:fs` store with TOCTOU-safe write
+  machinery (dev-authoring only, not for a deployed app).
+- `src/composer/storage/file-provider/` +
+  `plugins/composer-file-provider-plugin.mjs` +
+  `scripts/run-composer-file-e2e-server.mjs` — the dev filesystem transport
+  that wires the filesystem provider into the local dev server.
+- `src/composer/reuse/` — global-template reuse; product-specific, not core
+  document-model behavior.
+- `src/features/composer/*` **except** `preview/protocol.ts` + `bridge.ts` +
+  `client.ts` + `snapshot-store.ts` (portable — see the table above) — the
+  rest is host-owned app chrome: canvas host, toolbar, inspector, tree,
+  menus, routing, the `chrome/` controller.
+- [`pages/composer/*`](./pages/composer/) — the routed pages that mount the
+  app.
+- [`src/styleguide/data/composer-registry.ts`](./src/styleguide/data/composer-registry.ts) /
+  [`composer-schema.ts`](./src/styleguide/data/composer-schema.ts) — the
+  host's zod-validated runtime registry, parallel to
+  `src/styleguide/data/sg-registry.ts` in §1.
+
+This parallels the `src/features/styleguide/*` host-owned carve-out from §1 —
+the shared package ships only the components and their story/composer
+contracts, never the app chrome around them.
+
+### Known gaps you'll hit
+
+- **No scaffolding CLI.** Same as §5 above and tracked by the same
+  [#179](https://github.com/Takazudo/zudo-sg/issues/179) initializer — there's
+  no `pnpm new:composition`-style generator; a fork wires a storage provider
+  and the sample by hand.
+- **Reuse is product-specific.** `src/composer/reuse/` (global-template reuse)
+  is this product's own feature, not core document-model behavior — treat it
+  as a pattern to reference, not a module to copy.
+- **The dev filesystem transport is authoring-only.**
+  `src/composer/storage/filesystem/` and its plugin/server glue exist so this
+  repo's own contributors can author the sample composition against real
+  files in dev; it is not a deployed-app storage strategy and shouldn't be
+  adopted as one.
+
+---
+
+## 7. Related issues
 
 - [#179](https://github.com/Takazudo/zudo-sg/issues/179) — the deferred
   `create-zudo-sg` initializer this document stands in for.

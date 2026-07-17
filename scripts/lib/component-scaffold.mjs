@@ -135,10 +135,16 @@ export function componentTemplate({ pascalName, kebabName, nested = false }) {
 /**
  * `packages/ui/src/<name>/<name>.stories.tsx` — StoryMeta + a Playground
  * variant in the typed `Story<Props>` shape (see STORIES.md §3/§4).
+ *
+ * `nested` (default `false`) accounts for the extra directory level the
+ * category-nested layout inserts between `packages/ui/src` and the
+ * component's own directory: the relative import to the shared
+ * `stories/types` contract needs one more `../` (`../../stories/types`
+ * instead of `../stories/types`) or it resolves to a nonexistent path.
  */
-export function storiesTemplate({ pascalName, kebabName, category }) {
+export function storiesTemplate({ pascalName, kebabName, category, nested = false }) {
   const lines = [
-    `import type { StoryMeta, Story } from "../stories/types";`,
+    `import type { StoryMeta, Story } from "${nested ? "../../stories/types" : "../stories/types"}";`,
     `import { ${pascalName}, type ${pascalName}Props } from "./${kebabName}";`,
     ``,
     `const meta: StoryMeta = {`,
