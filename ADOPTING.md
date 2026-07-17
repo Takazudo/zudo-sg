@@ -39,7 +39,7 @@ authors component variants without adopting this catalog's UI at all.
 | [`scripts/new-component.mjs`](./scripts/new-component.mjs) + [`scripts/lib/component-scaffold.mjs`](./scripts/lib/component-scaffold.mjs) + [`scripts/lib/scaffold-config.mjs`](./scripts/lib/scaffold-config.mjs) | The `pnpm new:component` scaffolder — generates a component skeleton, stories file, test file, barrel export, and re-runs the registry codegen in one command. | `scripts/new-component.mjs`, `scripts/lib/component-scaffold.mjs`, `scripts/lib/scaffold-config.mjs`. |
 | _(optional)_ [`scripts/gen-token-manifest.mjs`](./scripts/gen-token-manifest.mjs) + [`scripts/lib/ui-token-manifest.mjs`](./scripts/lib/ui-token-manifest.mjs) | Regenerates the shared UI package's design-token manifest (feeding the token-tweak panel) from `packages/ui/styles/tokens.css` / `colors.css` via a real CSS AST parse (postcss), rather than a hand-maintained copy. | `scripts/gen-token-manifest.mjs`, `scripts/lib/ui-token-manifest.mjs`. |
 | _(optional)_ [`scripts/gen-root-token-manifest.mjs`](./scripts/gen-root-token-manifest.mjs) + [`scripts/lib/root-token-manifest.mjs`](./scripts/lib/root-token-manifest.mjs) + [`scripts/lib/css-var-resolver.mjs`](./scripts/lib/css-var-resolver.mjs) | Regenerates the **root host's own** design-token manifest (`src/config/design-tokens-manifest.ts`) from `src/styles/global.css` plus the two shared `@zudo-sg/ui` files it `@import`s, via a cross-file CSS custom-property resolver — needed because the root manifest mixes shared-package tokens, root-specific `@theme` overrides, and `var()` indirection across files, which `gen-token-manifest.mjs`'s single-file parse can't follow (see #208/#209/#210/#211). | `scripts/gen-root-token-manifest.mjs`, `scripts/lib/root-token-manifest.mjs`, `scripts/lib/css-var-resolver.mjs`, `scripts/lib/css-var-parser.mjs`. |
-| _(optional)_ [`scripts/gen-z-index.mjs`](./scripts/gen-z-index.mjs) | Regenerates a Tailwind v4 `@theme` z-index block from a single `Z_INDEX_TIERS` source array, so z-index layers stay centrally defined. See the parsing caveat in §6. | `scripts/gen-z-index.mjs`. |
+| _(optional)_ [`scripts/gen-z-index.mjs`](./scripts/gen-z-index.mjs) | Regenerates a Tailwind v4 `@theme` z-index block from a single `Z_INDEX_TIERS` source array, so z-index layers stay centrally defined. See the parsing caveat in §7. | `scripts/gen-z-index.mjs`. |
 
 `src/features/styleguide/*` is **host-owned application code, not part of
 `@zudo-sg/ui`** — the shared UI package (`packages/ui`) ships only the
@@ -194,7 +194,7 @@ worth checking those for current status before working around them yourself:
 
 ---
 
-## 7. Adopting the Composer
+## 6. Adopting the Composer
 
 The Composer (`/composer`) is a second, independent thing this repo's
 architecture can hand off, on top of the catalog covered in §1-§5: a
@@ -339,7 +339,7 @@ contracts, never the app chrome around them.
 
 ---
 
-## 8. Related issues
+## 7. Related issues
 
 - [#179](https://github.com/Takazudo/zudo-sg/issues/179) — the deferred
   `create-zudo-sg` initializer this document stands in for.
