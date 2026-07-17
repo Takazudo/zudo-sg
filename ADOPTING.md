@@ -197,7 +197,7 @@ worth checking those for current status before working around them yourself:
 ## 7. Adopting the Composer
 
 The Composer (`/composer`) is a second, independent thing this repo's
-architecture can hand off, on top of the catalog covered in §1-§6: a
+architecture can hand off, on top of the catalog covered in §1-§5: a
 document-model-driven authoring surface that assembles instances of the
 catalog's own components into a composition, backed by a revision-aware save
 queue and rendered live through a sandboxed preview iframe. It follows the
@@ -218,10 +218,16 @@ adoptable core is five named pieces: **model + commands + codec/recovery +
 save-queue + preview protocol** — i.e. `src/composer/model/` (document model,
 commands, codec, recovery) plus `src/composer/persistence/` (the save queue)
 plus the preview protocol (`src/features/composer/preview/protocol.ts` +
-`bridge.ts` + `client.ts`). To get a working editor rather than just the
-domain model, also add the store/lifecycle contract (`src/composer/library/`),
-the `generate-jsx` emitter (`src/composer/source/`), and one storage provider
-(see "Environment glue" below). Everything else — reuse, the dev filesystem
+`bridge.ts` + `client.ts`, see the table below for the full file set). Note
+`src/composer/persistence/save-queue.ts` itself imports its record/ref/outcome
+types from `src/composer/library/types.ts`, so that one file (not the rest of
+`library/`) travels with the minimal cut too — the store/lifecycle
+*implementation* the rest of `library/` provides is still an editor-level
+addition, not part of the five-item minimum. To get a working editor rather
+than just the domain model, add that store/lifecycle contract in full
+(`src/composer/library/`), the `generate-jsx` emitter
+(`src/composer/source/generate-jsx.ts`), and one storage provider (see
+"Environment glue" below). Everything else — reuse, the dev filesystem
 transport, the rest of the app UI — is additive.
 
 ### What to copy verbatim
@@ -236,8 +242,37 @@ UI package scope.
 | [`src/composer/model/`](./src/composer/model/) | Document model + commands (tree-mutation operations) + codec (lossless v1→v2 decoder) + recovery (future-schema quarantine). | `src/composer/model/`. |
 | [`src/composer/library/`](./src/composer/library/) | Store/lifecycle contract — `CompositionStore` / `CompositionLifecycleStore` / provider descriptors — the seam a storage provider implements against. | `src/composer/library/`. |
 | [`src/composer/persistence/`](./src/composer/persistence/) | The revision-aware save queue. | `src/composer/persistence/`. |
-| [`src/composer/source/`](./src/composer/source/) | The deterministic `generate-jsx` emitter — turns a document into exportable JSX source. | `src/composer/source/`. |
-| [`src/features/composer/preview/protocol.ts`](./src/features/composer/preview/protocol.ts) + [`bridge.ts`](./src/features/composer/preview/bridge.ts) + [`client.ts`](./src/features/composer/preview/client.ts) | The **preview protocol** — a transport-agnostic, zod-validated postMessage contract between the editor and the preview iframe. Despite living under `src/features/composer/`, it has no filesystem/IndexedDB/dev-transport coupling, so it is portable domain logic, not host glue. | `src/features/composer/preview/{protocol,bridge,client}.ts` (or wherever the fork's preview host lives). |
+| [`src/composer/source/generate-jsx.ts`](./src/composer/source/generate-jsx.ts) | The deterministic emitter — turns a document into exportable JSX source. Copy this file alone, **not** the whole `source/` directory: its sibling `plan-linked-jsx.ts` pulls in `src/composer/reuse/` (materialize/resolver), which is product-specific glue (see below), not core doc-model behavior. | `src/composer/source/generate-jsx.ts`. |
+| [`src/features/composer/preview/protocol.ts`](./src/features/composer/preview/protocol.ts) + [`bridge.ts`](./src/features/composer/preview/bridge.ts) + [`client.ts`](./src/features/composer/preview/client.ts) + [`snapshot-store.ts`](./src/features/composer/preview/snapshot-store.ts) | The **preview protocol** — a transport-agnostic, zod-validated postMessage contract between the editor and the preview iframe, plus `snapshot-store.ts`'s DOM-free revision guard that `client.ts` applies inbound messages through. Despite living under `src/features/composer/`, this quartet has no filesystem/IndexedDB/dev-transport coupling, so it is portable domain logic, not host glue. | `src/features/composer/preview/{protocol,bridge,client,snapshot-store}.ts` (or wherever the fork's preview host lives). |
+
+Three loose ends when actually copying the protocol quartet, since none of
+them are self-contained in this repo's current tree:
+
+- `protocol.ts` imports `jsonValueSchema` from
+  [`src/styleguide/data/composer-schema.ts`](./src/styleguide/data/composer-schema.ts)
+  — a small, generic recursive JSON-value zod schema, but it currently lives
+  inside that host-owned schema file (see "Environment glue" below, which
+  otherwise classifies that file as glue). Extract just that one schema; the
+  rest of `composer-schema.ts` is this repo's own registry validation.
+- `bridge.ts` imports the route path/title constants from
+  [`route.ts`](./src/features/composer/preview/route.ts) (trivial to copy or
+  redefine against the fork's own preview route) and, more importantly, calls
+  `withBase()` from [`src/utils/base.ts`](./src/utils/base.ts) to build the
+  iframe URL — a genuine dependency on this repo's zfb site config (base path
+  / trailing slash / locale), not portable as-is. A fork needs its own
+  base-path helper here, or a hardcoded path if it has none.
+- All four files import shared types through the `@/composer` barrel
+  (`src/composer/index.ts`), which just re-exports `model/` — already in this
+  table — so that import needs repointing to wherever `model/` lands, not a
+  new file to copy.
+
+`src/composer/library/types.ts` also isn't purely environment-agnostic:
+`CompositionProviderId` is a closed union over this repo's own two providers
+(`indexeddb`, `files`), and `COMPOSITION_PROVIDERS` hardcodes the
+project-specific `storageLabel` string `"IndexedDB: zudo-sg-composer"`. Treat
+that one file as an adaptation point — add/remove provider ids and edit the
+labels for whatever storage backend(s) the fork ships — rather than assuming
+the whole `library/` directory needs no changes.
 
 The preview *host* UI that mounts around the protocol — the canvas host,
 iframe mounting, `renderer.ts`, `preview-app.ts` — is host-owned chrome (see
@@ -263,9 +298,9 @@ this one only as a worked example of the shape.
 - `src/composer/reuse/` — global-template reuse; product-specific, not core
   document-model behavior.
 - `src/features/composer/*` **except** `preview/protocol.ts` + `bridge.ts` +
-  `client.ts` (portable — see the table above) — the rest is host-owned app
-  chrome: canvas host, toolbar, inspector, tree, menus, routing, the
-  `chrome/` controller.
+  `client.ts` + `snapshot-store.ts` (portable — see the table above) — the
+  rest is host-owned app chrome: canvas host, toolbar, inspector, tree,
+  menus, routing, the `chrome/` controller.
 - [`pages/composer/*`](./pages/composer/) — the routed pages that mount the
   app.
 - [`src/styleguide/data/composer-registry.ts`](./src/styleguide/data/composer-registry.ts) /
