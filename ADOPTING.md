@@ -223,12 +223,17 @@ plus the preview protocol (`src/features/composer/preview/protocol.ts` +
 types from `src/composer/library/types.ts`, so that one file (not the rest of
 `library/`) travels with the minimal cut too — the store/lifecycle
 *implementation* the rest of `library/` provides is still an editor-level
-addition, not part of the five-item minimum. To get a working editor rather
-than just the domain model, add that store/lifecycle contract in full
-(`src/composer/library/`), the `generate-jsx` emitter
+addition, not part of the five-item minimum. Adding that store/lifecycle
+contract in full (`src/composer/library/`), the `generate-jsx` emitter
 (`src/composer/source/generate-jsx.ts`), and one storage provider (see
-"Environment glue" below). Everything else — reuse, the dev filesystem
-transport, the rest of the app UI — is additive.
+"Environment glue" below) gets you a **headless persistence/export core** — a
+document model that loads, mutates, saves, and exports JSX — but **not yet an
+interactive editor**. The editing surface itself (controller, canvas, renderer,
+preview app, chooser, tree, inspector) lives in `src/features/composer/` and is
+classified as host glue below: a fork that wants a working editing UI must
+reimplement or port that layer, not merely copy the domain modules. Only reuse
+and the dev filesystem transport are genuinely additive — the app UI is required
+for an actual editor.
 
 ### What to copy verbatim
 
@@ -262,9 +267,14 @@ them are self-contained in this repo's current tree:
   / trailing slash / locale), not portable as-is. A fork needs its own
   base-path helper here, or a hardcoded path if it has none.
 - All four files import shared types through the `@/composer` barrel
-  (`src/composer/index.ts`), which just re-exports `model/` — already in this
-  table — so that import needs repointing to wherever `model/` lands, not a
-  new file to copy.
+  (`src/composer/index.ts`). That barrel is **not** model-only — it also
+  re-exports `library/`, `persistence/`, `reuse/`, `sample/`, `source/`, and
+  both `storage/` providers (`indexeddb`, `file-provider`), several of which are
+  explicitly excluded from this minimal cut. The symbols the quartet actually
+  needs all originate in `model/` (already in this table), so import them
+  **directly from `model/`** (or expose a new model-only barrel) rather than
+  pulling them through the full `@/composer` barrel, which would drag the
+  excluded modules into the fork.
 
 `src/composer/library/types.ts` also isn't purely environment-agnostic:
 `CompositionProviderId` is a closed union over this repo's own two providers
