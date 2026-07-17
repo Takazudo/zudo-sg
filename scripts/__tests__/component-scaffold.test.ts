@@ -188,6 +188,13 @@ describe("storiesTemplate", () => {
     expect(src).toContain(`import { DemoWidget } from "${UI_PACKAGE_NAME}";`);
     expect(src).toContain("export const Playground: Story<DemoWidgetProps> = {");
     expect(src).toContain('prop: "variant"');
+    expect(src).toContain(`from "../stories/types"`);
+  });
+
+  it("uses a one-deeper relative stories/types import when nested (category-dir scaffold)", () => {
+    const src = storiesTemplate({ pascalName: "DemoWidget", kebabName: "demo-widget", category: "Layout", nested: true });
+    expect(src).toContain(`import type { StoryMeta, Story } from "../../stories/types";`);
+    expect(src).not.toContain('from "../stories/types"');
   });
 });
 
