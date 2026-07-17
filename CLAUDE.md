@@ -24,10 +24,12 @@ pages/                    # File-based routing (host-owned: /, /components/*, /d
 src/
 ├── components/           # JSX + Preact components
 │   └── content/          # MDX content components (admonitions, code-group, ...)
+├── composer/             # Headless document model + storage + source-gen (composer domain logic)
 ├── config/               # Settings, color schemes, design token manifests
 ├── content/
 │   └── docs/             # Slim root guide content
 ├── features/
+│   ├── composer/         # /composer sub-app UI: chrome/canvas/preview/inspector/tree/reuse
 │   └── styleguide/       # /components catalog: chrome, preview, code-panel, search, token-tweak
 ├── styleguide/
 │   └── data/             # Codegen-backed component registry + nav nodes (#103)
@@ -76,6 +78,27 @@ Do NOT use h1 (`#`) in doc content — the page title from frontmatter is render
   (`when: "load"` or `"idle"`) — see `pages/lib/_body-end-islands.tsx` for the pattern.
   There is no `client:load`-style directive; that was an Astro-era convention this project
   no longer uses.
+
+## Composer
+
+- **What it is** — the `/composer` sub-application (epic #243): compose real
+  `@zudo-sg/ui` components into a persisted, JSON-safe tree. Routes:
+  `pages/composer/index.tsx` + `pages/composer/preview.tsx`; chrome in
+  `pages/lib/_composer-chrome.tsx`.
+- **Where code lives** — headless domain logic (model/commands/codec/recovery,
+  library/persistence/source, storage providers, reuse) in `src/composer/`;
+  app/UI (chrome/canvas/preview/inspector/tree/reuse) in `src/features/composer/`;
+  runtime registry + zod manifest in `src/styleguide/data/composer-registry.ts` +
+  `composer-schema.ts`; dev-only filesystem transport in
+  `plugins/composer-file-provider-plugin.mjs`.
+- **Behavioral source of truth** — `packages/ui/src/composer/types.ts` +
+  `packages/ui/STORIES.md` §10 (Composer contract) define the authoring
+  contract; module behavior is pinned by module-header comments,
+  `src/composer/**/__tests__`, and TESTING.md's "Composer E2E suites" section.
+  A component opts into the composer only via the OPTIONAL `composer` prop on
+  its `StoryMeta` (`defineComposer<P>()`) — never automatic.
+- See ADOPTING.md's "Adopting the Composer" section for the portable-vs-glue
+  split when copying this pattern into another project.
 
 ## Monorepo Structure
 
