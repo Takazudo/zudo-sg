@@ -30,3 +30,4 @@ minimumReleaseAgeExclude:
   - '@takazudo/zfb-linux-arm64-gnu'
   - '@takazudo/zfb-linux-x64-gnu'
   - '@takazudo/zfb-win32-x64-msvc'
+  - '@takazudo/zfb-md-wasm@0.1.0-next.90'

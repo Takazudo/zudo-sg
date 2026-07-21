@@ -1,14 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-// Mock the zudo-doc theme iframe-bridge so we can observe what the registry
-// sends to each iframe and drive the `onIframeReady` callback manually (the
-// real bridge relies on cross-window postMessage, which is not available here).
+// Mock the project-owned iframe-css-vars bridge so we can observe what the
+// registry sends to each iframe and drive the `onIframeReady` callback
+// manually (the real bridge relies on cross-window postMessage, which is not
+// available here).
 const applyCalls: Array<{ iframe: unknown; vars: ReadonlyArray<readonly [string, string]> }> = [];
 const clearCalls: Array<{ iframe: unknown; names: ReadonlyArray<string> }> = [];
 // Per-iframe `ready` callbacks captured from onIframeReady, keyed by contentWindow.
 const readyCallbacks = new Map<unknown, () => void>();
 
-vi.mock("@takazudo/zudo-doc/theme", () => ({
+vi.mock("../iframe-css-vars-bridge", () => ({
   sendApplyCssVars: (iframe: unknown, vars: ReadonlyArray<readonly [string, string]>) => {
     applyCalls.push({ iframe, vars });
   },

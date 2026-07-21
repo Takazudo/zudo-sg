@@ -387,7 +387,8 @@ describe("createDevMiddlewareHandler — real routing map + same-file shim", () 
   }
 
   // Raw, un-shimmed zdtp handler — the same factory the shim wraps. Used to
-  // prove the read-all-then-write-all clobber the shim exists to fix.
+  // confirm zdtp no longer has the read-all-then-write-all clobber the shim
+  // was built to work around (fixed upstream in zdtp 0.4.7, #527).
   function rawHandler() {
     return createApplyHandler({
       rootDir: sandbox,
@@ -453,11 +454,17 @@ describe("createDevMiddlewareHandler — real routing map + same-file shim", () 
     expect(css).not.toContain("--color-fg: light-dark(");
   });
 
-  // ── (d) SAME-FILE pairs: bug reproduction (raw) + fix verification (shim) ──
-  // Each pair MUST clobber through the raw handler and land BOTH edits through
-  // the shim — that contrast is what proves the shim actually fixes the bug.
+  // ── (d) SAME-FILE pairs: upstream fix confirmation (raw) + shim regression
+  //     guard (shim) ── zdtp 0.4.7 (#527) fixed the read-all-then-write-all
+  //     clobber this shim was built to work around (upstream bug-report sub
+  //     #202) by coalescing same-file token groups inside createApplyHandler
+  //     itself — see node_modules/@takazudo/zdtp/CHANGELOG.md's 0.4.7 entry.
+  //     The raw handler no longer clobbers either pair below; kept as a
+  //     regression guard in case a future zdtp bump reintroduces it. The shim
+  //     stays in place (harmless on top of the fixed upstream behavior) —
+  //     whether it's still needed at all is a separate follow-up.
 
-  it("(d) palette + color → colors.css: RAW zdtp handler clobbers (the bug)", async () => {
+  it("(d) palette + color → colors.css: RAW zdtp handler no longer clobbers (fixed upstream, zdtp 0.4.7 #527)", async () => {
     const { status } = await postRaw(rawHandler(), {
       "--palette-base-4": "oklch(.250 .006 65)",
       "--color-fg": "red",
@@ -466,9 +473,9 @@ describe("createDevMiddlewareHandler — real routing map + same-file shim", () 
     const css = readReal("colors.css");
     const hasPalette = css.includes("--palette-base-4: oklch(.250 .006 65);");
     const hasColor = css.includes("--color-fg: red;");
-    // read-all-then-write-all: both same-file groups read the ORIGINAL, so the
-    // second write clobbers the first — they cannot both survive.
-    expect(hasPalette && hasColor).toBe(false);
+    // createApplyHandler now coalesces same-file groups before reading/writing,
+    // so both edits land — no clobber.
+    expect(hasPalette && hasColor).toBe(true);
   });
 
   it("(d) palette + color → colors.css: SHIM lands BOTH edits", async () => {
@@ -499,7 +506,7 @@ describe("createDevMiddlewareHandler — real routing map + same-file shim", () 
     expect(new Set(files).size).toBe(files.length);
   });
 
-  it("(d) spacing + font → tokens.css: RAW zdtp handler clobbers (the bug)", async () => {
+  it("(d) spacing + font → tokens.css: RAW zdtp handler no longer clobbers (fixed upstream, zdtp 0.4.7 #527)", async () => {
     const { status } = await postRaw(rawHandler(), {
       "--spacing-hsp-md": "0.8rem",
       "--font-weight-bold": "800",
@@ -508,7 +515,7 @@ describe("createDevMiddlewareHandler — real routing map + same-file shim", () 
     const css = readReal("tokens.css");
     const hasSpacing = css.includes("--spacing-hsp-md: 0.8rem;");
     const hasFont = css.includes("--font-weight-bold: 800;");
-    expect(hasSpacing && hasFont).toBe(false);
+    expect(hasSpacing && hasFont).toBe(true);
   });
 
   it("(d) spacing + font → tokens.css: SHIM lands BOTH edits", async () => {

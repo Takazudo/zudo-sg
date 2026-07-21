@@ -23,6 +23,14 @@ export default defineConfig({
   tailwind: { enabled: true },
   // Public URL prefix for <link rel="stylesheet"> and <script> tags.
   base: settings.base,
+  // `@takazudo/zfb-md-wasm` and `@takazudo/zudo-doc-history-server` are
+  // OPTIONAL peer deps of @takazudo/zudo-doc that its html-preview-wrapper
+  // and doc-history-area package modules reach at build time regardless of
+  // whether the owning feature (htmlPreview / docHistory) is enabled — both
+  // are off here (see settings.ts). Both are real (installed) dependencies
+  // instead of `bundle.external`; see the equivalent comment in the root
+  // project's zfb.config.ts for why `external` alone doesn't cover every
+  // build pass zfb runs (islands bundle, static-paths evaluation).
 
   // ── Preset-owned fields (content collections, plugins, markdown, …) ────────
   ...zudoDocPreset({ settings, buildDocsSchema, directiveVocabulary, translations, colorSchemes }),

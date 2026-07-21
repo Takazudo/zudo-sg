@@ -43,15 +43,18 @@
 //   colors.css exposes both (Tier-1 palette in `:root`, Tier-2 `--color-*` in
 //   `@theme`); tokens.css is a single `@theme`.
 //
-// SAME-FILE HAZARD — two routed prefixes now share EACH target file (palette +
-//   color; and six prefixes on tokens.css), and zdtp 0.4.5 clobbers same-file
-//   prefix-groups because its apply handler is read-all-then-write-all. The
-//   `createDevMiddlewareHandler` shim below fixes this by issuing one apply
-//   call per prefix, awaited sequentially; see its inline comment + the
-//   upstream bug-report sub #202. The panel POSTs every currently-dirty token
-//   across ALL tabs in one Apply request (zdtp's `buildApplyOverrides`), so a
-//   single Apply routinely mixes prefixes that land in the same file — exactly
-//   the case the shim exists to make correct.
+// SAME-FILE HAZARD (historical) — two routed prefixes share EACH target file
+//   (palette + color; and six prefixes on tokens.css). zdtp 0.4.5's apply
+//   handler was read-all-then-write-all and clobbered same-file prefix-groups;
+//   the `createDevMiddlewareHandler` shim below fixed this by issuing one
+//   apply call per prefix, awaited sequentially — see its inline comment +
+//   the upstream bug-report sub #202. zdtp 0.4.7 (#527) later fixed the root
+//   cause upstream (createApplyHandler now coalesces same-file token groups
+//   before reading/writing), so the shim's per-prefix sequencing is no longer
+//   strictly required to avoid a clobber — it is kept here as a no-behavior-
+//   change no-op layer rather than removed in this pass; see
+//   plugins/__tests__/zdtp-apply-proxy-plugin.test.ts's "(d)" tests, which now
+//   assert the RAW handler also lands both edits correctly.
 
 import { createApplyHandler, loadRoutingFromFile } from "@takazudo/zdtp/server";
 import { resolve } from "node:path";

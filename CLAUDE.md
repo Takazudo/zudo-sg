@@ -4,11 +4,17 @@ Documentation site built with [zudo-doc](https://github.com/zudolab/zudo-doc) �
 
 ## Tech Stack
 
-- **zfb** — documentation build framework
+- **zfb** — documentation build framework. The `@takazudo/zfb*` family is deliberately pinned to
+  `0.1.0-next.89`, NOT the newest `next.90`: next.90's "Stage Escape Guards" hard-fail both the
+  `apps/demo` build (flags `@zudo-sg/ui`'s documented consume-from-source setup as package-name
+  sibling reach) and the `doc/` build (prunes `packageOwnedRoutes`' own `.zudo-doc/routes-src/`
+  as a hidden dir). No `zfb.config.ts` escape hatch exists. Upstream: zudo-front-builder#1816,
+  #1730. zudo-doc 4.3.0 only requires `^0.1.0-next.89`, so this costs nothing — lift the pin once
+  those land.
 - **MDX** — content format
 - **Tailwind CSS v4** — via `@tailwindcss/vite`
 - **Preact** — for interactive islands only (with compat mode for React API)
-- **syntect** — built-in code highlighting, run by zfb's Rust pipeline at build time (dual-theme, matching the site's light/dark mode). The themes are WCAG-AA-compliant variants of `base16-ocean` — `Base16 Ocean Light A11y` / `Base16 Ocean Dark A11y`, defined in `src/styles/syntect-themes/*.tmTheme` and wired via `codeHighlight` in `zfb.config.ts` (#169; stock base16-ocean fails AA for most tokens)
+- **syntax highlighting** — built-in class-mode code highlighting, run by zfb's Rust pipeline at build time: fences render as semantic `hi-*` token classes under `pre.hi-root`, mapped to this project's `--zd-syntax-*` design tokens via `@takazudo/zudo-doc/features.css`'s `--zfb-hi-*` bridge — no project-owned renderer, theme, or `codeHighlight` config required (zudo-doc 4.x; superseded the old project-owned WCAG-AA `base16-ocean` tmTheme pair from #169, since syntax colors now inherit the site's existing semantic tokens instead of being baked per-span at build time)
 
 ## Commands
 
