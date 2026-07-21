@@ -33,7 +33,13 @@ describe("ProseMd — real markdown runtime", () => {
       const heading = await screen.findByRole("heading", { level: 2, name: /title/i });
       expect(heading.closest(".zc-prose-md")).toBeTruthy();
       await waitFor(() => {
-        expect(document.querySelector("pre.hi-root")).toBeTruthy();
+        // Assert a TOKEN span, not just `pre.hi-root`. Both degrade paths
+        // (`neutralizeHighlightedBlocks`, `fallbackHighlightMarkup`) emit that
+        // wrapper too, so asserting it alone stays green even if highlighting
+        // fails completely. A `class`-bearing span is also the thing this test
+        // uniquely justifies: it has to survive BOTH the DOMPurify allowlist and
+        // the dangerouslySetInnerHTML mount.
+        expect(document.querySelector("pre.hi-root .hi-kw")).toBeTruthy();
       });
     },
     WASM_WARMUP_TIMEOUT_MS,
