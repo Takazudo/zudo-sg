@@ -80,7 +80,9 @@ html[${COMPOSER_PREVIEW_DOC_ATTR}] {
      flat. The mapping mirrors zudo-doc's own SYNTAX_SEMANTIC_ALIASES rather than
      any theme pack's literals, so nothing here can drift against upstream. */
   --zd-code-fg: var(--color-fg);
-  --zd-code-bg: var(--color-surface-2);
+  /* Code surface, NOT --color-surface-2 — see src/styles/preview.css for the full
+     rationale (surface-2 is a mid tone in dark, dropping syntax hues under AA). */
+  --zd-code-bg: color-mix(in oklch, var(--color-bg) 80%, var(--color-surface-2));
   --zd-syntax-comment:  var(--color-muted);
   --zd-syntax-string:   var(--color-success);
   --zd-syntax-number:   var(--color-warning);

@@ -193,7 +193,11 @@
   font-family: var(--font-mono);
   font-size: var(--text-small);
   line-height: var(--leading-relaxed);
-  background-color: var(--color-surface-2);
+  /* Bind to the code surface the syntax bridge is contrast-balanced against
+     (--zd-code-bg), falling back to surface-2 only where no code surface is
+     defined. surface-2 alone is a mid tone in dark and pushes hi-* tokens under
+     WCAG AA — see src/styles/preview.css. */
+  background-color: var(--zd-code-bg, var(--color-surface-2));
   border-radius: var(--radius-md);
   padding: var(--spacing-vsp-sm) var(--spacing-hsp-lg);
   overflow-x: auto;

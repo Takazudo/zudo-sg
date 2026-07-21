@@ -75,7 +75,14 @@ html[data-sg-preview-doc] {
      there is nothing here that can drift out of sync with zudo-doc's palettes.
      `preview-styles.test.ts` pins the mapping against that upstream table. */
   --zd-code-fg: var(--color-fg);
-  --zd-code-bg: var(--color-surface-2);
+  /* Code surface, NOT --color-surface-2. The ui neutral ramp has only 4 rungs and
+     surface-2 lands on neutral-2 (L .410) in dark — a mid tone. Syntax hues sit at
+     L .68–.76, so on that background keyword/string/callable/number all fall to
+     ~3.1–4.1:1, under WCAG AA. Doc-chrome pages put fences on a much subtler code
+     surface (~L .28 dark) and clear AA with these exact hues, so mirror that
+     relationship: offset slightly from the page background rather than jumping a
+     whole rung. Lands ~L .95 light / ~L .27 dark, matching the doc surface. */
+  --zd-code-bg: color-mix(in oklch, var(--color-bg) 80%, var(--color-surface-2));
   --zd-syntax-comment:  var(--color-muted);
   --zd-syntax-string:   var(--color-success);
   --zd-syntax-number:   var(--color-warning);
