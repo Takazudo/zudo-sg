@@ -80,7 +80,7 @@
     "jsdom": "^29.1.1",
     "lefthook": "^2.1.9",
     "msw": "^2.15.0",
-    "postcss": "^8.5.15",
+    "postcss": "^8.5.21",
     "tailwindcss": "^4.2.0",
     "tsx": "^4.21.0",
     "typescript": "^5.9.0",
