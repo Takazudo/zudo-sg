@@ -38,6 +38,14 @@
 // can never leave a duplicate text node behind), and a `dblclick` inside the
 // editable stops propagating so word-select cannot restart the session.
 //
+// ── Leaving the browser is not leaving the block ────────────────────────────
+//
+// A click on host chrome is invisible in here: the iframe cannot see the host
+// document's mousedown, so the only signal is focus leaving with no in-iframe
+// successor. A window/tab blur reports the very same thing, which is why
+// `leftTheBrowser` exists — without it, alt-tabbing away to copy something
+// raised the leave dialog and pulled the tab back to the front to show it.
+//
 // ── Why there is no "set mode" message ──────────────────────────────────────
 //
 // `restore-editing` (keeping a draft that a mode switch stashed) requires the
