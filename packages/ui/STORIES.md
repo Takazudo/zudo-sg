@@ -109,6 +109,27 @@ See also `.claude/skills/zudo-doc-design-system/SKILL.md` for the accent-budget
 rules (≤2–3 accent elements per viewport, hover always neutral) that govern how
 components spend the `accent` token at runtime.
 
+### Component-scoped CSS (rare exception)
+
+Almost every component styles itself entirely with Tailwind utility classes —
+no component-owned CSS file, on top of the two required imports above, is
+normally needed. `ProseMd` (#373) is the first exception: it mounts an opaque,
+runtime-rendered HTML fragment (arbitrary markdown → `<h2>/<p>/<ul>/...`) that
+no `Prose*` per-element override can reach, so it ships its own scoped
+stylesheet, co-located at `@zudo-sg/ui/src/content/prose-md/prose-md.css`
+(exposed via the package's `./src/*` export, like any other source file).
+
+**A consumer that renders `ProseMd` must import that file too**, in addition
+to `tokens.css` + `colors.css` above — omitting it does not break anything,
+it just leaves `ProseMd` rendering unstyled native HTML (the two required
+imports alone are not sufficient for this one component). This repo's root
+app wires it into its single bundled stylesheet via
+`src/styles/global.css`'s `@import "@zudo-sg/ui/src/content/prose-md/prose-md.css"`
+— see that import's comment for why, and `prose-md.css`'s own header for what
+it does and does not style. A future consumer outside this repo (e.g. a
+sibling workspace's own CSS graph) needs the equivalent import wired in
+manually; it is not part of the two-import baseline contract.
+
 ---
 
 ## 2. File location & discovery mechanism
@@ -631,7 +652,8 @@ export const Playground: Story<CtaButtonProps> = { /* … */ };
   for deterministic JSX/import generation.
 - **`defaults`** — JSON-safe initial prop values, keyed to real props.
 - **`fields`** — typed scalar-prop descriptors (`text` / `select` / `boolean` /
-  `number` / `color`). A `text` field may set `inlineEdit?: { multiline? }`.
+  `number` / `color`). A `text` field may set
+  `inlineEdit?: { multiline?, mode? }` — see "Inline-edit modes" below.
 - **`slots`** — named structural slots: `{ id, prop, label, accepts?, cardinality }`.
   `id` is the **persisted document key**; `prop` is the real prop it fills.
 - **`constraints?`** — optional JSON-safe structural constraints.
@@ -653,6 +675,23 @@ The registry is DERIVED from the same generated `storyModules` map the catalog
 already imports — it filters for opted-in metas, never a second filesystem scan
 or `import.meta.glob`.
 
+### Inline-edit modes
+
+A `text` field's `inlineEdit` object carries an optional `mode`:
+
+- `"plain"` (default, omitting `mode` means this) — the existing auto-commit
+  inline session (wave-8 / #257, #288): edits commit as the user types/blurs.
+- `"markdown-source"` — the canvas inline editor shows the raw markdown source
+  as plain text and routes through the explicit-save session instead (no
+  auto-commit anywhere) — see epic #368. This is a PARALLEL path keyed off the
+  mode marker, not a modification of the `"plain"` session.
+
+```tsx
+fields: [
+  { kind: "text", prop: "markdown", label: "Body", inlineEdit: { mode: "markdown-source" } },
+],
+```
+
 ### Invariants (enforced by the host validator + type system)
 
 - `componentId` and slot `id`s must **not** derive from title, slug, category,
@@ -663,6 +702,11 @@ or `import.meta.glob`.
 - `defaults` (and all field values) must be JSON-safe; functions/VNodes never
   enter the serializable manifest.
 - At most one inline-editable field per component (MVP).
+- A field declaring `inlineEdit` MUST have a matching `adapters.inlineEditor`
+  whose `field` references that same prop (#372) — the host validator rejects
+  an inlineEdit field with no adapter (or one that targets a different field)
+  as an authoring-time error, rather than letting it silently never become
+  editable (`inlineEditableForEntry()` would otherwise just return `null`).
 
 Full authoring types live in
 [`src/composer/types.ts`](./src/composer/types.ts) (re-exported from the package

@@ -73,6 +73,25 @@ html[${COMPOSER_PREVIEW_DOC_ATTR}] {
   --color-danger:  light-dark(var(--palette-state-danger),  var(--palette-state-danger-dark));
   --color-warning: light-dark(var(--palette-state-warning), var(--palette-state-warning-dark));
   --color-info:    light-dark(var(--palette-state-info),    var(--palette-state-info-dark));
+  /* Syntax highlighting (#381) — kept IDENTICAL to src/styles/preview.css, which
+     carries the full rationale: zudo-doc's features.css bridges the zfb-hi-*
+     properties (what the hi-* fence classes read) onto zd-syntax-* / zd-code-*,
+     and a chrome-free preview document has none of those, so fences rendered
+     flat. The mapping mirrors zudo-doc's own SYNTAX_SEMANTIC_ALIASES rather than
+     any theme pack's literals, so nothing here can drift against upstream. */
+  --zd-code-fg: var(--color-fg);
+  /* Code surface, NOT --color-surface-2 — see src/styles/preview.css for the full
+     rationale (surface-2 is a mid tone in dark, dropping syntax hues under AA). */
+  --zd-code-bg: color-mix(in oklch, var(--color-bg) 80%, var(--color-surface-2));
+  --zd-syntax-comment:  var(--color-muted);
+  --zd-syntax-string:   var(--color-success);
+  --zd-syntax-number:   var(--color-warning);
+  --zd-syntax-keyword:  var(--color-accent);
+  --zd-syntax-callable: var(--color-info);
+  --zd-syntax-type:     var(--color-warning);
+  --zd-syntax-name:     var(--zd-code-fg);
+  --zd-syntax-inserted: var(--color-success);
+  --zd-syntax-deleted:  var(--color-danger);
 }
 
 /* ── Canvas ───────────────────────────────────────────────────────────────── */
@@ -485,6 +504,161 @@ html[${COMPOSER_PREVIEW_DOC_ATTR}] {
   cursor: pointer;
 }
 .zc-error { margin: 0 0 1rem; }
+
+/* ── Explicit-save markdown source editing (issue #375, epic #368) ────────── */
+/* The raw-source editable that REPLACES the component's body while a prose
+   session is open. The editing affordance itself (accent outline + wash) comes
+   from the shared [data-zc-inline-editing] rule above — higher specificity, and
+   deliberately the same signal both sessions use. Everything here is the
+   source-editor presentation: monospace, preserved newlines, no reflow surprise
+   when a long unbroken URL is pasted. */
+.zc-prose-source {
+  display: block;
+  min-height: 3rem;
+  margin: 0;
+  padding: var(--spacing-vsp-3xs) var(--spacing-hsp-sm);
+  border-radius: 4px;
+  color: var(--color-fg);
+  font-family: var(--font-mono);
+  /* 14px functional-text floor. */
+  font-size: var(--text-caption);
+  line-height: 1.7;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  tab-size: 2;
+  cursor: text;
+}
+
+/* The floating Save affordance: bottom-right of the IFRAME viewport, which IS
+   the canvas area, and outside the editable region by construction. Only ever
+   present while a prose session is open. */
+.zc-prose-savebar {
+  position: fixed;
+  inset-block-end: var(--spacing-vsp-sm);
+  inset-inline-end: var(--spacing-hsp-lg);
+  z-index: var(--z-index-popover);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-hsp-sm);
+  padding: var(--spacing-vsp-3xs) var(--spacing-hsp-sm);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-surface);
+  box-shadow: 0 2px 10px light-dark(rgb(0 0 0 / 0.12), rgb(0 0 0 / 0.4));
+}
+.zc-prose-savebar-status {
+  color: var(--color-muted);
+  font-size: var(--text-caption);
+  white-space: nowrap;
+}
+
+/* Accent budget: this is the ONE primary CTA of the editing viewport, and it
+   only turns loud once there is something to save — a clean session's button is
+   a neutral "Done". Hover stays neutral in both states (a brightness wash on
+   the accent fill, never a second accent hue). */
+.zc-prose-save {
+  min-height: 2rem;
+  padding: 0 var(--spacing-hsp-md);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  background: var(--color-surface-2);
+  color: var(--color-fg);
+  font: inherit;
+  font-size: var(--text-caption);
+  cursor: pointer;
+}
+.zc-prose-save[data-zc-dirty] {
+  border-color: transparent;
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  font-weight: 600;
+}
+@media (hover: hover) {
+  .zc-prose-save:hover {
+    background: color-mix(in srgb, var(--color-fg) 8%, var(--color-surface-2));
+  }
+  .zc-prose-save[data-zc-dirty]:hover {
+    background: color-mix(in srgb, var(--color-fg) 12%, var(--color-accent));
+  }
+}
+.zc-prose-save:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+
+/* ── Confirmation dialogs (ESC / leave) ───────────────────────────────────── */
+/* Iframe-side, plain elements — the preview document has no Tailwind chrome
+   styles and no host dialog to borrow. The backdrop is what makes the dialog
+   genuinely modal for the POINTER (Tab containment is handled in
+   prose-inline-session.ts): it also covers the Save bar, which is why the bar
+   is not rendered at all while a dialog is open. */
+.zc-prose-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-index-modal-backdrop);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-hsp-lg);
+  background: light-dark(rgb(0 0 0 / 0.32), rgb(0 0 0 / 0.55));
+}
+.zc-prose-dialog {
+  z-index: var(--z-index-modal);
+  width: min(24rem, 100%);
+  padding: var(--spacing-vsp-xs) var(--spacing-hsp-lg) var(--spacing-hsp-lg);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface);
+  color: var(--color-fg);
+  box-shadow: 0 8px 32px light-dark(rgb(0 0 0 / 0.18), rgb(0 0 0 / 0.5));
+}
+.zc-prose-dialog-title {
+  margin: 0;
+  font-size: var(--text-small);
+  font-weight: 600;
+}
+.zc-prose-dialog-text {
+  margin: var(--spacing-vsp-3xs) 0 0;
+  color: var(--color-muted);
+  font-size: var(--text-caption);
+}
+.zc-prose-dialog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--spacing-hsp-sm);
+  margin-block-start: var(--spacing-vsp-xs);
+}
+.zc-prose-dialog-action {
+  min-height: 2rem;
+  padding: 0 var(--spacing-hsp-md);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  background: var(--color-surface);
+  color: var(--color-fg);
+  font: inherit;
+  font-size: var(--text-caption);
+  cursor: pointer;
+}
+/* Destructive, but not loud: danger tone on the LABEL and the border only —
+   a filled danger button next to a filled accent button would read as two
+   competing primaries. */
+.zc-prose-dialog-action--danger {
+  border-color: color-mix(in srgb, var(--color-danger) 45%, var(--color-border));
+  color: var(--color-danger);
+}
+.zc-prose-dialog-action--primary {
+  border-color: transparent;
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  font-weight: 600;
+}
+@media (hover: hover) {
+  .zc-prose-dialog-action:hover {
+    background: color-mix(in srgb, var(--color-fg) 8%, var(--color-surface));
+  }
+  .zc-prose-dialog-action--primary:hover {
+    background: color-mix(in srgb, var(--color-fg) 12%, var(--color-accent));
+  }
+}
+.zc-prose-dialog-action:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
 
 /* ── Boot / empty states ──────────────────────────────────────────────────── */
 .zc-empty {

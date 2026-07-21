@@ -50,6 +50,7 @@ import * as contentProseH4 from "@zudo-sg/ui/src/content/prose-h4/prose-h4.stori
 import * as contentProseH5 from "@zudo-sg/ui/src/content/prose-h5/prose-h5.stories.tsx";
 import * as contentProseH6 from "@zudo-sg/ui/src/content/prose-h6/prose-h6.stories.tsx";
 import * as contentProseLi from "@zudo-sg/ui/src/content/prose-li/prose-li.stories.tsx";
+import * as contentProseMd from "@zudo-sg/ui/src/content/prose-md/prose-md.stories.tsx";
 import * as contentProseOl from "@zudo-sg/ui/src/content/prose-ol/prose-ol.stories.tsx";
 import * as contentProseP from "@zudo-sg/ui/src/content/prose-p/prose-p.stories.tsx";
 import * as contentProseStrong from "@zudo-sg/ui/src/content/prose-strong/prose-strong.stories.tsx";
@@ -128,6 +129,7 @@ export const storyModules: Record<string, StoryModule> = {
   "./ui/src/content/prose-h5/prose-h5.stories.tsx": contentProseH5 as unknown as StoryModule,
   "./ui/src/content/prose-h6/prose-h6.stories.tsx": contentProseH6 as unknown as StoryModule,
   "./ui/src/content/prose-li/prose-li.stories.tsx": contentProseLi as unknown as StoryModule,
+  "./ui/src/content/prose-md/prose-md.stories.tsx": contentProseMd as unknown as StoryModule,
   "./ui/src/content/prose-ol/prose-ol.stories.tsx": contentProseOl as unknown as StoryModule,
   "./ui/src/content/prose-p/prose-p.stories.tsx": contentProseP as unknown as StoryModule,
   "./ui/src/content/prose-strong/prose-strong.stories.tsx": contentProseStrong as unknown as StoryModule,
@@ -212,6 +214,7 @@ export const storyExportOrder: Record<string, string[]> = {
   "./ui/src/content/prose-h5/prose-h5.stories.tsx": ["Default"],
   "./ui/src/content/prose-h6/prose-h6.stories.tsx": ["Default"],
   "./ui/src/content/prose-li/prose-li.stories.tsx": ["Default"],
+  "./ui/src/content/prose-md/prose-md.stories.tsx": ["Default"],
   "./ui/src/content/prose-ol/prose-ol.stories.tsx": ["Default"],
   "./ui/src/content/prose-p/prose-p.stories.tsx": ["Default"],
   "./ui/src/content/prose-strong/prose-strong.stories.tsx": ["Default"],

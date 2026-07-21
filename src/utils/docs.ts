@@ -156,13 +156,18 @@ export function buildNavTree(
   }
 
   const sidebarTree = buildSidebarTree(
-    // Pass `{ id, data }` only — NOT the whole entry. zfb entries carry the
-    // raw, un-index-stripped engine slug on the top-level `slug` field
-    // (e.g. "getting-started/index"), and the shared builder prefers
-    // `entry.slug` over the id-derived form; forwarding it would mint wrong
-    // node paths. Omitting it reproduces the legacy host derivation
-    // `data.slug ?? toRouteSlug(id)` (ids arrive pre-stripped via _data.ts).
-    docs.map((d) => ({ id: d.id, data: d.data })),
+    // Pass `{ slug, data }` only — NOT the whole entry. Real zfb entries carry
+    // the raw, un-index-stripped engine slug on `entry.slug` (e.g.
+    // "getting-started/index"); forwarding it as-is would mint wrong node
+    // paths. zudo-doc 4.x's builder resolves a node's slug via
+    // `entry.data.slug ?? toRouteSlug(entry.slug)` (current entry model —
+    // there is no `entry.id` fallback the way the pre-4.0 builder had), so
+    // this maps our own already-index-stripped `id` (see _data.ts's
+    // `stripIndexSuffix`) onto `entry.slug` instead. `toRouteSlug` is
+    // idempotent on an already-stripped id (only strips a literal "index" /
+    // trailing "/index", which a stripped id never has), reproducing the
+    // legacy host derivation `data.slug ?? toRouteSlug(id)` unchanged.
+    docs.map((d) => ({ slug: d.id, data: d.data })),
     lang,
     {
       categoryMeta,

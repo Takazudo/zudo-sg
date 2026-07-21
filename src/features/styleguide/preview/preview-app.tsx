@@ -12,14 +12,15 @@
 // the variant `render()` closures are bundled into the island chunk and run in
 // the browser — no per-story lazy loader / codegen needed.
 //
-// Token tweaks: `installIframeReceiver` listens for zudo-doc's theme
-// `apply-css-vars` bridge messages and writes them onto this document's
-// :root, so the design-token tweaker live-updates this preview.
+// Token tweaks: `installIframeReceiver` listens for the project-owned
+// `apply-css-vars` bridge messages (src/features/styleguide/token-tweak/
+// iframe-css-vars-bridge.ts) and writes them onto this document's :root, so
+// the design-token tweaker live-updates this preview.
 
 import type { JSX } from "preact";
 import { useEffect, useMemo, useState } from "preact/hooks";
 import type { StoryControl } from "@zudo-sg/ui";
-import { installIframeReceiver } from "@takazudo/zudo-doc/theme";
+import { installIframeReceiver } from "@/features/styleguide/token-tweak/iframe-css-vars-bridge";
 import { getStoryBySlug } from "@/styleguide/data/registry";
 import { MSG_HEIGHT, isUpdatePropsMessage } from "./messages";
 

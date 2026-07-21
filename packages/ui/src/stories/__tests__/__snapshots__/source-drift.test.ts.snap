@@ -316,6 +316,27 @@ exports[`story source vs. render drift > content/prose-li/prose-li.stories.tsx �
 }
 `;
 
+exports[`story source vs. render drift > content/prose-md/prose-md.stories.tsx → Default (Default) 1`] = `
+{
+  "html": "<div class="zc-prose-md zc-prose-md--pending"><pre class="zc-prose-md-raw">## Getting started
+
+Install the package, then render markdown straight from a string.
+
+- Zero-config defaults
+- Full **TypeScript** support
+
+\`\`\`ts
+export function greet(name: string): string {
+  return \`Hello, \${name}!\`;
+}
+\`\`\`
+
+> Edits to this field re-render live once wired into the canvas inspector.
+</pre></div>",
+  "source": "<ProseMd markdown={"## Getting started\\n\\nInstall the package, then render markdown straight from a string.\\n\\n- Zero-config defaults\\n- Full **TypeScript** support\\n\\n\`\`\`ts\\nexport function greet(name: string): string {\\n  return \`Hello, \${name}!\`;\\n}\\n\`\`\`\\n\\n> Edits to this field re-render live once wired into the canvas inspector.\\n"} />",
+}
+`;
+
 exports[`story source vs. render drift > content/prose-ol/prose-ol.stories.tsx → Default (Default) 1`] = `
 {
   "html": "<ol class="list-decimal pl-hsp-xl"><li class="marker:text-muted mb-vsp-xs [&amp;>ul]:mt-vsp-xs [&amp;>ul]:mb-0 [&amp;>ol]:mt-vsp-xs [&amp;>ol]:mb-0">Step one</li><li class="marker:text-muted mb-vsp-xs [&amp;>ul]:mt-vsp-xs [&amp;>ul]:mb-0 [&amp;>ol]:mt-vsp-xs [&amp;>ol]:mb-0">Step two</li><li class="marker:text-muted mb-vsp-xs [&amp;>ul]:mt-vsp-xs [&amp;>ul]:mb-0 [&amp;>ol]:mt-vsp-xs [&amp;>ol]:mb-0">Step three</li></ol>",

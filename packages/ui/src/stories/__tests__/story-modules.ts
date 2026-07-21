@@ -34,6 +34,7 @@ import * as contentProseH4 from "../../content/prose-h4/prose-h4.stories";
 import * as contentProseH5 from "../../content/prose-h5/prose-h5.stories";
 import * as contentProseH6 from "../../content/prose-h6/prose-h6.stories";
 import * as contentProseLi from "../../content/prose-li/prose-li.stories";
+import * as contentProseMd from "../../content/prose-md/prose-md.stories";
 import * as contentProseOl from "../../content/prose-ol/prose-ol.stories";
 import * as contentProseP from "../../content/prose-p/prose-p.stories";
 import * as contentProseStrong from "../../content/prose-strong/prose-strong.stories";
@@ -107,6 +108,7 @@ export const STORY_MODULES: Record<string, StoryModule> = {
   "content/prose-h5/prose-h5.stories.tsx": contentProseH5 as unknown as StoryModule,
   "content/prose-h6/prose-h6.stories.tsx": contentProseH6 as unknown as StoryModule,
   "content/prose-li/prose-li.stories.tsx": contentProseLi as unknown as StoryModule,
+  "content/prose-md/prose-md.stories.tsx": contentProseMd as unknown as StoryModule,
   "content/prose-ol/prose-ol.stories.tsx": contentProseOl as unknown as StoryModule,
   "content/prose-p/prose-p.stories.tsx": contentProseP as unknown as StoryModule,
   "content/prose-strong/prose-strong.stories.tsx": contentProseStrong as unknown as StoryModule,

@@ -34,8 +34,11 @@ import { expect, test, type Page, type FrameLocator } from "@playwright/test";
 // All five assertion groups required by issue #80 (H6) are present.
 // ---------------------------------------------------------------------------
 
-// Bridge constants — must match the iframe-bridge.js in @takazudo/zudo-doc.
-const BRIDGE_SOURCE = "zudo-doc-theme-bridge";
+// Bridge constants — must match src/features/styleguide/token-tweak/
+// iframe-css-vars-bridge.ts (project-owned; zudo-doc 4.0 removed its own
+// reusable iframe bridge as a repository-owned implementation detail,
+// zudolab/zudo-doc#2761 — see that module's header comment).
+const BRIDGE_SOURCE = "zudo-sg-token-tweak-bridge";
 
 // Sentinel value used across tests — chosen to be a distinct, parseable CSS
 // color value that is unlikely to be a stylesheet default.
@@ -158,8 +161,8 @@ async function setPanelColorAccent(page: Page, value: string): Promise<void> {
 
 /**
  * Apply CSS variable overrides directly to the preview iframe via the
- * zudo-doc-theme-bridge postMessage API. Tests the iframe receiver only;
- * does NOT populate the panel's previewOverrides registry Map.
+ * project-owned iframe-css-vars-bridge postMessage API. Tests the iframe
+ * receiver only; does NOT populate the panel's previewOverrides registry Map.
  *
  * Use this for tests that verify the iframe bridge receiver is installed and
  * the CSS cascade is correct. Do NOT use this when you need Reset to clear

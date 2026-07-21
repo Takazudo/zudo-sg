@@ -29,12 +29,25 @@ test("built preview exposes IndexedDB but no file capability, endpoint, UI, or d
   await expect(provider).toBeDisabled();
   await expect(page.getByText("Active database:")).toContainText("IndexedDB: zudo-sg-composer");
 
-  const endpoint = await request.post("/__zudo_composer_file_provider", {
-    headers: { "content-type": "application/json" },
-    data: { operation: "clear" },
-  });
-  expect(endpoint.status()).toBe(404);
-  expect(endpoint.headers()["content-type"]).not.toContain("application/json");
+  // The property under test is that the file-provider endpoint does not EXIST in a production
+  // build — not any particular status code. `zfb preview` rejects POST to every path wholesale
+  // (404 pre-next.79, 405 since), so pin the assertion to a control path instead of a literal
+  // status: the endpoint must be indistinguishable from a path that was never routed.
+  const controlPath = "/__zudo_composer_file_provider_absent_control";
+  const [endpoint, control] = await Promise.all([
+    request.post("/__zudo_composer_file_provider", {
+      headers: { "content-type": "application/json" },
+      data: { operation: "clear" },
+    }),
+    request.post(controlPath, {
+      headers: { "content-type": "application/json" },
+      data: { operation: "clear" },
+    }),
+  ]);
+  expect(endpoint.ok()).toBe(false);
+  expect(endpoint.status()).toBe(control.status());
+  expect(endpoint.headers()["content-type"] ?? "").not.toContain("application/json");
+  expect(await endpoint.text()).toBe(await control.text());
 
   await page.getByRole("button", { name: "New composition" }).first().click();
   const dialog = page.getByRole("dialog", { name: "New composition" });

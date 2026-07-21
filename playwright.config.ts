@@ -59,6 +59,14 @@ export default defineConfig({
       use: { baseURL: `http://localhost:${SMOKE_PORT}` },
     },
     {
+      name: "composer-prose",
+      // Epic #368's explicit-save prose flow, plus the proof that the hashed
+      // wasm markdown runtime really loads from the BUILT site (#376). Same
+      // static dist/ preview as "composer".
+      testMatch: "composer-prose.spec.ts",
+      use: { baseURL: `http://localhost:${SMOKE_PORT}` },
+    },
+    {
       name: "composer-persistence",
       // Real Chromium IndexedDB/migration lifecycle and provider-qualified
       // navigation. Kept separate from the long editor walkthrough so fixture

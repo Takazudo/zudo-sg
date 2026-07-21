@@ -22,8 +22,32 @@ const directiveVocabulary = {
 // `virtual:zudo-doc-route-context` module so the package-owned doc/404/versions
 // routes render with the host's real UI strings and `--zd-*` palette instead of
 // the neutral fallback. The preset warns at build time if either is missing.
+//
+// `designTokenPanel: false` here (NOT `settings.designTokenPanel`, which stays
+// `true` for the host's own header icon / BodyEndIslands wiring below) is a
+// deliberate, narrow override of the object fed to the PRESET only. zudo-doc
+// 4.x's `deriveBodyEndIslands` (chrome/derive.js) ADDS its own
+// `DesignTokenPanelIsland` — an eager, package-default panel bootstrap — on
+// EVERY package-owned route whenever `ctx.settings.designTokenPanel` is true,
+// regardless of a host `BodyEndIslands` override; that island injects its own
+// inline toggle-shim script, which clobbers this project's own
+// `window.__zdtpReadyClicks` global (both scripts assign the same name) and
+// duplicates the lazy-load gate this project already owns end-to-end
+// (pages/lib/_body-end-islands.tsx → src/components/design-token-panel-bootstrap.tsx
+// → src/lib/design-token-panel-bootstrap.ts, which does NOT consult
+// `designTokenPanelConfigModule` and would run regardless). Since this is the
+// PACKAGE's sole read of `designTokenPanel` (confirmed against
+// node_modules/@takazudo/zudo-doc/dist/chrome/derive.js), forcing it off here
+// suppresses only that redundant injection with no other effect.
+//
+// Hoisted to a `const` (not inlined) so TypeScript infers its type
+// structurally instead of checking it as a fresh object literal against
+// `PresetSettings` — which doesn't declare `designTokenPanel` at all (it's
+// read off the wider runtime settings shape, not this narrower preset-facing
+// type), so an inline literal here would fail excess-property checking.
+const presetSettings = { ...settings, designTokenPanel: false };
 const preset = zudoDocPreset({
-  settings,
+  settings: presetSettings,
   buildDocsSchema,
   directiveVocabulary,
   translations,
@@ -64,29 +88,27 @@ export default defineConfig({
   // node_modules/@takazudo/zfb's BundleConfig.mainFields doc (zfb #676).
   // `bundle.external: ["path-to-regexp"]` would scope this narrower, but
   // mainFields is zfb's *documented* fix for this msw case (#676), so we use it.
+  //
+  // zudo-doc 4.x's html-preview-wrapper and doc-history-area package modules
+  // reference two of @takazudo/zudo-doc's OPTIONAL peer deps —
+  // `@takazudo/zfb-md-wasm` (lazy-loaded for the HtmlPreview source panel)
+  // and `@takazudo/zudo-doc-history-server` (imported eagerly at module top
+  // level, unconditionally — not gated by the `docHistory` setting this
+  // project has off, see settings.ts) — regardless of whether the owning
+  // feature is enabled. `bundle.external` (zfb's documented escape hatch,
+  // BundleConfig.external) resolved this for the main SSR/page bundle pass,
+  // but NOT for the separate islands production bundle pass or zfb's
+  // static-paths evaluation (an embedded runtime that can't fall back to
+  // Node's module resolution the way a browser/SSR bundle can) — both still
+  // failed to resolve the bare specifiers. Installing both as real
+  // dependencies (see package.json) fixes every pass uniformly; neither is
+  // reached at runtime since both owning features are off.
   bundle: { mainFields: ["main", "module"] },
   // Collections, markdown.features, codeHighlight, resolveMarkdownLinks,
   // stripMdExt, trailingSlash, and the package plugin descriptors (search
   // index, llms.txt, claude-resources) — see node_modules/@takazudo/zudo-doc
   // /dist/preset.d.ts for the full fragment this spreads in.
   ...preset,
-  // Override the preset's syntect code theme (base16-ocean.light/.dark) with
-  // WCAG-AA-compliant variants (#169 / supersedes #133). The stock base16-ocean
-  // palette fails AA for normal text: in light mode every accent hue plus the
-  // comment grey is <4.5:1 on its #eff1f5 background (only the #4f5b66
-  // default-text grey passes); in dark mode the comment, red, and brown hues
-  // fail on #2b303b. Token colors are baked per-span inline by syntect at build
-  // time, so they can't be remapped in CSS — the only fix is at the theme level.
-  // These two themes are base16-ocean with ONLY the sub-AA token hues nudged
-  // (hue preserved) to >=4.5:1 against each theme's own background; backgrounds
-  // and default text are unchanged. See src/styles/syntect-themes/*.tmTheme; the
-  // AA invariant is guarded by scripts/__tests__/syntect-theme-contrast.test.ts.
-  // Referenced by each theme's internal `name`, not filename.
-  codeHighlight: {
-    themesDir: "src/styles/syntect-themes",
-    themeLight: "Base16 Ocean Light A11y",
-    themeDark: "Base16 Ocean Dark A11y",
-  },
   // Per-component docs (#119): an OPTIONAL MDX file co-located with each
   // component (`packages/ui/src/<name>/<name>.mdx`) rendered inline as a
   // section on the host-owned `/components/<slug>` detail page (NOT its own

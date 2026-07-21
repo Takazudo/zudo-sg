@@ -42,7 +42,7 @@
    above (line 11); the safelist import above generates the component utilities
    its headings/links/etc. depend on. */
 @import "@takazudo/zudo-doc/content.css";
-/* Non-island feature CSS (code block buttons, syntect light-dark token rule,
+/* Non-island feature CSS (code block buttons, the hi-* syntax-token bridge,
    .zd-html-preview-code, KaTeX, sidebar toggle geometry, view-transition chrome,
    .ai-chat-md, .zd-enlarge*, .zd-mermaid*).
    Shipped by @takazudo/zudo-doc as single source of truth. See zudolab/zudo-doc#2331. */

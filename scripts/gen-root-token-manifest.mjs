@@ -9,8 +9,8 @@
 // that generator's simpler single-file-parse contract (see #208/#210/#211).
 //
 // design-tokens-manifest.ts is a live consumer target (design-token-panel-config.ts,
-// pages/components/tokens.tsx, @takazudo/zudo-doc's design-token-serde) — same
-// treatment as scripts/gen-token-manifest.mjs / ui-design-tokens-manifest.ts.
+// pages/components/tokens.tsx) — same treatment as scripts/gen-token-manifest.mjs /
+// ui-design-tokens-manifest.ts.
 //
 // Usage:
 //   node scripts/gen-root-token-manifest.mjs           # rewrite the manifest

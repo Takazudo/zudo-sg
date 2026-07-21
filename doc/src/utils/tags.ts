@@ -42,8 +42,7 @@ export function resolveTag(raw: string) {
 
 /**
  * Resolve a list of raw tag strings (e.g. from frontmatter) to canonical ids,
- * dropping deprecated-without-redirect entries and preserving order. Duplicates
- * produced by alias collapse are removed.
+ * preserving order and removing duplicates.
  */
 export function resolvePageTags(rawTags: readonly string[]): string[] {
   return _resolvePageTags(rawTags, getVocab(), settings.tagGovernance);
@@ -61,8 +60,9 @@ export function collectTags(
 
     const seen = new Set<string>();
     for (const raw of rawTags) {
+      // `ResolvedTag` no longer carries a `deprecated` field — zudo-doc 4.0
+      // removed the tag deprecation runtime along with alias resolution.
       const resolved = resolveTag(raw);
-      if (resolved.deprecated) continue;
       if (seen.has(resolved.canonical)) continue;
       seen.add(resolved.canonical);
 

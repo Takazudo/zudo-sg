@@ -38,7 +38,7 @@ function lazyLoadDesignTokenPanel(): Promise<unknown> {
   return loadPromise;
 }
 
-function DesignTokenPanelBootstrap(): JSX.Element | null {
+function DocTokenPanelBootstrap(): JSX.Element | null {
   // At hydration register the per-instance loader on window WITHOUT importing
   // the heavy module. The doc-chrome shim in _body-end-islands.tsx calls this
   // (plain `window.*`, no bundler aliases) on the first `toggle-sg-doc-tweak`.
@@ -60,6 +60,11 @@ function DesignTokenPanelBootstrap(): JSX.Element | null {
   }
   return null;
 }
-DesignTokenPanelBootstrap.displayName = "DesignTokenPanelBootstrap";
+// Named distinctly from "DesignTokenPanelBootstrap" — that marker name is now
+// claimed by the package's own island (@takazudo/zudo-doc/design-token-panel-bootstrap,
+// scanner-visible since 4.x). Reusing it collided the two ("island marker name
+// collision"), and zfb keeps only ONE island per marker — the package's heavy,
+// eagerly-hydrating one would win, silently defeating this whole lazy-load gate.
+DocTokenPanelBootstrap.displayName = "DocTokenPanelBootstrap";
 
-export default DesignTokenPanelBootstrap;
+export default DocTokenPanelBootstrap;
