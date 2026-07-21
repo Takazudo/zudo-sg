@@ -85,21 +85,43 @@ function type(editor: HTMLElement, value: string): void {
 
 /**
  * Focus leaving for HOST chrome, the way a browser actually reports it: a
- * focusout with no in-iframe successor, and — one task later — focus genuinely
- * gone from this document.
+ * focusout with no in-iframe successor, focus genuinely gone from this document
+ * — its `activeElement` back on `<body>`, because the focus moved WITHIN the
+ * same top-level context — and the verdict taken one task later.
  *
- * Both halves matter. The session DEFERS its verdict by exactly one task,
+ * Every part matters. The session DEFERS its verdict by exactly one task,
  * because an incoming render that relocates the edited node blurs the editable
  * too and is otherwise indistinguishable at dispatch time (see `onFocusOut` in
  * `prose-inline-session.ts`); `hasFocus()` is what separates them, and it is
  * only decisive after the host's focus change has propagated. A test that
- * fired the event and asserted immediately would be asserting nothing.
+ * fired the event and asserted immediately would be asserting nothing. The
+ * `activeElement` reset is what separates this from `leaveForAnotherWindow`.
  */
 async function leaveForHostChrome(editor: HTMLElement): Promise<void> {
   const ownerDoc = editor.ownerDocument;
   const original = ownerDoc.hasFocus;
   ownerDoc.hasFocus = () => false;
   try {
+    editor.blur();
+    fireEvent.focusOut(editor, { relatedTarget: null });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  } finally {
+    ownerDoc.hasFocus = original;
+  }
+}
+
+/**
+ * The user alt-tabbing to another window (or switching tabs): the SAME
+ * focusout with a null `relatedTarget` and the same `hasFocus()` false — but
+ * the focus path into this document is retained, so the editable is still its
+ * `activeElement`. Leaving the browser is not leaving the block.
+ */
+async function leaveForAnotherWindow(editor: HTMLElement): Promise<void> {
+  const ownerDoc = editor.ownerDocument;
+  const original = ownerDoc.hasFocus;
+  ownerDoc.hasFocus = () => false;
+  try {
+    editor.focus();
     fireEvent.focusOut(editor, { relatedTarget: null });
     await new Promise((resolve) => setTimeout(resolve, 0));
   } finally {
@@ -227,6 +249,22 @@ describe("no implicit commits", () => {
 
     expect(container.querySelector(DIALOG)).toBeNull();
     expect(editorOf(container)!.textContent).toBe("still mine");
+    expect(onCommitInlineEdit).not.toHaveBeenCalled();
+  });
+
+  it("does NOT read a window/tab blur as leaving the block", async () => {
+    // Alt-tabbing away (to copy some markdown out of another window, say)
+    // reports exactly what a click on host chrome does — a focusout with no
+    // successor and `hasFocus()` false. Prompting here would pop a modal
+    // nobody asked for and pull the tab back to the front to show it.
+    const { container, onCommitInlineEdit } = open();
+    const editor = editorOf(container)!;
+    type(editor, "typed before switching windows");
+    await leaveForAnotherWindow(editor);
+
+    expect(container.querySelector(DIALOG)).toBeNull();
+    expect(editorOf(container)!.textContent).toBe("typed before switching windows");
+    expect(container.ownerDocument.activeElement).toBe(editor);
     expect(onCommitInlineEdit).not.toHaveBeenCalled();
   });
 
@@ -377,6 +415,26 @@ describe("clicking away", () => {
     expect(onSelect).toHaveBeenCalledWith("p-1");
   });
 
+  it.each<[string, number]>([
+    ["a right-click", 2],
+    ["a middle-click", 1],
+  ])("ignores %s outside the editable — only a primary press is an intent to leave", (_l, button) => {
+    // A right-click is how the user reaches the browser's own Paste menu, and
+    // `preventDefault` on mousedown does not suppress the `contextmenu` that
+    // follows — so treating it as a departure would put the modal AND the
+    // context menu on screen together.
+    const { container, onCommitInlineEdit } = open();
+    type(editorOf(container)!, "changed");
+    const notCancelled = fireEvent.mouseDown(
+      container.querySelector('[data-zc-node-id="p-1"] p')!,
+      { button },
+    );
+    expect(notCancelled).toBe(true);
+    expect(container.querySelector(DIALOG)).toBeNull();
+    expect(editorOf(container)!.textContent).toBe("changed");
+    expect(onCommitInlineEdit).not.toHaveBeenCalled();
+  });
+
   it("does not treat a click INSIDE the editable as leaving (caret placement)", () => {
     const { container } = open();
     const editor = editorOf(container)!;
@@ -494,6 +552,75 @@ describe("the ground moving under the session", () => {
     const { container, redraw, onCommitInlineEdit } = open();
     type(editorOf(container)!, "orphaned");
     redraw({ document: doc([node("p-1", "ui.prose-p", { children: "Alone." })]), revision: 1 });
+    expect(container.querySelector(DIALOG)).toBeNull();
+    expect(editorOf(container)).toBeNull();
+    expect(onCommitInlineEdit).not.toHaveBeenCalled();
+  });
+});
+
+// ── A commit the host would reject is never sent ────────────────────────────
+//
+// The host drops a commit stamped with a revision it has moved past (#288) and
+// answers with nothing — while the commit itself has already torn the editor
+// down. Sending one would trade the user's text for an edit that never lands.
+
+describe("saving after the canvas changed underneath", () => {
+  /** The same doc with an edit on the OTHER node — a host gesture elsewhere. */
+  const elsewhere = () =>
+    doc([
+      node("md-1", "ui.prose-md", { markdown: SOURCE }),
+      node("p-1", "ui.prose-p", { children: "Moved / deleted / undone elsewhere." }),
+    ]);
+
+  it("prompts instead of committing, and the draft is still there afterwards", () => {
+    const { container, onCommitInlineEdit, redraw } = open(fixture(), { revision: 0 });
+    type(editorOf(container)!, "hard-won draft");
+    // The host applied a gesture on another node and re-rendered: this field is
+    // untouched so the session lives on, but the revision the commit carries is
+    // now behind the host's.
+    redraw({ document: elsewhere(), revision: 1 });
+    expect(editorOf(container)!.textContent).toBe("hard-won draft");
+
+    fireEvent.click(container.querySelector(".zc-prose-save")!);
+
+    expect(onCommitInlineEdit).not.toHaveBeenCalled();
+    const dialog = container.querySelector(DIALOG)!;
+    expect(dialog).not.toBeNull();
+    // No Save option: it could not succeed. Keep editing is the way back to
+    // the text, which is what makes the failure non-destructive.
+    expect([...dialog.querySelectorAll("[data-zc-dialog-action]")].map((b) => b.textContent)).toEqual(
+      ["Discard changes", "Keep editing"],
+    );
+
+    fireEvent.click(action(container, "Keep editing"));
+    expect(editorOf(container)!.textContent).toBe("hard-won draft");
+  });
+
+  it("replaces the leave dialog's Save with the same prompt rather than losing the draft", () => {
+    // The review case end to end: a host gesture raises the leave dialog AND
+    // bumps the revision, so "Save changes" was both doomed and destructive.
+    const { container, onCommitInlineEdit, redraw } = open(fixture(), { revision: 0 });
+    type(editorOf(container)!, "draft the dialog is about to eat");
+    fireEvent.mouseDown(container.querySelector('[data-zc-node-id="p-1"] p')!);
+    expect(action(container, "Save changes")).toBeDefined();
+    redraw({ document: elsewhere(), revision: 1 });
+
+    fireEvent.click(action(container, "Save changes"));
+
+    expect(onCommitInlineEdit).not.toHaveBeenCalled();
+    expect(container.querySelector(DIALOG)).not.toBeNull();
+    expect([...container.querySelectorAll("[data-zc-dialog-action]")].map((b) => b.textContent)).toEqual(
+      ["Discard changes", "Keep editing"],
+    );
+
+    fireEvent.click(action(container, "Keep editing"));
+    expect(editorOf(container)!.textContent).toBe("draft the dialog is about to eat");
+  });
+
+  it("still discards a CLEAN session silently — a stale no-op is nothing to warn about", () => {
+    const { container, onCommitInlineEdit, redraw } = open(fixture(), { revision: 0 });
+    redraw({ document: elsewhere(), revision: 1 });
+    fireEvent.click(container.querySelector(".zc-prose-save")!);
     expect(container.querySelector(DIALOG)).toBeNull();
     expect(editorOf(container)).toBeNull();
     expect(onCommitInlineEdit).not.toHaveBeenCalled();

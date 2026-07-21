@@ -59,6 +59,7 @@ describe("idle", () => {
         initialValue: SEED,
         value: SEED,
         startRevision: REV,
+        stale: false,
       },
     });
     expect(effects).toEqual([]);
@@ -194,6 +195,7 @@ describe("editing", () => {
           initialValue: SEED,
           value: TYPED,
           startRevision: REV,
+          stale: false,
         },
       },
     ]);
@@ -258,9 +260,15 @@ describe("editing", () => {
       ],
     ])("survives %s", (_label, input) => {
       const state = editingDirty();
-      expect(proseSessionTransition(state, input)).toEqual({
-        state,
-        effects: [],
+      const { state: next, effects } = proseSessionTransition(state, input);
+      expect(effects).toEqual([]);
+      expect(next.kind).toBe("editing");
+      // The draft is untouched apart from `stale`: a render landed, so the
+      // host has moved past the revision this session's commit is gated
+      // against, and an explicit save must prompt rather than be dropped.
+      expect(proseSessionDraft(next)).toEqual({
+        ...proseSessionDraft(state),
+        stale: true,
       });
     });
   });
@@ -516,6 +524,7 @@ describe("prompting-leave", () => {
           initialValue: SEED,
           value: TYPED,
           startRevision: REV,
+          stale: false,
         },
       });
     });
@@ -660,6 +669,156 @@ describe("double-stimulus sequences", () => {
   });
 });
 
+describe("an unrecognised dialog choice", () => {
+  // Type-guarded and unreachable from the current UI — but the SAVE branch
+  // must be reached by naming it, never by elimination. A fail-open default to
+  // "commit" is the wrong polarity in the one module that guarantees there are
+  // no implicit commits.
+  it.each<ProseSessionState>([promptLeave(), promptLeaveStashed(), promptEscape()])(
+    "does nothing at all (state %#)",
+    (state) => {
+      const rogue = {
+        type: "dialog-choice",
+        dialog: dialogOf(state),
+        choice: "sure-why-not",
+      } as unknown as ProseSessionInput;
+      const { state: next, effects } = proseSessionTransition(state, rogue);
+      expect(effects).toEqual([]);
+      expect(next).toEqual(state);
+    },
+  );
+});
+
+// ── A commit the host would reject is never sent ───────────────────────────
+//
+// A render landing mid-session moves the host past the revision the commit is
+// stamped with, so the host's gate (#288) drops it — and because `commit` also
+// means "tear the editor down", sending it anyway would destroy the draft in
+// exchange for an edit that never lands. These pin the non-destructive path.
+
+describe("a superseded (stale) draft", () => {
+  const renderElsewhere: ProseSessionInput = {
+    type: "external-value-change",
+    nodeId: "n2",
+    fieldKey: FIELD,
+    value: "edited over there",
+  };
+  const staleDirty = (): ProseSessionState => apply(editingDirty(), renderElsewhere);
+  const staleStashedPrompt = (): ProseSessionState =>
+    apply(staleDirty(), { type: "mode-switch", mode: "preview" });
+
+  it("raises the STALE dialog instead of committing on save-click, keeping the draft", () => {
+    const { state, effects } = proseSessionTransition(staleDirty(), { type: "save-click" });
+    expect(commitOf(effects)).toBeUndefined();
+    expect(effects).toEqual([{ type: "show-dialog", dialog: "stale" }]);
+    expect(state).toEqual({
+      kind: "prompting-stale",
+      draft: proseSessionDraft(staleDirty()),
+      stashed: false,
+    });
+    // The whole point: the text is still here to be copied or retyped.
+    expect(proseSessionDraft(state)?.value).toBe(TYPED);
+  });
+
+  it("raises the STALE dialog instead of committing from the leave dialog's Save", () => {
+    // The exact review case: a host gesture (tree move / delete / undo) raises
+    // the leave dialog AND advances the revision, so "Save changes" would send
+    // a commit the host drops — with the editor already gone.
+    const prompting = apply(staleDirty(), { type: "outside-intent" });
+    const { state, effects } = proseSessionTransition(prompting, {
+      type: "dialog-choice",
+      dialog: "leave",
+      choice: "save",
+    });
+    expect(commitOf(effects)).toBeUndefined();
+    expect(has(effects, "discard")).toBe(false);
+    // The leave dialog is REPLACED in place, so nothing closes on the way.
+    expect(effects).toEqual([{ type: "show-dialog", dialog: "stale" }]);
+    expect(state.kind).toBe("prompting-stale");
+    expect(proseSessionDraft(state)?.value).toBe(TYPED);
+  });
+
+  it("carries a STASHED draft into the stale dialog and restores it on Keep editing", () => {
+    const { state: prompting } = proseSessionTransition(staleStashedPrompt(), {
+      type: "dialog-choice",
+      dialog: "leave",
+      choice: "save",
+    });
+    expect(prompting).toEqual({
+      kind: "prompting-stale",
+      draft: proseSessionDraft(staleDirty()),
+      stashed: true,
+    });
+
+    const draft = proseSessionDraft(prompting);
+    const { state, effects } = proseSessionTransition(prompting, {
+      type: "dialog-choice",
+      dialog: "stale",
+      choice: "keep-editing",
+    });
+    expect(state).toEqual({ kind: "editing", draft });
+    expect(effects).toEqual([
+      { type: "close-dialog" },
+      { type: "restore-editing", draft },
+      { type: "refocus" },
+    ]);
+  });
+
+  it("returns to editing with the draft intact on Keep editing", () => {
+    const prompting = apply(staleDirty(), { type: "save-click" });
+    const draft = proseSessionDraft(prompting);
+    const { state, effects } = proseSessionTransition(prompting, {
+      type: "dialog-choice",
+      dialog: "stale",
+      choice: "keep-editing",
+    });
+    expect(state).toEqual({ kind: "editing", draft });
+    expect(effects).toEqual([{ type: "close-dialog" }, { type: "refocus" }]);
+  });
+
+  it("treats dialog-ESC as Keep editing here too — the safe default", () => {
+    const prompting = apply(staleDirty(), { type: "save-click" });
+    const { state } = proseSessionTransition(prompting, { type: "escape" });
+    expect(state).toEqual({ kind: "editing", draft: proseSessionDraft(prompting) });
+  });
+
+  it("drops the draft only on an explicit Discard", () => {
+    const prompting = apply(staleDirty(), { type: "save-click" });
+    const { state, effects } = proseSessionTransition(prompting, {
+      type: "dialog-choice",
+      dialog: "stale",
+      choice: "discard",
+    });
+    expect(state).toEqual(idleProseSession);
+    expect(effects).toEqual([{ type: "close-dialog" }, { type: "discard" }]);
+  });
+
+  it("does not re-raise the dialog it is already showing on a repeated save", () => {
+    const prompting = apply(staleDirty(), { type: "save-click" });
+    const again = proseSessionTransition(prompting, { type: "save-click" });
+    expect(again.state).toEqual(prompting);
+    expect(again.effects).toEqual([]);
+  });
+
+  it("still exits SILENTLY when the draft is clean — there is nothing to lose", () => {
+    const cleanStale = apply(editingClean(), renderElsewhere);
+    const { state, effects } = proseSessionTransition(cleanStale, { type: "save-click" });
+    expect(state).toEqual(idleProseSession);
+    expect(effects).toEqual([{ type: "discard" }]);
+  });
+
+  it("stays stale: nothing clears the flag once a render has landed", () => {
+    const typedMore = apply(staleDirty(), { type: "input", value: TYPED_AGAIN });
+    expect(proseSessionDraft(typedMore)?.stale).toBe(true);
+    const kept = apply(
+      typedMore,
+      { type: "escape" },
+      { type: "dialog-choice", dialog: "escape", choice: "keep-editing" },
+    );
+    expect(proseSessionDraft(kept)?.stale).toBe(true);
+  });
+});
+
 // ── Graph-wide properties ──────────────────────────────────────────────────
 // Explore every reachable state under a fixed stimulus alphabet and assert the
 // module's invariants on EVERY edge, so a future transition cannot quietly
@@ -708,6 +867,8 @@ const ALPHABET: readonly ProseSessionInput[] = [
   { type: "dialog-choice", dialog: "leave", choice: "save" },
   { type: "dialog-choice", dialog: "leave", choice: "discard" },
   { type: "dialog-choice", dialog: "leave", choice: "keep-editing" },
+  { type: "dialog-choice", dialog: "stale", choice: "discard" },
+  { type: "dialog-choice", dialog: "stale", choice: "keep-editing" },
 ];
 
 interface Edge {
@@ -744,17 +905,18 @@ function exploreReachableGraph(): {
 const { edges, states } = exploreReachableGraph();
 
 const isDirtyState = (state: ProseSessionState): boolean => proseSessionIsDirty(state);
+/** The dialog a state has on screen, or `null` when none is. */
+const dialogOf = (state: ProseSessionState): string | null =>
+  state.kind === "idle" || state.kind === "editing" ? null : state.kind.slice("prompting-".length);
+/** Whether a state is one of the prompting kinds. */
+const isPrompting = (state: ProseSessionState): boolean => dialogOf(state) !== null;
 const has = (effects: readonly ProseSessionEffect[], type: ProseSessionEffect["type"]): boolean =>
   effects.some((e) => e.type === type);
 
 describe("reachable graph", () => {
   it("reaches every documented state shape, and no others", () => {
     const shapes = new Set(
-      states.map((s) =>
-        s.kind === "prompting-escape" || s.kind === "prompting-leave"
-          ? `${s.kind}${s.stashed ? ":stashed" : ""}`
-          : s.kind,
-      ),
+      states.map((s) => (s.kind === "idle" || s.kind === "editing" ? s.kind : `${s.kind}${s.stashed ? ":stashed" : ""}`)),
     );
     expect([...shapes].sort()).toEqual([
       "editing",
@@ -763,6 +925,8 @@ describe("reachable graph", () => {
       "prompting-escape:stashed",
       "prompting-leave",
       "prompting-leave:stashed",
+      "prompting-stale",
+      "prompting-stale:stashed",
     ]);
   });
 
@@ -827,15 +991,16 @@ describe("reachable graph", () => {
   });
 
   it("PROPERTY: dialogs open and close in step with the prompting states", () => {
+    // One rule for all three dialogs: what is on screen is exactly what the
+    // state says. A save on a STALE draft swaps the leave dialog for the stale
+    // one in place, so a prompt can also follow another prompt — that swap
+    // shows the new dialog and does NOT close, because nothing closed.
     for (const edge of edges) {
+      const from = dialogOf(edge.from);
+      const to = dialogOf(edge.to);
       const showed = edge.effects.find((e) => e.type === "show-dialog");
-      if (showed) {
-        expect(edge.to.kind).toBe(`prompting-${showed.dialog}`);
-        expect(edge.from.kind).toBe("editing");
-      }
-      const wasPrompting = edge.from.kind.startsWith("prompting");
-      const stillSamePrompt = edge.from.kind === edge.to.kind;
-      expect(has(edge.effects, "close-dialog")).toBe(wasPrompting && !stillSamePrompt);
+      expect(showed?.dialog ?? null).toBe(to !== null && to !== from ? to : null);
+      expect(has(edge.effects, "close-dialog")).toBe(from !== null && to === null);
       expect(has(edge.effects, "show-dialog") && has(edge.effects, "close-dialog")).toBe(false);
     }
   });
@@ -844,9 +1009,7 @@ describe("reachable graph", () => {
     for (const edge of edges) {
       if (!has(edge.effects, "refocus")) continue;
       expect(edge.to.kind).toBe("editing");
-      const fromStashed =
-        (edge.from.kind === "prompting-escape" || edge.from.kind === "prompting-leave") &&
-        edge.from.stashed;
+      const fromStashed = isPrompting(edge.from) && (edge.from as { stashed: boolean }).stashed;
       expect(has(edge.effects, "restore-editing")).toBe(fromStashed);
       // Edit mode and the editor must be back before the caret is placed.
       const order = edge.effects.map((e) => e.type);
