@@ -50,7 +50,7 @@
 import { Fragment, h } from "preact";
 import type { ComponentChildren, RefObject } from "preact";
 import { useCallback, useLayoutEffect, useRef, useState } from "preact/hooks";
-import type { CompositionDocument } from "@/composer";
+import type { CompositionDocument, CompositionNode } from "@/composer";
 import type { ComposerEntry } from "@/styleguide/data/composer-registry";
 import {
   INLINE_EDITING_ATTR,
@@ -98,6 +98,14 @@ export interface ProseInlineSessionOptions {
   mode: PreviewMode;
   /** The canvas root, used to locate the mounted editable. */
   canvasRef: RefObject<HTMLElement | null>;
+  /**
+   * Whether the canvas renders this node as OPAQUE (#245) — an unknown
+   * component, an unsupported version, a structurally invalid payload. Such a
+   * node shows its preserved payload read-only and its props are not
+   * updatable, so a session there could only ever produce a commit the model
+   * rejects — an edit the user believes landed and did not.
+   */
+  isOpaque: (node: CompositionNode) => boolean;
   /** The single commit path: the existing `commit-inline-edit` message. */
   onCommit?: (nodeId: string, fieldKey: string, value: string, documentRevision: number) => void;
 }
@@ -141,6 +149,15 @@ function editableAttrValue(ownerDoc: Document): "plaintext-only" | "true" {
     plaintextOnlySupport.set(ownerDoc, supported);
   }
   return supported ? "plaintext-only" : "true";
+}
+
+/** The raw-source editable rendered inside a LOCAL node's wrapper, if mounted. */
+function editorElement(canvas: HTMLElement | null, nodeId: string): HTMLElement | null {
+  return (
+    canvas?.querySelector<HTMLElement>(
+      `[data-zc-owner="local"][data-zc-node-id="${escapeAttrValue(nodeId)}"] [${PROSE_EDITING_ATTR}]`,
+    ) ?? null
+  );
 }
 
 /** Whether a focus/click target sits inside this session's own chrome. */
@@ -263,9 +280,14 @@ export function useProseInlineSession(options: ProseInlineSessionOptions): Prose
   const tryEnter = useCallback(
     (nodeId: string): boolean => {
       if (stateRef.current.kind !== "idle") return false;
-      const { document, entryById, revision } = optionsRef.current;
+      const { document, entryById, revision, isOpaque } = optionsRef.current;
       const targetNode = findNodeById(document.root, nodeId);
       if (!targetNode) return false;
+      // An opaque node is read-only — see `isOpaque`. (The auto-commit session
+      // is protected by a different mechanism: it edits the COMPONENT's own
+      // DOM, which an opaque node never renders, so its adapter simply fails to
+      // resolve. This session brings its own editable, so it must ask.)
+      if (isOpaque(targetNode)) return false;
       const entry = entryById.get(targetNode.componentId);
       const editable = inlineEditableForEntry(entry);
       if (!editable || editable.mode !== "markdown-source") return false;
@@ -293,9 +315,7 @@ export function useProseInlineSession(options: ProseInlineSessionOptions): Prose
     const active = mountRef.current;
     if (!active) return;
 
-    const el = canvasRef.current?.querySelector<HTMLElement>(
-      `[data-zc-owner="local"][data-zc-node-id="${escapeAttrValue(active.nodeId)}"] [${PROSE_EDITING_ATTR}]`,
-    );
+    const el = editorElement(canvasRef.current, active.nodeId);
     if (!el) {
       // The node left the canvas between the state update and this effect.
       // Abandon rather than strand the user in a session with no editor; the
@@ -414,6 +434,25 @@ export function useProseInlineSession(options: ProseInlineSessionOptions): Prose
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed by the mount identity
   }, [mount?.nodeId, mount?.fieldKey, mount?.epoch]);
+
+  // An incoming render can MOVE the edited node to a different parent slot
+  // without touching its field value — the ground-check deliberately keeps the
+  // session alive for that (the field did not change), but Preact builds the
+  // node's DOM afresh under its new parent, so the live editable is replaced by
+  // an empty element with no text, no `contenteditable`, and no listeners while
+  // `editableRef` still points at the detached one. Re-mount from the current
+  // draft instead of leaving the session bound to a dead node. Runs on every
+  // render (the check is one `querySelector` and only while a session is open)
+  // and converges: the re-mount makes the identities agree again.
+  useLayoutEffect(() => {
+    const active = mountRef.current;
+    if (!active) return;
+    const el = editorElement(canvasRef.current, active.nodeId);
+    if (!el || el === editableRef.current) return;
+    const draft = proseSessionDraft(stateRef.current);
+    if (!draft) return;
+    mountEditor(draft.nodeId, draft.fieldKey, draft.value);
+  });
 
   // `refocus`, deferred to after the render that (re)mounted the editable — a
   // "keep editing" from a STASHED draft has no element to focus until then.

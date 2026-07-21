@@ -127,6 +127,21 @@ describe("entering a markdown-source session", () => {
     expect(container.querySelector(".zc-prose-save")!.hasAttribute("data-zc-dirty")).toBe(false);
   });
 
+  it("REFUSES an opaque node — its preserved payload is read-only", () => {
+    // An unsupported component version makes the node opaque (#245): the canvas
+    // shows its payload verbatim and the model rejects prop updates, so an
+    // editor there could only ever produce an edit the user loses.
+    const stale = doc([node("md-1", "ui.prose-md", { markdown: SOURCE })]);
+    stale.root[0]!.componentVersion = 99;
+    const { container, onSelect } = draw(stale);
+    fireEvent.dblClick(container.querySelector('[data-zc-node-id="md-1"] .zc-opaque')!);
+    expect(container.querySelector(EDITOR)).toBeNull();
+    expect(container.querySelector(".zc-prose-savebar")).toBeNull();
+    // …and the payload disclosure is still there.
+    expect(container.querySelector('[data-zc-node-id="md-1"] .zc-opaque')).not.toBeNull();
+    expect(onSelect).not.toHaveBeenCalledWith(null);
+  });
+
   it("opens on click-again on the already-SELECTED node too", () => {
     const { container } = draw(fixture(), { session: { ...EDIT, selectedId: "md-1" } });
     fireEvent.click(container.querySelector('[data-zc-node-id="md-1"] .zc-prose-md')!);
@@ -386,6 +401,33 @@ describe("the ground moving under the session", () => {
     ]);
     redraw({ document: elsewhere, revision: 1 });
     expect(editorOf(container)!.textContent).toBe("still mine");
+  });
+
+  it("re-establishes the editor when a MOVE rebuilds the node's DOM under a new parent", () => {
+    // The field value is untouched, so the ground-check deliberately keeps the
+    // session alive — but Preact builds the node afresh under its new parent,
+    // destroying the live editable. The session must follow it, not stay bound
+    // to a detached node.
+    const { container, redraw } = open();
+    const editor = editorOf(container)!;
+    type(editor, "moved draft");
+
+    const moved = doc([
+      node("stack-1", "ui.stack", { gap: "md" }, {
+        content: [node("md-1", "ui.prose-md", { markdown: SOURCE })],
+      }),
+      node("p-1", "ui.prose-p", { children: "Plain paragraph." }),
+    ]);
+    redraw({ document: moved, revision: 1 });
+
+    const relocated = editorOf(container)!;
+    expect(relocated).not.toBeNull();
+    expect(relocated).not.toBe(editor); // a genuinely different element
+    expect(relocated.textContent).toBe("moved draft");
+    expect(relocated.getAttribute("contenteditable")).toBe("plaintext-only");
+    // Live again: typing still reaches the machine.
+    type(relocated, "typed after the move");
+    expect(container.querySelector(".zc-prose-save")!.hasAttribute("data-zc-dirty")).toBe(true);
   });
 
   it("discards SILENTLY when the edited node leaves the document", () => {

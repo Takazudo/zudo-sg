@@ -375,6 +375,9 @@ export function CompositionCanvas(props: CompositionCanvasProps): JSX.Element {
     revision,
     mode: session.mode,
     canvasRef,
+    // The same verdict `renderNode` draws with — an opaque node shows its
+    // preserved payload read-only and is never editable.
+    isOpaque: (node) => !entryById.has(node.componentId) || classifyNode(node, manifest).opaque,
     onCommit: onCommitInlineEdit,
   });
 
