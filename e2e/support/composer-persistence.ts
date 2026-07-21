@@ -43,6 +43,23 @@ export async function openComposerRecord(
   });
   await expect(libraryHeading, "the mounted library must start in the viewport").toBeInViewport();
 
+  // The heading paints as soon as the library view mounts — BEFORE the async
+  // IndexedDB open resolves, and on a first run that open is also what seeds
+  // the native sample record (storage/indexeddb/provider.ts, `raw === null`).
+  // The branch below picks open-existing vs create-new from a single
+  // non-retrying count(), so probing it here would race that seed: on a loaded
+  // machine it reads 0, falls through to New composition, and creates an EMPTY
+  // document (emptyCompositionDocument) instead of opening the seeded sample —
+  // leaving every sample-shaped node id absent. Wait for the collection to
+  // reach one of its two terminal states before deciding.
+  await expect(
+    page
+      .locator(".sg-composer-library-open")
+      .or(page.getByRole("heading", { name: "No compositions yet" }))
+      .first(),
+    "the library must finish loading before choosing open-existing vs create-new",
+  ).toBeVisible({ timeout: 15_000 });
+
   const requested = options.recordName
     ? page.getByRole("button", { name: options.recordName })
     : page.locator(".sg-composer-library-open").first();
