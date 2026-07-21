@@ -59,6 +59,18 @@ describe("scanInfoStringFences", () => {
     ]);
   });
 
+  it("handles CRLF line endings", () => {
+    expect(scanInfoStringFences("```ts\r\nconst a = 1;\r\n```\r\n")).toEqual([
+      { language: "ts", code: "const a = 1;" },
+    ]);
+  });
+
+  it("handles lone CR line endings", () => {
+    expect(scanInfoStringFences("```ts\rconst a = 1;\r```\r")).toEqual([
+      { language: "ts", code: "const a = 1;" },
+    ]);
+  });
+
   it("does not see fences nested in a container block", () => {
     // Documented limitation — the caller's count guard degrades on the
     // resulting mismatch rather than mislabelling code.

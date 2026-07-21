@@ -44,7 +44,11 @@ function stripIndent(line: string, indent: number): string {
  * `<pre><code>` with no syntect class, so they are not substitution targets.
  */
 export function scanInfoStringFences(source: string): SourceFence[] {
-  const lines = source.split("\n");
+  // CommonMark §2.1 counts CRLF and a lone CR as line endings. Splitting on
+  // `\n` alone would leave a trailing `\r` that the fence patterns below
+  // cannot consume (`.` and `$` both stop at a carriage return), so every
+  // fence in a CRLF document would go unseen.
+  const lines = source.split(/\r\n|\r|\n/);
   const fences: SourceFence[] = [];
 
   for (let index = 0; index < lines.length; index += 1) {

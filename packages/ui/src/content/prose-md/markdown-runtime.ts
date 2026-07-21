@@ -110,6 +110,13 @@ const PIPELINE_OPTIONS: PipelineOptions = {
     footnoteDefinition: false,
   },
   cjkFriendly: true,
+  features: {
+    // zudo-doc's preset pins this unconditionally, and the always-on
+    // HeadingLinks plugin derives its anchors from it. Without it a repeated
+    // child heading previews as `child` / `child-1` where the build emits
+    // `parent-child` / `other-child`.
+    headingIds: { strategy: "hierarchical" },
+  },
 };
 
 /**
@@ -139,6 +146,17 @@ const ALLOWED_ATTR = [
   "align", "alt", "class", "colspan", "dir", "height", "href", "id", "lang",
   "reversed", "rowspan", "src", "start", "title", "type", "width",
 ];
+
+/**
+ * `ALLOW_DATA_ATTR` defaults to true and is NOT narrowed by an explicit
+ * `ALLOWED_ATTR`, so raw `<span data-zc-node-id="…">` in an author's markdown
+ * would survive into the composer canvas — where `src/features/composer/
+ * preview/renderer.ts` routes events with `closest("[data-zc-node-id]")` /
+ * `closest("[data-zc-affordance]")` and would treat the prose as another
+ * node. Nothing this pipeline emits needs a `data-*` attribute, so drop the
+ * whole class. `aria-*` stays allowed for the heading-link labels.
+ */
+const SANITIZE_CONFIG = { ALLOWED_TAGS, ALLOWED_ATTR, ALLOW_DATA_ATTR: false };
 
 function escapeHtml(text: string): string {
   return text
@@ -195,7 +213,7 @@ function getPurifier(): typeof DOMPurify | null {
 export function sanitizeRenderedHtml(html: string): string | null {
   const instance = getPurifier();
   if (!instance) return null;
-  return instance.sanitize(html, { ALLOWED_TAGS, ALLOWED_ATTR });
+  return instance.sanitize(html, SANITIZE_CONFIG);
 }
 
 function toDiagnostic(diagnostic: Diagnostic): MarkdownDiagnostic {

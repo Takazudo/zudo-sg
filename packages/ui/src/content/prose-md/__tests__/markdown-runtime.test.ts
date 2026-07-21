@@ -59,6 +59,16 @@ describe("renderMarkdown — markdown constructs", () => {
     expect(html).toContain("<strong>重要</strong>");
   });
 
+  it("allocates hierarchical heading ids like the site build", async () => {
+    const { html, diagnostics } = await render(
+      "## Parent\n\n### Child\n\n## Other\n\n### Child\n",
+    );
+    expect(diagnostics).toEqual([]);
+    expect(html).toContain('id="parent-child"');
+    expect(html).toContain('id="other-child"');
+    expect(html).not.toContain('id="child-1"');
+  });
+
   it("reports a markdown parse error as a diagnostic with no html", async () => {
     // A bare void `<img>` is an end-tag mismatch for zfb's HTML parser.
     const { html, diagnostics } = await renderMarkdown('<img src="x">\n');
@@ -93,6 +103,12 @@ describe("renderMarkdown — fenced code", () => {
     expect(diagnostics).toEqual([
       expect.objectContaining({ severity: "warning", source: "highlight" }),
     ]);
+  });
+
+  it("highlights fences written with CRLF line endings", async () => {
+    const { html, diagnostics } = await render("```js\r\nconst answer = 42;\r\n```\r\n");
+    expect(diagnostics).toEqual([]);
+    expect(html).toContain('<span class="hi-kw">const</span>');
   });
 
   it("leaves an info-less fence as a plain code block", async () => {
@@ -147,6 +163,14 @@ describe("renderMarkdown — sanitization", () => {
   it("drops inline style attributes", async () => {
     const { html } = await render('<div style="position:fixed;inset:0">x</div>\n');
     expect(html).not.toContain("style=");
+    expect(html).toContain("x");
+  });
+
+  it("drops data-* attributes so prose cannot impersonate a composer node", async () => {
+    const { html } = await render(
+      '<span data-zc-node-id="root" data-zc-affordance="">x</span>\n',
+    );
+    expect(html).not.toContain("data-zc-");
     expect(html).toContain("x");
   });
 
