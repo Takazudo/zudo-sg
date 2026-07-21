@@ -735,4 +735,125 @@ test.describe.serial("Composer prose editing (#376)", () => {
     expect(pageErrors).toEqual([]);
     expect(consoleErrors).toEqual([]);
   });
+
+  // ── 20 ────────────────────────────────────────────────────────────────────
+  // Only a PRIMARY press outside the editable is an intent to leave. A
+  // right-click is how the user reaches the browser's own Paste menu, and
+  // `preventDefault` on mousedown does not suppress the `contextmenu` that
+  // follows — so treating it as a departure put the modal AND the native menu
+  // on screen together.
+  for (const [gesture, button] of [
+    ["right-click", "right"],
+    ["middle-click", "middle"],
+  ] as const) {
+    test(`20:${gesture} - a ${gesture} outside the editable is not an intent to leave`, async () => {
+      await setMarkdown(page, node(), "hello", "hello");
+      await openProseEditor(node(), editor());
+      await resetCommitCount(page);
+      await page.keyboard.type("XX");
+
+      await canvas(page).locator('[data-zc-node-id="heading-1"]').click({ button, force: true });
+      // The verdict on a departure is deliberately deferred by one task (see
+      // `onFocusOut`), so a bare `toHaveCount(0)` would pass before the dialog
+      // it is denying could ever have appeared. Settle first, then assert.
+      await page.waitForTimeout(300);
+
+      await expect(dialog()).toHaveCount(0);
+      await expect(editor()).toBeVisible();
+      await expect(editor()).toBeFocused();
+      expect(await editorText(editor())).toBe("helloXX");
+      expect(await commitCount(page)).toBe(0);
+
+      await page.keyboard.press("Escape");
+      await dialogAction(page, "Discard changes").click();
+      await expect(editor()).toHaveCount(0);
+    });
+  }
+
+  // ── 21 ────────────────────────────────────────────────────────────────────
+  // A commit the host would REJECT is never sent. Once any render lands, this
+  // session's commit carries a superseded revision (`startRevision` is captured
+  // once and never refreshed, #288), so the host's gate drops it — while the
+  // `commit` effect has already torn the editor down, taking the draft with it.
+  // Worst case, and the one reproduced here: a single host gesture on ANOTHER
+  // node both bumps the revision and raises the leave dialog, so its "Save
+  // changes" was doomed AND destructive.
+  test("21 - a host gesture on ANOTHER node makes the draft unsaveable, and neither Save path destroys it", async () => {
+    await setMarkdown(page, node(), "hello", "hello");
+    // The sibling whose row actions this test drives is nested two levels deep.
+    for (const id of ["split-1", "stack-1"]) {
+      const disclosure = page
+        .locator(`[data-sg-tree-node-id="${id}"] .sg-composer-tree-disclosure`)
+        .first();
+      if ((await disclosure.getAttribute("aria-expanded")) !== "true") await disclosure.click();
+    }
+    await page.locator(`[data-sg-tree-node-id="${nodeId}"] .sg-composer-tree-select`).first().click();
+
+    await openProseEditor(node(), editor());
+    await resetCommitCount(page);
+    await page.keyboard.type("PRECIOUS");
+
+    // Reordering `prose-1` touches neither this node nor its field, so the
+    // ground-check keeps the session alive — but the document revision has
+    // moved past the one the draft is stamped with.
+    await page
+      .locator('[data-sg-tree-node-id="prose-1"] .sg-composer-tree-action[aria-label*=" down"]')
+      .first()
+      .click();
+
+    // It is a host-chrome click too, so the leave dialog opens over a draft
+    // that can no longer be saved.
+    await expect(dialog()).toBeVisible();
+    await expect(canvas(page).locator(".zc-prose-dialog-title")).toHaveText(
+      "Unsaved markdown changes",
+    );
+
+    // "Save changes" must NOT commit. The dialog swaps in place for the stale
+    // one, which offers no Save at all because none could succeed.
+    await dialogAction(page, "Save changes").click();
+    await expect(canvas(page).locator(".zc-prose-dialog-title")).toHaveText(
+      "These changes can no longer be saved",
+    );
+    await expect(canvas(page).locator(DIALOG_ACTION)).toHaveText([
+      "Discard changes",
+      "Keep editing",
+    ]);
+    expect(await commitCount(page)).toBe(0);
+
+    // …and the draft survived, verbatim — which is the whole point: the user
+    // can still copy their text out.
+    await dialogAction(page, "Keep editing").click();
+    await expect(editor()).toBeVisible();
+    await expect(editor()).toBeFocused();
+    expect(await editorText(editor())).toBe("helloPRECIOUS");
+
+    // The floating Save button on the same stale draft: same refusal, same
+    // survival. (Reached through Keep editing because the only way to move the
+    // document out from under a live session is a host gesture, which is itself
+    // a click-away.)
+    await saveButton().click();
+    await expect(canvas(page).locator(".zc-prose-dialog-title")).toHaveText(
+      "These changes can no longer be saved",
+    );
+    await expect(canvas(page).locator(DIALOG_ACTION)).toHaveText([
+      "Discard changes",
+      "Keep editing",
+    ]);
+    expect(await commitCount(page)).toBe(0);
+    await dialogAction(page, "Keep editing").click();
+    expect(await editorText(editor())).toBe("helloPRECIOUS");
+
+    // The host never received a doomed commit, so it never had to reject one —
+    // its "inline edit was not applied" notice is the symptom this fix removes.
+    await expect(page.locator(".sg-composer-canvas-error")).toHaveCount(0);
+
+    await page.keyboard.press("Escape");
+    await dialogAction(page, "Discard changes").click();
+    await expect(editor()).toHaveCount(0);
+    // Nothing of the abandoned draft reached the model.
+    await page.locator(`[data-sg-tree-node-id="${nodeId}"] .sg-composer-tree-select`).first().click();
+    await expect(markdownField(page)).toHaveValue("hello");
+    expect(pageErrors).toEqual([]);
+    expect(consoleErrors).toEqual([]);
+  });
 });
