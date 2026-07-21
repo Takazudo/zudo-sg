@@ -17,7 +17,7 @@
     "@takazudo/zfb": "0.1.0-next.89",
     "@takazudo/zfb-runtime": "0.1.0-next.89",
     "@zudo-sg/ui": "workspace:*",
-    "preact": "^10.29.1",
+    "preact": "^10.29.7",
     "preact-render-to-string": "^6.6.6",
     "zod": "^4.0.0"
   },
