@@ -4,7 +4,13 @@ Documentation site built with [zudo-doc](https://github.com/zudolab/zudo-doc) �
 
 ## Tech Stack
 
-- **zfb** — documentation build framework
+- **zfb** — documentation build framework. The `@takazudo/zfb*` family is deliberately pinned to
+  `0.1.0-next.89`, NOT the newest `next.90`: next.90's "Stage Escape Guards" hard-fail both the
+  `apps/demo` build (flags `@zudo-sg/ui`'s documented consume-from-source setup as package-name
+  sibling reach) and the `doc/` build (prunes `packageOwnedRoutes`' own `.zudo-doc/routes-src/`
+  as a hidden dir). No `zfb.config.ts` escape hatch exists. Upstream: zudo-front-builder#1816,
+  #1730. zudo-doc 4.3.0 only requires `^0.1.0-next.89`, so this costs nothing — lift the pin once
+  those land.
 - **MDX** — content format
 - **Tailwind CSS v4** — via `@tailwindcss/vite`
 - **Preact** — for interactive islands only (with compat mode for React API)
