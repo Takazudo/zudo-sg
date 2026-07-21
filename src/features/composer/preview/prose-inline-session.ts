@@ -371,16 +371,74 @@ export function useProseInlineSession(options: ProseInlineSessionOptions): Prose
       // Focus left the editable with no in-iframe successor. That is the ONLY
       // observable signal for a click on HOST chrome (toolbar / inspector /
       // tree): the iframe cannot see the host document's mousedown, and this
-      // epic adds no protocol message for it.
+      // epic adds no protocol message for it. Read the draft NOW, while the
+      // element is guaranteed to still hold it.
       syncValueFromDom();
-      dispatch({ type: "outside-intent" });
+      // …but decide a TASK later, because a focusout is not necessarily a user
+      // gesture. An incoming render that MOVES this node (a reorder, a reparent
+      // — the case the re-mount effect below exists for) blurs the editable
+      // purely by relocating it in the DOM, and at dispatch time that is
+      // indistinguishable from a click on host chrome: both carry a null
+      // `relatedTarget`, both leave `activeElement` on `<body>`, and both still
+      // report `hasFocus()` true, since the host's own focus change has not
+      // propagated into this frame yet. One task later it has, and the two
+      // separate cleanly: a real click-away has moved focus OUT of this frame,
+      // while a relocation left it right here. Deciding synchronously raises a
+      // leave dialog the user never asked for every time the document
+      // re-renders under a live session (verified in Chromium) — which would
+      // also contradict the ground-check's promise that a render leaving the
+      // edited field alone leaves the session alone.
+      const view = ownerDoc.defaultView;
+      const decide = (): void => {
+        if (stateRef.current.kind !== "editing") return;
+        // Already rebound to a fresh editable: this focusout belonged to the
+        // element that was replaced, and the replacement is focused already.
+        if (editableRef.current !== el) return;
+        if (ownerDoc.hasFocus()) {
+          // Nothing left the canvas — restore the caret and carry on. The
+          // selection itself is left alone: the user's caret position is not
+          // this handler's to reset.
+          if (ownerDoc.activeElement !== el) el.focus();
+          return;
+        }
+        dispatch({ type: "outside-intent" });
+      };
+      if (view) view.setTimeout(decide, 0);
+      else decide();
     };
     // Word-select inside an active session must NOT bubble to the canvas, or it
     // would restart the session and revert the typing (verified failure mode).
     const onDblClick = (event: MouseEvent): void => {
       event.stopPropagation();
     };
+    // The rest of the ENTRY GESTURE must not select anything in here.
+    //
+    // The gesture that opens this editor is a click on the RENDERED block, and
+    // when the node was already selected the FIRST click is what enters — so
+    // the second click of a double-click (and the word-select it triggers)
+    // lands on the raw markdown source that just replaced what the user was
+    // actually pointing at. The offsets are unrelated between the two views,
+    // so the result is a one-word selection at an arbitrary spot in the source
+    // that the next keystroke silently replaces. `placeCaretAtEnd` above
+    // cannot defend against it: the browser applies its selection as the
+    // default action of an event that arrives AFTER this effect.
+    //
+    // `detail` separates a continuation from a fresh gesture without any
+    // timing guess: a mousedown continuing a multi-click run carries
+    // `detail >= 2`, while any NEW click sequence starts again at 1. So
+    // suppress the former and disarm on the latter — after which double-click
+    // word-select inside the source editor behaves completely normally.
+    let entryGestureLive = true;
+    const onMouseDown = (event: MouseEvent): void => {
+      if (!entryGestureLive) return;
+      if (event.detail >= 2) {
+        event.preventDefault();
+        return;
+      }
+      entryGestureLive = false;
+    };
 
+    el.addEventListener("mousedown", onMouseDown);
     el.addEventListener("compositionstart", onCompositionStart);
     el.addEventListener("compositionend", onCompositionEnd);
     el.addEventListener("input", onInput);
@@ -419,6 +477,7 @@ export function useProseInlineSession(options: ProseInlineSessionOptions): Prose
     ownerDoc.addEventListener("click", onDocClickCapture, true);
 
     return () => {
+      el.removeEventListener("mousedown", onMouseDown);
       el.removeEventListener("compositionstart", onCompositionStart);
       el.removeEventListener("compositionend", onCompositionEnd);
       el.removeEventListener("input", onInput);
@@ -513,9 +572,29 @@ export function useProseInlineSession(options: ProseInlineSessionOptions): Prose
   const dialogRef = useRef<HTMLElement | null>(null);
   useLayoutEffect(() => {
     if (!dialog) return;
-    dialogRef.current
-      ?.querySelector<HTMLElement>("[data-zc-dialog-default]")
-      ?.focus();
+    const defaultAction =
+      dialogRef.current?.querySelector<HTMLElement>("[data-zc-dialog-default]") ?? null;
+    defaultAction?.focus();
+
+    // That call is enough when the dialog was raised from INSIDE the canvas
+    // (ESC, a click on another block). It is not enough on the `focusout` path
+    // — a click on host chrome (inspector, tree, toolbar) — because real
+    // keyboard focus is then in the PARENT document: focusing a button in here
+    // moves only this document's own `activeElement`, so Tab keeps walking the
+    // host UI behind a modal the keyboard can never answer. Pulling the FRAME
+    // forward is what fixes that, and it has to happen after the host gesture
+    // that raised the dialog finishes claiming focus for itself — hence the
+    // macrotask. `hasFocus()` keeps it to exactly that case: when the canvas
+    // already holds focus this is a no-op.
+    const ownerDoc = dialogRef.current?.ownerDocument;
+    const view = ownerDoc?.defaultView;
+    if (!ownerDoc || !view) return;
+    const timer = view.setTimeout(() => {
+      if (ownerDoc.hasFocus()) return;
+      view.focus();
+      defaultAction?.focus();
+    }, 0);
+    return () => view.clearTimeout(timer);
   }, [dialog]);
 
   // ── Rendering ─────────────────────────────────────────────────────────────

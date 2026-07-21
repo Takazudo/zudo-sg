@@ -83,6 +83,30 @@ function type(editor: HTMLElement, value: string): void {
   fireEvent.input(editor);
 }
 
+/**
+ * Focus leaving for HOST chrome, the way a browser actually reports it: a
+ * focusout with no in-iframe successor, and — one task later — focus genuinely
+ * gone from this document.
+ *
+ * Both halves matter. The session DEFERS its verdict by exactly one task,
+ * because an incoming render that relocates the edited node blurs the editable
+ * too and is otherwise indistinguishable at dispatch time (see `onFocusOut` in
+ * `prose-inline-session.ts`); `hasFocus()` is what separates them, and it is
+ * only decisive after the host's focus change has propagated. A test that
+ * fired the event and asserted immediately would be asserting nothing.
+ */
+async function leaveForHostChrome(editor: HTMLElement): Promise<void> {
+  const ownerDoc = editor.ownerDocument;
+  const original = ownerDoc.hasFocus;
+  ownerDoc.hasFocus = () => false;
+  try {
+    fireEvent.focusOut(editor, { relatedTarget: null });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  } finally {
+    ownerDoc.hasFocus = original;
+  }
+}
+
 /** The dialog button whose visible label matches. */
 function action(container: HTMLElement, label: string): HTMLElement {
   const found = [...container.querySelectorAll<HTMLElement>("[data-zc-dialog-action]")].find(
@@ -147,6 +171,25 @@ describe("entering a markdown-source session", () => {
     fireEvent.click(container.querySelector('[data-zc-node-id="md-1"] .zc-prose-md')!);
     expect(editorOf(container)).not.toBeNull();
   });
+
+  it("suppresses the REST of the entry gesture so it cannot select in the fresh source", () => {
+    // Entering from an already-selected node consumes the FIRST click of a
+    // double-click, so the second one lands on raw markdown that replaced what
+    // the user was pointing at — and its word-select would put a selection at
+    // an unrelated offset that the next keystroke replaces. A continuation
+    // carries `detail >= 2`; a genuinely new gesture restarts at 1.
+    const { container } = draw(fixture(), { session: { ...EDIT, selectedId: "md-1" } });
+    fireEvent.click(container.querySelector('[data-zc-node-id="md-1"] .zc-prose-md')!);
+    const editor = editorOf(container)!;
+
+    const continuation = fireEvent.mouseDown(editor, { detail: 2 });
+    expect(continuation, "the entry gesture's second click is swallowed").toBe(false);
+
+    // A fresh click disarms the guard; from then on double-click behaves
+    // normally inside what is now an ordinary source editor.
+    expect(fireEvent.mouseDown(editor, { detail: 1 })).toBe(true);
+    expect(fireEvent.mouseDown(editor, { detail: 2 })).toBe(true);
+  });
 });
 
 describe("no implicit commits", () => {
@@ -159,15 +202,32 @@ describe("no implicit commits", () => {
     expect(editorOf(container)).not.toBeNull(); // session still open
   });
 
-  it("losing focus PROMPTS instead of committing (the plain session's blur-commits rule does not apply)", () => {
+  it("losing focus PROMPTS instead of committing (the plain session's blur-commits rule does not apply)", async () => {
     const { container, onCommitInlineEdit } = open();
     const editor = editorOf(container)!;
     type(editor, "changed");
     // Focus leaving the iframe with no in-iframe successor: the observable
     // signal for a click on HOST chrome (toolbar / inspector / tree).
-    fireEvent.focusOut(editor, { relatedTarget: null });
+    await leaveForHostChrome(editor);
     expect(onCommitInlineEdit).not.toHaveBeenCalled();
     expect(container.querySelector(DIALOG)).not.toBeNull();
+  });
+
+  it("a blur that never left the frame is a re-render, not a departure", async () => {
+    // An incoming render that MOVES the edited node rebuilds its DOM and blurs
+    // the editable on the way — no user gesture, and the ground-check has
+    // already decided the session survives. Prompting here would put a leave
+    // dialog on screen that the user never asked for, and answering it Discard
+    // would throw away a draft nothing threatened.
+    const { container, onCommitInlineEdit } = open();
+    const editor = editorOf(container)!;
+    type(editor, "still mine");
+    fireEvent.focusOut(editor, { relatedTarget: null });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(container.querySelector(DIALOG)).toBeNull();
+    expect(editorOf(container)!.textContent).toBe("still mine");
+    expect(onCommitInlineEdit).not.toHaveBeenCalled();
   });
 
   it("switching to Preview does NOT commit — it stashes and prompts", () => {
@@ -336,10 +396,10 @@ describe("clicking away", () => {
     expect(container.querySelector(DIALOG)).toBeNull();
   });
 
-  it("leave-dialog Discard drops the draft without committing", () => {
+  it("leave-dialog Discard drops the draft without committing", async () => {
     const { container, onCommitInlineEdit } = open();
     type(editorOf(container)!, "abandoned");
-    fireEvent.focusOut(editorOf(container)!, { relatedTarget: null });
+    await leaveForHostChrome(editorOf(container)!);
     fireEvent.click(action(container, "Discard changes"));
     expect(onCommitInlineEdit).not.toHaveBeenCalled();
     expect(editorOf(container)).toBeNull();
