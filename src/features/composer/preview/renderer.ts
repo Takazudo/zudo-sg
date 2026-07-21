@@ -49,6 +49,16 @@ import { VIRTUAL_ROOT_SLOT_ID, classifyNode, createManifest } from "@/composer";
 import type { ComposerEntry } from "@/styleguide/data/composer-registry";
 import { toManifestEntry } from "@/styleguide/data/composer-registry";
 import {
+  INLINE_EDITING_ATTR,
+  effectiveFieldValue,
+  escapeAttrValue,
+  findNodeById,
+  inlineEditableForEntry,
+  placeCaretAtEnd,
+  readEditableValue,
+} from "./inline-edit-dom";
+import { useProseInlineSession } from "./prose-inline-session";
+import {
   RESERVED_PROP_KEYS,
   serializeRect,
   type PreviewLinkedSourceContext,
@@ -82,12 +92,6 @@ export function focusByToken(token: string): void {
   document.querySelector<HTMLElement>(`[${FOCUS_TOKEN_ATTR}="${escapeAttrValue(token)}"]`)?.focus();
 }
 
-function escapeAttrValue(value: string): string {
-  return typeof CSS !== "undefined" && typeof CSS.escape === "function"
-    ? CSS.escape(value)
-    : value.replace(/(["\\])/g, "\\$1");
-}
-
 // ── Inline text editing (issue #257) ────────────────────────────────────────
 //
 // A flag alone can't target the right text node: real components render
@@ -103,13 +107,13 @@ function escapeAttrValue(value: string): string {
 //     remounts it and cannot leave a duplicate (imperatively-inserted) text node;
 //   - `dblclick` inside an active session STOPS propagation (word-select must not
 //     bubble to the canvas and restart the session, reverting the typing).
-
-/** The editable text region of a node, resolved from its runtime definition. */
-interface InlineEditable {
-  field: string;
-  multiline: boolean;
-  resolveElement: (root: HTMLElement) => HTMLElement | null;
-}
+//
+// The DOM helpers this session uses (`readEditableValue`, `placeCaretAtEnd`,
+// `effectiveFieldValue`, …) live in `inline-edit-dom.ts` — epic #368 added a
+// SECOND, explicit-save session (`prose-inline-session.ts`) that has to derive
+// those answers identically, and one shared implementation is what keeps the
+// #288 ground-check sound. This session's own behaviour is unchanged by that
+// move, and the two sessions never share state.
 
 /** An active on-canvas editing session — LOCAL renderer state, never persisted. */
 interface InlineSessionState {
@@ -127,167 +131,6 @@ interface InlineSessionState {
    * render landed.
    */
   startRevision: number;
-}
-
-const INLINE_EDITING_ATTR = "data-zc-inline-editing";
-
-/** The `{ field, multiline, resolveElement }` for a node, or null if it has none. */
-function inlineEditableForEntry(entry: ComposerEntry | undefined): InlineEditable | null {
-  const adapter = entry?.definition.adapters?.inlineEditor;
-  if (!adapter) return null;
-  const field = entry?.definition.fields?.find((f) => f.prop === adapter.field);
-  if (!field || field.kind !== "text" || !field.inlineEdit) return null;
-  return {
-    field: adapter.field,
-    multiline: field.inlineEdit.multiline ?? false,
-    resolveElement: adapter.resolveElement,
-  };
-}
-
-/** Depth-first lookup of a node by id within a composition's slot tree. */
-function findNodeById(nodes: readonly CompositionNode[], id: string): CompositionNode | null {
-  for (const node of nodes) {
-    if (node.id === id) return node;
-    for (const children of Object.values(node.slots)) {
-      const found = findNodeById(children ?? [], id);
-      if (found) return found;
-    }
-  }
-  return null;
-}
-
-/**
- * The on-screen value of an inline-editable field: the component's declared
- * defaults overlaid with the node's own props, coerced to a string. Shared by
- * session ENTRY (`enterInlineSession`) and the #288 ground-check so both read
- * the field IDENTICALLY — the ground-check compares this against the session's
- * captured `initialValue`, so it is only sound if the two derive the value the
- * same way.
- */
-function effectiveFieldValue(
-  node: CompositionNode | null | undefined,
-  entry: ComposerEntry | undefined,
-  fieldKey: string,
-): string {
-  const raw = { ...(entry?.definition.defaults ?? {}), ...(node?.props ?? {}) }[fieldKey];
-  return typeof raw === "string" ? raw : raw == null ? "" : String(raw);
-}
-
-/**
- * Inline-level element tags (issue #288). None of these start a new line on
- * their own — `<strong>Loud</strong> word` reads as one continuous line, not
- * two — so `readEditableValue` must not prepend a `\n` before one of these
- * just because it is an element child. Only a BLOCK-level child (e.g. a
- * browser's own paragraph-splitting `<div>`) implies a line break. Kept
- * intentionally small (the minimum the inline-editable cohort actually
- * produces) rather than an exhaustive HTML inline-element list.
- */
-const INLINE_ELEMENT_TAGS: ReadonlySet<string> = new Set(["B", "STRONG", "EM", "I", "SPAN", "A", "CODE"]);
-
-/**
- * Read the committed text out of an editing element.
- *
- * Decoration islands are skipped: a child marked `aria-hidden` /
- * `contenteditable="false"` (e.g. `CtaButton`'s trailing arrow) is chrome, not
- * content, so it never leaks into the committed value. For a multiline field,
- * `<br>` and BLOCK-level boundaries become newlines (an inline child, e.g. a
- * `<strong>` run — see `INLINE_ELEMENT_TAGS` — never does); a single-line
- * field can hold none (its Enter commits instead of inserting one), and any
- * pasted newline is collapsed to a space so the value stays single-line.
- */
-function readEditableValue(el: HTMLElement, multiline: boolean): string {
-  let out = "";
-  const walk = (node: Node): void => {
-    for (const child of Array.from(node.childNodes)) {
-      if (child.nodeType === 3 /* Text */) {
-        out += (child as Text).data;
-        continue;
-      }
-      if (child.nodeType !== 1 /* Element */) continue;
-      const elChild = child as HTMLElement;
-      if (
-        elChild.getAttribute("aria-hidden") === "true" ||
-        elChild.getAttribute("contenteditable") === "false"
-      ) {
-        continue; // decoration island — not editable content
-      }
-      if (elChild.tagName === "BR") {
-        out += "\n";
-        continue;
-      }
-      if (
-        multiline &&
-        !INLINE_ELEMENT_TAGS.has(elChild.tagName) &&
-        out.length > 0 &&
-        !out.endsWith("\n")
-      ) {
-        out += "\n";
-      }
-      walk(elChild);
-    }
-  };
-  walk(el);
-  return multiline ? out : out.replace(/[\r\n]+/g, " ");
-}
-
-/**
- * The last editable text node in document order, skipping decoration islands
- * (`aria-hidden` / `contenteditable="false"`, e.g. `CtaButton`'s trailing
- * arrow) with the same exclusion rule as `readEditableValue`. Returns null for
- * a field with no editable text (an empty field, or one holding only
- * decoration).
- */
-function lastEditableTextNode(el: HTMLElement): Text | null {
-  let found: Text | null = null;
-  const walk = (node: Node): void => {
-    for (const child of Array.from(node.childNodes)) {
-      if (child.nodeType === 3 /* Text */) {
-        found = child as Text;
-        continue;
-      }
-      if (child.nodeType !== 1 /* Element */) continue;
-      const elChild = child as HTMLElement;
-      if (
-        elChild.getAttribute("aria-hidden") === "true" ||
-        elChild.getAttribute("contenteditable") === "false"
-      ) {
-        continue; // decoration island — never a caret target
-      }
-      walk(elChild);
-    }
-  };
-  walk(el);
-  return found;
-}
-
-/**
- * Best-effort caret-to-end. Collapses to the end of the last EDITABLE text node
- * rather than `el`'s raw contents end: when a field ends in a
- * `contenteditable="false"` decoration (e.g. `CtaButton`'s trailing arrow),
- * collapsing to the raw end lands the caret after the non-editable node and the
- * browser bounces it to offset 0, so typed text prepends instead of appends
- * (issue #257 follow-up). Selection APIs missing (or a detached el) never throw.
- */
-function placeCaretAtEnd(el: HTMLElement): void {
-  try {
-    const view = el.ownerDocument.defaultView;
-    const selection = view?.getSelection?.();
-    if (!selection) return;
-    const range = el.ownerDocument.createRange();
-    const textNode = lastEditableTextNode(el);
-    if (textNode) {
-      range.setStart(textNode, textNode.data.length);
-    } else {
-      // No editable text (empty field or decoration-only): caret before any
-      // trailing decoration, at the start of the editable host.
-      range.setStart(el, 0);
-    }
-    range.collapse(true);
-    selection.removeAllRanges();
-    selection.addRange(range);
-  } catch {
-    // Best effort only.
-  }
 }
 
 /**
@@ -420,7 +263,6 @@ export function CompositionCanvas(props: CompositionCanvasProps): JSX.Element {
     onDropNode,
     onNodeError,
   } = props;
-  const edit = session.mode === "edit";
 
   // Ownership is tracked by object identity, never a raw node id: a source and
   // consumer may both legitimately contain `node-1`. The controller/session
@@ -506,6 +348,10 @@ export function CompositionCanvas(props: CompositionCanvasProps): JSX.Element {
       const entry = entryById.get(targetNode.componentId);
       const editable = inlineEditableForEntry(entry);
       if (!editable || !entry) return false;
+      // A `markdown-source` field belongs to the explicit-save prose session
+      // (#375), which is entered FIRST by `enterAnyInlineSession` below. This
+      // guard is what keeps the auto-commit path from ever claiming one.
+      if (editable.mode !== "plain") return false;
       const initialValue = effectiveFieldValue(targetNode, entry, editable.field);
       setSession({
         nodeId,
@@ -518,6 +364,40 @@ export function CompositionCanvas(props: CompositionCanvasProps): JSX.Element {
     },
     [document, entryById, revision, setSession],
   );
+
+  // ── Explicit-save prose session (issue #375, epic #368) ───────────────────
+  // The PARALLEL path for `inlineEdit.mode: "markdown-source"` fields. It owns
+  // its own state machine, its own editable surface, and its own iframe-side
+  // chrome; the auto-commit session above is untouched by it.
+  const prose = useProseInlineSession({
+    document,
+    entryById,
+    revision,
+    mode: session.mode,
+    canvasRef,
+    // The same verdict `renderNode` draws with — an opaque node shows its
+    // preserved payload read-only and is never editable.
+    isOpaque: (node) => !entryById.has(node.componentId) || classifyNode(node, manifest).opaque,
+    onCommit: onCommitInlineEdit,
+  });
+
+  /**
+   * The single entry point both gestures use. The prose session gets first
+   * refusal (it accepts only `markdown-source` fields); everything else falls
+   * through to the auto-commit session exactly as before.
+   */
+  const enterAnyInlineSession = (nodeId: string): boolean =>
+    prose.tryEnter(nodeId) || enterInlineSession(nodeId);
+
+  /**
+   * Edit-mode chrome is drawn when the HOST says Edit — or while a prose draft
+   * that a mode switch stashed has been restored, which needs Edit mode back
+   * but has no protocol message to ask for it (see `prose-inline-session.ts`).
+   */
+  const edit = session.mode === "edit" || prose.editModeOverride;
+
+  /** Either session holds the canvas — the imperative handlers below check both. */
+  const anySessionActive = (): boolean => sessionRef.current !== null || prose.activeRef.current;
 
   // Set up (and tear down) the imperative contentEditable when a session opens.
   // A layout effect runs after the keyed-body remount has committed the fresh
@@ -720,7 +600,7 @@ export function CompositionCanvas(props: CompositionCanvasProps): JSX.Element {
     // An active inline-editing region owns its own keys/clicks (Enter commits,
     // a multiline Enter inserts a newline, Space/caret keys type normally). The
     // capture-phase swallow must NOT stop those before they reach the editable.
-    if (sessionRef.current && target?.closest(`[${INLINE_EDITING_ATTR}]`)) return false;
+    if (anySessionActive() && target?.closest(`[${INLINE_EDITING_ATTR}]`)) return false;
     event.preventDefault();
     event.stopPropagation();
     return true;
@@ -729,7 +609,7 @@ export function CompositionCanvas(props: CompositionCanvasProps): JSX.Element {
   const onClickCapture = (event: MouseEvent): void => {
     const target = event.target as Element | null;
     // A click INSIDE the active editable is caret placement — never swallow it.
-    if (sessionRef.current && target?.closest(`[${INLINE_EDITING_ATTR}]`)) return;
+    if (anySessionActive() && target?.closest(`[${INLINE_EDITING_ATTR}]`)) return;
     if (!swallow(event)) return;
     const host = target?.closest("[data-zc-node-id]");
     // A source wrapper may have the same raw id as a local wrapper. Only the
@@ -738,7 +618,12 @@ export function CompositionCanvas(props: CompositionCanvasProps): JSX.Element {
     const nodeId = host?.getAttribute("data-zc-node-id") ?? null;
     // Click AGAIN on the already-selected node opens its inline editor (if it has
     // one); the first click on an unselected node just selects it.
-    if (nodeId && !sessionRef.current && nodeId === session.selectedId && enterInlineSession(nodeId)) {
+    if (
+      nodeId &&
+      !anySessionActive() &&
+      nodeId === session.selectedId &&
+      enterAnyInlineSession(nodeId)
+    ) {
       return;
     }
     onSelect(nodeId);
@@ -748,13 +633,13 @@ export function CompositionCanvas(props: CompositionCanvasProps): JSX.Element {
   const onDblClick = (event: MouseEvent): void => {
     // An active session's own dblclick is stopped before it reaches here (see
     // the session's `onDblClick`); guard anyway so word-select never restarts it.
-    if (sessionRef.current) return;
+    if (anySessionActive()) return;
     const target = event.target as Element | null;
     if (target?.closest("[data-zc-affordance]")) return;
     const host = target?.closest("[data-zc-node-id]");
     if (host && host.getAttribute("data-zc-owner") !== "local") return;
     const nodeId = host?.getAttribute("data-zc-node-id") ?? null;
-    if (nodeId && enterInlineSession(nodeId)) event.preventDefault();
+    if (nodeId && enterAnyInlineSession(nodeId)) event.preventDefault();
   };
 
   /** Keyboard activation is the other way a link/button fires. Swallow it too. */
@@ -1040,9 +925,16 @@ export function CompositionCanvas(props: CompositionCanvasProps): JSX.Element {
     const opaque = diagnostic.opaque || !entry;
     const label = entry?.title ?? node.componentId;
     const selected = isLocal && session.selectedId === node.id;
+    // While the prose session holds this node, its body IS the raw-markdown
+    // editable — the component is not rendered at all (see the "the editing
+    // surface is OURS" note in `prose-inline-session.ts`).
+    const proseEditing = isLocal && prose.mountedNodeId === node.id;
 
-    const body: ComponentChildren =
-      opaque || !entry ? renderOpaque(node, diagnostic) : renderComponent(node, entry);
+    const body: ComponentChildren = proseEditing
+      ? prose.renderEditor()
+      : opaque || !entry
+        ? renderOpaque(node, diagnostic)
+        : renderComponent(node, entry);
 
     // The SELECTED node's chrome gains a "⋯" trigger (issue #256) — every
     // other node's chrome stays exactly the bare label it always was (see
@@ -1125,10 +1017,15 @@ export function CompositionCanvas(props: CompositionCanvasProps): JSX.Element {
         : null,
       h(
         Fragment,
-        // Keyed DIFFERENTLY in edit vs read mode: entering/exiting a session
-        // remounts the body, so the imperatively-managed editing DOM is fully
-        // discarded on exit and can never leave a duplicate text node.
-        { key: isLocal && inlineSession?.nodeId === node.id ? "zc-body-editing" : "zc-body" },
+        // Keyed DIFFERENTLY in edit vs read mode: entering/exiting EITHER
+        // session remounts the body, so the imperatively-managed editing DOM is
+        // fully discarded on exit and can never leave a duplicate text node.
+        {
+          key:
+            (isLocal && inlineSession?.nodeId === node.id) || proseEditing
+              ? "zc-body-editing"
+              : "zc-body",
+        },
         h(
           NodeErrorBoundary,
           {
@@ -1165,7 +1062,9 @@ export function CompositionCanvas(props: CompositionCanvasProps): JSX.Element {
       ref: canvasRef,
       class: "zc-canvas",
       "data-composer-canvas": "",
-      "data-mode": session.mode,
+      // The EFFECTIVE mode, so a restored prose draft keeps the Edit-mode
+      // styling that goes with the Edit-mode handlers wired below.
+      "data-mode": edit ? "edit" : "preview",
       // The CSS hook for the drag lifecycle (issue #258): while set, insert-point
       // children are `pointer-events: none` so a child-crossing `dragleave`
       // (null `relatedTarget` in Chromium) can't wipe the drop highlight.
@@ -1209,6 +1108,11 @@ export function CompositionCanvas(props: CompositionCanvasProps): JSX.Element {
           "vertical",
           false,
         ),
+    // The prose session's Save button and confirmation dialog. Both are
+    // `position: fixed` in the IFRAME viewport (which is the canvas area), so
+    // their place in the tree is irrelevant to layout — the canvas is simply
+    // the one element guaranteed to be mounted whenever a session can exist.
+    prose.renderChrome(),
   );
 }
 

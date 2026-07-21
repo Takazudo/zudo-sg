@@ -98,14 +98,47 @@ describe("preview palette scope — structure", () => {
     expect(COMPOSER_PREVIEW_CSS).not.toContain(":root");
   });
 
-  it("keys every affordance z-index off the --z-index-local-* tier family", () => {
+  it("keys every z-index off a NAMED tier token — never a raw integer", () => {
+    // `pnpm check:z-index` enforces this repo-wide; asserting it here as well
+    // keeps the rule visible in the one stylesheet that is a JS string and so
+    // never passes through a CSS-aware linter.
     const zIndexValues = [...COMPOSER_PREVIEW_CSS.matchAll(/z-index:\s*([^;]+);/g)].map(
       (match) => match[1]!.trim(),
     );
     expect(zIndexValues.length).toBeGreaterThan(0);
     for (const value of zIndexValues) {
+      expect(value).toMatch(/^var\(--z-index-[\w-]+\)$/);
+    }
+  });
+
+  it("keys every PER-NODE affordance off the --z-index-local-* tier family", () => {
+    // A node's own chrome only ever needs to rise above its OWN isolated
+    // parent, so it must not claim a rung on the global overlay scale. The one
+    // documented exception is the prose session's chrome (issue #375), which is
+    // `position: fixed` in the iframe VIEWPORT rather than inside a node — the
+    // per-node scale cannot express "over the whole canvas", so it correctly
+    // uses the global popover/modal tiers.
+    const perNodeZIndexes = [...COMPOSER_PREVIEW_CSS.matchAll(/([^{}]+)\{([^}]*z-index:[^}]*)\}/g)]
+      .filter(([, selector]) => !selector!.includes(".zc-prose-"))
+      .map(([, , block]) => block!.match(/z-index:\s*([^;]+);/)![1]!.trim());
+    expect(perNodeZIndexes.length).toBeGreaterThan(0);
+    for (const value of perNodeZIndexes) {
       expect(value).toMatch(/^var\(--z-index-local-\d+\)$/);
     }
+  });
+
+  it("puts the prose dialog above its own backdrop, and both above the save bar", () => {
+    // The ordering that makes the dialog genuinely modal over the canvas: the
+    // backdrop has to cover the floating Save button, not sit under it.
+    expect(COMPOSER_PREVIEW_CSS).toMatch(
+      /\.zc-prose-savebar\s*\{[^}]*z-index:\s*var\(--z-index-popover\)/,
+    );
+    expect(COMPOSER_PREVIEW_CSS).toMatch(
+      /\.zc-prose-dialog-backdrop\s*\{[^}]*z-index:\s*var\(--z-index-modal-backdrop\)/,
+    );
+    expect(COMPOSER_PREVIEW_CSS).toMatch(
+      /\.zc-prose-dialog\s*\{[^}]*z-index:\s*var\(--z-index-modal\)/,
+    );
   });
 
   it("floats the chrome ABOVE the node box so a shrink-wrapped component is never covered", () => {
