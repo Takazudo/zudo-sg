@@ -236,8 +236,11 @@ export function validateComposerDefinitions(definitions: readonly ComposerMeta[]
       }
     }
 
-    // Inline-edit metadata: at most one inline-editable field (MVP), and the
-    // inline-editor adapter must target a real inline-edit text field.
+    // Inline-edit metadata: at most one inline-editable field (MVP), the
+    // inline-editor adapter must target a real inline-edit text field, and
+    // (the reverse, #372) every inlineEdit-declaring field must have a
+    // matching adapter — otherwise `inlineEditableForEntry()` silently
+    // returns null and the field never becomes editable.
     const inlineFields = fields.filter((f) => f.kind === "text" && f.inlineEdit);
     if (inlineFields.length > 1) {
       errors.push(`${where}: at most one inline-editable field is allowed (found ${inlineFields.length})`);
@@ -248,6 +251,14 @@ export function validateComposerDefinitions(definitions: readonly ComposerMeta[]
       if (!target || target.kind !== "text" || !target.inlineEdit) {
         errors.push(
           `${where}: inlineEditor adapter targets "${adapterField}", which is not an inline-editable text field`,
+        );
+      }
+    }
+    for (const field of inlineFields) {
+      if (adapterField !== field.prop) {
+        errors.push(
+          `${where}: field "${field.prop}" declares inlineEdit but has no matching adapters.inlineEditor` +
+            (adapterField ? ` (adapter targets "${adapterField}" instead)` : ""),
         );
       }
     }

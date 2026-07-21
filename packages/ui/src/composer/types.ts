@@ -100,10 +100,20 @@ export type ComposerField<P = Record<string, unknown>> = {
          * Marks this text field editable directly on the canvas (wave-8 /
          * #257). At most one inline-editable field per component (MVP). A
          * flag alone can't target the right text node when the component
-         * renders decorations, so a definition also supplies a trusted
-         * `adapters.inlineEditor` to resolve the editable element.
+         * renders decorations, so a definition MUST also supply a trusted
+         * `adapters.inlineEditor` whose `field` references this same prop
+         * (enforced by the host validator; #372).
          */
-        inlineEdit?: { multiline?: boolean };
+        inlineEdit?: {
+          multiline?: boolean;
+          /**
+           * `"plain"` (default) is the existing auto-commit inline session
+           * (#257 / #288). `"markdown-source"` means the canvas inline
+           * editor shows the raw markdown source as plain text and uses the
+           * explicit-save session (no auto-commit) — see epic #368.
+           */
+          mode?: "plain" | "markdown-source";
+        };
       }
     | {
         kind: "select";
