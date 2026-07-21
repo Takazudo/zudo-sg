@@ -109,6 +109,27 @@ See also `.claude/skills/zudo-doc-design-system/SKILL.md` for the accent-budget
 rules (≤2–3 accent elements per viewport, hover always neutral) that govern how
 components spend the `accent` token at runtime.
 
+### Component-scoped CSS (rare exception)
+
+Almost every component styles itself entirely with Tailwind utility classes —
+no component-owned CSS file, on top of the two required imports above, is
+normally needed. `ProseMd` (#373) is the first exception: it mounts an opaque,
+runtime-rendered HTML fragment (arbitrary markdown → `<h2>/<p>/<ul>/...`) that
+no `Prose*` per-element override can reach, so it ships its own scoped
+stylesheet, co-located at `@zudo-sg/ui/src/content/prose-md/prose-md.css`
+(exposed via the package's `./src/*` export, like any other source file).
+
+**A consumer that renders `ProseMd` must import that file too**, in addition
+to `tokens.css` + `colors.css` above — omitting it does not break anything,
+it just leaves `ProseMd` rendering unstyled native HTML (the two required
+imports alone are not sufficient for this one component). This repo's root
+app wires it into its single bundled stylesheet via
+`src/styles/global.css`'s `@import "@zudo-sg/ui/src/content/prose-md/prose-md.css"`
+— see that import's comment for why, and `prose-md.css`'s own header for what
+it does and does not style. A future consumer outside this repo (e.g. a
+sibling workspace's own CSS graph) needs the equivalent import wired in
+manually; it is not part of the two-import baseline contract.
+
 ---
 
 ## 2. File location & discovery mechanism

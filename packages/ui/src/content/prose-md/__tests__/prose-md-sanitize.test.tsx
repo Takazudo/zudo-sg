@@ -42,14 +42,24 @@ describe("ProseMd — real markdown runtime", () => {
   it(
     "never mounts raw script / event-handler markup embedded in the source",
     async () => {
+      // The `<img>` must be self-closing: an unclosed HTML block here is a
+      // markdown-rs parse error ("end-tag-mismatch"), which sends the
+      // component to its ERROR state — a real `<img>` element never mounts,
+      // and a naive "Body" text assertion would then pass vacuously by
+      // matching the PENDING placeholder's raw-source text instead (that
+      // placeholder shows the literal, unescaped markdown string).
       const markdown =
         "Body <script>window.__zc_xss = true;</script> text.\n\n" +
-        '<img src="x" onerror="window.__zc_xss = true">\n';
+        '<img src="x" onerror="window.__zc_xss = true" />\n';
       render(<ProseMd markdown={markdown} />);
 
+      // Wait for a REAL `<img>` element — the one thing only the ready
+      // (sanitized-HTML) state can produce; the pending placeholder only
+      // ever contains escaped text, never a real element.
       await waitFor(() => {
-        expect(screen.getByText(/Body/)).toBeInTheDocument();
+        expect(document.querySelector("img")).toBeInTheDocument();
       });
+      expect(screen.getByText(/Body/)).toBeInTheDocument();
       expect(document.querySelector("script")).toBeNull();
       expect(document.querySelector("[onerror]")).toBeNull();
     },

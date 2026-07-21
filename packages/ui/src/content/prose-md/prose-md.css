@@ -97,11 +97,17 @@
 }
 
 /* The runtime's always-on heading-links plugin appends a permalink anchor
-   (`<a class="hash-link">`) inside each heading — same exception ProseA
-   makes, so it renders unstyled rather than looking like a body-copy link. */
+   (`<a class="hash-link"></a>`) inside each heading — EMPTY, with its visible
+   "#" glyph, hover-reveal, and focus treatment supplied entirely by
+   `.zd-content`'s CSS (ProseA's own `hash-link` exception relies on that same
+   stylesheet being present). `.zd-content` never loads where ProseMd renders
+   (Composer canvas, catalog preview) — without it the anchor would be a
+   zero-size element that's still in the tab order: focusable, but invisible.
+   Suppressing it outright (rather than reimplementing the hover-reveal
+   permalink UI, which nothing here needs — this content has no stable,
+   bookmarkable URL to link into) is the correct fix, not a style choice. */
 .zc-prose-md a.hash-link {
-  color: inherit;
-  text-decoration: none;
+  display: none;
 }
 
 /* ── Lists (values ported from prose-ul/ol/li) ── */
