@@ -8,18 +8,18 @@ import { tagVocabulary } from "./tag-vocabulary";
 
 /**
  * Build the `tags` schema based on governance mode. `"strict"` tightens to a
- * `z.enum` of every canonical id plus every alias (content still uses
- * aliases verbatim — resolution happens at the aggregation layer, after
- * parsing).
+ * `z.enum` of every canonical id (zudo-doc 4.0 dropped alias resolution from
+ * `TagVocabularyEntry` — content now uses canonical ids only).
  */
 function buildTagsSchema() {
   const vocabularyActive =
     settings.tagVocabulary && settings.tagGovernance === "strict";
   if (!vocabularyActive) return z.array(z.string()).optional();
+  // Aliases were dropped from `TagVocabularyEntry` in zudo-doc 4.0 (the tag
+  // alias/deprecation runtime was removed) — only canonical ids remain.
   const allowed = new Set<string>();
   for (const entry of tagVocabulary) {
     allowed.add(entry.id);
-    for (const alias of entry.aliases ?? []) allowed.add(alias);
   }
   const allowedList = [...allowed];
   if (allowedList.length === 0) return z.array(z.string()).optional();

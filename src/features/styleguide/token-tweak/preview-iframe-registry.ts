@@ -17,7 +17,7 @@ import {
   sendClearCssVars,
   onIframeReady,
   type CssVarPair,
-} from "@takazudo/zudo-doc/theme";
+} from "./iframe-css-vars-bridge";
 
 const registered = new Set<HTMLIFrameElement>();
 const readyTeardowns = new Map<HTMLIFrameElement, () => void>();

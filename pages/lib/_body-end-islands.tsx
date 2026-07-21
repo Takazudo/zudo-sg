@@ -56,7 +56,13 @@ import PreviewTokenPanelBootstrap from "@/components/preview-token-panel-bootstr
 // for the same source-level identifier (zfb PR #150). esbuild preserves
 // function names by default, but the explicit assignment is a
 // belt-and-braces guard for production minification regressions.
-(DesignTokenPanelBootstrap as { displayName?: string }).displayName = "DesignTokenPanelBootstrap";
+// "DocTokenPanelBootstrap", not "DesignTokenPanelBootstrap" — that marker
+// name is claimed by the package's own scanner-visible island
+// (@takazudo/zudo-doc/design-token-panel-bootstrap, 4.x); reusing it produces
+// an island marker-name collision (zfb keeps only one island per marker) that
+// would hand hydration to the package's heavy, eager island instead of this
+// lazy-load gate. See src/components/design-token-panel-bootstrap.tsx.
+(DesignTokenPanelBootstrap as { displayName?: string }).displayName = "DocTokenPanelBootstrap";
 (PreviewTokenPanelBootstrap as { displayName?: string }).displayName = "PreviewTokenPanelBootstrap";
 (ClientRouterBootstrap as { displayName?: string }).displayName =
   "ClientRouterBootstrap";

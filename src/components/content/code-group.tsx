@@ -14,7 +14,7 @@ import { TabItem } from "@takazudo/zudo-doc/tab-item";
  * component zips the `tabs` label array with the `<pre data-lang>` children
  * by index, wrapping each in a <TabItem> with the matching label.
  *
- * Code inside each <pre> is raw text (NOT syntect-highlighted — the Rust
+ * Code inside each <pre> is raw text (NOT hi-* highlighted — the Rust
  * pipeline does not run highlight inside code-group fences). We render
  * the <pre> inside a <TabItem> with explicit styling via Tailwind tokens
  * so it looks like a code block visually.

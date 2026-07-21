@@ -108,24 +108,60 @@ declare module "zfb/config" {
      */
     base?: string;
     /**
-     * Configures the syntect-based syntax highlighter shipped with zfb.
+     * Configures zfb's fenced-code syntax highlighter.
      * Mirrors `CodeHighlightConfig` / `code_highlight` in crates/zfb/src/config.rs
      * (single-theme: Takazudo/zudo-front-builder#188 / sub #194, commit 339e30f;
      * dual-theme themeLight/themeDark added in the follow-up shipped in
-     * zfb 0.1.0-next.45+).
-     * When omitted, the engine falls back to the hardcoded default theme `base16-ocean.dark`.
+     * zfb 0.1.0-next.45+; class mode — `mode`/`classPrefix`/`roleClasses`/
+     * `defaultStylesheet` — added by the Highlight Tokens epic, zfb#1528,
+     * shipped by zfb 0.1.0-next.90 / zudo-doc 4.x).
      *
-     * Single-theme mode: set `theme` — tokens get inline `style="color:#hex"`.
-     * Dual-theme mode: set BOTH `themeLight` and `themeDark` (mutually exclusive
-     * with `theme`) — tokens get `--shiki-light`/`--shiki-dark` CSS custom
-     * properties and the `<pre>` gains `class="syntect-dual"` + `--shiki-*-bg`.
-     * All names are SYNTECT theme names, not Shiki names.
+     * `mode: "class"` (the preset's default as of zudo-doc 4.x) emits a
+     * semantic `hi-<role>` class per token instead of a theme/inline color —
+     * mutually exclusive with `theme`/`themeLight`/`themeDark`/`themesDir`,
+     * which only apply in the legacy `"inline"` mode. When `mode` is absent,
+     * `"inline"` is the default and those inline-mode fields apply; when
+     * omitted entirely, the engine falls back to the hardcoded default theme
+     * `base16-ocean.dark`.
+     *
+     * Inline mode, single-theme: set `theme` — tokens get inline
+     * `style="color:#hex"`. Inline mode, dual-theme: set BOTH `themeLight`
+     * and `themeDark` (mutually exclusive with `theme`) — tokens get
+     * `--shiki-light`/`--shiki-dark` CSS custom properties and the `<pre>`
+     * gains `class="syntect-dual"` + `--shiki-*-bg`. All theme names are
+     * SYNTECT theme names, not Shiki names.
      */
     codeHighlight?: {
       theme?: string;
       themesDir?: string;
       themeLight?: string;
       themeDark?: string;
+      mode?: "inline" | "class";
+      classPrefix?: string;
+      roleClasses?: Partial<
+        Record<
+          | "escape"
+          | "operator"
+          | "comment"
+          | "string"
+          | "number"
+          | "constant"
+          | "keyword"
+          | "function"
+          | "type"
+          | "namespace"
+          | "property"
+          | "variable"
+          | "tag"
+          | "attribute"
+          | "punctuation"
+          | "inserted"
+          | "deleted"
+          | "heading",
+          string
+        >
+      >;
+      defaultStylesheet?: boolean;
     };
     /**
      * Markdown link resolver (port of `remarkResolveMarkdownLinks`).
