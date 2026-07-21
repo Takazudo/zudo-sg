@@ -322,7 +322,7 @@ describe("prompting-escape", () => {
       choice: "keep-editing",
     });
     expect(state).toEqual({ kind: "editing", draft });
-    expect(effects).toEqual([{ type: "close-dialog" }, { type: "refocus", restore: false }]);
+    expect(effects).toEqual([{ type: "close-dialog" }, { type: "refocus" }]);
   });
 
   it("treats a second escape (dialog-ESC) as Keep editing — the safe default", () => {
@@ -331,7 +331,7 @@ describe("prompting-escape", () => {
     });
     expect(state.kind).toBe("editing");
     expect(proseSessionDraft(state)?.value).toBe(TYPED);
-    expect(effects).toEqual([{ type: "close-dialog" }, { type: "refocus", restore: false }]);
+    expect(effects).toEqual([{ type: "close-dialog" }, { type: "refocus" }]);
   });
 
   it("ignores a stale choice aimed at the leave dialog", () => {
@@ -382,17 +382,21 @@ describe("prompting-escape", () => {
     expect(effects).toEqual([{ type: "stash-draft", draft }]);
   });
 
-  it("asks for a RESTORING refocus when Keep editing follows a stash", () => {
+  it("restores Edit mode and the editor before refocusing when Keep editing follows a stash", () => {
+    const draft = proseSessionDraft(promptEscapeStashed());
     const { state, effects } = proseSessionTransition(promptEscapeStashed(), {
       type: "dialog-choice",
       dialog: "escape",
       choice: "keep-editing",
     });
-    expect(state).toEqual({
-      kind: "editing",
-      draft: proseSessionDraft(promptEscapeStashed()),
-    });
-    expect(effects).toEqual([{ type: "close-dialog" }, { type: "refocus", restore: true }]);
+    expect(state).toEqual({ kind: "editing", draft });
+    // Without `restore-editing` the machine would re-enter `editing` while the
+    // canvas sat in Preview mode with no editable to focus.
+    expect(effects).toEqual([
+      { type: "close-dialog" },
+      { type: "restore-editing", draft },
+      { type: "refocus" },
+    ]);
   });
 
   it("does not stash twice", () => {
@@ -463,7 +467,7 @@ describe("prompting-leave", () => {
       kind: "editing",
       draft: proseSessionDraft(promptLeave()),
     });
-    expect(effects).toEqual([{ type: "close-dialog" }, { type: "refocus", restore: false }]);
+    expect(effects).toEqual([{ type: "close-dialog" }, { type: "refocus" }]);
   });
 
   it("treats escape as Keep editing rather than escalating to a second dialog", () => {
@@ -474,7 +478,7 @@ describe("prompting-leave", () => {
       kind: "editing",
       draft: proseSessionDraft(promptLeave()),
     });
-    expect(effects).toEqual([{ type: "close-dialog" }, { type: "refocus", restore: false }]);
+    expect(effects).toEqual([{ type: "close-dialog" }, { type: "refocus" }]);
   });
 
   it("ignores a repeated outside-intent instead of stacking prompts", () => {
@@ -516,14 +520,19 @@ describe("prompting-leave", () => {
       });
     });
 
-    it("asks for a restoring refocus on Keep editing", () => {
+    it("restores Edit mode and the editor on Keep editing", () => {
+      const draft = proseSessionDraft(promptLeaveStashed());
       const { state, effects } = proseSessionTransition(promptLeaveStashed(), {
         type: "dialog-choice",
         dialog: "leave",
         choice: "keep-editing",
       });
       expect(state.kind).toBe("editing");
-      expect(effects).toEqual([{ type: "close-dialog" }, { type: "refocus", restore: true }]);
+      expect(effects).toEqual([
+        { type: "close-dialog" },
+        { type: "restore-editing", draft },
+        { type: "refocus" },
+      ]);
     });
 
     it("discards the stash on Discard", () => {
@@ -831,15 +840,30 @@ describe("reachable graph", () => {
     }
   });
 
-  it("PROPERTY: refocus only returns to editing, and asks to restore exactly when stashed", () => {
+  it("PROPERTY: refocus only returns to editing, preceded by restore-editing exactly when stashed", () => {
     for (const edge of edges) {
-      const refocus = edge.effects.find((e) => e.type === "refocus");
-      if (!refocus) continue;
+      if (!has(edge.effects, "refocus")) continue;
       expect(edge.to.kind).toBe("editing");
       const fromStashed =
         (edge.from.kind === "prompting-escape" || edge.from.kind === "prompting-leave") &&
         edge.from.stashed;
-      expect(refocus.restore).toBe(fromStashed);
+      expect(has(edge.effects, "restore-editing")).toBe(fromStashed);
+      // Edit mode and the editor must be back before the caret is placed.
+      const order = edge.effects.map((e) => e.type);
+      if (fromStashed) {
+        expect(order.indexOf("restore-editing")).toBeLessThan(order.indexOf("refocus"));
+      }
+    }
+  });
+
+  it("PROPERTY: restore-editing is the exact inverse of stash-draft — same draft, never unpaired", () => {
+    for (const edge of edges) {
+      const restore = edge.effects.find((e) => e.type === "restore-editing");
+      if (!restore) continue;
+      expect(restore.draft).toEqual(proseSessionDraft(edge.from));
+      expect(has(edge.effects, "refocus")).toBe(true);
+      expect(edge.from.kind.startsWith("prompting")).toBe(true);
+      expect((edge.from as { stashed: boolean }).stashed).toBe(true);
     }
   });
 

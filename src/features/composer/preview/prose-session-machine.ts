@@ -97,7 +97,7 @@ export type ProseDialogKind = "escape" | "leave";
  * `stashed` on a prompting state means the editable DOM is GONE (a mode switch
  * tore it down) and the draft survives only in this state. A prompt that ends
  * in "keep editing" from there needs the editor re-established, not merely
- * refocused — hence `refocus.restore`.
+ * refocused, and the canvas put back into Edit mode — hence `restore-editing`.
  */
 export type ProseSessionState =
   | { readonly kind: "idle" }
@@ -164,11 +164,15 @@ export type ProseSessionEffect =
   /** Hold the draft value outside the DOM: the editable is about to be destroyed. */
   | { readonly type: "stash-draft"; readonly draft: ProseDraft }
   /**
-   * Put the caret back in the editor. `restore` means the editor no longer
-   * exists (the draft was stashed) and must be re-established from
-   * `draft.value` first.
+   * The exact inverse of `stash-draft`, and only ever emitted for a stashed
+   * draft: the canvas has LEFT Edit mode and the editable is gone, so the
+   * integration must put the host back into Edit mode and re-mount the editor
+   * from `draft.value` before the `refocus` that always follows it. Without
+   * this the machine would re-enter `editing` while the canvas sat in Preview.
    */
-  | { readonly type: "refocus"; readonly restore: boolean }
+  | { readonly type: "restore-editing"; readonly draft: ProseDraft }
+  /** Put the caret back in the editor. */
+  | { readonly type: "refocus" }
   | { readonly type: "show-dialog"; readonly dialog: ProseDialogKind }
   | { readonly type: "close-dialog" };
 
@@ -302,7 +306,9 @@ function promptingTransition(
   const openDialog: ProseDialogKind = state.kind === "prompting-escape" ? "escape" : "leave";
   const keepEditing: ProseSessionTransition = {
     state: { kind: "editing", draft },
-    effects: [{ type: "close-dialog" }, { type: "refocus", restore: stashed }],
+    effects: stashed
+      ? [{ type: "close-dialog" }, { type: "restore-editing", draft }, { type: "refocus" }]
+      : [{ type: "close-dialog" }, { type: "refocus" }],
   };
 
   switch (input.type) {
