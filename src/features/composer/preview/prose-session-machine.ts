@@ -55,6 +55,20 @@
 // revision gate rejects it. Re-stamping a commit as fresh merely because it was
 // sent after that render is exactly the bug #288 fixed.
 //
+// ── A doomed commit is never sent (the STALE dialog) ────────────────────────
+//
+// The corollary of that contract is that once a render has landed, this
+// session's commit CANNOT succeed: the host drops it and answers with nothing.
+// A `commit` effect also means "tear the editor down", so sending a doomed one
+// destroys the draft in exchange for an edit that never lands — the user's text
+// is simply gone. So the draft carries `stale`, set the moment a render arrives
+// (see `external-value-change`), and an explicit save on a stale draft raises
+// the STALE dialog — [Discard changes / Keep editing] — INSTEAD of committing.
+// The draft survives either way, so the user can at least copy their text out.
+// The fix is deliberately on this side of the gate rather than a refreshed
+// `startRevision`: re-stamping would turn a visible failure into a silent
+// overwrite of whatever the render brought.
+//
 // ── Two accepted limitations (documented, deliberate silent discards) ───────
 //
 // 1. EXTERNAL VALUE CHANGE on the field being edited (the #288 "ground moves
@@ -85,13 +99,21 @@ export interface ProseDraft {
   readonly initialValue: string;
   readonly value: string;
   readonly startRevision: number;
+  /**
+   * A render has landed since session start, so the host's revision gate would
+   * reject a commit stamped with `startRevision` (#288) — see the header. Set
+   * once and never cleared: nothing can make a superseded revision current
+   * again.
+   */
+  readonly stale: boolean;
 }
 
 /**
  * Which dialog is open. `"escape"` offers [Discard / Keep editing];
- * `"leave"` offers [Save / Discard / Keep editing].
+ * `"leave"` offers [Save / Discard / Keep editing]; `"stale"` offers
+ * [Discard / Keep editing] because saving is no longer possible at all.
  */
-export type ProseDialogKind = "escape" | "leave";
+export type ProseDialogKind = "escape" | "leave" | "stale";
 
 /**
  * `stashed` on a prompting state means the editable DOM is GONE (a mode switch
@@ -109,6 +131,11 @@ export type ProseSessionState =
     }
   | {
       readonly kind: "prompting-leave";
+      readonly draft: ProseDraft;
+      readonly stashed: boolean;
+    }
+  | {
+      readonly kind: "prompting-stale";
       readonly draft: ProseDraft;
       readonly stashed: boolean;
     };
@@ -131,6 +158,12 @@ export type ProseSessionInput =
   | { readonly type: "escape" }
   | { readonly type: "save-click" }
   | { readonly type: "outside-intent" }
+  /**
+   * A RENDER landed. It carries the edited field's value in the incoming
+   * snapshot so the ground-check below can tell whether the ground moved — but
+   * its mere arrival already means the host has advanced the revision this
+   * session's commit is gated against, so it also marks the draft `stale`.
+   */
   | {
       readonly type: "external-value-change";
       readonly nodeId: string;
@@ -149,6 +182,11 @@ export type ProseSessionInput =
       readonly type: "dialog-choice";
       readonly dialog: "leave";
       readonly choice: "save" | "discard" | "keep-editing";
+    }
+  | {
+      readonly type: "dialog-choice";
+      readonly dialog: "stale";
+      readonly choice: "discard" | "keep-editing";
     };
 
 /**
@@ -200,9 +238,37 @@ function noEffects(state: ProseSessionState): ProseSessionTransition {
   return { state, effects: [] };
 }
 
-/** Terminal effects for an explicit save: a no-op commit is suppressed (see header). */
-function saveEffects(draft: ProseDraft): readonly ProseSessionEffect[] {
-  return draft.value === draft.initialValue ? [{ type: "discard" }] : [{ type: "commit", draft }];
+/**
+ * An EXPLICIT save — the only route to a `commit`. Three outcomes, in order:
+ *
+ *   - a no-op save (value unchanged from session start) just ends the session,
+ *     because a commit that changes nothing still advances the document
+ *     revision host-side (see the header);
+ *   - a STALE draft raises the stale dialog and KEEPS the draft, because the
+ *     commit would be rejected and the editor torn down with it (see the
+ *     header). Re-raising the dialog that is already open is a no-op;
+ *   - otherwise, commit.
+ *
+ * `openDialog` is the dialog currently on screen, or `null` when the save came
+ * straight from the floating Save button.
+ */
+function saveTransition(
+  draft: ProseDraft,
+  stashed: boolean,
+  openDialog: ProseDialogKind | null,
+): ProseSessionTransition {
+  const closing: readonly ProseSessionEffect[] =
+    openDialog === null ? [] : [{ type: "close-dialog" }];
+  if (draft.value === draft.initialValue) {
+    return { state: idleProseSession, effects: [...closing, { type: "discard" }] };
+  }
+  if (draft.stale) {
+    return {
+      state: { kind: "prompting-stale", draft, stashed },
+      effects: openDialog === "stale" ? [] : [{ type: "show-dialog", dialog: "stale" }],
+    };
+  }
+  return { state: idleProseSession, effects: [...closing, { type: "commit", draft }] };
 }
 
 /** Whether a document stimulus targets the field this session is editing. */
@@ -262,7 +328,7 @@ function editingTransition(
         : { state: idleProseSession, effects: [{ type: "discard" }] };
 
     case "save-click":
-      return { state: idleProseSession, effects: saveEffects(draft) };
+      return saveTransition(draft, false, null);
 
     // Leaving Edit mode re-renders the canvas and destroys the editable, so a
     // dirty draft is stashed FIRST and the leave dialog then operates on the
@@ -280,11 +346,13 @@ function editingTransition(
           }
         : { state: idleProseSession, effects: [{ type: "discard" }] };
 
-    // Accepted limitation 1 (see header).
+    // Accepted limitation 1 (see header). A render that leaves the edited field
+    // alone keeps the session — but it has still superseded the revision the
+    // commit is gated against, so the draft becomes `stale`.
     case "external-value-change":
       return groundMoved(draft, input)
         ? { state: idleProseSession, effects: [{ type: "discard" }] }
-        : noEffects(state);
+        : noEffects({ kind: "editing", draft: { ...draft, stale: true } });
 
     // Accepted limitation 2 (see header).
     case "node-removed":
@@ -299,11 +367,15 @@ function editingTransition(
 }
 
 function promptingTransition(
-  state: Extract<ProseSessionState, { kind: "prompting-escape" | "prompting-leave" }>,
+  state: Extract<
+    ProseSessionState,
+    { kind: "prompting-escape" | "prompting-leave" | "prompting-stale" }
+  >,
   input: ProseSessionInput,
 ): ProseSessionTransition {
   const { draft, stashed } = state;
-  const openDialog: ProseDialogKind = state.kind === "prompting-escape" ? "escape" : "leave";
+  const openDialog: ProseDialogKind =
+    state.kind === "prompting-escape" ? "escape" : state.kind === "prompting-leave" ? "leave" : "stale";
   const keepEditing: ProseSessionTransition = {
     state: { kind: "editing", draft },
     effects: stashed
@@ -331,10 +403,7 @@ function promptingTransition(
     // it, an explicit click is an explicit save — it routes through the same
     // single commit path rather than being dropped.
     case "save-click":
-      return {
-        state: idleProseSession,
-        effects: [{ type: "close-dialog" }, ...saveEffects(draft)],
-      };
+      return saveTransition(draft, stashed, openDialog);
 
     // The open dialog owns the pending decision: a further click outside is
     // consumed rather than stacking a second prompt.
@@ -361,13 +430,14 @@ function promptingTransition(
       };
 
     // Accepted limitation 1 (see header) — the dialog goes with the session.
+    // A render that spares the field still supersedes the commit's revision.
     case "external-value-change":
       return groundMoved(draft, input)
         ? {
             state: idleProseSession,
             effects: [{ type: "close-dialog" }, { type: "discard" }],
           }
-        : noEffects(state);
+        : noEffects({ ...state, draft: { ...draft, stale: true } });
 
     // Accepted limitation 2 (see header).
     case "node-removed":
@@ -389,10 +459,14 @@ function promptingTransition(
           effects: [{ type: "close-dialog" }, { type: "discard" }],
         };
       }
-      return {
-        state: idleProseSession,
-        effects: [{ type: "close-dialog" }, ...saveEffects(draft)],
-      };
+      // The SAVE branch is reached only by naming it. Falling through to a
+      // commit "because it was not one of the other two" would make an
+      // unrecognised choice an IMPLICIT commit — the one thing this module
+      // exists to forbid — so anything else is a no-op instead.
+      if (input.dialog === "leave" && input.choice === "save") {
+        return saveTransition(draft, stashed, openDialog);
+      }
+      return noEffects(state);
     }
   }
 }
@@ -416,6 +490,7 @@ export function proseSessionTransition(
               initialValue: input.value,
               value: input.value,
               startRevision: input.startRevision,
+              stale: false,
             },
           })
         : noEffects(state);
@@ -425,6 +500,7 @@ export function proseSessionTransition(
 
     case "prompting-escape":
     case "prompting-leave":
+    case "prompting-stale":
       return promptingTransition(state, input);
   }
 }

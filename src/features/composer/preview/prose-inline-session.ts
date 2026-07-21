@@ -38,6 +38,14 @@
 // can never leave a duplicate text node behind), and a `dblclick` inside the
 // editable stops propagating so word-select cannot restart the session.
 //
+// ── Leaving the browser is not leaving the block ────────────────────────────
+//
+// A click on host chrome is invisible in here: the iframe cannot see the host
+// document's mousedown, so the only signal is focus leaving with no in-iframe
+// successor. A window/tab blur reports the very same thing, which is why
+// `leftTheBrowser` exists — without it, alt-tabbing away to copy something
+// raised the leave dialog and pulled the tab back to the front to show it.
+//
 // ── Why there is no "set mode" message ──────────────────────────────────────
 //
 // `restore-editing` (keeping a draft that a mode switch stashed) requires the
@@ -170,6 +178,34 @@ function inProseChrome(target: EventTarget | null): boolean {
 function inProseEditable(target: EventTarget | null): boolean {
   const element = target as Element | null;
   return typeof element?.closest === "function" && element.closest(`[${PROSE_EDITING_ATTR}]`) !== null;
+}
+
+/**
+ * Did the user leave the BROWSER (another window, another tab), rather than
+ * click host chrome? Both blur this document identically — a `focusout` with a
+ * null `relatedTarget` and `hasFocus()` false — but leaving the browser is not
+ * leaving the editing session, so it must neither prompt nor grab focus back.
+ *
+ * The decisive signal is the TOP document: in the real embed the preview is a
+ * same-origin iframe inside the composer, and the top document reports focus
+ * for the whole tab — still true while the user clicks the inspector or the
+ * tree, false only once the tab itself is in the background. When there is no
+ * host frame (a direct mount, a unit test) or the top is cross-origin and
+ * refuses to be read, fall back to this document's own `activeElement`: a
+ * window blur RETAINS the focus path, so the editable is still named here,
+ * while focus moving elsewhere in the page would have reset it to `<body>`.
+ */
+function leftTheBrowser(ownerDoc: Document, editable: HTMLElement): boolean {
+  if (ownerDoc.visibilityState === "hidden") return true;
+  let topDoc: Document | null = null;
+  try {
+    const top = ownerDoc.defaultView?.top ?? null;
+    topDoc = top ? top.document : null;
+  } catch {
+    topDoc = null; // cross-origin top — unreadable, so fall through
+  }
+  if (topDoc && topDoc !== ownerDoc) return !topDoc.hasFocus();
+  return ownerDoc.activeElement === editable;
 }
 
 export function useProseInlineSession(options: ProseInlineSessionOptions): ProseInlineSession {
@@ -401,6 +437,12 @@ export function useProseInlineSession(options: ProseInlineSessionOptions): Prose
           if (ownerDoc.activeElement !== el) el.focus();
           return;
         }
+        // The user left the BROWSER, not the block. Alt-tabbing to another
+        // window (to copy some markdown, say) reports exactly what a click on
+        // host chrome does — a focusout with no successor and `hasFocus()`
+        // false — so without this it would raise a leave dialog nobody asked
+        // for AND yank the tab back to the front to show it.
+        if (leftTheBrowser(ownerDoc, el)) return;
         dispatch({ type: "outside-intent" });
       };
       if (view) view.setTimeout(decide, 0);
@@ -452,6 +494,12 @@ export function useProseInlineSession(options: ProseInlineSessionOptions): Prose
     // raised the same stimulus a second time.
     const onDocMouseDownCapture = (event: MouseEvent): void => {
       if (stateRef.current.kind !== "editing") return;
+      // Only a PRIMARY press is an intent to go somewhere else. A right-click
+      // (reaching for the browser's own Paste/Copy menu) or a middle-click is
+      // not — and `preventDefault` here would not suppress the `contextmenu`
+      // that follows anyway, so treating it as a departure would put the modal
+      // AND the context menu on screen together.
+      if (event.button !== 0) return;
       if (inProseEditable(event.target) || inProseChrome(event.target)) return;
       syncValueFromDom();
       if (proseSessionIsDirty(stateRef.current)) {
@@ -591,6 +639,8 @@ export function useProseInlineSession(options: ProseInlineSessionOptions): Prose
     if (!ownerDoc || !view) return;
     const timer = view.setTimeout(() => {
       if (ownerDoc.hasFocus()) return;
+      // …but never drag a BACKGROUND tab to the front to show a dialog.
+      if (ownerDoc.visibilityState === "hidden") return;
       view.focus();
       defaultAction?.focus();
     }, 0);
@@ -664,7 +714,18 @@ export function useProseInlineSession(options: ProseInlineSessionOptions): Prose
   };
 
   const renderDialog = (kind: ProseDialogKind): ComponentChildren => {
-    const escape = kind === "escape";
+    // Only the LEAVE dialog offers Save. The escape dialog is confirming a
+    // discard gesture, and on the stale dialog a save cannot succeed at all —
+    // the host's revision gate would drop it (see `prose-session-machine.ts`).
+    const offersSave = kind === "leave";
+    const title =
+      kind === "stale" ? "These changes can no longer be saved" : "Unsaved markdown changes";
+    const text =
+      kind === "escape"
+        ? "Discard the changes you made to this block?"
+        : kind === "leave"
+          ? "You are leaving this block. Save the changes you made?"
+          : "The canvas changed while you were editing, so this block can no longer be saved. Keep editing to copy your text out, or discard it.";
     return h(
       "div",
       {
@@ -686,14 +747,8 @@ export function useProseInlineSession(options: ProseInlineSessionOptions): Prose
           },
           onKeyDown: onDialogKeyDown,
         },
-        h("p", { id: DIALOG_TITLE_ID, class: "zc-prose-dialog-title" }, "Unsaved markdown changes"),
-        h(
-          "p",
-          { id: DIALOG_TEXT_ID, class: "zc-prose-dialog-text" },
-          escape
-            ? "Discard the changes you made to this block?"
-            : "You are leaving this block. Save the changes you made?",
-        ),
+        h("p", { id: DIALOG_TITLE_ID, class: "zc-prose-dialog-title" }, title),
+        h("p", { id: DIALOG_TEXT_ID, class: "zc-prose-dialog-text" }, text),
         h(
           "div",
           { class: "zc-prose-dialog-actions" },
@@ -707,11 +762,11 @@ export function useProseInlineSession(options: ProseInlineSessionOptions): Prose
             // The SAFE action takes initial focus (see the dialog focus effect).
             { "data-zc-dialog-default": "" },
           ),
-          escape
-            ? null
-            : dialogAction("Save changes", "primary", () =>
+          offersSave
+            ? dialogAction("Save changes", "primary", () =>
                 dispatch({ type: "dialog-choice", dialog: "leave", choice: "save" }),
-              ),
+              )
+            : null,
         ),
       ),
     );
