@@ -22,8 +22,32 @@ const directiveVocabulary = {
 // `virtual:zudo-doc-route-context` module so the package-owned doc/404/versions
 // routes render with the host's real UI strings and `--zd-*` palette instead of
 // the neutral fallback. The preset warns at build time if either is missing.
+//
+// `designTokenPanel: false` here (NOT `settings.designTokenPanel`, which stays
+// `true` for the host's own header icon / BodyEndIslands wiring below) is a
+// deliberate, narrow override of the object fed to the PRESET only. zudo-doc
+// 4.x's `deriveBodyEndIslands` (chrome/derive.js) ADDS its own
+// `DesignTokenPanelIsland` — an eager, package-default panel bootstrap — on
+// EVERY package-owned route whenever `ctx.settings.designTokenPanel` is true,
+// regardless of a host `BodyEndIslands` override; that island injects its own
+// inline toggle-shim script, which clobbers this project's own
+// `window.__zdtpReadyClicks` global (both scripts assign the same name) and
+// duplicates the lazy-load gate this project already owns end-to-end
+// (pages/lib/_body-end-islands.tsx → src/components/design-token-panel-bootstrap.tsx
+// → src/lib/design-token-panel-bootstrap.ts, which does NOT consult
+// `designTokenPanelConfigModule` and would run regardless). Since this is the
+// PACKAGE's sole read of `designTokenPanel` (confirmed against
+// node_modules/@takazudo/zudo-doc/dist/chrome/derive.js), forcing it off here
+// suppresses only that redundant injection with no other effect.
+//
+// Hoisted to a `const` (not inlined) so TypeScript infers its type
+// structurally instead of checking it as a fresh object literal against
+// `PresetSettings` — which doesn't declare `designTokenPanel` at all (it's
+// read off the wider runtime settings shape, not this narrower preset-facing
+// type), so an inline literal here would fail excess-property checking.
+const presetSettings = { ...settings, designTokenPanel: false };
 const preset = zudoDocPreset({
-  settings,
+  settings: presetSettings,
   buildDocsSchema,
   directiveVocabulary,
   translations,
