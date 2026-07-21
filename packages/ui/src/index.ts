@@ -75,6 +75,9 @@ export type { ProseH6Props } from "./content/prose-h6/prose-h6";
 export { ProseLi } from "./content/prose-li/prose-li";
 export type { ProseLiProps } from "./content/prose-li/prose-li";
 
+export { ProseMd } from "./content/prose-md/prose-md";
+export type { ProseMdProps } from "./content/prose-md/prose-md";
+
 export { ProseOl } from "./content/prose-ol/prose-ol";
 export type { ProseOlProps } from "./content/prose-ol/prose-ol";
 

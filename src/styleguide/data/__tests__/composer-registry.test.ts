@@ -255,11 +255,12 @@ describe("serializable manifest projection", () => {
   });
 });
 
-// The curated cohort opted in by issue #246: true containers, leaves, and
-// the two new layout primitives. Kept as an explicit sorted list (rather than
-// just checking length) so an accidental extra/missing opt-in fails loudly
-// with a readable diff, satisfying "unsupported story entries remain absent
-// from the Composer chooser."
+// The curated cohort opted in by issue #246 (plus #373's ProseMd, epic
+// #368): true containers, leaves, and the two new layout primitives. Kept as
+// an explicit sorted list (rather than just checking length) so an
+// accidental extra/missing opt-in fails loudly with a readable diff,
+// satisfying "unsupported story entries remain absent from the Composer
+// chooser."
 const CURATED_COHORT_IDS = [
   "ui.auto-grid",
   "ui.callout",
@@ -268,6 +269,7 @@ const CURATED_COHORT_IDS = [
   "ui.cta-button",
   "ui.hero",
   "ui.placeholder-box",
+  "ui.prose-md",
   "ui.prose-p",
   "ui.section-heading",
   "ui.split-layout",
@@ -330,9 +332,11 @@ describe("live registry — curated cohort opted in (issue #246)", () => {
 
   it("marks exactly the spec'd text-like scalar fields inline-editable, each with a trusted adapter", () => {
     // Per #246's synthesis note: ProseP/CtaButton text-bound children and
-    // SectionHeading's heading — nothing else in the cohort.
+    // SectionHeading's heading — plus #373's ProseMd markdown field
+    // (epic #368) — nothing else in the cohort.
     const expected: Record<string, string> = {
       "ui.prose-p": "children",
+      "ui.prose-md": "markdown",
       "ui.cta-button": "children",
       "ui.section-heading": "heading",
     };

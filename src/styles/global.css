@@ -143,6 +143,17 @@
  * file header). */
 @import "../features/composer/styles.css";
 
+/* ProseMd (#373) — scoped typography for the client-rendered markdown blob
+ * (`packages/ui/src/content/prose-md/prose-md.tsx`). Ships from @zudo-sg/ui
+ * (portable, Tier-2-token-bound only) rather than root, but this IS the one
+ * CSS graph zfb actually bundles, so it's wired in here — same reasoning as
+ * the two feature imports above. Kept unlayered for the same reason they are:
+ * plain descendant selectors off `.zc-prose-md` share no selector+property
+ * pair with any Tailwind utility, so layering it would gain nothing and only
+ * risk losing to `tailwindcss/utilities` if that ever changed. See the file's
+ * own header for what it does and does not style. */
+@import "@zudo-sg/ui/src/content/prose-md/prose-md.css";
+
 /* ========================================
  * Tailwind v4 content sources
  *
