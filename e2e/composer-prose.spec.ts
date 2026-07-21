@@ -669,16 +669,17 @@ test.describe.serial("Composer prose editing (#376)", () => {
   });
 
   // ── 19 ────────────────────────────────────────────────────────────────────
-  test("19 - fence token colours follow the theme in the composer canvas", async () => {
-    // NOTE (issue raised as `agent-found`): inside BOTH preview iframes the
-    // `--zfb-hi-*` bridge shipped by @takazudo/zudo-doc/features.css resolves
-    // to nothing, because that bridge is defined in terms of the doc-chrome
-    // `--zd-syntax-*` tokens and the chrome-free preview documents have no
-    // `--zd-*` injected. Every `hi-*` span therefore INHERITS the code block's
-    // colour instead of getting its own. This test pins what is actually true
-    // today — the tokens re-theme with the document — and deliberately does not
-    // pretend the fence is multi-coloured; tighten it when the bridge reaches
-    // the preview scope.
+  test("19 - the fence is really highlighted in the composer canvas, in both themes", async () => {
+    // The regression this pins (#381): the `--zfb-hi-*` bridge shipped by
+    // @takazudo/zudo-doc/features.css is written in terms of the doc-chrome
+    // `--zd-syntax-*` tokens, and the chrome-free preview documents have no
+    // `--zd-*` injected — so every bridged property resolved to the empty
+    // string and each `hi-*` span INHERITED the code block's own colour. The
+    // fence looked flat. `src/features/composer/preview/preview-styles.ts`
+    // restores those tokens for `html[data-composer-preview-doc]`, so the
+    // assertion below is the one that would have caught it: the coloured
+    // roles must be distinct from EACH OTHER and from the block's base colour,
+    // not merely present.
     // A fence rich enough to carry every token class under test — the previous
     // step's one-liner has no string or call in it.
     await setMarkdown(
@@ -692,8 +693,10 @@ test.describe.serial("Composer prose editing (#376)", () => {
       canvas(page)
         .locator("pre.hi-root")
         .evaluate((pre) => {
-          const out: Record<string, string | null> = {};
-          for (const name of ["hi-kw", "hi-str", "hi-var", "hi-punct"]) {
+          const out: Record<string, string | null> = {
+            base: getComputedStyle(pre).color,
+          };
+          for (const name of ["hi-kw", "hi-str", "hi-fn", "hi-var", "hi-punct"]) {
             const el = pre.querySelector(`.${name}`);
             out[name] = el ? getComputedStyle(el).color : null;
           }
@@ -711,6 +714,21 @@ test.describe.serial("Composer prose editing (#376)", () => {
       expect(dark[name], `${name} must be painted in dark mode`).toBeTruthy();
       expect(light[name], `${name} must not be baked to one theme`).not.toBe(dark[name]);
     }
+
+    // Roles that carry their own colour: keyword (accent), string (success),
+    // callable (info). Each must differ from the base AND from the others —
+    // "all three equal base" is exactly the flat rendering #381 fixed.
+    for (const theme of [light, dark]) {
+      const coloured = ["hi-kw", "hi-str", "hi-fn"] as const;
+      for (const name of coloured) {
+        expect(theme[name], `${name} must not inherit the block colour`).not.toBe(theme.base);
+      }
+      expect(new Set(coloured.map((name) => theme[name])).size, "kw/str/fn must be 3 hues").toBe(3);
+    }
+    // `hi-var` maps to `--zd-syntax-name`, which upstream aliases to the code
+    // foreground — equal to the base is the CORRECT value here, not a miss.
+    expect(light["hi-var"]).toBe(light.base);
+    expect(dark["hi-var"]).toBe(dark.base);
 
     await themeToggle.click();
     await expect(canvas(page).locator("html[data-theme='light']")).toBeAttached();
