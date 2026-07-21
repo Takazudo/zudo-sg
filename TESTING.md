@@ -63,7 +63,7 @@ Steps in `scripts/run-b4push.sh`:
 6. Build demo — `pnpm --filter @zudo-sg/demo build`
 7. Link check — `pnpm check:links` + `pnpm check:links:demo`
 8. HTML validation — `pnpm check:html`
-9. Playwright smoke e2e — `pnpm test:e2e` (styleguide + the 6 composer projects +
+9. Playwright smoke e2e — `pnpm test:e2e` (styleguide + the 7 composer projects +
    demo-smoke — see [Composer E2E suites](#composer-e2e-suites))
 10. Manual interactive smoke (operator-driven)
 
@@ -81,7 +81,7 @@ the single source of truth for pass/fail. Jobs mirror the b4push steps:
 - **build-demo** — `pnpm --filter @zudo-sg/demo build` (produces and caches
   `apps/demo/dist`), then `pnpm check:links:demo` against it
 - **smoke-e2e** — `pnpm test:e2e:ci` (Playwright, Chromium only; styleguide +
-  the 6 composer projects + demo-smoke — see
+  the 7 composer projects + demo-smoke — see
   [Composer E2E suites](#composer-e2e-suites); needs `build` and `build-demo`)
 - **dist-checks** — `pnpm check:links` + `pnpm check:html` against `dist/`
   (needs `build`; merged into one job so both checks share a single install)
@@ -105,7 +105,7 @@ pnpm test:e2e           # Playwright smoke (needs dist/ and apps/demo/dist/)
 ### Composer E2E suites
 
 `playwright.config.ts` (the default config, run by `pnpm test:e2e` / `pnpm test:e2e:ci`)
-includes 6 composer projects alongside `smoke`, `preview-token-panel`, and `demo-smoke`.
+includes 7 composer projects alongside `smoke`, `preview-token-panel`, and `demo-smoke`.
 The composer projects, like `smoke` and `preview-token-panel`, are served from the
 styleguide's static `dist/` preview (port 4700) — `demo-smoke` is separate, served from
 `apps/demo/dist` on port 4701:
@@ -113,6 +113,7 @@ styleguide's static `dist/` preview (port 4700) — `demo-smoke` is separate, se
 | Project | Spec | Covers |
 |---------|------|--------|
 | `composer` | `composer.spec.ts` | 14-step editor walkthrough — canvas/tree edits, chooser, inline text edit, copy/paste/cut/duplicate, cross-slot drag, storage & recovery matrix, SPA navigation guard |
+| `composer-prose` | `composer-prose.spec.ts` | Explicit-save prose editing (epic #368): the hashed `zfb-md-wasm` runtime loading from the BUILT site, the no-implicit-commit contract (Enter/blur/mode-switch never commit; ESC and click-away prompt), the `focusout` host-chrome path, dialog focus containment, the untouched plain auto-commit path, persistence across reload, and dual-theme computed styles |
 | `composer-persistence` | `composer-persistence.spec.ts` | Real-browser IndexedDB lifecycle (create/update/duplicate/delete) and legacy-storage migration |
 | `composer-production-boundary` | `composer-production-boundary.spec.ts` | Built preview exposes IndexedDB but no dev file capability, endpoint, UI, or destination writes |
 | `composer-contracts` | `composer-contracts.spec.ts` | Composer Polish S7 computed-style contract gate (panel separation, chooser dialog, tree geometry, accent census, typography floor, narrow-viewport overflow) |
@@ -144,6 +145,10 @@ the surface `composer-production-boundary` asserts is absent from the built prev
   `dist/` preview.
 - `pnpm test:e2e:composer-verification` and `pnpm test:e2e:composer-persistence` are not
   invoked by CI at all — they're local-only debugging entry points.
+
+`composer-prose` exists ONLY in the default config: it needs the static `dist/` preview
+(that is where the hashed wasm assets are served the way production serves them) and it
+mutates one record serially, so an isolated debugging twin would add nothing.
 
 This is a **deliberate overlap**: `composer-persistence`, `composer-production-boundary`,
 `composer` (as `composer-adapted`), `composer-verification`, `composer-contracts`, and
