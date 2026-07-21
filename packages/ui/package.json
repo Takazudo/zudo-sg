@@ -13,6 +13,10 @@
   "scripts": {
     "typecheck": "tsc --noEmit"
   },
+  "dependencies": {
+    "@takazudo/zfb-md-wasm": "0.1.0-next.89",
+    "dompurify": "^3.4.11"
+  },
   "peerDependencies": {
     "preact": "^10.29.1"
   },
