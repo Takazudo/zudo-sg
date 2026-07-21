@@ -41,7 +41,13 @@ export const composerFieldSchema = z.discriminatedUnion("kind", [
       kind: z.literal("text"),
       prop: z.string().min(1),
       label: z.string(),
-      inlineEdit: z.object({ multiline: z.boolean().optional() }).strict().optional(),
+      inlineEdit: z
+        .object({
+          multiline: z.boolean().optional(),
+          mode: z.enum(["plain", "markdown-source"]).optional(),
+        })
+        .strict()
+        .optional(),
     })
     .strict(),
   z

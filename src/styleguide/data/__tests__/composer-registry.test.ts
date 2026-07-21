@@ -134,6 +134,44 @@ describe("validateComposerDefinitions", () => {
     const errors = validateComposerDefinitions([def]);
     expect(errors.some((e) => /not an inline-editable text field/i.test(e))).toBe(true);
   });
+
+  // #372: a field declaring inlineEdit MUST have a matching adapters.inlineEditor,
+  // or `inlineEditableForEntry()` silently returns null and the field never
+  // becomes editable — the host validator makes that an authoring-time error.
+  it("rejects a field declaring inlineEdit with no adapters.inlineEditor at all", () => {
+    const def = makeDef({
+      fields: [{ kind: "text", prop: "label", label: "Label", inlineEdit: {} }],
+      defaults: { label: "Hi" },
+      slots: [],
+    });
+    const errors = validateComposerDefinitions([def]);
+    expect(errors.some((e) => /"label".*no matching adapters\.inlineEditor/i.test(e))).toBe(true);
+  });
+
+  it("rejects a field declaring inlineEdit when the adapter targets a different field", () => {
+    const def = makeDef({
+      fields: [
+        { kind: "text", prop: "label", label: "Label", inlineEdit: {} },
+        { kind: "text", prop: "other", label: "Other" },
+      ],
+      defaults: { label: "Hi" },
+      slots: [],
+      adapters: { inlineEditor: { field: "other", resolveElement: (r) => r } },
+    });
+    const errors = validateComposerDefinitions([def]);
+    expect(errors.some((e) => /not an inline-editable text field/i.test(e))).toBe(true);
+    expect(errors.some((e) => /"label".*no matching adapters\.inlineEditor/i.test(e))).toBe(true);
+  });
+
+  it("accepts a field declaring inlineEdit with a correctly matching adapter", () => {
+    const def = makeDef({
+      fields: [{ kind: "text", prop: "label", label: "Label", inlineEdit: { mode: "markdown-source" } }],
+      defaults: { label: "Hi" },
+      slots: [],
+      adapters: { inlineEditor: { field: "label", resolveElement: (r) => r } },
+    });
+    expect(validateComposerDefinitions([def])).toEqual([]);
+  });
 });
 
 describe("isJsonSafe", () => {

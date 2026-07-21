@@ -631,7 +631,8 @@ export const Playground: Story<CtaButtonProps> = { /* … */ };
   for deterministic JSX/import generation.
 - **`defaults`** — JSON-safe initial prop values, keyed to real props.
 - **`fields`** — typed scalar-prop descriptors (`text` / `select` / `boolean` /
-  `number` / `color`). A `text` field may set `inlineEdit?: { multiline? }`.
+  `number` / `color`). A `text` field may set
+  `inlineEdit?: { multiline?, mode? }` — see "Inline-edit modes" below.
 - **`slots`** — named structural slots: `{ id, prop, label, accepts?, cardinality }`.
   `id` is the **persisted document key**; `prop` is the real prop it fills.
 - **`constraints?`** — optional JSON-safe structural constraints.
@@ -653,6 +654,23 @@ The registry is DERIVED from the same generated `storyModules` map the catalog
 already imports — it filters for opted-in metas, never a second filesystem scan
 or `import.meta.glob`.
 
+### Inline-edit modes
+
+A `text` field's `inlineEdit` object carries an optional `mode`:
+
+- `"plain"` (default, omitting `mode` means this) — the existing auto-commit
+  inline session (wave-8 / #257, #288): edits commit as the user types/blurs.
+- `"markdown-source"` — the canvas inline editor shows the raw markdown source
+  as plain text and routes through the explicit-save session instead (no
+  auto-commit anywhere) — see epic #368. This is a PARALLEL path keyed off the
+  mode marker, not a modification of the `"plain"` session.
+
+```tsx
+fields: [
+  { kind: "text", prop: "markdown", label: "Body", inlineEdit: { mode: "markdown-source" } },
+],
+```
+
 ### Invariants (enforced by the host validator + type system)
 
 - `componentId` and slot `id`s must **not** derive from title, slug, category,
@@ -663,6 +681,11 @@ or `import.meta.glob`.
 - `defaults` (and all field values) must be JSON-safe; functions/VNodes never
   enter the serializable manifest.
 - At most one inline-editable field per component (MVP).
+- A field declaring `inlineEdit` MUST have a matching `adapters.inlineEditor`
+  whose `field` references that same prop (#372) — the host validator rejects
+  an inlineEdit field with no adapter (or one that targets a different field)
+  as an authoring-time error, rather than letting it silently never become
+  editable (`inlineEditableForEntry()` would otherwise just return `null`).
 
 Full authoring types live in
 [`src/composer/types.ts`](./src/composer/types.ts) (re-exported from the package
