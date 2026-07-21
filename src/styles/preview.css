@@ -60,4 +60,29 @@ html[data-sg-preview-doc] {
   --color-danger:  light-dark(var(--palette-state-danger),  var(--palette-state-danger-dark));
   --color-warning: light-dark(var(--palette-state-warning), var(--palette-state-warning-dark));
   --color-info:    light-dark(var(--palette-state-info),    var(--palette-state-info-dark));
+  /* Syntax highlighting (#381). zudo-doc's features.css bridges `--zfb-hi-*`
+     (what the `hi-*` fence classes actually read) onto `--zd-syntax-*` and
+     `--zd-code-*`. Those `--zd-*` only exist on doc-chrome pages, which go
+     through ColorSchemeProvider — a chrome-free preview document has none, so
+     every bridged token resolved to the empty string and fences rendered FLAT
+     (each span inheriting the code block's color).
+
+     The mapping below is not invented, and deliberately copies no theme pack's
+     literals: it mirrors zudo-doc's own SYNTAX_SEMANTIC_ALIASES table
+     (`dist/color-scheme-utils.js`), which is how its non-pack color schemes
+     derive syntax colors from semantic roles. Because it binds to the
+     `--color-*` names restored just above rather than to upstream hex values,
+     there is nothing here that can drift out of sync with zudo-doc's palettes.
+     `preview-styles.test.ts` pins the mapping against that upstream table. */
+  --zd-code-fg: var(--color-fg);
+  --zd-code-bg: var(--color-surface-2);
+  --zd-syntax-comment:  var(--color-muted);
+  --zd-syntax-string:   var(--color-success);
+  --zd-syntax-number:   var(--color-warning);
+  --zd-syntax-keyword:  var(--color-accent);
+  --zd-syntax-callable: var(--color-info);
+  --zd-syntax-type:     var(--color-warning);
+  --zd-syntax-name:     var(--zd-code-fg);
+  --zd-syntax-inserted: var(--color-success);
+  --zd-syntax-deleted:  var(--color-danger);
 }

@@ -82,10 +82,27 @@ describe("preview palette scope — structure", () => {
     const block = paletteBlock();
     expect(block).toContain("var(--palette-neutral-0)");
     expect(block).toContain("var(--palette-accent-2)");
-    // light-dark() is what makes the theme switch work off `color-scheme`.
-    const tokenCount = declaredTokens(block).length;
-    expect(tokenCount).toBeGreaterThan(0);
-    expect(block.match(/light-dark\(/g)?.length).toBe(tokenCount);
+    // Every restored token must be THEME-AWARE, and none may hard-code a color.
+    // Two shapes satisfy that: a direct `light-dark()` off `color-scheme` (the
+    // --color-* palette restoration), or an indirection to a token that is one
+    // (the #381 --zd-* syntax tokens, which alias the --color-* names above
+    // exactly as zudo-doc's own SYNTAX_SEMANTIC_ALIASES table does). Asserting
+    // "light-dark() count == token count" would forbid the indirection, so pin
+    // the property instead of the syntax.
+    const declarations = block
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => /^--[\w-]+\s*:/.test(line));
+    expect(declarations.length).toBe(declaredTokens(block).length);
+    expect(declarations.length).toBeGreaterThan(0);
+    for (const declaration of declarations) {
+      expect(declaration, "token must be theme-aware: light-dark() or a var() indirection").toMatch(
+        /light-dark\(|var\(--/,
+      );
+      expect(declaration, "token must not hard-code a color").not.toMatch(
+        /:\s*(#[0-9a-f]{3,8}|rgb\(|oklch\()/i,
+      );
+    }
   });
 
   it("declares NOTHING outside the preview document's scope — the host is untouched", () => {
@@ -300,5 +317,76 @@ describe("end-of-slot add affordance geometry (issue #283)", () => {
     expect(blockFor(COMPOSER_PREVIEW_CSS, ".zc-insert-menu--end")).not.toContain(
       "var(--color-accent)",
     );
+  });
+});
+
+// The syntax-token restoration (#381). zudo-doc's features.css bridges the
+// `--zfb-hi-*` custom properties that `hi-*` fence classes read onto
+// `--zd-syntax-*` / `--zd-code-*`, which only exist on doc-chrome pages. Both
+// chrome-free preview scopes therefore have to supply them or fences render flat.
+//
+// The point of this block is that our mapping is DERIVED, not hand-picked: it
+// mirrors zudo-doc's own SYNTAX_SEMANTIC_ALIASES table. Reading that table out of
+// the installed package means an upstream change to how syntax roles map onto
+// semantic roles fails here loudly, instead of silently desyncing the previews.
+describe("syntax token restoration (#381)", () => {
+  const ALIASES_PATH = resolve(
+    __dirname,
+    "../../../../../node_modules/@takazudo/zudo-doc/dist/color-scheme-utils.js",
+  );
+
+  /** zudo-doc's syntax-role → semantic-role table, read from the installed package. */
+  function upstreamSyntaxAliases(): Record<string, string> {
+    const source = readFileSync(ALIASES_PATH, "utf8");
+    const table = source.slice(source.indexOf("const SYNTAX_SEMANTIC_ALIASES = {"));
+    const body = table.slice(table.indexOf("{") + 1, table.indexOf("}"));
+    return Object.fromEntries(
+      [...body.matchAll(/(\w+):\s*"(\w+)"/g)].map(([, key, value]) => [key!, value!]),
+    );
+  }
+
+  /** `syntaxKeyword` -> `--zd-syntax-keyword` */
+  function cssName(camel: string): string {
+    return `--zd-${camel.replace(/([A-Z])/g, "-$1").toLowerCase()}`;
+  }
+
+  /** Our declared value for a token, from a palette block. */
+  function declaredValue(block: string, token: string): string {
+    return block.match(new RegExp(`${token}\\s*:\\s*([^;]+);`))?.[1]?.trim() ?? "";
+  }
+
+  it("mirrors zudo-doc's SYNTAX_SEMANTIC_ALIASES rather than copying theme-pack literals", () => {
+    const aliases = upstreamSyntaxAliases();
+    expect(Object.keys(aliases).length, "upstream alias table should be non-empty").toBeGreaterThan(0);
+
+    for (const [syntaxRole, semanticRole] of Object.entries(aliases)) {
+      // `codeFg` is zudo-doc's own code-foreground token, not a --color-* role.
+      const expected = semanticRole === "codeFg" ? "var(--zd-code-fg)" : `var(--color-${semanticRole})`;
+      for (const block of [paletteBlock(), styleguidePaletteBlock()]) {
+        expect(declaredValue(block, cssName(syntaxRole)), `${cssName(syntaxRole)} must follow upstream alias "${semanticRole}"`).toBe(expected);
+      }
+    }
+  });
+
+  it("declares no raw color literal in either preview scope's syntax tokens", () => {
+    for (const block of [paletteBlock(), styleguidePaletteBlock()]) {
+      const syntaxLines = block.split("\n").filter((line) => line.includes("--zd-syntax-"));
+      expect(syntaxLines.length).toBeGreaterThan(0);
+      for (const line of syntaxLines) {
+        expect(line, "syntax tokens must indirect through a token, never a literal").not.toMatch(
+          /#[0-9a-f]{3,8}|oklch\(|rgb\(/i,
+        );
+      }
+    }
+  });
+
+  it("keeps the two preview scopes identical for the syntax + code tokens", () => {
+    const composer = paletteBlock();
+    const styleguide = styleguidePaletteBlock();
+    for (const token of declaredTokens(composer).filter((t) => t.startsWith("--zd-"))) {
+      expect(declaredValue(styleguide, token), `${token} must match across preview scopes`).toBe(
+        declaredValue(composer, token),
+      );
+    }
   });
 });
