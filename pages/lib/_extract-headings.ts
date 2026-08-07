@@ -13,8 +13,7 @@
 //      heading text to get the plain visible text — matching what the renderer's
 //      `extractText` HAST walker sees after MDX → HTML conversion.
 //   3. Compute a heading ID that matches what zfb's Rust `HeadingLinks` plugin
-//      emits at render time, using the strategy in `settings.headingIdStrategy`
-//      (single source of truth, also read by `zfb.config.ts`):
+//      emits at render time. zfb 2 always uses hierarchical heading IDs:
 //        - `"flat"`: one dedup counter shared across ALL h2–h6 (even those not
 //          emitted into the TOC), so TOC anchor hrefs match the rendered IDs.
 //        - `"hierarchical"`: ancestor-prefixed IDs (`## Foo` / `### Moo` /
@@ -50,7 +49,7 @@
 
 import { settings } from "../../src/config/settings";
 
-/** Heading-ID (anchor) strategy. Mirrors `settings.headingIdStrategy`. */
+/** Heading-ID strategy. Production uses `hierarchical`; `flat` remains for parity tests. */
 export type HeadingIdStrategy = "flat" | "hierarchical";
 
 // Punctuation stripped (treated as a separator) by zfb's slugify — the ASCII
@@ -221,8 +220,8 @@ function resolveDepthWindow(
 /**
  * Extract TOC headings from a raw MDX/markdown body.
  *
- * Uses the same slugging algorithm as zfb's `HeadingLinks` plugin (selected by
- * `settings.headingIdStrategy`, or the `opts.strategy` override) so the
+ * Uses the same hierarchical slugging algorithm as zfb's `HeadingLinks`
+ * plugin (or the `opts.strategy` test override) so the
  * `href="#slug"` values in the TOC match the rendered heading element IDs.
  * Allocates over ALL matched h2–h6 (keeping the dedup counter and hierarchical
  * ancestor stack in sync with the renderer) but only pushes depth 2–4 items
@@ -231,8 +230,7 @@ function resolveDepthWindow(
  *
  * @param body - Raw markdown body string (frontmatter already stripped).
  * @param opts - Optional overrides for the depth window and heading-ID
- *   strategy (used by tests only; production call sites pass no arguments and
- *   read from settings).
+ *   strategy (used by tests only; production call sites pass no arguments).
  * @returns Array of `{ depth, slug, text }` items in document order.
  */
 export function extractHeadings(
@@ -248,7 +246,7 @@ export function extractHeadings(
     opts?.tocMaxDepth ?? settings.tocMaxDepth,
   );
 
-  const allocator = new SlugAllocator(opts?.strategy ?? settings.headingIdStrategy);
+  const allocator = new SlugAllocator(opts?.strategy ?? "hierarchical");
   const headings: HeadingItem[] = [];
 
   // Track the opening fence character and length so we correctly match the

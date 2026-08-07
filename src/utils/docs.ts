@@ -159,7 +159,7 @@ export function buildNavTree(
     // Pass `{ slug, data }` only — NOT the whole entry. Real zfb entries carry
     // the raw, un-index-stripped engine slug on `entry.slug` (e.g.
     // "getting-started/index"); forwarding it as-is would mint wrong node
-    // paths. zudo-doc 4.x's builder resolves a node's slug via
+    // paths. zudo-doc's builder resolves a node's slug via
     // `entry.data.slug ?? toRouteSlug(entry.slug)` (current entry model —
     // there is no `entry.id` fallback the way the pre-4.0 builder had), so
     // this maps our own already-index-stripped `id` (see _data.ts's

@@ -3,43 +3,16 @@
  * `@takazudo/zfb-md-wasm` (the wasm build of zfb's own markdown pipeline, so
  * a live preview matches what zfb renders at build time).
  *
- * ## Fence handling: why the source is re-scanned
+ * ## Fence handling
  *
- * The site renders fences in zfb's CLASS mode — semantic `hi-*` token classes
- * under `pre.hi-root`, coloured through `--zfb-hi-*` → `--zd-syntax-*`. That
- * is a TOP-LEVEL `codeHighlight: { mode: "class" }` key in `zfb.config.ts`
- * (set by `@takazudo/zudo-doc`'s preset), and the wasm boundary does NOT
- * expose it. Verified empirically against the pinned `0.1.0-next.89` package:
- *
- *   - `pipeline.features` is `MarkdownFeaturesConfig` and is validated by a
- *     Rust `deny_unknown_fields` deserializer whose accepted keys are
- *     `githubAlerts, readingTime, githubAutolinks, codeEnrichment, codeTabs,
- *     ruby, tocExport, imageDimensions, linkValidation, transclude,
- *     directives, mermaid, headingMarkerToc, headingIds` — no highlight key,
- *     so `features.codeHighlight` comes back as an `options` error diagnostic.
- *   - `pipeline.theme` only accepts a syntect THEME NAME. `theme: null` does
- *     not disable highlighting; it falls back to `base16-ocean.dark`, and
- *     `theme: "class"` is rejected as an unknown theme.
- *   - So every info-string fence renders as
- *     `<pre class="syntect-base16-ocean-dark">` with inline `style="color:…"`
- *     spans and no record of its original language.
- *
- * Hence the interim strategy: scan the markdown SOURCE for fenced blocks
- * (`fence-scan.ts`), then substitute positionally — Nth source fence carrying
- * an info string ↔ Nth `<pre class="syntect-*">` in document order — with
- * `highlightCode(code, { language })`, which IS closed to class mode and emits
- * the `hi-*` markup the site already styles. `roleClasses` is deliberately not
- * passed: this project themes via `data-theme` + `light-dark()` tokens, never
- * Tailwind `dark:` utilities. If the two counts disagree (a fence nested in a
- * blockquote or list item, which the flat scanner does not see) the
- * substitution is skipped wholesale and the syntect blocks are downgraded to
- * bare `hi-root` markup, so a mismatch loses colour rather than mislabelling
- * code. Lifting this needs a language-preserving unhighlighted fence mode in
- * `renderHtml` upstream.
+ * md-wasm 2.2 exposes zfb's native fenced-code class mode at
+ * `pipeline.codeHighlight`. It preserves the fence language and emits the same
+ * semantic `hi-*` markup as the build, including fences nested in blockquotes
+ * and lists. The former positional source scanner is therefore unnecessary.
  *
  * ## Sanitization is mandatory
  *
- * `renderHtml` is not a sanitizer. Verified against `next.89`: raw
+ * `renderHtml` is not a sanitizer. Verified against zfb-md-wasm 2.2.0: raw
  * `<script>alert(1)</script>`, `<a onclick="…">`, `<svg onload="…">`,
  * `<iframe src="…">` and `[x](javascript:…)` all pass through with zero
  * diagnostics. Every returned string therefore goes through DOMPurify with an
@@ -57,15 +30,9 @@
  */
 
 import DOMPurify from "dompurify";
-import type {
-  Diagnostic,
-  DiagnosticSource,
-  HighlightDiagnosticSource,
-  PipelineOptions,
-} from "@takazudo/zfb-md-wasm";
-import { scanInfoStringFences } from "./fence-scan";
+import type { Diagnostic, DiagnosticSource, PipelineOptions } from "@takazudo/zfb-md-wasm";
 
-export type MarkdownDiagnosticSource = DiagnosticSource | HighlightDiagnosticSource | "sanitize";
+export type MarkdownDiagnosticSource = DiagnosticSource | "internal" | "sanitize";
 
 export interface MarkdownDiagnostic {
   severity: "error" | "warning";
@@ -83,7 +50,7 @@ export interface MarkdownRenderResult {
 
 export type MarkdownModule = Pick<
   typeof import("@takazudo/zfb-md-wasm"),
-  "renderHtml" | "highlightCode"
+  "renderHtml"
 >;
 
 export type MarkdownModuleImporter = () => Promise<MarkdownModule>;
@@ -93,23 +60,20 @@ export interface MarkdownRuntime {
 }
 
 /**
- * Mirrors the site's build-time markdown behavior: `cjkFriendly` from
- * `src/config/settings.ts`, and zfb's CONSERVATIVE GFM default (strikethrough
- * + table on, autolinks / task lists / footnotes off) — neither the zudo-doc
- * preset nor `zfb.config.ts` overrides `markdown.gfm`, so the build runs this
- * exact set. Spelled out rather than left to the wasm default so a future
- * upstream default change surfaces as a test failure instead of a silent
- * preview/build divergence.
+ * Mirrors the zudo-doc 5 preset: conservative zfb GFM plus task lists and
+ * footnotes, CJK-friendly parsing, hierarchical heading ids, and semantic
+ * fenced-code class output.
  */
 const PIPELINE_OPTIONS: PipelineOptions = {
   gfm: {
     strikethrough: true,
     table: true,
     autolinkLiteral: false,
-    taskListItem: false,
-    footnoteDefinition: false,
+    taskListItem: true,
+    footnoteDefinition: true,
   },
   cjkFriendly: true,
+  codeHighlight: { mode: "class" },
   features: {
     // zudo-doc's preset pins this unconditionally, and the always-on
     // HeadingLinks plugin derives its anchors from it. Without it a repeated
@@ -120,17 +84,6 @@ const PIPELINE_OPTIONS: PipelineOptions = {
 };
 
 /**
- * Safe to match non-greedily: fence bodies are entity-escaped, so no `</pre>`
- * can appear inside. Built fresh per use — a shared `/g` literal carries
- * `lastIndex` state between calls.
- */
-function highlightedPrePattern(): RegExp {
-  return /<pre class="syntect-[^"]*">[\s\S]*?<\/pre>/g;
-}
-
-const HIGHLIGHT_ROOT_CLASS = "hi-root";
-
-/**
  * Prose allowlist for the sanitizer. Covers what zfb's markdown pipeline can
  * emit for this project's fences and GFM set, plus the `hi-*` highlight markup
  * (`class` on `pre`/`code`/`span`). `style` is intentionally absent.
@@ -138,13 +91,13 @@ const HIGHLIGHT_ROOT_CLASS = "hi-root";
 const ALLOWED_TAGS = [
   "a", "abbr", "blockquote", "br", "code", "dd", "del", "div", "dl", "dt", "em",
   "figcaption", "figure", "h1", "h2", "h3", "h4", "h5", "h6", "hr", "img", "ins",
-  "kbd", "li", "mark", "ol", "p", "pre", "s", "samp", "section", "span", "strong",
+  "input", "kbd", "li", "mark", "ol", "p", "pre", "s", "samp", "section", "span", "strong",
   "sub", "sup", "table", "tbody", "td", "tfoot", "th", "thead", "tr", "ul", "var",
 ];
 
 const ALLOWED_ATTR = [
-  "align", "alt", "class", "colspan", "dir", "height", "href", "id", "lang",
-  "reversed", "rowspan", "src", "start", "title", "type", "width",
+  "align", "alt", "checked", "class", "colspan", "dir", "disabled", "height", "href", "id", "lang",
+  "reversed", "role", "rowspan", "src", "start", "title", "type", "width",
 ];
 
 /**
@@ -158,20 +111,6 @@ const ALLOWED_ATTR = [
  */
 const SANITIZE_CONFIG = { ALLOWED_TAGS, ALLOWED_ATTR, ALLOW_DATA_ATTR: false };
 
-function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
-
-/** Escaped-but-unhighlighted `hi-root` markup, matching `highlightCode`'s own fallback shape. */
-function fallbackHighlightMarkup(code: string): string {
-  const lines = code.split("\n").map((line) => `<span class="line">${escapeHtml(line)}</span>`);
-  return `<pre class="${HIGHLIGHT_ROOT_CLASS}"><code>${lines.join("")}</code></pre>`;
-}
-
 /**
  * Probe run through the sanitizer before it is trusted. `isSupported` is not
  * sufficient: under happy-dom 16.8.1 (this repo's vitest DOM) DOMPurify
@@ -184,6 +123,7 @@ const SANITIZER_PROBE = '<img src="x" onerror="alert(1)"><script>alert(2)</scrip
 
 let purifier: typeof DOMPurify | null = null;
 let purifierVerified = false;
+let purifierWithInputGuard: typeof DOMPurify | null = null;
 
 /**
  * `dompurify`'s default export binds `window` at module-evaluation time, which
@@ -200,6 +140,20 @@ function getPurifier(): typeof DOMPurify | null {
     const probe = purifier.sanitize(SANITIZER_PROBE, { ALLOWED_TAGS, ALLOWED_ATTR });
     if (/<script/i.test(probe) || /\son[a-z]+=/i.test(probe)) return null;
     purifierVerified = true;
+  }
+  if (purifierWithInputGuard !== purifier) {
+    purifier.addHook("uponSanitizeElement", (node, data) => {
+      if (data.tagName !== "input") return;
+      const input = node as HTMLInputElement;
+      if (input.getAttribute("type") !== "checkbox") {
+        input.remove();
+        return;
+      }
+      // GFM task-list controls are display-only even when equivalent raw HTML
+      // omitted the attribute. Never allow prose to inject an active form UI.
+      input.setAttribute("disabled", "");
+    });
+    purifierWithInputGuard = purifier;
   }
   return purifier;
 }
@@ -224,62 +178,6 @@ function toDiagnostic(diagnostic: Diagnostic): MarkdownDiagnostic {
     line: diagnostic.line,
     column: diagnostic.column,
   };
-}
-
-/**
- * Rewrite syntect blocks left unsubstituted into bare `hi-root` markup. Their
- * inline colours are dropped by the sanitizer anyway; renaming the class at
- * least keeps the site's code-block styling.
- */
-function neutralizeHighlightedBlocks(html: string): string {
-  return html.replace(
-    /<pre class="syntect-[^"]*">/g,
-    `<pre class="${HIGHLIGHT_ROOT_CLASS}">`,
-  );
-}
-
-async function substituteFences(
-  html: string,
-  source: string,
-  module: MarkdownModule,
-  diagnostics: MarkdownDiagnostic[],
-): Promise<string> {
-  const blocks = html.match(highlightedPrePattern()) ?? [];
-  if (blocks.length === 0) return html;
-
-  const fences = scanInfoStringFences(source);
-  if (fences.length !== blocks.length) {
-    diagnostics.push({
-      severity: "warning",
-      source: "highlight",
-      message:
-        `found ${fences.length} source fence(s) with an info string but ` +
-        `${blocks.length} highlighted block(s); skipped language-aware ` +
-        "highlighting for this document",
-      line: null,
-      column: null,
-    });
-    return neutralizeHighlightedBlocks(html);
-  }
-
-  const replacements = await Promise.all(
-    fences.map(async ({ language, code }) => {
-      const result = await module.highlightCode(code, { language });
-      for (const diagnostic of result.diagnostics) {
-        diagnostics.push({
-          severity: diagnostic.severity,
-          source: diagnostic.source,
-          message: diagnostic.message,
-          line: diagnostic.line,
-          column: diagnostic.column,
-        });
-      }
-      return result.html ?? fallbackHighlightMarkup(code);
-    }),
-  );
-
-  let cursor = 0;
-  return html.replace(highlightedPrePattern(), () => replacements[cursor++]);
 }
 
 /**
@@ -316,12 +214,11 @@ export function createMarkdownRuntime(importModule: MarkdownModuleImporter): Mar
           return { html: null, diagnostics };
         }
 
-        const assembled = await substituteFences(rendered.html, source, module, diagnostics);
         if (diagnostics.some((diagnostic) => diagnostic.severity === "error")) {
           return { html: null, diagnostics };
         }
 
-        const sanitized = sanitizeRenderedHtml(assembled);
+        const sanitized = sanitizeRenderedHtml(rendered.html);
         if (sanitized === null) {
           diagnostics.push({
             severity: "error",

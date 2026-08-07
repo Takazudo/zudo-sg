@@ -5,9 +5,9 @@ import { expect, test } from "@playwright/test";
 // @zudo-sg/ui are present. Runs against the pre-built apps/demo/dist via the
 // "demo-smoke" project (see playwright.config.ts).
 //
-// The demo is a single-page site (no client-side router, no islands), so
-// there is no equivalent of the styleguide's multi-route smoke coverage —
-// one page load is the whole surface.
+// The demo is a statically built multi-route site. Its native client router
+// and enhancer islands have focused transition and refresh coverage in the
+// companion demo specs; this file keeps the home-page smoke assertions small.
 
 test("home page renders without JavaScript errors", async ({ page }) => {
   const jsErrors: string[] = [];

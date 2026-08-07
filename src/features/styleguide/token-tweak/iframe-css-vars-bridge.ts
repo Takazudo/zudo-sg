@@ -5,7 +5,7 @@
 // (`@takazudo/zudo-doc/theme`'s `sendApplyCssVars` / `sendClearCssVars` /
 // `installIframeReceiver` / `onIframeReady`), which this project's own
 // preview-iframe token-tweak feature (#76/H3a) imported as a convenience.
-// zudo-doc 4.0 removed that bridge as a "repository-owned" implementation
+// zudo-doc removed that bridge as a "repository-owned" implementation
 // detail (zudolab/zudo-doc#2761) — it was never meant as public API. Since
 // this project is the only consumer, the bridge (envelope + sender +
 // receiver) is now owned here instead, ported as-is from the pre-4.0

@@ -12,7 +12,7 @@
  * project themes via `data-theme` + `light-dark()`, baked into the tokens
  * themselves).
  *
- * `hi-*` fence token COLORS are deliberately NOT set here — the zudo-doc 4.x
+ * `hi-*` fence token COLORS are deliberately NOT set here — the zudo-doc
  * bridge (`--zfb-hi-*` -> `--zd-syntax-*`, shipped in
  * @takazudo/zudo-doc/features.css) already themes them wherever `pre.hi-root`
  * appears. This file only lays out the `pre`/`code` box (padding, radius,

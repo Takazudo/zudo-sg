@@ -53,6 +53,17 @@ describe("renderMarkdown — markdown constructs", () => {
     expect(html).toContain("<del>gone</del>");
   });
 
+  it("renders zudo-doc 5 task lists and footnotes", async () => {
+    const { html, diagnostics } = await render(
+      "- [x] done\n- [ ] todo\n\nReference[^1].\n\n[^1]: Footnote body.\n",
+    );
+    expect(diagnostics).toEqual([]);
+    expect(html).toContain('<input type="checkbox" disabled="" checked="">');
+    expect(html).toContain('<input type="checkbox" disabled="">');
+    expect(html).toContain('href="#user-content-fn-1"');
+    expect(html).toContain('class="footnotes"');
+  });
+
   it("renders CJK emphasis the way the site build does", async () => {
     const { html, diagnostics } = await render("これは**重要**な話です。\n");
     expect(diagnostics).toEqual([]);
@@ -95,14 +106,12 @@ describe("renderMarkdown — fenced code", () => {
     expect(cssIndex).toBeGreaterThan(firstRoot);
   });
 
-  it("falls back to escaped markup plus a warning for an unknown language", async () => {
+  it("falls back to escaped markup for an unknown language", async () => {
     const { html, diagnostics } = await render("```nosuchlang\nabc <tag> & \"q\"\n```\n");
     expect(html).toContain('<pre class="hi-root">');
     expect(html).toContain("abc &lt;tag&gt; &amp;");
     expect(html).not.toContain("<tag>");
-    expect(diagnostics).toEqual([
-      expect.objectContaining({ severity: "warning", source: "highlight" }),
-    ]);
+    expect(diagnostics).toEqual([]);
   });
 
   it("highlights fences written with CRLF line endings", async () => {
@@ -117,15 +126,13 @@ describe("renderMarkdown — fenced code", () => {
     expect(html).toContain("<pre><code>plain text</code></pre>");
   });
 
-  it("degrades to bare hi-root when the source scan and the render disagree", async () => {
-    // A fence nested in a blockquote is invisible to the flat source scanner.
+  it("preserves language-aware class highlighting for a nested fence", async () => {
     const { html, diagnostics } = await render("> ```js\n> const a = 1;\n> ```\n");
     expect(html).toContain('<pre class="hi-root">');
+    expect(html).toContain('<span class="hi-kw">const</span>');
     expect(html).not.toContain("syntect-");
     expect(html).not.toContain("style=");
-    expect(diagnostics).toEqual([
-      expect.objectContaining({ severity: "warning", source: "highlight" }),
-    ]);
+    expect(diagnostics).toEqual([]);
   });
 });
 
@@ -174,6 +181,14 @@ describe("renderMarkdown — sanitization", () => {
     expect(html).toContain("x");
   });
 
+  it("allows only disabled task-list checkboxes from raw input markup", async () => {
+    const { html } = await render(
+      '<input type="text" value="active" /><input type="checkbox" checked />\n',
+    );
+    expect(html).not.toContain('type="text"');
+    expect(html).toContain('<input type="checkbox" checked="" disabled="">');
+  });
+
   it("keeps benign inline html", async () => {
     const { html } = await render('<span class="note">kept</span>\n');
     expect(html).toContain('<span class="note">kept</span>');
@@ -183,7 +198,6 @@ describe("renderMarkdown — sanitization", () => {
 describe("createMarkdownRuntime — module loading", () => {
   const stubModule: MarkdownModule = {
     renderHtml: async () => ({ html: "<p>ok</p>", frontmatter: null, diagnostics: [] }),
-    highlightCode: async () => ({ html: null, diagnostics: [] }),
   };
 
   it("evicts a rejected import so a later call can retry", async () => {

@@ -51,6 +51,8 @@ Components live under `packages/ui/src/<category>/<component>/`, grouped into ni
 
 `doc` is a separate zudo-doc site deployed for contributor documentation. It should explain how zudo-sg works; it should not duplicate the styleguide catalog or become the operating manual for every styleguide panel.
 
+The docs workspace intentionally stays close to the zudo-doc 5.2 scaffold: `zfb.config.ts` holds the site choices, `pages/index.tsx` re-exports the package home route, `pages/docs/[[...slug]].tsx` is the required self-contained development/build catch-all, and `src/styles/global.css` imports package-owned styling. Doc chrome, navigation, schemas, translations, and feature islands are package responsibilities rather than local copies.
+
 ## Related pages
 
 Read [Component Catalog Pipeline](./component-catalog-pipeline.mdx) for the story discovery flow and [Design Tokens](./design-tokens.mdx) for the two token systems.

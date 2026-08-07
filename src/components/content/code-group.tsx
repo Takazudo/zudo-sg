@@ -1,5 +1,6 @@
 import { Tabs } from "@takazudo/zudo-doc/code-syntax";
 import { TabItem } from "@takazudo/zudo-doc/tab-item";
+import type { ComponentChildren } from "preact";
 
 /**
  * Adapter for zfb's `:::code-group` directive (codeTabs Option A).
@@ -26,12 +27,12 @@ import { TabItem } from "@takazudo/zudo-doc/tab-item";
 
 type Props = {
   tabs?: string[];
-  children?: React.ReactNode;
+  children?: ComponentChildren;
   // zfb forwards `:::code-group{name="x"}` as the `name` prop (used as Tabs groupId).
   name?: string;
 };
 
-function toArray(children: React.ReactNode): React.ReactNode[] {
+function toArray(children: ComponentChildren): ComponentChildren[] {
   if (!children) return [];
   if (Array.isArray(children)) return children;
   return [children];

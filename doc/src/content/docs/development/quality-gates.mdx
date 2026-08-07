@@ -27,14 +27,14 @@ node scripts/check-links.mjs --dist=doc/dist
 
 Generated files are checked in, but their source of truth lives elsewhere:
 
-- `pnpm check:z-index` verifies the generated z-index block from `src/config/z-index-tokens.ts`.
 - `pnpm check:sg-registry` verifies the styleguide story registries generated from `packages/ui/src/**/*.stories.tsx`.
 - `pnpm check:token-manifest` verifies the UI token manifest generated from `packages/ui/styles/tokens.css` and `packages/ui/styles/colors.css`.
+
+The docs workspace uses zudo-doc's package-owned default z-index tiers. It has no local z-index generator or drift check.
 
 When a source file changes, run the matching generator before committing:
 
 ```sh
-pnpm gen:z-index
 pnpm gen:sg-registry
 pnpm gen:token-manifest
 ```

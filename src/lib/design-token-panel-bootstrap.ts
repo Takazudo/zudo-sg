@@ -8,13 +8,13 @@
  */
 
 import { bootstrapDesignTokenPanel } from "@takazudo/zudo-doc/design-token-panel-bootstrap";
-import {
-  enableAutoload,
-  disableAutoload,
-} from "@takazudo/zdtp";
 import { buildDesignTokenPanelConfig } from "@/config/design-token-panel-config";
+import {
+  drainPrehydrationToggle,
+  installOwnerConsoleHelpers,
+} from "./token-panel-native-bootstrap";
 
-bootstrapDesignTokenPanel(buildDesignTokenPanelConfig);
+let bootstrapped = false;
 
 function readMode(): "light" | "dark" {
   if (typeof document !== "undefined") {
@@ -23,13 +23,16 @@ function readMode(): "light" | "dark" {
   return "light";
 }
 
-if (typeof window !== "undefined") {
-  const configForCurrentMode = () => buildDesignTokenPanelConfig(readMode());
-  const ns = configForCurrentMode().consoleNamespace;
-  const w = window as unknown as Record<string, Record<string, unknown> | undefined>;
-  w[ns] = {
-    ...w[ns],
-    enableAutoload: () => enableAutoload(configForCurrentMode()),
-    disableAutoload: () => disableAutoload(configForCurrentMode()),
-  };
+export function bootstrapDocTokenPanel(): void {
+  if (typeof window === "undefined") return;
+  if (!bootstrapped) {
+    bootstrapped = true;
+    bootstrapDesignTokenPanel(buildDesignTokenPanelConfig);
+
+    const configForCurrentMode = () => buildDesignTokenPanelConfig(readMode());
+    installOwnerConsoleHelpers(configForCurrentMode);
+  }
+  // Incoming soft-navigation HTML carries a fresh capture script even though
+  // the native bootstrap stays registered for the document lifetime.
+  drainPrehydrationToggle("zdtp-doc-prehydrate", "toggle-sg-doc-tweak");
 }
