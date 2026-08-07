@@ -53,9 +53,11 @@ export function getSiteTree(lineKey?: string): SiteTree {
   let sections: NavSection[] = [];
   try {
     const rawEntries = getCollection<Record<string, unknown>>("content");
-    // zfb does not runtime-validate the collection schema (v1.1 reserved),
-    // so parse explicitly here. A ZodError re-throws (fail the build on bad
-    // frontmatter); a missing/empty collection falls through to `[]` below.
+    // `zfb check` validates the configured collection schema. Parse again at
+    // this typed build boundary so callers retain the same fail-closed
+    // contract if collection loading is ever customized. A ZodError re-throws
+    // (fail the build on bad frontmatter); a missing/empty collection falls
+    // through to `[]` below.
     const contentSchema = buildContentSchema();
     const entries = rawEntries.map((e) => ({
       ...e,

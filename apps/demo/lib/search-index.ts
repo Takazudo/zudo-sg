@@ -16,11 +16,11 @@ import { buildSearchIndex } from "./search-index-core";
  * Reads the search index from the content collection. Synchronous — safe to
  * call from anywhere during SSR (`getCollection` is sync per ADR-004).
  *
- * As with `getSiteTree`, frontmatter is parsed explicitly (zfb does not
- * runtime-validate a collection's `schema` today). A ZodError re-throws
- * (fail the build on bad frontmatter); a missing/empty collection falls
- * through to `[]` — until content exists (#233), an empty index is
- * expected, not a bug.
+ * As with `getSiteTree`, frontmatter is parsed explicitly at this typed
+ * boundary in addition to `zfb check`'s collection-schema validation. A
+ * ZodError re-throws (fail the build on bad frontmatter); a missing/empty
+ * collection falls through to `[]` — until content exists (#233), an empty
+ * index is expected, not a bug.
  */
 export function getSearchIndex(): SearchDoc[] {
   try {

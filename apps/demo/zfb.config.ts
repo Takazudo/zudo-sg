@@ -12,9 +12,9 @@ const contentSchemaJson = z.toJSONSchema(contentSchema) as Record<string, unknow
  * - `base: "/"` — deployed at its own subdomain.
  * - `tailwind: { enabled: true }` — wires @tailwindcss/vite into the
  *   build so `@import "tailwindcss"` + `@theme` blocks are processed.
- * - `collections` — the single `content` collection (see content/), schema
- *   validated at runtime by lib/site-tree.ts (zfb accepts but does not
- *   enforce a collection's `schema` today — v1.1 reserved).
+ * - `collections` — the single `content` collection (see content/), whose
+ *   JSON schema `zfb check` validates. The site-tree and search boundaries
+ *   parse with the same Zod schema as an additional typed build-time guard.
  * - `stripMdExt` / `trailingSlash: false` — content authors write
  *   `[label](other.md)`-style links; hrefs resolve to the rendered route
  *   (`/other`) without a trailing slash.
@@ -38,16 +38,9 @@ export default defineConfig({
       schema: contentSchemaJson,
     },
   ],
-  // zfb does not copy project public/ assets into dist/ itself. Keep the
-  // local dummy-image catalog available at its resolver URLs after a build.
-  plugins: [
-    {
-      name: "../../plugins/copy-public-plugin.mjs",
-      options: {
-        publicDir: "public",
-      },
-    },
-  ],
+  // zfb natively copies its default `public/` directory. Keep root-relative
+  // dummy-image URLs unchanged rather than rebasing them under `base`.
+  copyPublicWithBase: false,
   stripMdExt: true,
   trailingSlash: false,
 });
