@@ -24,21 +24,9 @@ const directiveVocabulary = {
 // the neutral fallback. The preset warns at build time if either is missing.
 //
 // `designTokenPanel: false` here (NOT `settings.designTokenPanel`, which stays
-// `true` for the host's own header icon / BodyEndIslands wiring below) is a
-// deliberate, narrow override of the object fed to the PRESET only. zudo-doc
-// 4.x's `deriveBodyEndIslands` (chrome/derive.js) ADDS its own
-// `DesignTokenPanelIsland` — an eager, package-default panel bootstrap — on
-// EVERY package-owned route whenever `ctx.settings.designTokenPanel` is true,
-// regardless of a host `BodyEndIslands` override; that island injects its own
-// inline toggle-shim script, which clobbers this project's own
-// `window.__zdtpReadyClicks` global (both scripts assign the same name) and
-// duplicates the lazy-load gate this project already owns end-to-end
-// (pages/lib/_body-end-islands.tsx → src/components/design-token-panel-bootstrap.tsx
-// → src/lib/design-token-panel-bootstrap.ts, which does NOT consult
-// `designTokenPanelConfigModule` and would run regardless). Since this is the
-// PACKAGE's sole read of `designTokenPanel` (confirmed against
-// node_modules/@takazudo/zudo-doc/dist/chrome/derive.js), forcing it off here
-// suppresses only that redundant injection with no other effect.
+// `true` for the host's own header icon / BodyEndIslands wiring) is a narrow
+// preset-only override. It prevents package-owned routes from also mounting
+// zudo-doc's panel while the host keeps its two project-specific instances.
 //
 // Hoisted to a `const` (not inlined) so TypeScript infers its type
 // structurally instead of checking it as a fresh object literal against
@@ -76,6 +64,7 @@ export default defineConfig({
   port: 4321,
   tailwind: { enabled: true },
   base: settings.base,
+  strictContentBridge: true,
   // #215: msw's core resolves through path-to-regexp@6, a CJS-main/module-only
   // package (no `exports` map). esbuild's `--platform=neutral` page/SSR pass
   // (used for the client island bundle) has an EMPTY main-fields list by
@@ -89,20 +78,6 @@ export default defineConfig({
   // `bundle.external: ["path-to-regexp"]` would scope this narrower, but
   // mainFields is zfb's *documented* fix for this msw case (#676), so we use it.
   //
-  // zudo-doc 4.x's html-preview-wrapper and doc-history-area package modules
-  // reference two of @takazudo/zudo-doc's OPTIONAL peer deps —
-  // `@takazudo/zfb-md-wasm` (lazy-loaded for the HtmlPreview source panel)
-  // and `@takazudo/zudo-doc-history-server` (imported eagerly at module top
-  // level, unconditionally — not gated by the `docHistory` setting this
-  // project has off, see settings.ts) — regardless of whether the owning
-  // feature is enabled. `bundle.external` (zfb's documented escape hatch,
-  // BundleConfig.external) resolved this for the main SSR/page bundle pass,
-  // but NOT for the separate islands production bundle pass or zfb's
-  // static-paths evaluation (an embedded runtime that can't fall back to
-  // Node's module resolution the way a browser/SSR bundle can) — both still
-  // failed to resolve the bare specifiers. Installing both as real
-  // dependencies (see package.json) fixes every pass uniformly; neither is
-  // reached at runtime since both owning features are off.
   bundle: { mainFields: ["main", "module"] },
   // Collections, markdown.features, codeHighlight, resolveMarkdownLinks,
   // stripMdExt, trailingSlash, and the package plugin descriptors (search
@@ -136,14 +111,6 @@ export default defineConfig({
   resolveMarkdownLinks,
   plugins: [
     ...preset.plugins,
-    // Project-specific workaround, not part of the preset — see
-    // plugins/copy-public-plugin.mjs for why zfb build needs this.
-    {
-      name: "./plugins/copy-public-plugin.mjs",
-      options: {
-        publicDir: "public",
-      },
-    },
     // Wires the preview design-token panel's Apply button to a same-origin
     // dev-only endpoint that persists tweaks into packages/ui/styles/colors.css
     // — see plugins/zdtp-apply-proxy-plugin.mjs for the full pipeline + scope.

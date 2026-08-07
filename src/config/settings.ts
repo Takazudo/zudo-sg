@@ -25,6 +25,7 @@ import type {
   TagPlacement,
   TagGovernanceMode,
   MetaTagsConfig,
+  Settings,
 } from "./settings-types";
 
 export const settings = {
@@ -43,6 +44,7 @@ export const settings = {
   // relocated here without restructuring those package types. Each carries
   // a cross-reference comment pointing back to this block.
   siteName: "Zudo Sg",
+  logo: "/img/logo.svg",
   // Falsy siteUrl silently omits OGP absolute image URLs and canonical link
   // tags from build output — see the module-load warning below.
   siteUrl: "" as string,
@@ -64,16 +66,19 @@ export const settings = {
     twitterCreator: "@Takazudo",
   } satisfies MetaTagsConfig as MetaTagsConfig,
   docsDir: "src/content/docs",
+  entryDocSlug: "guide",
   defaultLocale: "en" as const,
   locales: {} as Record<string, LocaleConfig>,
   mermaid: true,
   sitemap: false,
   docTags: false,
+  docMetainfo: false,
   tagPlacement: "after-title" as TagPlacement,
   tagGovernance: "off" as TagGovernanceMode,
   tagVocabulary: false as boolean,
   frontmatterPreview: false as FrontmatterPreviewConfig | false,
   llmsTxt: true,
+  changelogs: false,
   math: false,
   cjkFriendly: true as boolean,
   onBrokenMarkdownLinks: "warn" as "warn" | "error" | "ignore",
@@ -98,10 +103,14 @@ export const settings = {
   designTokenPanel: true as boolean,
   tocMinDepth: 2 as number,
   tocMaxDepth: 4 as number,
-  headingIdStrategy: "hierarchical" as "flat" | "hierarchical",
   sidebarResizer: true as boolean,
   sidebarToggle: true as boolean,
+  tocToggle: false as boolean,
   imageEnlarge: true as boolean,
+  findInPage: false as boolean,
+  docHistory: false as boolean,
+  docHistoryExclude: [] as string[],
+  bodyFootUtilArea: false as false,
   htmlPreview: undefined as HtmlPreviewConfig | undefined,
   versions: [] satisfies VersionConfig[] as VersionConfig[] | false,
   claudeResources: false as { claudeDir: string; projectRoot?: string } | false,
@@ -166,7 +175,7 @@ export const settings = {
         "</svg></button>",
     },
   ] satisfies HeaderRightItem[] as HeaderRightItem[],
-};
+} satisfies Settings;
 
 // #194: siteUrl backs OGP absolute image URLs and canonical link tags.
 // Warn at module load (i.e. at build time) so a missing value doesn't ship
