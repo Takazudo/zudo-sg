@@ -14,20 +14,18 @@ allowBuilds:
 minimumReleaseAgeExclude:
   # First-party @takazudo packages — allowlisted by name so a freshly published
   # release (e.g. our own zudo-doc) installs without waiting out the
-  # minimumReleaseAge supply-chain window. (history-server is a transitive dep
-  # of zudo-doc.) minimumReleaseAgeExclude matches against package names.
-  - '@takazudo/zudo-doc-history-server'
+  # minimumReleaseAge supply-chain window. minimumReleaseAgeExclude matches
+  # against package names.
   - '@takazudo/zudo-doc'
   - '@takazudo/zdtp'
-  # zfb next-channel packages: just-shipped next.68 may be within the
-  # release-age window; exclude so the freshly published prerelease installs.
+  # Locked zfb packages and their optional native binaries may be newly
+  # published when this workspace is installed.
   - '@takazudo/zfb'
   - '@takazudo/zfb-runtime'
-  - '@takazudo/zfb-adapter-cloudflare'
+  - '@takazudo/zfb-md-wasm'
   # zfb platform-specific native binaries (optionalDependencies of zfb)
   - '@takazudo/zfb-darwin-arm64'
   - '@takazudo/zfb-darwin-x64'
   - '@takazudo/zfb-linux-arm64-gnu'
   - '@takazudo/zfb-linux-x64-gnu'
   - '@takazudo/zfb-win32-x64-msvc'
-  - '@takazudo/zfb-md-wasm@0.1.0-next.90'

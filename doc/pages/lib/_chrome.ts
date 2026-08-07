@@ -43,7 +43,7 @@ import type { DocsEntry } from "@/types/docs-entry";
 
 import { routeContext } from "./_route-context";
 import { stableDocs, memoizeDerived } from "./_nav-source-cache";
-import { mergeLocaleDocs } from "./locale-merge";
+import { mergeLocaleDocs } from "./_locale-merge";
 import { SearchWidget } from "./_search-widget";
 import { BodyEndIslands as BodyEndIslandsSeam } from "./_body-end-islands";
 import { buildFrontmatterPreviewEntries } from "./_frontmatter-preview-data";

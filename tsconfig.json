@@ -13,7 +13,8 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "allowJs": true,
-    "jsx": "preserve",
+    "jsx": "react-jsx",
+    "jsxImportSource": "preact",
     "strict": true,
     "noImplicitAny": true,
     "strictNullChecks": true,
@@ -25,10 +26,7 @@
     "alwaysStrict": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"],
-      "react": ["./node_modules/preact/compat/"],
-      "react/jsx-runtime": ["./node_modules/preact/jsx-runtime"],
-      "react-dom": ["./node_modules/preact/compat/"]
+      "@/*": ["src/*"]
     }
   },
   "exclude": ["dist", "e2e/fixtures", "apps", "packages", "doc", "pages", "worktrees", "vendor", "_temp-resource", "src/**/__tests__", "scripts/**/__tests__", "vitest.config.ts"]

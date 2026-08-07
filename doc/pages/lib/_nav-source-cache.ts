@@ -42,7 +42,7 @@
 
 import { getCollection, getContentSnapshot } from "zfb/content";
 import { bridgeDocsEntries, type ZfbDocsData } from "../_data";
-import type { DocPageEntry } from "./doc-page-props";
+import type { DocPageEntry } from "./_doc-page-props";
 
 // Re-export memoizeDerived from the package (pure, no zfb dep).
 export { memoizeDerived } from "@takazudo/zudo-doc/nav-source-cache";

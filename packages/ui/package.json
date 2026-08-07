@@ -14,7 +14,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@takazudo/zfb-md-wasm": "0.1.0-next.89",
+    "@takazudo/zfb-md-wasm": "2.2.0",
     "dompurify": "^3.4.11"
   },
   "peerDependencies": {
