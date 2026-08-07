@@ -288,6 +288,14 @@
    * ======================================== */
   --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
 
+  /* Letter spacing — zudo-doc 5 component-token defaults consume
+     --tracking-normal. Keep the complete package scale available so local
+     --zdc-* overrides can select a role without importing the scaffold theme. */
+  --tracking-tight: -0.025em;
+  --tracking-normal: normal;
+  --tracking-wide: 0.05em;
+  --tracking-wider: 0.1em;
+
   /* ========================================
    * Line height — snug step. The shared @zudo-sg/ui tokens.css now provides
    * --leading-snug: 1.4; this re-declares it at 1.375 for the denser
@@ -295,7 +303,8 @@
    * ======================================== */
   --leading-snug: 1.375;
 
-  /* View-transition duration consumed by the restored zudo-doc transition block */
+  /* Package chrome transitions and the restored view-transition block. */
+  --zd-transition-slow: 200ms;
   --zd-transition-slower: 300ms;
 
   /* ========================================

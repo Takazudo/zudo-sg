@@ -389,7 +389,7 @@ html[data-sg-composer-doc] body {
    `gap-*` utilities each section sets on its own children (the ratio-rule
    spacing the issue asks for) — see css-wisdom's spacing-philosophy article.
    First/last sections drop the outer padding/border since the panel's own
-   `py-vsp-10` and the panel's bottom edge already supply that space. */
+   `py-[10px]` and the panel's bottom edge already supply that space. */
 .sg-composer-inspector-section {
   padding-block: var(--spacing-vsp-xs);
   border-bottom: 1px solid var(--color-border);

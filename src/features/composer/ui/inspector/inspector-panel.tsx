@@ -180,7 +180,7 @@ export function InspectorPanel({
 
   if (selectedId === null || !location) {
     return (
-      <div class="flex h-full flex-col gap-vsp-2xs p-hsp-md py-vsp-10" data-sg-inspector-state="empty">
+      <div class="flex h-full flex-col gap-vsp-2xs p-hsp-md py-[10px]" data-sg-inspector-state="empty">
         <LinkedInspectorStatus presentation={linkedPresentation} actions={linkedActions} />
         <ReuseControls
           document={document}
@@ -216,7 +216,7 @@ export function InspectorPanel({
 
   return (
     <div
-      class="flex h-full flex-col overflow-y-auto p-hsp-md py-vsp-10"
+      class="flex h-full flex-col overflow-y-auto p-hsp-md py-[10px]"
       data-sg-inspector-state={diagnostic.opaque ? "opaque" : "editable"}
     >
       <LinkedInspectorStatus presentation={linkedPresentation} actions={linkedActions} />
