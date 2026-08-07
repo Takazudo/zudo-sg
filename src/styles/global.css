@@ -483,7 +483,7 @@ body {
 /* Code-block syntax-highlight token colors, line/word highlighting, code
  * titles, and CodeGroup raw-code panel styling used to be hand-authored here
  * against the legacy single-palette fence markup this project no longer
- * emits. zudo-doc 4.x's class-mode highlighter emits `pre.hi-root` instead
+ * emits. zudo-doc's class-mode highlighter emits `pre.hi-root` instead
  * and ships the equivalent `pre.hi-root`-scoped rules (plus the
  * `--zfb-hi-*` → `--zd-syntax-*` token bridge) via
  * `@takazudo/zudo-doc/features.css` (imported above) — see

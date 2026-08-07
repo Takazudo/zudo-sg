@@ -32,7 +32,7 @@ import { expect, test, type Page, type FrameLocator } from "@playwright/test";
 // ---------------------------------------------------------------------------
 
 // Bridge constants — must match src/features/styleguide/token-tweak/
-// iframe-css-vars-bridge.ts (project-owned; zudo-doc 4.0 removed its own
+// iframe-css-vars-bridge.ts (project-owned; zudo-doc removed its own
 // reusable iframe bridge as a repository-owned implementation detail,
 // zudolab/zudo-doc#2761 — see that module's header comment).
 const BRIDGE_SOURCE = "zudo-sg-token-tweak-bridge";

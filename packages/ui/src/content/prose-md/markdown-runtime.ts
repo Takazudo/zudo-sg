@@ -12,7 +12,7 @@
  *
  * ## Sanitization is mandatory
  *
- * `renderHtml` is not a sanitizer. Verified against `next.89`: raw
+ * `renderHtml` is not a sanitizer. Verified against zfb-md-wasm 2.2.0: raw
  * `<script>alert(1)</script>`, `<a onclick="…">`, `<svg onload="…">`,
  * `<iframe src="…">` and `[x](javascript:…)` all pass through with zero
  * diagnostics. Every returned string therefore goes through DOMPurify with an
