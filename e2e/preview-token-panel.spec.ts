@@ -24,12 +24,9 @@ import { expect, test, type Page, type FrameLocator } from "@playwright/test";
 //   unreliable. Tests that verify Reset must drive the panel via UI so the
 //   registry tracks the overrides.
 //
-//   window.sgPreview: zdtp's root (non-Astro) API doesn't auto-install these
-//   the way its Astro host adapter does, so preview-token-panel-bootstrap.ts
-//   wires window.sgPreview.enableAutoload() / .disableAutoload() by hand
-//   (#117) — there is no show/hide/toggleDesignPanel on this namespace. For
-//   tests we dispatch the CustomEvent directly (synchronous, always wired) to
-//   prove the toggle event channel is correctly bound.
+//   window.sgPreview: the project wrapper preserves the owner-autoload helpers
+//   through lazy dynamic imports. Panel opening still uses the instance's
+//   explicit CustomEvent channel, which also proves dual-panel isolation.
 //
 // All five assertion groups required by issue #80 (H6) are present.
 // ---------------------------------------------------------------------------
@@ -82,11 +79,8 @@ async function waitForFirstPreviewFrame(page: Page): Promise<FrameLocator> {
 /**
  * Open the preview token panel by dispatching the CustomEvent.
  *
- * The CustomEvent path is always available (registered by the preview-panel
- * bootstrap island). This also verifies the "toggle-preview-token-panel"
- * event channel is correctly wired. (There is no `window.sgPreview.toggleDesignPanel()`
- * alternative — zdtp's root API doesn't install one for non-Astro hosts; see
- * the file-header note.)
+ * The CustomEvent path is registered by the native lazy bootstrap and verifies
+ * that the "toggle-preview-token-panel" instance channel remains wired.
  */
 async function openPreviewPanel(page: Page): Promise<void> {
   await page.evaluate(() => {
