@@ -29,9 +29,9 @@ import {
   type CategoryMeta,
 } from "@/utils/docs";
 import type { DocsEntry } from "@/types/docs-entry";
-import type { DocPageEntry } from "./doc-page-props";
+import type { DocPageEntry } from "./_doc-page-props";
 import { stableDocs, memoizeDerived } from "./_nav-source-cache";
-import { mergeLocaleDocs } from "./locale-merge";
+import { mergeLocaleDocs } from "./_locale-merge";
 
 // ---------------------------------------------------------------------------
 // Stable category-meta merge
