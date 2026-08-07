@@ -1,61 +1,33 @@
 # Zudo Sg Docs
 
-Documentation site built with [zudo-doc](https://github.com/zudolab/zudo-doc) — a zfb-based documentation framework with MDX, Tailwind CSS v4, and Preact islands.
-
-## Tech Stack
-
-- **zfb** — documentation build framework
-- **MDX** — content format
-- **Tailwind CSS v4** — via `@tailwindcss/vite`
-- **Preact** — for interactive islands only (with compat mode for React API)
-- **syntax highlighting** — built-in class-mode code highlighting, run by zfb's Rust pipeline at build time: fences render as semantic `hi-*` token classes under `pre.hi-root`, mapped to design tokens via `@takazudo/zudo-doc/features.css`'s `--zfb-hi-*` bridge — no project-owned renderer or theme config required (zudo-doc 4.x)
+This workspace is the contributor documentation site built with zudo-doc 5.2, zfb, MDX, Tailwind CSS v4, and Preact.
 
 ## Commands
 
-- `pnpm dev` — zfb dev server (port 4323)
-- `pnpm build` — static HTML export to `dist/`
-- `pnpm check` — TypeScript type checking
+- `pnpm dev` — start zfb on port 4323.
+- `pnpm check` — typecheck config, routes, and MDX.
+- `pnpm build` — generate the static site in `dist/`.
+- `pnpm check:html` — validate generated HTML after a build.
+- `pnpm setup:doc-skill` — generate and link the `doc-wisdom` skill.
 
-## Key Directories
+Run commands from `doc/`, or use the `@zudo-sg/doc` workspace filter from the repository root.
 
-```
-src/
-├── components/          # JSX + Preact components
-│   └── admonitions/     # Note, Tip, Info, Warning, Danger
-├── config/              # Settings, color schemes
-├── content/
-│   └── docs/            # MDX content
-├── layouts/             # JSX layouts
-├── pages/               # File-based routing
-└── styles/
-    └── global.css       # Design tokens & Tailwind config
-```
+## Scaffold ownership
 
-## Content Conventions
+- Keep site choices in `zfb.config.ts` inside the single `defineConfig(zudoDoc({ ... }))` call.
+- Keep only the package index re-export and the canonical self-contained docs catch-all under `pages/`.
+- Package exports own doc chrome, route context, navigation, schemas, translations, color schemes, content components, and feature islands. Do not recreate a local `pages/lib` chain.
+- `src/styles/global.css` starts with the canonical 5.2 scaffold imports. Add only intentional project-specific token or content overrides after them.
+- `src/content/docs/` contains the 12 authored articles. Generated Claude-resource directories under `src/content/docs/claude*` are not hand-authored.
 
-### Frontmatter
+## Content conventions
 
-- Required: `title` (string)
-- Optional: `description`, `sidebar_position` (number), `category`
-- Sidebar order is driven by `sidebar_position`
+- Frontmatter requires `title`; use `sidebar_position` to control ordering and `description` when it improves metadata or search.
+- Do not add an h1 in the body; the frontmatter title renders it. Start sections at h2.
+- Use relative `.md`/`.mdx` links for authored documentation.
+- Directive admonitions such as `:::note` are available without imports.
+- Prefer server-rendered JSX. Add a Preact island only for required client behavior and keep its page import chain statically discoverable.
 
-### Admonitions
+## Enabled behavior
 
-Available in all MDX files without imports: `<Note>`, `<Tip>`, `<Info>`, `<Warning>`, `<Danger>`
-Each accepts an optional `title` prop.
-
-### Headings
-
-Do NOT use h1 (`#`) in doc content — the page title from frontmatter is rendered as h1. Start content headings from h2 (`##`).
-
-## Components
-
-- Default to **server-rendered JSX components** (`.tsx`) — zero JS, server-rendered
-- Use **Preact islands** only when client-side interactivity is needed
-
-## Enabled Features
-
-- **search** — Full-text search via Pagefind
-- **sidebarFilter** — Real-time sidebar filtering
-- **claudeResources** — Auto-generated docs for Claude Code resources
-- **llmsTxt** — Generates llms.txt for LLM consumption
+Search, image enlargement, dynamic page transitions, `llms.txt`, and repository-root Claude resources are enabled. AI chat, history, design-token panels, local versioning, tags, changelogs, sidebar resizing/toggling, and HTML preview are disabled.
