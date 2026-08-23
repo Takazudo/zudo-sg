@@ -7,10 +7,10 @@ import { openComposerRecord } from "./support/composer-persistence";
 // Three things this suite exists to prove, none of which a unit test can:
 //
 //   1. THE WASM RUNTIME LOADS ON THE BUILT SITE. `ProseMd` renders markdown
-//      client-side through `@takazudo/zfb-md-wasm`, whose glue module and
-//      `.wasm` payload are emitted as HASHED build assets. A `dist/` preview
-//      serves them the way production does — right MIME, right path, no
-//      console noise — and a fence really does come back carrying `hi-*`
+//      client-side through `@takazudo/zfb-md-wasm/render`, whose focused glue
+//      module and `.wasm` payload are emitted as HASHED build assets. A `dist/`
+//      preview serves them the way production does — right MIME, right path,
+//      no console noise — and a fence really does come back carrying `hi-*`
 //      classes. The hashes themselves are deliberately NOT asserted: they
 //      change on every build.
 //   2. THERE ARE NO IMPLICIT COMMITS. Exactly two gestures reach the model:
