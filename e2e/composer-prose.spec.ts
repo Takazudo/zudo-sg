@@ -169,7 +169,7 @@ test.describe.serial("Composer prose editing (#376)", () => {
     });
     page.on("response", (response) => {
       const url = response.url();
-      if (!/zfb_md_wasm/.test(url)) return;
+      if (!/zfb_md_wasm_render_(?:bg|glue)/.test(url)) return;
       wasmResponses.push({
         url,
         status: response.status(),
@@ -206,10 +206,10 @@ test.describe.serial("Composer prose editing (#376)", () => {
 
     // …and both hashed build assets were actually fetched, with the MIME that
     // makes `WebAssembly.instantiateStreaming` work. Hashes are not asserted.
-    const wasm = wasmResponses.find((r) => r.url.includes(".wasm"));
-    const glue = wasmResponses.find((r) => r.url.includes("glue"));
-    expect(wasm, "the .wasm payload must be requested from the built site").toBeDefined();
-    expect(glue, "the wasm glue module must be requested from the built site").toBeDefined();
+    const wasm = wasmResponses.find((r) => r.url.includes("zfb_md_wasm_render_bg"));
+    const glue = wasmResponses.find((r) => r.url.includes("zfb_md_wasm_render_glue"));
+    expect(wasm, "the focused render .wasm must be requested from the built site").toBeDefined();
+    expect(glue, "the focused render glue must be requested from the built site").toBeDefined();
     expect(wasm!.status).toBe(200);
     expect(wasm!.type).toContain("application/wasm");
     expect(glue!.status).toBe(200);
