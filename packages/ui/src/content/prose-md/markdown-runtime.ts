@@ -1,18 +1,19 @@
 /**
  * Client-side markdown → sanitized HTML runtime, backed by
- * `@takazudo/zfb-md-wasm` (the wasm build of zfb's own markdown pipeline, so
- * a live preview matches what zfb renders at build time).
+ * `@takazudo/zfb-md-wasm/render` (the focused wasm build of zfb's own
+ * markdown rendering pipeline, so a live preview matches what zfb renders at
+ * build time without shipping the root entry's compiler graph).
  *
  * ## Fence handling
  *
- * md-wasm 2.2 exposes zfb's native fenced-code class mode at
+ * md-wasm 2.10 exposes zfb's native fenced-code class mode at
  * `pipeline.codeHighlight`. It preserves the fence language and emits the same
  * semantic `hi-*` markup as the build, including fences nested in blockquotes
  * and lists. The former positional source scanner is therefore unnecessary.
  *
  * ## Sanitization is mandatory
  *
- * `renderHtml` is not a sanitizer. Verified against zfb-md-wasm 2.2.0: raw
+ * `renderHtml` is not a sanitizer. Verified against zfb-md-wasm 2.10.1: raw
  * `<script>alert(1)</script>`, `<a onclick="…">`, `<svg onload="…">`,
  * `<iframe src="…">` and `[x](javascript:…)` all pass through with zero
  * diagnostics. Every returned string therefore goes through DOMPurify with an
@@ -30,7 +31,11 @@
  */
 
 import DOMPurify from "dompurify";
-import type { Diagnostic, DiagnosticSource, PipelineOptions } from "@takazudo/zfb-md-wasm";
+import type {
+  Diagnostic,
+  DiagnosticSource,
+  PipelineOptions,
+} from "@takazudo/zfb-md-wasm/render";
 
 export type MarkdownDiagnosticSource = DiagnosticSource | "internal" | "sanitize";
 
@@ -49,7 +54,7 @@ export interface MarkdownRenderResult {
 }
 
 export type MarkdownModule = Pick<
-  typeof import("@takazudo/zfb-md-wasm"),
+  typeof import("@takazudo/zfb-md-wasm/render"),
   "renderHtml"
 >;
 
@@ -182,7 +187,8 @@ function toDiagnostic(diagnostic: Diagnostic): MarkdownDiagnostic {
 
 /**
  * Build a markdown runtime over a module importer. The cached value is only
- * the package-root import; a rejection is evicted so the next call retries.
+ * the focused render-entry import; a rejection is evicted so the next call
+ * retries.
  */
 export function createMarkdownRuntime(importModule: MarkdownModuleImporter): MarkdownRuntime {
   let modulePromise: Promise<MarkdownModule> | null = null;
@@ -247,7 +253,9 @@ export function createMarkdownRuntime(importModule: MarkdownModuleImporter): Mar
   };
 }
 
-const defaultRuntime = createMarkdownRuntime(() => import("@takazudo/zfb-md-wasm"));
+const defaultRuntime = createMarkdownRuntime(
+  () => import("@takazudo/zfb-md-wasm/render"),
+);
 
 /** Render markdown to sanitized HTML using the shared lazily-loaded runtime. */
 export function renderMarkdown(source: string): Promise<MarkdownRenderResult> {

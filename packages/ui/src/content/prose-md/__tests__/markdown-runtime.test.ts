@@ -15,7 +15,7 @@ import {
   type MarkdownModule,
 } from "../markdown-runtime";
 
-// First call pays the one-time wasm instantiation cost (~3MB artifact).
+// First call pays the one-time focused render-wasm instantiation cost (~2MB).
 const WASM_WARMUP_TIMEOUT_MS = 60_000;
 
 async function render(source: string) {
@@ -80,11 +80,10 @@ describe("renderMarkdown — markdown constructs", () => {
     expect(html).not.toContain('id="child-1"');
   });
 
-  it("reports a markdown parse error as a diagnostic with no html", async () => {
-    // A bare void `<img>` is an end-tag mismatch for zfb's HTML parser.
+  it("accepts a bare HTML void element with the 2.10 parser", async () => {
     const { html, diagnostics } = await renderMarkdown('<img src="x">\n');
-    expect(html).toBeNull();
-    expect(diagnostics.some((d) => d.severity === "error" && d.source === "markdown")).toBe(true);
+    expect(html).toBe('<img src="x">');
+    expect(diagnostics).toEqual([]);
   });
 });
 
@@ -231,6 +230,30 @@ describe("createMarkdownRuntime — module loading", () => {
     await runtime.renderMarkdown("b");
 
     expect(importModule).toHaveBeenCalledTimes(1);
+  });
+
+  it("returns no HTML when the renderer reports an error diagnostic", async () => {
+    const runtime = createMarkdownRuntime(async () => ({
+      renderHtml: async () => ({
+        html: "<p>partial</p>",
+        frontmatter: null,
+        diagnostics: [
+          {
+            severity: "error" as const,
+            source: "markdown" as const,
+            message: "invalid markdown",
+            line: 1,
+            column: 1,
+          },
+        ],
+      }),
+    }));
+
+    const { html, diagnostics } = await runtime.renderMarkdown("broken");
+    expect(html).toBeNull();
+    expect(diagnostics).toEqual([
+      expect.objectContaining({ severity: "error", source: "markdown" }),
+    ]);
   });
 
   it("surfaces a thrown wasm trap as an error diagnostic", async () => {

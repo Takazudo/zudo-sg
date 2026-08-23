@@ -7,10 +7,10 @@ import { openComposerRecord } from "./support/composer-persistence";
 // Three things this suite exists to prove, none of which a unit test can:
 //
 //   1. THE WASM RUNTIME LOADS ON THE BUILT SITE. `ProseMd` renders markdown
-//      client-side through `@takazudo/zfb-md-wasm`, whose glue module and
-//      `.wasm` payload are emitted as HASHED build assets. A `dist/` preview
-//      serves them the way production does — right MIME, right path, no
-//      console noise — and a fence really does come back carrying `hi-*`
+//      client-side through `@takazudo/zfb-md-wasm/render`, whose focused glue
+//      module and `.wasm` payload are emitted as HASHED build assets. A `dist/`
+//      preview serves them the way production does — right MIME, right path,
+//      no console noise — and a fence really does come back carrying `hi-*`
 //      classes. The hashes themselves are deliberately NOT asserted: they
 //      change on every build.
 //   2. THERE ARE NO IMPLICIT COMMITS. Exactly two gestures reach the model:
@@ -169,7 +169,7 @@ test.describe.serial("Composer prose editing (#376)", () => {
     });
     page.on("response", (response) => {
       const url = response.url();
-      if (!/zfb_md_wasm/.test(url)) return;
+      if (!/zfb_md_wasm_render_(?:bg|glue)/.test(url)) return;
       wasmResponses.push({
         url,
         status: response.status(),
@@ -206,10 +206,10 @@ test.describe.serial("Composer prose editing (#376)", () => {
 
     // …and both hashed build assets were actually fetched, with the MIME that
     // makes `WebAssembly.instantiateStreaming` work. Hashes are not asserted.
-    const wasm = wasmResponses.find((r) => r.url.includes(".wasm"));
-    const glue = wasmResponses.find((r) => r.url.includes("glue"));
-    expect(wasm, "the .wasm payload must be requested from the built site").toBeDefined();
-    expect(glue, "the wasm glue module must be requested from the built site").toBeDefined();
+    const wasm = wasmResponses.find((r) => r.url.includes("zfb_md_wasm_render_bg"));
+    const glue = wasmResponses.find((r) => r.url.includes("zfb_md_wasm_render_glue"));
+    expect(wasm, "the focused render .wasm must be requested from the built site").toBeDefined();
+    expect(glue, "the focused render glue must be requested from the built site").toBeDefined();
     expect(wasm!.status).toBe(200);
     expect(wasm!.type).toContain("application/wasm");
     expect(glue!.status).toBe(200);
