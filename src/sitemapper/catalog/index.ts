@@ -1,2 +1,19 @@
-// Composition catalog sub-barrel — intentionally empty; owned by issue #403.
-export {};
+// Public Sitemapper Composer catalog boundary.
+
+export type {
+  CatalogEntry,
+  CompositionCatalog,
+  CompositionCatalogInput,
+  CompositionCatalogListOutcome,
+  CompositionCatalogProvider,
+  CompositionCatalogProviderRegistry,
+  CompositionCatalogProviderSource,
+  CompositionCatalogStore,
+  ProviderFailure,
+  ResolveOutcome,
+} from "./types";
+export {
+  createCompositionCatalog,
+  listCompositions,
+  resolveComposition,
+} from "./catalog";
