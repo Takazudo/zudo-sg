@@ -143,6 +143,10 @@ textarea.sg-sitemapper-inspector__control {
   cursor: pointer;
 }
 
+.sg-sitemapper-composition button.sg-sitemapper-danger {
+  color: var(--color-danger);
+}
+
 .sg-sitemapper-composition button:focus-visible,
 .sg-sitemapper-picker__button:focus-visible {
   outline: 2px solid var(--color-focus);

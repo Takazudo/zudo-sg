@@ -22,4 +22,8 @@ describe("Sitemapper inspector styles", () => {
     expect(css).toContain(":focus-visible");
     expect(css).toMatch(/\.sg-sitemapper-inspector__control:focus\s*\{/);
   });
+
+  it("keeps destructive composition actions on the semantic danger color", () => {
+    expect(css).toMatch(/\.sg-sitemapper-composition button\.sg-sitemapper-danger\s*\{[^}]*color:\s*var\(--color-danger\)/);
+  });
 });

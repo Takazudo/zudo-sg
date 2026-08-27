@@ -120,6 +120,17 @@ describe("Sitemapper InspectorPanel", () => {
     expect(screen.getByRole("button", { name: "Clear composition" })).toBeInTheDocument();
   });
 
+  it("keeps a resolved reference usable when catalog listing unexpectedly rejects", async () => {
+    const fakeCatalog = catalog([FIRST]);
+    vi.mocked(fakeCatalog.listCompositions).mockRejectedValue(new Error("List unavailable"));
+    render(<InspectorPanel {...panelProps(node("home", "Home", FIRST.ref), { catalog: fakeCatalog })} />);
+
+    expect(await screen.findByText("Home layout")).toBeInTheDocument();
+    expect(screen.queryByText("Broken reference")).not.toBeInTheDocument();
+    // Provider id is the honest fallback when its display label cannot load.
+    expect(screen.getByText("browser")).toBeInTheDocument();
+  });
+
   it("round-trips assign, replace, and clear through the controlled callback", async () => {
     const changes: Array<CompositionRef | null> = [];
     const fakeCatalog = catalog();
