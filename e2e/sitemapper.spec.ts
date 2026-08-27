@@ -355,8 +355,11 @@ async function assertNarrowEditingIsOperable(page: Page): Promise<void> {
 }
 
 async function attachScreenshot(page: Page, testInfo: TestInfo, width: number, theme: Theme): Promise<void> {
-  await testInfo.attach(`sitemapper-${width}-${theme}`, {
-    body: await page.screenshot({ fullPage: true, animations: "disabled" }),
+  const name = `sitemapper-${width}-${theme}`;
+  const path = testInfo.outputPath(`${name}.png`);
+  await page.screenshot({ path, fullPage: true, animations: "disabled" });
+  await testInfo.attach(name, {
+    path,
     contentType: "image/png",
   });
 }
@@ -441,11 +444,15 @@ test.describe("Sitemapper browser exit gate", () => {
     for (const theme of THEMES) {
       test(`${viewport.width}px ${theme}: rendered visual and editing contract`, async ({ page }, testInfo) => {
         const errors = captureUnexpectedBrowserErrors(page);
-        await page.setViewportSize(viewport);
+        // Author through the legitimately visible desktop inspector first;
+        // only then enter the target visual viewport. Narrow interaction
+        // assertions remain canvas/tray-only below.
+        await page.setViewportSize(VIEWPORTS[0]);
         await page.goto("/sitemapper/");
         await waitForSitemapperLibrary(page);
         await createSitemap(page);
         await buildVisualTree(page);
+        await page.setViewportSize(viewport);
         await setThemeAndReopen(page, theme);
 
         try {

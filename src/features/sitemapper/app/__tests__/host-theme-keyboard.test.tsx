@@ -3,7 +3,11 @@
 import { render, screen, waitFor } from "@testing-library/preact";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { resolveHostTheme, useHostTheme } from "../use-host-theme";
-import { isEditableEventTarget, useSitemapperKeyboard, type KeyboardHost } from "../use-sitemapper-keyboard";
+import {
+  isSitemapperEditableEventTarget,
+  useSitemapperKeyboard,
+  type KeyboardHost,
+} from "../use-sitemapper-keyboard";
 
 afterEach(() => document.documentElement.removeAttribute("data-theme"));
 
@@ -33,7 +37,7 @@ it("guards Escape and removal shortcuts while typing in editable targets", () =>
   listener?.({ key: "Escape", target: { tagName: "TEXTAREA", isContentEditable: false } } as never);
   expect(remove).not.toHaveBeenCalled();
   expect(escape).not.toHaveBeenCalled();
-  expect(isEditableEventTarget({ tagName: "DIV", isContentEditable: true } as never)).toBe(true);
+  expect(isSitemapperEditableEventTarget({ tagName: "DIV", isContentEditable: true } as never)).toBe(true);
 
   const preventDefault = vi.fn();
   listener?.({ key: "Backspace", target: { tagName: "BODY", isContentEditable: false }, preventDefault } as never);

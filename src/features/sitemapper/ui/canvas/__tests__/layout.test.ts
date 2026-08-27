@@ -22,7 +22,7 @@ describe("canvas measured layout", () => {
       node("products", undefined, [node("long-title")]),
       node("about"),
     ])));
-    const result = layoutSitemap(tree, new Map([["long-title", 91]]), 1440);
+    const result = layoutSitemap(tree, new Map([["long-title", 91]]), 1440, "cluster");
 
     expect(result.mode).toBe("cluster");
     expect(result.nodes.find((item) => item.id === "long-title")?.height).toBe(91);
@@ -36,7 +36,7 @@ describe("canvas measured layout", () => {
 
   it("uses one uninterrupted vertical connector for a single depth-1 child", () => {
     const tree = buildLogicalTree(document(node("home", undefined, [node("only")])));
-    const result = layoutSitemap(tree, new Map(), 1440);
+    const result = layoutSitemap(tree, new Map(), 1440, "cluster");
     expect(result.segments).toHaveLength(1);
     expect(result.segments[0]?.id).toBe("home:only");
     expect(result.segments[0]?.path).toMatch(/^M [\d.]+ [\d.]+ V [\d.]+$/);
@@ -47,7 +47,7 @@ describe("canvas measured layout", () => {
       node("one", undefined, [node("nested", undefined, [node("deep")])]),
       node("two"),
     ])));
-    const result = layoutSitemap(tree, new Map(), 1440);
+    const result = layoutSitemap(tree, new Map(), 1440, "cluster");
     const root = result.nodes.find((item) => item.id === "home")!;
     const one = result.nodes.find((item) => item.id === "one")!;
     const two = result.nodes.find((item) => item.id === "two")!;
@@ -66,7 +66,7 @@ describe("canvas measured layout", () => {
       cursor.children.push(child);
       cursor = child;
     }
-    const result = layoutSitemap(buildLogicalTree(document(root)), new Map(), 375);
+    const result = layoutSitemap(buildLogicalTree(document(root)), new Map(), 375, "outline");
     const depth4 = result.nodes.find((item) => item.id === "d4")!;
     const depth6 = result.nodes.find((item) => item.id === "d6")!;
 
@@ -75,6 +75,17 @@ describe("canvas measured layout", () => {
     expect(depth6.left).toBe(depth4.left);
     expect(Math.min(...result.nodes.map((item) => item.width))).toBeGreaterThanOrEqual(240);
     expect(result.width).toBeGreaterThanOrEqual(375);
+  });
+
+  it("keeps the page-level mode independent from the canvas scrollport width", () => {
+    const tree = buildLogicalTree(document(node("home", undefined, [node("child")])));
+    const narrowCenterColumn = layoutSitemap(tree, new Map(), 760, "cluster");
+    const wideScrollport = layoutSitemap(tree, new Map(), 1440, "outline");
+
+    expect(narrowCenterColumn.mode).toBe("cluster");
+    expect(narrowCenterColumn.width).toBeGreaterThanOrEqual(760);
+    expect(wideScrollport.mode).toBe("outline");
+    expect(wideScrollport.width).toBeGreaterThanOrEqual(1440);
   });
 });
 
@@ -97,7 +108,7 @@ describe("external classification", () => {
         node("missing"),
       ]),
     ])));
-    const result = layoutSitemap(tree, new Map(), 1440);
+    const result = layoutSitemap(tree, new Map(), 1440, "cluster");
 
     expect(tree.byId.get("mixed")?.externalCluster).toBe(false);
     expect(result.segments.find((item) => item.id === "mixed:outside")?.external).toBe(true);
@@ -112,7 +123,7 @@ describe("external classification", () => {
         node("two", "http://two.example"),
       ]),
     ])));
-    const result = layoutSitemap(tree, new Map(), 1440);
+    const result = layoutSitemap(tree, new Map(), 1440, "cluster");
 
     expect(tree.byId.get("links")?.externalCluster).toBe(true);
     expect(tree.byId.get("one")?.externalCluster).toBe(true);

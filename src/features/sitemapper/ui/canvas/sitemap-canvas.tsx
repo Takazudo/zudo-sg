@@ -7,7 +7,14 @@ import type { JSX } from "preact";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "preact/hooks";
 import type { SitemapDocument, SitemapNode as SitemapNodeModel } from "../../../../sitemapper/model";
 import SitemapConnectors from "./connectors";
-import { buildLogicalTree, layoutSitemap, NODE_MIN_HEIGHT, type NodeHeights } from "./layout";
+import {
+  buildLogicalTree,
+  DESKTOP_MEDIA_QUERY,
+  layoutSitemap,
+  NODE_MIN_HEIGHT,
+  type CanvasLayoutMode,
+  type NodeHeights,
+} from "./layout";
 import SitemapNode from "./sitemap-node";
 
 export interface SitemapCanvasProps {
@@ -25,6 +32,10 @@ export interface SitemapCanvasProps {
 interface Measurements {
   readonly viewportWidth: number;
   readonly heights: NodeHeights;
+}
+
+function modeFromMediaQuery(query: Pick<MediaQueryList, "matches"> | undefined): CanvasLayoutMode {
+  return query?.matches ? "cluster" : "outline";
 }
 
 function sameMeasurements(previous: Measurements, width: number, heights: ReadonlyMap<string, number>): boolean {
@@ -61,6 +72,9 @@ export function SitemapCanvas({
   const frameRef = useRef<number | null>(null);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [measurements, setMeasurements] = useState<Measurements>({ viewportWidth: 0, heights: new Map() });
+  const [layoutMode, setLayoutMode] = useState<CanvasLayoutMode>(() => modeFromMediaQuery(
+    typeof globalThis.matchMedia === "function" ? globalThis.matchMedia(DESKTOP_MEDIA_QUERY) : undefined,
+  ));
 
   // The document-reference boundary is intentional: commands preserve the
   // reference for no-ops and replace it for real mutations.
@@ -68,8 +82,17 @@ export function SitemapCanvas({
   const nodesById = useMemo(() => nodeMap(document), [document]);
   const layout = useMemo(() => document.root.length === 0
     ? null
-    : layoutSitemap(logicalTree, measurements.heights, measurements.viewportWidth),
-  [document, logicalTree, measurements]);
+    : layoutSitemap(logicalTree, measurements.heights, measurements.viewportWidth, layoutMode),
+  [document, layoutMode, logicalTree, measurements]);
+
+  useEffect(() => {
+    if (typeof globalThis.matchMedia !== "function") return undefined;
+    const query = globalThis.matchMedia(DESKTOP_MEDIA_QUERY);
+    const updateMode = (): void => setLayoutMode(modeFromMediaQuery(query));
+    updateMode();
+    query.addEventListener("change", updateMode);
+    return () => query.removeEventListener("change", updateMode);
+  }, []);
 
   const measure = useCallback(() => {
     const canvas = canvasRef.current;

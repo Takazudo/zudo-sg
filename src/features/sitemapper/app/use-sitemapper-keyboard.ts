@@ -14,7 +14,7 @@ export interface SitemapperKeyboardOptions {
   host?: KeyboardHost;
 }
 
-export function isEditableEventTarget(target: EventTarget | null): boolean {
+export function isSitemapperEditableEventTarget(target: EventTarget | null): boolean {
   if (target === null || typeof (target as Element).tagName !== "string") return false;
   const element = target as HTMLElement;
   if (element.isContentEditable) return true;
@@ -26,7 +26,7 @@ export function useSitemapperKeyboard(options: SitemapperKeyboardOptions): void 
   useEffect(() => {
     const target: KeyboardHost = host ?? document;
     const onKeyDown = (event: KeyboardEvent): void => {
-      if (isEditableEventTarget(event.target)) return;
+      if (isSitemapperEditableEventTarget(event.target)) return;
       if (event.key === "Escape") {
         onEscape();
         return;

@@ -1,6 +1,6 @@
 import type { SitemapDocument, SitemapNode } from "../../../../sitemapper/model";
 
-export const DESKTOP_SEAM = 64 * 16;
+export const DESKTOP_MEDIA_QUERY = "(min-width: 64rem)";
 export const NODE_WIDTH = 10 * 16;
 export const NODE_MIN_HEIGHT = 3.5 * 16;
 
@@ -47,8 +47,10 @@ export interface ConnectorSegment {
   readonly external: boolean;
 }
 
+export type CanvasLayoutMode = "cluster" | "outline";
+
 export interface CanvasLayout {
-  readonly mode: "cluster" | "outline";
+  readonly mode: CanvasLayoutMode;
   readonly width: number;
   readonly height: number;
   readonly nodes: readonly NodeRectangle[];
@@ -317,10 +319,18 @@ function clusterLayout(tree: LogicalTree, heights: NodeHeights, viewportWidth: n
   });
 }
 
-/** Pure, immutable measured layout. All values are CSS pixels relative to the stage. */
-export function layoutSitemap(tree: LogicalTree, heights: NodeHeights, viewportWidth: number): CanvasLayout {
+/**
+ * Pure, immutable measured layout. `viewportWidth` is the actual canvas
+ * scrollport used for geometry; `mode` comes from the page-level media seam.
+ */
+export function layoutSitemap(
+  tree: LogicalTree,
+  heights: NodeHeights,
+  viewportWidth: number,
+  mode: CanvasLayoutMode,
+): CanvasLayout {
   const safeWidth = Math.max(0, viewportWidth);
-  return safeWidth >= DESKTOP_SEAM
+  return mode === "cluster"
     ? clusterLayout(tree, heights, safeWidth)
     : outlineLayout(tree, heights, safeWidth);
 }
