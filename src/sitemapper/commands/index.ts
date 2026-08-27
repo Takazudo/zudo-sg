@@ -1,2 +1,19 @@
-// Sitemap commands sub-barrel — intentionally empty; owned by issue #402.
-export {};
+export type {
+  ClonedSitemapSubtree,
+  SitemapCommandErrorCode,
+  SitemapCommandResult,
+  SitemapPagePropsPatch,
+} from "./commands";
+export {
+  addChildPage,
+  addSiblingPage,
+  cloneSubtreeWithNewIds,
+  duplicatePage,
+  movePage,
+  removePage,
+  renamePage,
+  reorderPage,
+  updatePageProps,
+} from "./commands";
+
+export { createSampleSitemap, SAMPLE_SITEMAP } from "../sample/sample-sitemap";
