@@ -162,8 +162,16 @@
   height: 44px;
   place-items: center;
   border-radius: 0.5rem;
-  color: currentcolor;
+  color: var(--color-fg);
   transform: translateY(-50%);
+}
+
+.sg-sitemapper-node__menu-trigger[data-sg-depth="0"] {
+  color: var(--color-on-accent);
+}
+
+.sg-sitemapper-node__menu-trigger[data-sg-external="true"] {
+  color: var(--color-fg);
 }
 
 .sg-sitemapper-node__menu {

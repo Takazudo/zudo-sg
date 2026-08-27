@@ -44,6 +44,7 @@ describe("SitemapCanvas", () => {
     expect(screen.getByRole("button", { name: "Child" })).toBeInTheDocument();
     const svg = document.querySelector(".sg-sitemapper-connectors");
     expect(svg).toHaveAttribute("aria-hidden", "true");
+    expect(screen.getByRole("button", { name: "Actions for Home" })).toHaveAttribute("data-sg-depth", "0");
   });
 
   it("dispatches controlled selection and node actions", () => {

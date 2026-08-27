@@ -69,6 +69,8 @@ export function SitemapNode({
       <button
         type="button"
         class="sg-sitemapper-node__menu-trigger"
+        data-sg-depth={rectangle.depth}
+        data-sg-external={externalTreatment ? "true" : undefined}
         aria-label={`Actions for ${node.title}`}
         aria-expanded={menuOpen}
         aria-haspopup="menu"
