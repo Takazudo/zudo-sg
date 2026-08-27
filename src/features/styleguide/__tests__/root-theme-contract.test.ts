@@ -33,6 +33,7 @@ describe("root zudo-doc 5 theme contract", () => {
       '@import "@takazudo/zudo-doc/features.css"',
       '@import "../features/styleguide/styles.css"',
       '@import "../features/composer/styles.css"',
+      '@import "../features/sitemapper/styles.css"',
     ];
     const positions = orderedImports.map((entry) => globalCss.indexOf(entry));
 
