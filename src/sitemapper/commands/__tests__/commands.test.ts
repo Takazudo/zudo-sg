@@ -98,6 +98,14 @@ describe("updatePageProps / renamePage", () => {
     expect(renamed).toEqual({ ok: true, document: before, selectedId: "b", changed: false });
     const empty = updatePageProps(before, "b", {});
     expect(empty).toEqual({ ok: true, document: before, selectedId: "b", changed: false });
+
+    const withRef = success(updatePageProps(before, "b", {
+      composition: { providerId: "indexeddb", recordId: "same" },
+    })).document;
+    const equivalentRef = updatePageProps(withRef, "b", {
+      composition: { recordId: "same", providerId: "indexeddb" },
+    });
+    expect(equivalentRef).toEqual({ ok: true, document: withRef, selectedId: "b", changed: false });
   });
 
   it("rejects unknown keys and malformed or non-JSON values", () => {

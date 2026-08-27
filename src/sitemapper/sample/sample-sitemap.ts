@@ -43,3 +43,7 @@ export function createSampleSitemap(): SitemapDocument {
 
 /** Canonical JSON sample. Use the builder when a mutable copy is required. */
 export const SAMPLE_SITEMAP: SitemapDocument = createSampleSitemap();
+
+/** Composer-compatible names for callers already scoped to `sitemapper`. */
+export const createSampleDocument = createSampleSitemap;
+export const SAMPLE_DOCUMENT = SAMPLE_SITEMAP;

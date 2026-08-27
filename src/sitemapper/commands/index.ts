@@ -1,5 +1,7 @@
 export type {
   ClonedSitemapSubtree,
+  CommandErrorCode,
+  CommandResult,
   SitemapCommandErrorCode,
   SitemapCommandResult,
   SitemapPagePropsPatch,
@@ -16,4 +18,9 @@ export {
   updatePageProps,
 } from "./commands";
 
-export { createSampleSitemap, SAMPLE_SITEMAP } from "../sample/sample-sitemap";
+export {
+  createSampleDocument,
+  createSampleSitemap,
+  SAMPLE_DOCUMENT,
+  SAMPLE_SITEMAP,
+} from "../sample/sample-sitemap";

@@ -41,6 +41,10 @@ export type SitemapCommandResult =
     }
   | { ok: false; error: string; code: SitemapCommandErrorCode };
 
+/** Concise aliases for consumers already scoped to the Sitemapper domain. */
+export type CommandErrorCode = SitemapCommandErrorCode;
+export type CommandResult = SitemapCommandResult;
+
 export interface ClonedSitemapSubtree {
   node: SitemapNode;
   idMap: ReadonlyMap<string, string>;
@@ -171,7 +175,13 @@ export function updatePageProps(
   const current = location.node as SitemapNode & Record<string, unknown>;
   const changed = Object.entries(patch).some(([key, value]) => {
     if (value === null) return Object.hasOwn(current, key);
-    return JSON.stringify(current[key]) !== JSON.stringify(value);
+    if (key === "composition" && validCompositionRef(value)) {
+      const existing = current[key];
+      return !validCompositionRef(existing)
+        || existing.providerId !== value.providerId
+        || existing.recordId !== value.recordId;
+    }
+    return current[key] !== value;
   });
   if (!changed) {
     return { ok: true, document, selectedId: pageId, changed: false };
