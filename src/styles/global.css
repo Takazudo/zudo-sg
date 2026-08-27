@@ -143,6 +143,11 @@
  * file header). */
 @import "../features/composer/styles.css";
 
+/* Sitemapper workspace — feature CSS (#400). This is an import-only
+ * aggregator; its shell/canvas/tree/inspector leaves are owned by later
+ * Sitemapper sub-issues. */
+@import "../features/sitemapper/styles.css";
+
 /* ProseMd (#373) — scoped typography for the client-rendered markdown blob
  * (`packages/ui/src/content/prose-md/prose-md.tsx`). Ships from @zudo-sg/ui
  * (portable, Tier-2-token-bound only) rather than root, but this IS the one
@@ -184,6 +189,10 @@
  * used by the toolbar/workspace shell and its page module. */
 @source "src/features/composer/**/*.{tsx,ts,jsx,js}";
 @source "pages/composer/**/*.{tsx,ts,jsx,js}";
+/* Sitemapper route + client island — scan both sides of the page/src boundary
+ * so utility classes remain available when Tailwind runs without .git. */
+@source "src/features/sitemapper/**/*.{tsx,ts,jsx,js}";
+@source "pages/sitemapper/**/*.{tsx,ts,jsx,js}";
 
 /* ========================================
  * Design Token System
