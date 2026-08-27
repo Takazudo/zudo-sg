@@ -130,6 +130,21 @@
   gap: 1px;
 }
 
+/* The rail exposes every action at all times, but visible text on five icon
+   actions makes the seven-control strip wider than the default 20rem rail and
+   collapses the page-title flex item. Keep the controls and accessible names;
+   visually hide only the redundant labels already represented by icons. */
+.sg-sitemapper-tree-action-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: clip;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 .sg-sitemapper-tree-action {
   display: inline-flex;
   min-width: 1.5rem;
@@ -287,6 +302,17 @@
 /* The default rail is deliberately compact; coarse pointers get a complete
    44px interaction floor for every control and the inline editor. */
 @media (pointer: coarse) {
+  .sg-sitemapper-tree-row {
+    flex-wrap: wrap;
+  }
+
+  .sg-sitemapper-tree-row-actions {
+    min-width: 0;
+    flex: 1 1 100%;
+    flex-wrap: wrap;
+    padding-inline-start: calc(1.5rem + var(--spacing-hsp-2xs));
+  }
+
   .sg-sitemapper-tree-disclosure,
   .sg-sitemapper-tree-disclosure-spacer,
   .sg-sitemapper-tree-select,

@@ -1,6 +1,6 @@
 import type { SitemapDocument, SitemapNode } from "../../../../sitemapper/model";
 
-export const DESKTOP_SEAM = 64 * 16;
+export const DESKTOP_MEDIA_QUERY = "(min-width: 64rem)";
 export const NODE_WIDTH = 10 * 16;
 export const NODE_MIN_HEIGHT = 3.5 * 16;
 
@@ -11,6 +11,7 @@ const ROW_GAP = 1.25 * 16;
 const MOBILE_ROW_GAP = 1 * 16;
 const LEVEL_INDENT = 1.5 * 16;
 const MOBILE_INDENT = 1.375 * 16;
+const OUTLINE_CONNECTOR_GUTTER = 0.5 * 16;
 const CHILD_OFFSET = 2 * 16;
 const ROOT_RAIL_DROP = 1.5 * 16;
 const MIN_MOBILE_NODE_WIDTH = 15 * 16;
@@ -47,8 +48,10 @@ export interface ConnectorSegment {
   readonly external: boolean;
 }
 
+export type CanvasLayoutMode = "cluster" | "outline";
+
 export interface CanvasLayout {
-  readonly mode: "cluster" | "outline";
+  readonly mode: CanvasLayoutMode;
   readonly width: number;
   readonly height: number;
   readonly nodes: readonly NodeRectangle[];
@@ -172,6 +175,34 @@ function connectors(
           `${parent.id}:${child.id}`,
           [["M", centers[index]!, railY], ["V", child.top]],
           child.external || child.externalCluster,
+        ));
+      });
+      continue;
+    }
+
+    if (mode === "outline") {
+      // Child boxes can share their parent's left edge once depth indentation
+      // clamps. Derive the spine from the child border rather than applying a
+      // desktop offset inside the boxes. When the gutter falls outside the
+      // parent, lead horizontally from its bottom border before descending.
+      const spineX = Math.min(...children.map((child) => child.left)) - OUTLINE_CONNECTOR_GUTTER;
+      const parentAnchorX = Math.min(
+        Math.max(spineX, parent.left),
+        parent.left + parent.width,
+      );
+      const lastY = children.at(-1)!.top + children.at(-1)!.height / 2;
+      const spineCommands: Array<readonly ["M", number, number] | readonly ["H" | "V", number]> = [
+        ["M", parentAnchorX, parent.top + parent.height],
+      ];
+      if (parentAnchorX !== spineX) spineCommands.push(["H", spineX]);
+      spineCommands.push(["V", lastY]);
+      output.push(segment(`${parent.id}:spine`, spineCommands, parent.externalCluster));
+      children.forEach((child) => {
+        const centerY = child.top + child.height / 2;
+        output.push(segment(
+          `${parent.id}:${child.id}`,
+          [["M", spineX, centerY], ["H", child.left]],
+          parent.externalCluster || child.external || child.externalCluster,
         ));
       });
       continue;
@@ -317,10 +348,18 @@ function clusterLayout(tree: LogicalTree, heights: NodeHeights, viewportWidth: n
   });
 }
 
-/** Pure, immutable measured layout. All values are CSS pixels relative to the stage. */
-export function layoutSitemap(tree: LogicalTree, heights: NodeHeights, viewportWidth: number): CanvasLayout {
+/**
+ * Pure, immutable measured layout. `viewportWidth` is the actual canvas
+ * scrollport used for geometry; `mode` comes from the page-level media seam.
+ */
+export function layoutSitemap(
+  tree: LogicalTree,
+  heights: NodeHeights,
+  viewportWidth: number,
+  mode: CanvasLayoutMode,
+): CanvasLayout {
   const safeWidth = Math.max(0, viewportWidth);
-  return safeWidth >= DESKTOP_SEAM
+  return mode === "cluster"
     ? clusterLayout(tree, heights, safeWidth)
     : outlineLayout(tree, heights, safeWidth);
 }

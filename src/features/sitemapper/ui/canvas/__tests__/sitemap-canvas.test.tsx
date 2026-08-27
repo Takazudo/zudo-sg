@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/preact";
+import { fireEvent, render, screen, waitFor } from "@testing-library/preact";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import type { SitemapDocument, SitemapNode } from "../../../../../sitemapper/model";
 import { SITEMAP_SCHEMA_VERSION } from "../../../../../sitemapper/model";
@@ -38,6 +38,34 @@ function props(document = doc()) {
 }
 
 describe("SitemapCanvas", () => {
+  it("follows the page media seam while measuring geometry from the canvas", async () => {
+    const listeners = new Set<EventListenerOrEventListenerObject>();
+    const media = {
+      matches: true,
+      media: "(min-width: 64rem)",
+      addEventListener: (_type: string, listener: EventListenerOrEventListenerObject) => listeners.add(listener),
+      removeEventListener: (_type: string, listener: EventListenerOrEventListenerObject) => listeners.delete(listener),
+    } as unknown as MediaQueryList;
+    const matchMedia = vi.spyOn(globalThis, "matchMedia").mockReturnValue(media);
+    const { container, unmount } = render(<SitemapCanvas {...props()} />);
+
+    await waitFor(() => expect(container.querySelector(".sg-sitemapper-canvas__stage"))
+      .toHaveAttribute("data-sg-layout", "cluster"));
+    expect(matchMedia).toHaveBeenCalledWith("(min-width: 64rem)");
+
+    Object.defineProperty(media, "matches", { configurable: true, value: false });
+    for (const listener of listeners) {
+      if (typeof listener === "function") listener.call(media, new Event("change"));
+      else listener.handleEvent(new Event("change"));
+    }
+    await waitFor(() => expect(container.querySelector(".sg-sitemapper-canvas__stage"))
+      .toHaveAttribute("data-sg-layout", "outline"));
+
+    unmount();
+    expect(listeners.size).toBe(0);
+    matchMedia.mockRestore();
+  });
+
   it("renders real node controls and a non-interactive connector overlay", () => {
     render(<SitemapCanvas {...props()} />);
     expect(screen.getByRole("button", { name: "Home" })).toBeInTheDocument();
