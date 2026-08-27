@@ -12,8 +12,8 @@ deliberately **not** that. Treat everything below as what the initializer
 would eventually automate; when #179 ships, prefer it and treat this file as
 superseded for new projects. Until then, this is the checklist.
 
-Two independent things get adopted, and you can take either without the
-other:
+Several independent things can be adopted, and you can take any of them
+without the others:
 
 1. **The story-authoring contract + registry codegen** — the `*.stories.tsx`
    shape and the script that discovers story files and turns them into an
@@ -21,6 +21,10 @@ other:
 2. **The catalog UI chrome** — the pages/components that actually render that
    registry into a browsable styleguide (§2 below, `src/features/styleguide/*`
    and `src/styleguide/data/`).
+3. **The Sitemapper authoring surface** — the page-tree model, persistence
+   contracts, workspace, and canvas described in §7 below. Its Composer catalog
+   adapter is repo glue and can be replaced when the adopting project has a
+   different content source.
 
 You could, for example, adopt the story contract to standardize how your team
 authors component variants without adopting this catalog's UI at all.
@@ -39,7 +43,7 @@ authors component variants without adopting this catalog's UI at all.
 | [`scripts/new-component.mjs`](./scripts/new-component.mjs) + [`scripts/lib/component-scaffold.mjs`](./scripts/lib/component-scaffold.mjs) + [`scripts/lib/scaffold-config.mjs`](./scripts/lib/scaffold-config.mjs) | The `pnpm new:component` scaffolder — generates a component skeleton, stories file, test file, barrel export, and re-runs the registry codegen in one command. | `scripts/new-component.mjs`, `scripts/lib/component-scaffold.mjs`, `scripts/lib/scaffold-config.mjs`. |
 | _(optional)_ [`scripts/gen-token-manifest.mjs`](./scripts/gen-token-manifest.mjs) + [`scripts/lib/ui-token-manifest.mjs`](./scripts/lib/ui-token-manifest.mjs) | Regenerates the shared UI package's design-token manifest (feeding the token-tweak panel) from `packages/ui/styles/tokens.css` / `colors.css` via a real CSS AST parse (postcss), rather than a hand-maintained copy. | `scripts/gen-token-manifest.mjs`, `scripts/lib/ui-token-manifest.mjs`. |
 | _(optional)_ [`scripts/gen-root-token-manifest.mjs`](./scripts/gen-root-token-manifest.mjs) + [`scripts/lib/root-token-manifest.mjs`](./scripts/lib/root-token-manifest.mjs) + [`scripts/lib/css-var-resolver.mjs`](./scripts/lib/css-var-resolver.mjs) | Regenerates the **root host's own** design-token manifest (`src/config/design-tokens-manifest.ts`) from `src/styles/global.css` plus the two shared `@zudo-sg/ui` files it `@import`s, via a cross-file CSS custom-property resolver — needed because the root manifest mixes shared-package tokens, root-specific `@theme` overrides, and `var()` indirection across files, which `gen-token-manifest.mjs`'s single-file parse can't follow (see #208/#209/#210/#211). | `scripts/gen-root-token-manifest.mjs`, `scripts/lib/root-token-manifest.mjs`, `scripts/lib/css-var-resolver.mjs`, `scripts/lib/css-var-parser.mjs`. |
-| _(optional)_ [`scripts/gen-z-index.mjs`](./scripts/gen-z-index.mjs) | Regenerates a Tailwind v4 `@theme` z-index block from a single `Z_INDEX_TIERS` source array, so z-index layers stay centrally defined. See the parsing caveat in §7. | `scripts/gen-z-index.mjs`. |
+| _(optional)_ [`scripts/gen-z-index.mjs`](./scripts/gen-z-index.mjs) | Regenerates a Tailwind v4 `@theme` z-index block from a single `Z_INDEX_TIERS` source array, so z-index layers stay centrally defined. See the parsing caveat in §5. | `scripts/gen-z-index.mjs`. |
 
 `src/features/styleguide/*` is **host-owned application code, not part of
 `@zudo-sg/ui`** — the shared UI package (`packages/ui`) ships only the
@@ -339,7 +343,82 @@ contracts, never the app chrome around them.
 
 ---
 
-## 7. Related issues
+## 7. Adopting the Sitemapper
+
+The Sitemapper (`/sitemapper`) is a page-tree authoring surface alongside the
+Composer. It owns a recursive `SitemapDocument` with one v1 root page, immutable
+tree commands, persistence, an outline tree, a measured canvas, and page-property
+inspection. It is not a generalized Composer document model: the Sitemapper tree
+has one `children` list per page and no component manifest. A project that does
+not have this repo's Composer can still adopt the page-tree pattern by replacing
+the composition catalog adapter described under repo glue.
+
+### Portable pattern
+
+These pieces describe the reusable shape and can move to another project after
+the adopting project's import paths and storage types are wired:
+
+- **Shared primitives** — `src/shared/` contains the JSON-safety/clone helpers
+  (`json.ts`), injectable id factories (`id-factory.ts`), provider-neutral record
+  identity (`record-identity.ts`), and the generic revision-aware save queue
+  (`persistence/save-queue.ts`). The queue provides the single-flight,
+  latest-wins persistence seam used by both authoring sub-apps.
+- **Headless page-tree domain** — `src/sitemapper/model/` and
+  `src/sitemapper/commands/` keep the persisted tree, structural validation and
+  recovery, traversal index, and pure add/update/remove/duplicate/reorder
+  operations independent of the UI. Keep the provider-qualified composition
+  reference shape if the target has an equivalent content library; otherwise
+  adapt or remove that optional field at the schema boundary.
+- **Store contract shape** — the `SitemapStore` contract separates `list`,
+  `get`, `put`, `delete`, and `clear` from the provider implementation, while
+  `SitemapProvider` pairs that store with `initialize`, `retry`, and
+  `startFresh` recovery operations. Keep this seam when swapping IndexedDB for
+  the adopting project's storage backend.
+- **Typed-slot workspace** — `SitemapperWorkspace` accepts typed
+  `toolbar`, `banner`, `tree`, `canvas`, and `inspector` slots, while retaining
+  the rail/resizer geometry around them. This lets a target project replace a
+  surface independently without coupling the shell to controller state.
+- **Prototype-first canvas process** — first compare plain static prototypes
+  using the same representative tree and the target viewport constraints, then
+  codify the chosen geometry as a pure layout function before mounting the UI.
+  The shipped canvas keeps DOM height measurement in the component and
+  `layoutSitemap` in the pure layout module; connector paths are derived from
+  the resulting rectangles. Re-derive the target project's spacing, tokens, and
+  responsive seam while preserving this separation and testing the chosen
+  contract at representative wide and narrow viewports.
+
+### Repo glue to re-implement
+
+The following pieces connect that portable pattern to this repository's zfb,
+zudo-doc, Composer, and browser storage setup:
+
+- **Route and chrome boundary** — `pages/sitemapper/index.tsx` owns the route's
+  document shell, while `pages/lib/_sitemapper-chrome.tsx` assembles the shared
+  head/header/body-end slots. An adopter should provide the equivalent route
+  and chrome boundary for its framework rather than moving these page modules
+  into the headless `src/` domain.
+- **CSS build seam** — `src/styles/global.css` imports
+  `src/features/sitemapper/styles.css` and carries the two explicit Tailwind
+  `@source` directives for `src/features/sitemapper/**/*.{tsx,ts,jsx,js}` and
+  `pages/sitemapper/**/*.{tsx,ts,jsx,js}`. Update the import and source roots
+  for the adopting project's feature and route locations.
+- **Header navigation** — `src/config/settings.ts` adds the self-contained
+  `{ label: "Sitemapper", path: "/sitemapper" }` entry to `headerNav`. Recreate
+  that entry in the target project's navigation configuration and use its own
+  base-path helper for the active route.
+- **Storage and content adapters** — `src/sitemapper/storage/indexeddb/`
+  implements this repo's browser provider and the separate
+  `zudo-sg-sitemapper` database; replace it when the target uses another
+  backend or database identity. `src/sitemapper/catalog/` is the read-only
+  bridge to this repo's Composer records, so replace that adapter with the
+  target project's saved-content provider (or omit composition assignment).
+- **App-specific UI wiring** — the production assembly in
+  `src/features/sitemapper/app/` connects the provider, controller, record
+  transitions, workspace slots, tree, canvas, inspector, and catalog. Keep the
+  seams, but adapt route imports, theme tokens, CSS class scope, and any
+  framework-specific island/bootstrap code.
+
+## 8. Related issues
 
 - [#179](https://github.com/Takazudo/zudo-sg/issues/179) — the deferred
   `create-zudo-sg` initializer this document stands in for.
