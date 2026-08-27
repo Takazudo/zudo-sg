@@ -26,6 +26,10 @@ import { ClientRouter } from "@takazudo/zfb-runtime";
 import { defaultLocale } from "@/config/i18n";
 import { withBase } from "@/utils/base";
 import SitemapperApp from "@/features/sitemapper/chrome/sitemapper-app";
+import {
+  SitemapperResizerInitScript,
+  SitemapperResizerRestoreScript,
+} from "@/features/sitemapper/chrome/resizer-scripts";
 import { composeMetaTitle } from "../lib/_compose-meta-title";
 import { buildSitemapperChrome } from "../lib/_sitemapper-chrome";
 
@@ -63,11 +67,13 @@ export default function SitemapperPage(): JSX.Element {
           }) as unknown as VNode
         }
         {chrome.head}
+        <SitemapperResizerRestoreScript />
       </head>
       <body class="min-h-screen antialiased">
         {chrome.header}
         {app}
         {chrome.bodyEnd}
+        <SitemapperResizerInitScript />
       </body>
     </html>
   );
