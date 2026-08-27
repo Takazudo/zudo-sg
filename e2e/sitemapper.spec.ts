@@ -151,6 +151,48 @@ async function assertNoBodyOverflow(page: Page): Promise<void> {
     .toBeLessThanOrEqual(widths.viewport);
 }
 
+async function assertDesktopTreeRailUsable(page: Page): Promise<void> {
+  const rail = page.locator(".sg-sitemapper-tree-rail");
+  await expect(rail).toBeVisible();
+  const geometry = await rail.evaluate((element) => {
+    const railBox = element.getBoundingClientRect();
+    const row = element.querySelector<HTMLElement>('[data-sg-tree-root="true"] > .sg-sitemapper-tree-row');
+    const title = row?.querySelector<HTMLElement>(".sg-sitemapper-tree-select-title");
+    if (!row || !title) throw new Error("Missing rendered root tree row");
+    const titleBox = title.getBoundingClientRect();
+    const titleStyle = getComputedStyle(title);
+    return {
+      clientWidth: element.clientWidth,
+      scrollWidth: element.scrollWidth,
+      titleWidth: titleBox.width,
+      titleDisplay: titleStyle.display,
+      titleVisibility: titleStyle.visibility,
+      controls: [...row.querySelectorAll<HTMLElement>("button")].map((control) => {
+        const box = control.getBoundingClientRect();
+        return {
+          name: control.getAttribute("aria-label") ?? control.textContent?.trim() ?? "unnamed",
+          left: box.left,
+          right: box.right,
+          width: box.width,
+          railLeft: railBox.left,
+          railRight: railBox.right,
+        };
+      }),
+    };
+  });
+  expect(geometry.scrollWidth, "the outline rail must not overflow horizontally")
+    .toBeLessThanOrEqual(geometry.clientWidth);
+  expect(geometry.titleDisplay).not.toBe("none");
+  expect(geometry.titleVisibility).not.toBe("hidden");
+  expect(geometry.titleWidth, "the root title must retain readable inline space").toBeGreaterThanOrEqual(32);
+  expect(geometry.controls.length, "all root row controls must remain rendered").toBeGreaterThanOrEqual(9);
+  for (const control of geometry.controls) {
+    expect(control.width, `${control.name} must remain visibly rendered`).toBeGreaterThan(0);
+    expect(control.left, `${control.name} must start inside the outline rail`).toBeGreaterThanOrEqual(control.railLeft);
+    expect(control.right, `${control.name} must end inside the outline rail`).toBeLessThanOrEqual(control.railRight);
+  }
+}
+
 async function assertOrthogonalConnectors(page: Page): Promise<void> {
   const paths = canvas(page).locator("svg.sg-sitemapper-connectors path");
   expect(await paths.count(), "the non-trivial tree must render connectors").toBeGreaterThan(0);
@@ -466,6 +508,7 @@ test.describe("Sitemapper browser exit gate", () => {
           await assertLeavesHaveNoOutboundSpine(page);
           await assertTierAndSelectionStyles(page);
           if (viewport.width === 375) await assertNarrowEditingIsOperable(page);
+          else await assertDesktopTreeRailUsable(page);
           expect(errors).toEqual({ pageErrors: [], consoleErrors: [] });
         } finally {
           // Keep a rendered artifact even when a direct contract assertion

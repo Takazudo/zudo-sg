@@ -11,6 +11,7 @@ const ROW_GAP = 1.25 * 16;
 const MOBILE_ROW_GAP = 1 * 16;
 const LEVEL_INDENT = 1.5 * 16;
 const MOBILE_INDENT = 1.375 * 16;
+const OUTLINE_CONNECTOR_GUTTER = 0.5 * 16;
 const CHILD_OFFSET = 2 * 16;
 const ROOT_RAIL_DROP = 1.5 * 16;
 const MIN_MOBILE_NODE_WIDTH = 15 * 16;
@@ -174,6 +175,34 @@ function connectors(
           `${parent.id}:${child.id}`,
           [["M", centers[index]!, railY], ["V", child.top]],
           child.external || child.externalCluster,
+        ));
+      });
+      continue;
+    }
+
+    if (mode === "outline") {
+      // Child boxes can share their parent's left edge once depth indentation
+      // clamps. Derive the spine from the child border rather than applying a
+      // desktop offset inside the boxes. When the gutter falls outside the
+      // parent, lead horizontally from its bottom border before descending.
+      const spineX = Math.min(...children.map((child) => child.left)) - OUTLINE_CONNECTOR_GUTTER;
+      const parentAnchorX = Math.min(
+        Math.max(spineX, parent.left),
+        parent.left + parent.width,
+      );
+      const lastY = children.at(-1)!.top + children.at(-1)!.height / 2;
+      const spineCommands: Array<readonly ["M", number, number] | readonly ["H" | "V", number]> = [
+        ["M", parentAnchorX, parent.top + parent.height],
+      ];
+      if (parentAnchorX !== spineX) spineCommands.push(["H", spineX]);
+      spineCommands.push(["V", lastY]);
+      output.push(segment(`${parent.id}:spine`, spineCommands, parent.externalCluster));
+      children.forEach((child) => {
+        const centerY = child.top + child.height / 2;
+        output.push(segment(
+          `${parent.id}:${child.id}`,
+          [["M", spineX, centerY], ["H", child.left]],
+          parent.externalCluster || child.external || child.externalCluster,
         ));
       });
       continue;

@@ -6,6 +6,7 @@ import {
   isExternalSlug,
   layoutSitemap,
   NODE_MIN_HEIGHT,
+  type CanvasLayout,
 } from "../layout";
 
 function node(id: string, slug?: string, children: SitemapNode[] = []): SitemapNode {
@@ -14,6 +15,39 @@ function node(id: string, slug?: string, children: SitemapNode[] = []): SitemapN
 
 function document(root: SitemapNode): SitemapDocument {
   return { schemaVersion: SITEMAP_SCHEMA_VERSION, id: "test", name: "Test", root: [root] };
+}
+
+function connectorCrossings(layout: CanvasLayout): string[] {
+  const failures: string[] = [];
+  for (const connector of layout.segments) {
+    const tokens = connector.path.match(/[MHV]|-?\d+(?:\.\d+)?/g) ?? [];
+    let cursor = 0;
+    let x = 0;
+    let y = 0;
+    while (cursor < tokens.length) {
+      const command = tokens[cursor++];
+      if (command === "M") {
+        x = Number(tokens[cursor++]);
+        y = Number(tokens[cursor++]);
+        continue;
+      }
+      const next = Number(tokens[cursor++]);
+      const x2 = command === "H" ? next : x;
+      const y2 = command === "V" ? next : y;
+      for (const box of layout.nodes) {
+        const crossesVertical = x === x2
+          && x > box.left && x < box.left + box.width
+          && Math.max(Math.min(y, y2), box.top) < Math.min(Math.max(y, y2), box.top + box.height);
+        const crossesHorizontal = y === y2
+          && y > box.top && y < box.top + box.height
+          && Math.max(Math.min(x, x2), box.left) < Math.min(Math.max(x, x2), box.left + box.width);
+        if (crossesVertical || crossesHorizontal) failures.push(`${connector.id}:${box.id}`);
+      }
+      x = x2;
+      y = y2;
+    }
+  }
+  return failures;
 }
 
 describe("canvas measured layout", () => {
@@ -75,6 +109,10 @@ describe("canvas measured layout", () => {
     expect(depth6.left).toBe(depth4.left);
     expect(Math.min(...result.nodes.map((item) => item.width))).toBeGreaterThanOrEqual(240);
     expect(result.width).toBeGreaterThanOrEqual(375);
+    expect(result.segments.every((item) => /^M [\d.]+ [\d.]+(?: [HV] [\d.]+)+$/.test(item.path))).toBe(true);
+    expect(connectorCrossings(result)).toEqual([]);
+    expect(result.segments.find((item) => item.id === "d0:spine")?.path).toMatch(/^M 26 [\d.]+ V/);
+    expect(result.segments.find((item) => item.id === "d4:spine")?.path).toMatch(/^M 100 [\d.]+ H 92 V/);
   });
 
   it("keeps the page-level mode independent from the canvas scrollport width", () => {
