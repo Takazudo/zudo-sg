@@ -205,7 +205,15 @@ async function setMarkdown(page: Page, nodeId: string, value: string): Promise<v
 async function openEditor(page: Page, nodeId: string, seed: string): Promise<Locator> {
   const node = nodeLocator(page, nodeId);
   const editor = canvas(page).locator(PROSE_EDITOR);
-  await node.dblclick();
+  if (await node.isVisible()) {
+    await node.dblclick();
+  } else {
+    // An empty ProseMd legitimately renders no pixels, so Playwright cannot
+    // perform a coordinate double-click on it. Dispatch the same bubbling
+    // `dblclick` at the real node wrapper; renderer.ts's production handler
+    // still resolves the node and enters the actual Prose session.
+    await node.dispatchEvent("dblclick");
+  }
   await expect(editor).toBeVisible();
   await expect(editor).toBeFocused();
   await expect.poll(() => editor.evaluate((element) => element.textContent ?? "")).toBe(seed);
