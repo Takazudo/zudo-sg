@@ -133,7 +133,7 @@ async function writeConsumer(directory, uiSpec) {
   await writeFile(path.join(directory, "package.json"), `${JSON.stringify(manifest, null, 2)}\n`);
   await writeFile(
     path.join(directory, "pnpm-workspace.yaml"),
-    `packages: []\nallowBuilds:\n  '${contractName}': true\n`,
+    `packages: []\nallowBuilds:\n  '${contractName}': true\n  esbuild: true\n`,
   );
   await writeFile(path.join(directory, "src/generated-composition.tsx"), generatedComposition());
 }

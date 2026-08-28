@@ -50,7 +50,10 @@ function App() {
         runtimeIdentity: runtimeIdentity(),
         componentCount: componentPackManifest.components.length,
         wasmHighlight: lightKeyword.textContent === "const" && darkKeyword.textContent === "const",
-        utilityGrid: getComputedStyle(grid).gridTemplateColumns.includes("minmax(13rem, 1fr)"),
+        utilityGrid:
+          grid.classList.contains("grid-cols-[repeat(auto-fit,minmax(13rem,1fr))]") &&
+          getComputedStyle(grid).display === "grid" &&
+          getComputedStyle(grid).gridTemplateColumns !== "none",
         lightKeyword: getComputedStyle(lightKeyword).color,
         darkKeyword: getComputedStyle(darkKeyword).color,
         lightBackground: getComputedStyle(lightPre).backgroundColor,
