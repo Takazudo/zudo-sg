@@ -1,10 +1,8 @@
-// Derived Composer registry — the /composer sub-application's catalog seam.
+// Temporary compatibility registry for the in-repository /composer app.
 //
-// This DERIVES the Composer catalog from the SAME generated `storyModules`
-// map the styleguide already builds (see `./sg-registry.ts`). It does NOT add a
-// second filesystem scan or `import.meta.glob`: it filters the already-imported
-// modules for the ones whose `meta.composer` was explicitly set via
-// `defineComposer(...)`. Components that have not opted in are never exposed.
+// Component authoring now lives in package sidecars using the independent
+// @zudo-composer/component-contract. This adapter projects those definitions
+// into the legacy app's internal shape until the app moves to zudo-composer.
 //
 // Two projections come out of one definition (locked by epic #243):
 //   - the RUNTIME registry (`composerEntries`) keeps the trusted, typed
@@ -13,10 +11,7 @@
 //   - the SERIALIZABLE manifest (`composerManifest`) strips every function so
 //     it can cross to the parent window / chooser / inspector as pure JSON.
 //
-// Display title/category/description are sourced from the owning `StoryMeta`
-// (never duplicated in the definition). `Story.render()` is deliberately NOT
-// part of the Composer renderer contract — the Composer instantiates the real
-// `component`, not a showcase variant.
+// Story modules are intentionally not imported by this registry.
 
 import type {
   ComposerConstraints,
@@ -26,10 +21,11 @@ import type {
   ComposerSource,
   JsonValue,
   StoryCategory,
-  StoryMeta,
-  StoryModule,
 } from "@zudo-sg/ui";
-import { storyModules } from "./sg-registry";
+import {
+  componentPackManifest,
+  componentRuntimeRegistry,
+} from "@zudo-sg/ui/composer-pack";
 import { composerManifestEntrySchema } from "./composer-schema";
 
 /**
@@ -42,13 +38,13 @@ export interface ComposerEntry {
   componentId: string;
   /** Component schema version. */
   version: number;
-  /** Display name, from `StoryMeta.title`. */
+  /** Display name, single-sourced in the component sidecar. */
   title: string;
-  /** Sidebar bucket, from `StoryMeta.category`. */
+  /** Sidebar bucket, single-sourced in the component sidecar. */
   category: StoryCategory;
-  /** One-sentence description, from `StoryMeta.description`. */
+  /** One-sentence description, single-sourced in the component sidecar. */
   description: string;
-  /** Glob path key of the owning story module. */
+  /** Temporary diagnostic key for the public component export. */
   path: string;
   /** Full trusted definition — retains `component` and `adapters`. */
   definition: ComposerMeta;
@@ -300,27 +296,53 @@ export function toManifestEntry(entry: ComposerEntry): ComposerManifestEntry {
 // ── Registry construction ───────────────────────────────────────────────────
 
 /**
- * Builds the runtime Composer registry from a story-module map by filtering for
- * metas that explicitly opted in via `meta.composer`. Throws if any opted-in
- * definition is invalid (so a bad opt-in fails loudly at import time).
+ * Projects contract sidecars to the legacy in-repository Composer shape.
+ * Story modules are not part of this boundary.
  */
-export function buildComposerRegistry(modules: Record<string, StoryModule>): ComposerEntry[] {
-  const entries: ComposerEntry[] = [];
-  for (const [path, mod] of Object.entries(modules)) {
-    const meta = mod.default as StoryMeta | undefined;
-    if (!meta || typeof meta.title !== "string") continue;
-    const composer = meta.composer;
-    if (!composer) continue; // only explicitly opted-in metas
-    entries.push({
-      componentId: composer.componentId,
-      version: composer.version,
-      title: meta.title,
-      category: meta.category,
-      description: meta.description,
-      path,
-      definition: composer,
-    });
-  }
+type PackManifestComponent = (typeof componentPackManifest.components)[number];
+type PackRuntimeRegistry = typeof componentRuntimeRegistry;
+
+function toLegacyDefinition(
+  sidecar: PackManifestComponent,
+  runtime: PackRuntimeRegistry["components"][string],
+): ComposerMeta {
+  return {
+    componentId: sidecar.id,
+    version: sidecar.schemaVersion,
+    component: runtime.component as unknown as ComposerMeta["component"],
+    source: { ...sidecar.source },
+    defaults: { ...(sidecar.defaults ?? {}) } as ComposerMeta["defaults"],
+    // `required` belongs to contract v1; the legacy app predates that key and
+    // uses defaults for the same insertion guarantee, so omit it here only.
+    fields: (sidecar.fields ?? []).map(
+      ({ required: _required, ...field }) => field,
+    ) as ComposerMeta["fields"],
+    slots: [...(sidecar.slots ?? [])] as ComposerMeta["slots"],
+    ...(runtime.adapters
+      ? { adapters: runtime.adapters as unknown as NonNullable<ComposerMeta["adapters"]> }
+      : {}),
+  };
+}
+
+export function buildComposerRegistry(
+  manifests: readonly PackManifestComponent[],
+  runtimeRegistry: PackRuntimeRegistry = componentRuntimeRegistry,
+): ComposerEntry[] {
+  const entries = manifests.map((sidecar): ComposerEntry => {
+    const runtime = runtimeRegistry.components[sidecar.id];
+    if (!runtime) {
+      throw new Error(`Missing Composer runtime for manifest component "${sidecar.id}"`);
+    }
+    return {
+      componentId: sidecar.id,
+      version: sidecar.schemaVersion,
+      title: sidecar.title,
+      category: sidecar.category as StoryCategory,
+      description: sidecar.description,
+      path: `${sidecar.source.module}#${sidecar.source.exportName}`,
+      definition: toLegacyDefinition(sidecar, runtime),
+    };
+  });
 
   const errors = validateComposerDefinitions(entries.map((e) => e.definition));
   if (errors.length > 0) {
@@ -331,11 +353,12 @@ export function buildComposerRegistry(modules: Record<string, StoryModule>): Com
 
 /**
  * The trusted runtime Composer registry — retains component functions and
- * adapters. Currently empty: no component has opted in yet (opting in the real
- * cohort is a later sub-issue, #246). Derived from the same `storyModules` the
- * styleguide catalog uses, so it never drifts and never triggers a second scan.
+ * adapters from package sidecars.
  */
-export const composerEntries: ComposerEntry[] = buildComposerRegistry(storyModules);
+export const composerEntries: ComposerEntry[] = buildComposerRegistry(
+  componentPackManifest.components,
+  componentRuntimeRegistry,
+);
 
 /** The serializable manifest — pure JSON, no functions. */
 export const composerManifest: ComposerManifestEntry[] = composerEntries.map(toManifestEntry);
@@ -355,7 +378,7 @@ export function getComposerManifestEntry(componentId: string): ComposerManifestE
   return manifestById.get(componentId);
 }
 
-/** All opted-in component ids, in generated story order. */
+/** All opted-in component ids, in generated pack order. */
 export function getComposerComponentIds(): string[] {
   return composerEntries.map((e) => e.componentId);
 }

@@ -1,0 +1,22 @@
+import { defineComponent } from "@zudo-composer/component-contract";
+import { Callout, type CalloutProps } from "./callout";
+
+export const calloutDisplay = {
+  title: "Callout",
+  category: "Feedback",
+  description: "Call-out box for notes/asides in body copy, in an accent-tinted or neutral tone.",
+} as const;
+
+export const calloutComposer = defineComponent<CalloutProps, typeof Callout>({
+  id: "ui.callout",
+  schemaVersion: 1,
+  ...calloutDisplay,
+  source: { module: "@zudo-sg/ui", exportKind: "named", exportName: "Callout" },
+  defaults: { tone: "note", title: "Note" },
+  fields: [
+    { kind: "select", prop: "tone", label: "Tone", options: ["note", "muted"] },
+    { kind: "text", prop: "title", label: "Title" },
+  ],
+  slots: [{ id: "body", prop: "children", label: "Body", cardinality: "many" }],
+  component: Callout,
+});

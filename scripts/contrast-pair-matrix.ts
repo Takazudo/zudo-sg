@@ -62,28 +62,31 @@ const BASE_PAIR_MATRIX: PairSpec[] = [
 ];
 
 const SYNTAX_ROLES = [
-  ["comment", "--zd-syntax-comment"],
-  ["string", "--zd-syntax-string"],
-  ["number", "--zd-syntax-number"],
-  ["keyword", "--zd-syntax-keyword"],
-  ["callable", "--zd-syntax-callable"],
-  ["type", "--zd-syntax-type"],
-  ["name", "--zd-syntax-name"],
-  ["inserted", "--zd-syntax-inserted"],
-  ["deleted", "--zd-syntax-deleted"],
+  ["comment", "--zd-syntax-comment", "--zfb-hi-com"],
+  ["string", "--zd-syntax-string", "--zfb-hi-str"],
+  ["number", "--zd-syntax-number", "--zfb-hi-num"],
+  ["keyword", "--zd-syntax-keyword", "--zfb-hi-kw"],
+  ["callable", "--zd-syntax-callable", "--zfb-hi-fn"],
+  ["type", "--zd-syntax-type", "--zfb-hi-ty"],
+  ["name", "--zd-syntax-name", "--zfb-hi-prop"],
+  ["inserted", "--zd-syntax-inserted", "--zfb-hi-ins"],
+  ["deleted", "--zd-syntax-deleted", "--zfb-hi-del"],
 ] as const;
 
 /** Every syntax role is checked on both the doc page and the preview fence. */
-const SYNTAX_PAIR_MATRIX: PairSpec[] = SYNTAX_ROLES.flatMap(([role, fgVar]) =>
-  (["doc-page", "preview"] as const).map((surface) => ({
-    key: `syntax-${role}-vs-${surface}-fence`,
-    label: `${fgVar} / ${surface} fence`,
-    tier: 1 as const,
-    threshold: 4.5,
-    fgVar,
-    bgVar: "--zd-code-bg",
-    surface,
-  })),
+const SYNTAX_PAIR_MATRIX: PairSpec[] = SYNTAX_ROLES.flatMap(([role, docVar, providerVar]) =>
+  (["doc-page", "preview"] as const).map((surface) => {
+    const fgVar = surface === "preview" ? providerVar : docVar;
+    return {
+      key: `syntax-${role}-vs-${surface}-fence`,
+      label: `${fgVar} / ${surface} fence`,
+      tier: 1 as const,
+      threshold: 4.5,
+      fgVar,
+      bgVar: surface === "preview" ? "--zfb-hi-bg" : "--zd-code-bg",
+      surface,
+    };
+  }),
 );
 
 const PAINTED_DELETED_PAIR_MATRIX: PairSpec[] = [
@@ -100,10 +103,10 @@ const PAINTED_DELETED_PAIR_MATRIX: PairSpec[] = [
   },
   {
     key: "syntax-deleted-painted-vs-preview-fence",
-    label: "--zd-syntax-deleted 15% tint / preview fence",
+    label: "--zfb-hi-del 15% tint / preview fence",
     tier: 1,
     threshold: 4.5,
-    fgVar: "--zd-syntax-deleted",
+    fgVar: "--zfb-hi-del",
     bgVar: "--color-bg",
     tintBg: true,
     tintPct: 15,

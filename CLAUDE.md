@@ -25,16 +25,16 @@ pages/                    # File-based routing (host-owned: /, /components/*, /d
 src/
 ├── components/           # JSX + Preact components
 │   └── content/          # MDX content components (admonitions, code-group, ...)
-├── composer/             # Headless document model + storage + source-gen (composer domain logic)
+├── composer/             # Legacy in-repo Composer core; retained only until Phase 4 cleanup
 ├── config/               # Settings, color schemes, design token manifests
 ├── content/
 │   └── docs/             # Slim root guide content
 ├── features/
-│   ├── composer/         # /composer sub-app UI: chrome/canvas/preview/inspector/tree/reuse
-│   ├── sitemapper/        # /sitemapper sub-app UI: chrome/canvas/inspector/tree/picker
+│   ├── composer/         # Legacy /composer app; standalone product lives in zudo-composer
+│   ├── sitemapper/       # Legacy /sitemapper app; standalone product lives in zudo-composer
 │   └── styleguide/       # /components catalog: chrome, preview, code-panel, search, token-tweak
-├── shared/               # Authoring primitives shared by Composer and Sitemapper
-├── sitemapper/            # Headless sitemap model, commands, catalog, library, and storage
+├── shared/               # Legacy authoring primitives retained until Phase 4 cleanup
+├── sitemapper/           # Legacy in-repo Sitemapper core retained until Phase 4 cleanup
 ├── styleguide/
 │   └── data/             # Codegen-backed component registry + nav nodes (#103)
 └── styles/
@@ -83,54 +83,40 @@ Do NOT use h1 (`#`) in doc content — the page title from frontmatter is render
   There is no `client:load`-style directive; that was an Astro-era convention this project
   no longer uses.
 
-## Composer
+## Component provider and product split
 
-- **What it is** — the `/composer` sub-application (epic #243): compose real
-  `@zudo-sg/ui` components into a persisted, JSON-safe tree. Routes:
-  `pages/composer/index.tsx` + `pages/composer/preview.tsx`; chrome in
-  `pages/lib/_composer-chrome.tsx`.
-- **Where code lives** — headless domain logic (model/commands/codec/recovery,
-  library/persistence/source, storage providers, reuse) in `src/composer/`;
-  app/UI (chrome/canvas/preview/inspector/tree/reuse) in `src/features/composer/`;
-  runtime registry + zod manifest in `src/styleguide/data/composer-registry.ts` +
-  `composer-schema.ts`; dev-only filesystem transport in
-  `plugins/composer-file-provider-plugin.mjs`.
-- **Behavioral source of truth** — `packages/ui/src/composer/types.ts` +
-  `packages/ui/STORIES.md` §10 (Composer contract) define the authoring
-  contract; module behavior is pinned by module-header comments,
-  `src/composer/**/__tests__`, and TESTING.md's "Composer and Sitemapper E2E suites" section.
-  A component opts into the composer only via the OPTIONAL `composer` prop on
-  its `StoryMeta` (`defineComposer<P>()`) — never automatic.
-- See ADOPTING.md's "Adopting the Composer" section for the portable-vs-glue
-  split when copying this pattern into another project.
+- **zudo-sg owns the provider** — components, stories, typed
+  `*.composer.tsx` sidecars, generated `packages/ui/src/composer-pack.ts`, and
+  the explicit `packages/ui/styles/composer.css` entry live here.
+- **Authoring rule** — use `defineComponent` from
+  `@zudo-composer/component-contract` in a co-located sidecar. Persisted
+  component `id`, `schemaVersion`, field `prop`, and slot `id`/`prop` are
+  explicit stable keys. `source.module` is the public `@zudo-sg/ui` package
+  export, never a private `/src/*` path. Export display metadata from the
+  sidecar; the story imports/spreads it, but no provider code imports stories.
+- **Generated boundary** — `pnpm gen:composer-pack` discovers sidecars and
+  generates the manifest/runtime pack. `pnpm check:composer-pack` rejects
+  drift. Consumers import `@zudo-sg/ui/composer-pack` and
+  `@zudo-sg/ui/styles/composer.css`.
+- **Immutable handoff** — `ui-provider-handoff.json` records the package tree,
+  package-only commit, exact Git spec, and exact component-contract commit.
+  Finish package docs/code first, advance local `package/ui-v1`, then run
+  `pnpm verify:ui-provider-install -- --exact`. Never pre-claim the post-merge
+  source SHA or CI URL.
+- **zudo-composer owns the products** — the standalone repository owns both
+  Composer and Sitemapper, including their clean storage/schema identities,
+  routes, application UI, and deployment.
+- **Temporary legacy seam** — this repository intentionally keeps its current
+  `/composer`, `/composer/preview`, and `/sitemapper` code/routes operational
+  through Phase 2 verification. Do not extend or migrate them. Phase 4 deletes
+  them after standalone proof.
+- **No compatibility contract** — there are zero users and zero production
+  data. Destructive clean-current-schema changes are allowed; do not add
+  backward-compatibility readers, migrations, redirects, aliases, or old-name
+  and old-storage fallbacks.
 
-## Sitemapper
-
-- **What it is** — the `/sitemapper` sub-application: a hierarchical sitemap in which each node
-  is a page that may reference a saved Composer composition. The route is
-  `pages/sitemapper/index.tsx`, and its shared head/header/body-end chrome is assembled by
-  `pages/lib/_sitemapper-chrome.tsx`.
-- **Where code lives** — headless domain logic (model, immutable tree commands, Composer catalog
-  adapter, library contracts/helpers, and IndexedDB storage) in `src/sitemapper/`; the app and UI
-  (record lifecycle/controller, workspace chrome, canvas, outline tree, inspector, and picker) in
-  `src/features/sitemapper/`.
-- **Behavioral source of truth** — module-header comments and the `__tests__` under
-  `src/sitemapper/` and `src/features/sitemapper/`, plus the browser exit gate in
-  `e2e/sitemapper.spec.ts`.
-- **Shared primitives** — `json`, `id-factory`, `record-identity`, and the revision-aware
-  `save-queue` now live in `src/shared/` for both authoring sub-apps. Re-export compatibility
-  shims remain at the old Composer paths (`src/composer/model/{json,id-factory,record-identity}.ts`
-  and `src/composer/persistence/save-queue.ts`).
-- **Two persisted-data contracts** — v1 requires exactly one root page. `root` remains an array
-  as a forward-compatible insertion slot, but validation rejects any root cardinality other than
-  one. A page's `CompositionRef` is provider-qualified (`providerId` + `recordId`) and may dangle
-  by design: the Composer delete path does not scan Sitemap consumers, so a deleted composition is
-  shown as a visible broken-reference badge with its raw reference instead of crashing.
-- **Storage isolation** — the Sitemapper IndexedDB provider uses the separate
-  `zudo-sg-sitemapper` database so its schema migrations remain independent of the Composer
-  database.
-- See ADOPTING.md's "Adopting the Sitemapper" section for the portable-vs-glue split when copying
-  this pattern into another project.
+See `packages/ui/STORIES.md` §10, `packages/ui/README.md`, and
+`ui-provider-handoff.json` for the permanent provider contract.
 
 ## Monorepo Structure
 
@@ -182,8 +168,8 @@ for how the two worlds relate.
 - **claudeSkills** — The `doc/` workspace ships zudo-doc-design-system, zudo-doc-translate, zudo-doc-version-bump skills
 - **designTokenPanel** — Interactive tabbed panel for tweaking spacing, font, size, and color tokens
 - **dynamicPageTransition** — SPA client-router page swaps with View Transitions and page-loading overlay
-- **sitemapper** — Hierarchical page-tree authoring at `/sitemapper`, with named sitemap persistence,
-  Composer composition assignment, desktop tree/inspector editing, and narrow canvas editing
+- **composer / sitemapper (temporary)** — legacy verification routes retained
+  only until Phase 4; product development belongs in zudo-composer
 - **sidebarResizer** — Draggable sidebar width
 - **sidebarToggle** — Show/hide desktop sidebar
 - **versioning** — Multi-version documentation support

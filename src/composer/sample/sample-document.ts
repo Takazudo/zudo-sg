@@ -59,7 +59,6 @@ export function createSampleDocument(): CompositionDocument {
                     componentId: C.prose,
                     componentVersion: V,
                     props: {
-                      size: "md",
                       children:
                         "Stable node ids, typed props, and named slots make each Composition portable.",
                     },
@@ -70,7 +69,6 @@ export function createSampleDocument(): CompositionDocument {
                     componentId: C.prose,
                     componentVersion: V,
                     props: {
-                      size: "md",
                       children:
                         "Named slots express where nested components belong without storing JSX as state.",
                     },

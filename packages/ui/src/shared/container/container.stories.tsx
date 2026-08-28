@@ -1,28 +1,14 @@
 import type { StoryMeta, Story } from "../../stories/types";
-import { defineComposer } from "../../composer/types";
 import { Container, type ContainerProps } from "./container";
+import { containerDisplay } from "./container.composer";
 
 const meta: StoryMeta = {
-  title: "Container",
-  category: "Layout",
-  description:
-    "Centers page content in a single ~88rem-wide column, with fluid inline padding that expands on wider viewports.",
+  ...containerDisplay,
   usage: `import { Container } from "@zudo-sg/ui/src/shared/container/container";
 
 <Container>
   <p>Page content…</p>
 </Container>`,
-  composer: defineComposer<ContainerProps>({
-    componentId: "ui.container",
-    version: 1,
-    component: Container,
-    source: {
-      module: "@zudo-sg/ui/src/shared/container/container",
-      exportKind: "named",
-      exportName: "Container",
-    },
-    slots: [{ id: "content", prop: "children", label: "Content", cardinality: "many" }],
-  }),
 };
 
 export default meta;

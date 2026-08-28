@@ -12,22 +12,17 @@
  * project themes via `data-theme` + `light-dark()`, baked into the tokens
  * themselves).
  *
- * `hi-*` fence token COLORS are deliberately NOT set here — the zudo-doc
- * bridge (`--zfb-hi-*` -> `--zd-syntax-*`, shipped in
- * @takazudo/zudo-doc/features.css) already themes them wherever `pre.hi-root`
- * appears. This file only lays out the `pre`/`code` box (padding, radius,
+ * `hi-*` fence token colors are owned by the public provider stylesheet,
+ * `@zudo-sg/ui/styles/composer.css`.
+ * This file only lays out the `pre`/`code` box (padding, radius,
  * overflow-x, background), mirroring `.zd-content`'s own code-block rules
  * (@takazudo/zudo-doc/content.css) but bound to @zudo-sg/ui's own portable
  * `--color-surface-2` rather than the root-only `--color-code-bg` — this
  * component ships from @zudo-sg/ui and must render correctly in any consumer,
  * not just this repo's root app.
  *
- * Wired into the bundle via `src/styles/global.css`'s
- * `@import "@zudo-sg/ui/src/content/prose-md/prose-md.css"` — that file is
- * the one CSS graph zfb actually bundles (host pages, the /components
- * catalog preview iframe, and the /composer/preview iframe all resolve
- * through it), so importing it there is what makes this stylesheet reach
- * every place ProseMd can render.
+ * External consumers import the canonical `@zudo-sg/ui/styles/composer.css`
+ * entrypoint, which supplies tokens, highlighting, and this component CSS.
  */
 
 .zc-prose-md {
@@ -193,12 +188,12 @@
   font-family: var(--font-mono);
   font-size: var(--text-small);
   line-height: var(--leading-relaxed);
-  /* Bind to the code surface the syntax bridge is contrast-balanced against
-     (--zd-code-bg), falling back to a bg/surface-2 mix only where no code
+  /* Bind to the provider-owned code surface, falling back to a bg/surface-2
+     mix only where no code
      surface is defined. A surface-2-only fallback is a mid tone in dark and
      pushes hi-* tokens under WCAG AA — see src/styles/preview.css. */
   background-color: var(
-    --zd-code-bg,
+    --zfb-hi-bg,
     color-mix(in oklch, var(--color-bg) 80%, var(--color-surface-2))
   );
   border-radius: var(--radius-md);
