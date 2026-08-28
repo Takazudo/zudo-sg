@@ -6,7 +6,7 @@
   "packageManager": "pnpm@11.5.2",
   "scripts": {
     "dev": "zfb dev",
-    "build": "zfb build",
+    "build": "node scripts/run-root-build.mjs",
     "preview": "zfb preview",
     "check": "zfb check && pnpm --filter @zudo-sg/ui typecheck && pnpm --filter @zudo-sg/demo typecheck && pnpm --filter @zudo-sg/doc check",
     "check:html": "html-validate \"dist/**/*.html\"",
