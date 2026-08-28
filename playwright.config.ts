@@ -112,6 +112,14 @@ export default defineConfig({
       },
     },
     {
+      name: "sitemapper",
+      // Full IndexedDB user story plus the 1440/375 light/dark rendered
+      // contract. It shares the built styleguide preview with Composer so a
+      // single browser origin can exercise cross-feature references.
+      testMatch: "sitemapper.spec.ts",
+      use: { baseURL: `http://localhost:${SMOKE_PORT}` },
+    },
+    {
       name: "demo-smoke",
       // Both demo specs serve from the same built demo dist (DEMO_SMOKE_PORT):
       // the render smoke checks, the SPA-transition regression suite, and the
