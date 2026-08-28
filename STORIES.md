@@ -648,9 +648,37 @@ The public source module is the package root (`@zudo-sg/ui`), never a private
 stable persisted `id` and the real component `prop` it fills; `accepts` omitted
 means any component in the pack, and `cardinality` is `single` or `many`.
 
-During the repository split, `src/composer/definitions.ts` is a package-internal
-collection used by the old in-repository Composer through a temporary adapter.
-The public pack boundary is defined separately and must not depend on stories.
+Field `prop` names are persisted document keys, not presentation labels. Mark a
+field `required: true` when insertion requires a valid default. A component or
+slot rename does not authorize changing persisted keys; change
+`schemaVersion` only when the persisted component contract actually breaks.
+
+### Generated pack and explicit CSS
+
+From the zudo-sg source repository root, `pnpm gen:composer-pack` scans
+`packages/ui/src/**/*.composer.tsx` and generates
+[`src/composer-pack.ts`](./src/composer-pack.ts). Each sidecar must export
+exactly one `defineComponent(...)` value. The public
+`@zudo-sg/ui/composer-pack` export contains:
+
+- `componentPack` — the validated trusted pack;
+- `componentPackManifest` — JSON-safe definitions for chooser/inspector/source
+  consumers; and
+- `componentRuntimeRegistry` — trusted component and runtime-adapter bindings.
+
+Run the root `pnpm check:composer-pack` script in checks; never hand-edit the
+generated file.
+Consumers must also import `@zudo-sg/ui/styles/composer.css`. That explicit CSS
+entry owns Tailwind preflight/utilities, provider tokens/colors, syntax styles,
+ProseMd styles, and the `@source "../src"` scan needed by the real components.
+Importing the pack alone intentionally does not inject CSS.
+
+During the repository split, the host's
+`src/styleguide/data/composer-registry.ts` temporarily projects the legacy app
+shape from this generated public pack. It does not import stories. The old
+`/composer`, `/composer/preview`, and `/sitemapper` apps/routes remain
+operational only through Phase 2 verification and are deleted in Phase 4;
+product ownership already belongs to the standalone zudo-composer repo.
 
 ### Inline-edit modes
 
@@ -688,3 +716,21 @@ fields: [
 The independent contract package owns the authoring types. The temporary legacy
 projection lives host-side in `src/styleguide/data/composer-registry.ts` and is
 removed with the old Composer application.
+
+### Package-only handoff
+
+External consumers use the literal exact Git specs recorded in the source
+repository's `ui-provider-handoff.json`. The UI spec points at a commit on
+`package/ui-v1` whose repository root tree must exactly equal
+`HEAD:packages/ui`; the contract spec points at its own exact package commit.
+Never use Git subdirectory `path:` syntax, `workspace:`, `file:`, `link:`, or a
+sibling-repository path.
+
+Finish all package code and documentation before advancing `package/ui-v1`,
+then refresh the handoff tree/SHA/spec and run the zudo-sg source-root command
+`pnpm verify:ui-provider-install -- --exact`. Do not write a future source-main
+SHA or CI URL into documentation before the merge and green checks exist.
+
+There are zero users and zero production Composer/Sitemapper data. No backward
+compatibility, migration, redirect, alias, or old-storage fallback is required;
+destructive clean-current-schema changes are explicitly allowed.
