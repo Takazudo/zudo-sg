@@ -559,6 +559,62 @@ describe("the ground moving under the session", () => {
   });
 });
 
+const TRAILING_DRAFTS = [
+  {
+    label: "one trailing newline",
+    html: "a<div><br></div>",
+    value: "a\n",
+  },
+  {
+    label: "two trailing newlines",
+    html: "a<div><br></div><div><br></div>",
+    value: "a\n\n",
+  },
+] as const;
+
+describe("per-mount multiline baselines", () => {
+  it.each(TRAILING_DRAFTS)("preserves a dirty $label draft through stash/restore and Save", (draft) => {
+    const { container, redraw, onCommitInlineEdit } = open(fixture(""));
+    const editor = editorOf(container)!;
+    editor.innerHTML = draft.html;
+    fireEvent.input(editor);
+
+    redraw({ session: { ...EDIT, mode: "preview" } });
+    expect(editorOf(container)).toBeNull();
+    fireEvent.click(action(container, "Keep editing"));
+
+    const restored = editorOf(container)!;
+    expect(restored.textContent).toBe(draft.value);
+    // Save immediately: this calls syncValueFromDom against the restored
+    // mount seed, not the session-start empty value.
+    fireEvent.click(container.querySelector(".zc-prose-save")!);
+
+    expect(onCommitInlineEdit).toHaveBeenCalledTimes(1);
+    expect(onCommitInlineEdit).toHaveBeenCalledWith("md-1", "markdown", draft.value, 0);
+  });
+
+  it.each(TRAILING_DRAFTS)("preserves a dirty $label draft through relocation and immediate Save", (draft) => {
+    const { container, redraw, onCommitInlineEdit } = open(fixture(""));
+    const editor = editorOf(container)!;
+    editor.innerHTML = draft.html;
+    fireEvent.input(editor);
+
+    // Keep the document identity (so the #288 incoming-render gate does not
+    // make this draft stale), while changing runtime ownership so Preact
+    // rebuilds the node DOM and the session has to relocate its editor.
+    redraw({ localRecordId: `relocated-${draft.label}` });
+    const relocated = editorOf(container)!;
+    expect(relocated).not.toBe(editor);
+    expect(relocated.textContent).toBe(draft.value);
+    // Save immediately after the remount, exercising the sync read boundary.
+    fireEvent.click(container.querySelector(".zc-prose-save")!);
+
+    expect(onCommitInlineEdit).toHaveBeenCalledTimes(1);
+    expect(onCommitInlineEdit).toHaveBeenCalledWith("md-1", "markdown", draft.value, 0);
+  });
+
+});
+
 // ── A commit the host would reject is never sent ────────────────────────────
 //
 // The host drops a commit stamped with a revision it has moved past (#288) and

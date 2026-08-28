@@ -155,7 +155,7 @@ function terminalNewlineCount(value: string): number {
 }
 
 /**
- * Read an editing element and apply the session's immutable multiline baseline.
+ * Read an editing element and apply the supplied immutable multiline baseline.
  *
  * `readEditableValue` remains the one raw DOM walker. This wrapper protects the
  * seed's deliberate terminal-newline quota: one terminal placeholder beyond
@@ -166,19 +166,24 @@ function terminalNewlineCount(value: string): number {
  * newline. Supporting that exact gesture would require beforeinput/selection
  * history, not UA branching; #444's cross-engine round-trip loss chooses to
  * preserve the seed here.
+ *
+ * `baselineValue` is the exact value seeded into the current editor. The plain
+ * session's mount never changes, so it passes its session `initialValue`; the
+ * prose session passes its frozen per-mount seed, which can be a restored or
+ * relocated draft while the machine's `draft.initialValue` remains unchanged.
  */
 export function readNormalizedEditableValue(
   el: HTMLElement,
   multiline: boolean,
-  initialValue: string,
+  baselineValue: string,
 ): string {
   const raw = readEditableValue(el, multiline);
   if (!multiline) return raw;
 
-  const seedTrailingNewlines = terminalNewlineCount(initialValue);
+  const seedTrailingNewlines = terminalNewlineCount(baselineValue);
   const rawTrailingNewlines = terminalNewlineCount(raw);
-  if (initialValue.endsWith("\n") && raw === initialValue.slice(0, -1)) {
-    return initialValue;
+  if (baselineValue.endsWith("\n") && raw === baselineValue.slice(0, -1)) {
+    return baselineValue;
   }
   if (rawTrailingNewlines > seedTrailingNewlines) {
     return raw.slice(0, -1);
