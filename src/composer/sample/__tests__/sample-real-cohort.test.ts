@@ -58,4 +58,18 @@ describe("native sample ↔ real Composer cohort", () => {
       }
     }
   });
+
+  it("uses only props declared by defaults or editable fields", () => {
+    for (const node of nodes) {
+      const entry = byId.get(node.componentId);
+      if (!entry) continue;
+      const declared = new Set([
+        ...Object.keys(entry.defaults),
+        ...entry.fields.map((field) => field.prop),
+      ]);
+      for (const prop of Object.keys(node.props ?? {})) {
+        expect(declared.has(prop), `${node.componentId}: undeclared sample prop "${prop}"`).toBe(true);
+      }
+    }
+  });
 });

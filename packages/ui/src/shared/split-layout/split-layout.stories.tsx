@@ -1,12 +1,9 @@
 import type { StoryMeta, Story } from "../../stories/types";
-import { defineComposer } from "../../composer/types";
 import { SplitLayout, type SplitLayoutProps } from "./split-layout";
+import { splitLayoutDisplay } from "./split-layout.composer";
 
 const meta: StoryMeta = {
-  title: "SplitLayout",
-  category: "Layout",
-  description:
-    "Two-pane layout: stacked full-width panes below md, ratio-controlled side-by-side panes at md and above.",
+  ...splitLayoutDisplay,
   usage: `import { SplitLayout } from "@zudo-sg/ui/src/shared/split-layout/split-layout";
 
 <SplitLayout
@@ -14,32 +11,6 @@ const meta: StoryMeta = {
   left={<div>Left pane</div>}
   right={<div>Right pane</div>}
 />`,
-  composer: defineComposer<SplitLayoutProps>({
-    componentId: "ui.split-layout",
-    version: 1,
-    component: SplitLayout,
-    source: {
-      module: "@zudo-sg/ui/src/shared/split-layout/split-layout",
-      exportKind: "named",
-      exportName: "SplitLayout",
-    },
-    defaults: { ratio: "50/50", gap: "md" },
-    fields: [
-      {
-        kind: "select",
-        prop: "ratio",
-        label: "Ratio",
-        options: ["50/50", "40/60", "60/40", "33/67", "67/33"],
-      },
-      { kind: "select", prop: "gap", label: "Gap", options: ["sm", "md", "lg"] },
-    ],
-    // One left slot (single) + an ordered, many right slot — proves #242's
-    // named right-column use case (multiple children, one named prop each).
-    slots: [
-      { id: "left", prop: "left", label: "Left", cardinality: "single" },
-      { id: "right", prop: "right", label: "Right", cardinality: "many" },
-    ],
-  }),
 };
 
 export default meta;
