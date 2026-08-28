@@ -1,0 +1,3 @@
+packages: []
+allowBuilds:
+  '@zudo-composer/component-contract': true
