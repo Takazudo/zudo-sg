@@ -21,13 +21,16 @@ without the others:
 2. **The catalog UI chrome** — the pages/components that actually render that
    registry into a browsable styleguide (§2 below, `src/features/styleguide/*`
    and `src/styleguide/data/`).
-3. **The Sitemapper authoring surface** — the page-tree model, persistence
-   contracts, workspace, and canvas described in §7 below. Its Composer catalog
-   adapter is repo glue and can be replaced when the adopting project has a
-   different content source.
+3. **The component provider boundary** — typed `*.composer.tsx` sidecars, the
+   generated pack, explicit provider CSS, and exact package-only Git handoff
+   described in §6 below.
 
 You could, for example, adopt the story contract to standardize how your team
 authors component variants without adopting this catalog's UI at all.
+
+Composer and Sitemapper are no longer zudo-sg adoption targets. Their product
+source, routes, storage, and deployment belong to
+[zudo-composer](https://github.com/Takazudo/zudo-composer); see §7.
 
 ---
 
@@ -198,225 +201,107 @@ worth checking those for current status before working around them yourself:
 
 ---
 
-## 6. Adopting the Composer
+## 6. Adopting the component provider
 
-The Composer (`/composer`) is a second, independent thing this repo's
-architecture can hand off, on top of the catalog covered in §1-§5: a
-document-model-driven authoring surface that assembles instances of the
-catalog's own components into a composition, backed by a revision-aware save
-queue and rendered live through a sandboxed preview iframe. It follows the
-same "two independent things get adopted" framing from the top of this
-document, but with an added constraint: **the Composer depends on the
-story-authoring contract** — specifically the optional `composer` property
-`defineComposer<P>` adds to `StoryMeta` (see
-[`packages/ui/STORIES.md` §10](./packages/ui/STORIES.md#10-composer-contract-optional-opt-in)) —
-so an adopter can take the catalog without the Composer, but cannot take the
-Composer without first having adopted the story contract from §1/§2. This
-section does not duplicate that contract; read STORIES.md §10 for the
-authoring side.
+The provider contract is independent from the story catalog. zudo-sg owns the
+real components and publishes their Composer-facing definitions through
+`@zudo-sg/ui`; the standalone zudo-composer application consumes the pack.
+An adopter can use the story system, the provider pack, both, or neither.
 
-### Minimum viable subset
+### Public package boundary
 
-Per [#349](https://github.com/Takazudo/zudo-sg/issues/349), the smallest
-adoptable core is five named pieces: **model + commands + codec/recovery +
-save-queue + preview protocol** — i.e. `src/composer/model/` (document model,
-commands, codec, recovery) plus `src/composer/persistence/` (the save queue)
-plus the preview protocol (`src/features/composer/preview/protocol.ts` +
-`bridge.ts` + `client.ts`, see the table below for the full file set). Note
-`src/composer/persistence/save-queue.ts` itself imports its record/ref/outcome
-types from `src/composer/library/types.ts`, so that one file (not the rest of
-`library/`) travels with the minimal cut too — the store/lifecycle
-*implementation* the rest of `library/` provides is still an editor-level
-addition, not part of the five-item minimum. Adding that store/lifecycle
-contract in full (`src/composer/library/`), the `generate-jsx` emitter
-(`src/composer/source/generate-jsx.ts`), and one storage provider (see
-"Environment glue" below) gets you a **headless persistence/export core** — a
-document model that loads, mutates, saves, and exports JSX — but **not yet an
-interactive editor**. The editing surface itself (controller, canvas, renderer,
-preview app, chooser, tree, inspector) lives in `src/features/composer/` and is
-classified as host glue below: a fork that wants a working editing UI must
-reimplement or port that layer, not merely copy the domain modules. Only reuse
-and the dev filesystem transport are genuinely additive — the app UI is required
-for an actual editor.
+| Source path | Purpose |
+|---|---|
+| [`packages/ui/src/**/*.composer.tsx`](./packages/ui/src) | Co-located typed component definitions authored with `defineComponent`. |
+| [`packages/ui/src/composer-pack.ts`](./packages/ui/src/composer-pack.ts) | Generated trusted pack, serializable manifest, and runtime registry. |
+| [`packages/ui/styles/composer.css`](./packages/ui/styles/composer.css) | Explicit Tailwind/provider CSS entry required when rendering the pack. |
+| [`packages/ui/package.json`](./packages/ui/package.json) | Public `./composer-pack` and `./styles/composer.css` exports plus peer contracts. |
+| [`ui-provider-handoff.json`](./ui-provider-handoff.json) | Exact package-only UI and component-contract Git coordinates. |
 
-### What to copy verbatim
+Consumers import the executable/data boundary and CSS explicitly:
 
-Portable domain logic — environment-agnostic, with the same caveat as §1:
-even these still need their `@zudo-sg/ui` imports repointed to the fork's own
-UI package scope.
+```ts
+import {
+  componentPack,
+  componentPackManifest,
+  componentRuntimeRegistry,
+} from "@zudo-sg/ui/composer-pack";
+import "@zudo-sg/ui/styles/composer.css";
+```
 
-| Source path | Purpose | Target location (in the adopting project) |
-|---|---|---|
-| [`packages/ui/src/composer/types.ts`](./packages/ui/src/composer/types.ts) | The Composer authoring contract: `defineComposer<P>`, scalar-field and structural-slot descriptors — the Composer analog of `stories/types.ts`. | `<ui-package>/src/composer/types.ts`. |
-| [`src/composer/model/`](./src/composer/model/) | Document model + commands (tree-mutation operations) + codec (lossless v1→v2 decoder) + recovery (future-schema quarantine). | `src/composer/model/`. |
-| [`src/composer/library/`](./src/composer/library/) | Store/lifecycle contract — `CompositionStore` / `CompositionLifecycleStore` / provider descriptors — the seam a storage provider implements against. | `src/composer/library/`. |
-| [`src/composer/persistence/`](./src/composer/persistence/) | The revision-aware save queue. | `src/composer/persistence/`. |
-| [`src/composer/source/generate-jsx.ts`](./src/composer/source/generate-jsx.ts) | The deterministic emitter — turns a document into exportable JSX source. Copy this file alone, **not** the whole `source/` directory: its sibling `plan-linked-jsx.ts` pulls in `src/composer/reuse/` (materialize/resolver), which is product-specific glue (see below), not core doc-model behavior. | `src/composer/source/generate-jsx.ts`. |
-| [`src/features/composer/preview/protocol.ts`](./src/features/composer/preview/protocol.ts) + [`bridge.ts`](./src/features/composer/preview/bridge.ts) + [`client.ts`](./src/features/composer/preview/client.ts) + [`snapshot-store.ts`](./src/features/composer/preview/snapshot-store.ts) | The **preview protocol** — a transport-agnostic, zod-validated postMessage contract between the editor and the preview iframe, plus `snapshot-store.ts`'s DOM-free revision guard that `client.ts` applies inbound messages through. Despite living under `src/features/composer/`, this quartet has no filesystem/IndexedDB/dev-transport coupling, so it is portable domain logic, not host glue. | `src/features/composer/preview/{protocol,bridge,client,snapshot-store}.ts` (or wherever the fork's preview host lives). |
+The manifest is JSON-safe. The runtime registry retains trusted Preact
+components plus optional render/inline-editor adapters. Neither value imports a
+story module.
 
-Three loose ends when actually copying the protocol quartet, since none of
-them are self-contained in this repo's current tree:
+### Permanent authoring rule
 
-- `protocol.ts` imports `jsonValueSchema` from
-  [`src/styleguide/data/composer-schema.ts`](./src/styleguide/data/composer-schema.ts)
-  — a small, generic recursive JSON-value zod schema, but it currently lives
-  inside that host-owned schema file (see "Environment glue" below, which
-  otherwise classifies that file as glue). Extract just that one schema; the
-  rest of `composer-schema.ts` is this repo's own registry validation.
-- `bridge.ts` imports the route path/title constants from
-  [`route.ts`](./src/features/composer/preview/route.ts) (trivial to copy or
-  redefine against the fork's own preview route) and, more importantly, calls
-  `withBase()` from [`src/utils/base.ts`](./src/utils/base.ts) to build the
-  iframe URL — a genuine dependency on this repo's zfb site config (base path
-  / trailing slash / locale), not portable as-is. A fork needs its own
-  base-path helper here, or a hardcoded path if it has none.
-- All four files import shared types through the `@/composer` barrel
-  (`src/composer/index.ts`). That barrel is **not** model-only — it also
-  re-exports `library/`, `persistence/`, `reuse/`, `sample/`, `source/`, and
-  both `storage/` providers (`indexeddb`, `file-provider`), several of which are
-  explicitly excluded from this minimal cut. The symbols the quartet actually
-  needs all originate in `model/` (already in this table), so import them
-  **directly from `model/`** (or expose a new model-only barrel) rather than
-  pulling them through the full `@/composer` barrel, which would drag the
-  excluded modules into the fork.
+1. Add `<name>.composer.tsx` beside the real component.
+2. Call `defineComponent` from `@zudo-composer/component-contract` against the
+   real component props.
+3. Assign explicit stable persisted keys: component `id`, `schemaVersion`,
+   every field `prop`, and each slot `id` plus real component `prop`.
+4. Publish source metadata from the package root:
+   `{ module: "@zudo-sg/ui", exportKind, exportName }`. Private
+   `@zudo-sg/ui/src/*` source paths are forbidden.
+5. Export one display object containing `title`, `category`, and
+   `description`. The story imports and spreads it so display data stays
+   single-sourced; the story does not contain a provider definition.
+6. From the zudo-sg source repository root, run `pnpm gen:composer-pack` and
+   commit the generated pack. Run `pnpm check:composer-pack` there to reject
+   discovery or generation drift.
 
-`src/composer/library/types.ts` also isn't purely environment-agnostic:
-`CompositionProviderId` is a closed union over this repo's own two providers
-(`indexeddb`, `files`), and `COMPOSITION_PROVIDERS` hardcodes the
-project-specific `storageLabel` string `"IndexedDB: zudo-sg-composer"`. Treat
-that one file as an adaptation point — add/remove provider ids and edit the
-labels for whatever storage backend(s) the fork ships — rather than assuming
-the whole `library/` directory needs no changes.
+See [`packages/ui/STORIES.md` §10](./packages/ui/STORIES.md#10-composer-component-sidecars)
+for fields, slots, inline editing, persisted-key invariants, and the generated
+boundary.
 
-The preview *host* UI that mounts around the protocol — the canvas host,
-iframe mounting, `renderer.ts`, `preview-app.ts` — is host-owned chrome (see
-"Environment glue" below), not part of this table.
+### Exact package-only handoff
 
-### Sample to re-derive
+The external install is a package-root Git commit, not a monorepo subdirectory
+selector. Finish every `packages/ui` code and documentation change before
+advancing `package/ui-v1`. The package commit's root tree must exactly equal
+`HEAD:packages/ui`, and `ui-provider-handoff.json` must record that tree,
+commit, literal Git spec, and the exact component-contract package commit.
 
-[`src/composer/sample/`](./src/composer/sample/) is **not** copy-verbatim.
-It's this repo's native production sample composition, and it hardcodes this
-repo's own `ui.*` component ids, props, and slots — a fork has to re-derive
-its own sample document against whatever components it has registered, using
-this one only as a worked example of the shape.
+Never use Git `path:` syntax, `workspace:`, `file:`, `link:`, or sibling
+repository paths in an external consumer. Verify the finished handoff from the
+zudo-sg source repository root with:
 
-### Environment glue you must re-implement or drop
+```sh
+pnpm check:composer-pack
+pnpm check:ui-provider-boundary
+pnpm test:ui-provider-package
+pnpm verify:ui-provider-install -- --exact
+```
 
-- `src/composer/storage/indexeddb/` — browser IndexedDB storage provider.
-- `src/composer/storage/filesystem/` — `node:fs` store with TOCTOU-safe write
-  machinery (dev-authoring only, not for a deployed app).
-- `src/composer/storage/file-provider/` +
-  `plugins/composer-file-provider-plugin.mjs` +
-  `scripts/run-composer-file-e2e-server.mjs` — the dev filesystem transport
-  that wires the filesystem provider into the local dev server.
-- `src/composer/reuse/` — global-template reuse; product-specific, not core
-  document-model behavior.
-- `src/features/composer/*` **except** `preview/protocol.ts` + `bridge.ts` +
-  `client.ts` + `snapshot-store.ts` (portable — see the table above) — the
-  rest is host-owned app chrome: canvas host, toolbar, inspector, tree,
-  menus, routing, the `chrome/` controller.
-- [`pages/composer/*`](./pages/composer/) — the routed pages that mount the
-  app.
-- [`src/styleguide/data/composer-registry.ts`](./src/styleguide/data/composer-registry.ts) /
-  [`composer-schema.ts`](./src/styleguide/data/composer-schema.ts) — the
-  host's zod-validated runtime registry, parallel to
-  `src/styleguide/data/sg-registry.ts` in §1.
+Do not pre-write the eventual source `main` SHA or a green CI URL. Those are
+recorded only after the source merge and remote checks exist.
 
-This parallels the `src/features/styleguide/*` host-owned carve-out from §1 —
-the shared package ships only the components and their story/composer
-contracts, never the app chrome around them.
-
-### Known gaps you'll hit
-
-- **No scaffolding CLI.** Same as §5 above and tracked by the same
-  [#179](https://github.com/Takazudo/zudo-sg/issues/179) initializer — there's
-  no `pnpm new:composition`-style generator; a fork wires a storage provider
-  and the sample by hand.
-- **Reuse is product-specific.** `src/composer/reuse/` (global-template reuse)
-  is this product's own feature, not core document-model behavior — treat it
-  as a pattern to reference, not a module to copy.
-- **The dev filesystem transport is authoring-only.**
-  `src/composer/storage/filesystem/` and its plugin/server glue exist so this
-  repo's own contributors can author the sample composition against real
-  files in dev; it is not a deployed-app storage strategy and shouldn't be
-  adopted as one.
+There are currently zero users and zero production Composer/Sitemapper data.
+The provider and consuming product therefore have no backward-compatibility,
+migration, redirect, alias, old-name, or old-storage obligation. A clean current
+schema may replace earlier prototypes destructively.
 
 ---
 
-## 7. Adopting the Sitemapper
+## 7. Composer and Sitemapper ownership
 
-The Sitemapper (`/sitemapper`) is a page-tree authoring surface alongside the
-Composer. It owns a recursive `SitemapDocument` with one v1 root page, immutable
-tree commands, persistence, an outline tree, a measured canvas, and page-property
-inspection. It is not a generalized Composer document model: the Sitemapper tree
-has one `children` list per page and no component manifest. A project that does
-not have this repo's Composer can still adopt the page-tree pattern by replacing
-the composition catalog adapter described under repo glue.
+Composer and Sitemapper are products of the standalone
+[zudo-composer](https://github.com/Takazudo/zudo-composer) repository. That
+repository owns their headless domains, application UI, routes, preview
+protocol, persistence providers, clean database identities, CI, and deployment.
+zudo-sg supplies components only through the installed component pack boundary.
 
-### Portable pattern
+The `src/composer`, `src/sitemapper`, `src/features/composer`,
+`src/features/sitemapper`, `pages/composer`, and `pages/sitemapper` trees in
+this repository are temporary legacy verification copies. They intentionally
+remain operational through Phase 2 so the provider can be proven before source
+deletion. Do not adopt, extend, migrate, redirect, or add compatibility shims to
+those copies. Phase 4 deletes them after the standalone handoff is verified.
 
-These pieces describe the reusable shape and can move to another project after
-the adopting project's import paths and storage types are wired:
-
-- **Shared primitives** — `src/shared/` contains the JSON-safety/clone helpers
-  (`json.ts`), injectable id factories (`id-factory.ts`), provider-neutral record
-  identity (`record-identity.ts`), and the generic revision-aware save queue
-  (`persistence/save-queue.ts`). The queue provides the single-flight,
-  latest-wins persistence seam used by both authoring sub-apps.
-- **Headless page-tree domain** — `src/sitemapper/model/` and
-  `src/sitemapper/commands/` keep the persisted tree, structural validation and
-  recovery, traversal index, and pure add/update/remove/duplicate/reorder
-  operations independent of the UI. Keep the provider-qualified composition
-  reference shape if the target has an equivalent content library; otherwise
-  adapt or remove that optional field at the schema boundary.
-- **Store contract shape** — the `SitemapStore` contract separates `list`,
-  `get`, `put`, `delete`, and `clear` from the provider implementation, while
-  `SitemapProvider` pairs that store with `initialize`, `retry`, and
-  `startFresh` recovery operations. Keep this seam when swapping IndexedDB for
-  the adopting project's storage backend.
-- **Typed-slot workspace** — `SitemapperWorkspace` accepts typed
-  `toolbar`, `banner`, `tree`, `canvas`, and `inspector` slots, while retaining
-  the rail/resizer geometry around them. This lets a target project replace a
-  surface independently without coupling the shell to controller state.
-- **Prototype-first canvas process** — first compare plain static prototypes
-  using the same representative tree and the target viewport constraints, then
-  codify the chosen geometry as a pure layout function before mounting the UI.
-  The shipped canvas keeps DOM height measurement in the component and
-  `layoutSitemap` in the pure layout module; connector paths are derived from
-  the resulting rectangles. Re-derive the target project's spacing, tokens, and
-  responsive seam while preserving this separation and testing the chosen
-  contract at representative wide and narrow viewports.
-
-### Repo glue to re-implement
-
-The following pieces connect that portable pattern to this repository's zfb,
-zudo-doc, Composer, and browser storage setup:
-
-- **Route and chrome boundary** — `pages/sitemapper/index.tsx` owns the route's
-  document shell, while `pages/lib/_sitemapper-chrome.tsx` assembles the shared
-  head/header/body-end slots. An adopter should provide the equivalent route
-  and chrome boundary for its framework rather than moving these page modules
-  into the headless `src/` domain.
-- **CSS build seam** — `src/styles/global.css` imports
-  `src/features/sitemapper/styles.css` and carries the two explicit Tailwind
-  `@source` directives for `src/features/sitemapper/**/*.{tsx,ts,jsx,js}` and
-  `pages/sitemapper/**/*.{tsx,ts,jsx,js}`. Update the import and source roots
-  for the adopting project's feature and route locations.
-- **Header navigation** — `src/config/settings.ts` adds the self-contained
-  `{ label: "Sitemapper", path: "/sitemapper" }` entry to `headerNav`. Recreate
-  that entry in the target project's navigation configuration and use its own
-  base-path helper for the active route.
-- **Storage and content adapters** — `src/sitemapper/storage/indexeddb/`
-  implements this repo's browser provider and the separate
-  `zudo-sg-sitemapper` database; replace it when the target uses another
-  backend or database identity. `src/sitemapper/catalog/` is the read-only
-  bridge to this repo's Composer records, so replace that adapter with the
-  target project's saved-content provider (or omit composition assignment).
-- **App-specific UI wiring** — the production assembly in
-  `src/features/sitemapper/app/` connects the provider, controller, record
-  transitions, workspace slots, tree, canvas, inspector, and catalog. Keep the
-  seams, but adapt route imports, theme tokens, CSS class scope, and any
-  framework-specific island/bootstrap code.
+For a new Composer/Sitemapper deployment, start from zudo-composer and inject a
+validated `@zudo-composer/component-contract` pack. For a new component system,
+implement the provider boundary in §6. Stories remain a styleguide concern and
+are never required inputs to Composer or Sitemapper.
 
 ## 8. Related issues
 
