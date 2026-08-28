@@ -67,7 +67,7 @@ import {
   findNodeById,
   inlineEditableForEntry,
   placeCaretAtEnd,
-  readEditableValue,
+  readNormalizedEditableValue,
 } from "./inline-edit-dom";
 import type { PreviewMode } from "./protocol";
 import {
@@ -309,8 +309,9 @@ export function useProseInlineSession(options: ProseInlineSessionOptions): Prose
    */
   const syncValueFromDom = useCallback(() => {
     const el = editableRef.current;
-    if (!el || stateRef.current.kind === "idle") return;
-    dispatch({ type: "input", value: readEditableValue(el, true) });
+    const draft = proseSessionDraft(stateRef.current);
+    if (!el || !draft) return;
+    dispatch({ type: "input", value: readNormalizedEditableValue(el, true, draft.initialValue) });
   }, [dispatch]);
 
   const tryEnter = useCallback(
@@ -382,7 +383,9 @@ export function useProseInlineSession(options: ProseInlineSessionOptions): Prose
       syncValueFromDom();
     };
     const onInput = (): void => {
-      dispatch({ type: "input", value: readEditableValue(el, true) });
+      const draft = proseSessionDraft(stateRef.current);
+      if (!draft) return;
+      dispatch({ type: "input", value: readNormalizedEditableValue(el, true, draft.initialValue) });
     };
     const onKeyDown = (event: KeyboardEvent): void => {
       // Enter is deliberately UNHANDLED: it inserts a newline in the source and

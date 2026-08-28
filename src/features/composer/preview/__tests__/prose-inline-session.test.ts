@@ -17,6 +17,7 @@ import { COMPOSITION_SCHEMA_VERSION } from "@/composer";
 import { composerEntries } from "@/styleguide/data/composer-registry";
 import { CompositionCanvas, type CompositionCanvasProps } from "../renderer";
 import type { PreviewSession } from "../protocol";
+import { INLINE_EDIT_BOUNDARY_CASES } from "./inline-edit-newline-cases";
 
 const EDIT: PreviewSession = { mode: "edit", theme: "light", selectedId: null };
 
@@ -625,6 +626,36 @@ describe("saving after the canvas changed underneath", () => {
     expect(editorOf(container)).toBeNull();
     expect(onCommitInlineEdit).not.toHaveBeenCalled();
   });
+});
+
+describe("baseline-aware multiline reads at the prose save boundary", () => {
+  it.each(INLINE_EDIT_BOUNDARY_CASES)(
+    "tracks $probe through input and explicit save",
+    (probe) => {
+      const document = doc([node("md-1", "ui.prose-md", { markdown: probe.seed })]);
+      const { container, onCommitInlineEdit } = open(document);
+      const editor = editorOf(container)!;
+      editor.innerHTML = probe.html;
+      fireEvent.input(editor);
+
+      const save = container.querySelector<HTMLElement>(".zc-prose-save")!;
+      if (probe.expected === probe.seed) {
+        expect(save.textContent).toBe("Done");
+        expect(save.hasAttribute("data-zc-dirty")).toBe(false);
+      } else {
+        expect(save.textContent).toBe("Save");
+        expect(save.hasAttribute("data-zc-dirty")).toBe(true);
+      }
+
+      fireEvent.click(save);
+      if (probe.expected === probe.seed) {
+        expect(onCommitInlineEdit).not.toHaveBeenCalled();
+      } else {
+        expect(onCommitInlineEdit).toHaveBeenCalledTimes(1);
+        expect(onCommitInlineEdit).toHaveBeenCalledWith("md-1", "markdown", probe.expected, 0);
+      }
+    },
+  );
 });
 
 describe("dialog accessibility", () => {

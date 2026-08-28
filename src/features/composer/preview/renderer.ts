@@ -55,7 +55,7 @@ import {
   findNodeById,
   inlineEditableForEntry,
   placeCaretAtEnd,
-  readEditableValue,
+  readNormalizedEditableValue,
 } from "./inline-edit-dom";
 import { useProseInlineSession } from "./prose-inline-session";
 import {
@@ -318,7 +318,9 @@ export function CompositionCanvas(props: CompositionCanvasProps): JSX.Element {
     if (!active || finishingRef.current) return;
     finishingRef.current = true;
     const el = editableRef.current;
-    const value = el ? readEditableValue(el, active.multiline) : active.initialValue;
+    const value = el
+      ? readNormalizedEditableValue(el, active.multiline, active.initialValue)
+      : active.initialValue;
     // A NO-OP commit (value unchanged from session start) must not reach the
     // host: it mutates nothing, yet still advances the document revision. That
     // is not merely wasteful — a spurious commit-of-the-seed (a blur fired the
