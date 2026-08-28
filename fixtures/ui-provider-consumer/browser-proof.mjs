@@ -1,9 +1,12 @@
 import { spawn } from "node:child_process";
 import { writeFile } from "node:fs/promises";
+import { createServer } from "node:net";
+import { fileURLToPath } from "node:url";
 import { chromium } from "@playwright/test";
 
 const origin = "http://127.0.0.1:4178";
-const server = spawn("corepack", ["pnpm", "exec", "vite", "preview", "--host", "127.0.0.1", "--port", "4178", "--strictPort"], {
+const viteBin = fileURLToPath(new URL("./node_modules/vite/bin/vite.js", import.meta.url));
+const server = spawn(process.execPath, [viteBin, "preview", "--host", "127.0.0.1", "--port", "4178", "--strictPort"], {
   cwd: process.cwd(),
   stdio: ["ignore", "pipe", "pipe"],
 });
@@ -25,6 +28,14 @@ async function waitForServer() {
 }
 
 let browser;
+async function assertPortReleased() {
+  await new Promise((resolve, reject) => {
+    const probe = createServer();
+    probe.once("error", reject);
+    probe.listen(4178, "127.0.0.1", () => probe.close(resolve));
+  });
+}
+
 try {
   await waitForServer();
   browser = await chromium.launch({ headless: true });
@@ -56,5 +67,9 @@ try {
     new Promise((resolve) => server.once("exit", resolve)),
     new Promise((resolve) => setTimeout(resolve, 5_000)),
   ]);
-  if (server.exitCode === null) server.kill("SIGKILL");
+  if (server.exitCode === null) {
+    server.kill("SIGKILL");
+    await new Promise((resolve) => server.once("exit", resolve));
+  }
+  await assertPortReleased();
 }
