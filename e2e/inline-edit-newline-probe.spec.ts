@@ -200,6 +200,11 @@ async function setMarkdown(page: Page, nodeId: string, value: string): Promise<v
   await field.blur();
   await expect(field).toHaveValue(value);
 
+  // The flush above schedules the normal Composer persistence/render path. A
+  // fresh saved state is the public signal that this seed's document update
+  // has landed before the iframe is asked to open a session.
+  await expect(page.locator('.sg-composer-save-status[data-sg-status="saved"]')).toBeVisible();
+
   const block = nodeLocator(page, nodeId).locator(".zc-prose-md");
   await expect(block).toHaveCount(1);
   // Avoid opening a session while the async markdown runtime is still painting
@@ -449,36 +454,45 @@ async function runProbe(
   };
 }
 
-test("captures the built Composer inline-edit newline matrix", async ({ page }, testInfo) => {
+test("captures the built Composer inline-edit newline matrix", async ({ browser }, testInfo) => {
   test.setTimeout(180_000);
   const matrix = projectMatrix(testInfo);
   const selectedRunMode = runMode();
   const rows: ProbeResult[] = [];
   const pageErrors: string[] = [];
   let harnessError: string | null = null;
-  page.on("pageerror", (error) => pageErrors.push(error.message));
 
   try {
-    await installCommitCapture(page);
-    await openComposerRecord(page);
-    const nodeId = await addProseMd(page);
     for (const definition of probeDefinitions()) {
-      const row = await runProbe(page, nodeId, matrix, definition);
-      rows.push(row);
-      // Keep this line deliberately stable: the manager can collect all four
-      // projects without parsing Playwright's human-oriented list reporter.
-      console.log(
-        `INLINE_EDIT_NEWLINE_ROW ${JSON.stringify({
-          engine: row.engine,
-          mode: row.mode,
-          probe: row.probe,
-          innerHTML: row.innerHTML,
-          textContent: row.textContent,
-          committed: row.committedValue,
-          expected: row.expectedValue,
-          pass: !row.mismatch,
-        })}`,
-      );
+      // Each probe gets a clean browser document and a newly-added real
+      // ProseMd. The prior probe's commit/render messages cannot then arrive
+      // after this session starts and mark its draft stale (#288).
+      const context = await browser.newContext();
+      const probePage = await context.newPage();
+      probePage.on("pageerror", (error) => pageErrors.push(`${definition.probe}: ${error.message}`));
+      try {
+        await installCommitCapture(probePage);
+        await openComposerRecord(probePage);
+        const nodeId = await addProseMd(probePage);
+        const row = await runProbe(probePage, nodeId, matrix, definition);
+        rows.push(row);
+        // Keep this line deliberately stable: the manager can collect all four
+        // projects without parsing Playwright's human-oriented list reporter.
+        console.log(
+          `INLINE_EDIT_NEWLINE_ROW ${JSON.stringify({
+            engine: row.engine,
+            mode: row.mode,
+            probe: row.probe,
+            innerHTML: row.innerHTML,
+            textContent: row.textContent,
+            committed: row.committedValue,
+            expected: row.expectedValue,
+            pass: !row.mismatch,
+          })}`,
+        );
+      } finally {
+        await context.close();
+      }
     }
 
     if (selectedRunMode === "confirm") {
