@@ -67,7 +67,7 @@ import {
   findNodeById,
   inlineEditableForEntry,
   placeCaretAtEnd,
-  readEditableValue,
+  readNormalizedEditableValue,
 } from "./inline-edit-dom";
 import type { PreviewMode } from "./protocol";
 import {
@@ -224,8 +224,13 @@ export function useProseInlineSession(options: ProseInlineSessionOptions): Prose
   const [mount, setMountValue] = useState<ProseMount | null>(null);
   const mountRef = useRef<ProseMount | null>(null);
   const epochRef = useRef(0);
-  /** Text to insert imperatively at the next mount (a fresh value, or a restored draft). */
-  const seedRef = useRef("");
+  /**
+   * Exact text seeded into the currently mounted editor. This is deliberately
+   * separate from `draft.initialValue`: the machine keeps the latter as the
+   * immutable session-start baseline, while DOM reads decode against this
+   * per-mount seed (which can be a restored/relocated draft).
+   */
+  const mountSeedRef = useRef<string | null>(null);
 
   const [dialog, setDialog] = useState<ProseDialogKind | null>(null);
   const [editModeOverride, setEditModeOverride] = useState(false);
@@ -238,12 +243,13 @@ export function useProseInlineSession(options: ProseInlineSessionOptions): Prose
 
   const setMount = useCallback((next: ProseMount | null) => {
     mountRef.current = next;
+    if (next === null) mountSeedRef.current = null;
     setMountValue(next);
   }, []);
 
   const mountEditor = useCallback(
     (nodeId: string, fieldKey: string, seed: string) => {
-      seedRef.current = seed;
+      mountSeedRef.current = seed;
       epochRef.current += 1;
       setMount({ nodeId, fieldKey, epoch: epochRef.current });
     },
@@ -309,8 +315,10 @@ export function useProseInlineSession(options: ProseInlineSessionOptions): Prose
    */
   const syncValueFromDom = useCallback(() => {
     const el = editableRef.current;
-    if (!el || stateRef.current.kind === "idle") return;
-    dispatch({ type: "input", value: readEditableValue(el, true) });
+    const draft = proseSessionDraft(stateRef.current);
+    const mountSeed = mountSeedRef.current;
+    if (!el || !draft || mountSeed === null) return;
+    dispatch({ type: "input", value: readNormalizedEditableValue(el, true, mountSeed) });
   }, [dispatch]);
 
   const tryEnter = useCallback(
@@ -362,12 +370,17 @@ export function useProseInlineSession(options: ProseInlineSessionOptions): Prose
     editableRef.current = el;
 
     const ownerDoc = el.ownerDocument;
+    const mountSeed = mountSeedRef.current;
+    if (mountSeed === null) {
+      dispatch({ type: "node-removed", nodeId: active.nodeId });
+      return;
+    }
     el.setAttribute(INLINE_EDITING_ATTR, "");
     // This is a SOURCE editor — see `editableAttrValue` for why the value is
     // probed rather than hardcoded.
     el.setAttribute("contenteditable", editableAttrValue(ownerDoc));
     // Imperative, never a vdom child — see the module header.
-    el.appendChild(ownerDoc.createTextNode(seedRef.current));
+    el.appendChild(ownerDoc.createTextNode(mountSeed));
     el.focus();
     placeCaretAtEnd(el);
 
@@ -382,7 +395,11 @@ export function useProseInlineSession(options: ProseInlineSessionOptions): Prose
       syncValueFromDom();
     };
     const onInput = (): void => {
-      dispatch({ type: "input", value: readEditableValue(el, true) });
+      if (proseSessionDraft(stateRef.current) === null) return;
+      // `mountSeed` is frozen for this element. A restored or relocated draft
+      // may differ from the session-start baseline, and must keep its own
+      // terminal-newline quota while this editor remains mounted.
+      dispatch({ type: "input", value: readNormalizedEditableValue(el, true, mountSeed) });
     };
     const onKeyDown = (event: KeyboardEvent): void => {
       // Enter is deliberately UNHANDLED: it inserts a newline in the source and
