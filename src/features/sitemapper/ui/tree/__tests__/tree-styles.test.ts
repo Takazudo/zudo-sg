@@ -38,4 +38,8 @@ describe("Sitemapper tree styles", () => {
     expect(css).not.toMatch(/\.sg-sitemapper-tree-row-actions\s*\{[^}]*display:\s*none/);
     expect(css).not.toMatch(/\.sg-sitemapper-tree-action-label\s*\{[^}]*display:\s*none/);
   });
+
+  it("reserves a readable inline floor for every tree title", () => {
+    expect(css).toMatch(/\.sg-sitemapper-tree-select-title\s*\{[^}]*min-inline-size:\s*2rem;/);
+  });
 });

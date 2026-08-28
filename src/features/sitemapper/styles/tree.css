@@ -91,6 +91,7 @@
 }
 
 .sg-sitemapper-tree-select-title {
+  min-inline-size: 2rem;
   flex: 0 1 auto;
 }
 
