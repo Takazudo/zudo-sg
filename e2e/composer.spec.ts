@@ -169,7 +169,7 @@ async function selectedCanvasNodeId(frame: FrameLocator): Promise<string> {
  * inline session). The `data-zc-inline-editing` attribute this `editable`
  * locator keys on is set at the TOP of that effect — so on a CPU-starved CI
  * runner the attribute (and thus a bare `toBeVisible()`) can resolve a beat
- * before `el.focus()` lands. A `Control+A`/`type` fired in that window silently
+ * before `el.focus()` lands. A `selectText()`/`type` fired in that window silently
  * targets nothing, the field keeps its seed value, and the later commit records
  * the UNCHANGED text — precisely the #252 step-11 CI flake. Gating on visible
  * AND focused guarantees subsequent keystrokes reach the live editable.
@@ -667,9 +667,9 @@ test.describe.serial("Composer 14-step walkthrough (#252) — steps 1-6, 8-13", 
     await openInlineEditor(ctaNode, editable);
     await expect(editable).toHaveAttribute("contenteditable", "plaintext-only");
     // The layout effect seeds the field with its current value — wait for it so
-    // Control+A selects real content, not an empty field.
+    // selectText() selects real content, not an empty field.
     await expect(editable).toContainText("Get started");
-    await page.keyboard.press("Control+A");
+    await editable.selectText();
     await page.keyboard.type("Get building");
     // Confirm the keystrokes actually landed BEFORE committing — a raced type
     // would otherwise commit the unchanged seed value (the #252 step-11 flake).
@@ -681,7 +681,7 @@ test.describe.serial("Composer 14-step walkthrough (#252) — steps 1-6, 8-13", 
 
     // Cancel via Escape.
     await openInlineEditor(ctaNode, editable);
-    await page.keyboard.press("Control+A");
+    await editable.selectText();
     await page.keyboard.type("Should not persist");
     await expect(editable).toContainText("Should not persist");
     await page.keyboard.press("Escape");
@@ -705,7 +705,7 @@ test.describe.serial("Composer 14-step walkthrough (#252) — steps 1-6, 8-13", 
 
     // Commit via blur (click outside the iframe entirely).
     await openInlineEditor(ctaNode, editable);
-    await page.keyboard.press("Control+A");
+    await editable.selectText();
     await page.keyboard.type("Get building now");
     await expect(editable).toContainText("Get building now");
     await page.locator(".sg-composer-toolbar").first().click({ position: { x: 4, y: 4 } });
