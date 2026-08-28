@@ -22,3 +22,9 @@ export const INLINE_EDIT_BOUNDARY_CASES: readonly InlineEditBoundaryCase[] = [
   { probe: "no-edit a\\n\\n", seed: "a\n\n", html: "a\n\n", expected: "a\n\n" },
   { probe: "type/delete a\\n\\n", seed: "a\n\n", html: "a\n<br>", expected: "a\n\n" },
 ];
+
+/** The measured direct-`<br>` clear shape for newline-bearing seeds. */
+export const INLINE_EDIT_NEWLINE_CLEAR_CASES = [
+  { probe: "clear a\\n", seed: "a\n", html: "<br>", expected: "" },
+  { probe: "clear a\\n\\n", seed: "a\n\n", html: "<br>", expected: "" },
+] as const;
