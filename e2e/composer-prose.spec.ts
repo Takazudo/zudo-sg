@@ -586,7 +586,7 @@ test.describe.serial("Composer prose editing (#376)", () => {
     await expect(plainEditable).toContainText("Get started");
 
     // …and Enter still auto-commits, exactly as before.
-    await page.keyboard.press("Control+A");
+    await plainEditable.selectText();
     await page.keyboard.type("Get building");
     await expect(plainEditable).toContainText("Get building");
     await page.keyboard.press("Enter");
