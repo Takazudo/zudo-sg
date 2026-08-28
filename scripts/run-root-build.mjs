@@ -9,9 +9,18 @@ import {
 
 const projectRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const pnpmCommand = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
-const ROOT_BUILD_ARGS = ["exec", "zfb", "build"];
-const FORWARDED_SIGNALS =
-  process.platform === "win32" ? ["SIGINT", "SIGTERM"] : ["SIGINT", "SIGTERM", "SIGHUP"];
+const ROOT_BUILD_ARGS = Object.freeze(["exec", "zfb", "build"]);
+
+export function rootBuildArgs(cliArgs = []) {
+  if (!Array.isArray(cliArgs)) throw new TypeError("cliArgs must be an array.");
+  return [...ROOT_BUILD_ARGS, ...cliArgs];
+}
+
+export function forwardedSignals(platform = process.platform) {
+  return platform === "win32" ? ["SIGINT", "SIGTERM"] : ["SIGINT", "SIGTERM", "SIGHUP"];
+}
+
+const FORWARDED_SIGNALS = forwardedSignals();
 
 function pipeChildOutput(readable, writable, guard) {
   if (!readable) return;
@@ -28,12 +37,13 @@ function pipeChildOutput(readable, writable, guard) {
  */
 export function runRootBuild(options = {}) {
   const command = options.command ?? pnpmCommand;
-  const args = options.args ?? ROOT_BUILD_ARGS;
+  const args = options.args ?? rootBuildArgs(options.cliArgs);
   const cwd = options.cwd ?? projectRoot;
   const env = options.env ?? { ...process.env };
   const spawnProcess = options.spawnProcess ?? spawn;
   const stdout = options.stdout ?? process.stdout;
   const stderr = options.stderr ?? process.stderr;
+  const signalSource = options.signalSource ?? process;
   const stdoutGuard = createRootBuildOutputGuard();
   const stderrGuard = createRootBuildOutputGuard();
 
@@ -61,10 +71,13 @@ export function runRootBuild(options = {}) {
     const signalHandlers = new Map();
     for (const signal of FORWARDED_SIGNALS) {
       const handler = () => {
-        if (child.exitCode === null && !child.killed) child.kill(signal);
+        const childIsActive =
+          child.exitCode === null &&
+          (child.signalCode === null || child.signalCode === undefined);
+        if (childIsActive) child.kill(signal);
       };
       signalHandlers.set(signal, handler);
-      process.on(signal, handler);
+      signalSource.on(signal, handler);
     }
 
     let spawnError;
@@ -73,7 +86,7 @@ export function runRootBuild(options = {}) {
     });
     child.once("close", (code, signal) => {
       for (const [forwardedSignal, handler] of signalHandlers) {
-        process.off(forwardedSignal, handler);
+        signalSource.off(forwardedSignal, handler);
       }
       resolveResult({
         code,
@@ -87,8 +100,8 @@ export function runRootBuild(options = {}) {
 
 export { IMAGE_DIMENSIONS_CANNOT_STAT, rootBuildExitCode };
 
-async function main() {
-  const result = await runRootBuild();
+export async function main(cliArgs = process.argv.slice(2), options = {}) {
+  const result = await runRootBuild({ ...options, cliArgs });
 
   if (result.error) process.stderr.write(`${result.error.message}\n`);
   if (result.diagnosticFound && result.code === 0 && !result.signal) {
