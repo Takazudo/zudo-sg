@@ -1,4 +1,8 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import { parse as parseCss } from "postcss";
 
 import { contrastRatio } from "../../src/config/contrast-utils";
 import { colorSchemes } from "../../src/config/color-schemes";
@@ -8,6 +12,21 @@ import {
   resolveRef,
   sides,
 } from "../ui-contrast-pairs";
+
+const GLOBAL_CSS_PATH = resolve(dirname(fileURLToPath(import.meta.url)), "../../src/styles/global.css");
+
+function globalDeletedBackgroundOverride(): string {
+  const root = parseCss(readFileSync(GLOBAL_CSS_PATH, "utf8"));
+  let value: string | undefined;
+  root.walkRules((rule) => {
+    if (rule.selector !== ":root") return;
+    rule.walkDecls("--zfb-hi-del-bg", (decl) => {
+      value = decl.value.replace(/\s+/g, " ").replace(/\( /g, "(").replace(/ \)/g, ")").trim();
+    });
+  });
+  if (value === undefined) throw new Error("global.css is missing the host deleted-background override");
+  return value;
+}
 
 describe("ui contrast source resolver", () => {
   it("resolves a nested fallback and selects the active light-dark side", () => {
@@ -72,7 +91,9 @@ describe("ui contrast source resolver", () => {
 
 describe("contrast matrix syntax fence coverage", () => {
   it("gates every syntax role on both doc-page and preview fence sources", () => {
-    const syntaxPairs = PAIR_MATRIX.filter((pair) => pair.fgVar.startsWith("--zd-syntax-"));
+    const syntaxPairs = PAIR_MATRIX.filter(
+      (pair) => pair.fgVar.startsWith("--zd-syntax-") && !pair.key.includes("-painted-"),
+    );
     expect(syntaxPairs).toHaveLength(18);
 
     const roles = new Set(syntaxPairs.map((pair) => pair.fgVar));
@@ -106,5 +127,32 @@ describe("contrast matrix syntax fence coverage", () => {
     expect(preview?.ratio).toBeCloseTo(5.23, 2);
     expect(doc?.pass).toBe(true);
     expect(preview?.pass).toBe(true);
+  });
+
+  it("gates the painted deleted tint against each actual fence surface", () => {
+    const paintedPairs = PAIR_MATRIX.filter((pair) => pair.key.startsWith("syntax-deleted-painted-vs-"));
+    expect(paintedPairs).toHaveLength(2);
+    expect(paintedPairs.map((pair) => [pair.surface, pair.bgVar, pair.tintPct])).toEqual([
+      ["doc-page", "--zd-bg", 15],
+      ["preview", "--color-bg", 15],
+    ]);
+
+    for (const name of ["Default Light", "Default Dark"] as const) {
+      const report = evaluateScheme(name, colorSchemes[name]!, "colorSchemes");
+      for (const pair of paintedPairs) {
+        expect(report.pairs.find((result) => result.key === pair.key)?.pass).toBe(true);
+      }
+    }
+
+    const darkReport = evaluateScheme("Default Dark", colorSchemes["Default Dark"]!, "colorSchemes");
+    expect(darkReport.pairs.find((pair) => pair.key === "syntax-deleted-painted-vs-doc-page-fence")?.ratio).toBeCloseTo(5.28, 2);
+    expect(darkReport.pairs.find((pair) => pair.key === "syntax-deleted-painted-vs-preview-fence")?.ratio).toBeCloseTo(4.65, 2);
+  });
+
+  it("pins the host override to the page/preview background, not code-bg", () => {
+    expect(globalDeletedBackgroundOverride()).toBe(
+      "color-mix(in srgb, var(--zd-syntax-deleted) 15%, var(--color-bg))",
+    );
+    expect(globalDeletedBackgroundOverride()).not.toContain("--zd-code-bg");
   });
 });

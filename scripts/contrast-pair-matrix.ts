@@ -25,6 +25,7 @@ export interface PairSpec {
   fgVar: string;
   bgVar: string;
   tintBg?: true;
+  tintPct?: number;
   /** Syntax pairs are evaluated against both source-defined fence surfaces. */
   surface?: FenceSurface;
 }
@@ -85,7 +86,36 @@ const SYNTAX_PAIR_MATRIX: PairSpec[] = SYNTAX_ROLES.flatMap(([role, fgVar]) =>
   })),
 );
 
-export const PAIR_MATRIX: PairSpec[] = [...BASE_PAIR_MATRIX, ...SYNTAX_PAIR_MATRIX];
+const PAINTED_DELETED_PAIR_MATRIX: PairSpec[] = [
+  {
+    key: "syntax-deleted-painted-vs-doc-page-fence",
+    label: "--zd-syntax-deleted 15% tint / doc-page fence",
+    tier: 1,
+    threshold: 4.5,
+    fgVar: "--zd-syntax-deleted",
+    bgVar: "--zd-bg",
+    tintBg: true,
+    tintPct: 15,
+    surface: "doc-page",
+  },
+  {
+    key: "syntax-deleted-painted-vs-preview-fence",
+    label: "--zd-syntax-deleted 15% tint / preview fence",
+    tier: 1,
+    threshold: 4.5,
+    fgVar: "--zd-syntax-deleted",
+    bgVar: "--color-bg",
+    tintBg: true,
+    tintPct: 15,
+    surface: "preview",
+  },
+];
+
+export const PAIR_MATRIX: PairSpec[] = [
+  ...BASE_PAIR_MATRIX,
+  ...SYNTAX_PAIR_MATRIX,
+  ...PAINTED_DELETED_PAIR_MATRIX,
+];
 
 // ---------------------------------------------------------------------------
 // Evaluation
@@ -131,7 +161,7 @@ export function evaluateScheme(name: string, scheme: ColorScheme, source: Preset
         `Scheme "${name}": pair "${spec.key}" references an unknown CSS var (fgVar=${spec.fgVar}, bgVar=${spec.bgVar})`,
       );
     }
-    const bg = spec.tintBg ? colorMixSrgb(fg, rawBg, ADMONITION_TINT_PCT) : rawBg;
+    const bg = spec.tintBg ? colorMixSrgb(fg, rawBg, spec.tintPct ?? ADMONITION_TINT_PCT) : rawBg;
     const ratio = contrastRatio(fg, bg);
     return {
       key: spec.key,
