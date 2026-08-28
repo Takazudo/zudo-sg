@@ -29,6 +29,11 @@ try {
   await waitForServer();
   browser = await chromium.launch({ headless: true });
   const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  const pageErrors = [];
+  page.on("console", (message) => {
+    if (message.type() === "error") pageErrors.push(message.text());
+  });
+  page.on("pageerror", (error) => pageErrors.push(error.message));
   await page.goto(origin, { waitUntil: "networkidle" });
   await page.waitForFunction(
     () => ["passed", "failed"].includes(document.body.dataset.providerProof ?? ""),
@@ -42,6 +47,7 @@ try {
   await page.screenshot({ path: "provider-proof.png", fullPage: true });
   await writeFile("browser-proof.json", `${JSON.stringify(result, null, 2)}\n`);
   if (result.status !== "passed") throw new Error(`Provider browser proof failed: ${JSON.stringify(result.proof)}`);
+  if (pageErrors.length) throw new Error(`Provider browser emitted errors: ${pageErrors.join(" | ")}`);
   console.log(`Browser proof passed: ${JSON.stringify(result.proof)}`);
 } finally {
   await browser?.close();

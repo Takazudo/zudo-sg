@@ -45,7 +45,8 @@ async function run(command, commandArgs, cwd, { allowFailure = false } = {}) {
 
 function assertNoLocalProtocols(content, label) {
   for (const protocol of ["workspace:", "file:", "link:", "path:"]) {
-    assert(!content.includes(protocol), `${label} must not contain ${protocol}`);
+    const pattern = new RegExp(`(?:^|[^A-Za-z0-9_-])${protocol}`, "mu");
+    assert(!pattern.test(content), `${label} must not contain ${protocol}`);
   }
   assert(!content.includes("../") && !content.includes("..\\"), `${label} must not contain sibling paths`);
 }
