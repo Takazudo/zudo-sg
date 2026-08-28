@@ -6,7 +6,7 @@ import {
   IMAGE_DIMENSIONS_CANNOT_STAT,
   rootBuildExitCode,
 } from "../lib/root-build-guard.mjs";
-import { runRootBuild } from "../run-root-build.mjs";
+import { forwardedSignals, main, rootBuildArgs, runRootBuild } from "../run-root-build.mjs";
 
 function captureStream() {
   let value = "";
@@ -39,30 +39,39 @@ class FakeChild extends EventEmitter {
   stdout = new PassThrough();
   stderr = new PassThrough();
   exitCode: number | null = null;
+  signalCode: string | null = null;
   killed = false;
+  killSignals: string[] = [];
 
-  kill() {
+  kill(signal: string) {
     this.killed = true;
+    this.killSignals.push(signal);
     return true;
   }
 
-  finish(code = 0) {
-    this.exitCode = code;
+  finish(code: number | null = 0, signal: string | null = null) {
+    this.exitCode = signal === null ? code : null;
+    this.signalCode = signal;
     this.stdout.end();
     this.stderr.end();
-    setImmediate(() => this.emit("close", code, null));
+    setImmediate(() => this.emit("close", this.exitCode, signal));
   }
 }
 
 async function runFakeChild(
   events: Array<{ stream: "stdout" | "stderr"; chunk: string }>,
   code = 0,
+  options: {
+    signalSource?: EventEmitter;
+  } = {},
 ) {
   const stdout = captureStream();
   const stderr = captureStream();
   const child = new FakeChild();
+  const signalSource = options.signalSource ?? new EventEmitter();
   const pending = runRootBuild({
     spawnProcess: () => child,
+    signalSource,
     stdout: stdout.stream,
     stderr: stderr.stream,
   });
@@ -71,7 +80,7 @@ async function runFakeChild(
   child.finish(code);
 
   const result = await pending;
-  return { result, stdout: stdout.value(), stderr: stderr.value() };
+  return { result, stdout: stdout.value(), stderr: stderr.value(), child, signalSource };
 }
 
 describe("createRootBuildOutputGuard", () => {
@@ -111,6 +120,41 @@ describe("createRootBuildOutputGuard", () => {
 });
 
 describe("runRootBuild", () => {
+  it("appends CLI flags after the real zfb build arguments", async () => {
+    let spawnedArgs: string[] | undefined;
+    const signalSource = new EventEmitter();
+    const stdout = captureStream();
+    const stderr = captureStream();
+    const child = new FakeChild();
+    const previousExitCode = process.exitCode;
+    process.exitCode = undefined;
+    try {
+      const pending = main(["--outdir", "custom-dist", "--strict-broken"], {
+        signalSource,
+        stdout: stdout.stream,
+        stderr: stderr.stream,
+        spawnProcess: (_command: string, args: string[]) => {
+          spawnedArgs = args;
+          return child;
+        },
+      });
+      child.finish();
+      await pending;
+    } finally {
+      process.exitCode = previousExitCode;
+    }
+
+    expect(spawnedArgs).toEqual([
+      "exec",
+      "zfb",
+      "build",
+      "--outdir",
+      "custom-dist",
+      "--strict-broken",
+    ]);
+    expect(rootBuildArgs()).toEqual(["exec", "zfb", "build"]);
+  });
+
   it("keeps a stdout diagnostic split across unrelated stderr chunks", async () => {
     const { result, stdout, stderr } = await runFakeChild([
       { stream: "stdout", chunk: "imageDim" },
@@ -176,5 +220,57 @@ describe("runRootBuild", () => {
     expect(result.diagnosticFound).toBe(false);
     expect(rootBuildExitCode(result)).toBe(17);
     expect(stderr).toBe("ordinary warning\n");
+  });
+
+  it("forwards repeated signals while the child remains active", async () => {
+    const signalSource = new EventEmitter();
+    const stdout = captureStream();
+    const stderr = captureStream();
+    const child = new FakeChild();
+    const pending = runRootBuild({
+      spawnProcess: () => child,
+      signalSource,
+      stdout: stdout.stream,
+      stderr: stderr.stream,
+    });
+
+    signalSource.emit("SIGINT");
+    signalSource.emit("SIGTERM");
+    signalSource.emit("SIGINT");
+    expect(child.killSignals).toEqual(["SIGINT", "SIGTERM", "SIGINT"]);
+
+    child.finish();
+    const result = await pending;
+    expect(result.code).toBe(0);
+  });
+
+  it("maps a signaled close and cleans signal listeners", async () => {
+    const signalSource = new EventEmitter();
+    const stdout = captureStream();
+    const stderr = captureStream();
+    const child = new FakeChild();
+    const pending = runRootBuild({
+      spawnProcess: () => child,
+      signalSource,
+      stdout: stdout.stream,
+      stderr: stderr.stream,
+    });
+
+    signalSource.emit("SIGINT");
+    expect(child.killSignals).toEqual(["SIGINT"]);
+    child.finish(null, "SIGTERM");
+    const result = await pending;
+    expect(result.signal).toBe("SIGTERM");
+    expect(rootBuildExitCode(result)).toBe(null);
+    for (const signal of forwardedSignals()) {
+      expect(signalSource.listenerCount(signal)).toBe(0);
+    }
+    signalSource.emit("SIGINT");
+    expect(child.killSignals).toEqual(["SIGINT"]);
+  });
+
+  it("does not install SIGHUP forwarding on Windows", () => {
+    expect(forwardedSignals("win32")).toEqual(["SIGINT", "SIGTERM"]);
+    expect(forwardedSignals("darwin")).toEqual(["SIGINT", "SIGTERM", "SIGHUP"]);
   });
 });
