@@ -91,6 +91,15 @@ describe("real provider pack conformance", () => {
     },
   );
 
+  it.each(["default export", "foo-bar", "2Component", "foo.bar"])(
+    "rejects invalid public export identifier %s",
+    (exportName) => {
+      const value = manifest();
+      (component(value).source as MutableRecord).exportName = exportName;
+      expectCode(() => componentPackManifestSchema.parse(value), "INVALID_PUBLIC_EXPORT");
+    },
+  );
+
   it("keeps manifest, runtime, public exports, and inline adapters in exact parity", () => {
     expect(validateRuntimeParity(componentPackManifest, componentRuntimeRegistry)).toEqual(componentPack);
     for (const entry of componentPackManifest.components) {
