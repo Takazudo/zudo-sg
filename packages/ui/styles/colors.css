@@ -96,7 +96,7 @@
      Values from color-schemes.ts (light map literals + dark ramp/overrides);
      each is AA (≥4.5:1) as text on its scheme's bg. ── */
   --palette-state-danger:       oklch(.505 .170 25);
-  --palette-state-danger-dark:  oklch(.655 .170 25);
+  --palette-state-danger-dark:  oklch(.700 .170 25);
   --palette-state-success:      oklch(.470 .140 145);
   --palette-state-success-dark: oklch(.680 .145 145);
   --palette-state-warning:      oklch(.490 .100 82);
