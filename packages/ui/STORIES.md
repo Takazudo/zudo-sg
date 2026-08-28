@@ -589,91 +589,68 @@ src/<category-slug>/<component>/<component>.mdx
   `resolveMarkdownLinks.dirs`, so these files never get their own URL — they
   only ever render inline on the component detail page.
 
-## 10. Composer contract (optional opt-in)
+## 10. Composer component sidecars
 
-The `/composer` sub-application (epic #243) lets an author build a page by
-composing real components into a persisted, JSON-safe tree. A component becomes
-available in the Composer **only** by explicitly opting in — there is no
-automatic exposure, and `Story.render()` is never part of the Composer renderer
-contract (the Composer instantiates the real component, not a showcase variant).
+Composer definitions are independent from the story system. An opted-in
+component owns a co-located `component-name.composer.tsx` sidecar authored with
+`defineComponent` from `@zudo-composer/component-contract`. Story modules never
+carry a `composer` property and Composer providers never import story modules.
 
-Opt in by setting the OPTIONAL `composer` property on `meta`, authored with the
-`defineComposer<P>(…)` identity helper (mirrors `defineStory<P>`). It typechecks
-the definition against the component's real props, then erases to the
-non-generic `ComposerMeta` that `StoryMeta.composer` stores. A separate named
-`composer` export is **not** viable — §3's contract test treats every non-default
-export as a `Story`.
+The sidecar is also the single source for display metadata. Its story imports
+and spreads the exported display object:
 
 ```tsx
-import type { StoryMeta, Story } from "../../stories/types";
-import { defineComposer } from "../../composer/types";
+// cta-button.composer.tsx
+import { defineComponent } from "@zudo-composer/component-contract";
 import { CtaButton, type CtaButtonProps } from "./cta-button";
 
-const meta: StoryMeta = {
+export const ctaButtonDisplay = {
   title: "CtaButton",
   category: "Actions",
-  description: "…",
-  usage: "…",
-  composer: defineComposer<CtaButtonProps>({
-    componentId: "ui.cta-button", // stable, opaque — see invariants below
-    version: 1,
-    component: CtaButton,
-    source: {
-      module: "@zudo-sg/ui/src/shared/cta-button/cta-button",
-      exportKind: "named",
-      exportName: "CtaButton",
-    },
-    defaults: { href: "/products", variant: "primary", children: "Browse" },
-    fields: [
-      { kind: "select", prop: "variant", label: "Variant", options: ["primary", "secondary"] },
-      { kind: "boolean", prop: "arrow", label: "Arrow" },
-      { kind: "text", prop: "children", label: "Label", inlineEdit: {} },
-    ],
-    // slots: [{ id: "right", prop: "right", label: "Right", cardinality: "many" }],
-    adapters: {
-      // Trusted, non-serializable. Resolves the editable text node for
-      // inline editing (CtaButton renders a trailing arrow, so a prop flag
-      // alone can't target the label). Runtime-registry side only.
-      inlineEditor: { field: "children", resolveElement: (root) => root },
-    },
-  }),
-};
+  description: "Accent-filled or outlined call-to-action link.",
+} as const;
 
+export const ctaButtonComposer = defineComponent<
+  CtaButtonProps,
+  typeof CtaButton,
+  unknown,
+  HTMLElement
+>({
+  id: "ui.cta-button",
+  schemaVersion: 1,
+  ...ctaButtonDisplay,
+  source: { module: "@zudo-sg/ui", exportKind: "named", exportName: "CtaButton" },
+  defaults: { href: "/products", variant: "primary", children: "Browse" },
+  fields: [
+    { kind: "select", prop: "variant", label: "Variant", options: ["primary", "secondary"] },
+    { kind: "text", prop: "children", label: "Label", inlineEdit: {} },
+  ],
+  component: CtaButton,
+  adapters: {
+    inlineEditor: { field: "children", resolveElement: (root) => root },
+  },
+});
+
+// cta-button.stories.tsx
+import { ctaButtonDisplay } from "./cta-button.composer";
+
+const meta: StoryMeta = { ...ctaButtonDisplay, usage: "…" };
 export default meta;
-
-export const Playground: Story<CtaButtonProps> = { /* … */ };
 ```
 
-### What a definition carries
+Definitions carry stable `id` and `schemaVersion` values, one public package
+`source`, JSON-safe `defaults`, prop-mapped scalar `fields`, stable structural
+`slots`, the trusted `component`, and optional trusted `render` /
+`inlineEditor` adapters. There is no source adapter or unused constraints bag.
 
-- **`componentId`** + **`version`** — stable identity and schema version.
-- **`component`** — the actual typed Preact component (trusted; runtime only).
-- **`source`** — `{ module, exportKind: "named" | "default", exportName, localName? }`
-  for deterministic JSX/import generation.
-- **`defaults`** — JSON-safe initial prop values, keyed to real props.
-- **`fields`** — typed scalar-prop descriptors (`text` / `select` / `boolean` /
-  `number` / `color`). A `text` field may set
-  `inlineEdit?: { multiline?, mode? }` — see "Inline-edit modes" below.
-- **`slots`** — named structural slots: `{ id, prop, label, accepts?, cardinality }`.
-  `id` is the **persisted document key**; `prop` is the real prop it fills.
-- **`constraints?`** — optional JSON-safe structural constraints.
-- **`adapters?`** — TRUSTED, non-serializable `render` / `source` / `inlineEditor`
-  functions (runtime-registry side only; stripped from the serializable manifest).
+The public source module is the package root (`@zudo-sg/ui`), never a private
+`/src/*` path. A field `prop` is a persisted scalar key. A slot has both a
+stable persisted `id` and the real component `prop` it fills; `accepts` omitted
+means any component in the pack, and `cardinality` is `single` or `many`.
 
-Display `title` / `category` / `description` are **not** duplicated in the
-definition — they stay sourced from the owning `StoryMeta`.
-
-### Two projections, one definition
-
-- **Runtime registry** (`src/styleguide/data/composer-registry.ts` →
-  `composerEntries`) keeps `component` and `adapters` and drives the preview.
-- **Serializable manifest** (`composerManifest`) strips every function so it
-  crosses to the parent window / chooser / inspector as pure JSON. A strict zod
-  schema (`composer-schema.ts`) rejects any leaked function.
-
-The registry is DERIVED from the same generated `storyModules` map the catalog
-already imports — it filters for opted-in metas, never a second filesystem scan
-or `import.meta.glob`.
+During the repository split, `src/composer/definitions.ts` is a package-internal
+collection used by the old in-repository Composer through a temporary adapter.
+The public pack boundary is defined separately and must not depend on stories.
 
 ### Inline-edit modes
 
@@ -692,9 +669,9 @@ fields: [
 ],
 ```
 
-### Invariants (enforced by the host validator + type system)
+### Invariants (enforced by the contract + type system)
 
-- `componentId` and slot `id`s must **not** derive from title, slug, category,
+- component `id` and slot `id`s must **not** derive from title, slug, category,
   or file path, and stay stable across renames/moves.
 - Structural slots are opt-in only — `children` is never inferred as a slot from
   `ComponentChildren`; it can be a scalar `text` field or a container slot.
@@ -708,7 +685,6 @@ fields: [
   as an authoring-time error, rather than letting it silently never become
   editable (`inlineEditableForEntry()` would otherwise just return `null`).
 
-Full authoring types live in
-[`src/composer/types.ts`](./src/composer/types.ts) (re-exported from the package
-root). The runtime derivation, validation, and manifest projection live host-side
-in `src/styleguide/data/composer-registry.ts`.
+The independent contract package owns the authoring types. The temporary legacy
+projection lives host-side in `src/styleguide/data/composer-registry.ts` and is
+removed with the old Composer application.

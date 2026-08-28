@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { h } from "preact";
 import { defineComposer } from "@zudo-sg/ui";
-import type { ComposerMeta, StoryModule } from "@zudo-sg/ui";
+import type { ComposerMeta } from "@zudo-sg/ui";
+import * as ui from "@zudo-sg/ui";
+import { componentDefinitions } from "../../../../packages/ui/src/composer/definitions";
+import { storyModules } from "../sg-registry";
 import {
   buildComposerRegistry,
   composerEntries,
@@ -36,19 +39,6 @@ function makeDef(overrides: Partial<ComposerMeta> = {}): ComposerMeta {
     slots: [{ id: "body", prop: "children", label: "Body", cardinality: "many" }],
   });
   return { ...base, ...overrides };
-}
-
-/** Wraps a meta in a synthetic opted-in story module. */
-function moduleFor(composer: ComposerMeta, title = "Dummy"): StoryModule {
-  return {
-    default: {
-      title,
-      category: "Layout",
-      description: "d",
-      usage: "u",
-      composer,
-    },
-  } as unknown as StoryModule;
 }
 
 describe("validateComposerDefinitions", () => {
@@ -194,33 +184,14 @@ describe("isJsonSafe", () => {
   });
 });
 
-describe("buildComposerRegistry (derived from story modules)", () => {
-  it("exposes only metas that explicitly opted in via meta.composer", () => {
-    const optedIn = moduleFor(makeDef({ componentId: "ui.opted" }), "Opted");
-    const notOptedIn = {
-      default: { title: "Plain", category: "Layout", description: "d", usage: "u" },
-    } as unknown as StoryModule;
-
-    const entries = buildComposerRegistry({
-      "./ui/src/opted/opted.stories.tsx": optedIn,
-      "./ui/src/plain/plain.stories.tsx": notOptedIn,
-    });
-
-    expect(entries.map((e) => e.componentId)).toEqual(["ui.opted"]);
-  });
-
-  it("sources display title/category/description from the StoryMeta, not the definition", () => {
-    const mod = moduleFor(makeDef({ componentId: "ui.opted" }), "Fancy Title");
-    const [entry] = buildComposerRegistry({ "./ui/src/x/x.stories.tsx": mod });
-    expect(entry.title).toBe("Fancy Title");
-    expect(entry.category).toBe("Layout");
-    expect(entry.description).toBe("d");
-  });
-
-  it("throws when an opted-in definition is invalid", () => {
-    const bad = moduleFor(makeDef({ defaults: { label: (() => 1) as unknown as string } }));
-    expect(() => buildComposerRegistry({ "./ui/src/x/x.stories.tsx": bad })).toThrow(
-      /Invalid Composer definition/i,
+describe("buildComposerRegistry (component sidecars)", () => {
+  it("projects the package-internal sidecars without importing story modules", () => {
+    const entries = buildComposerRegistry(componentDefinitions);
+    expect(entries.map((entry) => entry.componentId)).toEqual(
+      componentDefinitions.map((definition) => definition.id),
+    );
+    expect(entries.map((entry) => entry.title)).toEqual(
+      componentDefinitions.map((definition) => definition.title),
     );
   });
 });
@@ -283,6 +254,34 @@ describe("live registry — curated cohort opted in (issue #246)", () => {
     expect([...ids].sort()).toEqual(CURATED_COHORT_IDS);
   });
 
+  it("preserves the v1 persisted component and slot identities", () => {
+    const expectedSlots: Record<string, string[]> = {
+      "ui.auto-grid": ["items"],
+      "ui.callout": ["body"],
+      "ui.card": ["body"],
+      "ui.container": ["content"],
+      "ui.cta-button": [],
+      "ui.hero": [],
+      "ui.placeholder-box": [],
+      "ui.prose-md": [],
+      "ui.prose-p": [],
+      "ui.section-heading": [],
+      "ui.split-layout": ["left", "right"],
+      "ui.stack": ["content"],
+    };
+
+    expect(Object.fromEntries(composerEntries.map((entry) => [entry.componentId, entry.version])))
+      .toEqual(Object.fromEntries(CURATED_COHORT_IDS.map((id) => [id, 1])));
+    expect(
+      Object.fromEntries(
+        composerEntries.map((entry) => [
+          entry.componentId,
+          (entry.definition.slots ?? []).map((slot) => slot.id),
+        ]),
+      ),
+    ).toEqual(expectedSlots);
+  });
+
   it("does not surface Story.render() in the Composer contract", () => {
     // A ComposerEntry exposes `definition` (component + metadata), never a
     // Story or its render(). Guard the shape so a regression is caught.
@@ -297,8 +296,27 @@ describe("live registry — curated cohort opted in (issue #246)", () => {
   it("every opted-in definition has one trusted component and a real source export", () => {
     for (const entry of composerEntries) {
       expect(typeof entry.definition.component, entry.componentId).toBe("function");
-      expect(entry.definition.source.module.startsWith("@zudo-sg/ui/src/")).toBe(true);
+      expect(entry.definition.source.module).toBe("@zudo-sg/ui");
       expect(entry.definition.source.exportName.length).toBeGreaterThan(0);
+      expect(entry.definition.source.exportName in ui, entry.componentId).toBe(true);
+      expect(ui[entry.definition.source.exportName as keyof typeof ui]).toBe(
+        entry.definition.component,
+      );
+      expect(entry.definition.adapters?.source).toBeUndefined();
+      expect(entry.definition).not.toHaveProperty("constraints");
+    }
+  });
+
+  it("keeps story display metadata aligned with the sidecar single source", () => {
+    const storyMetaByTitle = new Map(
+      Object.values(storyModules).map((module) => [module.default.title, module.default]),
+    );
+    for (const entry of composerEntries) {
+      expect(storyMetaByTitle.get(entry.title)).toMatchObject({
+        title: entry.title,
+        category: entry.category,
+        description: entry.description,
+      });
     }
   });
 

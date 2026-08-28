@@ -18,9 +18,11 @@
     "dompurify": "^3.4.11"
   },
   "peerDependencies": {
+    "@zudo-composer/component-contract": "^1.0.0",
     "preact": "^10.29.1"
   },
   "devDependencies": {
+    "@zudo-composer/component-contract": "git+https://github.com/Takazudo/zudo-composer.git#51f1c64a7639134254866458ff72b497da9c2f36",
     "@types/node": "^22.0.0",
     "typescript": "^5.9.0"
   }

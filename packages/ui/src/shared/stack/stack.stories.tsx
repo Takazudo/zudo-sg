@@ -1,52 +1,15 @@
 import type { StoryMeta, Story } from "../../stories/types";
-import { defineComposer } from "../../composer/types";
 import { Stack, type StackProps } from "./stack";
+import { stackDisplay } from "./stack.composer";
 
 const meta: StoryMeta = {
-  title: "Stack",
-  category: "Layout",
-  description:
-    "Generic flex stack — vertical or horizontal — with bounded gap, cross-axis alignment, and main-axis justification. Horizontal stacks always wrap so they never force overflow.",
+  ...stackDisplay,
   usage: `import { Stack } from "@zudo-sg/ui/src/shared/stack/stack";
 
 <Stack gap="md">
   <div>First</div>
   <div>Second</div>
 </Stack>`,
-  composer: defineComposer<StackProps>({
-    componentId: "ui.stack",
-    version: 1,
-    component: Stack,
-    source: {
-      module: "@zudo-sg/ui/src/shared/stack/stack",
-      exportKind: "named",
-      exportName: "Stack",
-    },
-    defaults: { direction: "vertical", gap: "md", align: "stretch", justify: "start" },
-    fields: [
-      {
-        kind: "select",
-        prop: "direction",
-        label: "Direction",
-        options: ["vertical", "horizontal"],
-      },
-      { kind: "select", prop: "gap", label: "Gap", options: ["xs", "sm", "md", "lg", "xl"] },
-      {
-        kind: "select",
-        prop: "align",
-        label: "Align",
-        options: ["start", "center", "end", "stretch"],
-      },
-      {
-        kind: "select",
-        prop: "justify",
-        label: "Justify",
-        options: ["start", "center", "end", "between"],
-      },
-    ],
-    // The default `children` slot — genuinely ordered, many children.
-    slots: [{ id: "content", prop: "children", label: "Content", cardinality: "many" }],
-  }),
 };
 
 export default meta;

@@ -4,6 +4,7 @@ packages:
   - "apps/*"
   - "doc"
 allowBuilds:
+  '@zudo-composer/component-contract': true
   esbuild: true
   lefthook: true
   # msw's postinstall only runs `msw init` (copies mockServiceWorker.js into
