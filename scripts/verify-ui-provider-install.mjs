@@ -165,7 +165,8 @@ async function prepareAndBuild(directory, uiSpec, exact) {
   await run("corepack", ["pnpm", "run", "typecheck"], directory);
   await run("corepack", ["pnpm", "run", "build"], directory);
   await run("corepack", ["pnpm", "exec", "playwright", "install", "chromium"], directory);
-  await run("node", ["browser-proof.mjs"], directory);
+  const browserProof = await run("node", ["browser-proof.mjs"], directory);
+  console.log(browserProof.stdout.trim());
   await writeFile(
     path.join(directory, "provider-proof.json"),
     `${JSON.stringify({ exact, uiSpec, sourceTree: handoff.sourceTree }, null, 2)}\n`,
@@ -205,5 +206,5 @@ try {
   process.exitCode = 1;
 } finally {
   if (artifacts) await rm(artifacts, { recursive: true, force: true });
-  if (!outputArg && process.exitCode) await rm(consumer, { recursive: true, force: true });
+  if (!outputArg) await rm(consumer, { recursive: true, force: true });
 }

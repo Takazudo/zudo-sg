@@ -42,6 +42,14 @@ if (allowedBuildNames.some((name) => name !== "@zudo-composer/component-contract
   errors.push("packages/ui/pnpm-workspace.yaml: only the name-only contract build may be allowed");
 }
 
+for (const relative of ["package.json", "pnpm-workspace.yaml", "pnpm-lock.yaml", "tsconfig.json", "vitest.config.ts"]) {
+  const file = path.join(ui, relative);
+  const content = await readFile(file, "utf8");
+  reject(content, /(?:^|[^A-Za-z0-9_-])(?:workspace|file|link|path):/mu, "package config contains a local dependency protocol", file);
+  reject(content, /\.\.\//u, "package config contains a sibling path", file);
+  reject(content, /\.\.\\/u, "package config contains a sibling path", file);
+}
+
 const scoped = (await filesUnder(path.join(ui, "src"))).filter((file) =>
   file.endsWith(".composer.tsx") || file.endsWith("composer-pack.ts"),
 );
