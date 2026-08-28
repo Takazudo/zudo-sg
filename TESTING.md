@@ -63,8 +63,9 @@ Steps in `scripts/run-b4push.sh`:
 6. Build demo — `pnpm --filter @zudo-sg/demo build`
 7. Link check — `pnpm check:links` + `pnpm check:links:demo`
 8. HTML validation — `pnpm check:html`
-9. Playwright smoke e2e — `pnpm test:e2e` (styleguide + the 7 composer projects +
-   demo-smoke — see [Composer E2E suites](#composer-e2e-suites))
+9. Playwright smoke e2e — `pnpm test:e2e` (styleguide + the eight default authoring projects
+   (seven Composer projects plus Sitemapper) +
+   demo-smoke — see [Composer and Sitemapper E2E suites](#composer-and-sitemapper-e2e-suites))
 10. Manual interactive smoke (operator-driven)
 
 ### T1 — CI gate (authoritative)
@@ -81,13 +82,13 @@ the single source of truth for pass/fail. Jobs mirror the b4push steps:
 - **build-demo** — `pnpm --filter @zudo-sg/demo build` (produces and caches
   `apps/demo/dist`), then `pnpm check:links:demo` against it
 - **smoke-e2e** — `pnpm test:e2e:ci` (Playwright, Chromium only; styleguide +
-  the 7 composer projects + demo-smoke — see
-  [Composer E2E suites](#composer-e2e-suites); needs `build` and `build-demo`)
+  the eight default authoring projects (seven Composer projects plus Sitemapper) + demo-smoke — see
+  [Composer and Sitemapper E2E suites](#composer-and-sitemapper-e2e-suites); needs `build` and `build-demo`)
 - **dist-checks** — `pnpm check:links` + `pnpm check:html` against `dist/`
   (needs `build`; merged into one job so both checks share a single install)
 - **file-provider-e2e** — `pnpm test:e2e:composer-file` (Playwright, dev-server-backed
   file provider suite; no `needs`, builds its own `zfb dev` server from source — see
-  [Composer E2E suites](#composer-e2e-suites))
+  [Composer and Sitemapper E2E suites](#composer-and-sitemapper-e2e-suites))
 
 ### Individual checks
 
@@ -102,11 +103,12 @@ pnpm check:html         # HTML validation (needs dist/)
 pnpm test:e2e           # Playwright smoke (needs dist/ and apps/demo/dist/)
 ```
 
-### Composer E2E suites
+### Composer and Sitemapper E2E suites
 
 `playwright.config.ts` (the default config, run by `pnpm test:e2e` / `pnpm test:e2e:ci`)
-includes 7 composer projects alongside `smoke`, `preview-token-panel`, and `demo-smoke`.
-The composer projects, like `smoke` and `preview-token-panel`, are served from the
+includes eight authoring projects alongside `smoke`, `preview-token-panel`, and `demo-smoke`:
+the seven Composer projects and the Sitemapper project. These authoring projects, like `smoke`
+and `preview-token-panel`, are served from the
 styleguide's static `dist/` preview (port 4700) — `demo-smoke` is separate, served from
 `apps/demo/dist` on port 4701:
 
@@ -119,6 +121,7 @@ styleguide's static `dist/` preview (port 4700) — `demo-smoke` is separate, se
 | `composer-contracts` | `composer-contracts.spec.ts` | Composer Polish S7 computed-style contract gate (panel separation, chooser dialog, tree geometry, accent census, typography floor, narrow-viewport overflow) |
 | `composer-verification` | `composer-verification.spec.ts` | Viewport/theme/a11y matrix and interaction/state semantics (touch + mobile) |
 | `composer-reuse` | `composer-reuse.spec.ts` | Global-template and Pattern reuse — publish, discover, insert, dependency-checked unpublish, detach flows (touch + mobile) |
+| `sitemapper` | `sitemapper.spec.ts` | Sitemapper browser exit gate — named-sitemap creation/opening, page-tree add/sibling/duplicate/reorder/delete edits, composition-reference assignment and reload persistence, broken-reference recovery after Composer deletion, and 1440/375 light/dark visual/layout/editing contracts |
 
 Three composer-specific config files exist outside the default config, each with its own
 server/port and script — `composer-file`'s script runs in CI (see below); the
@@ -220,6 +223,6 @@ for the concrete T3 implementation pattern.
 ## Adding Tests
 
 - **Logic / data transforms** → add to `src/**/__tests__/` as `*.test.ts`, picked up by vitest automatically.
-- **New E2E flows** → add `*.spec.ts` to `e2e/`. Styleguide flows go in the port-4700 smoke fixture; demo flows go in the port-4701 demo-smoke fixture (see `playwright.config.ts`). Composer flows default to a `composer*` project in `playwright.config.ts` (static `dist/` preview) — only reach for one of the composer-specific configs when the flow needs something the default config can't give it: filesystem-write/dev-transport coverage → `playwright.composer-file.config.ts`; an isolated, single-worker run for verification/contracts/reuse debugging → `playwright.composer-verification.config.ts`; the same for persistence/production-boundary/full-walkthrough debugging → `playwright.composer-persistence.config.ts`. See [Composer E2E suites](#composer-e2e-suites).
+- **New E2E flows** → add `*.spec.ts` to `e2e/`. Styleguide flows go in the port-4700 smoke fixture; demo flows go in the port-4701 demo-smoke fixture (see `playwright.config.ts`). New sub-app suites belong in the default `playwright.config.ts` so CI's `pnpm test:e2e:ci` picks them up; for Composer flows, use a `composer*` project there (static `dist/` preview) and only reach for one of the Composer-specific configs when the flow needs something the default config cannot give it: filesystem-write/dev-transport coverage → `playwright.composer-file.config.ts`; an isolated, single-worker run for verification/contracts/reuse debugging → `playwright.composer-verification.config.ts`; the same for persistence/production-boundary/full-walkthrough debugging → `playwright.composer-persistence.config.ts`. See [Composer and Sitemapper E2E suites](#composer-and-sitemapper-e2e-suites).
 - **Visual regression** → use `/verify-ui` skill ad-hoc; do not add L5 specs to CI until T3 is set up.
 - **Anything asserting DOMPurify output** → put `@vitest-environment jsdom` in the file's leading docblock. Under the repo-wide happy-dom environment (16.8.1) DOMPurify reports `isSupported: true` yet sanitizes nothing — `<script>` and `onerror=` pass through verbatim — so an XSS assertion there would be testing a sanitizer that never ran. `packages/ui/src/content/prose-md/markdown-runtime.ts` refuses such a DOM outright (it probes the sanitizer before trusting it) and returns `html: null` with a `sanitize` error diagnostic, so the symptom is a null result rather than unsafe HTML.

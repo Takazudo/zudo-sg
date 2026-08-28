@@ -31,7 +31,10 @@ src/
 │   └── docs/             # Slim root guide content
 ├── features/
 │   ├── composer/         # /composer sub-app UI: chrome/canvas/preview/inspector/tree/reuse
+│   ├── sitemapper/        # /sitemapper sub-app UI: chrome/canvas/inspector/tree/picker
 │   └── styleguide/       # /components catalog: chrome, preview, code-panel, search, token-tweak
+├── shared/               # Authoring primitives shared by Composer and Sitemapper
+├── sitemapper/            # Headless sitemap model, commands, catalog, library, and storage
 ├── styleguide/
 │   └── data/             # Codegen-backed component registry + nav nodes (#103)
 └── styles/
@@ -95,11 +98,39 @@ Do NOT use h1 (`#`) in doc content — the page title from frontmatter is render
 - **Behavioral source of truth** — `packages/ui/src/composer/types.ts` +
   `packages/ui/STORIES.md` §10 (Composer contract) define the authoring
   contract; module behavior is pinned by module-header comments,
-  `src/composer/**/__tests__`, and TESTING.md's "Composer E2E suites" section.
+  `src/composer/**/__tests__`, and TESTING.md's "Composer and Sitemapper E2E suites" section.
   A component opts into the composer only via the OPTIONAL `composer` prop on
   its `StoryMeta` (`defineComposer<P>()`) — never automatic.
 - See ADOPTING.md's "Adopting the Composer" section for the portable-vs-glue
   split when copying this pattern into another project.
+
+## Sitemapper
+
+- **What it is** — the `/sitemapper` sub-application: a hierarchical sitemap in which each node
+  is a page that may reference a saved Composer composition. The route is
+  `pages/sitemapper/index.tsx`, and its shared head/header/body-end chrome is assembled by
+  `pages/lib/_sitemapper-chrome.tsx`.
+- **Where code lives** — headless domain logic (model, immutable tree commands, Composer catalog
+  adapter, library contracts/helpers, and IndexedDB storage) in `src/sitemapper/`; the app and UI
+  (record lifecycle/controller, workspace chrome, canvas, outline tree, inspector, and picker) in
+  `src/features/sitemapper/`.
+- **Behavioral source of truth** — module-header comments and the `__tests__` under
+  `src/sitemapper/` and `src/features/sitemapper/`, plus the browser exit gate in
+  `e2e/sitemapper.spec.ts`.
+- **Shared primitives** — `json`, `id-factory`, `record-identity`, and the revision-aware
+  `save-queue` now live in `src/shared/` for both authoring sub-apps. Re-export compatibility
+  shims remain at the old Composer paths (`src/composer/model/{json,id-factory,record-identity}.ts`
+  and `src/composer/persistence/save-queue.ts`).
+- **Two persisted-data contracts** — v1 requires exactly one root page. `root` remains an array
+  as a forward-compatible insertion slot, but validation rejects any root cardinality other than
+  one. A page's `CompositionRef` is provider-qualified (`providerId` + `recordId`) and may dangle
+  by design: the Composer delete path does not scan Sitemap consumers, so a deleted composition is
+  shown as a visible broken-reference badge with its raw reference instead of crashing.
+- **Storage isolation** — the Sitemapper IndexedDB provider uses the separate
+  `zudo-sg-sitemapper` database so its schema migrations remain independent of the Composer
+  database.
+- See ADOPTING.md's "Adopting the Sitemapper" section for the portable-vs-glue split when copying
+  this pattern into another project.
 
 ## Monorepo Structure
 
@@ -151,6 +182,8 @@ for how the two worlds relate.
 - **claudeSkills** — The `doc/` workspace ships zudo-doc-design-system, zudo-doc-translate, zudo-doc-version-bump skills
 - **designTokenPanel** — Interactive tabbed panel for tweaking spacing, font, size, and color tokens
 - **dynamicPageTransition** — SPA client-router page swaps with View Transitions and page-loading overlay
+- **sitemapper** — Hierarchical page-tree authoring at `/sitemapper`, with named sitemap persistence,
+  Composer composition assignment, desktop tree/inspector editing, and narrow canvas editing
 - **sidebarResizer** — Draggable sidebar width
 - **sidebarToggle** — Show/hide desktop sidebar
 - **versioning** — Multi-version documentation support
