@@ -22,7 +22,10 @@ import type {
   JsonValue,
   StoryCategory,
 } from "@zudo-sg/ui";
-import { componentDefinitions } from "../../../packages/ui/src/composer/definitions";
+import {
+  componentPackManifest,
+  componentRuntimeRegistry,
+} from "@zudo-sg/ui/composer-pack";
 import { composerManifestEntrySchema } from "./composer-schema";
 
 /**
@@ -296,13 +299,17 @@ export function toManifestEntry(entry: ComposerEntry): ComposerManifestEntry {
  * Projects contract sidecars to the legacy in-repository Composer shape.
  * Story modules are not part of this boundary.
  */
-type SidecarDefinition = (typeof componentDefinitions)[number];
+type PackManifestComponent = (typeof componentPackManifest.components)[number];
+type PackRuntimeRegistry = typeof componentRuntimeRegistry;
 
-function toLegacyDefinition(sidecar: SidecarDefinition): ComposerMeta {
+function toLegacyDefinition(
+  sidecar: PackManifestComponent,
+  runtime: PackRuntimeRegistry["components"][string],
+): ComposerMeta {
   return {
     componentId: sidecar.id,
     version: sidecar.schemaVersion,
-    component: sidecar.component as unknown as ComposerMeta["component"],
+    component: runtime.component as unknown as ComposerMeta["component"],
     source: { ...sidecar.source },
     defaults: { ...(sidecar.defaults ?? {}) } as ComposerMeta["defaults"],
     // `required` belongs to contract v1; the legacy app predates that key and
@@ -311,24 +318,31 @@ function toLegacyDefinition(sidecar: SidecarDefinition): ComposerMeta {
       ({ required: _required, ...field }) => field,
     ) as ComposerMeta["fields"],
     slots: [...(sidecar.slots ?? [])] as ComposerMeta["slots"],
-    ...(sidecar.adapters
-      ? { adapters: sidecar.adapters as unknown as NonNullable<ComposerMeta["adapters"]> }
+    ...(runtime.adapters
+      ? { adapters: runtime.adapters as unknown as NonNullable<ComposerMeta["adapters"]> }
       : {}),
   };
 }
 
 export function buildComposerRegistry(
-  sidecars: readonly SidecarDefinition[],
+  manifests: readonly PackManifestComponent[],
+  runtimeRegistry: PackRuntimeRegistry = componentRuntimeRegistry,
 ): ComposerEntry[] {
-  const entries = sidecars.map((sidecar): ComposerEntry => ({
-    componentId: sidecar.id,
-    version: sidecar.schemaVersion,
-    title: sidecar.title,
-    category: sidecar.category as StoryCategory,
-    description: sidecar.description,
-    path: `${sidecar.source.module}#${sidecar.source.exportName}`,
-    definition: toLegacyDefinition(sidecar),
-  }));
+  const entries = manifests.map((sidecar): ComposerEntry => {
+    const runtime = runtimeRegistry.components[sidecar.id];
+    if (!runtime) {
+      throw new Error(`Missing Composer runtime for manifest component "${sidecar.id}"`);
+    }
+    return {
+      componentId: sidecar.id,
+      version: sidecar.schemaVersion,
+      title: sidecar.title,
+      category: sidecar.category as StoryCategory,
+      description: sidecar.description,
+      path: `${sidecar.source.module}#${sidecar.source.exportName}`,
+      definition: toLegacyDefinition(sidecar, runtime),
+    };
+  });
 
   const errors = validateComposerDefinitions(entries.map((e) => e.definition));
   if (errors.length > 0) {
@@ -341,7 +355,10 @@ export function buildComposerRegistry(
  * The trusted runtime Composer registry — retains component functions and
  * adapters from package sidecars.
  */
-export const composerEntries: ComposerEntry[] = buildComposerRegistry(componentDefinitions);
+export const composerEntries: ComposerEntry[] = buildComposerRegistry(
+  componentPackManifest.components,
+  componentRuntimeRegistry,
+);
 
 /** The serializable manifest — pure JSON, no functions. */
 export const composerManifest: ComposerManifestEntry[] = composerEntries.map(toManifestEntry);
@@ -361,7 +378,7 @@ export function getComposerManifestEntry(componentId: string): ComposerManifestE
   return manifestById.get(componentId);
 }
 
-/** All opted-in component ids, in generated story order. */
+/** All opted-in component ids, in generated pack order. */
 export function getComposerComponentIds(): string[] {
   return composerEntries.map((e) => e.componentId);
 }

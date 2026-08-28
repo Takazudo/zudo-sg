@@ -148,6 +148,11 @@
  * Sitemapper sub-issues. */
 @import "../features/sitemapper/styles.css";
 
+/* Portable syntax paint + ProseMd typography. The provider owns these rules
+ * directly; zudo-doc's feature stylesheet is not part of the component package
+ * boundary and its earlier bridge is intentionally superseded here. */
+@import "../../packages/ui/styles/syntax-highlight.css";
+
 /* ProseMd (#373) — scoped typography for the client-rendered markdown blob
  * (`packages/ui/src/content/prose-md/prose-md.tsx`). Ships from @zudo-sg/ui
  * (portable, Tier-2-token-bound only) rather than root, but this IS the one
@@ -158,20 +163,6 @@
  * risk losing to `tailwindcss/utilities` if that ever changed. See the file's
  * own header for what it does and does not style. */
 @import "@zudo-sg/ui/src/content/prose-md/prose-md.css";
-
-/* Keep the painted deleted-line wash AA against the surface it actually sits
- * on. zudo-doc's default --zfb-hi-del-bg mixes over --zd-code-bg, but the
- * resulting same-span background falls below AA for this site's danger rung.
- * --color-bg lazily resolves to doc --zd-bg on chrome pages and to the UI
- * preview background in chrome-free previews. The deleted foreground remains
- * the existing --zd-syntax-deleted bridge source. */
-:root {
-  --zfb-hi-del-bg: color-mix(
-    in srgb,
-    var(--zd-syntax-deleted) 15%,
-    var(--color-bg)
-  );
-}
 
 /* ========================================
  * Tailwind v4 content sources
@@ -503,15 +494,10 @@ body {
   }
 }
 
-/* Code-block syntax-highlight token colors, line/word highlighting, code
- * titles, and CodeGroup raw-code panel styling used to be hand-authored here
- * against the legacy single-palette fence markup this project no longer
- * emits. zudo-doc's class-mode highlighter emits `pre.hi-root` instead
- * and ships the equivalent `pre.hi-root`-scoped rules (plus the
- * `--zfb-hi-*` → `--zd-syntax-*` token bridge) via
- * `@takazudo/zudo-doc/features.css` (imported above) — see
- * zudolab/zudo-doc#2331 and the syntax-highlighting migration guide. Do not
- * re-inline any of that here (zudolab/zudo-doc#2188). */
+/* Provider-owned class-mode syntax paint is imported from
+ * packages/ui/styles/syntax-highlight.css above. Host-only line/word
+ * highlighting, code titles, and CodeGroup layout remain supplied by the doc
+ * feature stylesheet where those doc features are rendered. */
 
 /* KaTeX math equations */
 .katex {

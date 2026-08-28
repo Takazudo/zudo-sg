@@ -88,6 +88,9 @@ jobs:
       - name: Check sg-registry codegen
         run: pnpm check:sg-registry
 
+      - name: Check composer-pack codegen
+        run: pnpm check:composer-pack
+
       - name: Check story-categories codegen
         run: pnpm check:story-categories
 
