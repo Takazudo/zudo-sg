@@ -183,7 +183,9 @@ test.describe("Composer reuse cross-feature acceptance", () => {
 
     await openLinkedSource(page);
     await page.locator('[data-sg-tree-node-id="source-header"] .sg-composer-tree-select').click();
-    const heading = page.locator("#sg-composer-inspector").getByLabel("Heading");
+    const heading = page
+      .locator("#sg-composer-inspector")
+      .getByRole("textbox", { name: "Heading", exact: true });
     await heading.fill("Updated source heading");
     await heading.press("Tab");
     await expect(page.locator(".sg-composer-save-status")).toHaveAttribute("data-sg-status", "saved");
