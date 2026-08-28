@@ -193,6 +193,11 @@ async function addProseMd(page: Page): Promise<string> {
 async function setMarkdown(page: Page, nodeId: string, value: string): Promise<void> {
   const field = markdownField(page);
   await field.fill(value);
+  // Inspector text fields use the Composer's debounced update channel. Blur is
+  // the existing user-facing flush point; without it, an immediate empty
+  // probe can open before the canvas receives the requested value and capture
+  // the component default instead.
+  await field.blur();
   await expect(field).toHaveValue(value);
 
   const block = nodeLocator(page, nodeId).locator(".zc-prose-md");
