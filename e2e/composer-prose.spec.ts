@@ -298,7 +298,7 @@ test.describe.serial("Composer prose editing (#376)", () => {
     await page.keyboard.press("Enter");
     await page.keyboard.type("## New heading");
 
-    expect(await editorText(editor())).toBe("## Heading\n\n`code` and text.\n\n## New heading\n");
+    expect(await editorText(editor())).toBe("## Heading\n\n`code` and text.\n\n## New heading");
     // Still editing: the block has not re-rendered and nothing reached the model.
     await expect(editor()).toBeVisible();
     await expect(node().locator(".zc-prose-md")).toHaveCount(0);
@@ -314,7 +314,7 @@ test.describe.serial("Composer prose editing (#376)", () => {
     await expect(canvas(page).locator(SAVEBAR)).toHaveCount(0);
     await expect(node().locator(".zc-prose-md h2").nth(1)).toHaveText("New heading");
     await expect(markdownField(page)).toHaveValue(
-      "## Heading\n\n`code` and text.\n\n## New heading\n",
+      "## Heading\n\n`code` and text.\n\n## New heading",
     );
     expect(await commitCount(page)).toBe(1);
   });
