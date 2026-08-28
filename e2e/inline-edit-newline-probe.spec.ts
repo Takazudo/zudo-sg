@@ -1,4 +1,12 @@
-import { expect, test, type FrameLocator, type Locator, type Page, type TestInfo } from "@playwright/test";
+import {
+  expect,
+  test,
+  type Frame,
+  type FrameLocator,
+  type Locator,
+  type Page,
+  type TestInfo,
+} from "@playwright/test";
 import { openComposerRecord } from "./support/composer-persistence";
 
 // Issue #444 is intentionally an opt-in measurement suite. The default
@@ -57,6 +65,11 @@ interface DomSnapshot {
   contenteditable: string | null;
 }
 
+interface RenderObservation {
+  revision: number;
+  markdownByNodeId: Record<string, string | null>;
+}
+
 interface InlineEditCommit {
   nodeId: string;
   fieldKey: string;
@@ -69,6 +82,7 @@ interface ProbeResult {
   mode: ContenteditableMode;
   probe: string;
   seed: string;
+  seedRenderRevision: number;
   expectedValue: string;
   innerHTML: string;
   textContent: string;
@@ -100,11 +114,18 @@ interface ProbeReport {
 declare global {
   interface Window {
     __inlineEditCommits?: InlineEditCommit[];
+    __inlineEditNewlineRenderObservations?: RenderObservation[];
   }
 }
 
 function canvas(page: Page): FrameLocator {
   return page.frameLocator(CANVAS_IFRAME);
+}
+
+function previewFrame(page: Page): Frame {
+  const frame = page.frames().find((candidate) => candidate.url().includes("/composer/preview"));
+  if (!frame) throw new Error("composer preview frame is not attached");
+  return frame;
 }
 
 function nodeLocator(page: Page, nodeId: string): Locator {
@@ -189,8 +210,86 @@ async function addProseMd(page: Page): Promise<string> {
   return nodeId;
 }
 
+/** Observe trusted parent→preview renders at an applied rAF boundary. */
+async function installRenderObserver(page: Page): Promise<void> {
+  previewFrame(page);
+  await previewFrame(page).evaluate(() => {
+    window.__inlineEditNewlineRenderObservations = [];
+    window.addEventListener("message", (event) => {
+      const data = event.data as {
+        channel?: unknown;
+        v?: unknown;
+        type?: unknown;
+        revision?: unknown;
+        document?: { root?: unknown };
+      } | null;
+      if (
+        event.source !== window.parent ||
+        event.origin !== window.location.origin ||
+        data?.channel !== "composer-preview" ||
+        data.v !== 1 ||
+        data.type !== "render" ||
+        typeof data.revision !== "number" ||
+        !Number.isInteger(data.revision) ||
+        !Array.isArray(data.document?.root)
+      ) {
+        return;
+      }
+
+      const revision = data.revision;
+      const root = data.document.root;
+      window.requestAnimationFrame(() => {
+        const markdownByNodeId: Record<string, string | null> = {};
+        const visit = (nodes: unknown[]): void => {
+          for (const candidate of nodes) {
+            if (!candidate || typeof candidate !== "object") continue;
+            const node = candidate as {
+              id?: unknown;
+              props?: unknown;
+              slots?: unknown;
+            };
+            if (typeof node.id === "string") {
+              const props = node.props;
+              const markdown =
+                props && typeof props === "object" && typeof (props as { markdown?: unknown }).markdown === "string"
+                  ? (props as { markdown: string }).markdown
+                  : null;
+              markdownByNodeId[node.id] = markdown;
+            }
+            if (node.slots && typeof node.slots === "object") {
+              for (const children of Object.values(node.slots as Record<string, unknown>)) {
+                if (Array.isArray(children)) visit(children);
+              }
+            }
+          }
+        };
+        visit(root);
+        window.__inlineEditNewlineRenderObservations?.push({ revision, markdownByNodeId });
+      });
+    });
+  });
+}
+
+async function observedSeedRender(
+  page: Page,
+  nodeId: string,
+  value: string,
+): Promise<RenderObservation | null> {
+  return previewFrame(page).evaluate(
+    ({ nodeId: requestedNodeId, value: requestedValue }) => {
+      const observations = window.__inlineEditNewlineRenderObservations ?? [];
+      for (let index = observations.length - 1; index >= 0; index -= 1) {
+        const observation = observations[index]!;
+        if (observation.markdownByNodeId[requestedNodeId] === requestedValue) return observation;
+      }
+      return null;
+    },
+    { nodeId, value },
+  );
+}
+
 /** Update the real inspector/model, then wait for the built ProseMd to settle. */
-async function setMarkdown(page: Page, nodeId: string, value: string): Promise<void> {
+async function setMarkdown(page: Page, nodeId: string, value: string): Promise<number> {
   const field = markdownField(page);
   await field.fill(value);
   // Inspector text fields use the Composer's debounced update channel. Blur is
@@ -200,16 +299,26 @@ async function setMarkdown(page: Page, nodeId: string, value: string): Promise<v
   await field.blur();
   await expect(field).toHaveValue(value);
 
-  // The flush above schedules the normal Composer persistence/render path. A
-  // fresh saved state is the public signal that this seed's document update
-  // has landed before the iframe is asked to open a session.
+  // The flush above schedules the normal Composer persistence path. Saved is
+  // useful host evidence, but it is not an iframe delivery acknowledgement.
   await expect(page.locator('.sg-composer-save-status[data-sg-status="saved"]')).toBeVisible();
+
+  // Wait for the trusted parent→preview render containing THIS node's exact
+  // requested prop after the observer's requestAnimationFrame boundary. This
+  // is the synchronization point that prevents a stale/default document from
+  // being captured by the next inline session.
+  await expect
+    .poll(() => observedSeedRender(page, nodeId, value), { timeout: 15_000 })
+    .not.toBeNull();
+  const render = await observedSeedRender(page, nodeId, value);
+  if (!render) throw new Error(`render observer did not see seed for node ${nodeId}`);
 
   const block = nodeLocator(page, nodeId).locator(".zc-prose-md");
   await expect(block).toHaveCount(1);
   // Avoid opening a session while the async markdown runtime is still painting
   // its pending placeholder. The source editor then owns the body cleanly.
   await expect(block).not.toHaveClass(/zc-prose-md--pending|zc-prose-md--error/);
+  return render.revision;
 }
 
 async function openEditor(page: Page, nodeId: string, seed: string): Promise<Locator> {
@@ -416,7 +525,7 @@ async function runProbe(
   matrix: ProjectMatrixEntry,
   definition: ProbeDefinition,
 ): Promise<ProbeResult> {
-  await setMarkdown(page, nodeId, definition.seed);
+  const seedRenderRevision = await setMarkdown(page, nodeId, definition.seed);
   const editor = await openEditor(page, nodeId, definition.seed);
   await forceContenteditable(editor, matrix.mode);
 
@@ -439,6 +548,7 @@ async function runProbe(
     mode: matrix.mode,
     probe: definition.probe,
     seed: definition.seed,
+    seedRenderRevision,
     expectedValue: definition.expected,
     innerHTML: finalSnapshot.innerHTML,
     textContent: finalSnapshot.textContent,
@@ -473,6 +583,7 @@ test("captures the built Composer inline-edit newline matrix", async ({ browser 
       try {
         await installCommitCapture(probePage);
         await openComposerRecord(probePage);
+        await installRenderObserver(probePage);
         const nodeId = await addProseMd(probePage);
         const row = await runProbe(probePage, nodeId, matrix, definition);
         rows.push(row);
