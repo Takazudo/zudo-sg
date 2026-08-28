@@ -32,7 +32,10 @@ const reportOutput =
 export default defineConfig({
   testDir: "./e2e",
   workers: 1,
-  timeout: 180_000,
+  // The probe intentionally opens fourteen fresh contexts; individual
+  // actions retain their normal Playwright timeouts while this test-level
+  // bound allows all built Composer/wasm lifecycles to complete.
+  timeout: 600_000,
   preserveOutput: "always",
   retries: process.env.CI ? 1 : 0,
   reporter: [["list"], ["json", { outputFile: reportOutput }]],

@@ -201,8 +201,14 @@ async function addProseMd(page: Page): Promise<string> {
   await chooser.getByRole("button", { name: "ProseMd", exact: true }).click();
   await expect(chooser).not.toBeVisible();
 
-  const selected = page.locator('.sg-composer-tree-select[aria-pressed="true"]');
+  // The chooser closes before the tree's add/select render necessarily lands.
+  // Filter the pressed control by the component title so an older selected
+  // SplitLayout cannot win the race while the new ProseMd row is mounting.
+  const selected = page
+    .locator('.sg-composer-tree-select[aria-pressed="true"]')
+    .filter({ hasText: "ProseMd" });
   await expect(selected).toHaveCount(1);
+  await expect(selected).toHaveAttribute("aria-pressed", "true");
   const nodeId = await selected.evaluate(
     (element) => element.closest("[data-sg-tree-node-id]")?.getAttribute("data-sg-tree-node-id") ?? "",
   );
@@ -565,7 +571,10 @@ async function runProbe(
 }
 
 test("captures the built Composer inline-edit newline matrix", async ({ browser }, testInfo) => {
-  test.setTimeout(180_000);
+  // Fourteen intentionally fresh browser contexts each boot the built
+  // Composer/wasm path; keep the overall bound generous without changing the
+  // focused locator/action assertion timeouts.
+  test.setTimeout(600_000);
   const matrix = projectMatrix(testInfo);
   const selectedRunMode = runMode();
   const rows: ProbeResult[] = [];
