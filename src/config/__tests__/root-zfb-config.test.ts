@@ -36,6 +36,14 @@ describe("root zfb integration contract", () => {
     );
   });
 
+  it("keeps the root bundle boundary and image dimensions enabled", () => {
+    expect(config.bundle).toEqual({
+      exclude: ["apps/demo/**"],
+      mainFields: ["main", "module"],
+    });
+    expect(config.markdown?.features?.imageDimensions).toEqual({});
+  });
+
   it("passes the complete host settings through the route descriptor", () => {
     const routes = config.plugins?.find(
       ({ name }) => name === "@takazudo/zudo-doc/plugins/routes",
