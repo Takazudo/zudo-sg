@@ -32,6 +32,7 @@ import type { PairResult, SchemeReport } from "./contrast-pair-matrix";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const COLORS_CSS_PATH = resolve(__dirname, "../packages/ui/styles/colors.css");
+const SYNTAX_CSS_PATH = resolve(__dirname, "../packages/ui/styles/syntax-highlight.css");
 const PREVIEW_CSS_PATH = resolve(__dirname, "../src/styles/preview.css");
 const PROSE_MD_CSS_PATH = resolve(__dirname, "../packages/ui/src/content/prose-md/prose-md.css");
 
@@ -40,7 +41,11 @@ export type Mode = "light" | "dark";
 const LINE_KEYS = ["vacuum", "process", "laser", "meeting", "beauty"] as const;
 
 function loadVars(): Map<string, string> {
-  return parseCssCustomProperties(readFileSync(COLORS_CSS_PATH, "utf8"));
+  const vars = parseCssCustomProperties(readFileSync(COLORS_CSS_PATH, "utf8"));
+  for (const [name, value] of parseCssCustomProperties(readFileSync(SYNTAX_CSS_PATH, "utf8"))) {
+    vars.set(name, value);
+  }
+  return vars;
 }
 
 /** Split a function's arguments without treating nested function commas as separators. */
@@ -262,8 +267,8 @@ const STANDALONE_SYNTAX_ALIASES = [
 ] as const;
 
 function standalonePreSpecs(mode: Mode, vars: Map<string, string>): Array<{ key: string; label: string; fg: string; bg: string; threshold: number }> {
-  // Deliberately do not add --zd-code-bg to this map: this is the external
-  // @zudo-sg/ui-only path, so the component's own var() fallback must win.
+  // The external package path owns --zfb-hi-bg directly; no doc-system bridge
+  // participates in resolving the component's real background declaration.
   const preBackground = resolveRef(loadProseMdPreBackground(), vars, mode);
   const specs = [{
     key: "prose-md-pre-fg-vs-standalone-background",
@@ -316,9 +321,8 @@ function evaluateMode(mode: Mode, vars: Map<string, string>): SchemeReport {
     { key: "focus-vs-surface-2", label: "focus / surface-2", fg: s("focus"), bg: surface2, threshold: 3 },
   ];
 
-  // The host preview scopes supply --zd-code-bg, but an external consumer of
-  // @zudo-sg/ui does not. Keep the component's source fallback in the gate and
-  // measure every highlighted role against that standalone fence surface.
+  // Keep the component's provider-owned source in the gate and measure every
+  // highlighted role against that standalone fence surface.
   specs.push(...standalonePreSpecs(mode, vars));
 
   for (const [name, railBg] of [

@@ -252,6 +252,9 @@ importers:
       '@zudo-composer/component-contract':
         specifier: git+https://github.com/Takazudo/zudo-composer.git#51f1c64a7639134254866458ff72b497da9c2f36
         version: https://codeload.github.com/Takazudo/zudo-composer/tar.gz/51f1c64a7639134254866458ff72b497da9c2f36
+      tailwindcss:
+        specifier: ^4.0.0
+        version: 4.3.1
       typescript:
         specifier: ^5.9.0
         version: 5.9.3

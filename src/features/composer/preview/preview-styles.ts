@@ -73,25 +73,6 @@ html[${COMPOSER_PREVIEW_DOC_ATTR}] {
   --color-danger:  light-dark(var(--palette-state-danger),  var(--palette-state-danger-dark));
   --color-warning: light-dark(var(--palette-state-warning), var(--palette-state-warning-dark));
   --color-info:    light-dark(var(--palette-state-info),    var(--palette-state-info-dark));
-  /* Syntax highlighting (#381) — kept IDENTICAL to src/styles/preview.css, which
-     carries the full rationale: zudo-doc's features.css bridges the zfb-hi-*
-     properties (what the hi-* fence classes read) onto zd-syntax-* / zd-code-*,
-     and a chrome-free preview document has none of those, so fences rendered
-     flat. The mapping mirrors zudo-doc's own SYNTAX_SEMANTIC_ALIASES rather than
-     any theme pack's literals, so nothing here can drift against upstream. */
-  --zd-code-fg: var(--color-fg);
-  /* Code surface, NOT --color-surface-2 — see src/styles/preview.css for the full
-     rationale (surface-2 is a mid tone in dark, dropping syntax hues under AA). */
-  --zd-code-bg: color-mix(in oklch, var(--color-bg) 80%, var(--color-surface-2));
-  --zd-syntax-comment:  var(--color-muted);
-  --zd-syntax-string:   var(--color-success);
-  --zd-syntax-number:   var(--color-warning);
-  --zd-syntax-keyword:  var(--color-accent);
-  --zd-syntax-callable: var(--color-info);
-  --zd-syntax-type:     var(--color-warning);
-  --zd-syntax-name:     var(--zd-code-fg);
-  --zd-syntax-inserted: var(--color-success);
-  --zd-syntax-deleted:  var(--color-danger);
 }
 
 /* ── Canvas ───────────────────────────────────────────────────────────────── */

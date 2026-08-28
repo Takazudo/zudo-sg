@@ -3,7 +3,10 @@ import { h } from "preact";
 import { defineComposer } from "@zudo-sg/ui";
 import type { ComposerMeta } from "@zudo-sg/ui";
 import * as ui from "@zudo-sg/ui";
-import { componentDefinitions } from "../../../../packages/ui/src/composer/definitions";
+import {
+  componentPackManifest,
+  componentRuntimeRegistry,
+} from "@zudo-sg/ui/composer-pack";
 import { storyModules } from "../sg-registry";
 import {
   buildComposerRegistry,
@@ -185,13 +188,16 @@ describe("isJsonSafe", () => {
 });
 
 describe("buildComposerRegistry (component sidecars)", () => {
-  it("projects the package-internal sidecars without importing story modules", () => {
-    const entries = buildComposerRegistry(componentDefinitions);
+  it("projects the public pack without importing story modules", () => {
+    const entries = buildComposerRegistry(
+      componentPackManifest.components,
+      componentRuntimeRegistry,
+    );
     expect(entries.map((entry) => entry.componentId)).toEqual(
-      componentDefinitions.map((definition) => definition.id),
+      componentPackManifest.components.map((definition) => definition.id),
     );
     expect(entries.map((entry) => entry.title)).toEqual(
-      componentDefinitions.map((definition) => definition.title),
+      componentPackManifest.components.map((definition) => definition.title),
     );
   });
 });
