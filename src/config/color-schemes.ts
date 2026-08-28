@@ -52,7 +52,7 @@ const darkMap: ModeMap = {
     codeBg: { base: 3 },
     codeFg: { base: 0 },
     success: { state: "success" },
-    danger: "oklch(.655 .170 25)",
+    danger: "oklch(.700 .170 25)",
     warning: { state: "warning" },
     info: { state: "info" },
     mermaidNodeBg: { base: 3 },

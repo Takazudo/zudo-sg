@@ -54,7 +54,7 @@ export const UI_PALETTE_COLORS: readonly UiPaletteColor[] = [
   { name: "accent-2", value: "oklch(.470 .120 56)" },
   { name: "accent-3", value: "oklch(.400 .096 56)" },
   { name: "state-danger", value: "oklch(.505 .170 25)" },
-  { name: "state-danger-dark", value: "oklch(.655 .170 25)" },
+  { name: "state-danger-dark", value: "oklch(.700 .170 25)" },
   { name: "state-success", value: "oklch(.470 .140 145)" },
   { name: "state-success-dark", value: "oklch(.680 .145 145)" },
   { name: "state-warning", value: "oklch(.490 .100 82)" },
