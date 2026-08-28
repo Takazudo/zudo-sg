@@ -265,9 +265,11 @@ export const previewTokenPanelConfig: PanelConfig = {
   // plugins/zdtp-apply-proxy-plugin.mjs for the endpoint/routing wiring. Routed
   // prefixes: palette + color → colors.css; spacing/text/font/leading/radius/
   // shadow → tokens.css (both files' top-level `:root`/`@theme` blocks are
-  // rewritable). The plugin's `createDevMiddlewareHandler` splits a mixed Apply
-  // into one sequential zdtp call per prefix so same-file tabs don't clobber
-  // each other — see that file's header comment + the shim's inline note.
+  // rewritable). The pinned zdtp >=0.4.7 handler coalesces a complete mixed
+  // Apply by resolved target file, so each same-file group is computed and
+  // written together and returned as one response row. Downgrading below
+  // 0.4.7 reintroduces the same-file clobber hazard; this is not a guarantee
+  // that a disk write failure is transactional.
   applyEndpoint,
   applyRouting,
 };
