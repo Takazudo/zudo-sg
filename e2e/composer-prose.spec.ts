@@ -610,7 +610,7 @@ test.describe.serial("Composer prose editing (#376)", () => {
     await openProseEditor(node(), editor());
     await page.keyboard.type("\n\n## Persisted heading");
     await saveButton().click();
-    const saved = "helloAAACCC!?\n\n## Persisted heading\n";
+    const saved = "helloAAACCC!?\n\n## Persisted heading";
     await expect(markdownField(page)).toHaveValue(saved);
 
     await page.reload();
