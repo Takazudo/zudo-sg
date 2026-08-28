@@ -29,5 +29,5 @@
       "@/*": ["src/*"]
     }
   },
-  "exclude": ["dist", "e2e/fixtures", "apps", "packages", "doc", "pages", "worktrees", "vendor", "_temp-resource", "src/**/__tests__", "scripts/**/__tests__", "vitest.config.ts"]
+  "exclude": ["dist", "e2e/fixtures", "fixtures", "apps", "packages", "doc", "pages", "worktrees", "vendor", "_temp-resource", "src/**/__tests__", "scripts/**/__tests__", "vitest.config.ts"]
 }

@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "packageManager": "pnpm@11.5.2",
   "main": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
@@ -13,7 +14,9 @@
     "./src/*": "./src/*"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --config vitest.config.ts",
+    "check": "pnpm run typecheck && pnpm run test"
   },
   "dependencies": {
     "@takazudo/zfb-md-wasm": "2.10.1",
@@ -26,8 +29,15 @@
   },
   "devDependencies": {
     "@zudo-composer/component-contract": "git+https://github.com/Takazudo/zudo-composer.git#51f1c64a7639134254866458ff72b497da9c2f36",
+    "@testing-library/jest-dom": "6.9.1",
+    "@testing-library/preact": "^3.2.4",
     "@types/node": "^22.0.0",
+    "happy-dom": "^16.8.1",
+    "jsdom": "^29.1.1",
+    "preact": "^10.29.1",
+    "preact-render-to-string": "^6.6.6",
     "tailwindcss": "^4.0.0",
-    "typescript": "^5.9.0"
+    "typescript": "^5.9.0",
+    "vitest": "^4.1.9"
   }
 }

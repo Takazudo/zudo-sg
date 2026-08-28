@@ -91,6 +91,9 @@ jobs:
       - name: Check composer-pack codegen
         run: pnpm check:composer-pack
 
+      - name: Check UI provider boundary
+        run: pnpm check:ui-provider-boundary
+
       - name: Check story-categories codegen
         run: pnpm check:story-categories
 
@@ -133,6 +136,23 @@ jobs:
 
       - name: Run unit tests
         run: pnpm test:unit
+
+  provider-conformance:
+    name: UI Provider Conformance
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: Check standalone UI package
+        run: pnpm test:ui-provider-package
+
+      - name: Verify exact provider install
+        run: pnpm verify:ui-provider-install -- --exact
 
   # ---------------------------------------------------------------------------
   # Job: Build
