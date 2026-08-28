@@ -13,6 +13,9 @@ import { colorSchemes } from "../src/config/color-schemes";
 import { schemeToCssPairs } from "../src/config/color-scheme-utils";
 import type { ColorScheme } from "../src/config/color-schemes";
 import { contrastRatio, colorMixSrgb, ADMONITION_TINT_PCT } from "../src/config/contrast-utils";
+import { loadPreviewVars, resolvePreviewVar, type Mode } from "./ui-contrast-pairs";
+
+export type FenceSurface = "doc-page" | "preview";
 
 export interface PairSpec {
   key: string;
@@ -22,9 +25,11 @@ export interface PairSpec {
   fgVar: string;
   bgVar: string;
   tintBg?: true;
+  /** Syntax pairs are evaluated against both source-defined fence surfaces. */
+  surface?: FenceSurface;
 }
 
-export const PAIR_MATRIX: PairSpec[] = [
+const BASE_PAIR_MATRIX: PairSpec[] = [
   // ── Tier 1 — text, AA ≥ 4.5:1 ──
   { key: "fg-vs-bg", label: "fg / bg", tier: 1, threshold: 4.5, fgVar: "--zd-fg", bgVar: "--zd-bg" },
   { key: "fg-vs-surface", label: "fg / surface", tier: 1, threshold: 4.5, fgVar: "--zd-fg", bgVar: "--zd-surface" },
@@ -54,6 +59,33 @@ export const PAIR_MATRIX: PairSpec[] = [
   { key: "mermaid-line-vs-bg", label: "mermaidLine / bg", tier: 2, threshold: 3.0, fgVar: "--zd-mermaid-line", bgVar: "--zd-bg" },
   { key: "image-overlay", label: "imageOverlayFg / imageOverlayBg", tier: 2, threshold: 3.0, fgVar: "--zd-image-overlay-fg", bgVar: "--zd-image-overlay-bg" },
 ];
+
+const SYNTAX_ROLES = [
+  ["comment", "--zd-syntax-comment"],
+  ["string", "--zd-syntax-string"],
+  ["number", "--zd-syntax-number"],
+  ["keyword", "--zd-syntax-keyword"],
+  ["callable", "--zd-syntax-callable"],
+  ["type", "--zd-syntax-type"],
+  ["name", "--zd-syntax-name"],
+  ["inserted", "--zd-syntax-inserted"],
+  ["deleted", "--zd-syntax-deleted"],
+] as const;
+
+/** Every syntax role is checked on both the doc page and the preview fence. */
+const SYNTAX_PAIR_MATRIX: PairSpec[] = SYNTAX_ROLES.flatMap(([role, fgVar]) =>
+  (["doc-page", "preview"] as const).map((surface) => ({
+    key: `syntax-${role}-vs-${surface}-fence`,
+    label: `${fgVar} / ${surface} fence`,
+    tier: 1 as const,
+    threshold: 4.5,
+    fgVar,
+    bgVar: "--zd-code-bg",
+    surface,
+  })),
+);
+
+export const PAIR_MATRIX: PairSpec[] = [...BASE_PAIR_MATRIX, ...SYNTAX_PAIR_MATRIX];
 
 // ---------------------------------------------------------------------------
 // Evaluation
@@ -87,10 +119,13 @@ export function getAllPresets(): Array<{ name: string; scheme: ColorScheme; sour
 
 export function evaluateScheme(name: string, scheme: ColorScheme, source: PresetSource): SchemeReport {
   const varMap = new Map(schemeToCssPairs(scheme));
+  const previewVars = loadPreviewVars();
+  const mode = inferMode(name, scheme);
 
   const pairs: PairResult[] = PAIR_MATRIX.map((spec) => {
-    const fg = varMap.get(spec.fgVar);
-    const rawBg = varMap.get(spec.bgVar);
+    const preview = spec.surface === "preview";
+    const fg = preview ? resolvePreviewVar(spec.fgVar, mode, previewVars) : varMap.get(spec.fgVar);
+    const rawBg = preview ? resolvePreviewVar(spec.bgVar, mode, previewVars) : varMap.get(spec.bgVar);
     if (fg === undefined || rawBg === undefined) {
       throw new Error(
         `Scheme "${name}": pair "${spec.key}" references an unknown CSS var (fgVar=${spec.fgVar}, bgVar=${spec.bgVar})`,
@@ -119,4 +154,14 @@ export function evaluateScheme(name: string, scheme: ColorScheme, source: Preset
     failCount: pairs.length - passCount,
     allPass: passCount === pairs.length,
   };
+}
+
+function inferMode(name: string, scheme: ColorScheme): Mode {
+  if (/dark/i.test(name)) return "dark";
+  if (/light/i.test(name)) return "light";
+  const bg = scheme.map.bg;
+  if (typeof bg !== "string" && "base" in bg) {
+    return bg.base === scheme.ramps.base.length - 1 ? "dark" : "light";
+  }
+  return "light";
 }
