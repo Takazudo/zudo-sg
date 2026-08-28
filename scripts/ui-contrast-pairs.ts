@@ -23,6 +23,8 @@
 import { readFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { parse as parseCss } from "postcss";
+import { formatCss, interpolate } from "culori";
 
 import { parseCssCustomProperties } from "./lib/css-var-parser.mjs";
 import { colorMixSrgb, contrastRatio } from "../src/config/contrast-utils";
@@ -30,8 +32,10 @@ import type { PairResult, SchemeReport } from "./contrast-pair-matrix";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const COLORS_CSS_PATH = resolve(__dirname, "../packages/ui/styles/colors.css");
+const PREVIEW_CSS_PATH = resolve(__dirname, "../src/styles/preview.css");
+const PROSE_MD_CSS_PATH = resolve(__dirname, "../packages/ui/src/content/prose-md/prose-md.css");
 
-type Mode = "light" | "dark";
+export type Mode = "light" | "dark";
 
 const LINE_KEYS = ["vacuum", "process", "laser", "meeting", "beauty"] as const;
 
@@ -39,29 +43,170 @@ function loadVars(): Map<string, string> {
   return parseCssCustomProperties(readFileSync(COLORS_CSS_PATH, "utf8"));
 }
 
-/** Resolve a `var(--palette-…)` reference (or a bare literal) to its oklch value. */
-function resolveRef(expr: string, vars: Map<string, string>): string {
-  const trimmed = expr.trim();
-  const m = /^var\(\s*(--[a-z0-9-]+)\s*\)$/i.exec(trimmed);
-  if (!m) return trimmed;
-  const value = vars.get(m[1]!);
-  if (value === undefined) {
-    throw new Error(`ui contrast audit: palette ref "${m[1]}" not found in colors.css`);
+/** Split a function's arguments without treating nested function commas as separators. */
+function splitFunctionArgs(input: string): string[] {
+  const args: string[] = [];
+  let start = 0;
+  let depth = 0;
+  let quote: string | undefined;
+  for (let i = 0; i < input.length; i++) {
+    const char = input[i]!;
+    if (quote !== undefined) {
+      if (char === quote && input[i - 1] !== "\\") quote = undefined;
+      continue;
+    }
+    if (char === '"' || char === "'") {
+      quote = char;
+    } else if (char === "(") {
+      depth++;
+    } else if (char === ")") {
+      depth--;
+      if (depth < 0) throw new Error(`ui contrast audit: unbalanced color expression "${input}"`);
+    } else if (char === "," && depth === 0) {
+      args.push(input.slice(start, i).trim());
+      start = i + 1;
+    }
   }
-  return value.trim();
+  if (quote !== undefined || depth !== 0) {
+    throw new Error(`ui contrast audit: unbalanced color expression "${input}"`);
+  }
+  args.push(input.slice(start).trim());
+  return args;
+}
+
+function functionArgs(expr: string, name: string): string[] | undefined {
+  const prefix = `${name}(`;
+  if (!expr.toLowerCase().startsWith(prefix)) return undefined;
+  if (!expr.endsWith(")")) throw new Error(`ui contrast audit: malformed ${name}() expression "${expr}"`);
+  return splitFunctionArgs(expr.slice(prefix.length, -1));
+}
+
+interface VarCall {
+  name: string;
+  fallback?: string;
+}
+
+function parseVarCall(expr: string): VarCall | undefined {
+  const args = functionArgs(expr, "var");
+  if (args === undefined) return undefined;
+  if (args.length < 1 || args.length > 2 || !/^--[a-z0-9_-]+$/i.test(args[0]!)) {
+    throw new Error(`ui contrast audit: malformed var() expression "${expr}"`);
+  }
+  return { name: args[0]!, fallback: args[1] };
+}
+
+interface ColorStop {
+  expr: string;
+  weight?: number;
+}
+
+/** Parse one color-mix stop, whose optional percentage is the final token. */
+function parseColorStop(raw: string): ColorStop {
+  const match = /^(.*?)(?:\s+([+-]?(?:\d+(?:\.\d*)?|\.\d+)%))?$/.exec(raw.trim());
+  if (!match || !match[1]!.trim()) throw new Error(`ui contrast audit: malformed color-mix stop "${raw}"`);
+  return {
+    expr: match[1]!.trim(),
+    weight: match[2] === undefined ? undefined : Number.parseFloat(match[2]),
+  };
+}
+
+/** Resolve an OKLCH color-mix with CSS's omitted-weight semantics. */
+function resolveColorMix(args: string[], vars: Map<string, string>, mode: Mode, chain: string[]): string {
+  if (args.length !== 3 || !/^in\s+oklch(?:\s|$)/i.test(args[0]!)) {
+    throw new Error(`ui contrast audit: only two-color color-mix(in oklch, …) is supported`);
+  }
+  const first = parseColorStop(args[1]!);
+  const second = parseColorStop(args[2]!);
+  let firstWeight: number;
+  let secondWeight: number;
+  if (first.weight === undefined && second.weight === undefined) {
+    firstWeight = 50;
+    secondWeight = 50;
+  } else if (first.weight === undefined) {
+    secondWeight = second.weight!;
+    firstWeight = 100 - secondWeight;
+  } else if (second.weight === undefined) {
+    firstWeight = first.weight;
+    secondWeight = 100 - firstWeight;
+  } else {
+    firstWeight = first.weight;
+    secondWeight = second.weight;
+  }
+  const total = firstWeight + secondWeight;
+  if (!(total > 0)) throw new Error(`ui contrast audit: color-mix() has no positive color weight`);
+
+  const firstColor = resolveRef(first.expr, vars, mode, chain);
+  const secondColor = resolveRef(second.expr, vars, mode, chain);
+  const interpolator = interpolate([firstColor, secondColor], "oklch");
+  const mixed = interpolator(secondWeight / total);
+  if (!mixed) throw new Error(`ui contrast audit: could not parse color-mix() colors`);
+  return formatCss(mixed);
+}
+
+/**
+ * Resolve the CSS color expression used by the UI token sources.
+ *
+ * This intentionally follows CSS custom-property fallback semantics instead
+ * of replacing the real source with a precomputed color: a missing or invalid
+ * first branch of `var(--x, fallback)` selects the fallback, nested `var()`
+ * calls are followed, `light-dark()` selects the active side, and
+ * `color-mix(in oklch, …)` is interpolated in OKLCH (never sRGB).
+ */
+export function resolveRef(
+  expr: string,
+  vars: Map<string, string>,
+  mode: Mode = "light",
+  chain: string[] = [],
+): string {
+  const trimmed = expr.trim();
+  const varCall = parseVarCall(trimmed);
+  if (varCall !== undefined) {
+    if (chain.includes(varCall.name)) {
+      throw new Error(`ui contrast audit: cyclic var() reference (${[...chain, varCall.name].join(" -> ")})`);
+    }
+    const value = vars.get(varCall.name);
+    if (value === undefined) {
+      if (varCall.fallback !== undefined) return resolveRef(varCall.fallback, vars, mode, chain);
+      throw new Error(`ui contrast audit: palette ref "${varCall.name}" not found in source CSS`);
+    }
+    try {
+      return resolveRef(value, vars, mode, [...chain, varCall.name]);
+    } catch (error) {
+      if (varCall.fallback !== undefined) return resolveRef(varCall.fallback, vars, mode, chain);
+      throw error;
+    }
+  }
+
+  const lightDarkArgs = functionArgs(trimmed, "light-dark");
+  if (lightDarkArgs !== undefined) {
+    if (lightDarkArgs.length !== 2) throw new Error(`ui contrast audit: malformed light-dark() expression "${expr}"`);
+    return resolveRef(lightDarkArgs[mode === "light" ? 0 : 1]!, vars, mode, chain);
+  }
+
+  const colorMixArgs = functionArgs(trimmed, "color-mix");
+  if (colorMixArgs !== undefined) return resolveColorMix(colorMixArgs, vars, mode, chain);
+
+  return trimmed;
 }
 
 /** Resolve a Tier-2 `--color-<token>` to its {light, dark} literals. */
-function sides(token: string, vars: Map<string, string>): { light: string; dark: string } {
+export function sides(token: string, vars: Map<string, string>): { light: string; dark: string } {
   const raw = vars.get(`--color-${token}`);
   if (raw === undefined) {
     throw new Error(`ui contrast audit: --color-${token} not found in colors.css`);
   }
-  const ld = /^light-dark\(\s*(.+?)\s*,\s*(.+?)\s*\)$/i.exec(raw);
-  if (ld) return { light: resolveRef(ld[1]!, vars), dark: resolveRef(ld[2]!, vars) };
+  const lightDarkArgs = functionArgs(raw, "light-dark");
+  if (lightDarkArgs !== undefined) {
+    if (lightDarkArgs.length !== 2) throw new Error(`ui contrast audit: malformed light-dark() expression "${raw}"`);
+    return {
+      light: resolveRef(lightDarkArgs[0]!, vars, "light"),
+      dark: resolveRef(lightDarkArgs[1]!, vars, "dark"),
+    };
+  }
   // Single-value (scheme-independent, e.g. rail-*): same on both sides.
-  const single = resolveRef(raw, vars);
-  return { light: single, dark: single };
+  const light = resolveRef(raw, vars, "light");
+  const dark = resolveRef(raw, vars, "dark");
+  return { light, dark };
 }
 
 function palette(name: string, vars: Map<string, string>): string {
@@ -70,6 +215,71 @@ function palette(name: string, vars: Map<string, string>): string {
     throw new Error(`ui contrast audit: --palette-${name} not found in colors.css`);
   }
   return value.trim();
+}
+
+/** Merge the package palette with the real styleguide preview scope. */
+export function loadPreviewVars(): Map<string, string> {
+  const vars = loadVars();
+  for (const [name, value] of parseCssCustomProperties(readFileSync(PREVIEW_CSS_PATH, "utf8"))) {
+    vars.set(name, value);
+  }
+  return vars;
+}
+
+/** Resolve a custom property from the merged preview source for one scheme. */
+export function resolvePreviewVar(name: string, mode: Mode, vars = loadPreviewVars()): string {
+  const value = vars.get(name);
+  if (value === undefined) throw new Error(`ui contrast audit: preview token "${name}" not found in source CSS`);
+  return resolveRef(value, vars, mode);
+}
+
+/** Read the actual `.zc-prose-md pre` background declaration from package CSS. */
+export function loadProseMdPreBackground(): string {
+  const root = parseCss(readFileSync(PROSE_MD_CSS_PATH, "utf8"));
+  let background: string | undefined;
+  root.walkRules((rule) => {
+    if (rule.selector !== ".zc-prose-md pre") return;
+    rule.walkDecls("background-color", (decl) => {
+      background = decl.value.trim();
+    });
+  });
+  if (background === undefined) {
+    throw new Error(`ui contrast audit: .zc-prose-md pre background-color not found in prose-md.css`);
+  }
+  return background;
+}
+
+const STANDALONE_SYNTAX_ALIASES = [
+  ["comment", "muted"],
+  ["string", "success"],
+  ["number", "warning"],
+  ["keyword", "accent"],
+  ["callable", "info"],
+  ["type", "warning"],
+  ["name", "fg"],
+  ["inserted", "success"],
+  ["deleted", "danger"],
+] as const;
+
+function standalonePreSpecs(mode: Mode, vars: Map<string, string>): Array<{ key: string; label: string; fg: string; bg: string; threshold: number }> {
+  // Deliberately do not add --zd-code-bg to this map: this is the external
+  // @zudo-sg/ui-only path, so the component's own var() fallback must win.
+  const preBackground = resolveRef(loadProseMdPreBackground(), vars, mode);
+  const specs = [{
+    key: "prose-md-pre-fg-vs-standalone-background",
+    label: "standalone ProseMd pre fg / fallback fence background",
+    fg: sides("fg", vars)[mode],
+    bg: preBackground,
+    threshold: 4.5,
+  }];
+  specs.push(...STANDALONE_SYNTAX_ALIASES.map(([role, token]) => ({
+    key: `prose-md-pre-${role}-vs-standalone-background`,
+    label: `standalone ProseMd pre ${role} / fallback fence background`,
+    fg: sides(token, vars)[mode],
+    bg: preBackground,
+    threshold: 4.5,
+  })));
+  return specs;
 }
 
 function evaluateMode(mode: Mode, vars: Map<string, string>): SchemeReport {
@@ -105,6 +315,11 @@ function evaluateMode(mode: Mode, vars: Map<string, string>): SchemeReport {
     { key: "focus-vs-surface", label: "focus / surface", fg: s("focus"), bg: surface, threshold: 3 },
     { key: "focus-vs-surface-2", label: "focus / surface-2", fg: s("focus"), bg: surface2, threshold: 3 },
   ];
+
+  // The host preview scopes supply --zd-code-bg, but an external consumer of
+  // @zudo-sg/ui does not. Keep the component's source fallback in the gate and
+  // measure every highlighted role against that standalone fence surface.
+  specs.push(...standalonePreSpecs(mode, vars));
 
   for (const [name, railBg] of [
     ["rail-bg", s("rail-bg")],

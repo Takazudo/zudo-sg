@@ -1,6 +1,16 @@
 import { defineConfig } from "@playwright/test";
+import { dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+import { createDevServer } from "./scripts/lib/playwright-e2e-server.mjs";
 
-const DEV_FILE_PORT = 4702;
+const PROJECT_ROOT = dirname(fileURLToPath(import.meta.url));
+const devServer = createDevServer({
+  entry: "file-dev",
+  projectRoot: PROJECT_ROOT,
+  command: "node scripts/run-composer-file-e2e-server.mjs --port {port}",
+  urlPath: "/composer/",
+  timeout: 120_000,
+});
 
 export default defineConfig({
   testDir: "./e2e",
@@ -9,12 +19,7 @@ export default defineConfig({
   reporter: process.env.CI
     ? [["list"], ["json", { outputFile: "playwright-report/composer-file.json" }]]
     : "list",
-  use: { baseURL: `http://localhost:${DEV_FILE_PORT}` },
-  webServer: {
-    command: `node scripts/run-composer-file-e2e-server.mjs --port ${DEV_FILE_PORT}`,
-    url: `http://localhost:${DEV_FILE_PORT}/composer/`,
-    reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
-  },
+  use: { baseURL: devServer.origin },
+  webServer: devServer.webServer,
   projects: [{ name: "composer-file-provider", testMatch: "composer-file-provider.spec.ts" }],
 });

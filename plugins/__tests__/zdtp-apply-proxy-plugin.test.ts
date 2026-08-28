@@ -8,9 +8,9 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-// Imported straight from zdtp so the same-file tests can drive the RAW,
-// un-shimmed handler (to prove the clobber) alongside the shimmed one, and
-// load the real committed routing map the plugin ships with.
+// Imported straight from zdtp so the canonical whole-payload test can drive
+// the upstream handler directly, and load the real committed routing map the
+// plugin ships with.
 import { createApplyHandler, loadRoutingFromFile } from "@takazudo/zdtp/server";
 import zdtpApplyProxyPlugin, {
   APPLY_PATH,
@@ -271,6 +271,23 @@ describe("createDevMiddlewareHandler", () => {
 
     expect(res.status).toBe(400);
   });
+
+  it("returns zdtp's 400 for an empty tokens object", async () => {
+    const handler = createDevMiddlewareHandler({
+      rootDir: sandbox,
+      writeRoot: sandbox,
+      routing: { palette: "colors.css" },
+    });
+    const before = readColorsCss();
+
+    const res = await post(handler, { tokens: {} });
+
+    expect(res.status).toBe(400);
+    const payload = JSON.parse(res.body ?? "{}");
+    expect(payload.ok).toBe(false);
+    expect(payload.error).toContain("at least one entry");
+    expect(readColorsCss()).toBe(before);
+  });
 });
 
 describe("toFetchRequest", () => {
@@ -316,7 +333,7 @@ describe("setup() — virtual:zdtp-apply-config dev/build gating", () => {
   });
 });
 
-// ── Routing extension + same-file coalescing shim ─────────────────────────
+// ── Routing extension + native same-file coalescing ────────────────────────
 // These exercise the plugin against the REAL committed zdtp-panel-routing.json
 // (not a hand-written fixture map, which would drift), writing into temp
 // fixtures shaped like the real @theme/:root blocks. The write-root is nested
@@ -339,13 +356,20 @@ const REAL_COLORS_FIXTURE = `:root {
 }
 `;
 
-// Shaped like packages/ui/styles/tokens.css: one `@theme` block carrying the
-// spacing/font/shadow families. --shadow-card is deliberately a multi-line,
-// multi-layer value with commas inside oklch() to exercise the value scanner.
+// Shaped like packages/ui/styles/tokens.css: one `@theme` block carrying one
+// representative variable from each routed family. --shadow-card is
+// deliberately a multi-line, multi-layer value with commas inside oklch() to
+// exercise the value scanner.
 const REAL_TOKENS_FIXTURE = `@theme {
   --spacing-hsp-md: 0.75rem;
 
+  --text-body: 1.25rem;
+
   --font-weight-bold: 700;
+
+  --leading-snug: 1.4;
+
+  --radius-md: 0.5rem;
 
   --shadow-card:
     0 0.5px 1px oklch(.185 .005 65 / 0.05),
@@ -373,7 +397,7 @@ describe("zdtp-panel-routing.json (committed routing map)", () => {
   });
 });
 
-describe("createDevMiddlewareHandler — real routing map + same-file shim", () => {
+describe("apply routing — real map + native whole-payload coalescing", () => {
   const stylesDir = () => join(sandbox, STYLES_REL);
   const readReal = (file: "colors.css" | "tokens.css") =>
     readFileSync(join(stylesDir(), file), "utf-8");
@@ -386,9 +410,8 @@ describe("createDevMiddlewareHandler — real routing map + same-file shim", () 
     });
   }
 
-  // Raw, un-shimmed zdtp handler — the same factory the shim wraps. Used to
-  // confirm zdtp no longer has the read-all-then-write-all clobber the shim
-  // was built to work around (fixed upstream in zdtp 0.4.7, #527).
+  // Raw zdtp handler — the upstream factory used by the plugin. The canonical
+  // whole-payload regression below verifies native same-file coalescing.
   function rawHandler() {
     return createApplyHandler({
       rootDir: sandbox,
@@ -454,85 +477,69 @@ describe("createDevMiddlewareHandler — real routing map + same-file shim", () 
     expect(css).not.toContain("--color-fg: light-dark(");
   });
 
-  // ── (d) SAME-FILE pairs: upstream fix confirmation (raw) + shim regression
-  //     guard (shim) ── zdtp 0.4.7 (#527) fixed the read-all-then-write-all
-  //     clobber this shim was built to work around (upstream bug-report sub
-  //     #202) by coalescing same-file token groups inside createApplyHandler
-  //     itself — see node_modules/@takazudo/zdtp/CHANGELOG.md's 0.4.7 entry.
-  //     The raw handler no longer clobbers either pair below; kept as a
-  //     regression guard in case a future zdtp bump reintroduces it. The shim
-  //     stays in place (harmless on top of the fixed upstream behavior) —
-  //     whether it's still needed at all is a separate follow-up.
-
-  it("(d) palette + color → colors.css: RAW zdtp handler no longer clobbers (fixed upstream, zdtp 0.4.7 #527)", async () => {
-    const { status } = await postRaw(rawHandler(), {
+  it("RAW createApplyHandler applies one whole payload across both target files", async () => {
+    const newValues = {
       "--palette-base-4": "oklch(.250 .006 65)",
       "--color-fg": "red",
-    });
-    expect(status).toBe(200);
-    const css = readReal("colors.css");
-    const hasPalette = css.includes("--palette-base-4: oklch(.250 .006 65);");
-    const hasColor = css.includes("--color-fg: red;");
-    // createApplyHandler now coalesces same-file groups before reading/writing,
-    // so both edits land — no clobber.
-    expect(hasPalette && hasColor).toBe(true);
-  });
-
-  it("(d) palette + color → colors.css: SHIM lands BOTH edits", async () => {
-    const res = await post(realHandler(), {
-      tokens: {
-        "--palette-base-4": "oklch(.250 .006 65)",
-        "--color-fg": "red",
-      },
-    });
-    expect(res.status).toBe(200);
-    const payload = JSON.parse(res.body ?? "{}");
-    expect(payload.ok).toBe(true);
-    const css = readReal("colors.css");
-    expect(css).toContain("--palette-base-4: oklch(.250 .006 65);");
-    expect(css).toContain("--color-fg: red;");
-    // The two same-file prefix calls must be COALESCED into one `updated` row —
-    // zdtp's result modal keys rows by `file`, so a duplicate `file` would render
-    // as split/partial sections (and collide as Preact keys). One row, both vars.
-    const colorRows = (payload.updated ?? []).filter(
-      (u: { file?: string }) => u.file?.endsWith("colors.css"),
-    );
-    expect(colorRows).toHaveLength(1);
-    expect(colorRows[0].changed).toEqual(
-      expect.arrayContaining(["--palette-base-4", "--color-fg"]),
-    );
-    // No file appears twice across the whole `updated` list.
-    const files = (payload.updated ?? []).map((u: { file?: string }) => u.file);
-    expect(new Set(files).size).toBe(files.length);
-  });
-
-  it("(d) spacing + font → tokens.css: RAW zdtp handler no longer clobbers (fixed upstream, zdtp 0.4.7 #527)", async () => {
-    const { status } = await postRaw(rawHandler(), {
       "--spacing-hsp-md": "0.8rem",
+      "--text-body": "1.5rem",
       "--font-weight-bold": "800",
-    });
+      "--leading-snug": "1.6",
+      "--radius-md": "0.75rem",
+      "--shadow-card":
+        "0 1px 2px oklch(.2 .01 65 / 0.1), 0 4px 8px oklch(.2 .01 65 / 0.1)",
+    };
+    const { status, json } = await postRaw(rawHandler(), newValues);
+
     expect(status).toBe(200);
-    const css = readReal("tokens.css");
-    const hasSpacing = css.includes("--spacing-hsp-md: 0.8rem;");
-    const hasFont = css.includes("--font-weight-bold: 800;");
-    expect(hasSpacing && hasFont).toBe(true);
+    expect(json.ok).toBe(true);
+    expect(json.unknownCssVars).toEqual([]);
+    expect(json.unchangedCssVars).toEqual([]);
+    expect(json.unknownOutsideBlockCssVars).toEqual([]);
+    expect(readReal("colors.css")).toContain(
+      "--palette-base-4: oklch(.250 .006 65);",
+    );
+    expect(readReal("colors.css")).toContain("--color-fg: red;");
+    expect(readReal("tokens.css")).toContain("--spacing-hsp-md: 0.8rem;");
+    expect(readReal("tokens.css")).toContain("--text-body: 1.5rem;");
+    expect(readReal("tokens.css")).toContain("--font-weight-bold: 800;");
+    expect(readReal("tokens.css")).toContain("--leading-snug: 1.6;");
+    expect(readReal("tokens.css")).toContain("--radius-md: 0.75rem;");
+    expect(readReal("tokens.css")).toContain(`${newValues["--shadow-card"]};`);
+
+    const rows = json.updated as Array<{
+      file: string;
+      changed: string[];
+      unchanged: string[];
+      unknown: string[];
+      unknownOutsideBlock: string[];
+    }>;
+    expect(rows).toHaveLength(2);
+    expect(new Set(rows.map((row) => row.file)).size).toBe(2);
+    expect(rows.map((row) => row.file).sort()).toEqual([
+      "packages/ui/styles/colors.css",
+      "packages/ui/styles/tokens.css",
+    ]);
+
+    const colorsRow = rows.find((row) => row.file.endsWith("colors.css"));
+    const tokensRow = rows.find((row) => row.file.endsWith("tokens.css"));
+    expect(colorsRow?.changed).toEqual(["--palette-base-4", "--color-fg"]);
+    expect(tokensRow?.changed).toEqual([
+      "--spacing-hsp-md",
+      "--text-body",
+      "--font-weight-bold",
+      "--leading-snug",
+      "--radius-md",
+      "--shadow-card",
+    ]);
+    for (const row of rows) {
+      expect(row.unchanged).toEqual([]);
+      expect(row.unknown).toEqual([]);
+      expect(row.unknownOutsideBlock).toEqual([]);
+    }
   });
 
-  it("(d) spacing + font → tokens.css: SHIM lands BOTH edits", async () => {
-    const res = await post(realHandler(), {
-      tokens: {
-        "--spacing-hsp-md": "0.8rem",
-        "--font-weight-bold": "800",
-      },
-    });
-    expect(res.status).toBe(200);
-    expect(JSON.parse(res.body ?? "{}").ok).toBe(true);
-    const css = readReal("tokens.css");
-    expect(css).toContain("--spacing-hsp-md: 0.8rem;");
-    expect(css).toContain("--font-weight-bold: 800;");
-  });
-
-  it("(e) mixed-file POST (--palette-* + --spacing-*) succeeds and updates both files", async () => {
+  it("mixed-file POST (--palette-* + --spacing-*) succeeds and updates both files", async () => {
     const res = await post(realHandler(), {
       tokens: {
         "--palette-base-0": "oklch(.9 .01 65)",
@@ -545,29 +552,22 @@ describe("createDevMiddlewareHandler — real routing map + same-file shim", () 
     expect(readReal("tokens.css")).toContain("--spacing-hsp-md: 0.7rem;");
   });
 
-  it("(f) 3 prefixes → tokens.css coalesce into ONE updated row", async () => {
-    // spacing + font + shadow all route to tokens.css → three sequential prefix
-    // calls, one coalesced `updated` row.
+  it("computes every routed file before writing when a later file has no token block", async () => {
+    const colorsBefore = readReal("colors.css");
+    writeFileSync(join(stylesDir(), "tokens.css"), "/* no :root or @theme block */\n");
+
     const res = await post(realHandler(), {
       tokens: {
+        "--palette-base-4": "oklch(.250 .006 65)",
         "--spacing-hsp-md": "0.8rem",
-        "--font-weight-bold": "800",
-        "--shadow-card": "0 1px 2px oklch(.2 .01 65 / 0.1)",
       },
     });
-    expect(res.status).toBe(200);
+
+    expect(res.status).toBe(409);
     const payload = JSON.parse(res.body ?? "{}");
-    expect(payload.ok).toBe(true);
-    const tokenRows = (payload.updated ?? []).filter(
-      (u: { file?: string }) => u.file?.endsWith("tokens.css"),
-    );
-    expect(tokenRows).toHaveLength(1);
-    expect(tokenRows[0].changed).toEqual(
-      expect.arrayContaining(["--spacing-hsp-md", "--font-weight-bold", "--shadow-card"]),
-    );
-    const css = readReal("tokens.css");
-    expect(css).toContain("--spacing-hsp-md: 0.8rem;");
-    expect(css).toContain("--font-weight-bold: 800;");
+    expect(payload.ok).toBe(false);
+    expect(payload.error).toContain("No top-level");
+    expect(readReal("colors.css")).toBe(colorsBefore);
   });
 
   it("still returns zdtp's single 400 when the POST carries an unroutable prefix", async () => {

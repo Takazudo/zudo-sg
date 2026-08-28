@@ -11,6 +11,10 @@ import { COMPOSITION_SCHEMA_VERSION } from "@/composer";
 import { composerEntries } from "@/styleguide/data/composer-registry";
 import { CompositionCanvas, focusByToken, type CompositionCanvasProps } from "../renderer";
 import type { PreviewSession } from "../protocol";
+import {
+  INLINE_EDIT_BOUNDARY_CASES,
+  INLINE_EDIT_NEWLINE_CLEAR_CASES,
+} from "./inline-edit-newline-cases";
 
 const EDIT: PreviewSession = { mode: "edit", theme: "light", selectedId: null };
 const PREVIEW: PreviewSession = { mode: "preview", theme: "light", selectedId: null };
@@ -591,21 +595,20 @@ describe("inline text editing (issue #257)", () => {
    */
   function openSession(nodeId: string, inner: string, document = SPLIT) {
     const onCommitInlineEdit = vi.fn();
-    const utils = render(
-      h(CompositionCanvas, {
-        document,
-        entries: composerEntries,
-        session: { ...EDIT, selectedId: nodeId },
-        onSelect: vi.fn(),
-        onRequestAdd: vi.fn(),
-        onRequestNodeMenu: vi.fn(),
-        onRequestInsertMenu: vi.fn(),
-        onCommitInlineEdit,
-      }),
-    );
+    const props: CompositionCanvasProps = {
+      document,
+      entries: composerEntries,
+      session: { ...EDIT, selectedId: nodeId },
+      onSelect: vi.fn(),
+      onRequestAdd: vi.fn(),
+      onRequestNodeMenu: vi.fn(),
+      onRequestInsertMenu: vi.fn(),
+      onCommitInlineEdit,
+    };
+    const utils = render(h(CompositionCanvas, props));
     const target = utils.container.querySelector(`[data-zc-node-id="${nodeId}"] ${inner}`)!;
     fireEvent.click(target);
-    return { ...utils, onCommitInlineEdit };
+    return { ...utils, onCommitInlineEdit, props };
   }
 
   describe("entering a session", () => {
@@ -998,6 +1001,60 @@ describe("inline text editing (issue #257)", () => {
         0,
       );
     });
+
+    it.each(INLINE_EDIT_NEWLINE_CLEAR_CASES)(
+      "commits an emptied $probe as an exact empty value",
+      (probe) => {
+        const document = doc([node("probe", "ui.prose-p", { children: probe.seed })]);
+        const { container, onCommitInlineEdit } = openSession("probe", "p", document);
+        const editable = editableOf(container, "probe")!;
+        editable.innerHTML = probe.html;
+        fireEvent.blur(editable);
+
+        expect(onCommitInlineEdit).toHaveBeenCalledTimes(1);
+        expect(onCommitInlineEdit).toHaveBeenCalledWith("probe", "children", probe.expected, 0);
+      },
+    );
+
+    it("keeps a no-edit literal newline as data and skips the commit", () => {
+      const document = doc([node("probe", "ui.prose-p", { children: "\n" })]);
+      const { container, onCommitInlineEdit } = openSession("probe", "p", document);
+      const editable = editableOf(container, "probe")!;
+      expect(editable.textContent).toBe("\n");
+      fireEvent.blur(editable);
+
+      expect(onCommitInlineEdit).not.toHaveBeenCalled();
+    });
+
+    it.each(INLINE_EDIT_BOUNDARY_CASES)(
+      "normalizes $probe at the plain-session commit boundary",
+      (probe, index) => {
+        const document = doc([node("probe", "ui.prose-p", { children: probe.seed })]);
+        const { container, onCommitInlineEdit, rerender, props } = openSession("probe", "p", document);
+        const editable = editableOf(container, "probe")!;
+        editable.innerHTML = probe.html;
+
+        if (index % 2 === 0) {
+          fireEvent.blur(editable);
+        } else {
+          act(() =>
+            rerender(
+              h(CompositionCanvas, {
+                ...props,
+                session: { ...props.session, mode: "preview" },
+              }),
+            ),
+          );
+        }
+
+        if (probe.expected === probe.seed) {
+          expect(onCommitInlineEdit).not.toHaveBeenCalled();
+        } else {
+          expect(onCommitInlineEdit).toHaveBeenCalledTimes(1);
+          expect(onCommitInlineEdit).toHaveBeenCalledWith("probe", "children", probe.expected, 0);
+        }
+      },
+    );
   });
 });
 

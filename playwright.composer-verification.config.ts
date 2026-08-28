@@ -1,6 +1,18 @@
 import { defineConfig } from "@playwright/test";
+import { dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+import { createStaticPreviewServer } from "./scripts/lib/playwright-e2e-server.mjs";
 
-const STATIC_PORT = 4704;
+const PROJECT_ROOT = dirname(fileURLToPath(import.meta.url));
+const staticServer = createStaticPreviewServer({
+  entry: "verification",
+  projectRoot: PROJECT_ROOT,
+  distPath: "dist",
+  buildCommand: "pnpm build",
+  command: "pnpm exec zfb preview --port {port}",
+  urlPath: "/composer/",
+  timeout: 60_000,
+});
 
 export default defineConfig({
   testDir: "./e2e",
@@ -10,13 +22,8 @@ export default defineConfig({
   reporter: process.env.CI
     ? [["list"], ["json", { outputFile: "playwright-report/composer-verification.json" }]]
     : "list",
-  use: { baseURL: `http://localhost:${STATIC_PORT}` },
-  webServer: {
-    command: `pnpm exec zfb preview --port ${STATIC_PORT}`,
-    url: `http://localhost:${STATIC_PORT}/composer/`,
-    reuseExistingServer: !process.env.CI,
-    timeout: 60_000,
-  },
+  use: { baseURL: staticServer.origin },
+  webServer: staticServer.webServer,
   projects: [
     {
       name: "composer-verification",

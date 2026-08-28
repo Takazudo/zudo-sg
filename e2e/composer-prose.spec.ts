@@ -42,6 +42,7 @@ const SAVE = ".zc-prose-save";
 const SAVEBAR = ".zc-prose-savebar";
 const DIALOG = ".zc-prose-dialog";
 const DIALOG_ACTION = ".zc-prose-dialog-action";
+const HELLO_TRAILING_NEWLINE = "hello\n";
 
 declare global {
   interface Window {
@@ -224,32 +225,28 @@ test.describe.serial("Composer prose editing (#376)", () => {
     await setMarkdown(page, node(), "# Ignored\n\n## Live edit\n\n```ts\nconst x = 1;\n```\n", "Live edit");
     await expect(block.locator("h2")).toHaveText("Live edit");
     await expect(block.locator("pre.hi-root .hi-kw").first()).toHaveText("const");
-
-    // Back to a small, newline-free value: every later step compares exact
-    // stored text, and a trailing newline in a `contenteditable` is subject to
-    // the browser's own placeholder handling (see issue #380).
-    await setMarkdown(page, node(), "hello", "hello");
   });
 
   // ── 3 ─────────────────────────────────────────────────────────────────────
-  test("03 - double-click opens a RAW-SOURCE editable with the caret at the end", async () => {
-    await setMarkdown(page, node(), "## Heading\n\n`code` and text.", "code and text.");
+  test("03 - double-click opens exact raw source with trailing and interior blank lines", async () => {
+    await setMarkdown(page, node(), "## Heading\n\n`code` and text.\n", "code and text.");
 
     await openProseEditor(node(), editor());
     // The source itself, verbatim — markdown syntax visible as literal text,
     // not the rendered tree (the component is not mounted underneath).
-    expect(await editorText(editor())).toBe("## Heading\n\n`code` and text.");
+    expect(await editorText(editor())).toBe("## Heading\n\n`code` and text.\n");
     await expect(node().locator(".zc-prose-md")).toHaveCount(0);
     await expect(editor()).toHaveAttribute("contenteditable", "plaintext-only");
     await expect(editor()).toHaveAttribute("aria-label", "Markdown source");
     await expect(editor()).toHaveCSS("white-space", "pre-wrap");
     await expect(editor()).toHaveCSS("font-family", /mono/);
 
-    // Caret collapsed at the end, so the first keystroke APPENDS. Entering
-    // consumes a click on the rendered block, and the source that replaces it
-    // has an unrelated layout — a caret left at the pointer would sit at an
-    // arbitrary offset, and a double-click's word-select would leave a
-    // selection there for the next keystroke to replace.
+    // Caret collapsed at the logical end, so the first keystroke inserts at
+    // the end of the source, just before its deliberate terminal newline.
+    // Entering consumes a click on the rendered block, and the source that
+    // replaces it has an unrelated layout — a caret left at the pointer would
+    // sit at an arbitrary offset, and a double-click's word-select would leave
+    // a selection there for the next keystroke to replace.
     const caret = await editor().evaluate((el) => {
       const selection = el.ownerDocument.defaultView!.getSelection()!;
       return {
@@ -272,14 +269,19 @@ test.describe.serial("Composer prose editing (#376)", () => {
   });
 
   // ── 4 ─────────────────────────────────────────────────────────────────────
-  test("04 - the affordance turns into a dirty Save and back again as the draft diverges", async () => {
+  test("04 - a trailing-newline seed returns to clean Done after type and delete", async () => {
     await page.keyboard.type("X");
+    expect(await editorText(editor())).toBe("## Heading\n\n`code` and text.X\n");
     await expect(saveButton()).toHaveText("Save");
     await expect(saveButton()).toHaveAttribute("data-zc-dirty", "");
     await expect(canvas(page).locator(".zc-prose-savebar-status")).toHaveText("Unsaved changes");
 
-    // Dirtiness is derived from the value, so undoing the keystroke clears it.
+    // The seed ends in a deliberate newline. Per the captured browser shape,
+    // typing lands before that terminal editing placeholder; deleting the
+    // typed character must still restore the exact seed and clear the dirty
+    // affordance.
     await page.keyboard.press("Backspace");
+    expect(await editorText(editor())).toBe("## Heading\n\n`code` and text.\n");
     await expect(saveButton()).toHaveText("Done");
     await expect(saveButton()).not.toHaveAttribute("data-zc-dirty", "");
     await expect(canvas(page).locator(".zc-prose-savebar-status")).toHaveCount(0);
@@ -287,6 +289,10 @@ test.describe.serial("Composer prose editing (#376)", () => {
 
   // ── 5 ─────────────────────────────────────────────────────────────────────
   test("05 - Enter inserts newlines and commits NOTHING", async () => {
+    // Continue the focused editor from step 04. Its deliberate terminal
+    // newline remains at the edge, so Enter inserts the new blank lines before
+    // that preserved newline and the next heading lands before the edge too.
+    await expect(editor()).toBeFocused();
     await resetCommitCount(page);
     await page.keyboard.press("Enter");
     await page.keyboard.press("Enter");
@@ -315,7 +321,7 @@ test.describe.serial("Composer prose editing (#376)", () => {
 
   // ── 7 ─────────────────────────────────────────────────────────────────────
   test("07 - ESC while dirty prompts; Keep editing preserves the draft, Discard reverts", async () => {
-    await setMarkdown(page, node(), "hello", "hello");
+    await setMarkdown(page, node(), HELLO_TRAILING_NEWLINE, "hello");
     await openProseEditor(node(), editor());
     await resetCommitCount(page);
     await page.keyboard.type("ZZZ");
@@ -336,7 +342,7 @@ test.describe.serial("Composer prose editing (#376)", () => {
 
     await dialogAction(page, "Keep editing").click();
     await expect(dialog()).toHaveCount(0);
-    expect(await editorText(editor())).toBe("helloZZZ");
+    expect(await editorText(editor())).toBe("helloZZZ\n");
     await expect(editor()).toBeFocused();
     expect(await commitCount(page)).toBe(0);
 
@@ -345,13 +351,14 @@ test.describe.serial("Composer prose editing (#376)", () => {
     await dialogAction(page, "Discard changes").click();
     await expect(editor()).toHaveCount(0);
     await expect(node().locator(".zc-prose-md")).toHaveText("hello");
-    await expect(markdownField(page)).toHaveValue("hello");
+    await expect(markdownField(page)).toHaveValue(HELLO_TRAILING_NEWLINE);
     expect(await commitCount(page)).toBe(0);
   });
 
   // ── 8 ─────────────────────────────────────────────────────────────────────
   test("08 - ESC with a clean draft exits silently", async () => {
     await openProseEditor(node(), editor());
+    expect(await editorText(editor())).toBe(HELLO_TRAILING_NEWLINE);
     await resetCommitCount(page);
     await page.keyboard.press("Escape");
 
@@ -383,7 +390,7 @@ test.describe.serial("Composer prose editing (#376)", () => {
 
     await dialogAction(page, "Save changes").click();
     await expect(editor()).toHaveCount(0);
-    await expect(markdownField(page)).toHaveValue("helloAAA");
+    await expect(markdownField(page)).toHaveValue("helloAAA\n");
     expect(await commitCount(page)).toBe(1);
   });
 
@@ -398,7 +405,7 @@ test.describe.serial("Composer prose editing (#376)", () => {
     await dialogAction(page, "Discard changes").click();
 
     await expect(editor()).toHaveCount(0);
-    await expect(markdownField(page)).toHaveValue("helloAAA");
+    await expect(markdownField(page)).toHaveValue("helloAAA\n");
     expect(await commitCount(page)).toBe(0);
   });
 
@@ -468,7 +475,7 @@ test.describe.serial("Composer prose editing (#376)", () => {
 
     await dialogAction(page, "Keep editing").click();
     await expect(editor()).toBeVisible();
-    expect(await editorText(editor())).toBe("helloAAACCC");
+    expect(await editorText(editor())).toBe("helloAAACCC\n");
     // Restoring a stashed draft needs Edit-mode chrome back, even though the
     // HOST toggle still says Preview — the canvas overrides it locally.
     await expect(canvas(page).locator('[data-composer-canvas][data-mode="edit"]')).toBeVisible();
@@ -479,7 +486,7 @@ test.describe.serial("Composer prose editing (#376)", () => {
     );
 
     await saveButton().click();
-    await expect(markdownField(page)).toHaveValue("helloAAACCC");
+    await expect(markdownField(page)).toHaveValue("helloAAACCC\n");
     expect(await commitCount(page)).toBe(1);
     // The local override is dropped the moment the session ends.
     await expect(canvas(page).locator('[data-composer-canvas][data-mode="preview"]')).toBeVisible();
@@ -499,7 +506,7 @@ test.describe.serial("Composer prose editing (#376)", () => {
     // that would otherwise be read as leaving never happens.
     await expect(dialog()).toHaveCount(0);
     await expect(editor()).toHaveCount(0);
-    await expect(markdownField(page)).toHaveValue("helloAAACCC!");
+    await expect(markdownField(page)).toHaveValue("helloAAACCC!\n");
     expect(await commitCount(page)).toBe(1);
   });
 
@@ -531,11 +538,11 @@ test.describe.serial("Composer prose editing (#376)", () => {
     await page.keyboard.press("Escape");
     await expect(dialog()).toHaveCount(0);
     await expect(editor()).toBeVisible();
-    expect(await editorText(editor())).toBe("helloAAACCC!?");
+    expect(await editorText(editor())).toBe("helloAAACCC!?\n");
     expect(await commitCount(page)).toBe(0);
 
     await saveButton().click();
-    await expect(markdownField(page)).toHaveValue("helloAAACCC!?");
+    await expect(markdownField(page)).toHaveValue("helloAAACCC!?\n");
   });
 
   // ── 15 ────────────────────────────────────────────────────────────────────
@@ -747,7 +754,7 @@ test.describe.serial("Composer prose editing (#376)", () => {
     ["middle-click", "middle"],
   ] as const) {
     test(`20:${gesture} - a ${gesture} outside the editable is not an intent to leave`, async () => {
-      await setMarkdown(page, node(), "hello", "hello");
+      await setMarkdown(page, node(), HELLO_TRAILING_NEWLINE, "hello");
       await openProseEditor(node(), editor());
       await resetCommitCount(page);
       await page.keyboard.type("XX");
@@ -761,7 +768,7 @@ test.describe.serial("Composer prose editing (#376)", () => {
       await expect(dialog()).toHaveCount(0);
       await expect(editor()).toBeVisible();
       await expect(editor()).toBeFocused();
-      expect(await editorText(editor())).toBe("helloXX");
+      expect(await editorText(editor())).toBe("helloXX\n");
       expect(await commitCount(page)).toBe(0);
 
       await page.keyboard.press("Escape");
@@ -779,7 +786,7 @@ test.describe.serial("Composer prose editing (#376)", () => {
   // node both bumps the revision and raises the leave dialog, so its "Save
   // changes" was doomed AND destructive.
   test("21 - a host gesture on ANOTHER node makes the draft unsaveable, and neither Save path destroys it", async () => {
-    await setMarkdown(page, node(), "hello", "hello");
+    await setMarkdown(page, node(), HELLO_TRAILING_NEWLINE, "hello");
     // The sibling whose row actions this test drives is nested two levels deep.
     for (const id of ["split-1", "stack-1"]) {
       const disclosure = page
@@ -825,7 +832,7 @@ test.describe.serial("Composer prose editing (#376)", () => {
     await dialogAction(page, "Keep editing").click();
     await expect(editor()).toBeVisible();
     await expect(editor()).toBeFocused();
-    expect(await editorText(editor())).toBe("helloPRECIOUS");
+    expect(await editorText(editor())).toBe("helloPRECIOUS\n");
 
     // The floating Save button on the same stale draft: same refusal, same
     // survival. (Reached through Keep editing because the only way to move the
@@ -841,7 +848,7 @@ test.describe.serial("Composer prose editing (#376)", () => {
     ]);
     expect(await commitCount(page)).toBe(0);
     await dialogAction(page, "Keep editing").click();
-    expect(await editorText(editor())).toBe("helloPRECIOUS");
+    expect(await editorText(editor())).toBe("helloPRECIOUS\n");
 
     // The host never received a doomed commit, so it never had to reject one —
     // its "inline edit was not applied" notice is the symptom this fix removes.
@@ -852,7 +859,7 @@ test.describe.serial("Composer prose editing (#376)", () => {
     await expect(editor()).toHaveCount(0);
     // Nothing of the abandoned draft reached the model.
     await page.locator(`[data-sg-tree-node-id="${nodeId}"] .sg-composer-tree-select`).first().click();
-    await expect(markdownField(page)).toHaveValue("hello");
+    await expect(markdownField(page)).toHaveValue(HELLO_TRAILING_NEWLINE);
     expect(pageErrors).toEqual([]);
     expect(consoleErrors).toEqual([]);
   });

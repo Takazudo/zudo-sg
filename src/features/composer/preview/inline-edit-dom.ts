@@ -5,7 +5,8 @@
 // contract is explicit-save rather than auto-commit — but which still has to
 // answer the same three questions the same way:
 //
-//   - "what text did the user actually type?" (`readEditableValue`)
+//   - "what raw text is in the DOM?" (`readEditableValue`)
+//   - "what current text belongs to this session?" (`readNormalizedEditableValue`)
 //   - "where does the caret go?"              (`placeCaretAtEnd`)
 //   - "what is this field's on-screen value?" (`effectiveFieldValue`)
 //
@@ -103,7 +104,7 @@ export function effectiveFieldValue(
 const INLINE_ELEMENT_TAGS: ReadonlySet<string> = new Set(["B", "STRONG", "EM", "I", "SPAN", "A", "CODE"]);
 
 /**
- * Read the committed text out of an editing element.
+ * Read the raw text out of an editing element.
  *
  * Decoration islands are skipped: a child marked `aria-hidden` /
  * `contenteditable="false"` (e.g. `CtaButton`'s trailing arrow) is chrome, not
@@ -146,6 +147,69 @@ export function readEditableValue(el: HTMLElement, multiline: boolean): string {
   };
   walk(el);
   return multiline ? out : out.replace(/[\r\n]+/g, " ");
+}
+
+/** Count the terminal newline quota without normalizing any other characters. */
+function terminalNewlineCount(value: string): number {
+  return value.length - value.replace(/\n+$/, "").length;
+}
+
+/**
+ * The browser's measured empty-editable placeholder is a direct `<br>` with
+ * no text (`<br>` / `textContent === ""`). Keep this deliberately narrow:
+ * raw `"\n"` by itself can be a literal seeded value, and a block-wrapped
+ * `<div><br></div>` does not establish whether the blank line is intentional.
+ */
+function isEmptyEditablePlaceholder(el: HTMLElement, raw: string): boolean {
+  const child = el.firstChild;
+  return (
+    raw === "\n" &&
+    el.textContent === "" &&
+    el.childNodes.length === 1 &&
+    child?.nodeType === 1 &&
+    (child as HTMLElement).tagName === "BR"
+  );
+}
+
+/**
+ * Read an editing element and apply the supplied immutable multiline baseline.
+ *
+ * `readEditableValue` remains the one raw DOM walker. This wrapper protects the
+ * seed's deliberate terminal-newline quota: one terminal placeholder beyond
+ * that quota is removed, while an exact seed-minus-one result repairs the
+ * captured browser loss. Interior blank lines and untouched seeds remain exact.
+ * The deterministic seed-minus-one repair has one known ambiguity: raw `a`
+ * with seed `a\n` is indistinguishable from intentionally deleting that final
+ * newline. Supporting that exact gesture would require beforeinput/selection
+ * history, not UA branching; #444's cross-engine round-trip loss chooses to
+ * preserve the seed here.
+ *
+ * `baselineValue` is the exact value seeded into the current editor. The plain
+ * session's mount never changes, so it passes its session `initialValue`; the
+ * prose session passes its frozen per-mount seed, which can be a restored or
+ * relocated draft while the machine's `draft.initialValue` remains unchanged.
+ * A direct `<br>` / empty-text placeholder is recognized as an actually empty
+ * editor before quota accounting; other raw newlines, including a literal
+ * seeded `"\n"`, remain data.
+ */
+export function readNormalizedEditableValue(
+  el: HTMLElement,
+  multiline: boolean,
+  baselineValue: string,
+): string {
+  const raw = readEditableValue(el, multiline);
+  if (!multiline) return raw;
+  if (isEmptyEditablePlaceholder(el, raw)) return "";
+
+  const seedTrailingNewlines = terminalNewlineCount(baselineValue);
+  const rawTrailingNewlines = terminalNewlineCount(raw);
+  if (baselineValue.endsWith("\n") && raw === baselineValue.slice(0, -1)) {
+    return baselineValue;
+  }
+  if (rawTrailingNewlines > seedTrailingNewlines) {
+    return raw.slice(0, -1);
+  }
+  return raw;
 }
 
 /**

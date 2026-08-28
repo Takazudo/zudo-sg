@@ -77,8 +77,13 @@ export default defineConfig({
   // node_modules/@takazudo/zfb's BundleConfig.mainFields doc (zfb #676).
   // `bundle.external: ["path-to-regexp"]` would scope this narrower, but
   // mainFields is zfb's *documented* fix for this msw case (#676), so we use it.
-  //
-  bundle: { mainFields: ["main", "module"] },
+  // zfb treats apps/ as an extra source root and recursively runs root markdown
+  // processing over demo MDX; apps/demo owns its own config/public tree, so keep
+  // that separate build outside the root bundle.
+  bundle: {
+    exclude: ["apps/demo/**"],
+    mainFields: ["main", "module"],
+  },
   // Collections, markdown.features, codeHighlight, resolveMarkdownLinks,
   // stripMdExt, trailingSlash, and the package plugin descriptors (search
   // index, llms.txt, claude-resources) — see node_modules/@takazudo/zudo-doc

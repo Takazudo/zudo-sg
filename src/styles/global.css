@@ -159,6 +159,20 @@
  * own header for what it does and does not style. */
 @import "@zudo-sg/ui/src/content/prose-md/prose-md.css";
 
+/* Keep the painted deleted-line wash AA against the surface it actually sits
+ * on. zudo-doc's default --zfb-hi-del-bg mixes over --zd-code-bg, but the
+ * resulting same-span background falls below AA for this site's danger rung.
+ * --color-bg lazily resolves to doc --zd-bg on chrome pages and to the UI
+ * preview background in chrome-free previews. The deleted foreground remains
+ * the existing --zd-syntax-deleted bridge source. */
+:root {
+  --zfb-hi-del-bg: color-mix(
+    in srgb,
+    var(--zd-syntax-deleted) 15%,
+    var(--color-bg)
+  );
+}
+
 /* ========================================
  * Tailwind v4 content sources
  *

@@ -1,9 +1,12 @@
 import { spawn } from "node:child_process";
-const projectRoot = process.cwd();
-const portIndex = process.argv.indexOf("--port");
-const port = portIndex >= 0 ? process.argv[portIndex + 1] : "4702";
+import { dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+import { parsePortArg } from "./lib/playwright-e2e-server.mjs";
 
-const child = spawn("pnpm", ["exec", "zfb", "dev", "--port", port], {
+const projectRoot = dirname(dirname(fileURLToPath(import.meta.url)));
+const port = parsePortArg(process.argv.slice(2), 4_702);
+
+const child = spawn("pnpm", ["exec", "zfb", "dev", "--port", String(port)], {
   cwd: projectRoot,
   env: { ...process.env, ZFB_DEV_BOOT_LAZY: "1" },
   stdio: "inherit",
