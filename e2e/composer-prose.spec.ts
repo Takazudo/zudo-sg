@@ -276,31 +276,29 @@ test.describe.serial("Composer prose editing (#376)", () => {
     await expect(saveButton()).toHaveAttribute("data-zc-dirty", "");
     await expect(canvas(page).locator(".zc-prose-savebar-status")).toHaveText("Unsaved changes");
 
-    // The seed ends in a deliberate newline. The browser may materialize a
-    // trailing editing placeholder around it, but deleting the typed character
-    // must still restore the exact seed and clear the dirty affordance.
+    // The seed ends in a deliberate newline. Per the captured browser shape,
+    // typing lands before that terminal editing placeholder; deleting the
+    // typed character must still restore the exact seed and clear the dirty
+    // affordance.
     await page.keyboard.press("Backspace");
     expect(await editorText(editor())).toBe("## Heading\n\n`code` and text.\n");
     await expect(saveButton()).toHaveText("Done");
     await expect(saveButton()).not.toHaveAttribute("data-zc-dirty", "");
     await expect(canvas(page).locator(".zc-prose-savebar-status")).toHaveCount(0);
-
-    await page.keyboard.press("Escape");
-    await expect(editor()).toHaveCount(0);
   });
 
   // ── 5 ─────────────────────────────────────────────────────────────────────
   test("05 - Enter inserts newlines and commits NOTHING", async () => {
-    // Keep the Enter assertion independent of the trailing-newline placeholder
-    // shape above: this seed has an interior blank line but no terminal one.
-    await setMarkdown(page, node(), "## Heading\n\n`code` and text.", "code and text.");
-    await openProseEditor(node(), editor());
+    // Continue the focused editor from step 04. Its deliberate terminal
+    // newline remains at the edge, so Enter inserts the new blank lines before
+    // that preserved newline and the next heading lands before the edge too.
+    await expect(editor()).toBeFocused();
     await resetCommitCount(page);
     await page.keyboard.press("Enter");
     await page.keyboard.press("Enter");
     await page.keyboard.type("## New heading");
 
-    expect(await editorText(editor())).toBe("## Heading\n\n`code` and text.\n\n## New heading");
+    expect(await editorText(editor())).toBe("## Heading\n\n`code` and text.\n\n## New heading\n");
     // Still editing: the block has not re-rendered and nothing reached the model.
     await expect(editor()).toBeVisible();
     await expect(node().locator(".zc-prose-md")).toHaveCount(0);
@@ -316,7 +314,7 @@ test.describe.serial("Composer prose editing (#376)", () => {
     await expect(canvas(page).locator(SAVEBAR)).toHaveCount(0);
     await expect(node().locator(".zc-prose-md h2").nth(1)).toHaveText("New heading");
     await expect(markdownField(page)).toHaveValue(
-      "## Heading\n\n`code` and text.\n\n## New heading",
+      "## Heading\n\n`code` and text.\n\n## New heading\n",
     );
     expect(await commitCount(page)).toBe(1);
   });
