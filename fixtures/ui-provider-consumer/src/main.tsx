@@ -10,7 +10,7 @@ const MARKDOWN = [
   "## Provider markdown",
   "",
   "```ts",
-  "const provider = 'ready';",
+  "const provider = greet('ready');",
   "```",
 ].join("\n");
 
@@ -39,10 +39,14 @@ function App() {
       const dark = document.querySelector<HTMLElement>('[data-proof-theme="dark"]');
       const lightKeyword = light?.querySelector<HTMLElement>(".hi-kw");
       const darkKeyword = dark?.querySelector<HTMLElement>(".hi-kw");
+      const lightString = light?.querySelector<HTMLElement>(".hi-str");
+      const darkString = dark?.querySelector<HTMLElement>(".hi-str");
+      const lightCallable = light?.querySelector<HTMLElement>(".hi-fn");
+      const darkCallable = dark?.querySelector<HTMLElement>(".hi-fn");
       const lightPre = light?.querySelector<HTMLElement>("pre.hi-root");
       const darkPre = dark?.querySelector<HTMLElement>("pre.hi-root");
       const grid = document.querySelector<HTMLElement>('[aria-label="Generated provider grid"]');
-      if (!lightKeyword || !darkKeyword || !lightPre || !darkPre || !grid) {
+      if (!lightKeyword || !darkKeyword || !lightString || !darkString || !lightCallable || !darkCallable || !lightPre || !darkPre || !grid) {
         window.setTimeout(inspect, 25);
         return;
       }
@@ -56,15 +60,25 @@ function App() {
           getComputedStyle(grid).gridTemplateColumns !== "none",
         lightKeyword: getComputedStyle(lightKeyword).color,
         darkKeyword: getComputedStyle(darkKeyword).color,
+        lightString: getComputedStyle(lightString).color,
+        darkString: getComputedStyle(darkString).color,
+        lightCallable: getComputedStyle(lightCallable).color,
+        darkCallable: getComputedStyle(darkCallable).color,
+        lightForeground: getComputedStyle(lightPre).color,
+        darkForeground: getComputedStyle(darkPre).color,
         lightBackground: getComputedStyle(lightPre).backgroundColor,
         darkBackground: getComputedStyle(darkPre).backgroundColor,
       };
+      const lightSyntax = [proof.lightKeyword, proof.lightString, proof.lightCallable, proof.lightForeground];
+      const darkSyntax = [proof.darkKeyword, proof.darkString, proof.darkCallable, proof.darkForeground];
       const success =
         proof.runtimeIdentity &&
         proof.componentCount === 12 &&
         proof.wasmHighlight &&
         proof.utilityGrid &&
-        proof.lightKeyword !== proof.darkKeyword &&
+        new Set(lightSyntax).size === lightSyntax.length &&
+        new Set(darkSyntax).size === darkSyntax.length &&
+        lightSyntax.every((color, index) => color !== darkSyntax[index]) &&
         proof.lightBackground !== proof.darkBackground;
       document.body.dataset.providerProof = success ? "passed" : "failed";
       const target = document.querySelector("#proof-result");
