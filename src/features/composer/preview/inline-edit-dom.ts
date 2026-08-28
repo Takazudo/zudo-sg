@@ -155,6 +155,23 @@ function terminalNewlineCount(value: string): number {
 }
 
 /**
+ * The browser's measured empty-editable placeholder is a direct `<br>` with
+ * no text (`<br>` / `textContent === ""`). Keep this deliberately narrow:
+ * raw `"\n"` by itself can be a literal seeded value, and a block-wrapped
+ * `<div><br></div>` does not establish whether the blank line is intentional.
+ */
+function isEmptyEditablePlaceholder(el: HTMLElement, raw: string): boolean {
+  const child = el.firstChild;
+  return (
+    raw === "\n" &&
+    el.textContent === "" &&
+    el.childNodes.length === 1 &&
+    child?.nodeType === 1 &&
+    (child as HTMLElement).tagName === "BR"
+  );
+}
+
+/**
  * Read an editing element and apply the supplied immutable multiline baseline.
  *
  * `readEditableValue` remains the one raw DOM walker. This wrapper protects the
@@ -171,6 +188,9 @@ function terminalNewlineCount(value: string): number {
  * session's mount never changes, so it passes its session `initialValue`; the
  * prose session passes its frozen per-mount seed, which can be a restored or
  * relocated draft while the machine's `draft.initialValue` remains unchanged.
+ * A direct `<br>` / empty-text placeholder is recognized as an actually empty
+ * editor before quota accounting; other raw newlines, including a literal
+ * seeded `"\n"`, remain data.
  */
 export function readNormalizedEditableValue(
   el: HTMLElement,
@@ -179,6 +199,7 @@ export function readNormalizedEditableValue(
 ): string {
   const raw = readEditableValue(el, multiline);
   if (!multiline) return raw;
+  if (isEmptyEditablePlaceholder(el, raw)) return "";
 
   const seedTrailingNewlines = terminalNewlineCount(baselineValue);
   const rawTrailingNewlines = terminalNewlineCount(raw);

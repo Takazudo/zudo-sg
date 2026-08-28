@@ -11,7 +11,10 @@ import { COMPOSITION_SCHEMA_VERSION } from "@/composer";
 import { composerEntries } from "@/styleguide/data/composer-registry";
 import { CompositionCanvas, focusByToken, type CompositionCanvasProps } from "../renderer";
 import type { PreviewSession } from "../protocol";
-import { INLINE_EDIT_BOUNDARY_CASES } from "./inline-edit-newline-cases";
+import {
+  INLINE_EDIT_BOUNDARY_CASES,
+  INLINE_EDIT_NEWLINE_CLEAR_CASES,
+} from "./inline-edit-newline-cases";
 
 const EDIT: PreviewSession = { mode: "edit", theme: "light", selectedId: null };
 const PREVIEW: PreviewSession = { mode: "preview", theme: "light", selectedId: null };
@@ -997,6 +1000,30 @@ describe("inline text editing (issue #257)", () => {
         "First line\nSecond line",
         0,
       );
+    });
+
+    it.each(INLINE_EDIT_NEWLINE_CLEAR_CASES)(
+      "commits an emptied $probe as an exact empty value",
+      (probe) => {
+        const document = doc([node("probe", "ui.prose-p", { children: probe.seed })]);
+        const { container, onCommitInlineEdit } = openSession("probe", "p", document);
+        const editable = editableOf(container, "probe")!;
+        editable.innerHTML = probe.html;
+        fireEvent.blur(editable);
+
+        expect(onCommitInlineEdit).toHaveBeenCalledTimes(1);
+        expect(onCommitInlineEdit).toHaveBeenCalledWith("probe", "children", probe.expected, 0);
+      },
+    );
+
+    it("keeps a no-edit literal newline as data and skips the commit", () => {
+      const document = doc([node("probe", "ui.prose-p", { children: "\n" })]);
+      const { container, onCommitInlineEdit } = openSession("probe", "p", document);
+      const editable = editableOf(container, "probe")!;
+      expect(editable.textContent).toBe("\n");
+      fireEvent.blur(editable);
+
+      expect(onCommitInlineEdit).not.toHaveBeenCalled();
     });
 
     it.each(INLINE_EDIT_BOUNDARY_CASES)(

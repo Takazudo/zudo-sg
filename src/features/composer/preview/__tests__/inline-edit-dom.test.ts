@@ -53,6 +53,19 @@ const CAPTURED_SHAPES: readonly CapturedShape[] = [
   { engine: "Firefox", mode: "plaintext-only", probe: "clear", seed: "clear me", html: "<br>", textContent: "", expected: "" },
   { engine: "Firefox", mode: "true", probe: "clear", seed: "clear me", html: "<br>", textContent: "", expected: "" },
 
+  // clear seeded "a\n"; the measured direct-BR placeholder is empty even
+  // though its raw walker value is one terminal newline
+  { engine: "Chromium", mode: "plaintext-only", probe: "clear a\\n", seed: "a\n", html: "<br>", textContent: "", expected: "" },
+  { engine: "Chromium", mode: "true", probe: "clear a\\n", seed: "a\n", html: "<br>", textContent: "", expected: "" },
+  { engine: "Firefox", mode: "plaintext-only", probe: "clear a\\n", seed: "a\n", html: "<br>", textContent: "", expected: "" },
+  { engine: "Firefox", mode: "true", probe: "clear a\\n", seed: "a\n", html: "<br>", textContent: "", expected: "" },
+
+  // clear seeded "a\n\n"; all captured modes use the same empty placeholder
+  { engine: "Chromium", mode: "plaintext-only", probe: "clear a\\n\\n", seed: "a\n\n", html: "<br>", textContent: "", expected: "" },
+  { engine: "Chromium", mode: "true", probe: "clear a\\n\\n", seed: "a\n\n", html: "<br>", textContent: "", expected: "" },
+  { engine: "Firefox", mode: "plaintext-only", probe: "clear a\\n\\n", seed: "a\n\n", html: "<br>", textContent: "", expected: "" },
+  { engine: "Firefox", mode: "true", probe: "clear a\\n\\n", seed: "a\n\n", html: "<br>", textContent: "", expected: "" },
+
   // no-edit ""; exact
   { engine: "Chromium", mode: "plaintext-only", probe: "no-edit empty", seed: "", html: "", textContent: "", expected: "" },
   { engine: "Chromium", mode: "true", probe: "no-edit empty", seed: "", html: "", textContent: "", expected: "" },
@@ -82,6 +95,12 @@ const CAPTURED_SHAPES: readonly CapturedShape[] = [
   { engine: "Chromium", mode: "true", probe: "no-edit a\\n", seed: "a\n", html: "a\n", textContent: "a\n", expected: "a\n" },
   { engine: "Firefox", mode: "plaintext-only", probe: "no-edit a\\n", seed: "a\n", html: "a\n", textContent: "a\n", expected: "a\n" },
   { engine: "Firefox", mode: "true", probe: "no-edit a\\n", seed: "a\n", html: "a\n", textContent: "a\n", expected: "a\n" },
+
+  // no-edit literal "\n"; unlike a direct empty placeholder this is a text node
+  { engine: "Chromium", mode: "plaintext-only", probe: "no-edit literal newline", seed: "\n", html: "\n", textContent: "\n", expected: "\n" },
+  { engine: "Chromium", mode: "true", probe: "no-edit literal newline", seed: "\n", html: "\n", textContent: "\n", expected: "\n" },
+  { engine: "Firefox", mode: "plaintext-only", probe: "no-edit literal newline", seed: "\n", html: "\n", textContent: "\n", expected: "\n" },
+  { engine: "Firefox", mode: "true", probe: "no-edit literal newline", seed: "\n", html: "\n", textContent: "\n", expected: "\n" },
 
   // type/delete "a\n"; exact
   { engine: "Chromium", mode: "plaintext-only", probe: "type/delete a\\n", seed: "a\n", html: "a\n", textContent: "a\n", expected: "a\n" },
@@ -127,6 +146,16 @@ describe("inline-edit DOM value readers", () => {
     const el = document.createElement("div");
     el.textContent = raw;
     expect(readNormalizedEditableValue(el, true, seed)).toBe(expected);
+  });
+
+  it("keeps a block-wrapped BR distinct from the measured direct empty placeholder", () => {
+    const el = document.createElement("div");
+    el.innerHTML = "<div><br></div>";
+
+    // This is raw one-newline data: the wrapper cannot infer whether the blank
+    // block is an intentional line or an engine-specific empty shape.
+    expect(readEditableValue(el, true)).toBe("\n");
+    expect(readNormalizedEditableValue(el, true, "a\n")).toBe("\n");
   });
 
   it("keeps single-line CR/LF collapsing unchanged and skips multiline normalization", () => {
