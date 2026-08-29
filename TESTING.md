@@ -55,7 +55,8 @@ pnpm b4push       # runs all steps below in order
 
 Steps in `scripts/run-b4push.sh`:
 
-1. Format check (mdx) — `pnpm dlx @takazudo/mdx-formatter --check .`
+1. Format check (Markdown/MDX, including tracked skills) —
+   `pnpm dlx @takazudo/mdx-formatter --check '**/*.md' '**/*.mdx' '.claude/**/*.md'`
 2. Design token lint — `pnpm lint:tokens`
 3. Codegen/provider drift checks — all `check:*` generators plus the UI provider boundary
 4. Type checking — `pnpm check`

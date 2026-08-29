@@ -92,7 +92,7 @@
  * divider + hsp-lg left padding + vsp-md block margin match the reference's
  * right code-area frame (issue #60). Below lg this swaps for a top divider
  * (see the max-width:1023px block). --color-border, not --color-muted (a TEXT
- * token) — border-ladder correction, Composer Polish S5b/#268. */
+ * token), keeps structural dividers separate from text roles. */
 #sg-code-panel {
   position: relative;
   flex-shrink: 0;
@@ -114,8 +114,8 @@
 
 /* Resizer handle — absolutely positioned grab strip at the code panel's edge,
  * targeted by its data-attr (the drag wiring in panel-scripts.tsx uses the same
- * attribute). Accent budget (Composer Polish S5b/#268): hover is a resting/
- * decorative tint — neutral. The [data-sg-dragging] active-drag state is the
+ * attribute). Under the styleguide accent budget, hover is a resting/decorative
+ * tint — neutral. The [data-sg-dragging] active-drag state is the
  * whitelisted pressed-control role, so it keeps the accent tint. The keyboard
  * focus outline (panel-scripts-source.ts's ACCENT_OUTLINE) is untouched — also
  * a whitelisted role. (The sidebar's own resizer is provided by DocLayout /
