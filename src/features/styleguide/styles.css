@@ -359,7 +359,7 @@
 }
 @media (hover: hover) {
   .sg-token-card:hover {
-    /* Accent budget (S5b/#268): resting hover is neutral, not accent — the
+    /* Under the styleguide accent budget, resting hover is neutral — the
      * border-ladder step-up gives the same affordance without spending it. */
     border-color: var(--color-border-strong);
   }

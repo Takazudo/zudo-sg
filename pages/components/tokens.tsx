@@ -215,8 +215,8 @@ export default function TokensPage(): JSX.Element {
                     {tok.default}
                   </span>
                   {/* Magnitude bar — decorative-by-repetition (one per row), so
-                      it defaults to neutral per the accent budget (S5b/#268)
-                      rather than the accent fill it used before. */}
+                      it defaults to neutral under the styleguide accent budget
+                      rather than spending accent on a repeated decoration. */}
                   <span
                     class="h-[0.75rem] rounded-sm bg-muted"
                     style={{ width: `var(${tok.cssVar})` }}
