@@ -108,7 +108,8 @@ Do NOT use h1 (`#`) in doc content — the page title from frontmatter is render
   Composer/Sitemapper data. Destructive current-only cleanup is required; do not add
   backward-compatibility readers, migrations, redirects, aliases, or old-name
   and old-storage fallbacks.
-- **Route invariant** — the styleguide-only root build emits 82 routes. Do not
+- **Route invariant** — the styleguide-only root build emits 82 HTML routes
+  (zfb reports 84 pages when `/robots.txt` and `/sitemap.xml` are included). Do not
   remove provider guides or unrelated routes while cleaning product ownership.
 
 See `packages/ui/STORIES.md` §10, `packages/ui/README.md`, and

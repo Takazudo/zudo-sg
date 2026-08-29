@@ -63,7 +63,7 @@ token file above. Know which world the file you're editing belongs to:
 
 - **Doc-chrome world** (root-only: `src/**`, `pages/**` — the styleguide host's own header,
   sidebar, search, doc prose, panels): colors come from `src/styles/global.css`'s `--zd-*` →
-  `--color-*` mapping. Utilities: `text-fg`, `bg-surface`, `border-muted`, `text-accent`, plus the
+  `--color-*` mapping. Utilities: `text-fg`, `bg-surface`, `border-border`, `text-accent`, plus the
   raw `p0`–`p15` palette. Doc prose (`.zd-content`) consumes the Tier-2 typography aliases
   (`text-body`, `text-caption`, ...) via `@takazudo/zudo-doc`'s `content.css`.
 - **UI-component world** (`packages/ui/src/**`, also consumed by `apps/demo` and by the root's
@@ -92,9 +92,9 @@ token file above. Know which world the file you're editing belongs to:
   the border ladder section below). Never assume a color utility means the
   same thing in both worlds — check which file you're in.
 - The chrome-free `/components/preview` iframe document (`<html data-sg-preview-doc>`) has no
-  `--zd-*` injected, so it needs its own entrypoint to restore the `@zudo-sg/ui` semantic colors
-  that the root-host re-assertion above would otherwise leave undefined: `src/styles/preview.css`,
-  imported after `global.css`'s `@zudo-sg/ui/styles/colors.css` import and scoped to
+  `--zd-*` injected, so `src/styles/preview.css` restores the overlapping `@zudo-sg/ui`
+  semantic colors that the root-host re-assertion above would otherwise leave undefined. It is
+  not a standalone entrypoint: `global.css` imports it into the one site-wide stylesheet. Its rules are scoped to
   `html[data-sg-preview-doc]` (specificity beats the `:root` the `@theme` block emits, so it's
   order-independent and never affects regular doc-chrome pages).
 
@@ -105,7 +105,7 @@ different concrete tokens:
 
 - **Doc-chrome** (`src/styles/global.css`):
   - **Tier 1** (palette): `p0`–`p15` — raw colors, use only when no semantic token fits
-  - **Tier 2** (semantic): `text-fg`, `bg-surface`, `border-muted`, `text-accent` — prefer these
+  - **Tier 2** (semantic): `text-fg`, `bg-surface`, `border-border`, `border-border-strong`, `text-accent` — prefer these
   - Palette index convention (consistent across all schemes, see `src/config/color-schemes.ts`):
     - p1=danger, p2=success, p3=warning, p4=info, p5=accent
     - p8=muted, p9=background, p10=surface, p11=text primary
@@ -121,9 +121,10 @@ different concrete tokens:
 
 ### Border ladder
 
-Structural chrome tokens are defined in `src/styles/global.css` and mirrored in
-`src/styles/preview.css` for the component-preview iframe, which has no `--zd-*`
-injected:
+The complete structural border ladder is defined in `src/styles/global.css`.
+The component-preview scope in `src/styles/preview.css` restores only the
+provider's `--color-border` value after the host re-assertion; it is not a
+second token source and does not mirror `--color-border-strong`:
 
 | Token | Role |
 |---|---|
