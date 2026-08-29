@@ -15,7 +15,7 @@
 #   build-doc            — pnpm build:doc (doc), then pnpm check:links:doc
 #                          against doc/dist
 #   smoke-e2e            — pnpm test:e2e:ci (Playwright: styleguide smoke,
-#                          preview-token-panel, Sitemapper, and demo-smoke;
+#                          preview-token-panel, and demo-smoke;
 #                          needs build + build-demo)
 #   dist-checks          — pnpm check:links + pnpm check:html against dist/
 #                          (needs build job; merged into one job since both
@@ -227,7 +227,7 @@ jobs:
   # ---------------------------------------------------------------------------
   # Job: Playwright smoke e2e (T1)
   # Runs the full default playwright.config.ts gate: styleguide smoke,
-  # preview-token-panel, Sitemapper, and demo-smoke. The config declares one
+  # preview-token-panel, and demo-smoke. The config declares one
   # webServer per dist (styleguide + demo), so this job needs both build jobs.
   # ---------------------------------------------------------------------------
   smoke-e2e:
