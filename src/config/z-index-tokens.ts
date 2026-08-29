@@ -29,7 +29,7 @@
 //   - `drag` — transient drag affordance (sidebar-resizer ghost line). Replaces
 //     the old `z-9999` anti-pattern with a named top-of-steady-UI tier.
 //
-// `toast` and `tooltip` are reserved canonical tiers from the strategy's
+// `popover`, `toast`, and `tooltip` are reserved canonical tiers from the strategy's
 // scale — kept for completeness (and so downstream `create-zudo-doc` users
 // inherit the full scale) even though zudo-doc does not use them yet.
 
@@ -84,6 +84,12 @@ export const Z_INDEX_TIERS: ZIndexTier[] = [
     name: "dropdown",
     value: 30,
     purpose: "header menus, version/language switchers",
+    kind: "global",
+  },
+  {
+    name: "popover",
+    value: 40,
+    purpose: "reserved — inline popovers (canonical scale; not yet used)",
     kind: "global",
   },
   {

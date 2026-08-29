@@ -322,6 +322,7 @@
     --z-index-sidebar: 10;
     --z-index-toolbar: 20;
     --z-index-dropdown: 30;
+    --z-index-popover: 40;
     --z-index-modal-backdrop: 50;
     --z-index-modal: 60;
     --z-index-toast: 70;
