@@ -71,7 +71,7 @@ import { PanelStateHeadScript, PanelResizersInitScript } from "./panel-scripts";
 export interface StyleguideLayoutProps {
   /**
    * Already-composed meta title (e.g. `composeMetaTitle("Components")`).
-   * Passed pre-composed because the composer lives in `pages/lib` and this
+   * Passed pre-composed because the title-composition helper lives in `pages/lib` and this
    * `src/` shell must not import from the excluded `pages/` tree.
    */
   title: string;
