@@ -2,10 +2,8 @@
 // outline/inspector rail localStorage keys, CSS custom-property names, and
 // data-attributes (issue #409).
 //
-// This intentionally mirrors the Composer workspace contract without sharing
-// its identifiers. Sitemapper and Composer can be mounted during the same SPA
-// session, so a bare key, custom property, or event would make one app's
-// resizer silently retarget the other app.
+// Every key, custom property, and event is scoped to Sitemapper so the resizer
+// cannot retarget unrelated host chrome.
 
 // ── localStorage keys ──────────────────────────────────────────────────────
 export const LS_TREE_WIDTH = "sg-sitemapper-tree-width";

@@ -51,8 +51,7 @@ export default defineConfig({
     {
       name: "sitemapper",
       // Full IndexedDB user story plus the 1440/375 light/dark rendered
-      // contract. It shares the built styleguide preview with Composer so a
-      // single browser origin can exercise cross-feature references.
+      // contract on the built styleguide preview.
       testMatch: "sitemapper.spec.ts",
       use: { baseURL: smokeServer.origin },
     },

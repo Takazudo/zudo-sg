@@ -2,8 +2,8 @@
 /** @jsxImportSource preact */
 // `/sitemapper` — the Sitemapper document shell (issue #400).
 //
-// Like `/composer`, this route deliberately owns its own `<html>` document
-// instead of going through `DocLayoutWithDefaults` / `StyleguideLayout`.
+// This route deliberately owns its own `<html>` document instead of going
+// through `DocLayoutWithDefaults` / `StyleguideLayout`.
 // Those layouts add the docs sidebar, TOC, footer, and a padded max-width
 // article band; the Sitemapper workspace needs the full viewport width below
 // the shared header.
