@@ -25,16 +25,11 @@ pages/                    # File-based routing (host-owned: /, /components/*, /d
 src/
 ├── components/           # JSX + Preact components
 │   └── content/          # MDX content components (admonitions, code-group, ...)
-├── composer/             # Legacy in-repo Composer core; retained only until Phase 4 cleanup
 ├── config/               # Settings, color schemes, design token manifests
 ├── content/
 │   └── docs/             # Slim root guide content
 ├── features/
-│   ├── composer/         # Legacy /composer app; standalone product lives in zudo-composer
-│   ├── sitemapper/       # Legacy /sitemapper app; standalone product lives in zudo-composer
 │   └── styleguide/       # /components catalog: chrome, preview, code-panel, search, token-tweak
-├── shared/               # Legacy authoring primitives retained until Phase 4 cleanup
-├── sitemapper/           # Legacy in-repo Sitemapper core retained until Phase 4 cleanup
 ├── styleguide/
 │   └── data/             # Codegen-backed component registry + nav nodes (#103)
 └── styles/
@@ -106,14 +101,16 @@ Do NOT use h1 (`#`) in doc content — the page title from frontmatter is render
 - **zudo-composer owns the products** — the standalone repository owns both
   Composer and Sitemapper, including their clean storage/schema identities,
   routes, application UI, and deployment.
-- **Temporary legacy seam** — this repository intentionally keeps its current
-  `/composer`, `/composer/preview`, and `/sitemapper` code/routes operational
-  through Phase 2 verification. Do not extend or migrate them. Phase 4 deletes
-  them after standalone proof.
+- **zudo-sg owns the styleguide and provider** — the host routes, catalog,
+  stories, provider sidecars/pack/CSS, and provider verification remain here;
+  no Composer or Sitemapper application code lives in this repository.
 - **No compatibility contract** — there are zero users and zero production
-  data. Destructive clean-current-schema changes are allowed; do not add
+  Composer/Sitemapper data. Destructive current-only cleanup is required; do not add
   backward-compatibility readers, migrations, redirects, aliases, or old-name
   and old-storage fallbacks.
+- **Route invariant** — the styleguide-only root build emits 82 HTML routes
+  (zfb reports 84 pages when `/robots.txt` and `/sitemap.xml` are included). Do not
+  remove provider guides or unrelated routes while cleaning product ownership.
 
 See `packages/ui/STORIES.md` §10, `packages/ui/README.md`, and
 `ui-provider-handoff.json` for the permanent provider contract.
@@ -168,8 +165,6 @@ for how the two worlds relate.
 - **claudeSkills** — The `doc/` workspace ships zudo-doc-design-system, zudo-doc-translate, zudo-doc-version-bump skills
 - **designTokenPanel** — Interactive tabbed panel for tweaking spacing, font, size, and color tokens
 - **dynamicPageTransition** — SPA client-router page swaps with View Transitions and page-loading overlay
-- **composer / sitemapper (temporary)** — legacy verification routes retained
-  only until Phase 4; product development belongs in zudo-composer
 - **sidebarResizer** — Draggable sidebar width
 - **sidebarToggle** — Show/hide desktop sidebar
 - **versioning** — Multi-version documentation support

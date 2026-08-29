@@ -21,7 +21,7 @@ router) is covered by T0 unit tests today, with L4 E2E coverage added in T1.
 | Tier | Status | What runs |
 |------|--------|-----------|
 | T0 | Active | typecheck + unit tests — inner loop, constant feedback |
-| T1 | Active | PR CI gate: lint-tokens + codegen-drift + typecheck + unit + build + build-demo + smoke-e2e + dist-checks + file-provider-e2e |
+| T1 | Active | PR CI gate: lint-tokens + codegen/provider drift + typecheck + unit + provider conformance + root/demo/doc builds + smoke-e2e + dist-checks |
 | T2 | Not needed | T1 budget is well under 10 min; no split needed |
 | T3 | Deferred to release | see below |
 | T4 | Local b4push only | convenience pre-push pass (not enforcement) |
@@ -56,39 +56,37 @@ pnpm b4push       # runs all steps below in order
 Steps in `scripts/run-b4push.sh`:
 
 1. Format check (mdx) — `pnpm dlx @takazudo/mdx-formatter --check .`
-2. Design token lint — `pnpm lint:tokens` (owned by S2; no-op pass until S2 merges)
-3. Type checking — `pnpm check`
-4. Unit tests — `pnpm test:unit`
-5. Build — `pnpm build`
-6. Build demo — `pnpm --filter @zudo-sg/demo build`
-7. Link check — `pnpm check:links` + `pnpm check:links:demo`
-8. HTML validation — `pnpm check:html`
-9. Playwright smoke e2e — `pnpm test:e2e` (styleguide + the eight default authoring projects
-   (seven Composer projects plus Sitemapper) +
-   demo-smoke — see [Composer and Sitemapper E2E suites](#composer-and-sitemapper-e2e-suites))
-10. Manual interactive smoke (operator-driven)
+2. Design token lint — `pnpm lint:tokens`
+3. Codegen/provider drift checks — all `check:*` generators plus the UI provider boundary
+4. Type checking — `pnpm check`
+5. Unit tests — `pnpm test:unit`
+6. Root build — `pnpm build`
+7. Demo build — `pnpm --filter @zudo-sg/demo build`
+8. Documentation build — `pnpm build:doc`
+9. Link checks — root, demo, and documentation output
+10. HTML validation — `pnpm check:html`
+11. Playwright smoke e2e — `pnpm test:e2e` (`smoke`, `preview-token-panel`, and `demo-smoke`)
+12. Manual interactive smoke (operator-driven)
 
 ### T1 — CI gate (authoritative)
 
 The `pr-checks.yml` workflow runs on every PR targeting `main` or `base/**` and is
 the single source of truth for pass/fail. Jobs mirror the b4push steps:
 
-- **lint-tokens** — `pnpm lint:tokens` (no-op until S2)
-- **codegen-drift** — `pnpm check:z-index` + `pnpm check:sg-registry` +
-  `pnpm check:token-manifest`
+- **lint-tokens** — `pnpm lint:tokens`
+- **codegen-drift** — z-index, story registry/category, Composer provider pack,
+  provider boundary, and UI/root token-manifest drift checks
 - **typecheck** — `pnpm check`
 - **unit** — `pnpm test:unit`
+- **provider-conformance** — standalone UI package checks and exact provider install
 - **build** — `pnpm build` (produces and caches `dist/`)
 - **build-demo** — `pnpm --filter @zudo-sg/demo build` (produces and caches
   `apps/demo/dist`), then `pnpm check:links:demo` against it
-- **smoke-e2e** — `pnpm test:e2e:ci` (Playwright, Chromium only; styleguide +
-  the eight default authoring projects (seven Composer projects plus Sitemapper) + demo-smoke — see
-  [Composer and Sitemapper E2E suites](#composer-and-sitemapper-e2e-suites); needs `build` and `build-demo`)
+- **build-doc** — `pnpm build:doc`, then `pnpm check:links:doc`
+- **smoke-e2e** — `pnpm test:e2e:ci` (Playwright, Chromium only; `smoke`,
+  `preview-token-panel`, and `demo-smoke`; needs `build` and `build-demo`)
 - **dist-checks** — `pnpm check:links` + `pnpm check:html` against `dist/`
   (needs `build`; merged into one job so both checks share a single install)
-- **file-provider-e2e** — `pnpm test:e2e:composer-file` (Playwright, dev-server-backed
-  file provider suite; no `needs`, builds its own `zfb dev` server from source — see
-  [Composer and Sitemapper E2E suites](#composer-and-sitemapper-e2e-suites))
 
 ### Individual checks
 
@@ -111,32 +109,19 @@ checkout root as its `cwd`, and every generated `webServer` entry sets
 therefore never silently adopted: Playwright must start the command owned by this
 checkout, and an occupied target port fails server startup before any test can pass.
 
-There are two intentionally different server modes:
-
-- **Static preview** — the default `playwright.config.ts` root and demo servers,
-  `playwright.composer-persistence.config.ts`,
-  `playwright.composer-verification.config.ts`, and
-  `playwright.prose-window-blur.config.ts` all use `zfb preview`. They serve a build
-  that must already exist in this checkout. The root server serves `dist/`; the demo
-  server serves `apps/demo/dist/`.
-- **Composer file dev** — `playwright.composer-file.config.ts` uses
-  `scripts/run-composer-file-e2e-server.mjs`, which starts `zfb dev` with the
-  filesystem transport. This is the one Composer suite that deliberately runs from
-  source and does not require `dist/` (or `apps/demo/dist/`) to exist.
+The default `playwright.config.ts` owns two static-preview servers. Both use
+`zfb preview` and require build output from this checkout: the root server
+serves `dist/`, and the demo server serves `apps/demo/dist/`.
 
 #### Port selection
 
 The helper in `scripts/lib/playwright-e2e-server.mjs` resolves one port per server
-entry. The six entries, their explicit overrides, CI fallbacks, and local offsets are:
+entry. The two entries, their explicit overrides, CI fallbacks, and local offsets are:
 
 | Entry / surface | Override environment variable | CI fallback | Local offset |
 |-----------------|------------------------------|-------------|--------------|
 | Root static preview (`playwright.config.ts`) | `ZUDO_SG_SMOKE_PORT` | 4700 | 0 |
 | Demo static preview (`playwright.config.ts`) | `ZUDO_SG_DEMO_SMOKE_PORT` | 4701 | 1 |
-| Composer file dev | `ZUDO_SG_COMPOSER_FILE_PORT` | 4702 | 2 |
-| Composer persistence static preview | `ZUDO_SG_COMPOSER_PERSISTENCE_PORT` | 4703 | 3 |
-| Composer verification static preview | `ZUDO_SG_COMPOSER_VERIFICATION_PORT` | 4704 | 4 |
-| Prose window-blur static preview | `ZUDO_SG_PROSE_WINDOW_BLUR_PORT` | 4713 | 13 |
 
 On a non-CI run without an override, the helper hashes
 `fs.realpathSync(checkoutRoot)` with SHA-256, maps the first 32-bit word into one of
@@ -147,33 +132,19 @@ collision is still possible; because ownership is exclusive, it fails loudly rat
 than serving a different checkout, and an explicit override can resolve it.
 
 An override wins in both local and CI environments. Override values must be decimal
-integers from 1 through 65,535; invalid values fail during config evaluation. The
-`composer-reuse` package script uses the verification config, so it uses
-`ZUDO_SG_COMPOSER_VERIFICATION_PORT`.
+integers from 1 through 65,535; invalid values fail during config evaluation.
 
 #### Build prerequisites and commands
 
-Install dependencies once in the worktree, then choose the command that matches the
-server mode:
+Install dependencies and build both static outputs before running Playwright:
 
 ```bash
 cd /path/to/zudo-sg-worktree
 pnpm install                         # once per worktree
 
-# Default config: both static outputs are required, even with --project=smoke.
 pnpm build
 pnpm --filter @zudo-sg/demo build
 pnpm test:e2e                        # or: pnpm test:e2e:ci
-
-# Isolated static Composer suites: only the root static output is required.
-pnpm build
-pnpm test:e2e:composer-persistence
-pnpm test:e2e:composer-verification
-pnpm test:e2e:composer-reuse        # uses the verification config
-pnpm test:e2e:prose-window-blur      # headed static preview; also needs a display
-
-# Composer file-provider suite: no build command is required.
-pnpm test:e2e:composer-file
 ```
 
 The default config evaluates both `createStaticPreviewServer` calls before
@@ -198,86 +169,16 @@ override must be applied to the command that loads the matching config:
 
 ```bash
 ZUDO_SG_SMOKE_PORT=54320 ZUDO_SG_DEMO_SMOKE_PORT=54321 pnpm test:e2e
-ZUDO_SG_COMPOSER_PERSISTENCE_PORT=54322 pnpm test:e2e:composer-persistence
-ZUDO_SG_COMPOSER_VERIFICATION_PORT=54323 pnpm test:e2e:composer-verification
-ZUDO_SG_COMPOSER_FILE_PORT=54324 pnpm test:e2e:composer-file
-ZUDO_SG_PROSE_WINDOW_BLUR_PORT=54325 pnpm test:e2e:prose-window-blur
 ```
 
-The static commands require the builds listed above and no foreign process on their
-target port. The file-provider command requires only installed dependencies and a
-free target port; it is expected to pass from a worktree with no build output.
+The static command requires both builds listed above and no foreign process on
+either target port. The three current projects are:
 
-### Composer and Sitemapper E2E suites
-
-`playwright.config.ts` (the default config, run by `pnpm test:e2e` / `pnpm test:e2e:ci`)
-includes eight authoring projects alongside `smoke`, `preview-token-panel`, and `demo-smoke`:
-the seven Composer projects and the Sitemapper project. These authoring projects, like `smoke`
-and `preview-token-panel`, are served from the
-styleguide's static `dist/` preview (local derived port; CI fallback 4700) — `demo-smoke`
-is separate, served from `apps/demo/dist` (local derived port; CI fallback 4701):
-
-| Project | Spec | Covers |
-|---------|------|--------|
-| `composer` | `composer.spec.ts` | 14-step editor walkthrough — canvas/tree edits, chooser, inline text edit, copy/paste/cut/duplicate, cross-slot drag, storage & recovery matrix, SPA navigation guard |
-| `composer-prose` | `composer-prose.spec.ts` | Explicit-save prose editing (epic #368): the hashed `zfb-md-wasm` runtime loading from the BUILT site, the no-implicit-commit contract (Enter/blur/mode-switch never commit; ESC and click-away prompt), the `focusout` host-chrome path, dialog focus containment, the untouched plain auto-commit path, persistence across reload, and dual-theme computed styles |
-| `composer-persistence` | `composer-persistence.spec.ts` | Real-browser IndexedDB lifecycle (create/update/duplicate/delete) and legacy-storage migration |
-| `composer-production-boundary` | `composer-production-boundary.spec.ts` | Built preview exposes IndexedDB but no dev file capability, endpoint, UI, or destination writes |
-| `composer-contracts` | `composer-contracts.spec.ts` | Composer Polish S7 computed-style contract gate (panel separation, chooser dialog, tree geometry, accent census, typography floor, narrow-viewport overflow) |
-| `composer-verification` | `composer-verification.spec.ts` | Viewport/theme/a11y matrix and interaction/state semantics (touch + mobile) |
-| `composer-reuse` | `composer-reuse.spec.ts` | Global-template and Pattern reuse — publish, discover, insert, dependency-checked unpublish, detach flows (touch + mobile) |
-| `sitemapper` | `sitemapper.spec.ts` | Sitemapper browser exit gate — named-sitemap creation/opening, page-tree add/sibling/duplicate/reorder/delete edits, composition-reference assignment and reload persistence, broken-reference recovery after Composer deletion, and 1440/375 light/dark visual/layout/editing contracts |
-
-Three composer-specific config files exist outside the default config, each with its own
-server/entry and script — `composer-file`'s script runs in CI (see below); the
-`composer-verification` and `composer-persistence` scripts are local-only:
-
-| Config | Server entry | Server | Projects | Script |
-|--------|------|--------|----------|--------|
-| `playwright.composer-file.config.ts` | `file-dev` | `zfb dev` (filesystem transport, via `scripts/run-composer-file-e2e-server.mjs`) | `composer-file-provider` | `pnpm test:e2e:composer-file` |
-| `playwright.composer-verification.config.ts` | `verification` | `zfb preview` | `composer-verification`, `composer-contracts`, `composer-reuse` | `pnpm test:e2e:composer-verification` (all three); `pnpm test:e2e:composer-reuse` (just `composer-reuse`) |
-| `playwright.composer-persistence.config.ts` | `persistence` | `zfb preview` | `composer-persistence`, `composer-production-boundary`, `composer-adapted` (`composer.spec.ts`) | `pnpm test:e2e:composer-persistence` |
-
-`playwright.composer-file.config.ts` is the only composer suite that can't run against a
-static `dist/` preview — it needs `zfb dev`'s filesystem write transport, which is exactly
-the surface `composer-production-boundary` asserts is absent from the built preview.
-
-**CI vs local, precisely:**
-
-- CI runs the reuse spec through the **default-config `composer-reuse` project**, inside
-  the `smoke-e2e` job (`pnpm test:e2e:ci`) — it does **not** invoke
-  `pnpm test:e2e:composer-reuse`. That isolated script (on
-  `playwright.composer-verification.config.ts`, verification entry; CI fallback 4704)
-  is a local-only command.
-- `composer-file` runs in its own `file-provider-e2e` CI job
-  (`pnpm test:e2e:composer-file`), since it needs a live `zfb dev` server rather than a
-  `dist/` preview.
-- `pnpm test:e2e:composer-verification` and `pnpm test:e2e:composer-persistence` are not
-  invoked by CI at all — they're local-only debugging entry points.
-
-`composer-prose` exists ONLY in the default config: it needs the static `dist/` preview
-(that is where the hashed wasm assets are served the way production serves them) and it
-mutates one record serially, so an isolated debugging twin would add nothing.
-
-This is a **deliberate overlap**: `composer-persistence`, `composer-production-boundary`,
-`composer` (as `composer-adapted`), `composer-verification`, `composer-contracts`, and
-`composer-reuse` all exist both in the default config (parallel workers, one shared dist
-server, run in CI) and in the isolated persistence/verification configs (`workers: 1`, serial database
-mutations, run locally) — the isolated configs give a deterministic, single-worker
-environment for debugging persistence/reuse flakes without the noise of the full parallel
-suite.
-
-**E2E support modules** (not test files themselves):
-
-- `e2e/support/composer-persistence.ts` — IndexedDB constants (database/store names, the
-  legacy storage key, composer route paths) and fixture helpers for opening a persisted
-  record.
-- `e2e/support/composer-reuse.ts` — reuse document/node builders and constants
-  (`SOURCE_RECORD_ID`, `PATTERN_RECORD_ID`) for Global-template and Pattern flows.
-
-> The `pr-checks.yml` job comments (job list, ordering, `needs` wiring) are owned by the
-> Composer CI epic — this section describes the resulting test surface, not the workflow
-> file itself.
+| Project | Specs | Surface |
+|---------|-------|---------|
+| `smoke` | `smoke.spec.ts` | Root styleguide, component catalog, and preview iframe |
+| `preview-token-panel` | `preview-token-panel.spec.ts` | Preview-token panel and iframe isolation |
+| `demo-smoke` | `demo-smoke.spec.ts`, `demo-transition.spec.ts`, `demo-refresh.spec.ts` | Demo rendering, navigation transitions, and refresh integration |
 
 ---
 
@@ -329,6 +230,6 @@ for the concrete T3 implementation pattern.
 ## Adding Tests
 
 - **Logic / data transforms** → add to `src/**/__tests__/` as `*.test.ts`, picked up by vitest automatically.
-- **New E2E flows** → add `*.spec.ts` to `e2e/`. Styleguide flows go in the root smoke fixture (local derived port; CI fallback 4700); demo flows go in the demo-smoke fixture (local derived port; CI fallback 4701) (see `playwright.config.ts`). New sub-app suites belong in the default `playwright.config.ts` so CI's `pnpm test:e2e:ci` picks them up; for Composer flows, use a `composer*` project there (static `dist/` preview) and only reach for one of the Composer-specific configs when the flow needs something the default config cannot give it: filesystem-write/dev-transport coverage → `playwright.composer-file.config.ts`; an isolated, single-worker run for verification/contracts/reuse debugging → `playwright.composer-verification.config.ts`; the same for persistence/production-boundary/full-walkthrough debugging → `playwright.composer-persistence.config.ts`. See [Composer and Sitemapper E2E suites](#composer-and-sitemapper-e2e-suites).
+- **New E2E flows** → add `*.spec.ts` to `e2e/`. Styleguide flows belong in `smoke` or `preview-token-panel` (root preview, CI fallback 4700); demo flows belong in `demo-smoke` (demo preview, CI fallback 4701). Keep new product-specific Composer/Sitemapper tests in the standalone zudo-composer repository.
 - **Visual regression** → use `/verify-ui` skill ad-hoc; do not add L5 specs to CI until T3 is set up.
 - **Anything asserting DOMPurify output** → put `@vitest-environment jsdom` in the file's leading docblock. Under the repo-wide happy-dom environment (16.8.1) DOMPurify reports `isSupported: true` yet sanitizes nothing — `<script>` and `onerror=` pass through verbatim — so an XSS assertion there would be testing a sanitizer that never ran. `packages/ui/src/content/prose-md/markdown-runtime.ts` refuses such a DOM outright (it probes the sanitizer before trusting it) and returns `html: null` with a `sanitize` error diagnostic, so the symptom is a null result rather than unsafe HTML.

@@ -25,14 +25,14 @@ public `@zudo-sg/ui/composer-pack` export. Stories consume sidecar display
 metadata for the catalog, but story modules are not inputs to the provider.
 
 The standalone [zudo-composer](https://github.com/Takazudo/zudo-composer)
-repository owns the Composer and Sitemapper products after the split. The
-legacy `/composer`, `/composer/preview`, and `/sitemapper` routes remain
-operational here only as a temporary Phase 2 verification seam; Phase 4 removes
-them after the standalone handoff is proven.
+repository owns the Composer and Sitemapper products after the split: their
+routes, application code, persistence, CI, and deployment live there. The
+former in-repo applications and `/composer`, `/composer/preview`, and
+`/sitemapper` routes have been removed from zudo-sg.
 
 There are currently zero users and zero production Composer/Sitemapper data.
 No backward-compatibility, migration, redirect, alias, or old-storage obligation
-exists. Both repositories may make destructive clean-current-schema changes.
+exists. The split was intentionally destructive and current-only.
 
 The immutable provider coordinates live in
 [`ui-provider-handoff.json`](./ui-provider-handoff.json). Contributors finish

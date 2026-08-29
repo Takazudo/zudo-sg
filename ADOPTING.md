@@ -291,12 +291,11 @@ repository owns their headless domains, application UI, routes, preview
 protocol, persistence providers, clean database identities, CI, and deployment.
 zudo-sg supplies components only through the installed component pack boundary.
 
-The `src/composer`, `src/sitemapper`, `src/features/composer`,
-`src/features/sitemapper`, `pages/composer`, and `pages/sitemapper` trees in
-this repository are temporary legacy verification copies. They intentionally
-remain operational through Phase 2 so the provider can be proven before source
-deletion. Do not adopt, extend, migrate, redirect, or add compatibility shims to
-those copies. Phase 4 deletes them after the standalone handoff is verified.
+The former `src/composer`, `src/sitemapper`, `src/features/composer`,
+`src/features/sitemapper`, `pages/composer`, and `pages/sitemapper` trees have
+been deleted from this repository. They are not adoption inputs, and zudo-sg
+does not provide aliases, redirects, migrations, or compatibility shims for
+their removed routes or storage identities.
 
 For a new Composer/Sitemapper deployment, start from zudo-composer and inject a
 validated `@zudo-composer/component-contract` pack. For a new component system,
