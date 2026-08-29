@@ -8,7 +8,10 @@ Composer and Sitemapper are standalone products owned by the
 [zudo-composer repository](https://github.com/Takazudo/zudo-composer). Use the
 [production application](https://zudo-composer.takazudomodular.com/) for both
 authoring tools. Their routes, document models, persistence, source generation,
-application UI, and deployment no longer live in this styleguide repository.
+application UI, and deployment permanently belong there. The in-repo Composer
+application and routes have now been removed. A temporary legacy `/sitemapper`
+route, model, persistence layer, and UI still remain here only until the next
+Phase 4 deletion topic; do not extend or migrate that seam.
 
 ## What zudo-sg owns
 
@@ -23,8 +26,9 @@ zudo-sg owns the component provider consumed by Composer:
 Component definitions use `defineComponent` from
 `@zudo-composer/component-contract`. Persisted component ids, schema versions,
 field props, and slot ids/props are stable contract keys. Public source metadata
-must identify named exports from `@zudo-sg/ui`; stories supply display metadata
-but are not provider inputs.
+must identify named exports from `@zudo-sg/ui`. Each sidecar exports its display
+metadata; the matching story imports and spreads it. Provider code never imports
+stories, and stories are not provider inputs.
 
 ## Updating the provider
 
