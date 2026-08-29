@@ -421,7 +421,6 @@ jobs:
 
             const previewRows = [
               ['Styleguide', siteResult, siteUrl],
-              ['Composer', siteResult, siteUrl && `${siteUrl.replace(/\/$/, '')}/composer`],
               ['Demo', demoResult, demoUrl],
               ['Docs', docResult, docUrl],
             ].map(([name, result, url]) =>

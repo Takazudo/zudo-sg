@@ -16,37 +16,9 @@ const PORTS_PER_PROJECT = 16;
 export const E2E_SERVER_ENTRIES = Object.freeze({
   root: Object.freeze({ env: "ZUDO_SG_SMOKE_PORT", legacyPort: 4_700, offset: 0 }),
   demo: Object.freeze({ env: "ZUDO_SG_DEMO_SMOKE_PORT", legacyPort: 4_701, offset: 1 }),
-  "file-dev": Object.freeze({
-    env: "ZUDO_SG_COMPOSER_FILE_PORT",
-    legacyPort: 4_702,
-    offset: 2,
-  }),
-  persistence: Object.freeze({
-    env: "ZUDO_SG_COMPOSER_PERSISTENCE_PORT",
-    legacyPort: 4_703,
-    offset: 3,
-  }),
-  verification: Object.freeze({
-    env: "ZUDO_SG_COMPOSER_VERIFICATION_PORT",
-    legacyPort: 4_704,
-    offset: 4,
-  }),
-  "prose-window-blur": Object.freeze({
-    env: "ZUDO_SG_PROSE_WINDOW_BLUR_PORT",
-    legacyPort: 4_713,
-    offset: 13,
-  }),
 });
 
-const ENTRY_ALIASES = Object.freeze({
-  file: "file-dev",
-  "composer-file": "file-dev",
-  "composer-file-dev": "file-dev",
-  "composer-persistence": "persistence",
-  "composer-verification": "verification",
-  "prose-blur": "prose-window-blur",
-  "prose-window": "prose-window-blur",
-});
+const ENTRY_ALIASES = Object.freeze({});
 
 function entryMetadata(options = {}) {
   const requestedEntry = options.entry ?? options.name ?? "root";
@@ -124,7 +96,7 @@ function deriveLocalPort(projectRoot, offset, realpath = fs.realpathSync) {
 }
 
 /**
- * Resolve the port for one of the six E2E server entries.
+ * Resolve the port for one of the root or demo E2E server entries.
  *
  * Entry-specific environment variables take precedence even in CI. Without
  * an override, CI retains the legacy port; local runs derive a stable block
@@ -312,38 +284,4 @@ function createServer(options = {}, { staticPreview }) {
  */
 export function createStaticPreviewServer(options = {}) {
   return createServer(options, { staticPreview: true });
-}
-
-/**
- * Create a Playwright webServer entry for a checkout-local dev server. This
- * deliberately performs no dist lookup; the composer-file server is meant to
- * boot from a clean checkout with no build output.
- */
-export function createDevServer(options = {}) {
-  return createServer(options, { staticPreview: false });
-}
-
-/**
- * Read the optional --port argument from a process argument vector. Unknown
- * arguments are ignored so this can be shared by the thin launcher wrapper.
- */
-export function parsePortArg(argv = [], fallback = 4_702) {
-  if (!Array.isArray(argv)) throw new Error("argv must be an array.");
-  const fallbackPort = validatePort(fallback);
-
-  for (let index = 0; index < argv.length; index += 1) {
-    const argument = argv[index];
-    if (argument === "--port") {
-      const value = argv[index + 1];
-      if (value === undefined || (typeof value === "string" && value.startsWith("--"))) {
-        throw new Error("Missing value for --port.");
-      }
-      return validatePort(value);
-    }
-    if (typeof argument === "string" && argument.startsWith("--port=")) {
-      return validatePort(argument.slice("--port=".length));
-    }
-  }
-
-  return fallbackPort;
 }

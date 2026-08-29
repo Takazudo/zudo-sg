@@ -15,14 +15,13 @@ describe("root zfb integration contract", () => {
     ]);
   });
 
-  it("keeps preset plugins first and appends only the two product plugins", () => {
+  it("keeps preset plugins first and appends the token-panel proxy", () => {
     expect(config.plugins?.map(({ name }) => name)).toEqual([
       "@takazudo/zudo-doc/plugins/routes",
       "@takazudo/zudo-doc/plugins/search-index",
       "@takazudo/zudo-doc/plugins/theme-packs",
       "@takazudo/zudo-doc/plugins/llms-txt",
       "./plugins/zdtp-apply-proxy-plugin.mjs",
-      "./plugins/composer-file-provider-plugin.mjs",
     ]);
   });
 

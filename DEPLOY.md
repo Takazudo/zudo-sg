@@ -106,8 +106,8 @@ workflow run starts.
 
 The workflow uploads the styleguide, demo, and documentation builds as Worker
 versions under a stable `pr-<number>` alias. A sticky PR comment links all three
-deployments and the Composer route directly. Later pushes to the same pull
-request update those URLs instead of creating new aliases or comments.
+deployments. Later pushes to the same pull request update those URLs instead of
+creating new aliases or comments.
 
 Fork and Dependabot pull requests skip this deployment workflow because
 Cloudflare secrets and a write-capable GitHub token are intentionally

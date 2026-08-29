@@ -65,7 +65,7 @@ ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 # Verify MDX/markdown files are formatted. The lefthook pre-commit hook
 # auto-formats on commit; this step catches drifts from direct edits.
 step
-if (cd "$ROOT_DIR" && pnpm dlx @takazudo/mdx-formatter --check .); then
+if (cd "$ROOT_DIR" && pnpm dlx @takazudo/mdx-formatter --check '**/*.md' '**/*.mdx' '.claude/**/*.md'); then
   pass "Format check passed"
 else
   fail "Format check"

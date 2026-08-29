@@ -133,14 +133,6 @@ export const settings = {
   headerNav: [
     { label: "Guide", path: "/docs/guide", categoryMatch: "guide" },
     { label: "Components", path: "/components", categoryMatch: "components" },
-    // No categoryMatch: /composer is a self-contained top-level route (not a
-    // docs section), so the package Header's plain path-prefix match
-    // (computeActiveNavPath / pathMatchesNavPath, @takazudo/zudo-doc/header)
-    // is sufficient for the active-state highlight (#247).
-    { label: "Composer", path: "/composer" },
-    // No categoryMatch: /sitemapper is a self-contained top-level route, so
-    // the package Header's plain path-prefix match is sufficient here too.
-    { label: "Sitemapper", path: "/sitemapper" },
     { label: "Doc", path: "https://zudo-sg-doc.takazudomodular.com" },
   ] satisfies HeaderNavItem[] as HeaderNavItem[],
   // NOTE: the framework's native `{ type: "trigger", trigger: "design-token-panel" }`

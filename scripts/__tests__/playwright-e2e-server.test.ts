@@ -9,35 +9,14 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
-  createDevServer,
   createStaticPreviewServer,
   decideStaticPreviewGuard,
-  parsePortArg,
   resolveE2EPort,
 } from "../lib/playwright-e2e-server.mjs";
 
 const entries = [
   { entry: "root", env: "ZUDO_SG_SMOKE_PORT", legacyPort: 4_700, offset: 0 },
   { entry: "demo", env: "ZUDO_SG_DEMO_SMOKE_PORT", legacyPort: 4_701, offset: 1 },
-  { entry: "file-dev", env: "ZUDO_SG_COMPOSER_FILE_PORT", legacyPort: 4_702, offset: 2 },
-  {
-    entry: "persistence",
-    env: "ZUDO_SG_COMPOSER_PERSISTENCE_PORT",
-    legacyPort: 4_703,
-    offset: 3,
-  },
-  {
-    entry: "verification",
-    env: "ZUDO_SG_COMPOSER_VERIFICATION_PORT",
-    legacyPort: 4_704,
-    offset: 4,
-  },
-  {
-    entry: "prose-window-blur",
-    env: "ZUDO_SG_PROSE_WINDOW_BLUR_PORT",
-    legacyPort: 4_713,
-    offset: 13,
-  },
 ] as const;
 
 const sandboxes: string[] = [];
@@ -53,7 +32,7 @@ function sandbox() {
 }
 
 describe("resolveE2EPort", () => {
-  it("derives deterministic, in-range ports with all six offsets", () => {
+  it("derives deterministic, in-range ports with both offsets", () => {
     const projectRoot = sandbox();
     const ports = entries.map(({ entry }) =>
       resolveE2EPort({ entry, projectRoot, env: {} }),
@@ -181,14 +160,14 @@ describe("server factories", () => {
       projectRoot,
       env: { CI: "1" },
       command: "pnpm exec zfb preview --port {port}",
-      urlPath: "/composer/",
+      urlPath: "/",
       timeout: 60_000,
     });
     expect(server.port).toBe(4_700);
     expect(server.origin).toBe("http://localhost:4700");
     expect(server.webServer).toMatchObject({
       command: "pnpm exec zfb preview --port 4700",
-      url: "http://localhost:4700/composer/",
+      url: "http://localhost:4700/",
       reuseExistingServer: false,
       cwd: projectRoot,
       timeout: 60_000,
@@ -211,23 +190,6 @@ describe("server factories", () => {
     );
   });
 
-  it("creates a dev server with no dist or project-root filesystem requirement", () => {
-    const projectRoot = join(sandbox(), "checkout-that-does-not-exist");
-    const server = createDevServer({
-      entry: "file-dev",
-      projectRoot,
-      env: { CI: "1" },
-      urlPath: "/composer/",
-    });
-    expect(server.port).toBe(4_702);
-    expect(server.webServer).toMatchObject({
-      command: "pnpm exec zfb dev --port 4702",
-      url: "http://localhost:4702/composer/",
-      reuseExistingServer: false,
-      cwd: projectRoot,
-    });
-  });
-
   it("interpolates explicit origin and port templates", () => {
     const projectRoot = sandbox();
     mkdirSync(join(projectRoot, "dist"));
@@ -240,24 +202,5 @@ describe("server factories", () => {
     });
     expect(server.webServer.command).toBe("serve --port 54321 --origin http://localhost:54321");
     expect(server.webServer.url).toBe("http://localhost:54321/health?port=54321");
-  });
-});
-
-describe("parsePortArg", () => {
-  it("returns the fallback when no port argument is present", () => {
-    expect(parsePortArg([], 4_702)).toBe(4_702);
-    expect(parsePortArg(["--verbose"], 4_702)).toBe(4_702);
-  });
-
-  it("parses separated and equals-form port arguments", () => {
-    expect(parsePortArg(["--port", "51234"], 4_702)).toBe(51_234);
-    expect(parsePortArg(["--port=51235"], 4_702)).toBe(51_235);
-  });
-
-  it("rejects missing and invalid port arguments and fallback values", () => {
-    expect(() => parsePortArg(["--port"], 4_702)).toThrow(/Missing value for --port/);
-    expect(() => parsePortArg(["--port", "0"], 4_702)).toThrow(/Invalid port/);
-    expect(() => parsePortArg(["--port=65536"], 4_702)).toThrow(/Invalid port/);
-    expect(() => parsePortArg([], 0)).toThrow(/Invalid port/);
   });
 });
