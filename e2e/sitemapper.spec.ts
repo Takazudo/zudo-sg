@@ -1,14 +1,7 @@
 import { expect, test, type Locator, type Page, type TestInfo } from "@playwright/test";
-import {
-  captureUnexpectedBrowserErrors,
-  openComposerLibrary,
-  resetComposerPersistence,
-} from "./support/composer-persistence";
-
 const SITEMAPPER_DATABASE_NAME = "zudo-sg-sitemapper";
 const THEME_KEY = "zudo-doc-theme";
 const SITEMAP_NAME = "E2E sitemap";
-const COMPOSITION_NAME = "Sitemapper composition";
 const THEMES = ["light", "dark"] as const;
 const VIEWPORTS = [
   { width: 1440, height: 900 },
@@ -35,11 +28,22 @@ async function deleteDatabase(page: Page, name: string): Promise<void> {
 }
 
 async function resetPersistence(page: Page): Promise<void> {
-  // The preview route mounts neither authoring provider, so no live database
-  // connection can block deletion between independently repeatable cases.
-  await resetComposerPersistence(page);
+  // A non-authoring route leaves no live Sitemapper connection to block reset.
+  await page.goto("/");
   await deleteDatabase(page, SITEMAPPER_DATABASE_NAME);
   await page.evaluate((key) => localStorage.removeItem(key), THEME_KEY);
+}
+
+function captureUnexpectedBrowserErrors(page: Page): {
+  pageErrors: string[];
+  consoleErrors: string[];
+} {
+  const errors = { pageErrors: [] as string[], consoleErrors: [] as string[] };
+  page.on("pageerror", (error) => errors.pageErrors.push(error.message));
+  page.on("console", (message) => {
+    if (message.type() === "error") errors.consoleErrors.push(message.text());
+  });
+  return errors;
 }
 
 async function waitForSitemapperLibrary(page: Page): Promise<void> {
@@ -97,22 +101,6 @@ async function waitForSaved(page: Page): Promise<void> {
     "saved",
     { timeout: 15_000 },
   );
-}
-
-async function createComposition(page: Page): Promise<string> {
-  await openComposerLibrary(page);
-  await expect(
-    page.locator(".sg-composer-library-open")
-      .or(page.getByRole("heading", { name: "No compositions yet" }))
-      .first(),
-  ).toBeVisible({ timeout: 15_000 });
-  await page.getByRole("button", { name: "New composition" }).first().click();
-  const dialog = page.getByRole("dialog", { name: "New composition" });
-  await dialog.getByLabel("Name", { exact: true }).fill(COMPOSITION_NAME);
-  await dialog.getByRole("button", { name: "Create composition", exact: true }).click();
-  await expect(page).toHaveURL(/#\/composition\/indexeddb\/[^/]+$/);
-  await expect(page.locator(".sg-composer-save-status")).toHaveAttribute("data-sg-status", "saved");
-  return decodeURIComponent(page.url().split("/").at(-1) ?? "");
 }
 
 async function buildVisualTree(page: Page): Promise<void> {
@@ -415,9 +403,8 @@ test.describe("Sitemapper browser exit gate", () => {
     await resetPersistence(page);
   });
 
-  test("completes CRUD, composition-reference persistence, and broken-reference recovery", async ({ page }) => {
+  test("completes Sitemapper CRUD and persistence", async ({ page }) => {
     const errors = captureUnexpectedBrowserErrors(page);
-    const compositionId = await createComposition(page);
 
     await page.goto("/");
     await page.locator("header[data-header] nav[data-header-nav]")
@@ -446,12 +433,6 @@ test.describe("Sitemapper browser exit gate", () => {
     await canvasAction(page, "Branch B", "Delete");
     await expect(node(page, "Branch B")).toHaveCount(0);
 
-    await selectNode(page, "Assigned page");
-    await page.getByRole("button", { name: "Choose composition" }).click();
-    const picker = page.getByRole("dialog", { name: "Choose a composition" });
-    const compositionRow = picker.getByRole("listitem").filter({ hasText: COMPOSITION_NAME });
-    await compositionRow.getByRole("button", { name: new RegExp(`Assign ${COMPOSITION_NAME}`) }).click();
-    await expect(page.getByText(COMPOSITION_NAME, { exact: true })).toBeVisible();
     await waitForSaved(page);
 
     await page.reload();
@@ -459,25 +440,6 @@ test.describe("Sitemapper browser exit gate", () => {
     await expect(nodes(page).filter({ hasText: "Branch A" })).toHaveCount(2);
     await expect(nodes(page).filter({ hasText: "Assigned page" })).toHaveCount(2);
     await expect(node(page, "Branch B")).toHaveCount(0);
-    await selectNode(page, "Assigned page");
-    await expect(page.getByText(COMPOSITION_NAME, { exact: true })).toBeVisible();
-    await expect(page.getByText("Browser storage", { exact: true })).toBeVisible();
-
-    await page.locator("header[data-header] nav[data-header-nav]")
-      .getByRole("link", { name: "Composer", exact: true }).click();
-    await openComposerLibrary(page);
-    await page.getByRole("button", { name: `Delete ${COMPOSITION_NAME}`, exact: true }).click();
-    const confirmation = page.getByRole("group", { name: `Confirm deleting ${COMPOSITION_NAME}` });
-    await confirmation.getByRole("button", { name: "Delete composition", exact: true }).click();
-    await expect(page.getByRole("button", { name: `Open ${COMPOSITION_NAME}` })).toHaveCount(0);
-
-    await page.locator("header[data-header] nav[data-header-nav]")
-      .getByRole("link", { name: "Sitemapper", exact: true }).click();
-    await openSitemap(page);
-    await selectNode(page, "Assigned page");
-    await expect(page.getByText("Broken reference", { exact: true })).toBeVisible();
-    await expect(page.getByText("Raw reference", { exact: true })).toBeVisible();
-    await expect(page.getByText(`indexeddb:${compositionId}`, { exact: true })).toBeVisible();
     await expect(page.locator(".sg-sitemapper-shell")).toBeVisible();
     expect(errors).toEqual({ pageErrors: [], consoleErrors: [] });
   });

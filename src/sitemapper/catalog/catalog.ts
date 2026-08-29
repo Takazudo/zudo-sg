@@ -1,11 +1,6 @@
-// Sitemapper ↔ Composer boundary: this is the only module in src/sitemapper/
-// that imports @/composer. It never calls Composer write APIs (put, delete,
-// clear, or lifecycle mutations). A Composer IndexedDB provider may still seed
-// or migrate during its first read/open, so this boundary is API-read-only but
-// not literally side-effect-free.
+// Temporary read-only catalog retained until the in-repo Sitemapper is removed.
 
 import { isSafeRecordId } from "@/shared";
-import type { CompositionLoadOutcome } from "@/composer";
 import type { CompositionRef } from "../model/types";
 import type {
   CatalogEntry,
@@ -17,6 +12,7 @@ import type {
   CompositionCatalogProviderSource,
   ProviderFailure,
   ResolveOutcome,
+  CompositionLoadOutcome,
 } from "./types";
 
 interface ProviderCollection {

@@ -27,10 +27,6 @@ export default defineConfig({
       // zfb-only virtual module (see vitest-stubs/zdtp-apply-config.ts) —
       // plain Vite has no resolver for a "virtual:" specifier.
       "virtual:zdtp-apply-config": resolve(__dirname, "vitest-stubs/zdtp-apply-config.ts"),
-      "virtual:composer-file-provider-config": resolve(
-        __dirname,
-        "vitest-stubs/composer-file-provider-config.ts",
-      ),
       // React → Preact compat aliases (mirrors production zfb/vite build).
       // Most-specific keys first so `react/jsx-runtime` is not swallowed by `react`.
       "react/jsx-runtime": "preact/jsx-runtime",
@@ -43,11 +39,6 @@ export default defineConfig({
   test: {
     include: [
       "src/**/__tests__/**/*.test.ts",
-      // Composer chrome DOM tests (issue #247) — Testing Library + happy-dom,
-      // same as the packages/ui component suites below. `_temp-resource/` is
-      // NOT under `src/`, so this glob can never sweep it in (see repo-root
-      // `_temp-resource/README.md`'s "production code/tests must not import"
-      // convention).
       "src/**/__tests__/**/*.test.tsx",
       "scripts/__tests__/**/*.test.ts",
       "plugins/__tests__/**/*.test.ts",

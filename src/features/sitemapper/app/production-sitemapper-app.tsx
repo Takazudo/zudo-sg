@@ -5,7 +5,6 @@
 
 import type { JSX } from "preact";
 import { useMemo, useState } from "preact/hooks";
-import { createIndexedDbCompositionProvider } from "@/composer";
 import type { IdFactory } from "@/shared";
 import { createCompositionCatalog, type CompositionCatalog } from "@/sitemapper/catalog";
 import type { SitemapProvider, SitemapRecord } from "@/sitemapper/library";
@@ -23,7 +22,7 @@ export interface ProductionSitemapperAppProps {
 
 export function ProductionSitemapperApp({ provider: suppliedProvider, catalog: suppliedCatalog, idFactory, pageIdFactory, now }: ProductionSitemapperAppProps): JSX.Element {
   const provider = useMemo(() => suppliedProvider ?? createIndexedDbSitemapProvider(), [suppliedProvider]);
-  const catalog = useMemo(() => suppliedCatalog ?? createCompositionCatalog([createIndexedDbCompositionProvider()]), [suppliedCatalog]);
+  const catalog = useMemo(() => suppliedCatalog ?? createCompositionCatalog([]), [suppliedCatalog]);
   const [record, setRecord] = useState<SitemapRecord | null>(null);
 
   return record ? (
