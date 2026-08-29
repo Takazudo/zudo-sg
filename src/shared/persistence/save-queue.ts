@@ -1,4 +1,4 @@
-// Revision-aware persistence coordination shared by the authoring sub-apps.
+// Revision-aware persistence coordination retained by Sitemapper.
 //
 // The queue owns the single-flight/latest-wins contract: edits are detached
 // and frozen immediately, at most one write is active, and edits made while it

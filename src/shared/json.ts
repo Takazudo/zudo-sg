@@ -1,7 +1,7 @@
 // Pure JSON-safety helpers shared by the headless authoring models.
 //
-// This module deliberately has no app or persistence imports. Both authoring
-// sub-apps use it to validate and detach the JSON documents they own.
+// This module deliberately has no app or persistence imports. Sitemapper uses
+// it to validate and detach the JSON documents it owns.
 
 import type { JsonValue } from "@zudo-sg/ui";
 

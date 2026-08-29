@@ -9,6 +9,9 @@ export type {
   CompositionCatalogProviderRegistry,
   CompositionCatalogProviderSource,
   CompositionCatalogStore,
+  CompositionLoadOutcome,
+  CompositionRecord,
+  CompositionSummary,
   ProviderFailure,
   ResolveOutcome,
 } from "./types";

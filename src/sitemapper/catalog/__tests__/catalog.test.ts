@@ -4,7 +4,7 @@ import {
   type CompositionCatalogProvider,
   type ResolveOutcome,
 } from "../index";
-import type { CompositionLoadOutcome, CompositionRecord, CompositionSummary } from "@/composer";
+import type { CompositionLoadOutcome, CompositionRecord, CompositionSummary } from "../index";
 
 const T1 = "2026-01-02T03:04:05.000Z";
 const T2 = "2026-01-02T04:04:05.000Z";

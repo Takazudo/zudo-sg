@@ -5,9 +5,8 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/pre
 import FDBFactory from "fake-indexeddb/lib/FDBFactory";
 import { h } from "preact";
 import { beforeAll, describe, expect, it, vi } from "vitest";
-import type { CompositionRecord } from "@/composer";
 import { createSequentialIdFactory } from "@/shared";
-import { createCompositionCatalog } from "@/sitemapper/catalog";
+import { createCompositionCatalog, type CompositionRecord } from "@/sitemapper/catalog";
 import type { SitemapRecord } from "@/sitemapper/library";
 import { createIndexedDbSitemapProvider } from "@/sitemapper/storage/indexeddb/provider";
 import { ProductionSitemapperApp } from "../production-sitemapper-app";

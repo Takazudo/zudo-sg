@@ -1,4 +1,4 @@
-// Provider-neutral record identity shared by the authoring sub-apps.
+// Provider-neutral record identity retained by Sitemapper.
 //
 // A source binding persists only this record id. Provider selection belongs to
 // the containing record at runtime, so this module intentionally has no app,

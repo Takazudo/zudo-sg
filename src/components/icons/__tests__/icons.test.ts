@@ -1,7 +1,5 @@
-// Plain `.ts` on purpose (no JSX, no @testing-library) — this file doubles as
-// the proof that the icon module is importable without JSX tooling, which is
-// the composer preview bundle's hard constraint (see the module header of
-// `src/features/composer/preview/preview-app.ts`).
+// Plain `.ts` on purpose (no JSX, no @testing-library) so the shared
+// Sitemapper icon module remains independent of JSX transforms.
 
 import { describe, expect, it } from "vitest";
 import { h, render } from "preact";
@@ -9,19 +7,10 @@ import {
   ChevronDownIcon,
   ChevronRightIcon,
   ChevronUpIcon,
-  ContainerIcon,
   CopyIcon,
-  CutIcon,
-  DragGripIcon,
-  DuplicateIcon,
-  EllipsisIcon,
-  ExpandIcon,
-  LeafIcon,
   PageIcon,
   PlusIcon,
-  SlotIcon,
   TrashIcon,
-  XMarkIcon,
   type IconComponent,
   type IconProps,
 } from "../index";
@@ -31,18 +20,9 @@ const ALL_ICONS: Record<string, IconComponent> = {
   ChevronDownIcon,
   ChevronUpIcon,
   PlusIcon,
-  XMarkIcon,
-  EllipsisIcon,
   CopyIcon,
-  CutIcon,
-  DuplicateIcon,
-  DragGripIcon,
   TrashIcon,
-  ExpandIcon,
   PageIcon,
-  SlotIcon,
-  ContainerIcon,
-  LeafIcon,
 };
 
 function renderIcon(Icon: IconComponent, props: IconProps = {}): HTMLElement {
@@ -89,7 +69,7 @@ describe("icons module", () => {
   }
 
   it("explicit width renders the bare svg with defaultSize filling height", () => {
-    const container = renderIcon(XMarkIcon, { width: 12 });
+    const container = renderIcon(PageIcon, { width: 12 });
     const svg = container.querySelector("svg")!;
     expect(container.querySelector("span")).toBeNull();
     expect(svg.getAttribute("width")).toBe("12");

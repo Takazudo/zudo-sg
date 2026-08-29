@@ -36,14 +36,14 @@
 
    `border` is ALSO re-asserted below, but as a DELIBERATE LITERAL, not to a
    `var(--zd-*)` role: the upstream SemanticKey set is closed, so there is no
-   `--zd-border` to map to (Composer Polish S1, #263). Unlike the `--zd-*` set
+   `--zd-border` to map to. Unlike the `--zd-*` set
    above this is a real value change — `--color-border` is consumed by the
    styleguide catalog chrome (`src/features/styleguide/**`, `pages/components/**`:
-   variant-frame, code-panel, catalog cards) and by the composer chrome, so those
-   borders move onto the deliberate ladder. Genuine docs pages (`.zd-content`, the
+   variant-frame, code-panel, catalog cards), so those borders move onto the
+   deliberate ladder. Genuine docs pages (`.zd-content`, the
    zudo-doc package chrome) bind no `border-border`/`var(--color-border)`, so they
    are unchanged. `--color-border-strong` is a new host-only ladder token (no ui
-   equivalent), consumed by later Composer Polish waves.
+   equivalent), consumed by major styleguide divisions.
 
    The remaining NEW ui-only names — surface-2, focus, on-accent, loading-scrim,
    and the rail family — are intentionally left at their @zudo-sg/ui values (NOT
@@ -133,16 +133,6 @@
  * ======================================== */
 @import "../features/styleguide/styles.css";
 
-/* Composer workspace — feature CSS (#247). Same "kept unlayered, moved up
- * into the top import block" reasoning as the styleguide import above, but
- * with no actual hazard to guard against: every Composer selector is a
- * bespoke `.sg-composer-*` class or `[data-sg-composer-*]` attribute that
- * shares no selector+property pair with any Tailwind utility or the
- * `.zd-doc-content-band` rules below (the Composer route doesn't render
- * DocLayout's content band at all — see src/features/composer/styles.css's
- * file header). */
-@import "../features/composer/styles.css";
-
 /* Sitemapper workspace — feature CSS (#400). This is an import-only
  * aggregator; its shell/canvas/tree/inspector leaves are owned by later
  * Sitemapper sub-issues. */
@@ -190,10 +180,6 @@
 @source "src/features/styleguide/**/*.{tsx,ts,jsx,js}";
 @source "src/styleguide/**/*.{tsx,ts,jsx,js}";
 @source "pages/components/**/*.{tsx,ts,jsx,js}";
-/* Composer route (#247) — scan so Tailwind generates the utility classes
- * used by the toolbar/workspace shell and its page module. */
-@source "src/features/composer/**/*.{tsx,ts,jsx,js}";
-@source "pages/composer/**/*.{tsx,ts,jsx,js}";
 /* Sitemapper route + client island — scan both sides of the page/src boundary
  * so utility classes remain available when Tailwind runs without .git. */
 @source "src/features/sitemapper/**/*.{tsx,ts,jsx,js}";
@@ -253,8 +239,7 @@
   --color-matched-keyword-fg: var(--zd-matched-keyword-fg);
 
   /* ========================================
-   * Structural chrome tokens — border ladder + composer panel separation
-   * (Composer Polish S1, #263)
+   * Structural chrome tokens — styleguide border ladder
    *
    * Literal oklch on the warm hue-65 base ramp (src/config/color-schemes.ts:
    * .965 / .705 / .480 / .300 / .185), per-mode via light-dark(). `color-scheme`
@@ -268,21 +253,10 @@
    * (it was an accidental leak of @zudo-sg/ui's --color-border via import order)
    * and adds --color-border-strong for major divisions. dark = .480 / .705 grades
    * (clearly visible on the .185 dark bg); light = analogous hairlines. Consumed
-   * by the styleguide catalog + composer chrome; docs pages consume neither.
-   *
-   * Composer panel separation + quiet guide (composer-scoped by CONSUMPTION —
-   * only .sg-composer-* / .zc-* chrome binds these; the sitewide surface==bg
-   * minimization for docs pages is untouched). panel-bg is tonally distinct from
-   * canvas-backdrop by ΔL ≈ 0.045 in both modes (panels lighter than the backdrop
-   * — the prototype grammar). guide is the resting muted tone for insert markers /
-   * handles / resizers (NOT accent). These three are DEFINED here but not yet
-   * bound — wave-2/3 sub-issues rebind the chrome onto them.
+   * by the styleguide catalog; docs pages consume neither.
    * ======================================== */
   --color-border:        light-dark(oklch(.855 .006 65), oklch(.480 .008 65));
   --color-border-strong: light-dark(oklch(.720 .006 65), oklch(.705 .008 65));
-  --sg-composer-panel-bg:        light-dark(oklch(.985 .003 65), oklch(.230 .007 65));
-  --sg-composer-canvas-backdrop: light-dark(oklch(.940 .004 65), oklch(.185 .005 65));
-  --sg-composer-guide:           light-dark(oklch(.680 .008 65), oklch(.560 .008 65));
 
   /* ========================================
    * Element sizes — semantic icon dimensions (root-specific)

@@ -91,8 +91,7 @@ export const Z_INDEX_TIERS: ZIndexTier[] = [
   {
     name: "popover",
     value: 40,
-    purpose:
-      "inline popovers: the Composer's context menus (issue #256) — node/insert menus and the Delete confirmation",
+    purpose: "inline popovers and Sitemapper canvas controls",
     kind: "global",
   },
   {

@@ -7,8 +7,8 @@
  * (minmax(0, 1fr)) | resizer | inspector rail.
  *
  * All values are semantic tokens or Sitemapper custom properties. In
- * particular, no Composer key/var/event is reused: both authoring apps may
- * be alive across a soft navigation in the same browser session.
+ * particular, its persisted layout keys and custom properties are scoped to
+ * Sitemapper.
  * ========================================================================== */
 
 :root {

@@ -122,11 +122,5 @@ export default defineConfig({
     {
       name: "./plugins/zdtp-apply-proxy-plugin.mjs",
     },
-    // Dev-only capability-gated transport for canonical Composer records and
-    // their browser-generated JSX. Build/preview receive an undefined virtual
-    // config and never install the middleware hook.
-    {
-      name: "./plugins/composer-file-provider-plugin.mjs",
-    },
   ],
 });

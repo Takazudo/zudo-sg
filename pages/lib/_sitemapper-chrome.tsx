@@ -9,8 +9,8 @@
 // importing `pages/lib/*` and accidentally widening the typecheck graph.
 //
 // Sitemapper intentionally has no footer. It is a full-width authoring
-// workspace, not a docs article, so it mirrors the Composer chrome boundary
-// rather than routing through DocLayoutWithDefaults.
+// workspace, not a docs article, so it does not route through
+// DocLayoutWithDefaults.
 
 import type { JSX } from "preact";
 import { settings } from "@/config/settings";
