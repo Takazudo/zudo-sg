@@ -133,11 +133,6 @@
  * ======================================== */
 @import "../features/styleguide/styles.css";
 
-/* Sitemapper workspace — feature CSS (#400). This is an import-only
- * aggregator; its shell/canvas/tree/inspector leaves are owned by later
- * Sitemapper sub-issues. */
-@import "../features/sitemapper/styles.css";
-
 /* Portable syntax paint + ProseMd typography. The provider owns these rules
  * directly; zudo-doc's feature stylesheet is not part of the component package
  * boundary and its earlier bridge is intentionally superseded here. */
@@ -180,11 +175,6 @@
 @source "src/features/styleguide/**/*.{tsx,ts,jsx,js}";
 @source "src/styleguide/**/*.{tsx,ts,jsx,js}";
 @source "pages/components/**/*.{tsx,ts,jsx,js}";
-/* Sitemapper route + client island — scan both sides of the page/src boundary
- * so utility classes remain available when Tailwind runs without .git. */
-@source "src/features/sitemapper/**/*.{tsx,ts,jsx,js}";
-@source "pages/sitemapper/**/*.{tsx,ts,jsx,js}";
-
 /* ========================================
  * Design Token System
  *
@@ -332,7 +322,6 @@
     --z-index-sidebar: 10;
     --z-index-toolbar: 20;
     --z-index-dropdown: 30;
-    --z-index-popover: 40;
     --z-index-modal-backdrop: 50;
     --z-index-modal: 60;
     --z-index-toast: 70;

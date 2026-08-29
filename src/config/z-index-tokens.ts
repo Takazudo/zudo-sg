@@ -32,8 +32,6 @@
 // `toast` and `tooltip` are reserved canonical tiers from the strategy's
 // scale — kept for completeness (and so downstream `create-zudo-doc` users
 // inherit the full scale) even though zudo-doc does not use them yet.
-// `popover` WAS in that same reserved state until the Composer's context
-// menus (issue #256) adopted it for exactly its documented purpose.
 
 export type ZIndexKind = "global" | "local";
 
@@ -86,12 +84,6 @@ export const Z_INDEX_TIERS: ZIndexTier[] = [
     name: "dropdown",
     value: 30,
     purpose: "header menus, version/language switchers",
-    kind: "global",
-  },
-  {
-    name: "popover",
-    value: 40,
-    purpose: "inline popovers and Sitemapper canvas controls",
     kind: "global",
   },
   {
