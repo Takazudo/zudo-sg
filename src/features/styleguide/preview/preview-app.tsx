@@ -63,11 +63,12 @@ function PreviewApp(): JSX.Element {
   // Accept live prop and resolved-theme updates from the parent.
   //
   // Trust model: this preview iframe is same-origin with its parent
-  // (`sandbox="allow-same-origin allow-scripts"`), so `window.parent` is a
-  // same-origin window we can compare against. Accept ONLY messages whose
-  // source is the parent and whose payload is a well-formed props or theme
-  // envelope; ignore everything else. Announce readiness only after installing
-  // this listener, so the parent can safely respond without losing a message.
+  // (`sandbox="allow-same-origin allow-scripts allow-forms"`), so
+  // `window.parent` is a same-origin window we can compare against. Accept ONLY
+  // messages whose source is the parent and whose payload is a well-formed
+  // props or theme envelope; ignore everything else. Announce readiness only
+  // after installing this listener, so the parent can safely respond without
+  // losing a message.
   useEffect(() => {
     function onMessage(e: MessageEvent): void {
       if (e.source !== window.parent) return;
