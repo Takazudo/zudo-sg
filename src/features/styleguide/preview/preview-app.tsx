@@ -22,7 +22,12 @@ import { useEffect, useMemo, useState } from "preact/hooks";
 import type { StoryControl } from "@zudo-sg/ui";
 import { installIframeReceiver } from "@/features/styleguide/token-tweak/iframe-css-vars-bridge";
 import { getStoryBySlug } from "@/styleguide/data/registry";
-import { MSG_HEIGHT, isUpdatePropsMessage } from "./messages";
+import {
+  MSG_HEIGHT,
+  MSG_READY,
+  isSetThemeMessage,
+  isUpdatePropsMessage,
+} from "./messages";
 
 function readParams(): { slug: string; variant: string } {
   if (typeof location === "undefined") return { slug: "", variant: "" };
@@ -54,20 +59,27 @@ function PreviewApp(): JSX.Element {
   // Install the design-token bridge receiver once.
   useEffect(() => installIframeReceiver(window), []);
 
-  // Accept live prop updates from the parent (controls panel).
+  // Accept live prop and resolved-theme updates from the parent.
   //
   // Trust model: this preview iframe is same-origin with its parent
   // (`sandbox="allow-same-origin allow-scripts"`), so `window.parent` is a
   // same-origin window we can compare against. Accept ONLY messages whose
-  // source is the parent and whose payload is a well-formed `sg:updateProps`
-  // envelope; ignore everything else.
+  // source is the parent and whose payload is a well-formed props or theme
+  // envelope; ignore everything else. Announce readiness only after installing
+  // this listener, so the parent can safely respond without losing a message.
   useEffect(() => {
     function onMessage(e: MessageEvent): void {
       if (e.source !== window.parent) return;
-      if (!isUpdatePropsMessage(e.data)) return;
-      setOverrides((prev) => ({ ...prev, ...e.data.props }));
+      if (isUpdatePropsMessage(e.data)) {
+        setOverrides((prev) => ({ ...prev, ...e.data.props }));
+        return;
+      }
+      if (isSetThemeMessage(e.data)) {
+        document.documentElement.dataset.theme = e.data.theme;
+      }
     }
     window.addEventListener("message", onMessage);
+    window.parent?.postMessage({ type: MSG_READY }, "*");
     return () => window.removeEventListener("message", onMessage);
   }, []);
 

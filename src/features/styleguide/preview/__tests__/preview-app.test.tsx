@@ -1,8 +1,13 @@
 import { h } from "preact";
-import { render } from "@testing-library/preact";
+import { act, render } from "@testing-library/preact";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import PreviewApp from "../preview-app";
-import { MSG_HEIGHT } from "../messages";
+import {
+  MSG_HEIGHT,
+  MSG_READY,
+  MSG_SET_THEME,
+  MSG_UPDATE_PROPS,
+} from "../messages";
 
 vi.mock("@/styleguide/data/registry", () => ({
   getStoryBySlug: () => ({
@@ -62,9 +67,56 @@ beforeEach(() => {
 
 afterEach(() => {
   document.body.innerHTML = "";
+  document.documentElement.removeAttribute("data-theme");
   vi.useRealTimers();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
+});
+
+describe("PreviewApp parent messaging", () => {
+  it("installs its listener before signaling readiness and preserves theme across prop updates", () => {
+    const postMessage = vi
+      .spyOn(window.parent, "postMessage")
+      .mockImplementation((message) => {
+        if (
+          typeof message === "object" &&
+          message !== null &&
+          (message as { type?: unknown }).type === MSG_READY
+        ) {
+          // Model the parent's immediate response to readiness. Because
+          // postMessage is mocked synchronously, this reaches the frame only
+          // if its listener was installed before the handshake was sent.
+          window.dispatchEvent(
+            new MessageEvent("message", {
+              data: { type: MSG_SET_THEME, theme: "dark" },
+              source: window.parent,
+            }),
+          );
+        }
+      });
+
+    render(<PreviewApp />);
+
+    expect(postMessage).toHaveBeenCalledWith({ type: MSG_READY }, "*");
+    expect(document.documentElement.dataset.theme).toBe("dark");
+
+    act(() => {
+      window.dispatchEvent(
+        new MessageEvent("message", {
+          data: { type: MSG_SET_THEME, theme: "light" },
+          source: null,
+        }),
+      );
+      window.dispatchEvent(
+        new MessageEvent("message", {
+          data: { type: MSG_UPDATE_PROPS, props: { label: "Updated" } },
+          source: window.parent,
+        }),
+      );
+    });
+
+    expect(document.documentElement.dataset.theme).toBe("dark");
+  });
 });
 
 describe("PreviewApp height reporting", () => {
@@ -74,6 +126,14 @@ describe("PreviewApp height reporting", () => {
       .mockImplementation(() => undefined);
 
     render(<PreviewApp />);
+
+    const heightMessageCount = (): number =>
+      postMessage.mock.calls.filter(
+        ([message]) =>
+          typeof message === "object" &&
+          message !== null &&
+          (message as { type?: unknown }).type === MSG_HEIGHT,
+      ).length;
 
     const fixtureRoot = document.querySelector("[data-sg-variant-root]");
     const fixtureContent = fixtureRoot?.firstElementChild as HTMLElement | null;
@@ -93,11 +153,11 @@ describe("PreviewApp height reporting", () => {
     );
 
     // Preserve the reporter's immediate, 100ms, and 500ms calls.
-    expect(postMessage).toHaveBeenCalledTimes(1);
+    expect(heightMessageCount()).toBe(1);
     vi.advanceTimersByTime(100);
-    expect(postMessage).toHaveBeenCalledTimes(2);
+    expect(heightMessageCount()).toBe(2);
     vi.advanceTimersByTime(400);
-    expect(postMessage).toHaveBeenCalledTimes(3);
+    expect(heightMessageCount()).toBe(3);
 
     // A fresh measurement on resize must be allowed to shrink; no max-height
     // accumulator may make the frame ratchet taller.
