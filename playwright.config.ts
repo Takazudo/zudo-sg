@@ -49,6 +49,11 @@ export default defineConfig({
       use: { baseURL: smokeServer.origin },
     },
     {
+      name: "preview-fidelity",
+      testMatch: "preview-fidelity.spec.ts",
+      use: { baseURL: smokeServer.origin },
+    },
+    {
       name: "demo-smoke",
       // Both demo specs serve from the same built demo dist (DEMO_SMOKE_PORT):
       // the render smoke checks, the SPA-transition regression suite, and the
