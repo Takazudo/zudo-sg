@@ -8,22 +8,21 @@ export const cardDisplay = {
     "Flat surface container with a border and rounded corners, in three variants and three padding sizes.",
 } as const;
 
-export const cardComposer = defineComponent<CardProps, typeof Card>({
+export const cardComposer = defineComponent<CardProps>()(Card, {
   id: "ui.card",
   schemaVersion: 1,
   ...cardDisplay,
   source: { module: "@zudo-sg/ui", exportKind: "named", exportName: "Card" },
   defaults: { title: "Card heading", variant: "default", padding: "md" },
   fields: [
-    { kind: "text", prop: "title", label: "Title" },
+    { prop: "title", label: "Title", schema: { type: "string" }, editor: { kind: "text" } },
     {
-      kind: "select",
       prop: "variant",
       label: "Variant",
-      options: ["default", "accent", "muted"],
+      schema: { type: "string", enum: ["default", "accent", "muted"] },
+      editor: { kind: "select" },
     },
-    { kind: "select", prop: "padding", label: "Padding", options: ["sm", "md", "lg"] },
+    { prop: "padding", label: "Padding", schema: { type: "string", enum: ["sm", "md", "lg"] }, editor: { kind: "select" } },
   ],
   slots: [{ id: "body", prop: "children", label: "Body", cardinality: "many" }],
-  component: Card,
 });

@@ -25,12 +25,7 @@ export const proseMdDisplay = {
   description: "Renders a markdown string client-side (fence highlighting, sanitized output).",
 } as const;
 
-export const proseMdComposer = defineComponent<
-  ProseMdProps,
-  typeof ProseMd,
-  unknown,
-  HTMLElement
->({
+export const proseMdComposer = defineComponent<ProseMdProps>()(ProseMd, {
   id: "ui.prose-md",
   schemaVersion: 1,
   ...proseMdDisplay,
@@ -38,13 +33,13 @@ export const proseMdComposer = defineComponent<
   defaults: { markdown: SAMPLE_MARKDOWN },
   fields: [
     {
-      kind: "text",
       prop: "markdown",
       label: "Markdown",
       required: true,
-      inlineEdit: { multiline: true, mode: "markdown-source" },
+      schema: { type: "string" },
+      editor: { kind: "text", multiline: true, mode: "markdown-source" },
+      inlineEdit: true,
     },
   ],
-  component: ProseMd,
-  adapters: { inlineEditor: { field: "markdown", resolveElement: (root) => root } },
+  adapters: { inlineEditor: { field: "markdown", resolveElement: (root: HTMLElement) => root } },
 });
