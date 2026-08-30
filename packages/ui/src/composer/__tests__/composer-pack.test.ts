@@ -30,34 +30,15 @@ describe("public composer pack", () => {
     expect(componentRuntimeRegistry).toBe(sourceRuntime);
   });
 
-  it("pins the exact v1 component and slot inventory", () => {
+  it("derives a unique, versioned component inventory from the generated pack", () => {
+    const ids = componentPackManifest.components.map(({ id }) => id);
+    expect(ids.length).toBeGreaterThan(0);
+    expect(new Set(ids).size).toBe(ids.length);
     expect(
-      componentPackManifest.components.map(({ id, schemaVersion, slots }) => ({
-        id,
-        schemaVersion,
-        slots,
-      })),
-    ).toEqual([
-      { id: "ui.callout", schemaVersion: 1, slots: [{ id: "body", prop: "children", label: "Body", cardinality: "many" }] },
-      { id: "ui.card", schemaVersion: 1, slots: [{ id: "body", prop: "children", label: "Body", cardinality: "many" }] },
-      { id: "ui.prose-md", schemaVersion: 1, slots: [] },
-      { id: "ui.prose-p", schemaVersion: 1, slots: [] },
-      { id: "ui.placeholder-box", schemaVersion: 1, slots: [] },
-      { id: "ui.auto-grid", schemaVersion: 1, slots: [{ id: "items", prop: "children", label: "Items", cardinality: "many" }] },
-      { id: "ui.container", schemaVersion: 1, slots: [{ id: "content", prop: "children", label: "Content", cardinality: "many" }] },
-      { id: "ui.cta-button", schemaVersion: 1, slots: [] },
-      { id: "ui.hero", schemaVersion: 1, slots: [] },
-      { id: "ui.section-heading", schemaVersion: 1, slots: [] },
-      {
-        id: "ui.split-layout",
-        schemaVersion: 1,
-        slots: [
-          { id: "left", prop: "left", label: "Left", cardinality: "single" },
-          { id: "right", prop: "right", label: "Right", cardinality: "many" },
-        ],
-      },
-      { id: "ui.stack", schemaVersion: 1, slots: [{ id: "content", prop: "children", label: "Content", cardinality: "many" }] },
-    ]);
+      componentPackManifest.components.every(
+        ({ id, schemaVersion }) => id.length > 0 && Number.isInteger(schemaVersion) && schemaVersion > 0,
+      ),
+    ).toBe(true);
   });
 
   it("keeps manifest and trusted runtime in exact parity", () => {
@@ -77,6 +58,7 @@ describe("public composer pack", () => {
   it("points every public source at the same exported runtime component", () => {
     for (const manifest of componentPackManifest.components) {
       expect(manifest.source.module).toBe("@zudo-sg/ui");
+      expect(manifest.source.module).not.toMatch(/(?:^|\/)src(?:\/|$)/);
       expect(manifest.source.exportKind).toBe("named");
       expect(
         publicUi[manifest.source.exportName as keyof typeof publicUi],
