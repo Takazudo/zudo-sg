@@ -20,6 +20,12 @@ export const heroComposer = defineComponent<HeroProps, typeof Hero>({
     variant: "primary",
     actions: [{ label: "Get started", href: "#", variant: "primary" }],
   },
+  staticProps: [
+    {
+      prop: "actions",
+      reason: "Structured CTA data remains application-owned until recursive value schemas are available.",
+    },
+  ],
   fields: [
     { kind: "text", prop: "eyebrow", label: "Eyebrow" },
     { kind: "text", prop: "heading", label: "Heading" },
