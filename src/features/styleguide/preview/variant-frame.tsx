@@ -113,12 +113,22 @@ function VariantFrame(props: VariantFrameProps): JSX.Element {
       </div>
       <div class="flex justify-center bg-bg p-hsp-md">
         <div style={{ width: viewport.width, maxWidth: "100%" }}>
+          {/* `allow-forms` is required by `packages/ui/src/forms/` stories:
+              #499 saw Chromium block submission without it (the submit
+              listener did not fire and the frame did not navigate), while
+              with it the listener fired and the frame navigated to the real
+              action. The catalog form stories omit their enhancer islands,
+              so `contact-form.stories.tsx` cannot show this: it renders
+              `<ContactForm />` alone; `ContactFormEnhancer` lives at
+              previewRoute `/preview/contact`, which
+              `pages/components/[slug].tsx:167` links out to instead of
+              rendering in a preview iframe. */}
           <iframe
             ref={iframeRef}
             src={src}
             title={`${slug} — ${name}`}
             loading="lazy"
-            sandbox="allow-same-origin allow-scripts"
+            sandbox="allow-same-origin allow-scripts allow-forms"
             style={{
               width: "100%",
               height: `${height}px`,
