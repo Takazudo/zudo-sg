@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/preact";
 import type { StoryControl } from "@zudo-sg/ui";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AFTER_NAVIGATE_EVENT } from "@takazudo/zudo-doc/transitions";
-import { MSG_READY, MSG_SET_THEME } from "../messages";
+import { MSG_READY, MSG_REQUEST_READY, MSG_SET_THEME } from "../messages";
 import VariantFrame from "../variant-frame";
 
 function readyFrame(iframe: HTMLIFrameElement): void {
@@ -106,6 +106,28 @@ describe("VariantFrame", () => {
     expect(themeMessages(postMessage)).toEqual([
       { type: MSG_SET_THEME, theme: "dark" },
     ]);
+  });
+
+  it("probes the frame after installing its listener to recover a missed ready signal", () => {
+    const postMessage = vi.fn();
+    const frameWindow = { postMessage } as unknown as Window;
+    const contentWindow = vi
+      .spyOn(HTMLIFrameElement.prototype, "contentWindow", "get")
+      .mockReturnValue(frameWindow);
+
+    const { unmount } = render(
+      <VariantFrame slug="cta-button" exportName="Playground" name="First" />,
+    );
+
+    expect(postMessage).toHaveBeenCalledWith(
+      { type: MSG_REQUEST_READY },
+      "*",
+    );
+
+    // Keep the mocked contentWindow in place through effect cleanup so the
+    // registry unregisters the same frame identity it registered.
+    unmount();
+    contentWindow.mockRestore();
   });
 
   it("isolates simultaneous frames and keeps a pinned frame opposite catalog changes", async () => {

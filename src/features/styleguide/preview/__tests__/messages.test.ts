@@ -1,10 +1,20 @@
 import { describe, expect, it } from "vitest";
 import {
   MSG_READY,
+  MSG_REQUEST_READY,
   MSG_SET_THEME,
   isReadyMessage,
+  isRequestReadyMessage,
   isSetThemeMessage,
 } from "../messages";
+
+describe("isRequestReadyMessage", () => {
+  it("accepts the parent readiness probe", () => {
+    expect(isRequestReadyMessage({ type: MSG_REQUEST_READY })).toBe(true);
+    expect(isRequestReadyMessage({ type: MSG_READY })).toBe(false);
+    expect(isRequestReadyMessage(null)).toBe(false);
+  });
+});
 
 describe("isSetThemeMessage", () => {
   it.each(["light", "dark"] as const)(

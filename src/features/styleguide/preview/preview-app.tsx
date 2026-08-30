@@ -25,6 +25,7 @@ import { getStoryBySlug } from "@/styleguide/data/registry";
 import {
   MSG_HEIGHT,
   MSG_READY,
+  isRequestReadyMessage,
   isSetThemeMessage,
   isUpdatePropsMessage,
 } from "./messages";
@@ -70,6 +71,14 @@ function PreviewApp(): JSX.Element {
   useEffect(() => {
     function onMessage(e: MessageEvent): void {
       if (e.source !== window.parent) return;
+      if (isRequestReadyMessage(e.data)) {
+        // The parent installs its message listener from a client-side effect,
+        // while this island also mounts on load. Re-answer a readiness probe
+        // so a one-shot `sg:ready` sent just before the parent listener was
+        // attached cannot leave this frame permanently unsynchronized.
+        window.parent?.postMessage({ type: MSG_READY }, "*");
+        return;
+      }
       if (isUpdatePropsMessage(e.data)) {
         setOverrides((prev) => ({ ...prev, ...e.data.props }));
         return;
