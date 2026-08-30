@@ -12,8 +12,15 @@
 import type { JSX } from "preact";
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import type { StoryControl } from "@zudo-sg/ui";
+import { onAfterNavigate } from "@takazudo/zudo-doc/transitions";
 import { withBase } from "@/utils/base";
-import { MSG_UPDATE_PROPS, isHeightMessage } from "./messages";
+import {
+  MSG_SET_THEME,
+  MSG_UPDATE_PROPS,
+  isHeightMessage,
+  isReadyMessage,
+  type PreviewTheme,
+} from "./messages";
 import { PREVIEW_ROUTE_PATH } from "./route";
 import {
   registerPreviewIframe,
@@ -35,6 +42,24 @@ const VIEWPORTS: Viewport[] = [
   { id: "full", label: "Full", width: "100%" },
 ];
 
+type ThemeMode = "follow" | PreviewTheme;
+
+interface ThemeOption {
+  id: ThemeMode;
+  label: string;
+}
+
+const THEME_OPTIONS: ThemeOption[] = [
+  { id: "follow", label: "Follow catalog" },
+  { id: "light", label: "Light" },
+  { id: "dark", label: "Dark" },
+];
+
+function readCatalogTheme(): PreviewTheme | null {
+  const theme = document.documentElement.getAttribute("data-theme");
+  return theme === "light" || theme === "dark" ? theme : null;
+}
+
 export interface VariantFrameProps {
   slug: string;
   /** Story export name (e.g. "Variants"). */
@@ -48,7 +73,10 @@ export interface VariantFrameProps {
 function VariantFrame(props: VariantFrameProps): JSX.Element {
   const { slug, exportName, name, controls } = props;
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const readyRef = useRef(false);
+  const themeModeRef = useRef<ThemeMode>("follow");
   const [height, setHeight] = useState(180);
+  const [themeMode, setThemeMode] = useState<ThemeMode>("follow");
   // Default to Full width; the fixed presets remain ordered narrow to wide.
   const [viewport, setViewport] = useState<Viewport>(
     VIEWPORTS.find((v) => v.id === "full") ?? VIEWPORTS[0],
@@ -62,16 +90,62 @@ function VariantFrame(props: VariantFrameProps): JSX.Element {
     return `${base}?slug=${encodeURIComponent(slug)}&variant=${encodeURIComponent(exportName)}`;
   }, [slug, exportName]);
 
-  // Receive height reports from this variant's iframe only.
+  function sendTheme(theme: PreviewTheme): void {
+    iframeRef.current?.contentWindow?.postMessage(
+      { type: MSG_SET_THEME, theme },
+      "*",
+    );
+  }
+
+  function syncTheme(): void {
+    if (!readyRef.current) return;
+    const mode = themeModeRef.current;
+    const theme = mode === "follow" ? readCatalogTheme() : mode;
+    if (theme) sendTheme(theme);
+  }
+
+  // Receive readiness and height reports from this variant's iframe only.
+  // Readiness gates every theme message so the iframe cannot miss its initial
+  // resolved theme while its listener is still being installed.
   useEffect(() => {
     function onMessage(e: MessageEvent): void {
       if (e.source !== iframeRef.current?.contentWindow) return;
+      if (isReadyMessage(e.data)) {
+        readyRef.current = true;
+        syncTheme();
+        return;
+      }
       if (isHeightMessage(e.data)) {
         setHeight(Math.max(80, Math.ceil(e.data.height)));
       }
     }
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
+  }, []);
+
+  // Follow is active synchronization, not native iframe inheritance. Observe
+  // the concrete catalog data-theme and also re-push it after SPA swaps (the
+  // package provider re-applies its theme on that lifecycle event).
+  useEffect(() => {
+    const observer = new MutationObserver((records) => {
+      if (
+        records.some((record) => record.attributeName === "data-theme") &&
+        themeModeRef.current === "follow"
+      ) {
+        syncTheme();
+      }
+    });
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-theme"],
+    });
+    const unsubscribeAfterNavigate = onAfterNavigate(() => {
+      if (themeModeRef.current === "follow") syncTheme();
+    });
+    return () => {
+      observer.disconnect();
+      unsubscribeAfterNavigate();
+    };
   }, []);
 
   // Register/unregister with the token-tweak registry.
@@ -90,26 +164,52 @@ function VariantFrame(props: VariantFrameProps): JSX.Element {
     );
   }
 
+  function selectTheme(mode: ThemeMode): void {
+    themeModeRef.current = mode;
+    setThemeMode(mode);
+    // Pinned modes are sent directly. Returning to Follow reads and sends the
+    // catalog's current concrete value immediately.
+    syncTheme();
+  }
+
   return (
     <section class="border border-border rounded-md overflow-hidden bg-surface">
       <div class="flex items-center justify-between gap-hsp-md px-hsp-md py-vsp-2xs border-b border-border bg-surface-2">
         <span class="text-small font-medium text-fg">{name}</span>
-        <div role="group" aria-label="Preview viewport" class="flex gap-hsp-3xs">
-          {VIEWPORTS.map((vp) => (
-            <button
-              type="button"
-              onClick={() => setViewport(vp)}
-              aria-pressed={viewport.id === vp.id}
-              class={
-                "px-hsp-xs py-vsp-3xs text-xs rounded-sm border transition-colors " +
-                (viewport.id === vp.id
-                  ? "border-accent bg-accent text-on-accent"
-                  : "border-border text-muted hover:text-fg")
-              }
-            >
-              {vp.label}
-            </button>
-          ))}
+        <div class="flex flex-wrap items-center justify-end gap-hsp-xs">
+          <div role="group" aria-label="Preview theme" class="flex gap-hsp-3xs">
+            {THEME_OPTIONS.map((option) => (
+              <button
+                type="button"
+                onClick={() => selectTheme(option.id)}
+                aria-pressed={themeMode === option.id}
+                class={
+                  themeMode === option.id
+                    ? "px-hsp-xs py-vsp-3xs text-xs rounded-sm border transition-colors border-accent bg-accent text-on-accent"
+                    : "px-hsp-xs py-vsp-3xs text-xs rounded-sm border transition-colors border-border text-muted hover:text-fg"
+                }
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+          <div role="group" aria-label="Preview viewport" class="flex gap-hsp-3xs">
+            {VIEWPORTS.map((vp) => (
+              <button
+                type="button"
+                onClick={() => setViewport(vp)}
+                aria-pressed={viewport.id === vp.id}
+                class={
+                  "px-hsp-xs py-vsp-3xs text-xs rounded-sm border transition-colors " +
+                  (viewport.id === vp.id
+                    ? "border-accent bg-accent text-on-accent"
+                    : "border-border text-muted hover:text-fg")
+                }
+              >
+                {vp.label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
       <div
