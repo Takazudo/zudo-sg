@@ -15,10 +15,7 @@ export const placeholderBoxDisplay = {
     "Labeled image stand-in used wherever the library has no real asset yet — also serves as the MDX `img` override target.",
 } as const;
 
-export const placeholderBoxComposer = defineComponent<
-  PlaceholderBoxComposerProps,
-  typeof PlaceholderBox
->({
+export const placeholderBoxComposer = defineComponent<PlaceholderBoxComposerProps>()(PlaceholderBox, {
   id: "ui.placeholder-box",
   schemaVersion: 1,
   ...placeholderBoxDisplay,
@@ -34,5 +31,4 @@ export const placeholderBoxComposer = defineComponent<
     },
     { kind: "select", prop: "size", label: "Size", options: ["sm", "md", "lg"] },
   ],
-  component: PlaceholderBox,
 });

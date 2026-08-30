@@ -7,7 +7,7 @@ export const calloutDisplay = {
   description: "Call-out box for notes/asides in body copy, in an accent-tinted or neutral tone.",
 } as const;
 
-export const calloutComposer = defineComponent<CalloutProps, typeof Callout>({
+export const calloutComposer = defineComponent<CalloutProps>()(Callout, {
   id: "ui.callout",
   schemaVersion: 1,
   ...calloutDisplay,
@@ -18,5 +18,4 @@ export const calloutComposer = defineComponent<CalloutProps, typeof Callout>({
     { kind: "text", prop: "title", label: "Title" },
   ],
   slots: [{ id: "body", prop: "children", label: "Body", cardinality: "many" }],
-  component: Callout,
 });

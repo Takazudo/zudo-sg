@@ -8,7 +8,7 @@ export const cardDisplay = {
     "Flat surface container with a border and rounded corners, in three variants and three padding sizes.",
 } as const;
 
-export const cardComposer = defineComponent<CardProps, typeof Card>({
+export const cardComposer = defineComponent<CardProps>()(Card, {
   id: "ui.card",
   schemaVersion: 1,
   ...cardDisplay,
@@ -25,5 +25,4 @@ export const cardComposer = defineComponent<CardProps, typeof Card>({
     { kind: "select", prop: "padding", label: "Padding", options: ["sm", "md", "lg"] },
   ],
   slots: [{ id: "body", prop: "children", label: "Body", cardinality: "many" }],
-  component: Card,
 });

@@ -8,7 +8,7 @@ export const prosePDisplay = {
     "MDX `p` element override — plain paragraph; flow spacing is owned by the consumer's content-flow stylesheet.",
 } as const;
 
-export const prosePComposer = defineComponent<ProsePProps, typeof ProseP, unknown, HTMLElement>({
+export const prosePComposer = defineComponent<ProsePProps>()(ProseP, {
   id: "ui.prose-p",
   schemaVersion: 1,
   ...prosePDisplay,
@@ -17,6 +17,5 @@ export const prosePComposer = defineComponent<ProsePProps, typeof ProseP, unknow
   fields: [
     { kind: "text", prop: "children", label: "Text", inlineEdit: { multiline: true } },
   ],
-  component: ProseP,
-  adapters: { inlineEditor: { field: "children", resolveElement: (root) => root } },
+  adapters: { inlineEditor: { field: "children", resolveElement: (root: HTMLElement) => root } },
 });

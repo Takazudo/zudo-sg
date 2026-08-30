@@ -8,7 +8,7 @@ export const autoGridDisplay = {
     "Auto-fit/auto-fill responsive grid primitive for card-style listings, switching column density by minimum track width.",
 } as const;
 
-export const autoGridComposer = defineComponent<AutoGridProps, typeof AutoGrid>({
+export const autoGridComposer = defineComponent<AutoGridProps>()(AutoGrid, {
   id: "ui.auto-grid",
   schemaVersion: 1,
   ...autoGridDisplay,
@@ -25,5 +25,4 @@ export const autoGridComposer = defineComponent<AutoGridProps, typeof AutoGrid>(
     { kind: "boolean", prop: "fill", label: "Fill (keep empty tracks)" },
   ],
   slots: [{ id: "items", prop: "children", label: "Items", cardinality: "many" }],
-  component: AutoGrid,
 });

@@ -8,7 +8,7 @@ export const stackDisplay = {
     "Generic flex stack — vertical or horizontal — with bounded gap, cross-axis alignment, and main-axis justification. Horizontal stacks always wrap so they never force overflow.",
 } as const;
 
-export const stackComposer = defineComponent<StackProps, typeof Stack>({
+export const stackComposer = defineComponent<StackProps>()(Stack, {
   id: "ui.stack",
   schemaVersion: 1,
   ...stackDisplay,
@@ -36,5 +36,4 @@ export const stackComposer = defineComponent<StackProps, typeof Stack>({
     },
   ],
   slots: [{ id: "content", prop: "children", label: "Content", cardinality: "many" }],
-  component: Stack,
 });
