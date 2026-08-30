@@ -74,7 +74,13 @@ function PreviewApp(): JSX.Element {
   // Report content height to the parent so it can size the iframe.
   useEffect(() => {
     function report(): void {
-      const height = document.body.scrollHeight;
+      // Keep the story's layout untouched: don't give body a BFC (`flow-root`)
+      // or padding to contain margins, and don't switch to
+      // documentElement.scrollHeight. The preview must render what a consuming
+      // page renders; changing that box trades fidelity for convenience where
+      // fidelity is the product.
+      const rect = document.body.getBoundingClientRect();
+      const height = Math.ceil(rect.bottom + window.scrollY);
       window.parent?.postMessage({ type: MSG_HEIGHT, height }, "*");
     }
     report();
