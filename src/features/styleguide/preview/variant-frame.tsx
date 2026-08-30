@@ -26,11 +26,12 @@ interface Viewport {
   width: string;
 }
 
-// Order + widths mirror the reference styleguide: Mobile (320px) / Tablet /
-// Full. Mobile is the narrowest, listed first.
+// Mobile is the narrowest, listed first; Full remains last so the fixed-width
+// presets progress from narrowest to widest before the fluid option.
 const VIEWPORTS: Viewport[] = [
   { id: "mobile", label: "Mobile", width: "320px" },
   { id: "tablet", label: "Tablet", width: "768px" },
+  { id: "desktop", label: "Desktop", width: "1280px" },
   { id: "full", label: "Full", width: "100%" },
 ];
 
@@ -48,7 +49,7 @@ function VariantFrame(props: VariantFrameProps): JSX.Element {
   const { slug, exportName, name, controls } = props;
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [height, setHeight] = useState(180);
-  // Default to Full width; the toggle is ordered Mobile / Tablet / Full.
+  // Default to Full width; the fixed presets remain ordered narrow to wide.
   const [viewport, setViewport] = useState<Viewport>(
     VIEWPORTS.find((v) => v.id === "full") ?? VIEWPORTS[0],
   );
@@ -111,8 +112,13 @@ function VariantFrame(props: VariantFrameProps): JSX.Element {
           ))}
         </div>
       </div>
-      <div class="flex justify-center bg-bg p-hsp-md">
-        <div style={{ width: viewport.width, maxWidth: "100%" }}>
+      <div
+        role="region"
+        aria-label="Preview viewport canvas"
+        tabIndex={0}
+        class="flex overflow-x-auto bg-bg p-hsp-md focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus"
+      >
+        <div class="mx-auto shrink-0" style={{ width: viewport.width }}>
           {/* `allow-forms` is required by `packages/ui/src/forms/` stories:
               #499 saw Chromium block submission without it (the submit
               listener did not fire and the frame did not navigate), while
@@ -132,6 +138,9 @@ function VariantFrame(props: VariantFrameProps): JSX.Element {
             style={{
               width: "100%",
               height: `${height}px`,
+              // An iframe's layout viewport is its content box. Keep the
+              // border at zero so a 1280px preset reaches the 1280px
+              // breakpoint; a visible border belongs on the wrapper.
               border: "0",
               display: "block",
             }}
