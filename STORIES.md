@@ -610,24 +610,18 @@ export const ctaButtonDisplay = {
   description: "Accent-filled or outlined call-to-action link.",
 } as const;
 
-export const ctaButtonComposer = defineComponent<
-  CtaButtonProps,
-  typeof CtaButton,
-  unknown,
-  HTMLElement
->({
+export const ctaButtonComposer = defineComponent<CtaButtonProps>()(CtaButton, {
   id: "ui.cta-button",
   schemaVersion: 1,
   ...ctaButtonDisplay,
   source: { module: "@zudo-sg/ui", exportKind: "named", exportName: "CtaButton" },
   defaults: { href: "/products", variant: "primary", children: "Browse" },
   fields: [
-    { kind: "select", prop: "variant", label: "Variant", options: ["primary", "secondary"] },
-    { kind: "text", prop: "children", label: "Label", inlineEdit: {} },
+    { prop: "variant", label: "Variant", schema: { type: "string", enum: ["primary", "secondary"] }, editor: { kind: "select" } },
+    { prop: "children", label: "Label", schema: { type: "string" }, editor: { kind: "text" }, inlineEdit: true },
   ],
-  component: CtaButton,
   adapters: {
-    inlineEditor: { field: "children", resolveElement: (root) => root },
+    inlineEditor: { field: "children", resolveElement: (root: HTMLElement) => root },
   },
 });
 
@@ -639,12 +633,12 @@ export default meta;
 ```
 
 Definitions carry stable `id` and `schemaVersion` values, one public package
-`source`, JSON-safe `defaults`, prop-mapped scalar `fields`, stable structural
+`source`, JSON-safe `defaults`, recursive schema/editor-paired `fields`, stable structural
 `slots`, the trusted `component`, and optional trusted `render` /
 `inlineEditor` adapters. There is no source adapter or unused constraints bag.
 
 The public source module is the package root (`@zudo-sg/ui`), never a private
-`/src/*` path. A field `prop` is a persisted scalar key. A slot has both a
+`/src/*` path. A field `prop` is a persisted JSON-value key. A slot has both a
 stable persisted `id` and the real component `prop` it fills; `accepts` omitted
 means any component in the pack, and `cardinality` is `single` or `many`.
 
@@ -673,16 +667,15 @@ entry owns Tailwind preflight/utilities, provider tokens/colors, syntax styles,
 ProseMd styles, and the `@source "../src"` scan needed by the real components.
 Importing the pack alone intentionally does not inject CSS.
 
-During the repository split, the host's
-`src/styleguide/data/composer-registry.ts` temporarily projects the legacy app
-shape from this generated public pack. It does not import stories. The old
-`/composer`, `/composer/preview`, and `/sitemapper` apps/routes remain
-operational only through Phase 2 verification and are deleted in Phase 4;
-product ownership already belongs to the standalone zudo-composer repo.
+The generated public pack is consumed directly by the standalone
+`zudo-composer` provider boundary. It does not import stories or depend on a
+styleguide registry; Composer and Sitemapper product ownership belongs to the
+standalone zudo-composer repository.
 
 ### Inline-edit modes
 
-A `text` field's `inlineEdit` object carries an optional `mode`:
+A canonical text field's editor carries the optional `mode`; `inlineEdit: true`
+marks the one top-level field that may be edited on the canvas:
 
 - `"plain"` (default, omitting `mode` means this) — the existing auto-commit
   inline session (wave-8 / #257, #288): edits commit as the user types/blurs.
@@ -693,7 +686,13 @@ A `text` field's `inlineEdit` object carries an optional `mode`:
 
 ```tsx
 fields: [
-  { kind: "text", prop: "markdown", label: "Body", inlineEdit: { mode: "markdown-source" } },
+  {
+    prop: "markdown",
+    label: "Body",
+    schema: { type: "string" },
+    editor: { kind: "text", mode: "markdown-source" },
+    inlineEdit: true,
+  },
 ],
 ```
 
@@ -713,9 +712,9 @@ fields: [
   as an authoring-time error, rather than letting it silently never become
   editable (`inlineEditableForEntry()` would otherwise just return `null`).
 
-The independent contract package owns the authoring types. The temporary legacy
-projection lives host-side in `src/styleguide/data/composer-registry.ts` and is
-removed with the old Composer application.
+The independent contract package owns the authoring types and the generated
+manifest is always canonical contract-v2 syntax. Providers must not recreate a
+legacy field projection at the consumer boundary.
 
 ### Package-only handoff
 
