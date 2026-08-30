@@ -15,14 +15,14 @@ export const cardComposer = defineComponent<CardProps>()(Card, {
   source: { module: "@zudo-sg/ui", exportKind: "named", exportName: "Card" },
   defaults: { title: "Card heading", variant: "default", padding: "md" },
   fields: [
-    { kind: "text", prop: "title", label: "Title" },
+    { prop: "title", label: "Title", schema: { type: "string" }, editor: { kind: "text" } },
     {
-      kind: "select",
       prop: "variant",
       label: "Variant",
-      options: ["default", "accent", "muted"],
+      schema: { type: "string", enum: ["default", "accent", "muted"] },
+      editor: { kind: "select" },
     },
-    { kind: "select", prop: "padding", label: "Padding", options: ["sm", "md", "lg"] },
+    { prop: "padding", label: "Padding", schema: { type: "string", enum: ["sm", "md", "lg"] }, editor: { kind: "select" } },
   ],
   slots: [{ id: "body", prop: "children", label: "Body", cardinality: "many" }],
 });

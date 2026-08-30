@@ -1,6 +1,11 @@
 import { defineComponent, type AuthorFieldDefinition } from "@zudo-composer/component-contract";
 import { Hero, type HeroProps } from "./hero";
 
+// The provider accepts ComponentChildren at runtime, while Composer persists
+// these authorable text leaves as JSON strings. Keep that authoring projection
+// explicit so contract-v2 static checks remain meaningful.
+type HeroComposerProps = Omit<HeroProps, "heading" | "lead"> & { heading?: string; lead?: string };
+
 export const heroDisplay = {
   title: "Hero",
   category: "Content",
@@ -8,7 +13,7 @@ export const heroDisplay = {
     "First-view hero band: eyebrow + display heading + lead + CTA row over a soft accent-tinted background.",
 } as const;
 
-export const heroComposer = defineComponent<HeroProps>()(Hero, {
+export const heroComposer = defineComponent<HeroComposerProps>()(Hero, {
   id: "ui.hero",
   schemaVersion: 1,
   ...heroDisplay,
@@ -21,10 +26,10 @@ export const heroComposer = defineComponent<HeroProps>()(Hero, {
     actions: [{ label: "Get started", href: "#", variant: "primary" }],
   },
   fields: [
-    { kind: "text", prop: "eyebrow", label: "Eyebrow" },
-    { kind: "text", prop: "heading", label: "Heading" },
-    { kind: "text", prop: "lead", label: "Lead" },
-    { kind: "select", prop: "variant", label: "Variant", options: ["primary", "secondary"] },
+    { prop: "eyebrow", label: "Eyebrow", schema: { type: "string" }, editor: { kind: "text" } },
+    { prop: "heading", label: "Heading", schema: { type: "string" }, editor: { kind: "text" } },
+    { prop: "lead", label: "Lead", schema: { type: "string" }, editor: { kind: "text" } },
+    { prop: "variant", label: "Variant", schema: { type: "string", enum: ["primary", "secondary"] }, editor: { kind: "select" } },
     {
       prop: "actions",
       label: "Actions",
@@ -60,6 +65,6 @@ export const heroComposer = defineComponent<HeroProps>()(Hero, {
         },
       },
       editor: { kind: "list" },
-    } satisfies AuthorFieldDefinition<HeroProps>,
+    } satisfies AuthorFieldDefinition<HeroComposerProps>,
   ],
 });

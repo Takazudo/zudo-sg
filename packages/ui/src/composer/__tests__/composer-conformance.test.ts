@@ -106,7 +106,7 @@ describe("real provider pack conformance", () => {
       const runtime = componentRuntimeRegistry.components[entry.id];
       expect(runtime?.schemaVersion).toBe(entry.schemaVersion);
       expect(runtime?.component).toBe(publicUi[entry.source.exportName as keyof typeof publicUi]);
-      const inline = entry.fields.find((field) => field.kind === "text" && field.inlineEdit);
+      const inline = entry.fields.find((field) => field.editor.kind === "text" && field.inlineEdit);
       if (inline) {
         expect(runtime?.adapters?.inlineEditor?.field).toBe(inline.prop);
         expect(typeof runtime?.adapters?.inlineEditor?.resolveElement).toBe("function");

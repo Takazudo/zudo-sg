@@ -16,13 +16,13 @@ export const autoGridComposer = defineComponent<AutoGridProps>()(AutoGrid, {
   defaults: { min: "15rem", fill: false, gap: "md" },
   fields: [
     {
-      kind: "select",
       prop: "min",
       label: "Min track width",
-      options: ["11rem", "13rem", "14rem", "15rem", "16rem", "18rem"],
+      schema: { type: "string", enum: ["11rem", "13rem", "14rem", "15rem", "16rem", "18rem"] },
+      editor: { kind: "select" },
     },
-    { kind: "select", prop: "gap", label: "Gap", options: ["sm", "md", "split"] },
-    { kind: "boolean", prop: "fill", label: "Fill (keep empty tracks)" },
+    { prop: "gap", label: "Gap", schema: { type: "string", enum: ["sm", "md", "split"] }, editor: { kind: "select" } },
+    { prop: "fill", label: "Fill (keep empty tracks)", schema: { type: "boolean" }, editor: { kind: "boolean" } },
   ],
   slots: [{ id: "items", prop: "children", label: "Items", cardinality: "many" }],
 });

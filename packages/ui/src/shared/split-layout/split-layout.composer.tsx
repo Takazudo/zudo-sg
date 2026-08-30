@@ -16,12 +16,12 @@ export const splitLayoutComposer = defineComponent<SplitLayoutProps>()(SplitLayo
   defaults: { ratio: "50/50", gap: "md" },
   fields: [
     {
-      kind: "select",
       prop: "ratio",
       label: "Ratio",
-      options: ["50/50", "40/60", "60/40", "33/67", "67/33"],
+      schema: { type: "string", enum: ["50/50", "40/60", "60/40", "33/67", "67/33"] },
+      editor: { kind: "select" },
     },
-    { kind: "select", prop: "gap", label: "Gap", options: ["sm", "md", "lg"] },
+    { prop: "gap", label: "Gap", schema: { type: "string", enum: ["sm", "md", "lg"] }, editor: { kind: "select" } },
   ],
   slots: [
     { id: "left", prop: "left", label: "Left", cardinality: "single" },
