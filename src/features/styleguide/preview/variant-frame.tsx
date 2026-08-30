@@ -15,6 +15,7 @@ import type { StoryControl } from "@zudo-sg/ui";
 import { onAfterNavigate } from "@takazudo/zudo-doc/transitions";
 import { withBase } from "@/utils/base";
 import {
+  MSG_REQUEST_READY,
   MSG_SET_THEME,
   MSG_UPDATE_PROPS,
   isHeightMessage,
@@ -120,6 +121,13 @@ function VariantFrame(props: VariantFrameProps): JSX.Element {
       }
     }
     window.addEventListener("message", onMessage);
+    // `PreviewApp` sends `sg:ready` once from a `when="load"` island. If
+    // that signal raced this effect during parent/iframe startup, ask the
+    // already-mounted frame to answer now that this listener is active.
+    iframeRef.current?.contentWindow?.postMessage(
+      { type: MSG_REQUEST_READY },
+      "*",
+    );
     return () => window.removeEventListener("message", onMessage);
   }, []);
 

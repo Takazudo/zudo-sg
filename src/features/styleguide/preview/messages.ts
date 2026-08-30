@@ -2,7 +2,8 @@
 // iframe.
 //
 // Two directions:
-//   parent → iframe : MSG_UPDATE_PROPS  (live control values from the controls panel)
+//   parent → iframe : MSG_REQUEST_READY (recover a one-shot ready race)
+//                     + MSG_UPDATE_PROPS  (live control values from the controls panel)
 //                     + MSG_SET_THEME     (resolved catalog theme)
 //   iframe → parent : MSG_READY         (the parent may start sending messages)
 //                     + MSG_HEIGHT        (content height, so the parent auto-sizes the iframe)
@@ -14,6 +15,7 @@
 
 export const MSG_UPDATE_PROPS = "sg:updateProps" as const;
 export const MSG_SET_THEME = "sg:setTheme" as const;
+export const MSG_REQUEST_READY = "sg:requestReady" as const;
 export const MSG_READY = "sg:ready" as const;
 export const MSG_HEIGHT = "sg:height" as const;
 
@@ -23,6 +25,10 @@ export interface UpdatePropsMessage {
   type: typeof MSG_UPDATE_PROPS;
   /** Prop name → value, merged over the variant's static props on re-render. */
   props: Record<string, unknown>;
+}
+
+export interface RequestReadyMessage {
+  type: typeof MSG_REQUEST_READY;
 }
 
 export interface HeightMessage {
@@ -40,9 +46,22 @@ export interface ReadyMessage {
   type: typeof MSG_READY;
 }
 
-export type ParentToPreviewMessage = UpdatePropsMessage | SetThemeMessage;
+export type ParentToPreviewMessage =
+  | RequestReadyMessage
+  | UpdatePropsMessage
+  | SetThemeMessage;
 export type PreviewToParentMessage = ReadyMessage | HeightMessage;
 export type PreviewMessage = ParentToPreviewMessage | PreviewToParentMessage;
+
+export function isRequestReadyMessage(
+  value: unknown,
+): value is RequestReadyMessage {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    (value as RequestReadyMessage).type === MSG_REQUEST_READY
+  );
+}
 
 export function isUpdatePropsMessage(value: unknown): value is UpdatePropsMessage {
   return (

@@ -5,6 +5,7 @@ import PreviewApp from "../preview-app";
 import {
   MSG_HEIGHT,
   MSG_READY,
+  MSG_REQUEST_READY,
   MSG_SET_THEME,
   MSG_UPDATE_PROPS,
 } from "../messages";
@@ -116,6 +117,32 @@ describe("PreviewApp parent messaging", () => {
     });
 
     expect(document.documentElement.dataset.theme).toBe("dark");
+  });
+
+  it("replies to a readiness probe after its one-shot ready signal", () => {
+    const postMessage = vi
+      .spyOn(window.parent, "postMessage")
+      .mockImplementation(() => undefined);
+
+    render(<PreviewApp />);
+    expect(postMessage).toHaveBeenCalledWith({ type: MSG_READY }, "*");
+
+    act(() => {
+      window.dispatchEvent(
+        new MessageEvent("message", {
+          data: { type: MSG_REQUEST_READY },
+          source: window.parent,
+        }),
+      );
+    });
+
+    const readyMessages = postMessage.mock.calls.filter(
+      ([message]) =>
+        typeof message === "object" &&
+        message !== null &&
+        (message as { type?: unknown }).type === MSG_READY,
+    );
+    expect(readyMessages).toHaveLength(2);
   });
 });
 
