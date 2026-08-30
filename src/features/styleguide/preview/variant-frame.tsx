@@ -12,8 +12,16 @@
 import type { JSX } from "preact";
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import type { StoryControl } from "@zudo-sg/ui";
+import { onAfterNavigate } from "@takazudo/zudo-doc/transitions";
 import { withBase } from "@/utils/base";
-import { MSG_UPDATE_PROPS, isHeightMessage } from "./messages";
+import {
+  MSG_REQUEST_READY,
+  MSG_SET_THEME,
+  MSG_UPDATE_PROPS,
+  isHeightMessage,
+  isReadyMessage,
+  type PreviewTheme,
+} from "./messages";
 import { PREVIEW_ROUTE_PATH } from "./route";
 import {
   registerPreviewIframe,
@@ -26,13 +34,32 @@ interface Viewport {
   width: string;
 }
 
-// Order + widths mirror the reference styleguide: Mobile (320px) / Tablet /
-// Full. Mobile is the narrowest, listed first.
+// Mobile is the narrowest, listed first; Full remains last so the fixed-width
+// presets progress from narrowest to widest before the fluid option.
 const VIEWPORTS: Viewport[] = [
   { id: "mobile", label: "Mobile", width: "320px" },
   { id: "tablet", label: "Tablet", width: "768px" },
+  { id: "desktop", label: "Desktop", width: "1280px" },
   { id: "full", label: "Full", width: "100%" },
 ];
+
+type ThemeMode = "follow" | PreviewTheme;
+
+interface ThemeOption {
+  id: ThemeMode;
+  label: string;
+}
+
+const THEME_OPTIONS: ThemeOption[] = [
+  { id: "follow", label: "Follow catalog" },
+  { id: "light", label: "Light" },
+  { id: "dark", label: "Dark" },
+];
+
+function readCatalogTheme(): PreviewTheme | null {
+  const theme = document.documentElement.getAttribute("data-theme");
+  return theme === "light" || theme === "dark" ? theme : null;
+}
 
 export interface VariantFrameProps {
   slug: string;
@@ -47,8 +74,11 @@ export interface VariantFrameProps {
 function VariantFrame(props: VariantFrameProps): JSX.Element {
   const { slug, exportName, name, controls } = props;
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const readyRef = useRef(false);
+  const themeModeRef = useRef<ThemeMode>("follow");
   const [height, setHeight] = useState(180);
-  // Default to Full width; the toggle is ordered Mobile / Tablet / Full.
+  const [themeMode, setThemeMode] = useState<ThemeMode>("follow");
+  // Default to Full width; the fixed presets remain ordered narrow to wide.
   const [viewport, setViewport] = useState<Viewport>(
     VIEWPORTS.find((v) => v.id === "full") ?? VIEWPORTS[0],
   );
@@ -61,16 +91,69 @@ function VariantFrame(props: VariantFrameProps): JSX.Element {
     return `${base}?slug=${encodeURIComponent(slug)}&variant=${encodeURIComponent(exportName)}`;
   }, [slug, exportName]);
 
-  // Receive height reports from this variant's iframe only.
+  function sendTheme(theme: PreviewTheme): void {
+    iframeRef.current?.contentWindow?.postMessage(
+      { type: MSG_SET_THEME, theme },
+      "*",
+    );
+  }
+
+  function syncTheme(): void {
+    if (!readyRef.current) return;
+    const mode = themeModeRef.current;
+    const theme = mode === "follow" ? readCatalogTheme() : mode;
+    if (theme) sendTheme(theme);
+  }
+
+  // Receive readiness and height reports from this variant's iframe only.
+  // Readiness gates every theme message so the iframe cannot miss its initial
+  // resolved theme while its listener is still being installed.
   useEffect(() => {
     function onMessage(e: MessageEvent): void {
       if (e.source !== iframeRef.current?.contentWindow) return;
+      if (isReadyMessage(e.data)) {
+        readyRef.current = true;
+        syncTheme();
+        return;
+      }
       if (isHeightMessage(e.data)) {
         setHeight(Math.max(80, Math.ceil(e.data.height)));
       }
     }
     window.addEventListener("message", onMessage);
+    // `PreviewApp` sends `sg:ready` once from a `when="load"` island. If
+    // that signal raced this effect during parent/iframe startup, ask the
+    // already-mounted frame to answer now that this listener is active.
+    iframeRef.current?.contentWindow?.postMessage(
+      { type: MSG_REQUEST_READY },
+      "*",
+    );
     return () => window.removeEventListener("message", onMessage);
+  }, []);
+
+  // Follow is active synchronization, not native iframe inheritance. Observe
+  // the concrete catalog data-theme and also re-push it after SPA swaps (the
+  // package provider re-applies its theme on that lifecycle event).
+  useEffect(() => {
+    const observer = new MutationObserver((records) => {
+      if (
+        records.some((record) => record.attributeName === "data-theme") &&
+        themeModeRef.current === "follow"
+      ) {
+        syncTheme();
+      }
+    });
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-theme"],
+    });
+    const unsubscribeAfterNavigate = onAfterNavigate(() => {
+      if (themeModeRef.current === "follow") syncTheme();
+    });
+    return () => {
+      observer.disconnect();
+      unsubscribeAfterNavigate();
+    };
   }, []);
 
   // Register/unregister with the token-tweak registry.
@@ -89,39 +172,83 @@ function VariantFrame(props: VariantFrameProps): JSX.Element {
     );
   }
 
+  function selectTheme(mode: ThemeMode): void {
+    themeModeRef.current = mode;
+    setThemeMode(mode);
+    // Pinned modes are sent directly. Returning to Follow reads and sends the
+    // catalog's current concrete value immediately.
+    syncTheme();
+  }
+
   return (
     <section class="border border-border rounded-md overflow-hidden bg-surface">
       <div class="flex items-center justify-between gap-hsp-md px-hsp-md py-vsp-2xs border-b border-border bg-surface-2">
         <span class="text-small font-medium text-fg">{name}</span>
-        <div role="group" aria-label="Preview viewport" class="flex gap-hsp-3xs">
-          {VIEWPORTS.map((vp) => (
-            <button
-              type="button"
-              onClick={() => setViewport(vp)}
-              aria-pressed={viewport.id === vp.id}
-              class={
-                "px-hsp-xs py-vsp-3xs text-xs rounded-sm border transition-colors " +
-                (viewport.id === vp.id
-                  ? "border-accent bg-accent text-on-accent"
-                  : "border-border text-muted hover:text-fg")
-              }
-            >
-              {vp.label}
-            </button>
-          ))}
+        <div class="flex flex-wrap items-center justify-end gap-hsp-xs">
+          <div role="group" aria-label="Preview theme" class="flex gap-hsp-3xs">
+            {THEME_OPTIONS.map((option) => (
+              <button
+                type="button"
+                onClick={() => selectTheme(option.id)}
+                aria-pressed={themeMode === option.id}
+                class={
+                  themeMode === option.id
+                    ? "px-hsp-xs py-vsp-3xs text-xs rounded-sm border transition-colors border-accent bg-accent text-on-accent"
+                    : "px-hsp-xs py-vsp-3xs text-xs rounded-sm border transition-colors border-border text-muted hover:text-fg"
+                }
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+          <div role="group" aria-label="Preview viewport" class="flex gap-hsp-3xs">
+            {VIEWPORTS.map((vp) => (
+              <button
+                type="button"
+                onClick={() => setViewport(vp)}
+                aria-pressed={viewport.id === vp.id}
+                class={
+                  "px-hsp-xs py-vsp-3xs text-xs rounded-sm border transition-colors " +
+                  (viewport.id === vp.id
+                    ? "border-accent bg-accent text-on-accent"
+                    : "border-border text-muted hover:text-fg")
+                }
+              >
+                {vp.label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
-      <div class="flex justify-center bg-bg p-hsp-md">
-        <div style={{ width: viewport.width, maxWidth: "100%" }}>
+      <div
+        role="region"
+        aria-label="Preview viewport canvas"
+        tabIndex={0}
+        class="flex overflow-x-auto bg-bg p-hsp-md focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus"
+      >
+        <div class="mx-auto shrink-0" style={{ width: viewport.width }}>
+          {/* `allow-forms` is required by `packages/ui/src/forms/` stories:
+              #499 saw Chromium block submission without it (the submit
+              listener did not fire and the frame did not navigate), while
+              with it the listener fired and the frame navigated to the real
+              action. The catalog form stories omit their enhancer islands,
+              so `contact-form.stories.tsx` cannot show this: it renders
+              `<ContactForm />` alone; `ContactFormEnhancer` lives at
+              previewRoute `/preview/contact`, which
+              `pages/components/[slug].tsx:167` links out to instead of
+              rendering in a preview iframe. */}
           <iframe
             ref={iframeRef}
             src={src}
             title={`${slug} — ${name}`}
             loading="lazy"
-            sandbox="allow-same-origin allow-scripts"
+            sandbox="allow-same-origin allow-scripts allow-forms"
             style={{
               width: "100%",
               height: `${height}px`,
+              // An iframe's layout viewport is its content box. Keep the
+              // border at zero so a 1280px preset reaches the 1280px
+              // breakpoint; a visible border belongs on the wrapper.
               border: "0",
               display: "block",
             }}
