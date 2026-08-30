@@ -33,11 +33,12 @@ export const proseMdComposer = defineComponent<ProseMdProps>()(ProseMd, {
   defaults: { markdown: SAMPLE_MARKDOWN },
   fields: [
     {
-      kind: "text",
       prop: "markdown",
       label: "Markdown",
       required: true,
-      inlineEdit: { multiline: true, mode: "markdown-source" },
+      schema: { type: "string" },
+      editor: { kind: "text", multiline: true, mode: "markdown-source" },
+      inlineEdit: true,
     },
   ],
   adapters: { inlineEditor: { field: "markdown", resolveElement: (root: HTMLElement) => root } },

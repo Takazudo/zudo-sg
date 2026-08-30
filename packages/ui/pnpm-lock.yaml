@@ -25,8 +25,8 @@ importers:
         specifier: ^22.0.0
         version: 22.20.1
       '@zudo-composer/component-contract':
-        specifier: git+https://github.com/Takazudo/zudo-composer.git#51f1c64a7639134254866458ff72b497da9c2f36
-        version: https://codeload.github.com/Takazudo/zudo-composer/tar.gz/51f1c64a7639134254866458ff72b497da9c2f36
+        specifier: git+https://github.com/Takazudo/zudo-composer.git#9b774b827e9f6fec14379995ac2c691ccc3b7e5b
+        version: https://codeload.github.com/Takazudo/zudo-composer/tar.gz/9b774b827e9f6fec14379995ac2c691ccc3b7e5b
       happy-dom:
         specifier: ^16.8.1
         version: 16.8.1
@@ -324,8 +324,8 @@ packages:
   '@vitest/utils@4.1.11':
     resolution: {integrity: sha512-zTCVGpyFsGWBhllOyKlTw/vnr6D9qxsfSDyfbyZmTyjHw5N/VuvzHpHoQjm2ZJzn4RJgx5w4r7V0er69CmLgPQ==}
 
-  '@zudo-composer/component-contract@https://codeload.github.com/Takazudo/zudo-composer/tar.gz/51f1c64a7639134254866458ff72b497da9c2f36':
-    resolution: {gitHosted: true, tarball: https://codeload.github.com/Takazudo/zudo-composer/tar.gz/51f1c64a7639134254866458ff72b497da9c2f36}
+  '@zudo-composer/component-contract@https://codeload.github.com/Takazudo/zudo-composer/tar.gz/9b774b827e9f6fec14379995ac2c691ccc3b7e5b':
+    resolution: {gitHosted: true, tarball: https://codeload.github.com/Takazudo/zudo-composer/tar.gz/9b774b827e9f6fec14379995ac2c691ccc3b7e5b}
     version: 1.0.0
     engines: {node: ^22.13.0 || >=24.0.0}
 
@@ -1435,7 +1435,7 @@ snapshots:
       convert-source-map: 2.0.0
       tinyrainbow: 3.1.1
 
-  '@zudo-composer/component-contract@https://codeload.github.com/Takazudo/zudo-composer/tar.gz/51f1c64a7639134254866458ff72b497da9c2f36': {}
+  '@zudo-composer/component-contract@https://codeload.github.com/Takazudo/zudo-composer/tar.gz/9b774b827e9f6fec14379995ac2c691ccc3b7e5b': {}
 
   ansi-regex@5.0.1: {}
 

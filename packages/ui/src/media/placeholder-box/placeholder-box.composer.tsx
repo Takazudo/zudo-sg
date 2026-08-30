@@ -22,13 +22,13 @@ export const placeholderBoxComposer = defineComponent<PlaceholderBoxComposerProp
   source: { module: "@zudo-sg/ui", exportKind: "named", exportName: "PlaceholderBox" },
   defaults: { label: "hero-image.png", aspect: "16/9", size: "md" },
   fields: [
-    { kind: "text", prop: "label", label: "Label" },
+    { prop: "label", label: "Label", schema: { type: "string" }, editor: { kind: "text" } },
     {
-      kind: "select",
       prop: "aspect",
       label: "Aspect ratio",
-      options: ["16/9", "4/3", "1/1"],
+      schema: { type: "string", enum: ["16/9", "4/3", "1/1"] },
+      editor: { kind: "select" },
     },
-    { kind: "select", prop: "size", label: "Size", options: ["sm", "md", "lg"] },
+    { prop: "size", label: "Size", schema: { type: "string", enum: ["sm", "md", "lg"] }, editor: { kind: "select" } },
   ],
 });
