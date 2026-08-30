@@ -1,4 +1,4 @@
-import { defineComponent } from "@zudo-composer/component-contract";
+import { defineComponent, type AuthorFieldDefinition } from "@zudo-composer/component-contract";
 import { Hero, type HeroProps } from "./hero";
 
 export const heroDisplay = {
@@ -20,16 +20,46 @@ export const heroComposer = defineComponent<HeroProps>()(Hero, {
     variant: "primary",
     actions: [{ label: "Get started", href: "#", variant: "primary" }],
   },
-  staticProps: [
-    {
-      prop: "actions",
-      reason: "Structured CTA data remains application-owned until recursive value schemas are available.",
-    },
-  ],
   fields: [
     { kind: "text", prop: "eyebrow", label: "Eyebrow" },
     { kind: "text", prop: "heading", label: "Heading" },
     { kind: "text", prop: "lead", label: "Lead" },
     { kind: "select", prop: "variant", label: "Variant", options: ["primary", "secondary"] },
+    {
+      prop: "actions",
+      label: "Actions",
+      schema: {
+        type: "array",
+        items: {
+          schema: {
+            type: "object",
+            fields: [
+              {
+                key: "label",
+                label: "Label",
+                required: true,
+                schema: { type: "string" },
+                editor: { kind: "text" },
+              },
+              {
+                key: "href",
+                label: "URL",
+                required: true,
+                schema: { type: "string" },
+                editor: { kind: "text" },
+              },
+              {
+                key: "variant",
+                label: "Variant",
+                schema: { type: "string", enum: ["primary", "secondary"] },
+                editor: { kind: "select" },
+              },
+            ],
+          },
+          editor: { kind: "group" },
+        },
+      },
+      editor: { kind: "list" },
+    } satisfies AuthorFieldDefinition<HeroProps>,
   ],
 });
