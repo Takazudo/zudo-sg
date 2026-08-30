@@ -610,12 +610,7 @@ export const ctaButtonDisplay = {
   description: "Accent-filled or outlined call-to-action link.",
 } as const;
 
-export const ctaButtonComposer = defineComponent<
-  CtaButtonProps,
-  typeof CtaButton,
-  unknown,
-  HTMLElement
->({
+export const ctaButtonComposer = defineComponent<CtaButtonProps>()(CtaButton, {
   id: "ui.cta-button",
   schemaVersion: 1,
   ...ctaButtonDisplay,
@@ -625,9 +620,8 @@ export const ctaButtonComposer = defineComponent<
     { kind: "select", prop: "variant", label: "Variant", options: ["primary", "secondary"] },
     { kind: "text", prop: "children", label: "Label", inlineEdit: {} },
   ],
-  component: CtaButton,
   adapters: {
-    inlineEditor: { field: "children", resolveElement: (root) => root },
+    inlineEditor: { field: "children", resolveElement: (root: HTMLElement) => root },
   },
 });
 

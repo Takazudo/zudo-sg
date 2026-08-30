@@ -7,12 +7,7 @@ export const sectionHeadingDisplay = {
   description: "Section header block: optional eyebrow, heading, and an optional intro paragraph.",
 } as const;
 
-export const sectionHeadingComposer = defineComponent<
-  SectionHeadingProps,
-  typeof SectionHeading,
-  unknown,
-  HTMLElement
->({
+export const sectionHeadingComposer = defineComponent<SectionHeadingProps>()(SectionHeading, {
   id: "ui.section-heading",
   schemaVersion: 1,
   ...sectionHeadingDisplay,
@@ -29,11 +24,10 @@ export const sectionHeadingComposer = defineComponent<
     { kind: "text", prop: "intro", label: "Intro" },
     { kind: "select", prop: "as", label: "Heading level", options: ["h1", "h2"] },
   ],
-  component: SectionHeading,
   adapters: {
     inlineEditor: {
       field: "heading",
-      resolveElement: (root) => root.querySelector<HTMLHeadingElement>("h1, h2"),
+      resolveElement: (root: HTMLElement) => root.querySelector<HTMLHeadingElement>("h1, h2"),
     },
   },
 });

@@ -8,7 +8,7 @@ export const splitLayoutDisplay = {
     "Two-pane layout: stacked full-width panes below md, ratio-controlled side-by-side panes at md and above.",
 } as const;
 
-export const splitLayoutComposer = defineComponent<SplitLayoutProps, typeof SplitLayout>({
+export const splitLayoutComposer = defineComponent<SplitLayoutProps>()(SplitLayout, {
   id: "ui.split-layout",
   schemaVersion: 1,
   ...splitLayoutDisplay,
@@ -27,5 +27,4 @@ export const splitLayoutComposer = defineComponent<SplitLayoutProps, typeof Spli
     { id: "left", prop: "left", label: "Left", cardinality: "single" },
     { id: "right", prop: "right", label: "Right", cardinality: "many" },
   ],
-  component: SplitLayout,
 });

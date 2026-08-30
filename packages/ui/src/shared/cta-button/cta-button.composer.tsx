@@ -7,12 +7,7 @@ export const ctaButtonDisplay = {
   description: "Accent-filled or outlined call-to-action link, with an optional trailing arrow.",
 } as const;
 
-export const ctaButtonComposer = defineComponent<
-  CtaButtonProps,
-  typeof CtaButton,
-  unknown,
-  HTMLElement
->({
+export const ctaButtonComposer = defineComponent<CtaButtonProps>()(CtaButton, {
   id: "ui.cta-button",
   schemaVersion: 1,
   ...ctaButtonDisplay,
@@ -24,11 +19,10 @@ export const ctaButtonComposer = defineComponent<
     { kind: "boolean", prop: "arrow", label: "Arrow" },
     { kind: "text", prop: "children", label: "Label", inlineEdit: { multiline: false } },
   ],
-  component: CtaButton,
   adapters: {
     inlineEditor: {
       field: "children",
-      resolveElement: (root) => root.querySelector<HTMLElement>("[data-cta-label]") ?? root,
+      resolveElement: (root: HTMLElement) => root.querySelector<HTMLElement>("[data-cta-label]") ?? root,
     },
   },
 });
