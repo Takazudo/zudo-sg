@@ -190,16 +190,27 @@ test.describe("catalogue filter", () => {
     const forms = page.locator(".sg-chip", { hasText: "Forms" });
     await forms.click();
     await expect(forms).toHaveAttribute("aria-pressed", "true");
-    const categories = await page.evaluate(
-      () =>
-        new Set(
-          [...document.querySelectorAll("[data-sg-tile]:not([hidden])")].map(
-            (tile) =>
-              tile.querySelector("[data-sg-card]")?.getAttribute("data-category"),
-          ),
-        ).size,
-    );
-    expect(categories).toBe(1);
+    // Poll rather than read once: `aria-pressed` flips with the chip's own
+    // render, but the tile hiding it implies runs in a `useEffect` a tick
+    // later, so a single `evaluate` here races the filter under load. The
+    // visible-tile assertions above already use `expect.poll` for the same
+    // reason; this one spot did not, and flaked once in four full runs.
+    await expect
+      .poll(() =>
+        page.evaluate(
+          () =>
+            new Set(
+              [
+                ...document.querySelectorAll("[data-sg-tile]:not([hidden])"),
+              ].map((tile) =>
+                tile
+                  .querySelector("[data-sg-card]")
+                  ?.getAttribute("data-category"),
+              ),
+            ).size,
+        ),
+      )
+      .toBe(1);
 
     await page.locator("h1").first().click();
     await page.keyboard.press("/");
