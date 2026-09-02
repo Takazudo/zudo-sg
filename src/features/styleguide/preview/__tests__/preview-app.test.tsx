@@ -144,6 +144,34 @@ describe("PreviewApp parent messaging", () => {
     );
     expect(readyMessages).toHaveLength(2);
   });
+
+  it("re-reports height alongside readiness, so a listener that attaches after every mount/timer/resize report has already fired can still recover it (#537)", () => {
+    const postMessage = vi
+      .spyOn(window.parent, "postMessage")
+      .mockImplementation(() => undefined);
+
+    render(<PreviewApp />);
+
+    // Drop every call recorded during mount (the ready signal plus the
+    // immediate/100ms/500ms height reports) so the assertions below can only
+    // pass if the probe response below re-posts both on its own.
+    postMessage.mockClear();
+
+    act(() => {
+      window.dispatchEvent(
+        new MessageEvent("message", {
+          data: { type: MSG_REQUEST_READY },
+          source: window.parent,
+        }),
+      );
+    });
+
+    expect(postMessage).toHaveBeenCalledWith({ type: MSG_READY }, "*");
+    expect(postMessage).toHaveBeenCalledWith(
+      { type: MSG_HEIGHT, height: 125 },
+      "*",
+    );
+  });
 });
 
 describe("PreviewApp height reporting", () => {
