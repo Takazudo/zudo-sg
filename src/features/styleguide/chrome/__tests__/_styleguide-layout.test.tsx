@@ -1,3 +1,4 @@
+import type { JSX } from "preact";
 import { render } from "preact-render-to-string";
 import { describe, expect, it, vi } from "vitest";
 
@@ -18,13 +19,20 @@ import { describe, expect, it, vi } from "vitest";
 // separately proves the prop type lines up with the real package's
 // `DocLayoutProps`.
 vi.mock("@takazudo/zudo-doc/doclayout", () => ({
-  DocLayoutWithDefaults: (props: { contentWide?: boolean; children?: unknown }) => (
-    <div
-      class="zd-doc-content-band"
-      {...(props.contentWide ? { "data-zd-wide": "" } : {})}
-    >
-      {props.children}
-    </div>
+  DocLayoutWithDefaults: (props: {
+    contentWide?: boolean;
+    headerOverride?: unknown;
+    children?: unknown;
+  }) => (
+    <>
+      {props.headerOverride}
+      <div
+        class="zd-doc-content-band"
+        {...(props.contentWide ? { "data-zd-wide": "" } : {})}
+      >
+        {props.children}
+      </div>
+    </>
   ),
 }));
 
@@ -36,10 +44,6 @@ vi.mock("@takazudo/zudo-doc/sidebar-tree-island", () => ({
   SidebarTree: () => null,
 }));
 
-vi.mock("../header-toggles", () => ({
-  default: () => null,
-}));
-
 vi.mock("../panel-scripts", () => ({
   PanelStateHeadScript: () => null,
   PanelResizersInitScript: () => null,
@@ -47,13 +51,16 @@ vi.mock("../panel-scripts", () => ({
 
 import { StyleguideLayout } from "../_styleguide-layout";
 
-function renderTokensLayout(contentWide?: boolean): string {
+function renderTokensLayout(
+  contentWide?: boolean,
+  header: JSX.Element = <></>,
+): string {
   return render(
     <StyleguideLayout
       title="Design Tokens"
       activeSlug="tokens"
       head={<></>}
-      header={<></>}
+      header={header}
       footer={<></>}
       bodyEnd={<></>}
       contentWide={contentWide}
@@ -73,5 +80,25 @@ describe("StyleguideLayout contentWide seam (#538)", () => {
     const html = renderTokensLayout();
     expect(html).toContain("zd-doc-content-band");
     expect(html).not.toContain("data-zd-wide");
+  });
+});
+
+describe("StyleguideLayout header slot (#541)", () => {
+  // The shell used to wrap the page header in `.sg-header-region` and overlay
+  // an `.sg-header-toggles` island onto the framework header band. Both are
+  // gone; the styleguide-only controls moved into the detail page's own
+  // workbench toolbar. This pins the shell to passing the header through
+  // verbatim, because re-introducing the overlay would put the code-panel
+  // toggle back on every route — including the one place it must never be, a
+  // panel that hides itself.
+  it("passes the page header through with no styleguide chrome around it", () => {
+    const html = renderTokensLayout(
+      true,
+      <header data-header="">framework chrome</header>,
+    );
+
+    expect(html).toContain("<header data-header>framework chrome</header>");
+    expect(html).not.toContain("sg-header-region");
+    expect(html).not.toContain("sg-header-toggles");
   });
 });

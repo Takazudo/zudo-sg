@@ -3,10 +3,18 @@
 // Component detail — `/components/<slug>`.
 //
 // Enumerates one route per discovered story (paths() → getAllSlugs()), and
-// renders that story's variants as stacked isolated preview iframes
-// (VariantFrame islands). Each VariantFrame loads `/components/preview?slug=…
-// &variant=…` as its iframe src and auto-sizes to the preview's reported
-// height.
+// hands that story's variants to a single DetailWorkbench island: one
+// page-level toolbar (theme / viewport / layout / code-panel / preview tokens)
+// plus one isolated preview iframe stage per variant. The toolbar owns that
+// state and passes it down as props — see the header of
+// `src/features/styleguide/preview/detail-workbench.tsx` for why it is one
+// island and not a toolbar broadcasting to independent stages (#541).
+//
+// Width (#541): the page opts into the DocLayout WIDE band so the preview
+// column gets the room the whole route exists to provide. The band is shared
+// with prose, so the title/description and the trailing component-docs MDX
+// section keep their own ~56rem reading measure — only the workbench spans the
+// full band.
 //
 // Chrome composition (mirrors pages/components/index.tsx): the docs chrome
 // defaults (`HeaderWithDefaults` / `FooterWithDefaults` / `HeadWithDefaults` /
@@ -20,7 +28,8 @@
 // the `codePanel` prop of StyleguideLayout. It flows into the DocLayout
 // `tocOverride` slot and flips `hideToc` to false. The panel is composed as
 // `<aside id="sg-code-panel">…</aside>` and the CodePanel island is loaded
-// inside it. The `>>> #49 SEAM` marker is now filled.
+// inside it. It is the page's single source display — the content column used
+// to repeat the same string in a USAGE `<pre>` that overflowed its own box.
 
 import type { JSX, VNode } from "preact";
 import { Island } from "@takazudo/zfb";
@@ -34,7 +43,7 @@ import {
 } from "@/styleguide/data/component-docs";
 import { componentDocMdxComponents } from "@/components/content/component-doc-mdx-components";
 import { StyleguideLayout } from "@/features/styleguide/chrome/_styleguide-layout";
-import VariantFrame from "@/features/styleguide/preview/variant-frame";
+import DetailWorkbench from "@/features/styleguide/preview/detail-workbench";
 import CodePanel from "@/features/styleguide/code-panel/code-panel";
 import type { CodePanelVariant } from "@/features/styleguide/code-panel/code-panel";
 import { composeMetaTitle } from "../lib/_compose-meta-title";
@@ -136,6 +145,24 @@ export default function StoryDetailPage(
   const docSlug = componentDocSlug(entry.path);
   const doc = docSlug ? getEntry(COMPONENT_DOCS_COLLECTION, docSlug) : undefined;
 
+  // `when: "load"` — the toolbar is the page's primary control surface and
+  // owns every stage's theme/viewport, so it must never wait on a viewport
+  // intersection. The stages themselves stay cheap: each iframe is
+  // `loading="lazy"`, so below-the-fold previews still defer their network.
+  const workbench = Island({
+    when: "load",
+    children: (
+      <DetailWorkbench
+        slug={slug}
+        variants={entry.variants.map((v) => ({
+          exportName: v.exportName,
+          name: v.name,
+          controls: v.story.controls,
+        }))}
+      />
+    ),
+  }) as unknown as VNode;
+
   return (
     <StyleguideLayout
       title={composeMetaTitle(entry.meta.title)}
@@ -143,32 +170,24 @@ export default function StoryDetailPage(
       lang={locale}
       {...chrome}
       codePanel={codePanel}
+      contentWide
     >
-      <div class="mx-auto max-w-[56rem]">
-        <header class="mb-vsp-lg">
+      {/* One wrapper keeps `.zd-content`'s flow spacing out of the page's own
+          vertical rhythm; the blocks below own their spacing explicitly. */}
+      <div>
+        <header class="mb-vsp-lg max-w-[56rem]">
           <h1 class="text-2xl font-bold text-fg">{entry.meta.title}</h1>
           <p class="mt-vsp-xs text-muted">{entry.meta.description}</p>
-          <span class="mt-vsp-xs inline-block rounded-full border border-border px-hsp-sm py-vsp-3xs text-xs text-muted">
+          <span class="mt-vsp-xs inline-block rounded-full border border-border px-hsp-sm py-vsp-3xs text-caption leading-normal text-muted">
             {entry.meta.category}
           </span>
         </header>
-
-        <section class="mb-vsp-xl">
-          <h2 class="mb-vsp-sm text-small font-semibold uppercase tracking-wide text-muted">
-            Usage
-          </h2>
-          <div class="sg-snippet">
-            <pre class="overflow-auto rounded-md bg-surface-2 p-hsp-md text-xs text-muted">
-              <code>{entry.meta.usage}</code>
-            </pre>
-          </div>
-        </section>
 
         {entry.meta.previewRoute && (
           // Sanctioned `previewRoute` pattern (STORIES.md §6): a link out to a
           // REAL page route, not one of the variant preview iframes below —
           // kept visually distinct (its own bordered callout, not a frame).
-          <section class="mb-vsp-xl rounded-md border border-border bg-surface-2 p-hsp-md">
+          <section class="mb-vsp-xl max-w-[56rem] rounded-md border border-border bg-surface-2 p-hsp-md">
             <h2 class="mb-vsp-2xs text-small font-semibold uppercase tracking-wide text-muted">
               Live demo
             </h2>
@@ -181,29 +200,15 @@ export default function StoryDetailPage(
           </section>
         )}
 
-        <div class="flex flex-col gap-vsp-xl">
-          {entry.variants.map((v) => {
-            const frame = Island({
-              when: "visible",
-              children: (
-                <VariantFrame
-                  slug={slug}
-                  exportName={v.exportName}
-                  name={v.name}
-                  controls={v.story.controls}
-                />
-              ),
-            }) as unknown as VNode;
-            return <div key={v.exportName}>{frame}</div>;
-          })}
-        </div>
+        {workbench}
 
         {doc && (
           <section class="mt-vsp-xl border-t border-border pt-vsp-xl">
             {/* `.zd-content` supplies the shared prose typography (headings,
                 lists, code blocks) via zudo-doc's content.css; the components
-                map adds the admonition tags. */}
-            <div class="zd-content">
+                map adds the admonition tags. Prose keeps its reading measure
+                even though the band is wide. */}
+            <div class="zd-content max-w-[56rem]">
               <doc.Content components={componentDocMdxComponents} />
             </div>
           </section>

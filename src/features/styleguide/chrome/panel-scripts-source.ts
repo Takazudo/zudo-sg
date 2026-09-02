@@ -12,6 +12,7 @@
 // flows through here automatically.
 
 import {
+  AFTER_SWAP_EVENT,
   ATTR_CODE_PANEL_HIDDEN,
   ATTR_CODE_PANEL_RESIZER,
   CSS_VAR_CODE_PANEL_W,
@@ -31,8 +32,6 @@ export const RESTORE_SCRIPT = `(function(){
 })();`;
 
 export const RESIZER_SCRIPT = `(function(){
-  if(window.__sgResizersInstalled) return;
-  window.__sgResizersInstalled=true;
   var MIN_CP=${MIN_CODE_PANEL_W};
   var STEP=16;
   var ACCENT_OUTLINE='2px solid var(--zd-accent,rgba(128,128,128,0.5))';
@@ -45,7 +44,7 @@ export const RESIZER_SCRIPT = `(function(){
     function readCurrentWidth(){
       // Measure the real panel element — always px, unit-agnostic. The CSS var
       // default is authored as a rem-based clamp (--sg-code-panel-w:
-      // clamp(20rem,35vw,32rem)) and getComputedStyle returns custom-property
+      // clamp(18rem,26vw,26rem)) and getComputedStyle returns custom-property
       // text UNRESOLVED, so parseFloat on the var would yield a bogus leading
       // number, not pixels, collapsing the panel on first keyboard use. Fall
       // back to a rem-aware parse only if the element is absent.
@@ -120,4 +119,14 @@ export const RESIZER_SCRIPT = `(function(){
     });
   }
   init();
+  // The client router swaps the whole body, so a detail -> detail navigation
+  // hands us a brand-new, unwired handle. Re-run init on every swap; the
+  // per-element __sgWired flag makes that idempotent. The window flag guards
+  // only the LISTENER registration (this script may itself be re-executed by
+  // the swap) — it must NOT gate init(), which is what left the new handle
+  // inert before #541.
+  if(!window.__sgResizersInstalled){
+    window.__sgResizersInstalled=true;
+    document.addEventListener('${AFTER_SWAP_EVENT}', init);
+  }
 })();`;

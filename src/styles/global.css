@@ -117,16 +117,15 @@
  * file header comment and zudolab/zudo-doc#2082/#2109). An unlayered rule
  * always beats a layered one regardless of specificity, so layering this
  * import would make it permanently lose to `tailwindcss/utilities` — flipping
- * two framework overrides: `.sg-header-region > [data-header]` (padding-right,
- * vs. the header's `px-hsp-lg` utility — Tailwind v4 compiles that to the
- * logical `padding-inline` shorthand, a "corresponding property" pair with
- * `padding-right`) and `.zd-doc-content-band:has(#sg-code-panel)` (gap, vs.
- * the content band's `gap-[clamp(...)]` utility). Both feature selectors
- * carry higher specificity than the single-class utility they override (the
- * attribute selector and the `:has(#sg-code-panel)` ID argument), and this
- * import still comes after `tailwindcss/utilities` in source order — moved
- * up INTO the top import block, not above it — so the override holds either
- * way. This file's own body rules below share no selector+property pair with
+ * the framework override `.zd-doc-content-band:has(#sg-code-panel)` (gap, vs.
+ * the content band's `gap-[clamp(...)]` utility). It used to be one of two —
+ * #541 deleted the styleguide header overlay and the `[data-header]`
+ * padding reservation that went with it. That feature selector carries higher
+ * specificity than the single-class utility it overrides (the
+ * `:has(#sg-code-panel)` ID argument), and this import still comes after
+ * `tailwindcss/utilities` in source order — moved up INTO the top import
+ * block, not above it — so the override holds either way. This file's own body
+ * rules below share no selector+property pair with
  * the feature CSS (the only shared class, `.zd-doc-content-band`, is touched
  * for different properties there — max-width transition vs. flex-direction/
  * gap here), so relocating the import above them changes nothing.
