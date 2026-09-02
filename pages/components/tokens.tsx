@@ -6,11 +6,13 @@
 // reference is visible with no JS); a client island (TokenPlayground) layers
 // the interactivity on top via event delegation:
 //   - click any token to copy its RESOLVED value (hex / rem) or its
-//     `var(--token)` reference (toggle in the toolbar),
-//   - open the existing zdtp tweaker (dispatches `toggle-sg-doc-tweak`, the
-//     doc-chrome panel's explicit toggle channel) to edit tokens live — because
-//     the swatches are painted with `var(--…)`, edits there restyle this page in
-//     real time.
+//     `var(--token)` reference (toggle in the toolbar). Because the swatches
+//     are painted with `var(--…)`, they also restyle live from the header's
+//     site-wide Design Tokens icon (doc-chrome panel) — no page-local trigger
+//     for that panel lives here (#538).
+//   - open the preview design-token panel (dispatches
+//     `toggle-preview-token-panel`) to edit the `@zudo-sg/ui` tokens used by
+//     component preview iframes elsewhere on the site.
 //
 // Token data: imports from ROOT `src/config/design-tokens-manifest.ts` (the
 // superset) rather than the styleguide's own manifest. Color tokens come from
@@ -106,6 +108,7 @@ export default function TokensPage(): JSX.Element {
       title={composeMetaTitle("Design Tokens")}
       activeSlug={TOKENS_SLUG}
       lang={locale}
+      contentWide
       {...chrome}
     >
       <div class="mx-auto max-w-[64rem]">

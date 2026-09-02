@@ -13,11 +13,12 @@
 //   2. COPY MODE — a toggle picks whether a click copies the resolved value
 //      (e.g. `#1f6f8b`) or the `var(--color-accent)` reference, since designers
 //      want one and engineers the other.
-//   3. LIVE TWEAK — a button opens the existing zdtp design-token panel via the
-//      same "toggle-sg-doc-tweak" event the header Design Tokens icon
-//      dispatches; edits there propagate to every preview iframe via the
-//      token-tweak bridge, and — because the swatches use `var(--…)` inline —
-//      this page's swatches update live too.
+//   3. PREVIEW TWEAK — a button opens the preview design-token panel via the
+//      "toggle-preview-token-panel" event, to edit the `@zudo-sg/ui` tokens
+//      used by component preview iframes elsewhere on the site. The doc-chrome
+//      panel (the site's own `--zd-*` tokens) is opened from the header's
+//      site-wide Design Tokens icon instead — this island no longer duplicates
+//      that trigger locally (#538).
 //
 // Contract with the SSR markup (pages/components/tokens.tsx):
 //   - Each copyable element is `[data-sg-token]` with:
@@ -79,13 +80,6 @@ export default function TokenPlayground(): JSX.Element {
     };
   }, []);
 
-  function openTweaker(): void {
-    // "toggle-sg-doc-tweak" is the doc-chrome panel's explicit toggle channel.
-    // The reserved "toggle-design-token-panel" is intentionally avoided so the
-    // doc-chrome and preview zdtp instances stay isolated (Takazudo/zudo-sg#84).
-    window.dispatchEvent(new CustomEvent("toggle-sg-doc-tweak"));
-  }
-
   function openPreviewTweaker(): void {
     window.dispatchEvent(new CustomEvent("toggle-preview-token-panel"));
   }
@@ -117,13 +111,6 @@ export default function TokenPlayground(): JSX.Element {
           retired in the native-chrome restyle, so this feature trigger now
           carries the same native utility literal. Kept as a full literal (not
           composed) so the Tailwind v4 scanner emits every utility. */}
-      <button
-        type="button"
-        class="inline-flex items-center gap-hsp-2xs px-hsp-xs py-vsp-3xs border border-border rounded text-small text-muted hover:text-fg transition-colors cursor-pointer"
-        onClick={openTweaker}
-      >
-        Tweak tokens live →
-      </button>
       <button
         type="button"
         class="inline-flex items-center gap-hsp-2xs px-hsp-xs py-vsp-3xs border border-border rounded text-small text-muted hover:text-fg transition-colors cursor-pointer"
