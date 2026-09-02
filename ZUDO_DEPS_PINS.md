@@ -10,7 +10,7 @@
 - pinned: 82811a8b7e6030fa759d823bd739307bca1480c3 (v5.16.1)
 - updated: 2026-09-02
 - sync: pnpm dlx create-zudo-doc@<ver> <scratch>/ref-doc --yes --pm pnpm --no-install …  # generate a reference, then three-way merge
-- notes: local customizations to re-apply (`zfb.config.ts` site settings, `.htmlvalidate.json`, `wrangler.toml`, `DELETION_LEDGER.md`, `check:html` script + `html-validate` devDep, `scripts/run-b4push.sh`, `--strict-plain-css-imports` on the build script if step 5 landed, plus anything step 4 had to restore).
+- notes: local customizations to re-apply: `zfb.config.ts` site settings, `.htmlvalidate.json`, `wrangler.toml`, `DELETION_LEDGER.md`, the `check:html` script + `html-validate` devDep, `scripts/run-b4push.sh`, and `--strict-plain-css-imports` on the build script. No scaffold dependency required restoration at 5.16.1.
 
 ## create-zudo-doc (setup-doc-skill.sh)
 
