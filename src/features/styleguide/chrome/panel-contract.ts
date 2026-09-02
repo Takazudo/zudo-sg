@@ -44,6 +44,15 @@ export const MIN_CODE_PANEL_W = 280;
 export const ID_CODE_PANEL = "sg-code-panel";
 export const ATTR_CODE_PANEL_RESIZER = "data-sg-code-panel-resizer";
 
+// ── SPA lifecycle ──────────────────────────────────────────────────────────
+// zudo-doc's client router dispatches this on `document` after every page
+// swap. The resizer's inline <script> has to re-attach its handle there (the
+// swap replaces the element with a fresh, unwired one), and an inline script
+// cannot import anything at runtime — so it is re-exported here for
+// panel-scripts-source.ts to interpolate, aliased rather than re-typed so it
+// can never drift from the package's own constant.
+export { AFTER_NAVIGATE_EVENT as AFTER_SWAP_EVENT } from "@takazudo/zudo-doc/transitions";
+
 // ── Client-only DOM helpers ────────────────────────────────────────────────
 
 function root(el?: HTMLElement): HTMLElement {

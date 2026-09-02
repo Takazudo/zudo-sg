@@ -10,14 +10,14 @@ The styleguide ships two independent design-token panels. Each one edits a diffe
 
 | | Doc-chrome panel | Preview panel |
 |---|---|---|
-| **Header control** | **Design Tokens** icon (sliders glyph) — shown on **every** docs page | **Preview tokens** icon (stacked-frames glyph) — shown on styleguide/component pages; also a "Preview tokens →" button on the `/components/tokens` toolbar |
+| **Trigger** | **Design Tokens** icon (sliders glyph) in the header — shown on **every** page, docs and styleguide alike | **Preview tokens** button (stacked-frames glyph) in a component detail page's workbench toolbar (`/components/<slug>`); also a "Preview tokens →" button on the `/components/tokens` toolbar |
 | **What it edits** | The documentation site's own UI | The `@zudo-sg/ui` component tokens inside preview iframes |
 | **Where applied** | Host `<html>` `:root` | Preview iframes only |
 | **localStorage prefix** | `sg-doc-tweak` | `sg-preview-tweak` |
 | **Console namespace** | `window.sgDoc` | `window.sgPreview` |
 | **Toggle event** | `toggle-sg-doc-tweak` | `toggle-preview-token-panel` |
 
-The header carries the two panels as a matched pair of icons in its right region: the **Design Tokens** icon is available site-wide (every docs page), while the **Preview tokens** icon appears only on the styleguide/component pages where preview iframes exist. So styleguide pages show two token icons and regular docs pages show one.
+The two panels are no longer a matched pair of header icons. The **Design Tokens** icon stays in the header and is available site-wide, including on styleguide pages. The **Preview tokens** control moved out of the header entirely — it now lives beside the previews it acts on, as a button in the component detail page's own toolbar, alongside the standing button on the `/components/tokens` page. A regular docs page shows one token control (the header icon); a component detail page shows two, and neither is in the header.
 
 ## Doc-chrome panel (Design Tokens)
 
@@ -33,7 +33,7 @@ Use this panel when you want to adjust or export the documentation site's design
 
 ## Preview panel (Preview tokens)
 
-Click the **Preview tokens** icon in the header (the stacked-frames glyph, on styleguide/component pages) or the "Preview tokens →" button on the `/components/tokens` toolbar to open this panel.
+Click the **Preview tokens** button (the stacked-frames glyph) in a component detail page's workbench toolbar, or the "Preview tokens →" button on the `/components/tokens` toolbar, to open this panel.
 
 The preview panel edits the `@zudo-sg/ui` design tokens — `--color-*`, `--spacing-*`, `--font-*`, `--radius-*`, `--shadow-*`. Instead of writing to the host `:root`, every change is sent directly into each registered preview iframe's `:root` via zudo-doc's theme bridge.
 

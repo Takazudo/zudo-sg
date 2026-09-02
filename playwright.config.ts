@@ -44,6 +44,13 @@ export default defineConfig({
       use: { baseURL: smokeServer.origin },
     },
     {
+      // The /components catalogue gallery (#540): inline SSR thumbnails, the
+      // wide band, the filter contract, and the tile-size control.
+      name: "catalog-gallery",
+      testMatch: "catalog-gallery.spec.ts",
+      use: { baseURL: smokeServer.origin },
+    },
+    {
       name: "preview-token-panel",
       testMatch: "preview-token-panel.spec.ts",
       use: { baseURL: smokeServer.origin },
@@ -51,6 +58,13 @@ export default defineConfig({
     {
       name: "preview-fidelity",
       testMatch: "preview-fidelity.spec.ts",
+      use: { baseURL: smokeServer.origin },
+    },
+    {
+      // #541 — the detail-page workbench (one toolbar, controlled stages).
+      // Serves from the same root dist as the smoke project.
+      name: "detail-workbench",
+      testMatch: "detail-workbench.spec.ts",
       use: { baseURL: smokeServer.origin },
     },
     {

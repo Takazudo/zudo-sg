@@ -45,6 +45,25 @@ function defaultsFromControls(
   return out;
 }
 
+/**
+ * Measure content height and post it to the parent.
+ *
+ * Keep the story's layout untouched: don't give body a BFC (`flow-root`) or
+ * padding to contain margins, and don't switch to
+ * documentElement.scrollHeight. The preview must render what a consuming
+ * page renders; changing that box trades fidelity for convenience where
+ * fidelity is the product.
+ *
+ * Module-scoped (not a closure inside an effect) so both the mount-time
+ * reporter and the `sg:requestReady` handler below can call the same
+ * measurement — see #537.
+ */
+function reportHeight(): void {
+  const rect = document.body.getBoundingClientRect();
+  const height = Math.ceil(rect.bottom + window.scrollY);
+  window.parent?.postMessage({ type: MSG_HEIGHT, height }, "*");
+}
+
 function PreviewApp(): JSX.Element {
   const [{ slug, variant }] = useState(readParams);
   // Live prop overrides pushed from the parent's controls panel. Read on every
@@ -76,8 +95,13 @@ function PreviewApp(): JSX.Element {
         // The parent installs its message listener from a client-side effect,
         // while this island also mounts on load. Re-answer a readiness probe
         // so a one-shot `sg:ready` sent just before the parent listener was
-        // attached cannot leave this frame permanently unsynchronized.
+        // attached cannot leave this frame permanently unsynchronized. A
+        // late-attaching listener (e.g. `Island when="visible"` on a
+        // below-the-fold frame) also misses the mount/100ms/500ms height
+        // reports below, with no other recovery path, so re-post the current
+        // height alongside readiness (#537).
         window.parent?.postMessage({ type: MSG_READY }, "*");
+        reportHeight();
         return;
       }
       if (isUpdatePropsMessage(e.data)) {
@@ -95,20 +119,10 @@ function PreviewApp(): JSX.Element {
 
   // Report content height to the parent so it can size the iframe.
   useEffect(() => {
-    function report(): void {
-      // Keep the story's layout untouched: don't give body a BFC (`flow-root`)
-      // or padding to contain margins, and don't switch to
-      // documentElement.scrollHeight. The preview must render what a consuming
-      // page renders; changing that box trades fidelity for convenience where
-      // fidelity is the product.
-      const rect = document.body.getBoundingClientRect();
-      const height = Math.ceil(rect.bottom + window.scrollY);
-      window.parent?.postMessage({ type: MSG_HEIGHT, height }, "*");
-    }
-    report();
-    const t1 = window.setTimeout(report, 100);
-    const t2 = window.setTimeout(report, 500);
-    const ro = new ResizeObserver(report);
+    reportHeight();
+    const t1 = window.setTimeout(reportHeight, 100);
+    const t2 = window.setTimeout(reportHeight, 500);
+    const ro = new ResizeObserver(reportHeight);
     ro.observe(document.body);
     return () => {
       window.clearTimeout(t1);

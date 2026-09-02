@@ -1,7 +1,20 @@
 "use client";
 
-// Parent-side host for ONE story variant: an isolated preview iframe plus a
-// viewport switcher and (optional) a read-only controls summary.
+// Controlled stage for ONE story variant: an isolated preview iframe plus an
+// optional live-controls panel.
+//
+// State ownership (#541): theme mode and viewport preset are NOT held here.
+// They belong to the page-level toolbar in ./detail-workbench.tsx and arrive
+// as props, so a stage that mounts late — a below-the-fold variant, or a
+// variant appended after the toolbar already moved — renders with the CURRENT
+// values. A page-level *event* could not do this: it would be dispatched
+// before those stages existed and simply be missed. Props survive late
+// mounting; broadcasts do not.
+//
+// What stays per-frame is what is genuinely per-frame: the iframe, the
+// `sg:height` handshake, the token-tweak registration, the
+// `Preview viewport canvas` scroll region, and the variant's own story-prop
+// controls.
 //
 // The iframe loads `/components/preview?slug=…&variant=…`; the same-origin
 // route gives the preview the main CSS bundle and CSS isolation (its own
@@ -28,33 +41,49 @@ import {
   unregisterPreviewIframe,
 } from "../token-tweak/preview-iframe-registry";
 
-interface Viewport {
-  id: string;
+// The preset tables live here, beside the stage that consumes them, and are
+// imported by the toolbar that drives them — the toolbar imports the stage
+// already, so the reverse direction would be a cycle.
+
+export type ViewportId = "mobile" | "tablet" | "desktop" | "full";
+
+export interface Viewport {
+  id: ViewportId;
   label: string;
   width: string;
 }
 
 // Mobile is the narrowest, listed first; Full remains last so the fixed-width
 // presets progress from narrowest to widest before the fluid option.
-const VIEWPORTS: Viewport[] = [
+export const VIEWPORTS: Viewport[] = [
   { id: "mobile", label: "Mobile", width: "320px" },
   { id: "tablet", label: "Tablet", width: "768px" },
   { id: "desktop", label: "Desktop", width: "1280px" },
   { id: "full", label: "Full", width: "100%" },
 ];
 
-type ThemeMode = "follow" | PreviewTheme;
+/** Fluid width — the fixed presets are opt-in. */
+export const DEFAULT_VIEWPORT_ID: ViewportId = "full";
 
-interface ThemeOption {
+export type ThemeMode = "follow" | PreviewTheme;
+
+export interface ThemeOption {
   id: ThemeMode;
   label: string;
 }
 
-const THEME_OPTIONS: ThemeOption[] = [
+export const THEME_OPTIONS: ThemeOption[] = [
   { id: "follow", label: "Follow catalog" },
   { id: "light", label: "Light" },
   { id: "dark", label: "Dark" },
 ];
+
+export const DEFAULT_THEME_MODE: ThemeMode = "follow";
+
+function viewportWidth(id: ViewportId): string {
+  const preset = VIEWPORTS.find((v) => v.id === id);
+  return (preset ?? VIEWPORTS[VIEWPORTS.length - 1]).width;
+}
 
 function readCatalogTheme(): PreviewTheme | null {
   const theme = document.documentElement.getAttribute("data-theme");
@@ -69,19 +98,22 @@ export interface VariantFrameProps {
   name: string;
   /** Declarative control descriptors (metadata only). */
   controls?: StoryControl[];
+  /** Toolbar-owned theme mode. "follow" tracks the catalog's `data-theme`. */
+  themeMode: ThemeMode;
+  /** Toolbar-owned viewport preset. */
+  viewportId: ViewportId;
 }
 
 function VariantFrame(props: VariantFrameProps): JSX.Element {
-  const { slug, exportName, name, controls } = props;
+  const { slug, exportName, name, controls, themeMode, viewportId } = props;
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const readyRef = useRef(false);
-  const themeModeRef = useRef<ThemeMode>("follow");
+  // Mirror the prop into a ref so the `[]`-deps listeners below (message,
+  // MutationObserver, after-navigate) read the CURRENT mode without being torn
+  // down and re-installed on every toolbar change.
+  const themeModeRef = useRef<ThemeMode>(themeMode);
+  themeModeRef.current = themeMode;
   const [height, setHeight] = useState(180);
-  const [themeMode, setThemeMode] = useState<ThemeMode>("follow");
-  // Default to Full width; the fixed presets remain ordered narrow to wide.
-  const [viewport, setViewport] = useState<Viewport>(
-    VIEWPORTS.find((v) => v.id === "full") ?? VIEWPORTS[0],
-  );
 
   const src = useMemo(() => {
     // PREVIEW_ROUTE_PATH is shared with css-injection.ts's iframe selector
@@ -131,6 +163,14 @@ function VariantFrame(props: VariantFrameProps): JSX.Element {
     return () => window.removeEventListener("message", onMessage);
   }, []);
 
+  // Adopt the toolbar's theme on every change. On mount this is a no-op
+  // (`readyRef` is still false) and the ready handler above sends the first
+  // value instead — which is exactly what makes a late-mounting stage land on
+  // the current mode rather than the default.
+  useEffect(() => {
+    syncTheme();
+  }, [themeMode]);
+
   // Follow is active synchronization, not native iframe inheritance. Observe
   // the concrete catalog data-theme and also re-push it after SPA swaps (the
   // package provider re-applies its theme on that lifecycle event).
@@ -172,53 +212,10 @@ function VariantFrame(props: VariantFrameProps): JSX.Element {
     );
   }
 
-  function selectTheme(mode: ThemeMode): void {
-    themeModeRef.current = mode;
-    setThemeMode(mode);
-    // Pinned modes are sent directly. Returning to Follow reads and sends the
-    // catalog's current concrete value immediately.
-    syncTheme();
-  }
-
   return (
     <section class="border border-border rounded-md overflow-hidden bg-surface">
-      <div class="flex items-center justify-between gap-hsp-md px-hsp-md py-vsp-2xs border-b border-border bg-surface-2">
-        <span class="text-small font-medium text-fg">{name}</span>
-        <div class="flex flex-wrap items-center justify-end gap-hsp-xs">
-          <div role="group" aria-label="Preview theme" class="flex gap-hsp-3xs">
-            {THEME_OPTIONS.map((option) => (
-              <button
-                type="button"
-                onClick={() => selectTheme(option.id)}
-                aria-pressed={themeMode === option.id}
-                class={
-                  themeMode === option.id
-                    ? "px-hsp-xs py-vsp-3xs text-xs rounded-sm border transition-colors border-accent bg-accent text-on-accent"
-                    : "px-hsp-xs py-vsp-3xs text-xs rounded-sm border transition-colors border-border text-muted hover:text-fg"
-                }
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
-          <div role="group" aria-label="Preview viewport" class="flex gap-hsp-3xs">
-            {VIEWPORTS.map((vp) => (
-              <button
-                type="button"
-                onClick={() => setViewport(vp)}
-                aria-pressed={viewport.id === vp.id}
-                class={
-                  "px-hsp-xs py-vsp-3xs text-xs rounded-sm border transition-colors " +
-                  (viewport.id === vp.id
-                    ? "border-accent bg-accent text-on-accent"
-                    : "border-border text-muted hover:text-fg")
-                }
-              >
-                {vp.label}
-              </button>
-            ))}
-          </div>
-        </div>
+      <div class="px-hsp-md py-vsp-2xs border-b border-border bg-surface-2">
+        <span class="text-caption leading-normal font-medium text-fg">{name}</span>
       </div>
       <div
         role="region"
@@ -226,7 +223,7 @@ function VariantFrame(props: VariantFrameProps): JSX.Element {
         tabIndex={0}
         class="flex overflow-x-auto bg-bg p-hsp-md focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus"
       >
-        <div class="mx-auto shrink-0" style={{ width: viewport.width }}>
+        <div class="mx-auto shrink-0" style={{ width: viewportWidth(viewportId) }}>
           {/* `allow-forms` is required by `packages/ui/src/forms/` stories:
               #499 saw Chromium block submission without it (the submit
               listener did not fire and the frame did not navigate), while
@@ -234,9 +231,8 @@ function VariantFrame(props: VariantFrameProps): JSX.Element {
               action. The catalog form stories omit their enhancer islands,
               so `contact-form.stories.tsx` cannot show this: it renders
               `<ContactForm />` alone; `ContactFormEnhancer` lives at
-              previewRoute `/preview/contact`, which
-              `pages/components/[slug].tsx:167` links out to instead of
-              rendering in a preview iframe. */}
+              previewRoute `/preview/contact`, which the detail page links out
+              to instead of rendering in a preview iframe. */}
           <iframe
             ref={iframeRef}
             src={src}
@@ -292,6 +288,10 @@ function coerceNumber(
  * Live controls for one variant. Holds per-control state seeded from defaults,
  * renders a controlled input per control type, and posts the FULL current prop
  * set to the iframe on every change (and on Reset).
+ *
+ * These are the variant's OWN story props — they stay with their variant. Only
+ * the global theme / viewport / layout controls were hoisted to the page
+ * toolbar (#541).
  */
 function ControlsPanel({
   controls,
@@ -327,7 +327,7 @@ function ControlsPanel({
           type="button"
           onClick={() => setOpen((o) => !o)}
           aria-expanded={open}
-          class="flex items-center gap-hsp-2xs text-xs uppercase tracking-wide text-muted hover:text-fg"
+          class="flex items-center gap-hsp-2xs text-caption leading-normal uppercase tracking-wide text-muted hover:text-fg cursor-pointer"
         >
           <span aria-hidden="true">{open ? "▼" : "▶"}</span>
           Controls
@@ -336,7 +336,7 @@ function ControlsPanel({
           <button
             type="button"
             onClick={reset}
-            class="text-xs rounded-sm border border-border px-hsp-xs py-vsp-3xs text-muted hover:text-fg hover:border-border transition-colors"
+            class="text-caption leading-normal rounded-sm border border-border px-hsp-xs py-vsp-3xs text-muted hover:text-fg transition-colors cursor-pointer"
           >
             Reset
           </button>
