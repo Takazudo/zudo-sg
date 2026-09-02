@@ -44,6 +44,13 @@ export default defineConfig({
       use: { baseURL: smokeServer.origin },
     },
     {
+      // The /components catalogue gallery (#540): inline SSR thumbnails, the
+      // wide band, the filter contract, and the tile-size control.
+      name: "catalog-gallery",
+      testMatch: "catalog-gallery.spec.ts",
+      use: { baseURL: smokeServer.origin },
+    },
+    {
       name: "preview-token-panel",
       testMatch: "preview-token-panel.spec.ts",
       use: { baseURL: smokeServer.origin },

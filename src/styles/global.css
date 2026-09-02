@@ -132,6 +132,13 @@
  * gap here), so relocating the import above them changes nothing.
  * ======================================== */
 @import "../features/styleguide/styles.css";
+/* Catalogue gallery — the inline-SSR thumbnail framing model (virtual
+ * viewport + scale + fit), the tile grid, and the tile-size segmented
+ * control. Split from styles.css because it is a self-contained feature
+ * with a load-bearing header comment; same unlayered placement and same
+ * rationale as the import above. See
+ * src/features/styleguide/catalog/gallery.css (#540). */
+@import "../features/styleguide/catalog/gallery.css";
 
 /* Portable syntax paint + ProseMd typography. The provider owns these rules
  * directly; zudo-doc's feature stylesheet is not part of the component package
