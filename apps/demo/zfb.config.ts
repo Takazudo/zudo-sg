@@ -31,6 +31,8 @@ export default defineConfig({
   framework: "preact",
   base: "/",
   tailwind: { enabled: true },
+  // zfb 2.14 guard: fail builds when JS/TS imports plain CSS bytes it cannot emit.
+  strictPlainCssImports: true,
   collections: [
     {
       name: "content",
