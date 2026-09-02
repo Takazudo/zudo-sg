@@ -54,7 +54,6 @@
     "@takazudo/zudo-doc": "5.16.1",
     "@zudo-sg/ui": "workspace:*",
     "diff": "^8.0.4",
-    "gray-matter": "^4.0.0",
     "katex": "^0.16.38",
     "mermaid": "^11.12.3",
     "minisearch": "^7.2.0",
