@@ -65,6 +65,8 @@ export default defineConfig({
   tailwind: { enabled: true },
   base: settings.base,
   strictContentBridge: true,
+  // zfb 2.14 guard: fail builds when JS/TS imports plain CSS bytes it cannot emit.
+  strictPlainCssImports: true,
   // #215: msw's core resolves through path-to-regexp@6, a CJS-main/module-only
   // package (no `exports` map). esbuild's `--platform=neutral` page/SSR pass
   // (used for the client island bundle) has an EMPTY main-fields list by
