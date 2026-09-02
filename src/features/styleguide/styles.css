@@ -20,20 +20,13 @@
    * Selector/var names stay in sync with
    * src/features/styleguide/chrome/panel-contract.ts. */
   --sg-header-h: 3.5rem;
-  /* Default code-panel width — responsive clamp matching the reference
-   * styleguide's right code-area frame (issue #60). The resizer
-   * (panel-scripts.tsx) overrides this var per-user at runtime in px, so this
-   * stays the single source of the default width. */
-  --sg-code-panel-w: clamp(20rem, 35vw, 32rem);
-  /* Horizontal slot reserved at the header's right edge for the overlaid
-   * styleguide token icons (Preview tokens [+ Code toggle on detail pages]).
-   * The framework `<Header>` has no host-island slot in its right region, so
-   * these icons are composed as a sibling and overlaid into the header band by
-   * `.sg-header-toggles` below; this var both pads the framework header so its
-   * own right cluster (incl. the site-wide Design Tokens icon) clears the
-   * overlay AND sizes the overlay's right-anchored slot. Single source of
-   * truth — tune here if the icon count/spacing changes. (#84/#85) */
-  --sg-header-toggles-slot: 4.5rem;
+  /* Default code-panel width — the resizer (panel-scripts.tsx) overrides this
+   * var per-user at runtime in px, so this stays the single source of the
+   * default width. Narrowed from clamp(20rem,35vw,32rem) in #541: the panel and
+   * the preview share one band bounded by the sidebar, so every px the panel
+   * takes at rest comes straight out of the previews the route exists to show.
+   * The floor still clears MIN_CODE_PANEL_W in panel-contract.ts. */
+  --sg-code-panel-w: clamp(18rem, 26vw, 26rem);
   /* Code-panel resizer grab-strip width — no shared spacing rung matches
    * 10px, so this stays a dedicated local constant. The strip is centered
    * over the panel's 1px left border via the calc() below (left = -half
@@ -41,58 +34,14 @@
   --sg-code-panel-resizer-w: 0.625rem; /* 10px */
 }
 
-/* ── Styleguide header: overlay the Preview tokens (+ Code) icons into the
- * framework header's right region ──
- * The framework `<Header>` is a self-contained sticky `<header>` exposing no
- * host-island slot in its right cluster, so `SgHeaderToggles` is composed as a
- * sibling (see _styleguide-layout.tsx) and pulled up over the header row here.
- * `.sg-header-region` reserves a right slot inside the framework header so its
- * native right cluster (theme/search/github/Design Tokens) shifts left and the
- * overlay sits flush to its left without overlapping; `.sg-header-toggles` is a
- * sticky, height-matched, right-anchored bar that tracks the viewport top
- * exactly like the header. This makes the icons read as header right-region
- * controls, not an in-flow strip below the sticky header. (#84/#85)
- *
- * Ownership: this `.sg-header-*` selector block is owned by the doc-chrome
- * header sub-issue. It does NOT touch the code-panel layout selectors
- * (`#sg-code-panel`, `.zd-doc-content-band`, the max-width:1023px block). */
-.sg-header-region {
-  display: contents;
-}
-/* Reserve the overlay slot inside the framework header's own right padding so
- * its native right cluster clears the overlaid styleguide icons. Targets the
- * framework header element (data-header) only within a styleguide page. */
-.sg-header-region > [data-header] {
-  padding-right: calc(var(--spacing-hsp-lg) + var(--sg-header-toggles-slot));
-}
-.sg-header-toggles {
-  position: sticky;
-  top: 0;
-  /* Pull the bar up so it overlays the just-rendered sticky header row instead
-   * of stacking below it. */
-  margin-top: calc(-1 * var(--sg-header-h));
-  height: var(--sg-header-h);
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  /* Sit flush against the framework right cluster, inside the reserved slot. */
-  padding-right: var(--spacing-hsp-lg);
-  /* Above the header band (z-toolbar = 20) so the icons are clickable. */
-  z-index: calc(var(--z-index-toolbar) + 1);
-  /* Let header-band clicks fall through everywhere except the buttons. */
-  pointer-events: none;
-}
-.sg-header-toggles > * {
-  pointer-events: auto;
-}
-
 /* ── Code panel: right-region layout (fills DocLayout's TOC column) ──
  * Frame VISUALS: the left bar/gutter is owned here so it is guaranteed to
  * render (the element carries no native border utility) — a 1px border-ladder
  * divider + hsp-lg left padding + vsp-md block margin match the reference's
- * right code-area frame (issue #60). Below lg this swaps for a top divider
- * (see the max-width:1023px block). --color-border, not --color-muted (a TEXT
- * token), keeps structural dividers separate from text roles. */
+ * right code-area frame (issue #60). Below the side-by-side breakpoint this
+ * swaps for a top divider (see the max-width:1279px block). --color-border,
+ * not --color-muted (a TEXT token), keeps structural dividers separate from
+ * text roles. */
 #sg-code-panel {
   position: relative;
   flex-shrink: 0;
@@ -103,7 +52,11 @@
   border-left: 1px solid var(--color-border);
 }
 
-@media (min-width: 1024px) {
+/* Side-by-side only from 1280px (#541, raised from 1024): between the two the
+ * band minus the sidebar leaves the preview and the panel squeezing each
+ * other, so mid-widths stack instead. Matches DocLayout's own xl TOC-column
+ * breakpoint. */
+@media (min-width: 1280px) {
   #sg-code-panel {
     position: sticky;
     top: var(--sg-header-h);
@@ -142,12 +95,12 @@
   display: none;
 }
 
-/* Below the lg breakpoint the framework .zd-doc-content-band stays an
+/* Below the side-by-side breakpoint the framework .zd-doc-content-band stays an
  * unconditional flex row — it never wraps on its own. Force a column stack
  * when the code panel is present so it lands below the preview, then keep the
  * panel full-width, swap its left border for a top divider, and drop the
  * resizer. */
-@media (max-width: 1023px) {
+@media (max-width: 1279px) {
   .zd-doc-content-band:has(#sg-code-panel) {
     flex-direction: column;
     gap: 0;
@@ -206,8 +159,6 @@
   color: var(--color-success);
   border-color: var(--color-success);
 }
-
-/* --- Usage snippet block (detail page) ------------------------------------ */
 
 /* --- Landing search + tag filter ------------------------------------------ */
 .sg-filter {
@@ -303,6 +254,38 @@
   background: var(--color-accent);
   border-color: var(--color-accent);
   color: var(--color-on-accent);
+}
+
+/* --- Detail-page workbench toolbar ---------------------------------------- */
+/* One page-level toolbar owns theme / viewport / layout / code-panel /
+ * preview-tokens for every stage below it (see preview/detail-workbench.tsx).
+ * Shares the shape of `.sg-token-toolbar` below; both are page-level control
+ * strips, so they read as the same object. */
+.sg-workbench-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-hsp-md);
+  margin-bottom: var(--spacing-vsp-md);
+  padding: var(--spacing-vsp-2xs) var(--spacing-hsp-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  /* Opaque — the stages scroll underneath it when it is pinned below. */
+  background: var(--color-surface);
+}
+
+/* Pinned only in the side-by-side desktop layout, where the strip is one or two
+ * rows and keeping "show this in dark" one click away part way down a long
+ * variant list is the whole point of hoisting these controls out of the stage
+ * headers. It wraps to four rows on a phone, where pinning would spend a fifth
+ * of the viewport on chrome for the entire scroll. */
+@media (min-width: 1280px) {
+  .sg-workbench-toolbar {
+    position: sticky;
+    top: var(--sg-header-h);
+    /* Above the stages it scrolls over; below the framework header band. */
+    z-index: var(--z-index-local-2);
+  }
 }
 
 /* --- Token playground toolbar + toast ------------------------------------- */

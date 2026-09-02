@@ -61,6 +61,13 @@ export default defineConfig({
       use: { baseURL: smokeServer.origin },
     },
     {
+      // #541 — the detail-page workbench (one toolbar, controlled stages).
+      // Serves from the same root dist as the smoke project.
+      name: "detail-workbench",
+      testMatch: "detail-workbench.spec.ts",
+      use: { baseURL: smokeServer.origin },
+    },
+    {
       name: "demo-smoke",
       // Both demo specs serve from the same built demo dist (DEMO_SMOKE_PORT):
       // the render smoke checks, the SPA-transition regression suite, and the

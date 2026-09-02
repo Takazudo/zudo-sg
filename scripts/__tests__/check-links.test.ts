@@ -151,8 +151,10 @@ describe("check-links.mjs", () => {
   });
 
   it("does not flag an href shown inside the Usage snippet's displayed source (outside the code panel)", () => {
-    // pages/components/[slug].tsx renders meta.usage as verbatim source in a
-    // plain <pre><code> "Usage" section — no sg-code-panel aside around it.
+    // A displayed-source <pre><code> outside any sg-code-panel aside. The
+    // component detail page used to render meta.usage this way; #541 removed
+    // that duplicate block, so this now guards the general shape rather than
+    // one page's markup.
     writeDistFile(
       "components/button/index.html",
       `<div class="sg-snippet"><pre class="overflow-auto"><code>href="/nonexistent"</code></pre></div>`,
