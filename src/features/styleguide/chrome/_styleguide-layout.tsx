@@ -98,6 +98,14 @@ export interface StyleguideLayoutProps {
    * width.
    */
   codePanel?: VNode | null;
+  /**
+   * Opt the content band into the DocLayout **wide** layout — forwarded
+   * verbatim to `DocLayoutWithDefaults contentWide`, which sets
+   * `data-zd-wide` on `.zd-doc-content-band` and widens the reading column
+   * cap from `clamp(50rem,75vw,90rem)` to `clamp(50rem,92.5vw,120rem)` (see
+   * `@takazudo/zudo-doc/dist/features.css`). Defaults to `false`.
+   */
+  contentWide?: boolean;
   children: JSX.Element | JSX.Element[];
 }
 
@@ -110,6 +118,7 @@ export function StyleguideLayout({
   footer,
   bodyEnd,
   codePanel,
+  contentWide,
   children,
 }: StyleguideLayoutProps): JSX.Element {
   const showCodePanel = Boolean(codePanel);
@@ -183,6 +192,7 @@ export function StyleguideLayout({
       lang={lang}
       noindex={settings.noindex}
       hideToc={!showCodePanel}
+      contentWide={contentWide}
       sidebarPersistKey={`sidebar-${lang}-components`}
       headerOverride={composedHeader}
       sidebarOverride={sidebarOverride}
