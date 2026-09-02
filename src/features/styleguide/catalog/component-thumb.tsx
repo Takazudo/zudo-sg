@@ -47,6 +47,7 @@ export const ATOM_SCALE_CATEGORIES: readonly StoryCategory[] = [
   "Feedback",
   "News",
   "Media",
+  "Forms",
 ];
 
 /**
