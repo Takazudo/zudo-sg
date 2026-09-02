@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
-import matter from "gray-matter";
+import { matter } from "@takazudo/zudo-doc/frontmatter";
 import { generateClaudeResourcesDocs } from "../generate";
 
 let tmpDir: string;
@@ -128,6 +128,28 @@ describe("generateClaudeResourcesDocs", () => {
   // ---------------------------------------------------------------------------
 
   describe("content", () => {
+    it("skips a command with malformed YAML frontmatter", () => {
+      fs.writeFileSync(
+        path.join(claudeDir, "commands", "malformed.md"),
+        String.raw`---
+description: "bad \d escape"
+---
+
+Malformed command body.`,
+      );
+
+      const result = generateClaudeResourcesDocs({
+        claudeDir,
+        projectRoot: tmpDir,
+        docsDir,
+      });
+
+      expect(result.commands).toBe(1);
+      expect(
+        fs.existsSync(path.join(docsDir, "claude-commands", "malformed.mdx")),
+      ).toBe(false);
+    });
+
     it("generates overview page with CategoryNav", () => {
       generateClaudeResourcesDocs({
         claudeDir,
