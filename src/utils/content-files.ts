@@ -1,6 +1,6 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { join, relative } from "node:path";
-import matter from "gray-matter";
+import { matter } from "@takazudo/zudo-doc/frontmatter";
 import { settings } from "../config/settings";
 
 /** Strip markdown formatting to produce plain text */

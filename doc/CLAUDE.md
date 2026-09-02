@@ -1,12 +1,12 @@
 # Zudo Sg Docs
 
-This workspace is the contributor documentation site built with zudo-doc 5.12, zfb, MDX, Tailwind CSS v4, and Preact.
+This workspace is the contributor documentation site built with zudo-doc 5.16, zfb, MDX, Tailwind CSS v4, and Preact.
 
 ## Commands
 
 - `pnpm dev` — start zfb on port 4323.
 - `pnpm check` — typecheck config, routes, and MDX.
-- `pnpm build` — generate the static site in `dist/`.
+- `pnpm build` — run `zfb build --strict-plain-css-imports` and generate the static site in `dist/`.
 - `pnpm check:html` — validate generated HTML after a build.
 - `pnpm setup:doc-skill` — generate and link the `doc-wisdom` skill.
 
@@ -17,6 +17,7 @@ Run commands from `doc/`, or use the `@zudo-sg/doc` workspace filter from the re
 - Keep site choices in `zfb.config.ts` inside the single `defineConfig(zudoDoc({ ... }))` call.
 - Keep only the package index re-export and the canonical self-contained docs catch-all under `pages/`.
 - Package exports own doc chrome, route context, navigation, schemas, translations, color schemes, content components, and feature islands. Do not recreate a local `pages/lib` chain.
+- Keep doc-history metadata hacks out of this workspace: there is no prebuild or precheck hook.
 - `src/styles/global.css` starts with the canonical 5.2 scaffold imports. Add only intentional project-specific token or content overrides after them.
 - `src/content/docs/` contains the 12 authored articles. Generated Claude-resource directories under `src/content/docs/claude*` are not hand-authored.
 
