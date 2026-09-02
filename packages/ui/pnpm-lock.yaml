@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@takazudo/zfb-md-wasm':
-        specifier: 2.10.1
-        version: 2.10.1
+        specifier: 2.14.3
+        version: 2.14.3
       dompurify:
         specifier: ^3.4.11
         version: 3.4.14
@@ -238,8 +238,8 @@ packages:
   '@standard-schema/spec@1.1.0':
     resolution: {integrity: sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w==}
 
-  '@takazudo/zfb-md-wasm@2.10.1':
-    resolution: {integrity: sha512-KT04bv2wMz7l7kds8JCqoTlHhGZZ3gnkRBMcNeW1sB1sJesnTowx+VNDcN9Wwu6KLISkiJ3B54lVEaTkIPyj0A==}
+  '@takazudo/zfb-md-wasm@2.14.3':
+    resolution: {integrity: sha512-Yu6gm1c+GkTPzH0dgrbv2qRIhyNDHHPVumQBhofcjc2ac9d+WBS9CHcODvzBdbv82Tx484e/BBeArSrO55p3+A==}
     engines: {node: '>=20.0.0', pnpm: '>=10.0.0'}
 
   '@testing-library/dom@8.20.1':
@@ -1321,7 +1321,7 @@ snapshots:
 
   '@standard-schema/spec@1.1.0': {}
 
-  '@takazudo/zfb-md-wasm@2.10.1':
+  '@takazudo/zfb-md-wasm@2.14.3':
     dependencies:
       '@types/mdast': 4.0.4
       mdast-util-directive: 3.1.0
