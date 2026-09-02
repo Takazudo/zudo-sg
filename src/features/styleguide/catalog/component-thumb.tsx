@@ -110,6 +110,7 @@ const ID_REF_ATTRS = [
 ];
 
 const SCRIPT_RE = /<script\b[^>]*>[\s\S]*?<\/script>/gi;
+const STYLE_RE = /<style\b[^>]*>[\s\S]*?<\/style>/gi;
 const ID_ATTR_RE = /\sid="([^"]*)"/g;
 const ID_REF_ATTR_RE = new RegExp(`\\s(${ID_REF_ATTRS.join("|")})="([^"]*)"`, "g");
 const FRAGMENT_HREF_RE = /\shref="#([^"\s]+)"/g;
@@ -117,9 +118,19 @@ const FRAGMENT_URL_RE = /url\(#([^)"\s]+)\)/g;
 
 /**
  * Make one rendered story safe to inline alongside 71 others: strip `<script>`
- * blocks and namespace every id (and every reference to one) under `prefix`,
- * so intra-tile wiring — a `<label for>`, an `aria-controls`, an SVG
- * `url(#gradient)` — keeps working while nothing leaks across tiles.
+ * and `<style>` blocks, and namespace every id (and every reference to one)
+ * under `prefix`, so intra-tile wiring — a `<label for>`, an `aria-controls`,
+ * an SVG `url(#gradient)` — keeps working while nothing leaks across tiles.
+ *
+ * `<style>` is stripped for two independent reasons, either of which alone
+ * would justify it. It is invalid here: `<style>` is metadata content, so
+ * html-validate rejects it under a `<div>` (`element-permitted-content`), and
+ * `pnpm check:html` is a release gate. And it is *global*: the nav stories emit
+ * a story-only rule pinning SiteNav's fixed rail to its frame, which inlined
+ * verbatim would apply to the whole catalogue page — three times over — not
+ * just the tile that carries it. Nothing is lost: the tile's `transform`
+ * already establishes a containing block, which is what actually keeps the
+ * fixed-position nav stories inside their own boxes here.
  *
  * Attribute-shaped text inside a component's own *content* (a code sample that
  * literally prints ` id="…"`) would be rewritten too. That is cosmetic in a
@@ -135,6 +146,7 @@ export function scopeThumbHtml(html: string, prefix: string): string {
 
   return html
     .replace(SCRIPT_RE, "")
+    .replace(STYLE_RE, "")
     .replace(ID_ATTR_RE, (_match, id: string) => ` id="${prefix}${id}"`)
     .replace(
       ID_REF_ATTR_RE,

@@ -171,6 +171,22 @@ describe("snapshot scoping", () => {
     expect(out).toContain("<p>kept</p>");
   });
 
+  it("drops style blocks, which are both invalid here and page-global", () => {
+    // The nav stories emit a story-only rule pinning SiteNav's fixed rail to
+    // its frame. Inlined verbatim it would (a) fail `pnpm check:html` —
+    // `<style>` is metadata content and html-validate rejects it under a
+    // `<div>` — and (b) apply to the WHOLE catalogue page, three times over,
+    // not just the tile carrying it. The tile's own transform already
+    // establishes the containing block that keeps such stories boxed in.
+    const out = scopeThumbHtml(
+      '<div><style>.zui-nav-story-frame nav { position: absolute; }</style><nav>kept</nav></div>',
+      "p-",
+    );
+    expect(out).not.toContain("<style");
+    expect(out).not.toContain("zui-nav-story-frame");
+    expect(out).toContain("<nav>kept</nav>");
+  });
+
   it("leaves attributes that merely end in id alone", () => {
     expect(scopeThumbHtml('<b data-testid="x"></b>', "p-")).toContain(
       'data-testid="x"',
