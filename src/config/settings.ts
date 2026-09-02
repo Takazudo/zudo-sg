@@ -70,6 +70,8 @@ export const settings = {
   defaultLocale: "en" as const,
   locales: {} as Record<string, LocaleConfig>,
   mermaid: true,
+  // Package default for an opt-in feature not enabled here.
+  transclude: false as boolean,
   sitemap: false,
   docTags: false,
   docMetainfo: false,
@@ -107,6 +109,18 @@ export const settings = {
   sidebarToggle: true as boolean,
   tocToggle: false as boolean,
   imageEnlarge: true as boolean,
+  // Package default for an opt-in feature not enabled here.
+  assetViewer: false as boolean,
+  // Package default for an opt-in feature not enabled here.
+  assetViewerDir: "assets",
+  // Package default for an opt-in feature not enabled here.
+  assetViewerRoutePrefix: "files",
+  // Package default for an opt-in feature not enabled here.
+  assetViewerExclude: [] as string[],
+  // Package default for an opt-in feature not enabled here.
+  assetViewerIndex: false as boolean,
+  // Package default for an opt-in feature not enabled here.
+  assetViewerIndexing: false as false,
   findInPage: false as boolean,
   docHistory: false as boolean,
   docHistoryExclude: [] as string[],

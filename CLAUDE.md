@@ -5,7 +5,7 @@ Documentation site built with [zudo-doc](https://github.com/zudolab/zudo-doc) �
 ## Tech Stack
 
 - **zfb** — documentation build framework. The `@takazudo/zfb*` family is pinned to the stable
-  `2.10.1` release in lockstep with zudo-doc 5.12.0.
+  `2.14.3` release in lockstep with zudo-doc 5.16.1.
 - **MDX** — content format
 - **Tailwind CSS v4** — via `@tailwindcss/vite`
 - **Preact** — for interactive islands only (with compat mode for React API)

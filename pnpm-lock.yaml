@@ -27,20 +27,20 @@ importers:
         specifier: ^6.0.0
         version: 6.43.1
       '@takazudo/zdtp':
-        specifier: 0.4.12
-        version: 0.4.12(preact@10.29.2)
+        specifier: 0.4.14
+        version: 0.4.14(preact@10.29.2)
       '@takazudo/zfb':
-        specifier: 2.10.1
-        version: 2.10.1
+        specifier: 2.14.3
+        version: 2.14.3
       '@takazudo/zfb-md-wasm':
-        specifier: 2.10.1
-        version: 2.10.1
+        specifier: 2.14.3
+        version: 2.14.3
       '@takazudo/zfb-runtime':
-        specifier: 2.10.1
-        version: 2.10.1(@takazudo/zfb@2.10.1)
+        specifier: 2.14.3
+        version: 2.14.3(@takazudo/zfb@2.14.3)
       '@takazudo/zudo-doc':
-        specifier: 5.12.0
-        version: 5.12.0(@takazudo/zdtp@0.4.12(preact@10.29.2))(@takazudo/zfb-md-wasm@2.10.1)(@takazudo/zfb-runtime@2.10.1(@takazudo/zfb@2.10.1))(@takazudo/zfb@2.10.1)(@types/node@22.19.21)(diff@8.0.4)(katex@0.16.47)(preact@10.29.2)(zod@4.4.3)
+        specifier: 5.16.1
+        version: 5.16.1(@takazudo/zdtp@0.4.14(preact@10.29.2))(@takazudo/zfb-md-wasm@2.14.3)(@takazudo/zfb-runtime@2.14.3(@takazudo/zfb@2.14.3))(@takazudo/zfb@2.14.3)(@types/node@22.19.21)(diff@8.0.4)(katex@0.16.47)(preact@10.29.2)(zod@4.4.3)
       '@zudo-sg/ui':
         specifier: workspace:*
         version: link:packages/ui
@@ -80,7 +80,7 @@ importers:
         version: 1.61.0
       '@tailwindcss/vite':
         specifier: ^4.2.0
-        version: 4.3.1(vite@8.0.16(@types/node@22.19.21)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4))
+        version: 4.3.1(vite@8.0.16(@types/node@22.19.21)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)(yaml@2.9.0))
       '@takazudo/zudo-design-token-lint':
         specifier: 2.1.0
         version: 2.1.0
@@ -104,7 +104,7 @@ importers:
         version: 16.8.1
       html-validate:
         specifier: ^10.0.0
-        version: 10.17.0(vitest@4.1.9(@types/node@22.19.21)(happy-dom@16.8.1)(jsdom@29.1.1)(msw@2.15.0(@types/node@22.19.21)(typescript@5.9.3))(vite@8.0.16(@types/node@22.19.21)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)))
+        version: 10.17.0(vitest@4.1.9(@types/node@22.19.21)(happy-dom@16.8.1)(jsdom@29.1.1)(msw@2.15.0(@types/node@22.19.21)(typescript@5.9.3))(vite@8.0.16(@types/node@22.19.21)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)(yaml@2.9.0)))
       jsdom:
         specifier: ^29.1.1
         version: 29.1.1
@@ -128,16 +128,16 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^4.1.9
-        version: 4.1.9(@types/node@22.19.21)(happy-dom@16.8.1)(jsdom@29.1.1)(msw@2.15.0(@types/node@22.19.21)(typescript@5.9.3))(vite@8.0.16(@types/node@22.19.21)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4))
+        version: 4.1.9(@types/node@22.19.21)(happy-dom@16.8.1)(jsdom@29.1.1)(msw@2.15.0(@types/node@22.19.21)(typescript@5.9.3))(vite@8.0.16(@types/node@22.19.21)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)(yaml@2.9.0))
 
   apps/demo:
     dependencies:
       '@takazudo/zfb':
-        specifier: 2.10.1
-        version: 2.10.1
+        specifier: 2.14.3
+        version: 2.14.3
       '@takazudo/zfb-runtime':
-        specifier: 2.10.1
-        version: 2.10.1(@takazudo/zfb@2.10.1)
+        specifier: 2.14.3
+        version: 2.14.3(@takazudo/zfb@2.14.3)
       '@zudo-sg/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -153,7 +153,7 @@ importers:
     devDependencies:
       '@tailwindcss/vite':
         specifier: ^4.2.0
-        version: 4.3.1(vite@8.0.16(@types/node@22.19.21)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4))
+        version: 4.3.1(vite@8.0.16(@types/node@22.19.21)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)(yaml@2.9.0))
       '@types/node':
         specifier: ^22.0.0
         version: 22.19.21
@@ -167,20 +167,20 @@ importers:
   doc:
     dependencies:
       '@takazudo/zdtp':
-        specifier: 0.4.12
-        version: 0.4.12(preact@10.29.2)
+        specifier: 0.4.14
+        version: 0.4.14(preact@10.29.2)
       '@takazudo/zfb':
-        specifier: 2.10.1
-        version: 2.10.1
+        specifier: 2.14.3
+        version: 2.14.3
       '@takazudo/zfb-md-wasm':
-        specifier: 2.10.1
-        version: 2.10.1
+        specifier: 2.14.3
+        version: 2.14.3
       '@takazudo/zfb-runtime':
-        specifier: 2.10.1
-        version: 2.10.1(@takazudo/zfb@2.10.1)
+        specifier: 2.14.3
+        version: 2.14.3(@takazudo/zfb@2.14.3)
       '@takazudo/zudo-doc':
-        specifier: 5.12.0
-        version: 5.12.0(@takazudo/zdtp@0.4.12(preact@10.29.2))(@takazudo/zfb-md-wasm@2.10.1)(@takazudo/zfb-runtime@2.10.1(@takazudo/zfb@2.10.1))(@takazudo/zfb@2.10.1)(@types/node@22.19.21)(diff@8.0.4)(katex@0.16.47)(preact@10.29.2)(zod@4.4.3)
+        specifier: 5.16.1
+        version: 5.16.1(@takazudo/zdtp@0.4.14(preact@10.29.2))(@takazudo/zfb-md-wasm@2.14.3)(@takazudo/zfb-runtime@2.14.3(@takazudo/zfb@2.14.3))(@takazudo/zfb@2.14.3)(@types/node@22.19.21)(diff@8.0.4)(katex@0.16.47)(preact@10.29.2)(zod@4.4.3)
       diff:
         specifier: ^8.0.3
         version: 8.0.4
@@ -214,13 +214,13 @@ importers:
     devDependencies:
       '@tailwindcss/vite':
         specifier: ^4.2.0
-        version: 4.3.1(vite@8.0.16(@types/node@22.19.21)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4))
+        version: 4.3.1(vite@8.0.16(@types/node@22.19.21)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)(yaml@2.9.0))
       '@types/node':
         specifier: ^22.0.0
         version: 22.19.21
       html-validate:
         specifier: ^10.0.0
-        version: 10.17.0(vitest@4.1.9(@types/node@22.19.21)(happy-dom@16.8.1)(jsdom@29.1.1)(msw@2.15.0(@types/node@22.19.21)(typescript@5.9.3))(vite@8.0.16(@types/node@22.19.21)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)))
+        version: 10.17.0(vitest@4.1.9(@types/node@22.19.21)(happy-dom@16.8.1)(jsdom@29.1.1)(msw@2.15.0(@types/node@22.19.21)(typescript@5.9.3))(vite@8.0.16(@types/node@22.19.21)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)(yaml@2.9.0)))
       pagefind:
         specifier: ^1.4.0
         version: 1.5.2
@@ -234,8 +234,8 @@ importers:
   packages/ui:
     dependencies:
       '@takazudo/zfb-md-wasm':
-        specifier: 2.10.1
-        version: 2.10.1
+        specifier: 2.14.3
+        version: 2.14.3
       dompurify:
         specifier: ^3.4.11
         version: 3.4.11
@@ -272,7 +272,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^4.1.9
-        version: 4.1.9(@types/node@22.19.21)(happy-dom@16.8.1)(jsdom@29.1.1)(msw@2.15.0(@types/node@22.19.21)(typescript@5.9.3))(vite@8.0.16(@types/node@22.19.21)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4))
+        version: 4.1.9(@types/node@22.19.21)(happy-dom@16.8.1)(jsdom@29.1.1)(msw@2.15.0(@types/node@22.19.21)(typescript@5.9.3))(vite@8.0.16(@types/node@22.19.21)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)(yaml@2.9.0))
 
 packages:
 
@@ -1006,54 +1006,54 @@ packages:
     peerDependencies:
       vite: ^5.2.0 || ^6 || ^7 || ^8
 
-  '@takazudo/zdtp@0.4.12':
-    resolution: {integrity: sha512-BmDZwfMEmeghwkxxR5/tmG1THY4KIOumBUIPOmwhy4bqrV4FYGQBj9AjnaO7LiggoNcQklLXKCvwjOasTDBmoQ==}
+  '@takazudo/zdtp@0.4.14':
+    resolution: {integrity: sha512-/gUWZHN3buN79qzTiBis2icsMxqAUVIbn+NcM2NDNdbbGYHHiZ35AMTSnVeyq8BSWGJQaLVcmj9/0B/fX0VIrg==}
     engines: {node: '>=22.0.0', pnpm: '>=10.0.0'}
     hasBin: true
     peerDependencies:
       preact: ^10.29.1
 
-  '@takazudo/zfb-darwin-arm64@2.10.1':
-    resolution: {integrity: sha512-xPUBU5RvGPd/Nliaa1aANU10D+PaSJ8nxN1Zx9xLAW7WNiuLoff3FVWMh9FE4nCjEEUbgH7iLjMOPbf5FCKIEw==}
+  '@takazudo/zfb-darwin-arm64@2.14.3':
+    resolution: {integrity: sha512-4QKwVXlMF79QH+S1oZkMrEvBodCO6kMijVCHoLi1R3jx2OTPlHN4iXPaDBsh4jUn/wgua/Dfgak8f2AYE08RaQ==}
     cpu: [arm64]
     os: [darwin]
 
-  '@takazudo/zfb-darwin-x64@2.10.1':
-    resolution: {integrity: sha512-l9gYFzd8g2qp9rIsNEpAX7gZ9/KeUvS2SXkFQFg4TSm1YlRjGsLSncjhUIe32aG+P7AM40SDkSBSyPL6i0W/kA==}
+  '@takazudo/zfb-darwin-x64@2.14.3':
+    resolution: {integrity: sha512-QEO2uSm9v3t1XPpZv8+6vY/G7w4li9waODW7BVHY5eD5QyU16Wc2Kb6WouDs3paqJNoq+EWUGHUx21IOj6mS9A==}
     cpu: [x64]
     os: [darwin]
 
-  '@takazudo/zfb-linux-arm64-gnu@2.10.1':
-    resolution: {integrity: sha512-z8lMzp//1UZTGAyGsYojt1hEc3tW+yC8nz8kQ+3bsB1UwZOt3deK52LlqjE3H2h1NmmTtnibb4DHZVtGpSCZ8A==}
+  '@takazudo/zfb-linux-arm64-gnu@2.14.3':
+    resolution: {integrity: sha512-hm81haSAooxQKyJ27MH9bnNDs78uk4xEXr6kJQe4xIrmPKvj8/jtwOuXb+xE0Tjokp7XtPpZ1t86rzasiiM33w==}
     cpu: [arm64]
     os: [linux]
 
-  '@takazudo/zfb-linux-x64-gnu@2.10.1':
-    resolution: {integrity: sha512-+PoLHmjUK7BWyeUxh4FvugXcfdcXT00Q0gu/s4k7I3wG+uEpi7ucLXmXaYhMx71bw99RTwXuzGKSbg4Tpampwg==}
+  '@takazudo/zfb-linux-x64-gnu@2.14.3':
+    resolution: {integrity: sha512-CedHamsHFerZA/q41ByJ2X1MWoVMW0XKCi0EBuwZnv+OxrZKLLGwOHlAL0B6cE15BQXQRC0PKAABAMM8BkFnNQ==}
     cpu: [x64]
     os: [linux]
 
-  '@takazudo/zfb-md-wasm@2.10.1':
-    resolution: {integrity: sha512-KT04bv2wMz7l7kds8JCqoTlHhGZZ3gnkRBMcNeW1sB1sJesnTowx+VNDcN9Wwu6KLISkiJ3B54lVEaTkIPyj0A==}
+  '@takazudo/zfb-md-wasm@2.14.3':
+    resolution: {integrity: sha512-Yu6gm1c+GkTPzH0dgrbv2qRIhyNDHHPVumQBhofcjc2ac9d+WBS9CHcODvzBdbv82Tx484e/BBeArSrO55p3+A==}
     engines: {node: '>=20.0.0', pnpm: '>=10.0.0'}
 
-  '@takazudo/zfb-runtime@2.10.1':
-    resolution: {integrity: sha512-U3P/1qLkAct6DFz2wwGLN5BrhU0J4D0ruo1p1CxIm80ZVA6KuyPcR4RQxESqSO7WuUIHPiod5/D1KJZzQtM/oA==}
+  '@takazudo/zfb-runtime@2.14.3':
+    resolution: {integrity: sha512-erVBr2r667w7YkBN9BkuXwvflTHy+LphOm6xrqB6wqqeezCX0PK/xAy4XmRVpjenaIrXDWFj+qX74XRbM6Bz0w==}
     engines: {node: '>=22.0.0', pnpm: '>=10.0.0'}
     peerDependencies:
-      '@takazudo/zfb': 2.10.1
+      '@takazudo/zfb': 2.14.3
       react: ^19.2.3
     peerDependenciesMeta:
       react:
         optional: true
 
-  '@takazudo/zfb-win32-x64-msvc@2.10.1':
-    resolution: {integrity: sha512-Srs2SrX8qm+6SDEeHoaWN4LQi6a4cx+4Z8A8F9hDttKRA25mYiHnM4ezjEO7HU6NO29VHxyHXi97lJWklURAIg==}
+  '@takazudo/zfb-win32-x64-msvc@2.14.3':
+    resolution: {integrity: sha512-D4JWL59HOhIwF8rt0uaJ9pHtnWWslQNCzGQCZVzlHawLCFLunQaTIcT0JqepIPJlTY9nm15XXtcJmo/HBsz09g==}
     cpu: [x64]
     os: [win32]
 
-  '@takazudo/zfb@2.10.1':
-    resolution: {integrity: sha512-2ixhJisp/4jrE0rCCl9WiR4j0Cxb49Rj9VAiaG+tUuDQrJMo/bwmuyifLul+aQ1lrbucadL2INcHNbCsJ8/J5w==}
+  '@takazudo/zfb@2.14.3':
+    resolution: {integrity: sha512-qS9OfKeNaeAPvZC/x9wtJeBUla/O8AvlbPh9M+mbc8NOIeGSGm2CxsiUtZWRu/i/A1zg/y6ziRjMkmWr6zX7TQ==}
     engines: {node: '>=22.0.0', pnpm: '>=10.0.0'}
     hasBin: true
     peerDependencies:
@@ -1067,15 +1067,15 @@ packages:
     engines: {node: '>=18'}
     hasBin: true
 
-  '@takazudo/zudo-doc@5.12.0':
-    resolution: {integrity: sha512-di9Uan+jKFyFwwchpNsWfPYR6IQVNVkDUX4+nLqk0kNjeq+d0ieWgT7G5SLDdgZyt3mA9Ys5Yt5MA+3YC1crJQ==}
+  '@takazudo/zudo-doc@5.16.1':
+    resolution: {integrity: sha512-Jh8tMRqXm3zQVAnSsh+w1gEIqXFqIcdE5OpNlxlRpXoHBS7JMlB+kRkqicGAxJGeZdqVbm92wzZ9vZxslFr/og==}
     hasBin: true
     peerDependencies:
-      '@takazudo/zdtp': ^0.4.12
-      '@takazudo/zfb': ^2.10.0
-      '@takazudo/zfb-md-wasm': ^2.10.0
-      '@takazudo/zfb-runtime': ^2.10.0
-      '@takazudo/zudo-doc-history-server': ^5.5.3
+      '@takazudo/zdtp': ^0.4.14
+      '@takazudo/zfb': ^2.14.3
+      '@takazudo/zfb-md-wasm': ^2.14.3
+      '@takazudo/zfb-runtime': ^2.14.3
+      '@takazudo/zudo-doc-history-server': ^5.15.0
       diff: ^8.0.0
       katex: ^0.16.0
       preact: ^10.29.1
@@ -2589,10 +2589,6 @@ packages:
   strict-event-emitter@0.5.1:
     resolution: {integrity: sha512-vMgjE/GGEPEFnhFub6pa4FmJBRBVOLpIII2hvCZ8Kzb7K0hlHo7mQv6xYrBvCL2LtAIBwFUK8wvuJgTVSQ5MFQ==}
 
-  string-similarity@4.0.4:
-    resolution: {integrity: sha512-/q/8Q4Bl4ZKAPjj8WerIBJWALKkaPRfrvhfF8k/B23i4nzrlRj2/go1m90In7nG/3XDSbOo0+pu6RvCTM9RGMQ==}
-    deprecated: Package no longer supported. Contact Support at https://www.npmjs.com/support for more info.
-
   string-width@4.2.3:
     resolution: {integrity: sha512-wKyQRQpjJ0sIp62ErSZdGsjMJWsap5oRNihHhu6G7JVO/9jIB6UyevL+tXuOqrng8j/cxKTWyWUwvSTriiZz/g==}
     engines: {node: '>=8'}
@@ -2874,6 +2870,11 @@ packages:
   y18n@5.0.8:
     resolution: {integrity: sha512-0pfFzegeDWJHJIAmTLRP2DwHjdF5s7jo9tuztdQxAhINCdvS+3nGINqPd00AphqJR/0LhANUS6/+7SCb98YOfA==}
     engines: {node: '>=10'}
+
+  yaml@2.9.0:
+    resolution: {integrity: sha512-2AvhNX3mb8zd6Zy7INTtSpl1F15HW6Wnqj0srWlkKLcpYl/gMIMJiyuGq2KeI2YFxUPjdlB+3Lc10seMLtL4cA==}
+    engines: {node: '>= 14.6'}
+    hasBin: true
 
   yargs-parser@21.1.1:
     resolution: {integrity: sha512-tVpsJW7DdjecAiFpbIB1e3qxIQsE6NoPc5/eTdrbbIC4h0LVsWhnoa3g+m2HclBIujHzsxZ4VJVA+GUuc2/LBw==}
@@ -3472,33 +3473,33 @@ snapshots:
       '@tailwindcss/oxide-win32-arm64-msvc': 4.3.1
       '@tailwindcss/oxide-win32-x64-msvc': 4.3.1
 
-  '@tailwindcss/vite@4.3.1(vite@8.0.16(@types/node@22.19.21)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4))':
+  '@tailwindcss/vite@4.3.1(vite@8.0.16(@types/node@22.19.21)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)(yaml@2.9.0))':
     dependencies:
       '@tailwindcss/node': 4.3.1
       '@tailwindcss/oxide': 4.3.1
       tailwindcss: 4.3.1
-      vite: 8.0.16(@types/node@22.19.21)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)
+      vite: 8.0.16(@types/node@22.19.21)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)(yaml@2.9.0)
 
-  '@takazudo/zdtp@0.4.12(preact@10.29.2)':
+  '@takazudo/zdtp@0.4.14(preact@10.29.2)':
     dependencies:
       '@tailwindcss/browser': 4.3.2
       culori: 4.0.2
       preact: 10.29.2
       tailwind-merge: 3.6.0
 
-  '@takazudo/zfb-darwin-arm64@2.10.1':
+  '@takazudo/zfb-darwin-arm64@2.14.3':
     optional: true
 
-  '@takazudo/zfb-darwin-x64@2.10.1':
+  '@takazudo/zfb-darwin-x64@2.14.3':
     optional: true
 
-  '@takazudo/zfb-linux-arm64-gnu@2.10.1':
+  '@takazudo/zfb-linux-arm64-gnu@2.14.3':
     optional: true
 
-  '@takazudo/zfb-linux-x64-gnu@2.10.1':
+  '@takazudo/zfb-linux-x64-gnu@2.14.3':
     optional: true
 
-  '@takazudo/zfb-md-wasm@2.10.1':
+  '@takazudo/zfb-md-wasm@2.14.3':
     dependencies:
       '@types/mdast': 4.0.4
       mdast-util-directive: 3.1.0
@@ -3506,46 +3507,45 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@takazudo/zfb-runtime@2.10.1(@takazudo/zfb@2.10.1)':
+  '@takazudo/zfb-runtime@2.14.3(@takazudo/zfb@2.14.3)':
     dependencies:
-      '@takazudo/zfb': 2.10.1
+      '@takazudo/zfb': 2.14.3
       hono: 4.12.26
 
-  '@takazudo/zfb-win32-x64-msvc@2.10.1':
+  '@takazudo/zfb-win32-x64-msvc@2.14.3':
     optional: true
 
-  '@takazudo/zfb@2.10.1':
+  '@takazudo/zfb@2.14.3':
     optionalDependencies:
-      '@takazudo/zfb-darwin-arm64': 2.10.1
-      '@takazudo/zfb-darwin-x64': 2.10.1
-      '@takazudo/zfb-linux-arm64-gnu': 2.10.1
-      '@takazudo/zfb-linux-x64-gnu': 2.10.1
-      '@takazudo/zfb-win32-x64-msvc': 2.10.1
+      '@takazudo/zfb-darwin-arm64': 2.14.3
+      '@takazudo/zfb-darwin-x64': 2.14.3
+      '@takazudo/zfb-linux-arm64-gnu': 2.14.3
+      '@takazudo/zfb-linux-x64-gnu': 2.14.3
+      '@takazudo/zfb-win32-x64-msvc': 2.14.3
 
   '@takazudo/zudo-design-token-lint@2.1.0':
     dependencies:
       chalk: 5.6.2
       glob: 13.0.6
 
-  '@takazudo/zudo-doc@5.12.0(@takazudo/zdtp@0.4.12(preact@10.29.2))(@takazudo/zfb-md-wasm@2.10.1)(@takazudo/zfb-runtime@2.10.1(@takazudo/zfb@2.10.1))(@takazudo/zfb@2.10.1)(@types/node@22.19.21)(diff@8.0.4)(katex@0.16.47)(preact@10.29.2)(zod@4.4.3)':
+  '@takazudo/zudo-doc@5.16.1(@takazudo/zdtp@0.4.14(preact@10.29.2))(@takazudo/zfb-md-wasm@2.14.3)(@takazudo/zfb-runtime@2.14.3(@takazudo/zfb@2.14.3))(@takazudo/zfb@2.14.3)(@types/node@22.19.21)(diff@8.0.4)(katex@0.16.47)(preact@10.29.2)(zod@4.4.3)':
     dependencies:
       '@inquirer/prompts': 8.5.2(@types/node@22.19.21)
-      '@takazudo/zfb': 2.10.1
-      '@takazudo/zfb-runtime': 2.10.1(@takazudo/zfb@2.10.1)
+      '@takazudo/zfb': 2.14.3
+      '@takazudo/zfb-runtime': 2.14.3(@takazudo/zfb@2.14.3)
       esbuild: 0.28.1
       fs-extra: 11.3.5
-      gray-matter: 4.0.3
       minimist: 1.2.8
       picocolors: 1.1.1
       pluralize: 8.0.0
       preact: 10.29.2
       smol-toml: 1.8.0
-      string-similarity: 4.0.4
       tsx: 4.22.4
+      yaml: 2.9.0
       zod: 4.4.3
     optionalDependencies:
-      '@takazudo/zdtp': 0.4.12(preact@10.29.2)
-      '@takazudo/zfb-md-wasm': 2.10.1
+      '@takazudo/zdtp': 0.4.14(preact@10.29.2)
+      '@takazudo/zfb-md-wasm': 2.14.3
       diff: 8.0.4
       katex: 0.16.47
     transitivePeerDependencies:
@@ -3762,14 +3762,14 @@ snapshots:
       chai: 6.2.2
       tinyrainbow: 3.1.0
 
-  '@vitest/mocker@4.1.9(msw@2.15.0(@types/node@22.19.21)(typescript@5.9.3))(vite@8.0.16(@types/node@22.19.21)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4))':
+  '@vitest/mocker@4.1.9(msw@2.15.0(@types/node@22.19.21)(typescript@5.9.3))(vite@8.0.16(@types/node@22.19.21)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)(yaml@2.9.0))':
     dependencies:
       '@vitest/spy': 4.1.9
       estree-walker: 3.0.3
       magic-string: 0.30.21
     optionalDependencies:
       msw: 2.15.0(@types/node@22.19.21)(typescript@5.9.3)
-      vite: 8.0.16(@types/node@22.19.21)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)
+      vite: 8.0.16(@types/node@22.19.21)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)(yaml@2.9.0)
 
   '@vitest/pretty-format@4.1.9':
     dependencies:
@@ -4383,7 +4383,7 @@ snapshots:
     transitivePeerDependencies:
       - '@noble/hashes'
 
-  html-validate@10.17.0(vitest@4.1.9(@types/node@22.19.21)(happy-dom@16.8.1)(jsdom@29.1.1)(msw@2.15.0(@types/node@22.19.21)(typescript@5.9.3))(vite@8.0.16(@types/node@22.19.21)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4))):
+  html-validate@10.17.0(vitest@4.1.9(@types/node@22.19.21)(happy-dom@16.8.1)(jsdom@29.1.1)(msw@2.15.0(@types/node@22.19.21)(typescript@5.9.3))(vite@8.0.16(@types/node@22.19.21)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)(yaml@2.9.0))):
     dependencies:
       '@html-validate/stylish': 5.2.0
       '@sidvind/better-ajv-errors': 5.0.0(ajv@8.20.0)
@@ -4394,7 +4394,7 @@ snapshots:
       prompts: 2.4.2
       semver: 7.8.4
     optionalDependencies:
-      vitest: 4.1.9(@types/node@22.19.21)(happy-dom@16.8.1)(jsdom@29.1.1)(msw@2.15.0(@types/node@22.19.21)(typescript@5.9.3))(vite@8.0.16(@types/node@22.19.21)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4))
+      vitest: 4.1.9(@types/node@22.19.21)(happy-dom@16.8.1)(jsdom@29.1.1)(msw@2.15.0(@types/node@22.19.21)(typescript@5.9.3))(vite@8.0.16(@types/node@22.19.21)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)(yaml@2.9.0))
 
   iconv-lite@0.6.3:
     dependencies:
@@ -5286,8 +5286,6 @@ snapshots:
 
   strict-event-emitter@0.5.1: {}
 
-  string-similarity@4.0.4: {}
-
   string-width@4.2.3:
     dependencies:
       emoji-regex: 8.0.0
@@ -5420,7 +5418,7 @@ snapshots:
       '@types/unist': 3.0.3
       vfile-message: 4.0.3
 
-  vite@8.0.16(@types/node@22.19.21)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4):
+  vite@8.0.16(@types/node@22.19.21)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)(yaml@2.9.0):
     dependencies:
       lightningcss: 1.32.0
       picomatch: 4.0.4
@@ -5433,11 +5431,12 @@ snapshots:
       fsevents: 2.3.3
       jiti: 2.7.0
       tsx: 4.22.4
+      yaml: 2.9.0
 
-  vitest@4.1.9(@types/node@22.19.21)(happy-dom@16.8.1)(jsdom@29.1.1)(msw@2.15.0(@types/node@22.19.21)(typescript@5.9.3))(vite@8.0.16(@types/node@22.19.21)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)):
+  vitest@4.1.9(@types/node@22.19.21)(happy-dom@16.8.1)(jsdom@29.1.1)(msw@2.15.0(@types/node@22.19.21)(typescript@5.9.3))(vite@8.0.16(@types/node@22.19.21)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)(yaml@2.9.0)):
     dependencies:
       '@vitest/expect': 4.1.9
-      '@vitest/mocker': 4.1.9(msw@2.15.0(@types/node@22.19.21)(typescript@5.9.3))(vite@8.0.16(@types/node@22.19.21)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4))
+      '@vitest/mocker': 4.1.9(msw@2.15.0(@types/node@22.19.21)(typescript@5.9.3))(vite@8.0.16(@types/node@22.19.21)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)(yaml@2.9.0))
       '@vitest/pretty-format': 4.1.9
       '@vitest/runner': 4.1.9
       '@vitest/snapshot': 4.1.9
@@ -5454,7 +5453,7 @@ snapshots:
       tinyexec: 1.2.4
       tinyglobby: 0.2.17
       tinyrainbow: 3.1.0
-      vite: 8.0.16(@types/node@22.19.21)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)
+      vite: 8.0.16(@types/node@22.19.21)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)(yaml@2.9.0)
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/node': 22.19.21
@@ -5526,6 +5525,8 @@ snapshots:
   xmlchars@2.2.0: {}
 
   y18n@5.0.8: {}
+
+  yaml@2.9.0: {}
 
   yargs-parser@21.1.1: {}
 
