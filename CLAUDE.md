@@ -5,7 +5,7 @@ Documentation site built with [zudo-doc](https://github.com/zudolab/zudo-doc) �
 ## Tech Stack
 
 - **zfb** — documentation build framework. The `@takazudo/zfb*` family is pinned to the stable
-  `2.14.3` release in lockstep with zudo-doc 5.16.1.
+  `2.15.1` release in lockstep with zudo-doc 5.18.2.
 - **MDX** — content format
 - **Tailwind CSS v4** — via `@tailwindcss/vite`
 - **Preact** — for interactive islands only (with compat mode for React API)
@@ -109,8 +109,10 @@ Do NOT use h1 (`#`) in doc content — the page title from frontmatter is render
   backward-compatibility readers, migrations, redirects, aliases, or old-name
   and old-storage fallbacks.
 - **Route invariant** — the styleguide-only root build emits 82 HTML routes
-  (zfb reports 84 pages when `/robots.txt` and `/sitemap.xml` are included). Do not
-  remove provider guides or unrelated routes while cleaning product ownership.
+  (zfb reports 83 pages, the 83rd being `/robots.txt`). Since zudo-doc 5.17.0 the
+  package injects `/sitemap.xml` only when `settings.sitemap` is enabled, and this
+  project sets it to `false`, so no sitemap route is emitted. Do not remove provider
+  guides or unrelated routes while cleaning product ownership.
 
 See `packages/ui/STORIES.md` §10, `packages/ui/README.md`, and
 `ui-provider-handoff.json` for the permanent provider contract.
