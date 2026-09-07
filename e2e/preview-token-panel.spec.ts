@@ -138,7 +138,9 @@ async function clickPanelAction(page: Page, label: string): Promise<void> {
 
 /**
  * Navigate to the "Size" tab in the currently-open panel and set --radius-md
- * to a specific px value using the text input (aria-label: "--radius-md value").
+ * to a specific rem value using the text input (aria-label: "--radius-md value").
+ * The row's unit is rem (it is authored as rem in packages/ui/styles/tokens.css),
+ * so typing "20" commits "20rem" — see #580.
  *
  * This drives the panel's own Size tab input, which calls the sink's apply()
  * path (applyPreviewVars → sendApplyCssVars → iframe postMessage). Using the
@@ -387,12 +389,12 @@ test("preview panel: Reset clears preview overrides; host chrome state is untouc
 
   // Apply --radius-md override via the panel's Size tab text input.
   // This goes through: input onChange → zdtp state → sink.apply() →
-  //   applyPreviewVars([["--radius-md", "20px"]]) →
-  //   sendApplyCssVars(iframe, [["--radius-md", "20px"]]) → iframe postMessage.
+  //   applyPreviewVars([["--radius-md", "20rem"]]) →
+  //   sendApplyCssVars(iframe, [["--radius-md", "20rem"]]) → iframe postMessage.
   await setPanelRadiusMd(page, "20");
 
   // Verify the iframe received the override.
-  expect(await getIframeRootVar(frame, "--radius-md")).toBe("20px");
+  expect(await getIframeRootVar(frame, "--radius-md")).toBe("20rem");
 
   // Click Reset.
   await clickPanelAction(page, "Reset");
@@ -402,8 +404,8 @@ test("preview panel: Reset clears preview overrides; host chrome state is untouc
   //   iframe postMessage → iframe removes inline style → stylesheet default takes over.
   await page.waitForTimeout(300);
 
-  // --radius-md must no longer be "20px" (reverts to stylesheet default).
-  expect(await getIframeRootVar(frame, "--radius-md")).not.toBe("20px");
+  // --radius-md must no longer be "20rem" (reverts to stylesheet default).
+  expect(await getIframeRootVar(frame, "--radius-md")).not.toBe("20rem");
 
   // Host :root doc-chrome override must survive the preview panel Reset.
   expect(await getHostRootVar(page, "--zd-bg")).toBe("#aabbcc");
@@ -498,9 +500,9 @@ test("preview panel: Export emits zdtp schema; Load-from-JSON restores overrides
   await expect(importModal.getByText(/loaded/i)).toBeVisible({ timeout: 5_000 });
 
   // The real round-trip assertion: the loaded state is re-applied via the sink,
-  // so the iframe's --radius-md is restored to 20px (it was cleared by Reset above).
+  // so the iframe's --radius-md is restored to 20rem (it was cleared by Reset above).
   await page.waitForTimeout(250);
-  expect(await getIframeRootVar(frame, "--radius-md")).toBe("20px");
+  expect(await getIframeRootVar(frame, "--radius-md")).toBe("20rem");
 
   // Same round-trip assertion for the Color tab (#197) — --color-accent must
   // also be restored, proving the ui-color tab was captured by Export and
@@ -539,7 +541,7 @@ test("preview panel: late-mounted iframe replays current overrides on ready", as
   await setPanelRadiusMd(page, "20");
 
   // Confirm the first (already-mounted) iframe has the override.
-  expect(await getIframeRootVar(frame, "--radius-md")).toBe("20px");
+  expect(await getIframeRootVar(frame, "--radius-md")).toBe("20rem");
 
   // Check for a second preview iframe (multi-variant story).
   const allIframes = page.locator('iframe[src*="/components/preview"]');
@@ -565,12 +567,12 @@ test("preview panel: late-mounted iframe replays current overrides on ready", as
       "--radius-md",
     );
     // The second iframe should have received the replayed override.
-    expect(secondRadius).toBe("20px");
+    expect(secondRadius).toBe("20rem");
   } else {
     // Single-iframe page: re-assert the first iframe carries the override.
     // The late-mount replay path is architecturally covered by the registry
     // unit tests; here we confirm the end-to-end UI path populates the registry.
-    expect(await getIframeRootVar(frame, "--radius-md")).toBe("20px");
+    expect(await getIframeRootVar(frame, "--radius-md")).toBe("20rem");
   }
 });
 
@@ -590,7 +592,7 @@ test("preview panel: Reset clears overrides from all visible preview iframes", a
   await setPanelRadiusMd(page, "20");
 
   // Confirm the first iframe has the override.
-  expect(await getIframeRootVar(frame, "--radius-md")).toBe("20px");
+  expect(await getIframeRootVar(frame, "--radius-md")).toBe("20rem");
 
   // Click Reset.
   await clickPanelAction(page, "Reset");
@@ -600,7 +602,7 @@ test("preview panel: Reset clears overrides from all visible preview iframes", a
   // for --radius-md removed; computed value reverts to the stylesheet default.
   await page.waitForTimeout(300);
 
-  expect(await getIframeRootVar(frame, "--radius-md")).not.toBe("20px");
+  expect(await getIframeRootVar(frame, "--radius-md")).not.toBe("20rem");
 
   // If a second iframe is present, verify it also received the clear message.
   const allIframes = page.locator('iframe[src*="/components/preview"]');
@@ -613,6 +615,6 @@ test("preview panel: Reset clears overrides from all visible preview iframes", a
       (el, name) => getComputedStyle(el).getPropertyValue(name).trim(),
       "--radius-md",
     );
-    expect(secondRadius).not.toBe("20px");
+    expect(secondRadius).not.toBe("20rem");
   }
 });
