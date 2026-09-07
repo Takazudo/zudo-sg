@@ -12,6 +12,19 @@
  * The color cluster is scheme-less (`colorExtras.colorSchemes = {}`): the
  * editable source of truth is the ramp/semantic tier model, not a legacy
  * 16-slot scheme preset registry.
+ *
+ * Tier previews (zdtp 0.4.15+, opt-in via `TierConfig.preview`) are turned on
+ * for every tier that has a matching preview kind: font-size/radius get
+ * `'size'`/`'radius'` glyphs, hsp/vsp/icon spacing get `'bar'`, font-weight
+ * gets `'weight'`, font-family gets `'family'`, transition gets `'duration'`,
+ * and line-height gets `'line-height'` (which requires a `number` tier — see
+ * `tierFromGroup`'s `numberKind` option below). `'family'`/`'weight'` do not
+ * add their own preview row: per PORTABLE-CONTRACT.md §3.2 they style the
+ * *other* size/line-height specimen samples in the same `font` tab using the
+ * tier's first item. The `layout` spacing tier deliberately has no preview —
+ * it mixes `0`, `1px`, and a `clamp()` readonly row, and a bar preview would
+ * render something for the clamp row that means nothing next to two
+ * sub-pixel rows (issue #576).
  */
 
 import type {
@@ -42,12 +55,26 @@ const DEFAULT_SHIKI_THEME = "github-dark";
 // Helpers — partition flat manifest arrays into TabConfig.tiers by group.
 // ---------------------------------------------------------------------------
 
-function toTierItem(t: TokenDef): TierItem {
+interface ToTierItemOptions {
+  /**
+   * Emit `{ kind: 'number', step }` instead of `{ kind: 'length', ... }`.
+   * zdtp's `TokenControl` (upstream, this repo doesn't own it) has no
+   * "number" member, so a unitless token like `--leading-normal` would
+   * otherwise become `{ kind: 'length', unit: '' }` — but `preview:
+   * 'line-height'` requires a `number` tier and `configurePanel()` throws
+   * otherwise. Used only for the unitless line-height groups.
+   */
+  numberKind?: boolean;
+}
+
+function toTierItem(t: TokenDef, opts?: ToTierItemOptions): TierItem {
   let kind;
   if (t.control === "select") {
     kind = { kind: "select" as const, options: t.options ?? [] };
   } else if (t.control === "text") {
     kind = { kind: "text" as const };
+  } else if (opts?.numberKind) {
+    kind = { kind: "number" as const, step: t.step, unit: t.unit };
   } else {
     kind = {
       kind: "length" as const,
@@ -71,13 +98,14 @@ function tierFromGroup(
   tokens: readonly TokenDef[],
   groupId: string,
   label: string,
+  opts?: ToTierItemOptions,
 ): TierConfig {
   return {
     id: groupId,
     label,
     items: tokens
       .filter((t) => t.group === groupId)
-      .map(toTierItem),
+      .map((t) => toTierItem(t, opts)),
   };
 }
 
@@ -195,10 +223,16 @@ const FONT_TAB: TabConfig = {
   id: "font",
   label: "Font",
   tiers: [
-    tierFromGroup(FONT_TOKENS, "font-size", "Font size"),
-    tierFromGroup(FONT_TOKENS, "line-height", "Line height"),
-    tierFromGroup(FONT_TOKENS, "font-weight", "Font weight"),
-    tierFromGroup(FONT_TOKENS, "font-family", "Font family"),
+    { ...tierFromGroup(FONT_TOKENS, "font-size", "Font size"), preview: "size" },
+    {
+      ...tierFromGroup(FONT_TOKENS, "line-height", "Line height", {
+        numberKind: true,
+      }),
+      preview: "line-height",
+      previewBase: "--text-body",
+    },
+    { ...tierFromGroup(FONT_TOKENS, "font-weight", "Font weight"), preview: "weight" },
+    { ...tierFromGroup(FONT_TOKENS, "font-family", "Font family"), preview: "family" },
   ],
 };
 
@@ -210,9 +244,10 @@ const SPACING_TAB: TabConfig = {
   id: "spacing",
   label: "Spacing",
   tiers: [
-    tierFromGroup(SPACING_TOKENS, "hsp", "Horizontal spacing"),
-    tierFromGroup(SPACING_TOKENS, "vsp", "Vertical spacing"),
-    tierFromGroup(SPACING_TOKENS, "icon", "Icons"),
+    { ...tierFromGroup(SPACING_TOKENS, "hsp", "Horizontal spacing"), preview: "bar" },
+    { ...tierFromGroup(SPACING_TOKENS, "vsp", "Vertical spacing"), preview: "bar" },
+    { ...tierFromGroup(SPACING_TOKENS, "icon", "Icons"), preview: "bar" },
+    // No preview: mixes 0, 1px, and a clamp() readonly row — see file header.
     tierFromGroup(SPACING_TOKENS, "layout", "Layout"),
   ],
 };
@@ -225,8 +260,8 @@ const SIZE_TAB: TabConfig = {
   id: "size",
   label: "Size",
   tiers: [
-    tierFromGroup(SIZE_TOKENS, "radius", "Radius"),
-    tierFromGroup(SIZE_TOKENS, "transition", "Transition"),
+    { ...tierFromGroup(SIZE_TOKENS, "radius", "Radius"), preview: "radius" },
+    { ...tierFromGroup(SIZE_TOKENS, "transition", "Transition"), preview: "duration" },
   ],
 };
 
@@ -247,6 +282,10 @@ export function buildDesignTokenPanelConfig(mode: PanelMode): PanelConfig {
     toggleEvent: "toggle-sg-doc-tweak",
     schemaId: "zudo-design-tokens/v3",
     exportFilenameBase: "sg-doc-design-tokens",
+    // This is a public site with a doc-chrome header button that opens this
+    // panel for every visitor — default `true` would arm owner-mode autoload
+    // for whoever clicks it (README §10.1's "auto-remember footgun").
+    autoRememberOnOpen: false,
     tabs: [PALETTE_TAB, buildColorTab(mode), FONT_TAB, SPACING_TAB, SIZE_TAB],
   };
 }

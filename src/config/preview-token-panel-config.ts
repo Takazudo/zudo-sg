@@ -29,6 +29,16 @@
  * a doc-chrome `--palette-*` + `--zd-*` color scheme. @zudo-sg/ui owns a
  * family-named palette plus `light-dark()` semantic tokens, so its Tier-2
  * `--color-*` tokens stay free-text rows.
+ *
+ * Tier previews (zdtp 0.4.15+, opt-in via `TierConfig.preview`) are turned on
+ * for every font/spacing/radius tier that has a matching preview kind — see
+ * FONT_TAB/SPACING_TAB/SIZE_TAB below. `'family'`/`'weight'` do not add their
+ * own preview row: per PORTABLE-CONTRACT.md §3.2 they style the other
+ * size/line-height specimen samples in the same `font` tab using the tier's
+ * first item. The `shadow` size tier and the `ui-color`/`palette` tabs
+ * deliberately have no preview — `shadow` is a free-text tier with no
+ * matching preview kind, and the color tiers render their own swatch/curve
+ * editors instead (issue #576).
  */
 
 import type { PanelConfig, TabConfig, TierConfig, TierItem, TokenDef } from "@takazudo/zdtp";
@@ -49,12 +59,26 @@ import { applyEndpoint, applyRouting } from "virtual:zdtp-apply-config";
 // Helpers — reuse the same toTierItem / tierFromGroup pattern as the doc panel.
 // ---------------------------------------------------------------------------
 
-function toTierItem(t: TokenDef): TierItem {
+interface ToTierItemOptions {
+  /**
+   * Emit `{ kind: 'number', step }` instead of `{ kind: 'length', ... }`.
+   * zdtp's `TokenControl` (upstream, this repo doesn't own it) has no
+   * "number" member, so a unitless token like `--leading-normal` would
+   * otherwise become `{ kind: 'length', unit: '' }` — but `preview:
+   * 'line-height'` requires a `number` tier and `configurePanel()` throws
+   * otherwise. Used only for the unitless line-height groups.
+   */
+  numberKind?: boolean;
+}
+
+function toTierItem(t: TokenDef, opts?: ToTierItemOptions): TierItem {
   let kind;
   if (t.control === "select") {
     kind = { kind: "select" as const, options: t.options ?? [] };
   } else if (t.control === "text") {
     kind = { kind: "text" as const };
+  } else if (opts?.numberKind) {
+    kind = { kind: "number" as const, step: t.step, unit: t.unit };
   } else {
     kind = {
       kind: "length" as const,
@@ -78,11 +102,12 @@ function tierFromGroup(
   tokens: readonly TokenDef[],
   groupId: string,
   label: string,
+  opts?: ToTierItemOptions,
 ): TierConfig {
   return {
     id: groupId,
     label,
-    items: tokens.filter((t) => t.group === groupId).map(toTierItem),
+    items: tokens.filter((t) => t.group === groupId).map((t) => toTierItem(t, opts)),
   };
 }
 
@@ -187,8 +212,8 @@ const SPACING_TAB: TabConfig = {
   id: "spacing",
   label: "Spacing",
   tiers: [
-    tierFromGroup(UI_SPACING_TOKENS, "hsp", "Horizontal spacing"),
-    tierFromGroup(UI_SPACING_TOKENS, "vsp", "Vertical spacing"),
+    { ...tierFromGroup(UI_SPACING_TOKENS, "hsp", "Horizontal spacing"), preview: "bar" },
+    { ...tierFromGroup(UI_SPACING_TOKENS, "vsp", "Vertical spacing"), preview: "bar" },
   ],
 };
 
@@ -200,11 +225,22 @@ const FONT_TAB: TabConfig = {
   id: "font",
   label: "Font",
   tiers: [
-    tierFromGroup(UI_FONT_TOKENS, "font-size", "Font size"),
-    tierFromGroup(UI_FONT_TOKENS, "font-size-lh", "Font size / line height"),
-    tierFromGroup(UI_FONT_TOKENS, "font-weight", "Font weight"),
-    tierFromGroup(UI_FONT_TOKENS, "line-height", "Line height"),
-    tierFromGroup(UI_FONT_TOKENS, "font-family", "Font family"),
+    { ...tierFromGroup(UI_FONT_TOKENS, "font-size", "Font size"), preview: "size" },
+    {
+      ...tierFromGroup(UI_FONT_TOKENS, "font-size-lh", "Font size / line height", {
+        numberKind: true,
+      }),
+      preview: "line-height",
+      previewBase: "--text-base",
+    },
+    { ...tierFromGroup(UI_FONT_TOKENS, "font-weight", "Font weight"), preview: "weight" },
+    {
+      ...tierFromGroup(UI_FONT_TOKENS, "line-height", "Line height", {
+        numberKind: true,
+      }),
+      preview: "line-height",
+    },
+    { ...tierFromGroup(UI_FONT_TOKENS, "font-family", "Font family"), preview: "family" },
   ],
 };
 
@@ -216,7 +252,8 @@ const SIZE_TAB: TabConfig = {
   id: "size",
   label: "Size",
   tiers: [
-    tierFromGroup(UI_SIZE_TOKENS, "radius", "Radius"),
+    { ...tierFromGroup(UI_SIZE_TOKENS, "radius", "Radius"), preview: "radius" },
+    // No preview: free-text tier, no matching preview kind applies.
     tierFromGroup(UI_SIZE_TOKENS, "shadow", "Shadow"),
   ],
 };
@@ -241,6 +278,10 @@ export const previewTokenPanelConfig: PanelConfig = {
   // event will NOT open this panel, and dispatching this event will NOT open
   // the doc-chrome panel.
   toggleEvent: "toggle-preview-token-panel",
+  // This is a public site: the /components/tokens page dispatches
+  // "toggle-preview-token-panel" for every visitor, so default `true` would
+  // arm owner-mode autoload for whoever opens it (README §10.1).
+  autoRememberOnOpen: false,
   tabs: [COLOR_TAB, PALETTE_TAB, SPACING_TAB, FONT_TAB, SIZE_TAB],
   // Left empty deliberately: `colorPresets` only feeds the "Scheme…" dropdown
   // rendered by the reserved 'color'/'color-secondary' ColorTab (verified

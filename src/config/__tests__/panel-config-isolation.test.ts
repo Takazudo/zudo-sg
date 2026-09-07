@@ -8,6 +8,11 @@
  */
 
 import { describe, expect, it, vi } from "vitest";
+import {
+  configurePanel,
+  loadPersistedState,
+  __resetPanelConfigForTests,
+} from "@takazudo/zdtp/testing";
 
 // Mock the preview-iframe-registry so the preview config module can import
 // without pulling in browser-side preview bridge code.
@@ -266,5 +271,118 @@ describe("panel config isolation", () => {
 
   it("doc panel has no applySink (writes to host :root)", () => {
     expect(designTokenPanelConfig.applySink).toBeUndefined();
+  });
+
+  it("autoRememberOnOpen is false on both configs (public site — issue #576)", () => {
+    expect(designTokenPanelConfig.autoRememberOnOpen).toBe(false);
+    expect(previewTokenPanelConfig.autoRememberOnOpen).toBe(false);
+  });
+
+  it("every tier with preview: 'line-height' has type.kind === 'number' on every item", () => {
+    for (const config of [designTokenPanelConfig, previewTokenPanelConfig]) {
+      for (const tab of config.tabs) {
+        for (const tier of tab.tiers) {
+          if (tier.preview !== "line-height") continue;
+          for (const item of tier.items) {
+            expect(item.type.kind).toBe("number");
+          }
+        }
+      }
+    }
+  });
+
+  it("every tier with preview: 'duration' has unit 'ms' or 's' on every item", () => {
+    for (const config of [designTokenPanelConfig, previewTokenPanelConfig]) {
+      for (const tab of config.tabs) {
+        for (const tier of tab.tiers) {
+          if (tier.preview !== "duration") continue;
+          for (const item of tier.items) {
+            const unit = "unit" in item.type ? item.type.unit : undefined;
+            expect(["ms", "s"]).toContain(unit);
+          }
+        }
+      }
+    }
+  });
+
+  it("configurePanel accepts both configs without throwing", () => {
+    // NOTE: as of zdtp 0.5.1, `configurePanel()` itself does NOT run
+    // `assertValidPanelConfig` — that check only runs inside the Astro
+    // host-adapter's inline-JSON-config boundary (`dist/astro/host-adapter.js`,
+    // reading `<script id="tokenpanel-config">`), and `assertValidPanelConfig`
+    // is not part of any public export. Both panels in this project bootstrap
+    // via a direct `zdtp.configurePanel(getConfig())` call
+    // (src/lib/token-panel-native-bootstrap.ts), never through
+    // `<DesignTokenPanelHost>`, so this call never exercises that validator
+    // either in this test or in production. This assertion is still worth
+    // keeping as an import/construction smoke test, but the real correctness
+    // guard for the preview/kind pairing in this file is the pair of tests
+    // above (every 'line-height' tier is 'number', every 'duration' tier's
+    // unit is ms/s) plus the manual cross-check against
+    // node_modules/@takazudo/zdtp/dist/panel-config-CqbuB0nh.js's validator
+    // rules done when these configs were authored.
+    __resetPanelConfigForTests();
+    expect(() => configurePanel(designTokenPanelConfig)).not.toThrow();
+    __resetPanelConfigForTests();
+    expect(() => configurePanel(previewTokenPanelConfig)).not.toThrow();
+    __resetPanelConfigForTests();
+  });
+
+  describe("state-continuity: line-height typography survives the length->number kind change", () => {
+    // Every persisted format stores typography as item-id -> string and
+    // records no `kind` — the `toTierItem`/`toNumberTierItem` split only
+    // affects how the panel EDITS a value, not how it's stored. These tests
+    // seed each legacy envelope directly (no configurePanel/mount involved)
+    // and assert `loadPersistedState` round-trips the value unchanged, with
+    // no `legacyIdRenameMap` and no migration needed (issue #576).
+    const versions = ["v2", "v3", "v4"] as const;
+
+    it.each(versions)(
+      "doc panel: leading-snug (fractional, %s envelope)",
+      (version) => {
+        localStorage.clear();
+        const key = `${designTokenPanelConfig.storagePrefix}-state-${version}`;
+        localStorage.setItem(
+          key,
+          JSON.stringify({
+            color: {},
+            spacing: {},
+            typography: { "leading-snug": "1.375" },
+            size: {},
+          }),
+        );
+        const state = loadPersistedState(
+          localStorage,
+          undefined,
+          undefined,
+          designTokenPanelConfig,
+        );
+        expect(state?.typography["leading-snug"]).toBe("1.375");
+      },
+    );
+
+    it.each(versions)(
+      "preview panel: ui-text-base--line-height (font-size-lh, fractional, %s envelope)",
+      (version) => {
+        localStorage.clear();
+        const key = `${previewTokenPanelConfig.storagePrefix}-state-${version}`;
+        localStorage.setItem(
+          key,
+          JSON.stringify({
+            color: {},
+            spacing: {},
+            typography: { "ui-text-base--line-height": "1.375" },
+            size: {},
+          }),
+        );
+        const state = loadPersistedState(
+          localStorage,
+          undefined,
+          undefined,
+          previewTokenPanelConfig,
+        );
+        expect(state?.typography["ui-text-base--line-height"]).toBe("1.375");
+      },
+    );
   });
 });
