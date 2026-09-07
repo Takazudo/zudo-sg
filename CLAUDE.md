@@ -99,6 +99,14 @@ Do NOT use h1 (`#`) in doc content — the page title from frontmatter is render
   Finish package docs/code first, advance local `package/ui-v1`, then run
   `pnpm verify:ui-provider-install -- --exact`. Never pre-claim the post-merge
   source SHA or CI URL.
+- **Local gate sequencing** — `packages/ui` is also a standalone package with its own
+  lockfile; running `pnpm` with a working directory or `--dir` inside `packages/ui` (even a
+  no-op) auto-installs its standalone dependency set and diverges the tree from the root
+  workspace. The canonical local sequence, the lockfile-refresh procedure, and the
+  `rm -rf packages/ui/node_modules && pnpm install` recovery are documented in
+  `doc/src/content/docs/development/quality-gates.mdx` ("Standalone provider package gate").
+  `pnpm test:ui-provider-package` and `pnpm verify:ui-provider-install -- --exact` are already
+  isolated and safe to run as-is.
 - **zudo-composer owns the products** — the standalone repository owns both
   Composer and Sitemapper, including their clean storage/schema identities,
   routes, application UI, and deployment.
