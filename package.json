@@ -23,7 +23,7 @@
     "gen:composable-component-report": "node scripts/report-composable-components.mjs",
     "check:composable-component-report": "node scripts/report-composable-components.mjs --check",
     "check:ui-provider-boundary": "node scripts/check-ui-provider-boundary.mjs",
-    "test:ui-provider-package": "pnpm --dir packages/ui check",
+    "test:ui-provider-package": "node scripts/test-ui-provider-package.mjs",
     "verify:ui-provider-install": "node scripts/verify-ui-provider-install.mjs",
     "gen:story-categories": "node scripts/gen-story-categories.mjs",
     "check:story-categories": "node scripts/gen-story-categories.mjs --check",
