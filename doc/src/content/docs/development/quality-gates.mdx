@@ -57,6 +57,99 @@ It runs formatting checks for MDX, token lint, codegen drift checks, typecheck, 
 
 Use the full gate before pushing broad changes. For documentation-only changes, the required focused checks are usually the docs build, docs check, link check against `doc/dist`, and `git diff --check`.
 
+## Standalone provider package gate
+
+`packages/ui` is dual-mode: a workspace member and, at the same time, its own standalone
+package with a separate `pnpm-lock.yaml` (it resolves a different Preact version than the
+root workspace does). Two gates verify the standalone side without disturbing the workspace:
+`pnpm test:ui-provider-package` (typecheck + Vitest, run on an isolated copy outside the repo)
+and `pnpm verify:ui-provider-install -- --exact` (installs the published package spec in a
+temp directory and proves it builds for a real consumer).
+
+### Canonical local sequence
+
+Run in this order — root gates first, then the standalone provider gates:
+
+```sh
+pnpm install
+pnpm check
+pnpm test:unit
+pnpm test:ui-provider-package
+pnpm verify:ui-provider-install -- --exact
+```
+
+Every command above is safe to run from the repo root as written: `pnpm check` typechecks
+`@zudo-sg/ui` through `--filter`, which resolves against the root lockfile, and both provider
+gates install, typecheck, and test in a temp directory, so `packages/ui/node_modules` is never
+written. One command does run with its working directory inside the package — `pnpm pack`, in
+`verify:ui-provider-install`'s local-package fallback, which `--exact` never reaches — and it is
+safe because `pack` is neither `run` nor `exec`, so `verify-deps-before-run` does not fire.
+Clean-workspace CI is still the source of truth; this sequence is a local convenience, not a
+substitute for it.
+
+### The one thing that breaks it: running pnpm directly inside `packages/ui`
+
+Never run `pnpm` with your working directory inside `packages/ui`, and never pass
+`--dir packages/ui` — not even for a no-op command. Both forms trigger pnpm's
+`verify-deps-before-run` check, which compares against `packages/ui`'s own lockfile (it
+declares `packages: []`, so it's its own workspace root) and reinstalls its standalone
+dependency set into `packages/ui/node_modules` before your command even runs. That replaces
+the workspace-linked `preact` symlink with a second, self-contained copy, and the repo ends up
+with two Preact module identities. This is not about install flags — no explicit
+`pnpm ... install` is required, and none of the commands in the canonical sequence above do this.
+
+```sh
+# Don't do this:
+cd packages/ui && pnpm test
+pnpm --dir packages/ui exec node -e "0"
+
+# Do this instead:
+pnpm test:ui-provider-package          # isolated copy, same checks
+pnpm --filter @zudo-sg/ui typecheck    # runs in the root workspace context
+```
+
+### Refreshing the standalone lockfile
+
+When `packages/ui/package.json`'s dependencies change, regenerate its nested lockfile with
+`--lockfile-only` and install at the root **last** — this updates both lockfiles without ever
+materializing `packages/ui/node_modules`, because `--lockfile-only` never writes
+`node_modules` at all:
+
+```sh
+pnpm --dir packages/ui install --lockfile-only
+pnpm install
+```
+
+This is a lockfile-refresh procedure, not a way to avoid the hazard above — running
+`pnpm --dir packages/ui <anything else>` right after this sequence still contaminates the
+tree. What keeps the standalone gates safe is that they run on an isolated copy, not this
+ordering.
+
+### Recovery for an already-contaminated tree
+
+If `packages/ui/node_modules/.pnpm` contains a nested `preact@*` entry, or
+`packages/ui/node_modules/preact` is a real directory instead of a symlink, the tree is
+contaminated. Recover from the repo root:
+
+```sh
+rm -rf packages/ui/node_modules && pnpm install
+```
+
+**The `rm -rf` is the load-bearing half.** A plain `pnpm install` alone reports
+`Already up to date` and leaves the second Preact instance in place — that message prints
+identically whether the tree is actually healthy or still broken, so don't use it to judge
+success. Only a filesystem check (as above) tells you the recovery worked.
+
+### What a contaminated tree looks like
+
+A developer who hits this without knowing the cause sees, in the root unit suite, roughly 76
+failed tests across roughly 44 UI-related test files, with "Found multiple elements" errors —
+two Preact instances mean React Testing Library's element identity checks stop matching. The
+demo app's Playwright suite fails four tests: theme controls go missing, a Browse control stops
+updating `aria-expanded`, and a page error surfaces reading Preact's internal `__H` field. None
+of this points at the change that was actually made; if you see these specific symptoms, check
+for contamination first with the recovery above before debugging further.
+
 ## CI gate
 
 Pull requests target `main` or `base/**` branches. CI mirrors the b4push shape with separate jobs for token lint, codegen drift, typecheck, unit tests, root build, demo build, smoke E2E, and dist checks.
