@@ -163,9 +163,6 @@ importers:
 
   doc:
     dependencies:
-      '@takazudo/zdtp':
-        specifier: 0.5.1
-        version: 0.5.1(preact@10.29.2)
       '@takazudo/zfb':
         specifier: 2.15.1
         version: 2.15.1
