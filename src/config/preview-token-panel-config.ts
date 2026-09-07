@@ -29,6 +29,17 @@
  * a doc-chrome `--palette-*` + `--zd-*` color scheme. @zudo-sg/ui owns a
  * family-named palette plus `light-dark()` semantic tokens, so its Tier-2
  * `--color-*` tokens stay free-text rows.
+ *
+ * Tier previews (zdtp 0.4.15+, opt-in via `TierConfig.preview`) are turned on
+ * for the spacing (`'bar'`) and radius (`'radius'`) tiers ONLY — see
+ * SPACING_TAB/SIZE_TAB below. Unlike the doc-chrome panel, this panel's whole
+ * `font` tab stays bare: zdtp 0.5.1 resolves font-specimen styles through the
+ * HOST cascade, which an `applySink` panel never writes to, so a font preview
+ * here would render the doc-chrome panel's typography instead of this panel's
+ * (#577 — full reasoning in the block comment above FONT_TAB). The `shadow`
+ * size tier and the `ui-color`/`palette` tabs deliberately have no preview
+ * either — `shadow` is a free-text tier with no matching preview kind, and the
+ * color tiers render their own swatch/curve editors instead (issue #576).
  */
 
 import type { PanelConfig, TabConfig, TierConfig, TierItem, TokenDef } from "@takazudo/zdtp";
@@ -49,12 +60,32 @@ import { applyEndpoint, applyRouting } from "virtual:zdtp-apply-config";
 // Helpers — reuse the same toTierItem / tierFromGroup pattern as the doc panel.
 // ---------------------------------------------------------------------------
 
-function toTierItem(t: TokenDef): TierItem {
+interface ToTierItemOptions {
+  /**
+   * Emit `{ kind: 'number', step }` instead of `{ kind: 'length', ... }`.
+   * zdtp's `TokenControl` (upstream, this repo doesn't own it) has no
+   * "number" member, so a unitless token like `--leading-normal` would
+   * otherwise become `{ kind: 'length', unit: '' }` — but zdtp's
+   * `preview: 'line-height'` contract requires a `number` tier.
+   *
+   * This panel currently ships NO line-height preview (see FONT_TAB), so the
+   * opt-in buys nothing here today; it is kept in lockstep with the doc-chrome
+   * panel so re-enabling the font previews stays the one-line-per-tier change
+   * FONT_TAB promises. It is behaviour-neutral: for a unitless token zdtp's
+   * row editor treats `number` and `length` identically, and no persisted
+   * state records the kind.
+   */
+  numberKind?: boolean;
+}
+
+function toTierItem(t: TokenDef, opts?: ToTierItemOptions): TierItem {
   let kind;
   if (t.control === "select") {
     kind = { kind: "select" as const, options: t.options ?? [] };
   } else if (t.control === "text") {
     kind = { kind: "text" as const };
+  } else if (opts?.numberKind) {
+    kind = { kind: "number" as const, step: t.step, unit: t.unit };
   } else {
     kind = {
       kind: "length" as const,
@@ -78,11 +109,12 @@ function tierFromGroup(
   tokens: readonly TokenDef[],
   groupId: string,
   label: string,
+  opts?: ToTierItemOptions,
 ): TierConfig {
   return {
     id: groupId,
     label,
-    items: tokens.filter((t) => t.group === groupId).map(toTierItem),
+    items: tokens.filter((t) => t.group === groupId).map((t) => toTierItem(t, opts)),
   };
 }
 
@@ -187,8 +219,8 @@ const SPACING_TAB: TabConfig = {
   id: "spacing",
   label: "Spacing",
   tiers: [
-    tierFromGroup(UI_SPACING_TOKENS, "hsp", "Horizontal spacing"),
-    tierFromGroup(UI_SPACING_TOKENS, "vsp", "Vertical spacing"),
+    { ...tierFromGroup(UI_SPACING_TOKENS, "hsp", "Horizontal spacing"), preview: "bar" },
+    { ...tierFromGroup(UI_SPACING_TOKENS, "vsp", "Vertical spacing"), preview: "bar" },
   ],
 };
 
@@ -196,14 +228,39 @@ const SPACING_TAB: TabConfig = {
 // Font tab
 // ---------------------------------------------------------------------------
 
+// NO `preview` on ANY tier here, deliberately — unlike the doc-chrome panel's Font
+// tab, which carries the full set. zdtp 0.5.1's font-specimen renderer styles its
+// samples with `var(--token, <panel value>)` and mounts them in the HOST document,
+// which already defines every one of these vars at `:root`. This panel is an
+// `applySink` instance: its writes go to the styleguide preview iframes, never to
+// the host, so the panel value only ever reaches the dead fallback slot. Measured on
+// zdtp 0.5.1 (#577): editing `--text-2xl` 2.5rem -> 5rem updates the row meta to
+// `ui-text-2xl · 80px` while the sample stays at a computed 40px, and because both
+// panels' first family/weight rows name the same vars, a DOC-panel edit visibly
+// restyles this panel's specimen. A preview showing another panel's values is worse
+// than no preview, so the font tiers stay bare until upstream stops resolving
+// specimen styles through the host cascade.
+//
+// The `bar` (Spacing) and `radius` (Size) glyphs below are NOT affected and stay on:
+// they write the resolved token value straight into the inline style with no `var()`,
+// so they track this panel's own edits correctly (verified the same way).
+//
+// Dropping these previews also drops this panel's font-specimen toolbar and its
+// "Render on page" control, which need the reserved `font` tab id PLUS at least one
+// `size`/`line-height` preview. That is intended: the specimen is precisely the
+// broken surface. Re-enabling is a one-line-per-tier change once upstream is fixed.
 const FONT_TAB: TabConfig = {
   id: "font",
   label: "Font",
   tiers: [
     tierFromGroup(UI_FONT_TOKENS, "font-size", "Font size"),
-    tierFromGroup(UI_FONT_TOKENS, "font-size-lh", "Font size / line height"),
+    tierFromGroup(UI_FONT_TOKENS, "font-size-lh", "Font size / line height", {
+      numberKind: true,
+    }),
     tierFromGroup(UI_FONT_TOKENS, "font-weight", "Font weight"),
-    tierFromGroup(UI_FONT_TOKENS, "line-height", "Line height"),
+    tierFromGroup(UI_FONT_TOKENS, "line-height", "Line height", {
+      numberKind: true,
+    }),
     tierFromGroup(UI_FONT_TOKENS, "font-family", "Font family"),
   ],
 };
@@ -216,7 +273,8 @@ const SIZE_TAB: TabConfig = {
   id: "size",
   label: "Size",
   tiers: [
-    tierFromGroup(UI_SIZE_TOKENS, "radius", "Radius"),
+    { ...tierFromGroup(UI_SIZE_TOKENS, "radius", "Radius"), preview: "radius" },
+    // No preview: free-text tier, no matching preview kind applies.
     tierFromGroup(UI_SIZE_TOKENS, "shadow", "Shadow"),
   ],
 };
@@ -241,6 +299,10 @@ export const previewTokenPanelConfig: PanelConfig = {
   // event will NOT open this panel, and dispatching this event will NOT open
   // the doc-chrome panel.
   toggleEvent: "toggle-preview-token-panel",
+  // This is a public site: the /components/tokens page dispatches
+  // "toggle-preview-token-panel" for every visitor, so default `true` would
+  // arm owner-mode autoload for whoever opens it (README §10.1).
+  autoRememberOnOpen: false,
   tabs: [COLOR_TAB, PALETTE_TAB, SPACING_TAB, FONT_TAB, SIZE_TAB],
   // Left empty deliberately: `colorPresets` only feeds the "Scheme…" dropdown
   // rendered by the reserved 'color'/'color-secondary' ColorTab (verified

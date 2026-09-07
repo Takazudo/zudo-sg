@@ -8,6 +8,11 @@
  */
 
 import { describe, expect, it, vi } from "vitest";
+import {
+  configurePanel,
+  loadPersistedState,
+  __resetPanelConfigForTests,
+} from "@takazudo/zdtp/testing";
 
 // Mock the preview-iframe-registry so the preview config module can import
 // without pulling in browser-side preview bridge code.
@@ -266,5 +271,188 @@ describe("panel config isolation", () => {
 
   it("doc panel has no applySink (writes to host :root)", () => {
     expect(designTokenPanelConfig.applySink).toBeUndefined();
+  });
+
+  it("autoRememberOnOpen is false on both configs (public site — issue #576)", () => {
+    expect(designTokenPanelConfig.autoRememberOnOpen).toBe(false);
+    expect(previewTokenPanelConfig.autoRememberOnOpen).toBe(false);
+  });
+
+  // Regression guard for the zdtp 0.5.1 host-cascade defect measured in #577.
+  // The preview panel is an `applySink` instance, but zdtp's font-specimen renderer
+  // styles samples with `var(--token, <panel value>)` inside the HOST document, which
+  // defines every one of those vars — so a font preview here renders the DOC panel's
+  // typography, not this panel's, and a doc-panel edit visibly restyles it. The font
+  // tiers therefore stay bare on purpose. `bar`/`radius` glyphs are unaffected (they
+  // write resolved values with no `var()`), which is why this guard is font-tab-only.
+  // Delete this test when upstream stops resolving specimen styles through the host.
+  it("preview panel's font tab carries NO preview (upstream host-cascade defect, #577)", () => {
+    const fontTab = previewTokenPanelConfig.tabs.find((t) => t.id === "font");
+    expect(fontTab).toBeDefined();
+    for (const tier of fontTab!.tiers) {
+      expect(tier.preview).toBeUndefined();
+      expect(tier.previewBase).toBeUndefined();
+    }
+  });
+
+  it("doc-chrome panel's font tab DOES carry previews (it writes to the host :root)", () => {
+    const fontTab = designTokenPanelConfig.tabs.find((t) => t.id === "font");
+    expect(fontTab).toBeDefined();
+    const previews = fontTab!.tiers.map((t) => t.preview).filter(Boolean);
+    expect(previews).toEqual(
+      expect.arrayContaining(["size", "line-height", "weight", "family"]),
+    );
+  });
+
+  // zdtp's full preview -> item-kind contract, re-encoded from
+  // `assertValidPanelConfig` (node_modules/@takazudo/zdtp/dist/panel-config-*.js).
+  // That validator runs ONLY inside zdtp's Astro host-adapter, which this project
+  // bypasses (see the configurePanel smoke test below), so this table is the guard
+  // that fails CI when a regenerated manifest changes a token's control kind under
+  // a tier that opted into a preview. Covering every kind matters because the
+  // manifests are `--check`-gated codegen: adding one free-text token to `hsp`, or
+  // flipping `font-family` off `control: "text"`, would otherwise silently ship a
+  // broken glyph. zdtp also rejects mixed item kinds within one tier, which this
+  // per-item loop enforces implicitly.
+  const PREVIEW_ITEM_KINDS: Record<string, readonly string[]> = {
+    size: ["length"],
+    "line-height": ["number"],
+    family: ["text"],
+    weight: ["select", "number"],
+    bar: ["length"],
+    radius: ["length"],
+    duration: ["length", "number"],
+  };
+
+  it("every tier with a preview uses an item kind zdtp's validator allows", () => {
+    for (const config of [designTokenPanelConfig, previewTokenPanelConfig]) {
+      for (const tab of config.tabs) {
+        for (const tier of tab.tiers) {
+          if (tier.preview === undefined) continue;
+          // `referencesTier` tiers resolve their kind through the referenced
+          // tier; neither panel uses one under a preview, so assert that stays
+          // true rather than reimplementing zdtp's indirection.
+          expect(tier.referencesTier).toBeUndefined();
+          const allowed = PREVIEW_ITEM_KINDS[tier.preview];
+          expect(allowed).toBeDefined();
+          for (const item of tier.items) {
+            expect(
+              allowed,
+              `${config.storagePrefix} tab "${tab.id}" tier "${tier.id}" item "${item.id}" (preview: ${tier.preview})`,
+            ).toContain(item.type.kind);
+          }
+        }
+      }
+    }
+  });
+
+  it("previewBase is only set on a preview: 'line-height' tier and names a real font-size token", () => {
+    for (const config of [designTokenPanelConfig, previewTokenPanelConfig]) {
+      for (const tab of config.tabs) {
+        const cssVarsInTab = tab.tiers.flatMap((t) => t.items.map((i) => i.cssVar));
+        for (const tier of tab.tiers) {
+          if (tier.previewBase === undefined) continue;
+          expect(tier.preview).toBe("line-height");
+          // Optional upstream — omitting it makes the specimen fall back to the
+          // `size` tier's nearest-to-16px item — but when set it must resolve,
+          // or the specimen silently reads the host's computed value instead.
+          expect(cssVarsInTab).toContain(tier.previewBase);
+        }
+      }
+    }
+  });
+
+  it("every tier with preview: 'duration' has unit 'ms' or 's' on every item", () => {
+    for (const config of [designTokenPanelConfig, previewTokenPanelConfig]) {
+      for (const tab of config.tabs) {
+        for (const tier of tab.tiers) {
+          if (tier.preview !== "duration") continue;
+          for (const item of tier.items) {
+            const unit = "unit" in item.type ? item.type.unit : undefined;
+            expect(["ms", "s"]).toContain(unit);
+          }
+        }
+      }
+    }
+  });
+
+  it("configurePanel accepts both configs without throwing", () => {
+    // NOTE: as of zdtp 0.5.1, `configurePanel()` itself does NOT run
+    // `assertValidPanelConfig` — that check only runs inside the Astro
+    // host-adapter's inline-JSON-config boundary (`dist/astro/host-adapter.js`,
+    // reading `<script id="tokenpanel-config">`), and `assertValidPanelConfig`
+    // is not part of any public export. Both panels in this project bootstrap
+    // via a direct `zdtp.configurePanel(getConfig())` call
+    // (src/lib/token-panel-native-bootstrap.ts), never through
+    // `<DesignTokenPanelHost>`, so this call never exercises that validator
+    // either in this test or in production. This assertion is still worth
+    // keeping as an import/construction smoke test, but the real correctness
+    // guard for the preview/kind pairing in this file is the PREVIEW_ITEM_KINDS
+    // table above (all seven preview kinds), the 'duration' ms/s unit rule, and
+    // the previewBase check — re-encoded from
+    // node_modules/@takazudo/zdtp/dist/panel-config-CqbuB0nh.js's validator.
+    __resetPanelConfigForTests();
+    expect(() => configurePanel(designTokenPanelConfig)).not.toThrow();
+    __resetPanelConfigForTests();
+    expect(() => configurePanel(previewTokenPanelConfig)).not.toThrow();
+    __resetPanelConfigForTests();
+  });
+
+  describe("state-continuity: line-height typography survives the length->number kind change", () => {
+    // Every persisted format stores typography as item-id -> string and
+    // records no `kind` — the `toTierItem`/`toNumberTierItem` split only
+    // affects how the panel EDITS a value, not how it's stored. These tests
+    // seed each legacy envelope directly (no configurePanel/mount involved)
+    // and assert `loadPersistedState` round-trips the value unchanged, with
+    // no `legacyIdRenameMap` and no migration needed (issue #576).
+    const versions = ["v2", "v3", "v4"] as const;
+
+    it.each(versions)(
+      "doc panel: leading-snug (fractional, %s envelope)",
+      (version) => {
+        localStorage.clear();
+        const key = `${designTokenPanelConfig.storagePrefix}-state-${version}`;
+        localStorage.setItem(
+          key,
+          JSON.stringify({
+            color: {},
+            spacing: {},
+            typography: { "leading-snug": "1.375" },
+            size: {},
+          }),
+        );
+        const state = loadPersistedState(
+          localStorage,
+          undefined,
+          undefined,
+          designTokenPanelConfig,
+        );
+        expect(state?.typography["leading-snug"]).toBe("1.375");
+      },
+    );
+
+    it.each(versions)(
+      "preview panel: ui-text-base--line-height (font-size-lh, fractional, %s envelope)",
+      (version) => {
+        localStorage.clear();
+        const key = `${previewTokenPanelConfig.storagePrefix}-state-${version}`;
+        localStorage.setItem(
+          key,
+          JSON.stringify({
+            color: {},
+            spacing: {},
+            typography: { "ui-text-base--line-height": "1.375" },
+            size: {},
+          }),
+        );
+        const state = loadPersistedState(
+          localStorage,
+          undefined,
+          undefined,
+          previewTokenPanelConfig,
+        );
+        expect(state?.typography["ui-text-base--line-height"]).toBe("1.375");
+      },
+    );
   });
 });
