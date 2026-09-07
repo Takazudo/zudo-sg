@@ -221,26 +221,40 @@ const SPACING_TAB: TabConfig = {
 // Font tab
 // ---------------------------------------------------------------------------
 
+// NO `preview` on ANY tier here, deliberately — unlike the doc-chrome panel's Font
+// tab, which carries the full set. zdtp 0.5.1's font-specimen renderer styles its
+// samples with `var(--token, <panel value>)` and mounts them in the HOST document,
+// which already defines every one of these vars at `:root`. This panel is an
+// `applySink` instance: its writes go to the styleguide preview iframes, never to
+// the host, so the panel value only ever reaches the dead fallback slot. Measured on
+// zdtp 0.5.1 (#577): editing `--text-2xl` 2.5rem -> 5rem updates the row meta to
+// `ui-text-2xl · 80px` while the sample stays at a computed 40px, and because both
+// panels' first family/weight rows name the same vars, a DOC-panel edit visibly
+// restyles this panel's specimen. A preview showing another panel's values is worse
+// than no preview, so the font tiers stay bare until upstream stops resolving
+// specimen styles through the host cascade.
+//
+// The `bar` (Spacing) and `radius` (Size) glyphs below are NOT affected and stay on:
+// they write the resolved token value straight into the inline style with no `var()`,
+// so they track this panel's own edits correctly (verified the same way).
+//
+// Dropping these previews also drops this panel's font-specimen toolbar and its
+// "Render on page" control, which need the reserved `font` tab id PLUS at least one
+// `size`/`line-height` preview. That is intended: the specimen is precisely the
+// broken surface. Re-enabling is a one-line-per-tier change once upstream is fixed.
 const FONT_TAB: TabConfig = {
   id: "font",
   label: "Font",
   tiers: [
-    { ...tierFromGroup(UI_FONT_TOKENS, "font-size", "Font size"), preview: "size" },
-    {
-      ...tierFromGroup(UI_FONT_TOKENS, "font-size-lh", "Font size / line height", {
-        numberKind: true,
-      }),
-      preview: "line-height",
-      previewBase: "--text-base",
-    },
-    { ...tierFromGroup(UI_FONT_TOKENS, "font-weight", "Font weight"), preview: "weight" },
-    {
-      ...tierFromGroup(UI_FONT_TOKENS, "line-height", "Line height", {
-        numberKind: true,
-      }),
-      preview: "line-height",
-    },
-    { ...tierFromGroup(UI_FONT_TOKENS, "font-family", "Font family"), preview: "family" },
+    tierFromGroup(UI_FONT_TOKENS, "font-size", "Font size"),
+    tierFromGroup(UI_FONT_TOKENS, "font-size-lh", "Font size / line height", {
+      numberKind: true,
+    }),
+    tierFromGroup(UI_FONT_TOKENS, "font-weight", "Font weight"),
+    tierFromGroup(UI_FONT_TOKENS, "line-height", "Line height", {
+      numberKind: true,
+    }),
+    tierFromGroup(UI_FONT_TOKENS, "font-family", "Font family"),
   ],
 };
 

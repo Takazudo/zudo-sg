@@ -278,6 +278,32 @@ describe("panel config isolation", () => {
     expect(previewTokenPanelConfig.autoRememberOnOpen).toBe(false);
   });
 
+  // Regression guard for the zdtp 0.5.1 host-cascade defect measured in #577.
+  // The preview panel is an `applySink` instance, but zdtp's font-specimen renderer
+  // styles samples with `var(--token, <panel value>)` inside the HOST document, which
+  // defines every one of those vars — so a font preview here renders the DOC panel's
+  // typography, not this panel's, and a doc-panel edit visibly restyles it. The font
+  // tiers therefore stay bare on purpose. `bar`/`radius` glyphs are unaffected (they
+  // write resolved values with no `var()`), which is why this guard is font-tab-only.
+  // Delete this test when upstream stops resolving specimen styles through the host.
+  it("preview panel's font tab carries NO preview (upstream host-cascade defect, #577)", () => {
+    const fontTab = previewTokenPanelConfig.tabs.find((t) => t.id === "font");
+    expect(fontTab).toBeDefined();
+    for (const tier of fontTab!.tiers) {
+      expect(tier.preview).toBeUndefined();
+      expect(tier.previewBase).toBeUndefined();
+    }
+  });
+
+  it("doc-chrome panel's font tab DOES carry previews (it writes to the host :root)", () => {
+    const fontTab = designTokenPanelConfig.tabs.find((t) => t.id === "font");
+    expect(fontTab).toBeDefined();
+    const previews = fontTab!.tiers.map((t) => t.preview).filter(Boolean);
+    expect(previews).toEqual(
+      expect.arrayContaining(["size", "line-height", "weight", "family"]),
+    );
+  });
+
   it("every tier with preview: 'line-height' has type.kind === 'number' on every item", () => {
     for (const config of [designTokenPanelConfig, previewTokenPanelConfig]) {
       for (const tab of config.tabs) {
