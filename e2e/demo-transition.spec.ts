@@ -94,8 +94,12 @@ async function softNavTo(page: Page, href: string): Promise<void> {
  * its `setTimeout(show, 150)` on that same event, so holding that one request
  * freezes the navigation exactly inside the window where the overlay is meant
  * to appear — for as long as the assertions need, with no sleep racing the
- * timer. The router has no prefetch (zfb-runtime omits the hook), so the
- * navigation fetch is the only request to this path.
+ * timer. zfb-runtime does ship a prefetch module (client-router/prefetch.js,
+ * default strategy "hover"), but it only wires listeners from prefetchInit(),
+ * which `<ClientRouter />` calls solely under `prefetchAll` — and the demo
+ * mounts `<ClientRouter />` (layouts/default.tsx) bare, in <head>, never
+ * hydrated. So no prefetch runs here and the navigation fetch is the only
+ * request to this path; enabling prefetch would need this helper revisited.
  */
 async function holdNavigationFetch(page: Page, href: string): Promise<{ release: () => void }> {
   let openGate!: () => void;

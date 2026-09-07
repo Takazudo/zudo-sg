@@ -144,7 +144,7 @@ export default function TokensPage(): JSX.Element {
         <div data-sg-tokens-root>
           <section class="mb-vsp-xl">
             <h2 class="mb-vsp-2xs text-lg font-semibold text-fg">Palette</h2>
-            <p class="mb-vsp-sm text-small text-muted">
+            <p class="mb-vsp-sm max-w-[56rem] text-small text-muted">
               Raw grouped swatches that feed the semantic component tokens.
             </p>
             <div class="flex flex-col gap-vsp-md">
@@ -185,7 +185,7 @@ export default function TokensPage(): JSX.Element {
             <h2 class="mb-vsp-2xs text-lg font-semibold text-fg">
               Semantic color
             </h2>
-            <p class="mb-vsp-sm text-small text-muted">
+            <p class="mb-vsp-sm max-w-[56rem] text-small text-muted">
               Public color tokens consumed by components.
             </p>
             <div class="grid grid-cols-2 gap-hsp-md sm:grid-cols-3 lg:grid-cols-4">

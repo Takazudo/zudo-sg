@@ -305,9 +305,12 @@ your own diff needs changing.
 
 The generic *"advertised package branch is stale"* failure means something else:
 the recorded commit is not an ancestor of the ref (the handoff is diverged, or
-the ref was rolled back), or the ancestry could not be determined at all. That
-one is a real handoff problem — investigate it. Either way the check exits
-non-zero; a mismatch never passes.
+the ref was rolled back), **or** the ancestry could not be determined — the
+check falls back to the generic message whenever its throwaway fetch of the
+advertised commit fails, so a network or credential problem in CI lands here
+too. Read the first case as a real handoff problem and investigate it; rule out
+the second by re-running the job. Either way the check exits non-zero; a
+mismatch never passes.
 
 ---
 
