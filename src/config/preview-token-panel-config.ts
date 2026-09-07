@@ -31,14 +31,15 @@
  * `--color-*` tokens stay free-text rows.
  *
  * Tier previews (zdtp 0.4.15+, opt-in via `TierConfig.preview`) are turned on
- * for every font/spacing/radius tier that has a matching preview kind — see
- * FONT_TAB/SPACING_TAB/SIZE_TAB below. `'family'`/`'weight'` do not add their
- * own preview row: per PORTABLE-CONTRACT.md §3.2 they style the other
- * size/line-height specimen samples in the same `font` tab using the tier's
- * first item. The `shadow` size tier and the `ui-color`/`palette` tabs
- * deliberately have no preview — `shadow` is a free-text tier with no
- * matching preview kind, and the color tiers render their own swatch/curve
- * editors instead (issue #576).
+ * for the spacing (`'bar'`) and radius (`'radius'`) tiers ONLY — see
+ * SPACING_TAB/SIZE_TAB below. Unlike the doc-chrome panel, this panel's whole
+ * `font` tab stays bare: zdtp 0.5.1 resolves font-specimen styles through the
+ * HOST cascade, which an `applySink` panel never writes to, so a font preview
+ * here would render the doc-chrome panel's typography instead of this panel's
+ * (#577 — full reasoning in the block comment above FONT_TAB). The `shadow`
+ * size tier and the `ui-color`/`palette` tabs deliberately have no preview
+ * either — `shadow` is a free-text tier with no matching preview kind, and the
+ * color tiers render their own swatch/curve editors instead (issue #576).
  */
 
 import type { PanelConfig, TabConfig, TierConfig, TierItem, TokenDef } from "@takazudo/zdtp";
@@ -64,9 +65,15 @@ interface ToTierItemOptions {
    * Emit `{ kind: 'number', step }` instead of `{ kind: 'length', ... }`.
    * zdtp's `TokenControl` (upstream, this repo doesn't own it) has no
    * "number" member, so a unitless token like `--leading-normal` would
-   * otherwise become `{ kind: 'length', unit: '' }` — but `preview:
-   * 'line-height'` requires a `number` tier and `configurePanel()` throws
-   * otherwise. Used only for the unitless line-height groups.
+   * otherwise become `{ kind: 'length', unit: '' }` — but zdtp's
+   * `preview: 'line-height'` contract requires a `number` tier.
+   *
+   * This panel currently ships NO line-height preview (see FONT_TAB), so the
+   * opt-in buys nothing here today; it is kept in lockstep with the doc-chrome
+   * panel so re-enabling the font previews stays the one-line-per-tier change
+   * FONT_TAB promises. It is behaviour-neutral: for a unitless token zdtp's
+   * row editor treats `number` and `length` identically, and no persisted
+   * state records the kind.
    */
   numberKind?: boolean;
 }

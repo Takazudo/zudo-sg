@@ -73,9 +73,13 @@ glyphs — until this token panel previews epic (`Takazudo/zudo-sg#575`).
 | Size | shadow (preview only) | — | none | Free-text tier; no preview kind matches text values |
 | Color / Palette | all tiers | none | none | These tiers render their own swatch/curve editors instead of a preview glyph |
 
-A tier with `preview: 'line-height'` must also set `previewBase` — it names the font-size CSS
-variable the line-height specimen paragraph is rendered at (`--text-body` here).
-`previewBase` has no meaning on any other `preview` kind and is only read for `'line-height'`.
+A tier with `preview: 'line-height'` **may** also set `previewBase` — it names the font-size CSS
+variable the line-height specimen paragraph is rendered at (`--text-body` here). It is optional:
+with no `previewBase`, zdtp falls back to whichever item of the tab's `'size'` preview tier is
+closest to 16px, and to a flat 16px if the tab has no `'size'` tier at all. It is worth setting
+anyway — the fallback silently re-picks a different base whenever the font-size tier changes.
+`previewBase` is only read for `'line-height'`, and zdtp's validator rejects it on any other
+`preview` kind.
 
 `'family'` and `'weight'` tiers do not render a preview row of their own. Per
 `PORTABLE-CONTRACT.md` §3.2, the *first item* in each of those tiers instead supplies the
@@ -91,8 +95,10 @@ leaving a toolbar with nothing to show.
 
 ## The `{ kind: 'number' }` tier-item opt-in
 
-`preview: 'line-height'` requires every item in that tier to have `type.kind === 'number'`;
-`configurePanel()` throws on a `'length'` tier there. The unitless line-height tokens
+`preview: 'line-height'` requires every item in that tier to have `type.kind === 'number'`. That
+rule lives in zdtp's `assertValidPanelConfig`, which this project never reaches at runtime (see
+"`configurePanel()` does not validate" below) — the repo's own tests are what enforce it. The
+unitless line-height tokens
 (`--leading-*`, `--text-*--line-height`) would otherwise map to `{ kind: 'length', unit: '' }`
 through the normal `toTierItem` path, so both panel configs add a local `numberKind` option to
 `toTierItem`/`tierFromGroup` that emits `{ kind: 'number', step, unit }` instead, used only for
@@ -159,9 +165,14 @@ panels bootstrap through a direct `zdtp.configurePanel(getConfig())` call
 Consequently, `panel-config-isolation.test.ts`'s `"configurePanel accepts both configs without
 throwing"` test is a smoke test — it proves the configs import and construct cleanly, not that
 they satisfy zdtp's validation rules. The real correctness guards for the preview/kind pairing
-are the hand-written tests that re-encode those rules directly: every `preview: 'line-height'`
-tier must have `type.kind === 'number'` on every item, and every `preview: 'duration'` tier must
-have a `'ms'`/`'s'` unit on every item. Treat those tests, not the `configurePanel` smoke test, as
+are the hand-written tests that re-encode those rules directly: a `PREVIEW_ITEM_KINDS` table
+covering all seven preview kinds (`size`/`bar`/`radius` → `length`, `line-height` → `number`,
+`family` → `text`, `weight` → `select`/`number`, `duration` → `length`/`number`) asserted per
+item, the `'ms'`/`'s'` unit rule for `'duration'`, and a check that `previewBase` only appears on
+a `'line-height'` tier and names a token that actually exists in the same tab. Covering every
+kind — not just the two this epic happened to touch — matters because both manifests are
+regenerated codegen: a regen that flips one token's `control` would otherwise ship a broken glyph
+silently. Treat those tests, not the `configurePanel` smoke test, as
 the thing that fails CI if a future tier/preview pairing is wrong. Filed upstream as
 [Takazudo/zudo-design-token-panel#851](https://github.com/Takazudo/zudo-design-token-panel/issues/851).
 

@@ -304,14 +304,59 @@ describe("panel config isolation", () => {
     );
   });
 
-  it("every tier with preview: 'line-height' has type.kind === 'number' on every item", () => {
+  // zdtp's full preview -> item-kind contract, re-encoded from
+  // `assertValidPanelConfig` (node_modules/@takazudo/zdtp/dist/panel-config-*.js).
+  // That validator runs ONLY inside zdtp's Astro host-adapter, which this project
+  // bypasses (see the configurePanel smoke test below), so this table is the guard
+  // that fails CI when a regenerated manifest changes a token's control kind under
+  // a tier that opted into a preview. Covering every kind matters because the
+  // manifests are `--check`-gated codegen: adding one free-text token to `hsp`, or
+  // flipping `font-family` off `control: "text"`, would otherwise silently ship a
+  // broken glyph. zdtp also rejects mixed item kinds within one tier, which this
+  // per-item loop enforces implicitly.
+  const PREVIEW_ITEM_KINDS: Record<string, readonly string[]> = {
+    size: ["length"],
+    "line-height": ["number"],
+    family: ["text"],
+    weight: ["select", "number"],
+    bar: ["length"],
+    radius: ["length"],
+    duration: ["length", "number"],
+  };
+
+  it("every tier with a preview uses an item kind zdtp's validator allows", () => {
     for (const config of [designTokenPanelConfig, previewTokenPanelConfig]) {
       for (const tab of config.tabs) {
         for (const tier of tab.tiers) {
-          if (tier.preview !== "line-height") continue;
+          if (tier.preview === undefined) continue;
+          // `referencesTier` tiers resolve their kind through the referenced
+          // tier; neither panel uses one under a preview, so assert that stays
+          // true rather than reimplementing zdtp's indirection.
+          expect(tier.referencesTier).toBeUndefined();
+          const allowed = PREVIEW_ITEM_KINDS[tier.preview];
+          expect(allowed).toBeDefined();
           for (const item of tier.items) {
-            expect(item.type.kind).toBe("number");
+            expect(
+              allowed,
+              `${config.storagePrefix} tab "${tab.id}" tier "${tier.id}" item "${item.id}" (preview: ${tier.preview})`,
+            ).toContain(item.type.kind);
           }
+        }
+      }
+    }
+  });
+
+  it("previewBase is only set on a preview: 'line-height' tier and names a real font-size token", () => {
+    for (const config of [designTokenPanelConfig, previewTokenPanelConfig]) {
+      for (const tab of config.tabs) {
+        const cssVarsInTab = tab.tiers.flatMap((t) => t.items.map((i) => i.cssVar));
+        for (const tier of tab.tiers) {
+          if (tier.previewBase === undefined) continue;
+          expect(tier.preview).toBe("line-height");
+          // Optional upstream — omitting it makes the specimen fall back to the
+          // `size` tier's nearest-to-16px item — but when set it must resolve,
+          // or the specimen silently reads the host's computed value instead.
+          expect(cssVarsInTab).toContain(tier.previewBase);
         }
       }
     }
@@ -342,11 +387,10 @@ describe("panel config isolation", () => {
     // `<DesignTokenPanelHost>`, so this call never exercises that validator
     // either in this test or in production. This assertion is still worth
     // keeping as an import/construction smoke test, but the real correctness
-    // guard for the preview/kind pairing in this file is the pair of tests
-    // above (every 'line-height' tier is 'number', every 'duration' tier's
-    // unit is ms/s) plus the manual cross-check against
-    // node_modules/@takazudo/zdtp/dist/panel-config-CqbuB0nh.js's validator
-    // rules done when these configs were authored.
+    // guard for the preview/kind pairing in this file is the PREVIEW_ITEM_KINDS
+    // table above (all seven preview kinds), the 'duration' ms/s unit rule, and
+    // the previewBase check — re-encoded from
+    // node_modules/@takazudo/zdtp/dist/panel-config-CqbuB0nh.js's validator.
     __resetPanelConfigForTests();
     expect(() => configurePanel(designTokenPanelConfig)).not.toThrow();
     __resetPanelConfigForTests();

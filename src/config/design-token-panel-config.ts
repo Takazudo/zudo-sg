@@ -60,9 +60,14 @@ interface ToTierItemOptions {
    * Emit `{ kind: 'number', step }` instead of `{ kind: 'length', ... }`.
    * zdtp's `TokenControl` (upstream, this repo doesn't own it) has no
    * "number" member, so a unitless token like `--leading-normal` would
-   * otherwise become `{ kind: 'length', unit: '' }` — but `preview:
-   * 'line-height'` requires a `number` tier and `configurePanel()` throws
-   * otherwise. Used only for the unitless line-height groups.
+   * otherwise become `{ kind: 'length', unit: '' }` — but zdtp's
+   * `preview: 'line-height'` contract requires a `number` tier.
+   *
+   * Nothing enforces that contract at RUNTIME here: `assertValidPanelConfig`
+   * is called only from zdtp's Astro host-adapter, and this project bootstraps
+   * with a direct `configurePanel()` call, which does not validate. The guard
+   * is `src/config/__tests__/panel-config-isolation.test.ts`, which re-encodes
+   * the preview/kind table. Used only for the unitless line-height groups.
    */
   numberKind?: boolean;
 }
