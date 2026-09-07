@@ -80,9 +80,12 @@ pnpm verify:ui-provider-install -- --exact
 
 Every command above is safe to run from the repo root as written: `pnpm check` typechecks
 `@zudo-sg/ui` through `--filter`, which resolves against the root lockfile, and both provider
-gates copy the package into a temp directory before installing or running anything, so
-`packages/ui/node_modules` is never touched. Clean-workspace CI is still the source of truth;
-this sequence is a local convenience, not a substitute for it.
+gates install, typecheck, and test in a temp directory, so `packages/ui/node_modules` is never
+written. One command does run with its working directory inside the package — `pnpm pack`, in
+`verify:ui-provider-install`'s local-package fallback, which `--exact` never reaches — and it is
+safe because `pack` is neither `run` nor `exec`, so `verify-deps-before-run` does not fire.
+Clean-workspace CI is still the source of truth; this sequence is a local convenience, not a
+substitute for it.
 
 ### The one thing that breaks it: running pnpm directly inside `packages/ui`
 
