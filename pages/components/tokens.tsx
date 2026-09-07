@@ -22,6 +22,19 @@
 //
 // See src/features/styleguide/token-tweak/token-playground.tsx for the
 // SSR ↔ island contract (`data-sg-tokens-root`, `data-sg-token`, `data-var`).
+//
+// Layout: the band opts into zudo-doc's WIDE content layout (`contentWide` →
+// `data-zd-wide`), which the swatch grids use in full — the grids are the
+// reason this page asks for the wide band at all. This page used to pair
+// `contentWide` with a centred `mx-auto max-w-[64rem]` body wrapper, which
+// cancelled most of the extra width AND re-centred the column, so the page
+// sat inboard of `/components` and `/components/<slug>` instead of sharing
+// their left edge. #545 settled that ambiguity in favour of keeping
+// `contentWide` and dropping the cap (rather than dropping `contentWide` and
+// keeping a 64rem column), because both siblings cap LEFT — `max-w-[56rem]`
+// with no `mx-auto` — so the centred column was the outlier, not the intent.
+// Prose keeps its own reading measure via the same left cap; a wide band must
+// not mean 1150px-wide paragraphs.
 
 import type { JSX, VNode } from "preact";
 import { Island } from "@takazudo/zfb";
@@ -111,8 +124,8 @@ export default function TokensPage(): JSX.Element {
       contentWide
       {...chrome}
     >
-      <div class="mx-auto max-w-[64rem]">
-        <header class="mb-vsp-lg">
+      <div>
+        <header class="mb-vsp-lg max-w-[56rem]">
           <h1 class="text-heading font-bold mb-vsp-2xs">Design tokens</h1>
           <p class="mt-vsp-xs text-muted">
             The semantic tokens the <code>@zudo-sg/ui</code> components consume.
