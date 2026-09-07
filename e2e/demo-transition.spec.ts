@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Page, type Route } from "@playwright/test";
 
 /**
  * Demo SPA transition regression suite.
@@ -15,6 +15,9 @@ import { expect, test, type Page } from "@playwright/test";
  *      the section that owns the destination route (nav-sync.ts on
  *      `zfb:after-swap`).
  *   4. Loading overlay present: `#zd-page-loading-overlay` exists in the DOM.
+ *   5. Loading overlay actually shows: it gains `data-visible` (and paints —
+ *      computed `opacity`/`visibility`, not just the attribute) while a swap is
+ *      in flight, then loses it once the swap lands.
  *
  * Selector policy: the content tree will keep changing, so anchor on STABLE
  * structural `data-*` / id hooks only:
@@ -55,16 +58,66 @@ async function openRailAndListLeafHrefs(page: Page): Promise<string[]> {
   });
 }
 
+/** Normalize a URL pathname the way the rail hrefs are normalized (no trailing slash). */
+function normalizePath(pathname: string): string {
+  return pathname.replace(/\/+$/, "") || "/";
+}
+
+/** The in-rail leaf link pointing at `href` (with or without a trailing slash). */
+function railLink(page: Page, href: string) {
+  return page
+    .locator(`#zui-nav-drawer a[href="${href}"], #zui-nav-drawer a[href="${href}/"]`)
+    .first();
+}
+
+/** Wait for the SPA URL to settle on `href`. */
+async function waitForSoftNav(page: Page, href: string): Promise<void> {
+  await page.waitForURL((url) => normalizePath(url.pathname) === href, {
+    waitUntil: "domcontentloaded",
+  });
+}
+
 /** Click an in-rail link to `href` and wait for the SPA URL change. */
 async function softNavTo(page: Page, href: string): Promise<void> {
-  await page.locator(`#zui-nav-drawer a[href="${href}"], #zui-nav-drawer a[href="${href}/"]`).first().click();
-  await page.waitForURL(
-    (url) => {
-      const p = url.pathname.replace(/\/+$/, "") || "/";
-      return p === href;
-    },
-    { waitUntil: "domcontentloaded" },
-  );
+  await railLink(page, href).click();
+  await waitForSoftNav(page, href);
+}
+
+/**
+ * Park the client router's page fetch for `href` so the overlay's 150 ms
+ * show-delay timer always wins, then release it on demand.
+ *
+ * Why this interception point: the router dispatches
+ * `zfb:before-preparation` synchronously and only then awaits its loader's
+ * `fetch(to.href)` (zfb-runtime `client-router/events.js` doPreparation →
+ * `router.js` defaultLoader → fetchHTML). The overlay's inline bootstrap starts
+ * its `setTimeout(show, 150)` on that same event, so holding that one request
+ * freezes the navigation exactly inside the window where the overlay is meant
+ * to appear — for as long as the assertions need, with no sleep racing the
+ * timer. The router has no prefetch (zfb-runtime omits the hook), so the
+ * navigation fetch is the only request to this path.
+ */
+async function holdNavigationFetch(page: Page, href: string): Promise<{ release: () => void }> {
+  let openGate!: () => void;
+  const gate = new Promise<void>((resolve) => {
+    openGate = resolve;
+  });
+
+  const routeHandler = async (route: Route) => {
+    await gate;
+    // The page can already be torn down if an assertion failed while the
+    // request was parked; a rejected continue() would mask the real failure.
+    await route.continue().catch(() => {});
+  };
+
+  // Scoped to this one pathname, and `page` is a per-test fixture, so the
+  // registration cannot outlive the test or park an unrelated request. A
+  // redirect re-entering the handler after release passes straight through,
+  // since resolving a settled promise is a no-op.
+  await page.route((url) => normalizePath(url.pathname) === href, routeHandler);
+
+  /** Let the parked navigation request through. Idempotent. */
+  return { release: () => openGate() };
 }
 
 test("internal nav click soft-navigates without a full reload (window sentinel survives)", async ({
@@ -167,4 +220,49 @@ test("active section [data-current] re-syncs to the destination route after a sw
 test("loading overlay element is present in the DOM", async ({ page }) => {
   await page.goto("/");
   await expect(page.locator("#zd-page-loading-overlay")).toBeAttached();
+});
+
+test("loading overlay becomes visible while a swap is in flight, and hides after it lands", async ({
+  page,
+}) => {
+  await page.goto("/company/");
+
+  const hrefs = await openRailAndListLeafHrefs(page);
+  const target = hrefs.find((h) => h !== "/company" && h !== "/");
+  expect(target, "expected at least one non-company rail leaf link").toBeTruthy();
+
+  const overlay = page.locator("#zd-page-loading-overlay");
+  // Baseline: idle means attached but not painted. Without this a permanently
+  // visible overlay would satisfy the in-flight assertions below.
+  await expect(overlay).toBeAttached();
+  await expect(overlay).not.toHaveAttribute("data-visible");
+  await expect(overlay).toHaveAttribute("aria-hidden", "true");
+  await expect(overlay).toHaveCSS("opacity", "0");
+
+  const held = await holdNavigationFetch(page, target!);
+
+  try {
+    // Do NOT wait for the URL here: it only changes once the swap runs, which
+    // cannot happen while the response is parked.
+    await railLink(page, target!).click();
+
+    await expect(overlay).toHaveAttribute("data-visible", "");
+    await expect(overlay).toHaveAttribute("aria-hidden", "false");
+    // The attributes alone would still pass if the CSS stopped revealing it —
+    // `.page-loading-overlay[data-visible]` is what flips opacity/visibility,
+    // and both assertions retry past the 200ms fade.
+    await expect(overlay).toHaveCSS("visibility", "visible");
+    await expect(overlay).toHaveCSS("opacity", "1");
+    await expect(overlay).toBeVisible();
+  } finally {
+    // Always release, including on assertion failure, so the parked handler
+    // cannot outlive the test.
+    held.release();
+  }
+
+  // The swap replaces the body, so this is a freshly rendered overlay node; the
+  // URL change is what proves the navigation actually completed.
+  await waitForSoftNav(page, target!);
+  await expect(overlay).not.toHaveAttribute("data-visible");
+  await expect(overlay).toHaveAttribute("aria-hidden", "true");
 });
