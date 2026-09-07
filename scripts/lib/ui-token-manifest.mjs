@@ -203,10 +203,15 @@ export const FONT_SPECS = [
  * expressions can't be driven by a single-axis slider.
  */
 export const SIZE_SPECS = [
-  { cssVar: "--radius-DEFAULT", group: "radius", step: 1, unit: "px" },
-  { cssVar: "--radius-sm", group: "radius", step: 1, unit: "px" },
-  { cssVar: "--radius-md", group: "radius", step: 1, unit: "px" },
-  { cssVar: "--radius-lg", group: "radius", step: 1, unit: "px" },
+  // `unit` MUST match the unit the token is authored in (packages/ui/styles/tokens.css),
+  // because the panel appends it to whatever bare number the user types. These four are
+  // rem there (0.25rem / 0.25rem / 0.5rem / 1rem); declaring "px" made a typed `2.5`
+  // commit `2.5px` instead of `2.5rem` — a silent ~6x shrink (#580). `--radius-full` is
+  // the exception: its value really is the px pill sentinel `9999px`.
+  { cssVar: "--radius-DEFAULT", group: "radius", step: 0.05, unit: "rem" },
+  { cssVar: "--radius-sm", group: "radius", step: 0.05, unit: "rem" },
+  { cssVar: "--radius-md", group: "radius", step: 0.05, unit: "rem" },
+  { cssVar: "--radius-lg", group: "radius", step: 0.05, unit: "rem" },
   {
     cssVar: "--radius-full",
     group: "radius",

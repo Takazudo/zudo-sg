@@ -680,8 +680,8 @@ export const UI_SIZE_TOKENS: readonly TokenDef[] = [
     label: "radius-DEFAULT",
     group: "radius",
     default: "0.25rem",
-    step: 1,
-    unit: "px",
+    step: 0.05,
+    unit: "rem",
   },
   {
     id: "ui-radius-sm",
@@ -689,8 +689,8 @@ export const UI_SIZE_TOKENS: readonly TokenDef[] = [
     label: "radius-sm",
     group: "radius",
     default: "0.25rem",
-    step: 1,
-    unit: "px",
+    step: 0.05,
+    unit: "rem",
   },
   {
     id: "ui-radius-md",
@@ -698,8 +698,8 @@ export const UI_SIZE_TOKENS: readonly TokenDef[] = [
     label: "radius-md",
     group: "radius",
     default: "0.5rem",
-    step: 1,
-    unit: "px",
+    step: 0.05,
+    unit: "rem",
   },
   {
     id: "ui-radius-lg",
@@ -707,8 +707,8 @@ export const UI_SIZE_TOKENS: readonly TokenDef[] = [
     label: "radius-lg",
     group: "radius",
     default: "1rem",
-    step: 1,
-    unit: "px",
+    step: 0.05,
+    unit: "rem",
   },
   {
     id: "ui-radius-full",
