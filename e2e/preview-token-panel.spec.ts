@@ -93,6 +93,50 @@ async function openPreviewPanel(page: Page): Promise<void> {
 }
 
 /**
+ * Click a panel header action ("Reset", "Export", "Load from JSON", …) by its
+ * visible text, in either open panel (doc or preview).
+ *
+ * zdtp 0.5.1 collapses `.tokenpanel-header` actions into a "Panel actions"
+ * popover once the panel's own container width drops below 1135px
+ * (`@container tokenpanel`) — both zdtp instances this project docks are
+ * narrower than that, so the header links are always hidden and the popover
+ * is the only path. Handle both layouts: click the header link directly if
+ * it's visible, otherwise open the popover first.
+ *
+ * Both branches must stay scoped. `.tokenpanel-action-link` is NOT unique to
+ * the header: each tab body carries its own "Reset Font" / "Reset Size" /
+ * "Reset Spacing" link with the same class, and `hasText` is a substring
+ * match — so an unscoped `hasText: "Reset"` also matches those and would
+ * silently reset one tab instead of the whole panel. `> ` restricts the
+ * direct branch to the header's own action row (the popover is a nested
+ * `div`, so it is excluded here and matched separately below). Likewise the
+ * trigger is matched by `.tokenpanel-actions-menu-btn`, not by its
+ * `aria-label` — the popover it opens carries the identical
+ * `aria-label="Panel actions"`.
+ */
+async function clickPanelAction(page: Page, label: string): Promise<void> {
+  const directLink = page
+    .locator(".tokenpanel-header > .tokenpanel-action-link", { hasText: label })
+    .first();
+  if (await directLink.isVisible()) {
+    await directLink.click();
+    return;
+  }
+
+  const menuBtn = page.locator(".tokenpanel-actions-menu-btn").first();
+  await expect(menuBtn).toBeVisible({ timeout: 5_000 });
+  await menuBtn.click();
+
+  const popoverLink = page
+    .locator(".tokenpanel-actions-popover .tokenpanel-action-link", {
+      hasText: label,
+    })
+    .first();
+  await expect(popoverLink).toBeVisible({ timeout: 5_000 });
+  await popoverLink.click();
+}
+
+/**
  * Navigate to the "Size" tab in the currently-open panel and set --radius-md
  * to a specific px value using the text input (aria-label: "--radius-md value").
  *
@@ -313,11 +357,7 @@ test("doc Tokens panel: dispatching toggle-sg-doc-tweak opens the real (non-empt
   // but must NOT clear the preview iframe's --color-accent.
   // The doc panel's Reset calls clearAppliedStyles (no sink), which only removes
   // inline styles from the host document.documentElement — not from iframes.
-  const resetBtn = page
-    .locator(".tokenpanel-action-link", { hasText: "Reset" })
-    .first();
-  await expect(resetBtn).toBeVisible({ timeout: 5_000 });
-  await resetBtn.click();
+  await clickPanelAction(page, "Reset");
   await page.waitForTimeout(200);
 
   // Iframe's --color-accent must still be the sentinel after doc panel Reset.
@@ -355,11 +395,7 @@ test("preview panel: Reset clears preview overrides; host chrome state is untouc
   expect(await getIframeRootVar(frame, "--radius-md")).toBe("20px");
 
   // Click Reset.
-  const resetBtn = page
-    .locator(".tokenpanel-action-link", { hasText: "Reset" })
-    .first();
-  await expect(resetBtn).toBeVisible({ timeout: 5_000 });
-  await resetBtn.click();
+  await clickPanelAction(page, "Reset");
 
   // After Reset, the sink's clear() path runs:
   //   clearPreviewVars(["--radius-md", …]) → sendClearCssVars(iframe, …) →
@@ -396,11 +432,7 @@ test("preview panel: Export emits zdtp schema; Load-from-JSON restores overrides
   await setPanelColorAccent(page, COLOR_TAB_SENTINEL);
 
   // Click Export to open the export modal.
-  const exportBtn = page
-    .locator(".tokenpanel-action-link", { hasText: "Export" })
-    .first();
-  await expect(exportBtn).toBeVisible({ timeout: 5_000 });
-  await exportBtn.click();
+  await clickPanelAction(page, "Export");
 
   // Wait for the export modal.
   const exportModal = page.locator(
@@ -436,18 +468,11 @@ test("preview panel: Export emits zdtp schema; Load-from-JSON restores overrides
   await expect(exportModal).not.toBeVisible({ timeout: 3_000 });
 
   // Reset to clear overrides so Load-from-JSON has something to restore.
-  const resetBtn = page
-    .locator(".tokenpanel-action-link", { hasText: "Reset" })
-    .first();
-  await resetBtn.click();
+  await clickPanelAction(page, "Reset");
   await page.waitForTimeout(300);
 
   // Click "Load from JSON…" to open the import modal.
-  const loadBtn = page
-    .locator(".tokenpanel-action-link", { hasText: "Load from JSON" })
-    .first();
-  await expect(loadBtn).toBeVisible({ timeout: 5_000 });
-  await loadBtn.click();
+  await clickPanelAction(page, "Load from JSON");
 
   // Wait for the import modal.
   const importModal = page.locator(
@@ -568,11 +593,7 @@ test("preview panel: Reset clears overrides from all visible preview iframes", a
   expect(await getIframeRootVar(frame, "--radius-md")).toBe("20px");
 
   // Click Reset.
-  const resetBtn = page
-    .locator(".tokenpanel-action-link", { hasText: "Reset" })
-    .first();
-  await expect(resetBtn).toBeVisible({ timeout: 5_000 });
-  await resetBtn.click();
+  await clickPanelAction(page, "Reset");
 
   // After Reset, clearPreviewVars → sendClearCssVars sends a clear message to
   // every registered iframe. The first iframe should have its inline style

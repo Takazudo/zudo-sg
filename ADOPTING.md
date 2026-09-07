@@ -164,7 +164,8 @@ can't drift.
 ## 4. Host-owned vs. package-injected routes
 
 Not every route in this repo is a plain file under `pages/`. `@takazudo/zudo-doc`
-injects some routes (docs pages, 404, robots, sitemap) directly; others stay
+injects some routes (docs pages, 404, robots — plus sitemap when
+`settings.sitemap` is on, which it is not in this root host) directly; others stay
 host-owned pages that `pages/` defines itself (`/`, `/components/*`,
 `/docs/versions`). Which is which is controlled by `settings.packageOwnedRoutes`
 in `src/config/settings.ts` (see the comment directly above that field) and

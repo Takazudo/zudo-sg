@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@takazudo/zfb-md-wasm':
-        specifier: 2.14.3
-        version: 2.14.3
+        specifier: 2.15.1
+        version: 2.15.1
       dompurify:
         specifier: ^3.4.11
         version: 3.4.14
@@ -25,8 +25,8 @@ importers:
         specifier: ^22.0.0
         version: 22.20.1
       '@zudo-composer/component-contract':
-        specifier: git+https://github.com/Takazudo/zudo-composer.git#9b774b827e9f6fec14379995ac2c691ccc3b7e5b
-        version: https://codeload.github.com/Takazudo/zudo-composer/tar.gz/9b774b827e9f6fec14379995ac2c691ccc3b7e5b
+        specifier: git+https://github.com/Takazudo/zudo-composer.git#b66d52bb273a10010485efb2d06f80cee8001bd6
+        version: https://codeload.github.com/Takazudo/zudo-composer/tar.gz/b66d52bb273a10010485efb2d06f80cee8001bd6
       happy-dom:
         specifier: ^16.8.1
         version: 16.8.1
@@ -238,8 +238,8 @@ packages:
   '@standard-schema/spec@1.1.0':
     resolution: {integrity: sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w==}
 
-  '@takazudo/zfb-md-wasm@2.14.3':
-    resolution: {integrity: sha512-Yu6gm1c+GkTPzH0dgrbv2qRIhyNDHHPVumQBhofcjc2ac9d+WBS9CHcODvzBdbv82Tx484e/BBeArSrO55p3+A==}
+  '@takazudo/zfb-md-wasm@2.15.1':
+    resolution: {integrity: sha512-9VEusMYrQBpSjsnQjmyuIrne26ITHcG/UUzgc/Btihjt3l8bRW6CZSddqQyCnsO0xwRuFhzzuAMQBwzwt8jEjA==}
     engines: {node: '>=20.0.0', pnpm: '>=10.0.0'}
 
   '@testing-library/dom@8.20.1':
@@ -324,8 +324,8 @@ packages:
   '@vitest/utils@4.1.11':
     resolution: {integrity: sha512-zTCVGpyFsGWBhllOyKlTw/vnr6D9qxsfSDyfbyZmTyjHw5N/VuvzHpHoQjm2ZJzn4RJgx5w4r7V0er69CmLgPQ==}
 
-  '@zudo-composer/component-contract@https://codeload.github.com/Takazudo/zudo-composer/tar.gz/9b774b827e9f6fec14379995ac2c691ccc3b7e5b':
-    resolution: {gitHosted: true, tarball: https://codeload.github.com/Takazudo/zudo-composer/tar.gz/9b774b827e9f6fec14379995ac2c691ccc3b7e5b}
+  '@zudo-composer/component-contract@https://codeload.github.com/Takazudo/zudo-composer/tar.gz/b66d52bb273a10010485efb2d06f80cee8001bd6':
+    resolution: {gitHosted: true, integrity: sha512-exI9JYDYNCGhVdFAQlKer8hCDbEUY7HVCorrYipUc6nrDC/mrpUZbvvsRHAJ5aPaPR6AIZLdu8+KetIGGHxDlA==, tarball: https://codeload.github.com/Takazudo/zudo-composer/tar.gz/b66d52bb273a10010485efb2d06f80cee8001bd6}
     version: 1.0.0
     engines: {node: ^22.13.0 || >=24.0.0}
 
@@ -1321,7 +1321,7 @@ snapshots:
 
   '@standard-schema/spec@1.1.0': {}
 
-  '@takazudo/zfb-md-wasm@2.14.3':
+  '@takazudo/zfb-md-wasm@2.15.1':
     dependencies:
       '@types/mdast': 4.0.4
       mdast-util-directive: 3.1.0
@@ -1435,7 +1435,7 @@ snapshots:
       convert-source-map: 2.0.0
       tinyrainbow: 3.1.1
 
-  '@zudo-composer/component-contract@https://codeload.github.com/Takazudo/zudo-composer/tar.gz/9b774b827e9f6fec14379995ac2c691ccc3b7e5b': {}
+  '@zudo-composer/component-contract@https://codeload.github.com/Takazudo/zudo-composer/tar.gz/b66d52bb273a10010485efb2d06f80cee8001bd6': {}
 
   ansi-regex@5.0.1: {}
 

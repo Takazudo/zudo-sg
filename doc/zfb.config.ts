@@ -6,6 +6,9 @@ export default defineConfig(
     port: 4323,
     siteName: "Zudo Sg Docs",
     siteUrl: "https://zudo-sg-doc.takazudomodular.com",
+    // Explicit since zudo-doc 5.17.0 gated /sitemap.xml on this setting; before that
+    // the route was emitted unconditionally and this deployed site shipped one.
+    sitemap: true,
     base: "/",
     entryDocSlug: "getting-started",
     llmsTxt: true,

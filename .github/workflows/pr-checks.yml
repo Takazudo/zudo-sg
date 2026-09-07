@@ -21,7 +21,7 @@
 #                          (needs build job; merged into one job since both
 #                          only need the same dist/ cache restore)
 #
-# Node 22 + pnpm via the shared .github/actions/setup composite action (pnpm
+# Node 24 + pnpm via the shared .github/actions/setup composite action (pnpm
 # version comes from the packageManager field in package.json).
 # Root and demo build output shared between jobs via actions/cache to avoid
 # re-building.

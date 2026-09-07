@@ -14,7 +14,11 @@ inputs:
   node-version:
     description: Node.js version to install
     required: false
-    default: "22"
+    # 24, matching local development. Node 22 ships npm 10, whose peer resolver
+    # crashes preparing Git-hosted dependencies that pull vitest 4.1.x -- see
+    # #555. Node is only the build toolchain here: the deploy jobs upload static
+    # output through Wrangler, so this does not change any served runtime.
+    default: "24"
 
 runs:
   using: composite
