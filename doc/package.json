@@ -13,8 +13,6 @@
     "preview": "zfb preview",
     "check": "zfb check",
     "check:html": "html-validate \"dist/**/*.html\"",
-    "gen:z-index": "gen-z-index",
-    "check:z-index": "gen-z-index --check",
     "setup:doc-skill": "bash scripts/setup-doc-skill.sh",
     "setup:doc-skill-silent": "bash scripts/setup-doc-skill.sh --silent",
     "setup:doc-skill:claude": "bash scripts/setup-doc-skill.sh --target claude",
@@ -22,7 +20,6 @@
     "setup:doc-skill:both": "bash scripts/setup-doc-skill.sh --target both"
   },
   "dependencies": {
-    "@takazudo/zdtp": "0.5.1",
     "@takazudo/zfb": "2.15.1",
     "@takazudo/zfb-runtime": "2.15.1",
     "@takazudo/zfb-md-wasm": "2.15.1",
