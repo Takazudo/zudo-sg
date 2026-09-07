@@ -282,6 +282,33 @@ The provider and consuming product therefore have no backward-compatibility,
 migration, redirect, alias, old-name, or old-storage obligation. A clean current
 schema may replace earlier prototypes destructively.
 
+### The transient that reddens unrelated pull requests
+
+`package/ui-v1` is a **single global ref**, while `ui-provider-handoff.json` is
+recorded **per branch**. `provider-conformance` runs
+`pnpm verify:ui-provider-install -- --exact` on every pull request targeting
+`main` or `base/**`, and that check compares the branch's recorded
+`packageCommit` against whatever the ref points at *right now*.
+
+So the moment one pull request advances `package/ui-v1`, every other open pull
+request still carrying the older `packageCommit` fails `provider-conformance` —
+not because of anything in its own diff, but because the ref it is compared
+against moved underneath it. It is transient and self-healing.
+
+The check names this case explicitly: when the recorded `packageCommit` is an
+**ancestor** of the commit the ref now points at, the failure reads *"the
+advertised package branch has advanced past this branch's handoff"* rather than
+the generic *"advertised package branch is stale"*. When you see it, the fix is
+to **rebase onto a base that carries the newer `ui-provider-handoff.json`**, or
+to **wait for the advancing pull request to merge** and then rebase. Nothing in
+your own diff needs changing.
+
+The generic *"advertised package branch is stale"* failure means something else:
+the recorded commit is not an ancestor of the ref (the handoff is diverged, or
+the ref was rolled back), or the ancestry could not be determined at all. That
+one is a real handoff problem — investigate it. Either way the check exits
+non-zero; a mismatch never passes.
+
 ---
 
 ## 7. Composer and Sitemapper ownership
