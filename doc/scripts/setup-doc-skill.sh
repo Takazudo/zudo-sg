@@ -205,24 +205,33 @@ physical_dir() {
   fi
 }
 
-# Helper: replace a symlink or file at the given path
+# Helper: (re)point a symlink at the given target. A stale symlink (including
+# a broken one) is replaced silently -- this owns the generated skill's global
+# name, so its own prior link is always safe to move. A REAL file or directory
+# sitting at link_path is not ours and is left alone: refuse and exit rather
+# than rm -rf it out from under the user (ported from upstream, #551/#565 --
+# the fork previously rm -rf'd unconditionally on `[ -L ] || [ -e ]`, which
+# silently destroyed a real directory sitting at a link target).
 ensure_symlink() {
   local link_path="$1"
   local target="$2"
-  if [ -L "$link_path" ] || [ -e "$link_path" ]; then
-    rm -rf "$link_path"
+  if [ -L "$link_path" ]; then
+    rm "$link_path"
+  elif [ -e "$link_path" ]; then
+    echo "Error: '$link_path' already exists and is not a symlink. Move or remove it and rerun setup:doc-skill." >&2
+    exit 1
   fi
   ln -s "$target" "$link_path"
 }
 
 # Helper: link a single tracked (hand-written) skill into the global skills
 # dir WITHOUT ever deleting something this script doesn't own
-# (zudolab/zudo-doc#3156, D4). Unlike ensure_symlink (rm -rf-based -- safe
-# only for the generated skill, whose global name this project owns),
-# tracked-skill names are arbitrary and could collide with a user-owned
-# global skill or a name already claimed by another project, so an existing
-# entry that isn't already our own correct link is left untouched, with a
-# warning.
+# (zudolab/zudo-doc#3156, D4). Unlike ensure_symlink (which owns the
+# generated skill's single global name and so may safely replace its own
+# prior symlink there), tracked-skill names are arbitrary and could collide
+# with a user-owned global skill or a name already claimed by another
+# project, so an existing entry that isn't already our own correct link is
+# left untouched, with a warning, rather than erroring out.
 safe_link_tracked_skill() {
   local link_path="$1"
   local link_target="$2"

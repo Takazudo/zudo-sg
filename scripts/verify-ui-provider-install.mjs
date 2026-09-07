@@ -73,9 +73,60 @@ async function remotePackageStatus() {
   const ref = `refs/heads/${handoff.packageBranch}`;
   const result = await run("git", ["ls-remote", "--exit-code", repositoryUrl, ref], root, { allowFailure: true });
   const row = result.stdout.split(/\r?\n/u).map((line) => line.trim().split(/\s+/u)).find((parts) => parts[1] === ref);
-  if (!row) return { status: "unavailable", reason: `${ref} is not advertised` };
-  if (row[0] !== handoff.packageCommit) return { status: "mismatch", reason: `${ref} points at ${row[0]}` };
-  return { status: "reachable", reason: "" };
+  if (!row) return { status: "unavailable", ref, reason: `${ref} is not advertised` };
+  if (row[0] !== handoff.packageCommit) {
+    return { status: "mismatch", ref, remoteCommit: row[0], reason: `${ref} points at ${row[0]}` };
+  }
+  return { status: "reachable", ref, reason: "" };
+}
+
+// `git ls-remote` hands back a bare SHA with no history, and CI's actions/checkout is shallow, so
+// there is no local history to answer this against. Fetch the advertised commit into a throwaway
+// bare repo -- the same trick verifyRemoteTree() uses -- which brings its ancestors with it.
+async function handoffAncestryOf(remoteCommit) {
+  const bare = await mkdtemp(path.join(os.tmpdir(), "zudo-sg-ui-ancestry-"));
+  try {
+    await run("git", ["init", "--bare", "--quiet", bare], root);
+    // No --depth here on purpose: a shallow fetch has no parents, so every comparison would
+    // look "unrelated".
+    const fetched = await run("git", ["fetch", "--no-tags", repositoryUrl, remoteCommit], bare, {
+      allowFailure: true,
+    });
+    if (fetched.exitCode !== 0) return "undeterminable";
+    const present = await run("git", ["cat-file", "-e", `${handoff.packageCommit}^{commit}`], bare, {
+      allowFailure: true,
+    });
+    if (present.exitCode !== 0) return "unrelated";
+    const ancestor = await run(
+      "git",
+      ["merge-base", "--is-ancestor", handoff.packageCommit, remoteCommit],
+      bare,
+      { allowFailure: true },
+    );
+    if (ancestor.exitCode === 0) return "ancestor";
+    if (ancestor.exitCode === 1) return "unrelated";
+    return "undeterminable";
+  } catch {
+    return "undeterminable";
+  } finally {
+    await rm(bare, { recursive: true, force: true });
+  }
+}
+
+async function failOnRemoteMismatch(remote) {
+  if ((await handoffAncestryOf(remote.remoteCommit)) === "ancestor") {
+    fail(
+      [
+        `the advertised package branch has advanced past this branch's handoff (transient; not caused by this diff):`,
+        `  ${remote.ref} now points at ${remote.remoteCommit}`,
+        `  ui-provider-handoff.json records packageCommit ${handoff.packageCommit}, which is an ancestor of it`,
+        `${handoff.packageBranch} is a single global ref while ui-provider-handoff.json is per-branch, so another`,
+        `pull request advanced the ref after this branch recorded its handoff. Rebase onto a base that carries the`,
+        `newer ui-provider-handoff.json, or wait for the advancing pull request to merge and then rebase.`,
+      ].join("\n"),
+    );
+  }
+  fail(`advertised package branch is stale: ${remote.reason}`);
 }
 
 async function verifyRemoteTree() {
@@ -189,7 +240,7 @@ let artifacts;
 
 try {
   const remote = await remotePackageStatus();
-  if (remote.status === "mismatch") fail(`advertised package branch is stale: ${remote.reason}`);
+  if (remote.status === "mismatch") await failOnRemoteMismatch(remote);
   if (forceExact) assert(remote.status === "reachable", `advertised package branch unavailable: ${remote.reason}`);
 
   if (!forceLocal && remote.status === "reachable") {
