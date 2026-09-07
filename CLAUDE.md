@@ -21,7 +21,8 @@ Documentation site built with [zudo-doc](https://github.com/zudolab/zudo-doc) �
 
 ```
 pages/                    # File-based routing (host-owned: /, /components/*, /docs/versions)
-│                         # zudo-doc's package injects the rest (docs, 404, robots, sitemap)
+│                         # zudo-doc's package injects the rest (docs, 404, robots;
+│                         # sitemap only when settings.sitemap is on — it is off here)
 src/
 ├── components/           # JSX + Preact components
 │   └── content/          # MDX content components (admonitions, code-group, ...)

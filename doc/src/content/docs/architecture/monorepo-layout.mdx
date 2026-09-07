@@ -17,7 +17,7 @@ zudo-sg is a pnpm workspace. The root package is the styleguide host, `packages/
 `-- doc/
 ```
 
-The root host is built with zfb, zudo-doc, MDX, Tailwind CSS v4, and Preact. It owns styleguide-specific pages such as `/`, `/components/*`, and `/docs/versions`; package-injected zudo-doc routes own the general docs chrome, 404, robots, and sitemap behavior.
+The root host is built with zfb, zudo-doc, MDX, Tailwind CSS v4, and Preact. It owns styleguide-specific pages such as `/`, `/components/*`, and `/docs/versions`; package-injected zudo-doc routes own the general docs chrome, 404, and robots behavior (plus the sitemap when `settings.sitemap` is enabled, which the root host leaves off).
 
 ## Root styleguide host
 
