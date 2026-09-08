@@ -9,6 +9,7 @@
 
 import { describe, expect, it, vi } from "vitest";
 import {
+  assertValidPanelConfig,
   configurePanel,
   loadPersistedState,
   __resetPanelConfigForTests,
@@ -89,6 +90,7 @@ vi.mock("virtual:zdtp-apply-config", () => ({
 
 import { designTokenPanelConfig } from "../design-token-panel-config";
 import { previewTokenPanelConfig } from "../preview-token-panel-config";
+import { UI_PALETTE_COLORS } from "../ui-design-tokens-manifest";
 
 describe("panel config isolation", () => {
   it("storagePrefix values are distinct", () => {
@@ -193,17 +195,23 @@ describe("panel config isolation", () => {
     // when no cluster is resolved from the tab.
     expect(paletteTab?.colorExtras).toBeUndefined();
 
-    // One TierConfig per --palette-{group}-{step-or-role} group (neutral/accent/
-    // state/line), matching UI_PALETTE_COLORS in ui-design-tokens-manifest.ts —
-    // NOT one flat tier, since the curve editor derives every step in a tier
-    // from one shared curve.
-    const tierIds = paletteTab?.tiers.map((t) => t.id).sort();
-    expect(tierIds).toEqual(
-      ["palette-accent", "palette-line", "palette-neutral", "palette-state"].sort(),
-    );
-    // neutral(4) + accent(4) + state(8) + line(20) = 36.
-    const totalItems = paletteTab?.tiers.reduce((n, t) => n + t.items.length, 0);
-    expect(totalItems).toBe(36);
+    // Preserve first-seen order; each business line owns one named palette prefix.
+    expect(paletteTab?.tiers.map((tier) => [tier.id, tier.items.length])).toEqual([
+      ["palette-neutral", 4],
+      ["palette-accent", 4],
+      ["palette-state", 8],
+      ["palette-line-vacuum", 4],
+      ["palette-line-process", 4],
+      ["palette-line-laser", 4],
+      ["palette-line-meeting", 4],
+      ["palette-line-beauty", 4],
+    ]);
+    // Regrouping must preserve every manifest item identity, value, and order.
+    expect(paletteTab?.tiers.flatMap((tier) => tier.items.map(({ id, cssVar, default: value }) => ({
+      id, cssVar, value,
+    })))).toEqual(UI_PALETTE_COLORS.map(({ name, value }) => ({
+      id: `palette-${name}`, cssVar: `--palette-${name}`, value,
+    })));
     const neutralTier = paletteTab?.tiers.find((t) => t.id === "palette-neutral");
     expect(neutralTier?.items.map((item) => item.id)).toEqual([
       "palette-neutral-0",
@@ -228,9 +236,16 @@ describe("panel config isolation", () => {
       "palette-state-info",
       "palette-state-info-dark",
     ]);
-    const lineTier = paletteTab?.tiers.find((t) => t.id === "palette-line");
-    expect(lineTier?.items.length).toBe(20);
-    expect(lineTier?.items[0]?.cssVar).toBe("--palette-line-vacuum-accent");
+    for (const line of ["vacuum", "process", "laser", "meeting", "beauty"]) {
+      const tier = paletteTab?.tiers.find((t) => t.id === `palette-line-${line}`);
+      expect(tier?.label).toBe(`Line · ${line.charAt(0).toUpperCase() + line.slice(1)}`);
+      expect(tier?.items.map((item) => [item.id, item.cssVar])).toEqual(
+        ["accent", "accent-dark", "hover", "hover-dark"].map((role) => [
+          `palette-line-${line}-${role}`,
+          `--palette-line-${line}-${role}`,
+        ]),
+      );
+    }
     // Every item opts into the lossless OKLCH color picker (zdtp >= 0.3.3).
     for (const tier of paletteTab?.tiers ?? []) {
       for (const item of tier.items) {
@@ -278,21 +293,20 @@ describe("panel config isolation", () => {
     expect(previewTokenPanelConfig.autoRememberOnOpen).toBe(false);
   });
 
-  // Regression guard for the zdtp 0.5.1 host-cascade defect measured in #577.
-  // The preview panel is an `applySink` instance, but zdtp's font-specimen renderer
-  // styles samples with `var(--token, <panel value>)` inside the HOST document, which
-  // defines every one of those vars — so a font preview here renders the DOC panel's
-  // typography, not this panel's, and a doc-panel edit visibly restyles it. The font
-  // tiers therefore stay bare on purpose. `bar`/`radius` glyphs are unaffected (they
-  // write resolved values with no `var()`), which is why this guard is font-tab-only.
-  // Delete this test when upstream stops resolving specimen styles through the host.
-  it("preview panel's font tab carries NO preview (upstream host-cascade defect, #577)", () => {
+  // zdtp 0.6.0 fixed instance-value specimens (upstream commit 7d18952).
+  // The 0.6.1 browser re-check for issue #577 measured 40px -> 80px for the
+  // preview's own size edit, unchanged by doc-panel family/weight/size edits.
+  it("preview panel's font tab enables instance-value specimens", () => {
     const fontTab = previewTokenPanelConfig.tabs.find((t) => t.id === "font");
-    expect(fontTab).toBeDefined();
-    for (const tier of fontTab!.tiers) {
-      expect(tier.preview).toBeUndefined();
-      expect(tier.previewBase).toBeUndefined();
-    }
+    expect(
+      fontTab?.tiers.map(({ id, preview, previewBase }) => ({ id, preview, previewBase })),
+    ).toEqual([
+      { id: "font-size", preview: "size", previewBase: undefined },
+      { id: "font-size-lh", preview: "line-height", previewBase: "--text-base" },
+      { id: "font-weight", preview: "weight", previewBase: undefined },
+      { id: "line-height", preview: "line-height", previewBase: "--text-base" },
+      { id: "font-family", preview: "family", previewBase: undefined },
+    ]);
   });
 
   it("doc-chrome panel's font tab DOES carry previews (it writes to the host :root)", () => {
@@ -304,93 +318,18 @@ describe("panel config isolation", () => {
     );
   });
 
-  // zdtp's full preview -> item-kind contract, re-encoded from
-  // `assertValidPanelConfig` (node_modules/@takazudo/zdtp/dist/panel-config-*.js).
-  // That validator runs ONLY inside zdtp's Astro host-adapter, which this project
-  // bypasses (see the configurePanel smoke test below), so this table is the guard
-  // that fails CI when a regenerated manifest changes a token's control kind under
-  // a tier that opted into a preview. Covering every kind matters because the
-  // manifests are `--check`-gated codegen: adding one free-text token to `hsp`, or
-  // flipping `font-family` off `control: "text"`, would otherwise silently ship a
-  // broken glyph. zdtp also rejects mixed item kinds within one tier, which this
-  // per-item loop enforces implicitly.
-  const PREVIEW_ITEM_KINDS: Record<string, readonly string[]> = {
-    size: ["length"],
-    "line-height": ["number"],
-    family: ["text"],
-    weight: ["select", "number"],
-    bar: ["length"],
-    radius: ["length"],
-    duration: ["length", "number"],
-  };
-
-  it("every tier with a preview uses an item kind zdtp's validator allows", () => {
-    for (const config of [designTokenPanelConfig, previewTokenPanelConfig]) {
-      for (const tab of config.tabs) {
-        for (const tier of tab.tiers) {
-          if (tier.preview === undefined) continue;
-          // `referencesTier` tiers resolve their kind through the referenced
-          // tier; neither panel uses one under a preview, so assert that stays
-          // true rather than reimplementing zdtp's indirection.
-          expect(tier.referencesTier).toBeUndefined();
-          const allowed = PREVIEW_ITEM_KINDS[tier.preview];
-          expect(allowed).toBeDefined();
-          for (const item of tier.items) {
-            expect(
-              allowed,
-              `${config.storagePrefix} tab "${tab.id}" tier "${tier.id}" item "${item.id}" (preview: ${tier.preview})`,
-            ).toContain(item.type.kind);
-          }
-        }
-      }
-    }
-  });
-
-  it("previewBase is only set on a preview: 'line-height' tier and names a real font-size token", () => {
-    for (const config of [designTokenPanelConfig, previewTokenPanelConfig]) {
-      for (const tab of config.tabs) {
-        const cssVarsInTab = tab.tiers.flatMap((t) => t.items.map((i) => i.cssVar));
-        for (const tier of tab.tiers) {
-          if (tier.previewBase === undefined) continue;
-          expect(tier.preview).toBe("line-height");
-          // Optional upstream — omitting it makes the specimen fall back to the
-          // `size` tier's nearest-to-16px item — but when set it must resolve,
-          // or the specimen silently reads the host's computed value instead.
-          expect(cssVarsInTab).toContain(tier.previewBase);
-        }
-      }
-    }
-  });
-
-  it("every tier with preview: 'duration' has unit 'ms' or 's' on every item", () => {
-    for (const config of [designTokenPanelConfig, previewTokenPanelConfig]) {
-      for (const tab of config.tabs) {
-        for (const tier of tab.tiers) {
-          if (tier.preview !== "duration") continue;
-          for (const item of tier.items) {
-            const unit = "unit" in item.type ? item.type.unit : undefined;
-            expect(["ms", "s"]).toContain(unit);
-          }
-        }
-      }
-    }
+  // The testing entry is deliberately unmocked: run zdtp's public validator,
+  // including reserved palette, preview-kind, previewBase, and duration rules.
+  it.each([
+    ["doc-chrome", designTokenPanelConfig],
+    ["preview", previewTokenPanelConfig],
+  ] as const)("%s panel passes assertValidPanelConfig", (_name, config) => {
+    expect(() => assertValidPanelConfig(config)).not.toThrow();
   });
 
   it("configurePanel accepts both configs without throwing", () => {
-    // NOTE: as of zdtp 0.5.1, `configurePanel()` itself does NOT run
-    // `assertValidPanelConfig` — that check only runs inside the Astro
-    // host-adapter's inline-JSON-config boundary (`dist/astro/host-adapter.js`,
-    // reading `<script id="tokenpanel-config">`), and `assertValidPanelConfig`
-    // is not part of any public export. Both panels in this project bootstrap
-    // via a direct `zdtp.configurePanel(getConfig())` call
-    // (src/lib/token-panel-native-bootstrap.ts), never through
-    // `<DesignTokenPanelHost>`, so this call never exercises that validator
-    // either in this test or in production. This assertion is still worth
-    // keeping as an import/construction smoke test, but the real correctness
-    // guard for the preview/kind pairing in this file is the PREVIEW_ITEM_KINDS
-    // table above (all seven preview kinds), the 'duration' ms/s unit rule, and
-    // the previewBase check — re-encoded from
-    // node_modules/@takazudo/zdtp/dist/panel-config-CqbuB0nh.js's validator.
+    // configurePanel still does not validate in 0.6.1. Keep this construction
+    // smoke test alongside the real assertValidPanelConfig gate above.
     __resetPanelConfigForTests();
     expect(() => configurePanel(designTokenPanelConfig)).not.toThrow();
     __resetPanelConfigForTests();
