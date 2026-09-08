@@ -36,7 +36,7 @@ The UI package follows the [Three-Tier Color Strategy](https://zudo-css-wisdom.t
 | Semantic | `--color-*` roles backed by palette refs, with a few zudo-doc-style AA-tuned light-mode literals | `packages/ui/styles/colors.css` |
 | Component | Scoped overrides when a component truly needs them | component code or CSS |
 
-Palette groups include `base`, `accent`, `state`, and a `line-*` ramp per business line. `base` is the grayscale / warm-neutral ramp, `accent` is the amber action ramp, `state` contains named status colors (danger/success/warning/info), and each `line-*` group supplies a business line's own accent + hover pair, layered in through a `[data-line="<key>"]` override of the semantic `--color-accent`/`--color-accent-hover` roles below — components never bind to a `line-*` palette entry directly.
+Palette groups used by the UI palette tab are `neutral`, `accent`, `state`, and one tier per business line: `line-vacuum`, `line-process`, `line-laser`, `line-meeting`, and `line-beauty`. `neutral` is the grayscale / warm-neutral ramp, `accent` is the amber action ramp, `state` contains named status colors (danger/success/warning/info), and each `line-*` group supplies a business line's own accent + hover pair, layered in through a `[data-line="<key>"]` override of the semantic `--color-accent`/`--color-accent-hover` roles below — components never bind to a `line-*` palette entry directly. Keeping each line in its own tier gives it an independent OKLCH curve and satisfies zdtp 0.6's named-palette prefix validation.
 
 Semantic (Tier 2) roles built from these groups: `bg`, `surface`, `surface-2`, `border`, `fg`, `muted`, `accent`, `accent-hover`, `on-accent`, `focus`, the four state colors, and the `rail-*` family (a persistent dark nav surface — deliberately not a `light-dark()` pair, so it stays dark in both schemes).
 
@@ -49,6 +49,26 @@ Palette variables live in plain `:root`, not Tailwind `@theme`, so Tailwind does
 The zudo-doc 3.x chrome uses a ramp-native model for its own color schemes. It exposes palette ramps and semantic `--zd-*` roles through the root design-token panel. That model is for the documentation and styleguide shell, not for target-site UI components.
 
 The preview token panel is a second panel instance for `@zudo-sg/ui`. It has separate storage keys, event names, and an apply sink that writes preview values into registered styleguide iframes instead of the host document root.
+
+## Shared build-safe tabs (`src/config/ui-token-tabs.ts`)
+
+`src/config/ui-token-tabs.ts` is the single source for the `@zudo-sg/ui` tab data used by the runtime preview panel and the static dashboard. It shapes the generated UI token manifest into `uiTokenTabs`, and exports `uiDashboardTabs` as the same array so tab order, defaults, item identities, palette grouping, and preview metadata cannot drift between the two consumers. `dashboardPreviewOverrides` supplies the dashboard's read-only sample choices for rows whose editor metadata cannot express the desired sample.
+
+Keep this module importable by plain Node during a build. Its runtime dependency is the generated `ui-design-tokens-manifest.ts`; zdtp and dashboard imports are type-only, and the module contains data-shaping code without browser globals, a dev-server module, or panel setup. The preview-only wiring stays in `preview-token-panel-config.ts`: `virtual:zdtp-apply-config`, the preview-iframe registry, and the `applySink` (along with the endpoint and routing values that serve that sink) remain outside the shared module.
+
+`src/config/__tests__/ui-token-tabs.test.ts` enforces this boundary by checking the runtime import allowlist, importing the module with Node's native type stripping, and asserting that `uiDashboardTabs` and the preview config use the same tab array. It also checks the manifest mapping, the per-line palette order, and the dashboard override coverage.
+
+## Static token dashboard
+
+The `/components/tokens` page renders two server-rendered `TokenDashboard` instances, one for each declared mode. They do not use a client island, panel state, browser globals, or hydration: the light and dark views are read-only inventories of `@zudo-sg/ui` declared defaults. The page uses the shared `uiDashboardTabs` data and `dashboardPreviewOverrides`, then gives the instances the stable IDs `ui-defaults-light` and `ui-defaults-dark` and the titles **UI tokens — declared defaults (light)** and **UI tokens — declared defaults (dark)**.
+
+Dashboard styling is delivered through the host CSS pipeline with `@import "@takazudo/zdtp/dashboard/styles.css"` in `src/styles/global.css`. This is separate from the panel's self-injected stylesheet. Loading the dashboard stylesheet through a per-page public asset would require a copy step for development and production and would introduce base-URL handling, so the public-asset alternative was rejected.
+
+The dashboard and the live token rows represent different token domains. The dashboards show declared `@zudo-sg/ui` defaults for light and dark mode. The live rows below them show values resolved from the host page's `:root`, which belongs to the documentation chrome cascade. The root manifest's spacing and font rows therefore cannot stand in for the UI package defaults: equal names or units do not make those declarations interchangeable.
+
+`dashboardPreviewOverrides` is passed through the dashboard's `previewOverrides` prop to make the static samples explicit. The `light-dark()` semantic color rows receive color samples even though their panel editor entries are text declarations, and shadow declarations receive shadow samples. `previewBase: "--text-base"` supplies the shared font-size base for the line-height tiers. The API accepts a tier-level base, so it cannot select a different base for every `font-size-lh` row; this is the deliberate compromise for those per-size leading samples.
+
+The handmade renderers remain for now. A planned follow-up can remove them once the dashboard reaches parity with their useful coverage or a product decision sets a different reference surface. See the upstream [TokenDashboard reference](https://zdtp.zudolab.dev/docs/reference/token-dashboard/) and [static token dashboard recipe](https://zdtp.zudolab.dev/docs/recipes/static-token-dashboard/) for the component and static-rendering contracts.
 
 ## Panel tier previews
 
