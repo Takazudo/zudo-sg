@@ -63,11 +63,10 @@ interface ToTierItemOptions {
    * otherwise become `{ kind: 'length', unit: '' }` — but zdtp's
    * `preview: 'line-height'` contract requires a `number` tier.
    *
-   * Nothing enforces that contract at RUNTIME here: `assertValidPanelConfig`
-   * is called only from zdtp's Astro host-adapter, and this project bootstraps
-   * with a direct `configurePanel()` call, which does not validate. The guard
-   * is `src/config/__tests__/panel-config-isolation.test.ts`, which re-encodes
-   * the preview/kind table. Used only for the unitless line-height groups.
+   * Direct `configurePanel()` calls do not validate at runtime. The unit gate
+   * in `src/config/__tests__/panel-config-isolation.test.ts` calls the public
+   * `assertValidPanelConfig` exported since zdtp 0.6.0. Used only for the
+   * unitless line-height groups.
    */
   numberKind?: boolean;
 }

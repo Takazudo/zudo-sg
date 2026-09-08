@@ -30,16 +30,11 @@
  * family-named palette plus `light-dark()` semantic tokens, so its Tier-2
  * `--color-*` tokens stay free-text rows.
  *
- * Tier previews (zdtp 0.4.15+, opt-in via `TierConfig.preview`) are turned on
- * for the spacing (`'bar'`) and radius (`'radius'`) tiers ONLY — see
- * SPACING_TAB/SIZE_TAB below. Unlike the doc-chrome panel, this panel's whole
- * `font` tab stays bare: zdtp 0.5.1 resolves font-specimen styles through the
- * HOST cascade, which an `applySink` panel never writes to, so a font preview
- * here would render the doc-chrome panel's typography instead of this panel's
- * (#577 — full reasoning in the block comment above FONT_TAB). The `shadow`
- * size tier and the `ui-color`/`palette` tabs deliberately have no preview
- * either — `shadow` is a free-text tier with no matching preview kind, and the
- * color tiers render their own swatch/curve editors instead (issue #576).
+ * Tier previews are enabled for font, spacing (`'bar'`), and radius (`'radius'`)
+ * tiers. zdtp 0.6.0's instance-value font specimens fix the host-cascade defect
+ * behind issue #577; the browser re-check on 0.6.1 is recorded above FONT_TAB.
+ * The `shadow` tier stays bare because no preview kind matches free text, and
+ * `ui-color`/`palette` render their own swatch/curve editors (issue #576).
  */
 
 import type { PanelConfig, TabConfig, TierConfig, TierItem, TokenDef } from "@takazudo/zdtp";
@@ -68,12 +63,9 @@ interface ToTierItemOptions {
    * otherwise become `{ kind: 'length', unit: '' }` — but zdtp's
    * `preview: 'line-height'` contract requires a `number` tier.
    *
-   * This panel currently ships NO line-height preview (see FONT_TAB), so the
-   * opt-in buys nothing here today; it is kept in lockstep with the doc-chrome
-   * panel so re-enabling the font previews stays the one-line-per-tier change
-   * FONT_TAB promises. It is behaviour-neutral: for a unitless token zdtp's
-   * row editor treats `number` and `length` identically, and no persisted
-   * state records the kind.
+   * The public `assertValidPanelConfig` unit-test gate checks this contract.
+   * For unitless tokens the row editor treats `number` and `length` identically,
+   * and no persisted state records the kind.
    */
   numberKind?: boolean;
 }
@@ -126,7 +118,9 @@ function tierFromGroup(
 // every step in that ONE tier and commits the whole group in a single write).
 // A flat single-tier dump (the pre-0.4.0 GenericTab layout this replaces)
 // would put every group on one shared curve, which is wrong — base/accent/state
-// are independent scales. The tab also gets a
+// are independent scales. Each business line also needs its own tier: the
+// validator requires a shared named-item prefix, and each line hue needs its
+// own OKLCH curve. The tab also gets a
 // WCAG contrast-checker ("Check" mode) over the whole flattened palette for
 // free, with no extra config.
 //
@@ -139,14 +133,14 @@ function tierFromGroup(
  * Split a `UI_PALETTE_COLORS` name into its group family and step/role:
  *   "neutral-2"           → { family: "neutral", step: "2" }
  *   "state-danger-dark"   → { family: "state", step: "danger-dark" }
- *   "line-vacuum-accent"  → { family: "line",  step: "vacuum-accent" }
+ *   "line-vacuum-accent"  → { family: "line-vacuum", step: "accent" }
  * Names with no recognized grouping are kept as single-item families for
  * defensive compatibility, but the committed @zudo-sg/ui palette uses grouped
  * names (neutral / accent / state / line).
  */
 function splitPaletteName(name: string): { family: string; step: string | null } {
-  const lineMatch = /^line-(.+)$/.exec(name);
-  if (lineMatch) return { family: "line", step: lineMatch[1] ?? null };
+  const lineMatch = /^(line-[^-]+)-(.+)$/.exec(name);
+  if (lineMatch) return { family: lineMatch[1]!, step: lineMatch[2]! };
   const stateMatch = /^state-(.+)$/.exec(name);
   if (stateMatch) return { family: "state", step: stateMatch[1] ?? null };
   const match = /^(.+)-(\d+)$/.exec(name);
@@ -178,7 +172,10 @@ function buildPaletteTiers(): TierConfig[] {
   }
   return Array.from(families.entries()).map(([family, items]) => ({
     id: `palette-${family}`,
-    label: family.charAt(0).toUpperCase() + family.slice(1),
+    label: family
+      .split("-")
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(" · "),
     items,
   }));
 }
@@ -228,40 +225,42 @@ const SPACING_TAB: TabConfig = {
 // Font tab
 // ---------------------------------------------------------------------------
 
-// NO `preview` on ANY tier here, deliberately — unlike the doc-chrome panel's Font
-// tab, which carries the full set. zdtp 0.5.1's font-specimen renderer styles its
-// samples with `var(--token, <panel value>)` and mounts them in the HOST document,
-// which already defines every one of these vars at `:root`. This panel is an
-// `applySink` instance: its writes go to the styleguide preview iframes, never to
-// the host, so the panel value only ever reaches the dead fallback slot. Measured on
-// zdtp 0.5.1 (#577): editing `--text-2xl` 2.5rem -> 5rem updates the row meta to
-// `ui-text-2xl · 80px` while the sample stays at a computed 40px, and because both
-// panels' first family/weight rows name the same vars, a DOC-panel edit visibly
-// restyles this panel's specimen. A preview showing another panel's values is worse
-// than no preview, so the font tiers stay bare until upstream stops resolving
-// specimen styles through the host cascade.
-//
-// The `bar` (Spacing) and `radius` (Size) glyphs below are NOT affected and stay on:
-// they write the resolved token value straight into the inline style with no `var()`,
-// so they track this panel's own edits correctly (verified the same way).
-//
-// Dropping these previews also drops this panel's font-specimen toolbar and its
-// "Render on page" control, which need the reserved `font` tab id PLUS at least one
-// `size`/`line-height` preview. That is intended: the specimen is precisely the
-// broken surface. Re-enabling is a one-line-per-tier change once upstream is fixed.
+// Re-enabled after the issue #577 browser re-check on zdtp 0.6.1: editing
+// --text-2xl from 2.5rem to 5rem moved the computed specimen from 40px to 80px.
+// Doc-panel edits to --text-micro (3rem), --font-weight-normal (900), and
+// --font-sans (monospace) changed the host vars while this specimen stayed at
+// 80px, weight 400, and its own UI sans family. Upstream 0.6.0 commit 7d18952
+// renders specimen fonts from instance values (zudo-design-token-panel#850),
+// so this applySink panel's specimens no longer depend on the host cascade.
+// Size/line-height previews also restore the specimen toolbar / Render on page.
 const FONT_TAB: TabConfig = {
   id: "font",
   label: "Font",
   tiers: [
-    tierFromGroup(UI_FONT_TOKENS, "font-size", "Font size"),
-    tierFromGroup(UI_FONT_TOKENS, "font-size-lh", "Font size / line height", {
-      numberKind: true,
-    }),
-    tierFromGroup(UI_FONT_TOKENS, "font-weight", "Font weight"),
-    tierFromGroup(UI_FONT_TOKENS, "line-height", "Line height", {
-      numberKind: true,
-    }),
-    tierFromGroup(UI_FONT_TOKENS, "font-family", "Font family"),
+    { ...tierFromGroup(UI_FONT_TOKENS, "font-size", "Font size"), preview: "size" },
+    {
+      ...tierFromGroup(UI_FONT_TOKENS, "font-size-lh", "Font size / line height", {
+        numberKind: true,
+      }),
+      preview: "line-height",
+      // Tier-level base is a compromise for the per-size leading rows.
+      previewBase: "--text-base",
+    },
+    {
+      ...tierFromGroup(UI_FONT_TOKENS, "font-weight", "Font weight"),
+      preview: "weight",
+    },
+    {
+      ...tierFromGroup(UI_FONT_TOKENS, "line-height", "Line height", {
+        numberKind: true,
+      }),
+      preview: "line-height",
+      previewBase: "--text-base",
+    },
+    {
+      ...tierFromGroup(UI_FONT_TOKENS, "font-family", "Font family"),
+      preview: "family",
+    },
   ],
 };
 

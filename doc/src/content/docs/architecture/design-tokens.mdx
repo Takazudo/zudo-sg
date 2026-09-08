@@ -61,11 +61,11 @@ glyphs — until this token panel previews epic (`Takazudo/zudo-sg#575`).
 
 | Tab | Tier | Doc-chrome panel `preview` | Preview panel `preview` | Why |
 | --- | --- | --- | --- | --- |
-| Font | font-size | `'size'` | none | See "Preview panel font tab is bare" below |
-| Font | line-height | `'line-height'` (`previewBase: '--text-body'`) | none | Same |
-| Font | font-weight | `'weight'` | none | Same |
-| Font | font-family | `'family'` | none | Same |
-| Font | font-size-lh (preview panel only) | — | none | Same |
+| Font | font-size | `'size'` | `'size'` | Instance-value specimens; see the browser re-check below |
+| Font | line-height | `'line-height'` (`previewBase: '--text-body'`) | `'line-height'` (`previewBase: '--text-base'`) | Explicit font-size base |
+| Font | font-weight | `'weight'` | `'weight'` | Styles specimens from this panel's first weight item |
+| Font | font-family | `'family'` | `'family'` | Styles specimens from this panel's first family item |
+| Font | font-size-lh (preview panel only) | — | `'line-height'` (`previewBase: '--text-base'`) | Tier-level base is a compromise for per-size leading rows |
 | Spacing | hsp / vsp / icon (doc), hsp / vsp (preview) | `'bar'` | `'bar'` | Both write a resolved length, not a `var()` reference — see below |
 | Spacing | layout (doc only) | none | — | Mixes `0`, `1px`, and a `clamp()` readonly row; no preview kind fits a mixed tier like that |
 | Size | radius | `'radius'` | `'radius'` | Resolved-value glyph, same reasoning as `bar` |
@@ -74,7 +74,8 @@ glyphs — until this token panel previews epic (`Takazudo/zudo-sg#575`).
 | Color / Palette | all tiers | none | none | These tiers render their own swatch/curve editors instead of a preview glyph |
 
 A tier with `preview: 'line-height'` **may** also set `previewBase` — it names the font-size CSS
-variable the line-height specimen paragraph is rendered at (`--text-body` here). It is optional:
+variable the line-height specimen paragraph is rendered at (`--text-body` for doc chrome,
+`--text-base` for preview tokens). It is optional:
 with no `previewBase`, zdtp falls back to whichever item of the tab's `'size'` preview tier is
 closest to 16px, and to a flat 16px if the tab has no `'size'` tier at all. It is worth setting
 anyway — the fallback silently re-picks a different base whenever the font-size tier changes.
@@ -89,9 +90,8 @@ at.
 
 The font-specimen toolbar and its **Render on page** control need the reserved `font` tab id
 *plus* at least one `'size'` or `'line-height'` preview tier inside that tab — there is no
-separate flag that turns the toolbar on. This is why removing every preview from the preview
-panel's `font` tab (see below) also removed that panel's specimen toolbar entirely, rather than
-leaving a toolbar with nothing to show.
+separate flag that turns the toolbar on. Both panels now provide those tiers, so both offer
+the specimen toolbar and **Render on page** control.
 
 ## The `{ kind: 'number' }` tier-item opt-in
 
@@ -118,62 +118,52 @@ the panel *edits* a value in the UI, not how it is read from or written to `loca
 and asserts `loadPersistedState` round-trips fractional line-height values unchanged, with no
 `legacyIdRenameMap` involved.
 
-## Preview panel font tab is bare (partial opt-in, not a decision to skip previews)
+## Preview panel font specimens use instance values
 
-The preview panel's `font` tab tiers carry no `preview` at all, unlike the doc-chrome panel's
-`font` tab, which carries the full set. This is the one tab where the two configs deliberately
-diverge, and the reason is a specific upstream rendering defect rather than a stylistic choice:
+The preview panel's five font tiers now enable previews. This retires the workaround from
+[Takazudo/zudo-sg#577](https://github.com/Takazudo/zudo-sg/issues/577): zdtp 0.5.1 rendered
+font specimens through `var(--token, <panel value>)` in the host document. Because the preview
+panel writes through `applySink` to iframes, the host's existing variables overrode its own
+specimen values. All five tiers were temporarily left bare in commit `3730128`.
 
-zdtp 0.5.1's font-specimen renderer styles its `'size'`/`'line-height'` samples with
-`var(--token, <panel value>)`, and mounts those samples in the **host** document — the document
-that already defines every one of these CSS variables at `:root`. The doc-chrome panel writes
-directly to the host `:root` (no `applySink`), so for it the `var(--token, ...)` reference always
-resolves to the panel's own live edit — the preview correctly tracks that panel.
-
-The preview panel is different: it is an `applySink` instance (`applyPreviewVars` /
-`clearPreviewVars`), and its writes go only to the registered styleguide preview iframes, never
-to the host `:root`. So when the preview panel's font specimen tries to resolve
-`var(--token, <preview-panel-value>)` in the host document, the host's own pre-existing
-definition wins and the fallback is never reached — the specimen shows the *host's* value, not
-the preview panel's edit. Worse, because the doc-chrome panel's and the preview panel's first
-family/weight rows happen to name variables in the same host `:root`, editing the doc-chrome
-panel visibly restyles the preview panel's specimen sample. A preview panel showing another
-panel's state is worse than showing no preview at all, so all five font tiers were left bare
-(commit `3730128`) rather than shipped broken. This also removes that panel's specimen toolbar
-and **Render on page** control, per the toolbar requirement described above — that is expected,
-not a separate regression.
-
-The `'bar'` (Spacing) and `'radius'` (Size) previews are **not** affected by this and stay enabled
-on the preview panel: those glyphs paint the resolved token value directly into an inline style
-with no `var()` indirection, so they always reflect whichever panel wrote them, regardless of
-which document they render in. That resolved-value-vs-`var()` split is exactly why this opt-in is
-partial rather than all-or-nothing — it is also what makes it safe to re-enable just the font
-tiers later, with no other change, once the renderer stops resolving specimen styles through the
-host cascade. Filed upstream as
+zdtp 0.6.0's [commit `7d18952`](https://github.com/Takazudo/zudo-design-token-panel/commit/7d18952)
+changed specimen fonts to use instance values, addressing
 [Takazudo/zudo-design-token-panel#850](https://github.com/Takazudo/zudo-design-token-panel/issues/850).
+The browser re-check on 0.6.1 under `pnpm dev` measured the preview panel's `--text-2xl`
+specimen at **40px** before editing its value from `2.5rem` to `5rem`, and **80px** afterward.
+The doc-chrome panel then changed `--text-micro` to `3rem`, `--font-weight-normal` to `900`,
+and `--font-sans` to `monospace`; the host computed variables reflected those edits while the
+preview specimen remained **80px**, **weight 400**, with the same UI sans family.
+
+The preview panel therefore enables `'size'`, `'weight'`, `'family'`, and both `'line-height'`
+tiers again. Both line-height tiers use `previewBase: '--text-base'`: the tier-level API
+cannot choose a separate font-size base for each `font-size-lh` row, so that shared base is a
+compromise for the per-size leading tokens. Storage identities and iframe sink routing are
+unchanged.
 
 ## `configurePanel()` does not validate — the tests are the real guard
 
-zdtp ships `assertValidPanelConfig`, but `configurePanel()` itself does not call it. That
-assertion only runs inside the Astro host-adapter's inline-JSON-config boundary (reading a
-`<script id="tokenpanel-config">` tag), and this project bypasses that boundary entirely — both
-panels bootstrap through a direct `zdtp.configurePanel(getConfig())` call
-(`src/lib/token-panel-native-bootstrap.ts`), never through `<DesignTokenPanelHost>`.
-`assertValidPanelConfig` is also not exported from either `@takazudo/zdtp` or
-`@takazudo/zdtp/testing`, so this project could not call it directly even if it wanted to.
+Since zdtp 0.6.0, `assertValidPanelConfig` is publicly exported from both
+`@takazudo/zdtp` and `@takazudo/zdtp/testing`. `configurePanel()` still does not call it.
+Both panels bootstrap through a direct `zdtp.configurePanel(getConfig())` call
+(`src/lib/token-panel-native-bootstrap.ts`), bypassing the Astro host-adapter's
+inline-JSON-config validation boundary.
 
-Consequently, `panel-config-isolation.test.ts`'s `"configurePanel accepts both configs without
-throwing"` test is a smoke test — it proves the configs import and construct cleanly, not that
-they satisfy zdtp's validation rules. The real correctness guards for the preview/kind pairing
-are the hand-written tests that re-encode those rules directly: a `PREVIEW_ITEM_KINDS` table
-covering all seven preview kinds (`size`/`bar`/`radius` → `length`, `line-height` → `number`,
-`family` → `text`, `weight` → `select`/`number`, `duration` → `length`/`number`) asserted per
-item, the `'ms'`/`'s'` unit rule for `'duration'`, and a check that `previewBase` only appears on
-a `'line-height'` tier and names a token that actually exists in the same tab. Covering every
-kind — not just the two this epic happened to touch — matters because both manifests are
-regenerated codegen: a regen that flips one token's `control` would otherwise ship a broken glyph
-silently. Treat those tests, not the `configurePanel` smoke test, as
-the thing that fails CI if a future tier/preview pairing is wrong. Filed upstream as
+`panel-config-isolation.test.ts` now calls the real `assertValidPanelConfig` from the
+unmocked testing entry for **both** configs. This replaces the hand-written preview-kind,
+`previewBase`, and duration-unit rule copies with the upstream validator, including its
+reserved-palette checks. The separate `configurePanel` test remains a construction smoke
+test. Storage identity and legacy state-continuity tests also remain.
+
+The preview palette has eight tiers in first-seen order: `palette-neutral`,
+`palette-accent`, `palette-state`, `palette-line-vacuum`, `palette-line-process`,
+`palette-line-laser`, `palette-line-meeting`, and `palette-line-beauty`. The five line
+tiers each contain four items. Named palette items must share the prefix derived from
+the first item's last hyphen; separating business lines meets that rule and gives each
+line hue its own OKLCH curve. All 36 item ids and CSS variables are unchanged, and the
+reserved `palette` tab still omits `colorExtras`.
+
+The public-validator request was tracked in
 [Takazudo/zudo-design-token-panel#851](https://github.com/Takazudo/zudo-design-token-panel/issues/851).
 
 ## Other deliberate opt-outs
