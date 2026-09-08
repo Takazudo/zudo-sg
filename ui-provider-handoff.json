@@ -1,10 +1,10 @@
 {
   "packageName": "@zudo-sg/ui",
   "sourcePath": "packages/ui",
-  "sourceTree": "37690052297af1b16442a6183eb844081621ba1d",
+  "sourceTree": "2cb6cf582aaaaac581cef9feeb5ca7e2d6200e8f",
   "packageBranch": "package/ui-v1",
-  "packageCommit": "018455b6678533c118647d488f9a374a3571cfcb",
-  "rootGitSpec": "git+https://github.com/Takazudo/zudo-sg.git#018455b6678533c118647d488f9a374a3571cfcb",
+  "packageCommit": "82296b3b56c210e1424ad60d9831b5efd187024a",
+  "rootGitSpec": "git+https://github.com/Takazudo/zudo-sg.git#82296b3b56c210e1424ad60d9831b5efd187024a",
   "contract": {
     "packageName": "@zudo-composer/component-contract",
     "packageCommit": "b66d52bb273a10010485efb2d06f80cee8001bd6",
