@@ -102,6 +102,14 @@
 @import "@takazudo/zudo-doc/features.css";
 @import "@takazudo/zudo-doc/page-loading.css";
 
+/* Static dashboard CSS is separate from the panel stylesheet, which zdtp
+   self-injects at mount. Scoped to .zdtp-dashboard; kept after host content
+   CSS so its rules win ties against descendant prose styling. Tailwind v4
+   delivers it in the single styles-<hash>.css bundle in dev and static builds,
+   with no base-URL handling. Copying to public/ plus a <link> was rejected:
+   that would need a copy step for both dev/build and base-aware asset URLs. */
+@import "@takazudo/zdtp/dashboard/styles.css";
+
 /* ========================================
  * Styleguide catalog — feature CSS import (#122, #167)
  *
