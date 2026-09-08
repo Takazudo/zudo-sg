@@ -1,3 +1,6 @@
 packages: []
 allowBuilds:
   '@zudo-composer/component-contract': true
+minimumReleaseAgeExclude:
+  # Match the root workspace's first-party policy for this package's dependency.
+  - '@takazudo/zfb-md-wasm'
