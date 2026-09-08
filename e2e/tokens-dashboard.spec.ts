@@ -78,12 +78,16 @@ async function readPersistedState(
   return parsed as Record<string, unknown>;
 }
 
-function isOpaqueColor(color: string): boolean {
-  const normalized = color.trim().toLowerCase();
-  return normalized !== "" && normalized !== "transparent" && !(
-    /rgba?\([^)]*(?:,\s*0(?:\D|$)|\/\s*0)\s*\)/.test(normalized) ||
-    /hsla?\([^)]*(?:,\s*0(?:\D|$)|\/\s*0)\s*\)/.test(normalized)
-  );
+async function renderedAlpha(page: Page, color: string): Promise<number> {
+  return page.evaluate((value) => {
+    const canvas = document.createElement("canvas");
+    canvas.width = canvas.height = 1;
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("Canvas color probe unavailable");
+    context.fillStyle = value;
+    context.fillRect(0, 0, 1, 1);
+    return context.getImageData(0, 0, 1, 1).data[3]!;
+  }, color);
 }
 
 test("JS-off desktop renders both declared dashboards and their reference geometry", async ({
@@ -130,8 +134,8 @@ test("JS-off desktop renders both declared dashboards and their reference geomet
     );
     const lightAccentColor = await computedBackground(lightAccent);
     const darkAccentColor = await computedBackground(darkAccent);
-    expect(isOpaqueColor(lightAccentColor)).toBe(true);
-    expect(isOpaqueColor(darkAccentColor)).toBe(true);
+    expect(await renderedAlpha(page, lightAccentColor)).toBe(255);
+    expect(await renderedAlpha(page, darkAccentColor)).toBe(255);
     expect(lightAccentColor).not.toBe(darkAccentColor);
 
     const typographySpecimen = light
@@ -247,7 +251,7 @@ test("dashboard defaults stay isolated from saved preview and doc-chrome panel s
     ),
   ).toBe(declaredAccent);
   const reloadedPreviewPanel = await openPanel(page, "toggle-preview-token-panel");
-  await reloadedPreviewPanel.getByRole("tab", { name: "Color", exact: true }).click();
+  await reloadedPreviewPanel.getByRole("tab", { name: /^Color(?: \d+ changed tokens?)?$/ }).click();
   await expect(reloadedPreviewPanel.getByLabel("--color-accent value")).toHaveValue(
     COLOR_SENTINEL,
   );
@@ -262,7 +266,7 @@ test("dashboard defaults stay isolated from saved preview and doc-chrome panel s
 
   await page.reload();
   const reloadedDocPanel = await openPanel(page, "toggle-sg-doc-tweak");
-  await reloadedDocPanel.getByRole("tab", { name: "Spacing", exact: true }).click();
+  await reloadedDocPanel.getByRole("tab", { name: /^Spacing(?: \d+ changed tokens?)?$/ }).click();
   await expect(reloadedDocPanel.getByLabel("--spacing-hsp-md value")).toHaveValue("2.25");
   await closePanel(page, reloadedDocPanel);
 
