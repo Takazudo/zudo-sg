@@ -1,11 +1,11 @@
 /** @jsxRuntime automatic */
 /** @jsxImportSource preact */
-// Interactive design-token playground — `/components/tokens`.
+// Declared-defaults reference and interactive design-token playground — `/components/tokens`.
 //
 // The swatch / spacing / type rows are SERVER-RENDERED (the full token
 // reference is visible with no JS); a client island (TokenPlayground) layers
 // the interactivity on top via event delegation:
-//   - click any token to copy its RESOLVED value (hex / rem) or its
+//   - click any live token row to copy its RESOLVED value (hex / rem) or its
 //     `var(--token)` reference (toggle in the toolbar). Because the swatches
 //     are painted with `var(--…)`, they also restyle live from the header's
 //     site-wide Design Tokens icon (doc-chrome panel) — no page-local trigger
@@ -41,6 +41,7 @@ import { defaultLocale } from "@/config/i18n";
 import { withBase } from "@/utils/base";
 import { TOKENS_SLUG } from "@/styleguide/data/registry";
 import { StyleguideLayout } from "@/features/styleguide/chrome/_styleguide-layout";
+import { UiTokenDashboards } from "@/features/styleguide/token-dashboard/ui-token-dashboards";
 import TokenPlayground from "@/features/styleguide/token-tweak/token-playground";
 import { SPACING_TOKENS, FONT_TOKENS } from "@/config/design-tokens-manifest";
 import {
@@ -131,146 +132,162 @@ export default function TokensPage(): JSX.Element {
         <header class="mb-vsp-lg max-w-[56rem]">
           <h1 class="text-heading font-bold mb-vsp-2xs">Design tokens</h1>
           <p class="mt-vsp-xs text-muted">
-            The semantic tokens the <code>@zudo-sg/ui</code> components consume.
-            <strong> Click any token</strong> to copy it; use the toolbar to
-            pick whether you copy the resolved value or the{" "}
-            <code>var(--token)</code> reference, or open the tweaker to edit
-            tokens live.
+            Two views of design tokens: <strong>Declared defaults</strong> is a
+            static reference for <code>@zudo-sg/ui</code>; <strong>Live values</strong>{" "}
+            offers click-to-copy values resolved from this page. Use the live
+            toolbar to choose a resolved value or a <code>var(--token)</code>{" "}
+            reference, or open Preview tokens to edit the component previews.
           </p>
         </header>
 
-        {playground}
+        <UiTokenDashboards />
 
-        <div data-sg-tokens-root>
-          <section class="mb-vsp-xl">
-            <h2 class="mb-vsp-2xs text-lg font-semibold text-fg">Palette</h2>
-            <p class="mb-vsp-sm max-w-[56rem] text-small text-muted">
-              Raw grouped swatches that feed the semantic component tokens.
-            </p>
-            <div class="flex flex-col gap-vsp-md">
-              {PALETTE_GROUPS.map((group) => (
-                <div>
-                  <h3 class="mb-vsp-2xs text-small font-semibold text-fg">
-                    {group.label}
-                  </h3>
-                  <div class="grid grid-cols-2 gap-hsp-md sm:grid-cols-3 lg:grid-cols-4">
-                    {group.tokens.map((tok) => (
-                      <button
-                        type="button"
-                        class="sg-token-card"
-                        data-sg-token
-                        data-var={tok.varName}
-                        data-kind="color"
-                        title={`Click to copy ${tok.varName}`}
-                      >
-                        <span
-                          class="sg-token-swatch"
-                          style={{ background: `var(${tok.varName})` }}
-                        />
-                        <span class="sg-token-card-meta">
-                          <span class="text-small font-medium text-fg">
-                            {tok.name}
+        <section>
+          <h2 class="mb-vsp-2xs text-xl font-semibold text-fg">
+            Live values (host cascade)
+          </h2>
+          <p class="mb-vsp-sm max-w-[56rem] text-muted">
+            In resolved-value mode, each row copies the value this document’s{" "}
+            <code>:root</code> resolves at click time, following the header’s
+            Design Tokens panel and the site theme. Palette and Semantic color
+            show the <code>@zudo-sg/ui</code> colour variables as this host
+            resolves them. Spacing and Type scale list the host chrome’s scale
+            from the root manifest (including <code>--text-body</code> aliases),
+            separate from the UI defaults above.
+          </p>
+          {playground}
+
+          <div data-sg-tokens-root>
+            <section class="mb-vsp-xl">
+              <h3 class="mb-vsp-2xs text-lg font-semibold text-fg">Palette</h3>
+              <p class="mb-vsp-sm max-w-[56rem] text-small text-muted">
+                Raw grouped swatches that feed the semantic component tokens.
+              </p>
+              <div class="flex flex-col gap-vsp-md">
+                {PALETTE_GROUPS.map((group) => (
+                  <div>
+                    <h4 class="mb-vsp-2xs text-small font-semibold text-fg">
+                      {group.label}
+                    </h4>
+                    <div class="grid grid-cols-2 gap-hsp-md sm:grid-cols-3 lg:grid-cols-4">
+                      {group.tokens.map((tok) => (
+                        <button
+                          type="button"
+                          class="sg-token-card"
+                          data-sg-token
+                          data-var={tok.varName}
+                          data-kind="color"
+                          title={`Click to copy ${tok.varName}`}
+                        >
+                          <span
+                            class="sg-token-swatch"
+                            style={{ background: `var(${tok.varName})` }}
+                          />
+                          <span class="sg-token-card-meta">
+                            <span class="text-small font-medium text-fg">
+                              {tok.name}
+                            </span>
+                            <span class="text-xs text-muted">{tok.varName}</span>
                           </span>
-                          <span class="text-xs text-muted">{tok.varName}</span>
-                        </span>
-                      </button>
-                    ))}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          </section>
+                ))}
+              </div>
+            </section>
 
-          <section class="mb-vsp-xl">
-            <h2 class="mb-vsp-2xs text-lg font-semibold text-fg">
-              Semantic color
-            </h2>
-            <p class="mb-vsp-sm max-w-[56rem] text-small text-muted">
-              Public color tokens consumed by components.
-            </p>
-            <div class="grid grid-cols-2 gap-hsp-md sm:grid-cols-3 lg:grid-cols-4">
-              {COLOR_TOKENS.map((tok) => (
-                <button
-                  type="button"
-                  class="sg-token-card"
-                  data-sg-token
-                  data-var={tok.varName}
-                  data-kind="color"
-                  title={`Click to copy ${tok.varName}`}
-                >
-                  <span
-                    class="sg-token-swatch"
-                    style={{ background: `var(${tok.varName})` }}
-                  />
-                  <span class="sg-token-card-meta">
-                    <span class="text-small font-medium text-fg">
-                      {tok.name}
-                    </span>
-                    <span class="text-xs text-muted">{tok.varName}</span>
-                  </span>
-                </button>
-              ))}
-            </div>
-          </section>
-
-          <section class="mb-vsp-xl">
-            <h2 class="mb-vsp-sm text-lg font-semibold text-fg">Spacing</h2>
-            <div class="flex flex-col gap-vsp-2xs">
-              {SPACING_TOKENS.filter(
-                (t) => t.group === "hsp" || t.group === "vsp",
-              ).map((tok) => (
-                <button
-                  type="button"
-                  class="sg-token-row"
-                  data-sg-token
-                  data-var={tok.cssVar}
-                  data-kind="length"
-                  title={`Click to copy ${tok.cssVar}`}
-                >
-                  <span class="w-[6rem] shrink-0 text-left text-small text-fg">
-                    {tok.label}
-                  </span>
-                  <span class="w-[5rem] shrink-0 text-left text-xs text-muted">
-                    {tok.default}
-                  </span>
-                  {/* Magnitude bar — decorative-by-repetition (one per row), so
-                      it defaults to neutral under the styleguide accent budget
-                      rather than spending accent on a repeated decoration. */}
-                  <span
-                    class="h-[0.75rem] rounded-sm bg-muted"
-                    style={{ width: `var(${tok.cssVar})` }}
-                  />
-                </button>
-              ))}
-            </div>
-          </section>
-
-          <section class="mb-vsp-xl">
-            <h2 class="mb-vsp-sm text-lg font-semibold text-fg">Type scale</h2>
-            <div class="flex flex-col gap-vsp-sm">
-              {FONT_TOKENS.filter((t) => t.group === "font-size").map((tok) => (
-                <button
-                  type="button"
-                  class="sg-token-row sg-token-row--baseline"
-                  data-sg-token
-                  data-var={tok.cssVar}
-                  data-kind="length"
-                  title={`Click to copy ${tok.cssVar}`}
-                >
-                  <span class="w-[6rem] shrink-0 text-left text-xs text-muted">
-                    {tok.label}
-                  </span>
-                  <span
-                    class="text-left text-fg"
-                    style={{ fontSize: `var(${tok.cssVar})` }}
+            <section class="mb-vsp-xl">
+              <h3 class="mb-vsp-2xs text-lg font-semibold text-fg">
+                Semantic color
+              </h3>
+              <p class="mb-vsp-sm max-w-[56rem] text-small text-muted">
+                Public color tokens consumed by components.
+              </p>
+              <div class="grid grid-cols-2 gap-hsp-md sm:grid-cols-3 lg:grid-cols-4">
+                {COLOR_TOKENS.map((tok) => (
+                  <button
+                    type="button"
+                    class="sg-token-card"
+                    data-sg-token
+                    data-var={tok.varName}
+                    data-kind="color"
+                    title={`Click to copy ${tok.varName}`}
                   >
-                    The quick brown fox
-                  </span>
-                </button>
-              ))}
-            </div>
-          </section>
-        </div>
+                    <span
+                      class="sg-token-swatch"
+                      style={{ background: `var(${tok.varName})` }}
+                    />
+                    <span class="sg-token-card-meta">
+                      <span class="text-small font-medium text-fg">
+                        {tok.name}
+                      </span>
+                      <span class="text-xs text-muted">{tok.varName}</span>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </section>
+
+            <section class="mb-vsp-xl">
+              <h3 class="mb-vsp-sm text-lg font-semibold text-fg">Spacing</h3>
+              <div class="flex flex-col gap-vsp-2xs">
+                {SPACING_TOKENS.filter(
+                  (t) => t.group === "hsp" || t.group === "vsp",
+                ).map((tok) => (
+                  <button
+                    type="button"
+                    class="sg-token-row"
+                    data-sg-token
+                    data-var={tok.cssVar}
+                    data-kind="length"
+                    title={`Click to copy ${tok.cssVar}`}
+                  >
+                    <span class="w-[6rem] shrink-0 text-left text-small text-fg">
+                      {tok.label}
+                    </span>
+                    <span class="w-[5rem] shrink-0 text-left text-xs text-muted">
+                      {tok.default}
+                    </span>
+                    {/* Magnitude bar — decorative-by-repetition (one per row), so
+                        it defaults to neutral under the styleguide accent budget
+                        rather than spending accent on a repeated decoration. */}
+                    <span
+                      class="h-[0.75rem] rounded-sm bg-muted"
+                      style={{ width: `var(${tok.cssVar})` }}
+                    />
+                  </button>
+                ))}
+              </div>
+            </section>
+
+            <section class="mb-vsp-xl">
+              <h3 class="mb-vsp-sm text-lg font-semibold text-fg">Type scale</h3>
+              <div class="flex flex-col gap-vsp-sm">
+                {FONT_TOKENS.filter((t) => t.group === "font-size").map((tok) => (
+                  <button
+                    type="button"
+                    class="sg-token-row sg-token-row--baseline"
+                    data-sg-token
+                    data-var={tok.cssVar}
+                    data-kind="length"
+                    title={`Click to copy ${tok.cssVar}`}
+                  >
+                    <span class="w-[6rem] shrink-0 text-left text-xs text-muted">
+                      {tok.label}
+                    </span>
+                    <span
+                      class="text-left text-fg"
+                      style={{ fontSize: `var(${tok.cssVar})` }}
+                    >
+                      The quick brown fox
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </section>
+          </div>
+        </section>
       </div>
     </StyleguideLayout>
   );

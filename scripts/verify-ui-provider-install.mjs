@@ -183,9 +183,10 @@ async function writeConsumer(directory, uiSpec) {
     },
   };
   await writeFile(path.join(directory, "package.json"), `${JSON.stringify(manifest, null, 2)}\n`);
+  // The isolated consumer cannot inherit the root's first-party release-age policy.
   await writeFile(
     path.join(directory, "pnpm-workspace.yaml"),
-    `packages: []\nallowBuilds:\n  '${contractName}': true\n  esbuild: true\n`,
+    `packages: []\nallowBuilds:\n  '${contractName}': true\n  esbuild: true\nminimumReleaseAgeExclude:\n  - '@takazudo/zfb-md-wasm'\n`,
   );
   await writeFile(path.join(directory, "src/generated-composition.tsx"), generatedComposition());
 }

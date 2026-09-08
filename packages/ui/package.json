@@ -19,7 +19,7 @@
     "check": "pnpm run typecheck && pnpm run test"
   },
   "dependencies": {
-    "@takazudo/zfb-md-wasm": "2.15.1",
+    "@takazudo/zfb-md-wasm": "2.16.0",
     "dompurify": "^3.4.11"
   },
   "peerDependencies": {

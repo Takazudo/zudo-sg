@@ -51,6 +51,11 @@ export default defineConfig({
       use: { baseURL: smokeServer.origin },
     },
     {
+      name: "tokens-dashboard",
+      testMatch: "tokens-dashboard.spec.ts",
+      use: { baseURL: smokeServer.origin },
+    },
+    {
       name: "preview-token-panel",
       testMatch: "preview-token-panel.spec.ts",
       use: { baseURL: smokeServer.origin },

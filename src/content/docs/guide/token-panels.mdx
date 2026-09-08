@@ -37,7 +37,7 @@ Click the **Preview tokens** button (the stacked-frames glyph) in a component de
 
 The preview panel edits the `@zudo-sg/ui` design tokens — `--color-*`, `--spacing-*`, `--font-*`, `--radius-*`, `--shadow-*`. Instead of writing to the host `:root`, every change is sent directly into each registered preview iframe's `:root` via zudo-doc's theme bridge.
 
-Its **Palette** tab exposes the raw Tier-1 colors as grouped `base`, `accent`, `state`, and `line` (business-line accents) swatches. The semantic **Color** tab keeps the unchanged `--color-*` names that point at those palette entries.
+Its **Palette** tab exposes the raw Tier-1 colors as grouped `neutral`, `accent`, and `state` swatches, followed by one tier for each business line: `line-vacuum`, `line-process`, `line-laser`, `line-meeting`, and `line-beauty`. Each line has its own hue, and zdtp 0.6's palette validation requires one family per named tier, so the lines stay split into separate groups with their own OKLCH curves. The semantic **Color** tab keeps the unchanged `--color-*` names that point at those palette entries.
 
 **Why iframes only?** In `src/styles/global.css` the `@zudo-sg/ui` target tokens are aliased onto the doc chrome. Writing them to the host `:root` would corrupt the documentation site's appearance, so the panel deliberately routes all writes into the iframes and leaves the host untouched.
 
@@ -46,6 +46,14 @@ Its **Palette** tab exposes the raw Tier-1 colors as grouped `base`, `accent`, `
 <Note>
   Changes in this panel affect only the component previews in the iframes — the documentation chrome is left untouched.
 </Note>
+
+## Declared defaults on the tokens page
+
+The `/components/tokens` page starts with two static dashboards under **Declared defaults**: **UI tokens — declared defaults (light)** and **UI tokens — declared defaults (dark)**. They show the declared `@zudo-sg/ui` defaults for each mode, with grouped palette strips, actual-size spacing rulers, and multiline typography specimens. The dashboards are read-only reference views.
+
+The dashboards are isolated from both token panels and from saved tweaks. Editing either panel never changes these declared-default views. The live click-to-copy rows below them are a separate **Live values (host cascade)** area; those rows resolve values from the page's own `:root`, so they can reflect host-cascade values rather than the dashboard's declared UI defaults.
+
+For the component's API and the build-safe static-rendering pattern, see the [TokenDashboard reference](https://zdtp.zudolab.dev/docs/reference/token-dashboard/) and [static token dashboard recipe](https://zdtp.zudolab.dev/docs/recipes/static-token-dashboard/).
 
 ## Apply — persist a tweak to CSS source
 
