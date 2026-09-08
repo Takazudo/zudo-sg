@@ -5,7 +5,7 @@ Documentation site built with [zudo-doc](https://github.com/zudolab/zudo-doc) �
 ## Tech Stack
 
 - **zfb** — documentation build framework. The `@takazudo/zfb*` family is pinned to the stable
-  `2.16.0` release in lockstep with zudo-doc 5.19.1. The scoped pnpm peer exception for zudo-doc's zdtp range is safe for the verified API surface and goes away when zudo-doc widens its range.
+  `2.16.0` release in lockstep with zudo-doc 5.19.1. The scoped peer exception in `pnpm-workspace.yaml` for zudo-doc's zdtp range is safe for the verified API surface and goes away when zudo-doc widens its range.
 - **MDX** — content format
 - **Tailwind CSS v4** — via `@tailwindcss/vite`
 - **Preact** — for interactive islands only (with compat mode for React API)

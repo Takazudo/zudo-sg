@@ -87,12 +87,5 @@
     "workerDirectory": [
       "public"
     ]
-  },
-  "pnpm": {
-    "peerDependencyRules": {
-      "allowedVersions": {
-        "@takazudo/zudo-doc>@takazudo/zdtp": "0.6"
-      }
-    }
   }
 }
