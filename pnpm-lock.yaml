@@ -27,8 +27,8 @@ importers:
         specifier: ^6.0.0
         version: 6.43.1
       '@takazudo/zdtp':
-        specifier: 0.6.1
-        version: 0.6.1(preact@10.29.2)
+        specifier: 0.7.0
+        version: 0.7.0(preact@10.29.2)
       '@takazudo/zfb':
         specifier: 2.16.0
         version: 2.16.0
@@ -39,8 +39,8 @@ importers:
         specifier: 2.16.0
         version: 2.16.0(@takazudo/zfb@2.16.0)
       '@takazudo/zudo-doc':
-        specifier: 5.19.1
-        version: 5.19.1(@takazudo/zdtp@0.6.1(preact@10.29.2))(@takazudo/zfb-md-wasm@2.16.0)(@takazudo/zfb-runtime@2.16.0(@takazudo/zfb@2.16.0))(@takazudo/zfb@2.16.0)(@types/node@22.19.21)(diff@8.0.4)(katex@0.16.47)(preact@10.29.2)(zod@4.4.3)
+        specifier: 5.21.0
+        version: 5.21.0(@takazudo/zdtp@0.7.0(preact@10.29.2))(@takazudo/zfb-md-wasm@2.16.0)(@takazudo/zfb-runtime@2.16.0(@takazudo/zfb@2.16.0))(@takazudo/zfb@2.16.0)(@types/node@22.19.21)(diff@8.0.4)(katex@0.16.47)(preact@10.29.2)(zod@4.4.3)
       '@zudo-sg/ui':
         specifier: workspace:*
         version: link:packages/ui
@@ -173,8 +173,8 @@ importers:
         specifier: 2.16.0
         version: 2.16.0(@takazudo/zfb@2.16.0)
       '@takazudo/zudo-doc':
-        specifier: 5.19.1
-        version: 5.19.1(@takazudo/zdtp@0.6.1(preact@10.29.2))(@takazudo/zfb-md-wasm@2.16.0)(@takazudo/zfb-runtime@2.16.0(@takazudo/zfb@2.16.0))(@takazudo/zfb@2.16.0)(@types/node@22.19.21)(diff@8.0.4)(katex@0.16.47)(preact@10.29.2)(zod@4.4.3)
+        specifier: 5.21.0
+        version: 5.21.0(@takazudo/zdtp@0.7.0(preact@10.29.2))(@takazudo/zfb-md-wasm@2.16.0)(@takazudo/zfb-runtime@2.16.0(@takazudo/zfb@2.16.0))(@takazudo/zfb@2.16.0)(@types/node@22.19.21)(diff@8.0.4)(katex@0.16.47)(preact@10.29.2)(zod@4.4.3)
       diff:
         specifier: ^8.0.3
         version: 8.0.4
@@ -941,8 +941,8 @@ packages:
     peerDependencies:
       vite: ^5.2.0 || ^6 || ^7 || ^8
 
-  '@takazudo/zdtp@0.6.1':
-    resolution: {integrity: sha512-XpM3ogN5pz021hjjimAP1Q+WcUNvsdYZ07CuHJ+Uvk5roHQu2sgmepNKydpMM8t7abXT8DIYW9ISekhLGI0ziQ==}
+  '@takazudo/zdtp@0.7.0':
+    resolution: {integrity: sha512-qSb9MwDNFpEui5yeOGGKULgV2h8xL5Zp5IYOZt8EQoGqP5n22xh4ZlUhVjFc5HFN506dhJRcWuxvsNKT2WKeDg==}
     engines: {node: '>=22.0.0', pnpm: '>=10.0.0'}
     hasBin: true
     peerDependencies:
@@ -1002,11 +1002,11 @@ packages:
     engines: {node: '>=18'}
     hasBin: true
 
-  '@takazudo/zudo-doc@5.19.1':
-    resolution: {integrity: sha512-D305M4q/SmOXFADHvZzm4KUj530unbN0vEwYq+o/JQuuqn20bYn0ZtDJ5CwwNeXbJiTjs1aDP7V4/Mmll+JDgg==}
+  '@takazudo/zudo-doc@5.21.0':
+    resolution: {integrity: sha512-V3XfA7Mi/SQa3nFtUGLwcntTB7kJnY94Em2MMfrKrUsU/Smp7z3WeZgDY/OzgeQCKBKPCD1Sk9nBTMh3NSfVEg==}
     hasBin: true
     peerDependencies:
-      '@takazudo/zdtp': ^0.5.2
+      '@takazudo/zdtp': ^0.5.2 || ^0.6.0 || ^0.7.0
       '@takazudo/zfb': ^2.16.0
       '@takazudo/zfb-md-wasm': ^2.16.0
       '@takazudo/zfb-runtime': ^2.16.0
@@ -3351,7 +3351,7 @@ snapshots:
       tailwindcss: 4.3.1
       vite: 8.0.16(@types/node@22.19.21)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)(yaml@2.9.0)
 
-  '@takazudo/zdtp@0.6.1(preact@10.29.2)':
+  '@takazudo/zdtp@0.7.0(preact@10.29.2)':
     dependencies:
       '@tailwindcss/browser': 4.3.2
       culori: 4.0.2
@@ -3399,7 +3399,7 @@ snapshots:
       chalk: 5.6.2
       glob: 13.0.6
 
-  '@takazudo/zudo-doc@5.19.1(@takazudo/zdtp@0.6.1(preact@10.29.2))(@takazudo/zfb-md-wasm@2.16.0)(@takazudo/zfb-runtime@2.16.0(@takazudo/zfb@2.16.0))(@takazudo/zfb@2.16.0)(@types/node@22.19.21)(diff@8.0.4)(katex@0.16.47)(preact@10.29.2)(zod@4.4.3)':
+  '@takazudo/zudo-doc@5.21.0(@takazudo/zdtp@0.7.0(preact@10.29.2))(@takazudo/zfb-md-wasm@2.16.0)(@takazudo/zfb-runtime@2.16.0(@takazudo/zfb@2.16.0))(@takazudo/zfb@2.16.0)(@types/node@22.19.21)(diff@8.0.4)(katex@0.16.47)(preact@10.29.2)(zod@4.4.3)':
     dependencies:
       '@inquirer/prompts': 8.5.2(@types/node@22.19.21)
       '@takazudo/zfb': 2.16.0
@@ -3407,6 +3407,7 @@ snapshots:
       esbuild: 0.28.1
       fs-extra: 11.3.5
       minimist: 1.2.8
+      parse5: 8.0.1
       picocolors: 1.1.1
       pluralize: 8.0.0
       preact: 10.29.2
@@ -3415,7 +3416,7 @@ snapshots:
       yaml: 2.9.0
       zod: 4.4.3
     optionalDependencies:
-      '@takazudo/zdtp': 0.6.1(preact@10.29.2)
+      '@takazudo/zdtp': 0.7.0(preact@10.29.2)
       '@takazudo/zfb-md-wasm': 2.16.0
       diff: 8.0.4
       katex: 0.16.47
