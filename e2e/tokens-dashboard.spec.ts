@@ -419,7 +419,11 @@ test("site theme changes the host while each dashboard keeps its own chrome", as
   const hostLightBackground = await page.locator("body").evaluate(
     (body) => getComputedStyle(body).backgroundColor,
   );
-  const dashboardChrome = await computedBackground(light);
+  const lightChrome = await computedBackground(light);
+  const darkChrome = await computedBackground(dark);
+  expect(darkChrome).not.toBe(lightChrome);
+  await expect(light).toHaveAttribute("data-chrome", "light");
+  await expect(dark).toHaveAttribute("data-chrome", "dark");
 
   await themeToggle.click();
   await expect(html).toHaveAttribute("data-theme", "dark");
@@ -432,8 +436,8 @@ test("site theme changes the host while each dashboard keeps its own chrome", as
     .poll(() => page.locator("body").evaluate((body) => getComputedStyle(body).backgroundColor))
     .not.toBe(hostLightBackground);
 
-  expect(await computedBackground(light)).toBe(dashboardChrome);
-  expect(await computedBackground(dark)).toBe(dashboardChrome);
+  expect(await computedBackground(light)).toBe(lightChrome);
+  expect(await computedBackground(dark)).toBe(darkChrome);
   const darkInventory = dark.locator(".zdtp-dashboard__inventory");
   expect(
     await darkInventory.evaluate((inventory) => getComputedStyle(inventory).colorScheme),

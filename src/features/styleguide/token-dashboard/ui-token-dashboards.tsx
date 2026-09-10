@@ -32,6 +32,7 @@ export function UiTokenDashboards() {
       <TokenDashboard
         id="ui-defaults-dark"
         mode="dark"
+        chrome="dark"
         title="UI tokens — declared defaults (dark)"
         tabs={uiDashboardTabs}
         previewOverrides={dashboardPreviewOverrides}

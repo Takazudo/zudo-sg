@@ -20,6 +20,7 @@ describe("UI declared-defaults dashboards", () => {
       const dashboard = dashboards[index]!;
       expect(dashboard.id).toBe(`ui-defaults-${mode}`);
       expect(dashboard.getAttribute("data-mode")).toBe(mode);
+      expect(dashboard.getAttribute("data-chrome")).toBe(mode);
       expect(dashboard.querySelector(".zdtp-dashboard__count")?.textContent).toBe(
         "102 tokens",
       );

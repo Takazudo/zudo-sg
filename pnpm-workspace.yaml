@@ -30,6 +30,3 @@ minimumReleaseAgeExclude:
   - '@takazudo/zfb-linux-arm64-gnu'
   - '@takazudo/zfb-linux-x64-gnu'
   - '@takazudo/zfb-win32-x64-msvc'
-peerDependencyRules:
-  allowedVersions:
-    '@takazudo/zudo-doc>@takazudo/zdtp': '0.6'
