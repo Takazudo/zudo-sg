@@ -30,3 +30,8 @@ minimumReleaseAgeExclude:
   - '@takazudo/zfb-linux-arm64-gnu'
   - '@takazudo/zfb-linux-x64-gnu'
   - '@takazudo/zfb-win32-x64-msvc'
+# zudo-doc 5.22.0's optional zdtp peer range stops at ^0.7.0; zdtp 0.8.0 is
+# verified against it in this repo. Drop once zudo-doc widens the range.
+peerDependencyRules:
+  allowedVersions:
+    '@takazudo/zudo-doc>@takazudo/zdtp': '0.8'
