@@ -1,18 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="zudo sg">
-  <title>zudo sg</title>
-  <!-- Brand mark: warm-amber "token tile" with a knocked-out z (zudo initial).
-       Amber hue (~65) matches the site's OKLCH accent tokens (p5 light /
-       p12 dark). Fixed brand values — not theme tokens — so the mark is stable
-       across color modes. Mirrored by public/img/logo.svg (mono silhouette)
-       and the rasterized favicon-16/32.png + favicon.ico. -->
-  <defs>
-    <linearGradient id="amber" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#e59b3a"/>
-      <stop offset="1" stop-color="#c9761d"/>
-    </linearGradient>
-  </defs>
-  <rect x="6" y="6" width="88" height="88" rx="22" fill="url(#amber)"/>
-  <path
-    d="M28 30H72V42H28Z M28 58H72V70H28Z M60 42L72 42L40 58L28 58Z"
-    fill="#fbf6ee"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" data-auto-logo="chat"><rect x="0" y="0" width="200" height="200" fill="#ffffff" /><rect x="6" y="6" width="188" height="188" fill="none" stroke="#141210" stroke-width="1.6" /><line x1="6" y1="6" x2="49.088311754568586" y2="49.088311754568586" stroke="#141210" stroke-width="1.4" /><line x1="194" y1="6" x2="150.9116882454314" y2="49.088311754568586" stroke="#141210" stroke-width="1.4" /><line x1="6" y1="194" x2="49.088311754568586" y2="150.9116882454314" stroke="#141210" stroke-width="1.4" /><line x1="194" y1="194" x2="150.9116882454314" y2="150.9116882454314" stroke="#141210" stroke-width="1.4" /><circle cx="100" cy="100" r="65" fill="#141210" /><g transform="translate(31.749999999999986, 31.749999999999986) scale(1.3650000000000002)"><path d="M26 28 L74 28 L74 62 L48 62 L36 74 L36 62 L26 62 Z" fill="none" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" /><circle cx="38" cy="45" r="3" fill="#ffffff" /><circle cx="50" cy="45" r="3" fill="#ffffff" /><circle cx="62" cy="45" r="3" fill="#ffffff" /></g></svg>

@@ -4,8 +4,8 @@
 // in two places (the array is the single source of truth for the nav tree).
 //
 // Shape (matches the native tree's NavNode contract):
-//   • Two leading leaf nodes — "Overview" (/components) and "Design Tokens"
-//     (/components/tokens) — so the chrome's primary routes sit at the top.
+//   • One leading leaf node — "Overview" (/components) — opens the catalog.
+//     The standalone /tokens page is linked from the header instead.
 //   • Each story category becomes a parent node (hasPage:false, no href) whose
 //     children are its stories.
 //   • Each story becomes a leaf node (hasPage:true, href = withBase('/components/'+slug)).
@@ -16,7 +16,7 @@
 
 import type { NavNode } from "@/utils/docs";
 import { withBase } from "@/utils/base";
-import { getCategoryGroups, OVERVIEW_SLUG, TOKENS_SLUG } from "./registry";
+import { getCategoryGroups, OVERVIEW_SLUG } from "./registry";
 
 /**
  * Build the styleguide nav tree. Pure + synchronous (reads the eager-import
@@ -31,15 +31,6 @@ export function buildNavNodes(): NavNode[] {
     label: "Overview",
     position: next(),
     href: withBase("/components"),
-    hasPage: true,
-    children: [],
-  };
-
-  const tokens: NavNode = {
-    slug: TOKENS_SLUG,
-    label: "Design Tokens",
-    position: next(),
-    href: withBase("/components/tokens"),
     hasPage: true,
     children: [],
   };
@@ -62,7 +53,7 @@ export function buildNavNodes(): NavNode[] {
     })),
   }));
 
-  return [overview, tokens, ...categoryNodes];
+  return [overview, ...categoryNodes];
 }
 
 /** The styleguide nav tree, built once at module init (eager + synchronous). */

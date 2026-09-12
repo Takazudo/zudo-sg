@@ -1,4 +1,4 @@
-# Zudo Sg Docs
+# zudo-sg Docs
 
 This workspace is the contributor documentation site built with zudo-doc 5.22.0, zfb, MDX, Tailwind CSS v4, and Preact.
 

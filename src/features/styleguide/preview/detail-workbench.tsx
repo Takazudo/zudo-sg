@@ -21,7 +21,7 @@
 // un-hides the panel, permanently, including on reload from persisted state.
 // The site-wide Design Tokens icon is a separate, untouched control shipped
 // through `settings.headerRightItems`; there are two token panels by design
-// (src/content/docs/guide/token-panels.mdx).
+// (src/content/docs/overview/token-panels.mdx).
 //
 // A variant's OWN story-prop controls are not hoisted — they stay with their
 // variant inside the stage (see ./variant-frame.tsx).

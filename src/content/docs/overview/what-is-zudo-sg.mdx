@@ -1,0 +1,23 @@
+---
+title: What is zudo-sg?
+description: The styleguide host, component library, demo app, and full docs site that make up zudo-sg.
+sidebar_position: 2
+---
+
+zudo-sg brings the component source, its styleguide, and its surrounding documentation together in one workspace.
+
+## The styleguide host
+
+The root application is a styleguide host built on [zudo-doc](https://github.com/zudolab/zudo-doc). It provides the component catalog, live previews, and host-specific tools for exploring the library.
+
+## The component library
+
+zudo-sg provides the `@zudo-sg/ui` component library. The host consumes the package from source, and the library contains around 70 Preact components that are shared by the styleguide and other applications.
+
+## The multi-page demo
+
+The `apps/demo` workspace is a multi-page demo application powered by the same component library. It shows how the components work together in a complete product-style experience.
+
+## The full documentation site
+
+The separately deployed full documentation site contains the broader zudo-sg documentation and is available at [zudo-sg-doc.takazudomodular.com](https://zudo-sg-doc.takazudomodular.com/). The root styleguide keeps its `/docs` section focused on host-specific notes and links there for the complete reference.

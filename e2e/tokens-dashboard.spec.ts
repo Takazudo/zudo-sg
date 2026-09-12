@@ -1,14 +1,47 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
+import { withBase } from "../src/utils/base";
 import {
   UI_DASHBOARD_MODE_DEPENDENT_COUNT,
   UI_DASHBOARD_MODE_INDEPENDENT_COUNT,
   UI_DASHBOARD_TOKEN_COUNT,
 } from "../src/features/styleguide/token-dashboard/dashboard-inventory";
 
-const TOKENS_PATH = "/components/tokens";
+const TOKENS_PATH = withBase("/tokens");
 const PREVIEW_STATE_KEY = "sg-preview-tweak-state-v4";
 const DOC_STATE_KEY = "sg-doc-tweak-state-v4";
 const COLOR_SENTINEL = "oklch(0.42 0.18 210)";
+
+async function expectStandaloneTokensLayout(page: Page): Promise<void> {
+  const sidebar = page.locator("#desktop-sidebar");
+  await expect(sidebar).toHaveClass("sr-only");
+  await expect(sidebar).not.toHaveAttribute("data-zfb-transition-persist");
+  await expect(sidebar.locator("a")).toHaveCount(0);
+
+  const band = page.locator(".zd-doc-content-band");
+  await expect(band).toHaveAttribute("data-zd-nosidebar", "");
+  await expect(band).not.toHaveAttribute("data-zd-wide");
+  await expect(page.locator(".zd-toc-col, .zd-desktop-sidebar-toggle")).toHaveCount(0);
+
+  const geometry = await band.evaluate((element) => {
+    const bounds = element.getBoundingClientRect();
+    const rootFontSize = parseFloat(getComputedStyle(document.documentElement).fontSize);
+    return {
+      maxWidthRem: parseFloat(getComputedStyle(element).maxWidth) / rootFontSize,
+      centerOffset: Math.abs(
+        bounds.left - (document.documentElement.clientWidth - bounds.width) / 2,
+      ),
+    };
+  });
+  expect(geometry.maxWidthRem).toBe(80);
+  expect(geometry.centerOffset).toBeLessThanOrEqual(1);
+
+  const headerNav = page.getByRole("navigation", { name: "Main", exact: true });
+  const tokensLink = headerNav.getByRole("link", { name: "Design Tokens", exact: true });
+  await expect(tokensLink).toHaveAttribute("href", TOKENS_PATH);
+  await expect(tokensLink).toHaveAttribute("aria-current", "page");
+  await expect(headerNav.getByRole("link", { name: "Components", exact: true }))
+    .not.toHaveAttribute("aria-current");
+}
 
 function dashboard(page: Page, mode: "light" | "dark"): Locator {
   return page.locator(
@@ -154,6 +187,7 @@ test("JS-off desktop renders the declared dashboards and their reference geometr
   try {
     const response = await page.goto(TOKENS_PATH);
     expect(response?.status()).toBe(200);
+    await expectStandaloneTokensLayout(page);
 
     const light = dashboard(page, "light");
     const dark = dashboard(page, "dark");
@@ -381,9 +415,30 @@ test("token reference keeps preview editing without legacy listing or copy contr
   await closePanel(page, panel);
 });
 
+test("the tokens mobile drawer opens at the root menu", async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 740 });
+  await page.goto(TOKENS_PATH);
+  // The mobile toggle hydrates when visible; wait for its module before clicking.
+  await page.waitForLoadState("networkidle");
+  await page.getByRole("button", { name: "Open sidebar", exact: true }).click();
+
+  const drawer = page.locator("aside[data-zd-mobile-sidebar]");
+  await expect(drawer.getByRole("link", { name: "Components", exact: true }))
+    .toHaveAttribute("href", withBase("/components"));
+  await expect(drawer.getByRole("link", { name: "Design Tokens", exact: true }))
+    .toHaveAttribute("href", TOKENS_PATH);
+  await expect(drawer.locator(`a[href="${withBase("/components/cta-button")}"]`))
+    .toHaveCount(0);
+});
+
 test("client navigation preserves the document and mounts all dashboards", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
-  await page.goto("/components");
+  await page.goto(withBase("/components"));
+  await expect(page.locator("#desktop-sidebar"))
+    .toHaveAttribute("data-zfb-transition-persist", "sidebar-en-components");
+  await expect(page.locator("#desktop-sidebar").getByRole("link", {
+    name: "Design Tokens", exact: true,
+  })).toHaveCount(0);
   await page.evaluate(() => {
     (window as Window & { __sgSpaMarker?: boolean }).__sgSpaMarker = true;
   });
@@ -405,10 +460,16 @@ test("client navigation preserves the document and mounts all dashboards", async
         );
       }),
   );
-  const tokensLink = page.locator('#desktop-sidebar a[href="/components/tokens"]');
+  const tokensLink = page.getByRole("navigation", { name: "Main", exact: true })
+    .getByRole("link", { name: "Design Tokens", exact: true });
   await expect(tokensLink).toBeVisible();
+  await expect(tokensLink).toHaveAttribute("href", TOKENS_PATH);
   await tokensLink.click();
   await swapped;
+  await expect(page).toHaveURL(
+    (url) => url.pathname.replace(/\/$/, "") === TOKENS_PATH.replace(/\/$/, ""),
+  );
+  await expectStandaloneTokensLayout(page);
 
   expect(
     await page.evaluate(
