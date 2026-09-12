@@ -52,6 +52,7 @@
     "@takazudo/zfb-md-wasm": "2.16.0",
     "@takazudo/zfb-runtime": "2.16.0",
     "@takazudo/zudo-doc": "5.22.0",
+    "@takazudo/zudo-doc-history-server": "5.22.0",
     "@zudo-sg/ui": "workspace:*",
     "diff": "^8.0.4",
     "katex": "^0.16.38",

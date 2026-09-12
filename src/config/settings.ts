@@ -106,11 +106,11 @@ The same library drives a multi-page demo site, so the components can be explore
   packageOwnedRoutes: true as boolean,
   dynamicPageTransition: true as boolean,
   // Host-callables channel for the injected routes: a module exporting
-  // `chromeBindings: ChromeHostBindings`. Only the BodyEndIslands slot is
-  // overridden (the two zdtp token panels + image/mermaid enlarge); every other
-  // slot keeps its package default. Lives under pages/lib/ so it can import the
-  // host BodyEndIslands island chain without dragging pages/* into the src tsc
-  // program. See pages/lib/_chrome-bindings.tsx.
+  // `chromeBindings: ChromeHostBindings`. Binds BodyEndIslands (the two zdtp
+  // token panels + image/mermaid enlarge) and docHistoryMeta (Created / Updated /
+  // Author); every other slot keeps its package default. Lives under pages/lib/
+  // so it can import the host BodyEndIslands island chain without dragging
+  // pages/* into the src tsc program. See pages/lib/_chrome-bindings.tsx.
   chromeBindingsModule: "./pages/lib/_chrome-bindings.tsx" as string,
   aiAssistant: false as boolean,
   aiChatDemoMode: false as boolean,
