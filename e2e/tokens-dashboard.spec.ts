@@ -1,4 +1,9 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
+import {
+  UI_DASHBOARD_MODE_DEPENDENT_COUNT,
+  UI_DASHBOARD_MODE_INDEPENDENT_COUNT,
+  UI_DASHBOARD_TOKEN_COUNT,
+} from "../src/features/styleguide/token-dashboard/dashboard-inventory";
 
 const TOKENS_PATH = "/components/tokens";
 const PREVIEW_STATE_KEY = "sg-preview-tweak-state-v4";
@@ -9,6 +14,16 @@ function dashboard(page: Page, mode: "light" | "dark"): Locator {
   return page.locator(
     `#ui-defaults-${mode}.zdtp-dashboard[data-mode="${mode}"]`,
   );
+}
+
+function sharedDashboard(page: Page): Locator {
+  return page.locator(
+    '#ui-defaults-shared.zdtp-dashboard[data-chrome="host"]',
+  );
+}
+
+function dashboardHeader(dashboardRoot: Locator): Locator {
+  return dashboardRoot.locator(":scope > .zdtp-dashboard__header");
 }
 
 function tokenRow(dashboardRoot: Locator, cssVar: string): Locator {
@@ -90,7 +105,7 @@ async function renderedAlpha(page: Page, color: string): Promise<number> {
   }, color);
 }
 
-test("JS-off desktop renders both declared dashboards and their reference geometry", async ({
+test("JS-off desktop renders the declared dashboards and their reference geometry", async ({
   browser,
   baseURL,
 }) => {
@@ -107,14 +122,26 @@ test("JS-off desktop renders both declared dashboards and their reference geomet
 
     const light = dashboard(page, "light");
     const dark = dashboard(page, "dark");
+    const shared = sharedDashboard(page);
     await expect(light).toBeAttached();
     await expect(dark).toBeAttached();
-    await expect(light.locator("[data-css-var]")).toHaveCount(102);
-    await expect(dark.locator("[data-css-var]")).toHaveCount(102);
+    await expect(shared).toBeAttached();
+    await expect(light.locator("[data-css-var]")).toHaveCount(
+      UI_DASHBOARD_MODE_DEPENDENT_COUNT,
+    );
+    await expect(dark.locator("[data-css-var]")).toHaveCount(
+      UI_DASHBOARD_MODE_DEPENDENT_COUNT,
+    );
+    await expect(shared.locator("[data-css-var]")).toHaveCount(
+      UI_DASHBOARD_MODE_INDEPENDENT_COUNT,
+    );
+    expect(
+      UI_DASHBOARD_MODE_DEPENDENT_COUNT + UI_DASHBOARD_MODE_INDEPENDENT_COUNT,
+    ).toBe(UI_DASHBOARD_TOKEN_COUNT);
 
-    expect(await rulerWidth(light)).toBe(12);
+    expect(await rulerWidth(shared)).toBe(12);
 
-    const neutralNames = await light
+    const neutralNames = await shared
       .locator(".zdtp-dashboard__palette")
       .first()
       .locator("[data-css-var]")
@@ -138,7 +165,7 @@ test("JS-off desktop renders both declared dashboards and their reference geomet
     expect(await renderedAlpha(page, darkAccentColor)).toBe(255);
     expect(lightAccentColor).not.toBe(darkAccentColor);
 
-    const typographySpecimen = light
+    const typographySpecimen = shared
       .locator(".zdtp-dashboard__preview--typography .zdtp-dashboard__sample")
       .first();
     const specimenBox = await typographySpecimen.boundingBox();
@@ -172,10 +199,19 @@ test("JS-off 360px keeps the dashboards in bounds and exposes a keyboard-scrolla
     await page.goto(TOKENS_PATH);
     const light = dashboard(page, "light");
     const dark = dashboard(page, "dark");
+    const shared = sharedDashboard(page);
     await expect(light).toBeAttached();
     await expect(dark).toBeAttached();
-    await expect(light.locator("[data-css-var]")).toHaveCount(102);
-    await expect(dark.locator("[data-css-var]")).toHaveCount(102);
+    await expect(shared).toBeAttached();
+    await expect(light.locator("[data-css-var]")).toHaveCount(
+      UI_DASHBOARD_MODE_DEPENDENT_COUNT,
+    );
+    await expect(dark.locator("[data-css-var]")).toHaveCount(
+      UI_DASHBOARD_MODE_DEPENDENT_COUNT,
+    );
+    await expect(shared.locator("[data-css-var]")).toHaveCount(
+      UI_DASHBOARD_MODE_INDEPENDENT_COUNT,
+    );
 
     expect(
       await page.evaluate(
@@ -183,7 +219,7 @@ test("JS-off 360px keeps the dashboards in bounds and exposes a keyboard-scrolla
       ),
     ).toBe(true);
 
-    const strip = light
+    const strip = shared
       .locator('.zdtp-dashboard__palette-scroll[role="region"][tabindex="0"]')
       .first();
     await expect(strip).toHaveCount(1);
@@ -211,7 +247,20 @@ test("dashboard defaults stay isolated from saved preview and doc-chrome panel s
 }) => {
   await page.goto(TOKENS_PATH);
   const light = dashboard(page, "light");
+  const dark = dashboard(page, "dark");
+  const shared = sharedDashboard(page);
   await expect(light).toBeAttached();
+  await expect(dark).toBeAttached();
+  await expect(shared).toBeAttached();
+  await expect(light.locator("[data-css-var]")).toHaveCount(
+    UI_DASHBOARD_MODE_DEPENDENT_COUNT,
+  );
+  await expect(dark.locator("[data-css-var]")).toHaveCount(
+    UI_DASHBOARD_MODE_DEPENDENT_COUNT,
+  );
+  await expect(shared.locator("[data-css-var]")).toHaveCount(
+    UI_DASHBOARD_MODE_INDEPENDENT_COUNT,
+  );
 
   const accentSample = tokenRow(light, "--color-accent").locator(
     ".zdtp-dashboard__sample--color",
@@ -278,7 +327,7 @@ test("dashboard defaults stay isolated from saved preview and doc-chrome panel s
       ),
     ),
   ).toBe(declaredAccent);
-  expect(await rulerWidth(postDocDashboard)).toBe(12);
+  expect(await rulerWidth(sharedDashboard(page))).toBe(12);
 
   await page.evaluate(() => localStorage.clear());
 });
@@ -313,9 +362,13 @@ test("live token clicks copy real values while declared dashboards stay outside 
     .poll(() => page.evaluate(() => navigator.clipboard.readText()))
     .toBe(`var(${varName})`);
 
-  for (const mode of ["light", "dark"] as const) {
-    const rows = dashboard(page, mode).locator("[data-css-var]");
-    await expect(rows).toHaveCount(102);
+  for (const [root, expectedCount] of [
+    [dashboard(page, "light"), UI_DASHBOARD_MODE_DEPENDENT_COUNT],
+    [dashboard(page, "dark"), UI_DASHBOARD_MODE_DEPENDENT_COUNT],
+    [sharedDashboard(page), UI_DASHBOARD_MODE_INDEPENDENT_COUNT],
+  ] as const) {
+    const rows = root.locator("[data-css-var]");
+    await expect(rows).toHaveCount(expectedCount);
     expect(
       await rows.evaluateAll((elements) =>
         elements.some((element) => element.hasAttribute("data-sg-token")),
@@ -329,7 +382,7 @@ test("live token clicks copy real values while declared dashboards stay outside 
   }
 });
 
-test("client navigation preserves the document and mounts both dashboards", async ({ page }) => {
+test("client navigation preserves the document and mounts all dashboards", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/components");
   await page.evaluate(() => {
@@ -365,9 +418,19 @@ test("client navigation preserves the document and mounts both dashboards", asyn
   ).toBe(true);
   const light = dashboard(page, "light");
   const dark = dashboard(page, "dark");
+  const shared = sharedDashboard(page);
   await expect(light).toBeAttached();
   await expect(dark).toBeAttached();
-  await expect(light.locator("[data-css-var]")).toHaveCount(102);
+  await expect(shared).toBeAttached();
+  await expect(light.locator("[data-css-var]")).toHaveCount(
+    UI_DASHBOARD_MODE_DEPENDENT_COUNT,
+  );
+  await expect(dark.locator("[data-css-var]")).toHaveCount(
+    UI_DASHBOARD_MODE_DEPENDENT_COUNT,
+  );
+  await expect(shared.locator("[data-css-var]")).toHaveCount(
+    UI_DASHBOARD_MODE_INDEPENDENT_COUNT,
+  );
   expect(
     await light.evaluate((root) => getComputedStyle(root).borderRadius),
   ).toBe("10px");
@@ -385,7 +448,9 @@ test("blocking the combined stylesheet leaves dashboard HTML but removes its sty
   await page.goto(TOKENS_PATH);
   const light = dashboard(page, "light");
   await expect(light).toBeAttached();
-  await expect(light.locator("[data-css-var]")).toHaveCount(102);
+  await expect(light.locator("[data-css-var]")).toHaveCount(
+    UI_DASHBOARD_MODE_DEPENDENT_COUNT,
+  );
   expect(
     await light.evaluate((root) => getComputedStyle(root).borderRadius),
   ).not.toBe("10px");
@@ -404,8 +469,10 @@ test("site theme changes the host while each dashboard keeps its own chrome", as
   await page.goto(TOKENS_PATH);
   const light = dashboard(page, "light");
   const dark = dashboard(page, "dark");
+  const shared = sharedDashboard(page);
   await expect(light).toBeAttached();
   await expect(dark).toBeAttached();
+  await expect(shared).toBeAttached();
 
   const html = page.locator("html");
   const themeToggle = page.locator('button[aria-label^="Switch to "]:visible').first();
@@ -419,11 +486,13 @@ test("site theme changes the host while each dashboard keeps its own chrome", as
   const hostLightBackground = await page.locator("body").evaluate(
     (body) => getComputedStyle(body).backgroundColor,
   );
-  const lightChrome = await computedBackground(light);
-  const darkChrome = await computedBackground(dark);
+  const lightChrome = await computedBackground(dashboardHeader(light));
+  const darkChrome = await computedBackground(dashboardHeader(dark));
+  const sharedLightChrome = await computedBackground(dashboardHeader(shared));
   expect(darkChrome).not.toBe(lightChrome);
   await expect(light).toHaveAttribute("data-chrome", "light");
   await expect(dark).toHaveAttribute("data-chrome", "dark");
+  await expect(shared).toHaveAttribute("data-chrome", "host");
 
   await themeToggle.click();
   await expect(html).toHaveAttribute("data-theme", "dark");
@@ -436,10 +505,13 @@ test("site theme changes the host while each dashboard keeps its own chrome", as
     .poll(() => page.locator("body").evaluate((body) => getComputedStyle(body).backgroundColor))
     .not.toBe(hostLightBackground);
 
-  expect(await computedBackground(light)).toBe(lightChrome);
-  expect(await computedBackground(dark)).toBe(darkChrome);
-  const darkInventory = dark.locator(".zdtp-dashboard__inventory");
+  expect(await computedBackground(dashboardHeader(light))).toBe(lightChrome);
+  expect(await computedBackground(dashboardHeader(dark))).toBe(darkChrome);
+  expect(await computedBackground(dashboardHeader(shared))).not.toBe(
+    sharedLightChrome,
+  );
+  const darkRegion = dark.locator('.zdtp-dashboard__region[data-scheme="dark"]');
   expect(
-    await darkInventory.evaluate((inventory) => getComputedStyle(inventory).colorScheme),
+    await darkRegion.evaluate((region) => getComputedStyle(region).colorScheme),
   ).toBe("dark");
 });

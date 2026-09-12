@@ -60,7 +60,15 @@ Keep this module importable by plain Node during a build. Its runtime dependency
 
 ## Static token dashboard
 
-The `/components/tokens` page renders two server-rendered `TokenDashboard` instances, one for each declared mode. They do not use a client island, panel state, browser globals, or hydration: the light and dark views are read-only inventories of `@zudo-sg/ui` declared defaults. The page uses the shared `uiDashboardTabs` data and `dashboardPreviewOverrides`, then gives the instances the stable IDs `ui-defaults-light` and `ui-defaults-dark` and the titles **UI tokens — declared defaults (light)** and **UI tokens — declared defaults (dark)**.
+The `/components/tokens` page renders three server-rendered `TokenDashboard` instances. They do not use a client island, panel state, browser globals, or hydration: the light and dark views use `include="mode-dependent"` and show only rows whose declared values differ by mode, while the shared view uses `include="mode-independent"` and shows every other row once. The page uses the shared `uiDashboardTabs` data and `dashboardPreviewOverrides`, then gives the instances these stable IDs and titles:
+
+| ID | `TokenDashboard` props | Title |
+| --- | --- | --- |
+| `ui-defaults-light` | `mode="light"`, `chrome="light"`, `include="mode-dependent"` | **UI tokens — mode-dependent defaults (light)** |
+| `ui-defaults-dark` | `mode="dark"`, `chrome="dark"`, `include="mode-dependent"` | **UI tokens — mode-dependent defaults (dark)** |
+| `ui-defaults-shared` | `chrome="host"`, `include="mode-independent"` | **UI tokens — shared defaults (mode-independent)** |
+
+The shared view follows the site theme, and all three views remain read-only inventories of `@zudo-sg/ui` declared defaults.
 
 Dashboard styling is delivered through the host CSS pipeline with `@import "@takazudo/zdtp/dashboard/styles.css"` in `src/styles/global.css`. This is separate from the panel's self-injected stylesheet. Loading the dashboard stylesheet through a per-page public asset would require a copy step for development and production and would introduce base-URL handling, so the public-asset alternative was rejected.
 

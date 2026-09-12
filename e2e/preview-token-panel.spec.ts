@@ -486,6 +486,15 @@ test("preview panel: Export emits zdtp schema; Load-from-JSON restores overrides
   const textarea = importModal.locator("textarea").first();
   await textarea.fill(exportedJson);
 
+  // zdtp 0.8.0 gates loading behind its scoped import flow: analyze the JSON
+  // first, then leave the default tabs/options selected and load it.
+  await importModal
+    .getByRole("button", { name: "Analyze", exact: true })
+    .click();
+  await expect(
+    importModal.getByRole("heading", { name: "Import scope", exact: true }),
+  ).toBeVisible({ timeout: 5_000 });
+
   // Click the "Load" confirm button inside the import modal.
   const loadConfirmBtn = importModal.getByRole("button", {
     name: "Load",
