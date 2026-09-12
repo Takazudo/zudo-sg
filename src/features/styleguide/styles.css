@@ -116,7 +116,11 @@
     margin-block-start: 0; /* cancel base margin-block so the border-top divider sits flush */
     border-left: 0;
     border-top: 1px solid var(--color-border);
-    padding-left: 0;
+    padding-inline: var(--spacing-hsp-xl);
+
+    @media (min-width: 1024px) {
+      padding-inline: var(--spacing-hsp-2xl);
+    }
   }
   #sg-code-panel [data-sg-code-panel-resizer] {
     display: none;
