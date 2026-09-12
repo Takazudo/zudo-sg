@@ -21,6 +21,7 @@ describe("root zfb integration contract", () => {
       "@takazudo/zudo-doc/plugins/search-index",
       "@takazudo/zudo-doc/plugins/theme-packs",
       "@takazudo/zudo-doc/plugins/llms-txt",
+      "@takazudo/zudo-doc/plugins/img-src-check",
       "./plugins/zdtp-apply-proxy-plugin.mjs",
     ]);
   });
