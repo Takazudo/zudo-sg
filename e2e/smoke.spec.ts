@@ -83,7 +83,7 @@ test("guide docs page returns 200", async ({ page }) => {
 
 // ── Styleguide /components routes ────────────────────────────────────────────
 // Wave 2 (#49): smoke checks for the component catalog, a detail page,
-// the token playground, and at least one preview iframe load.
+// the token reference, and at least one preview iframe load.
 
 test("/components catalog renders and includes the filter island marker", async ({ page }) => {
   const response = await page.goto("/components");
