@@ -60,7 +60,7 @@ Keep this module importable by plain Node during a build. Its runtime dependency
 
 ## Static token dashboard
 
-The `/components/tokens` page renders three server-rendered `TokenDashboard` instances. They do not use a client island, panel state, browser globals, or hydration: the light and dark views use `include="mode-dependent"` and show only rows whose declared values differ by mode, while the shared view uses `include="mode-independent"` and shows every other row once. The page uses the shared `uiDashboardTabs` data and `dashboardPreviewOverrides`, then gives the instances these stable IDs and titles:
+The `/tokens` page renders three server-rendered `TokenDashboard` instances. They do not use a client island, panel state, browser globals, or hydration: the light and dark views use `include="mode-dependent"` and show only rows whose declared values differ by mode, while the shared view uses `include="mode-independent"` and shows every other row once. The page uses the shared `uiDashboardTabs` data and `dashboardPreviewOverrides`, then gives the instances these stable IDs and titles:
 
 | ID | `TokenDashboard` props | Title |
 | --- | --- | --- |

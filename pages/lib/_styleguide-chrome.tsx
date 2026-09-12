@@ -2,7 +2,7 @@
 /** @jsxImportSource preact */
 // Shared chrome-slot builder for the host-owned styleguide routes (#113).
 //
-// The three /components pages (index, [slug], tokens) each composed the same
+// The catalog, component detail, and /tokens pages each compose the same
 // four DocLayout chrome slots — head / header / footer / bodyEnd — from the
 // pages/lib/* defaults, differing only in title, current path, and active
 // slug. That ~30-line block is centralised here so the pages stay focused on
@@ -32,6 +32,8 @@ export interface StyleguideChromeOptions {
   currentPath: string;
   /** Active styleguide slug for the sidebar highlight. */
   activeSlug: string;
+  /** Use the root mobile menu when the page hides its component sidebar. */
+  hideSidebar?: boolean;
 }
 
 export interface StyleguideChromeSlots {
@@ -42,15 +44,16 @@ export interface StyleguideChromeSlots {
 }
 
 /**
- * Build the four DocLayout chrome slots shared by every /components page.
- * The styleguide mobile drawer uses the registry-built `navNodes` tree (not the
- * docs collection), so the header always gets `sidebarNodesOverride={navNodes}`.
+ * Build the four DocLayout chrome slots shared by the styleguide routes.
+ * Component pages use the registry-built `navNodes` tree in their mobile drawer.
+ * Standalone pages omit that override so the drawer shows the root menu.
  */
 export function buildStyleguideChrome({
   lang,
   pageTitle,
   currentPath,
   activeSlug,
+  hideSidebar = false,
 }: StyleguideChromeOptions): StyleguideChromeSlots {
   return {
     head: <HeadWithDefaults title={pageTitle} />,
@@ -58,8 +61,8 @@ export function buildStyleguideChrome({
       <HeaderWithDefaults
         lang={lang}
         currentPath={currentPath}
-        sidebarNodesOverride={navNodes}
-        currentSlug={activeSlug}
+        {...(!hideSidebar ? { sidebarNodesOverride: navNodes } : {})}
+        currentSlug={hideSidebar ? undefined : activeSlug}
       />
     ),
     footer: <FooterWithDefaults lang={lang} />,
