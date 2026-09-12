@@ -55,7 +55,7 @@ describe("root zfb integration contract", () => {
     expect(routeSettings).toEqual({ ...settings, designTokenPanel: false });
     expect(settings).toMatchObject({
       logo: "auto",
-      entryDocSlug: "guide",
+      entryDocSlug: "overview",
       tocToggle: true,
       versions: [],
     });

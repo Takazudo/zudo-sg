@@ -11,7 +11,7 @@ A pnpm-workspace monorepo producing four artifacts from one shared component lib
 - **`packages/ui`** — shared Preact component library (single source of truth)
 - **`apps/demo`** — demo marketing site → `https://zudo-sg-demo-site.takazudomodular.com/`
 
-The root site intentionally keeps `/docs` slim: it contains a short Guide for
+The root site intentionally keeps `/docs` slim: it contains a short Overview for
 styleguide-specific workflows and links to the full documentation site. The
 `doc/` workspace owns generated Claude resources and the doc-lookup skill
 wiring.
