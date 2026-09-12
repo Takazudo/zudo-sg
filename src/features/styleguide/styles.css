@@ -259,8 +259,7 @@
 /* --- Detail-page workbench toolbar ---------------------------------------- */
 /* One page-level toolbar owns theme / viewport / layout / code-panel /
  * preview-tokens for every stage below it (see preview/detail-workbench.tsx).
- * Shares the shape of `.sg-token-toolbar` below; both are page-level control
- * strips, so they read as the same object. */
+ */
 .sg-workbench-toolbar {
   display: flex;
   flex-wrap: wrap;
@@ -288,115 +287,9 @@
   }
 }
 
-/* --- Token playground toolbar + toast ------------------------------------- */
-.sg-token-toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--spacing-hsp-lg);
-  margin-bottom: var(--spacing-vsp-lg);
-  padding: var(--spacing-vsp-sm) var(--spacing-hsp-md);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  background: var(--color-surface);
-}
-.sg-token-modes {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--spacing-hsp-xs);
-}
-.sg-token-toast {
-  margin-left: auto;
-  padding: var(--spacing-vsp-3xs) var(--spacing-hsp-sm);
-  border-radius: var(--radius-sm);
-  background: var(--color-fg);
-  color: var(--color-bg);
-  font-size: var(--text-caption);
-  opacity: 0;
-  transform: translateY(var(--spacing-vsp-3xs));
-  pointer-events: none;
-  transition:
-    opacity 0.18s ease,
-    transform 0.18s ease;
-}
-.sg-token-toast[data-visible] {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-/* --- Token cards (color) + rows (spacing/type) — clickable to copy --------- */
-.sg-token-card {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-vsp-2xs);
-  padding: var(--spacing-hsp-sm);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-DEFAULT);
-  background: var(--color-surface);
-  text-align: left;
-  cursor: pointer;
-  transition:
-    border-color 0.15s ease,
-    box-shadow 0.15s ease;
-}
-@media (hover: hover) {
-  .sg-token-card:hover {
-    /* Under the styleguide accent budget, resting hover is neutral — the
-     * border-ladder step-up gives the same affordance without spending it. */
-    border-color: var(--color-border-strong);
-  }
-}
-.sg-token-card:focus-visible {
-  outline: 2px solid var(--color-focus);
-  outline-offset: 2px;
-}
-.sg-token-swatch {
-  display: block;
-  width: 100%;
-  height: 3rem;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--color-border);
-}
-.sg-token-card-meta {
-  display: flex;
-  flex-direction: column;
-}
-
-.sg-token-row {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-hsp-md);
-  padding: var(--spacing-vsp-3xs) var(--spacing-hsp-sm);
-  border: 1px solid transparent;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  text-align: left;
-  cursor: pointer;
-  transition:
-    background-color 0.15s ease,
-    border-color 0.15s ease;
-}
-.sg-token-row--baseline {
-  align-items: baseline;
-}
-@media (hover: hover) {
-  .sg-token-row:hover {
-    background: var(--color-surface-2);
-    border-color: var(--color-border);
-  }
-}
-.sg-token-row:focus-visible {
-  outline: 2px solid var(--color-focus);
-  outline-offset: 2px;
-}
-
 @media (prefers-reduced-motion: reduce) {
   .sg-copy-btn,
   .sg-chip,
-  .sg-token-card,
-  .sg-token-row,
-  .sg-token-toast,
   .sg-search-field {
     transition: none;
   }

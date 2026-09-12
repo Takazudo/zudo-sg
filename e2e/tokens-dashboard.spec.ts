@@ -351,54 +351,18 @@ test("dashboard defaults stay isolated from saved preview and doc-chrome panel s
   await page.evaluate(() => localStorage.clear());
 });
 
-test("live token clicks copy real values while declared dashboards stay outside the live area", async ({
-  page,
-}) => {
-  await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
+test("token reference keeps preview editing without legacy listing or copy controls", async ({ page }) => {
   await page.goto(TOKENS_PATH);
+  await expect(page.locator(".zdtp-dashboard")).toHaveCount(3);
+  await expect(page.locator("[data-sg-tokens-root], [data-sg-token]")).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Live values (host cascade)", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("group", { name: "Copy format" })).toHaveCount(0);
 
-  const liveRoot = page.locator("[data-sg-tokens-root]");
-  await expect(liveRoot.locator(".zdtp-dashboard")).toHaveCount(0);
-  const firstToken = liveRoot.locator("[data-sg-token]").first();
-  await expect(firstToken).toBeVisible();
-  const varName = await firstToken.getAttribute("data-var");
-  expect(varName).toMatch(/^--[a-z0-9-]+$/);
-
-  await firstToken.click();
-  const toast = page.locator('.sg-token-toast[data-visible="true"]');
-  await expect(toast).toBeVisible();
-  const resolvedValue = await page.evaluate(() => navigator.clipboard.readText());
-  expect(resolvedValue.trim()).not.toBe("");
-  expect(resolvedValue).not.toMatch(/^var\(/);
-
-  const copyFormat = page.getByRole("group", { name: "Copy format" });
-  const varMode = copyFormat.getByRole("button", { name: "var(--token)", exact: true });
-  await varMode.click();
-  await expect(varMode).toHaveAttribute("aria-pressed", "true");
-  await firstToken.click();
-  await expect(toast).toBeVisible();
-  await expect
-    .poll(() => page.evaluate(() => navigator.clipboard.readText()))
-    .toBe(`var(${varName})`);
-
-  for (const [root, expectedCount] of [
-    [dashboard(page, "light"), UI_DASHBOARD_MODE_DEPENDENT_COUNT],
-    [dashboard(page, "dark"), UI_DASHBOARD_MODE_DEPENDENT_COUNT],
-    [sharedDashboard(page), UI_DASHBOARD_MODE_INDEPENDENT_COUNT],
-  ] as const) {
-    const rows = root.locator("[data-css-var]");
-    await expect(rows).toHaveCount(expectedCount);
-    expect(
-      await rows.evaluateAll((elements) =>
-        elements.some((element) => element.hasAttribute("data-sg-token")),
-      ),
-    ).toBe(false);
-    expect(
-      await rows.evaluateAll((elements) =>
-        elements.some((element) => (element.getAttribute("title") ?? "").startsWith("Click to copy")),
-      ),
-    ).toBe(false);
-  }
+  await page.getByRole("button", { name: "Preview tokens →", exact: true }).click();
+  const panel = page.locator(".tokenpanel-shell").first();
+  await expect(panel).toBeVisible();
+  await expect(panel.getByRole("tab", { name: "Color", exact: true })).toBeVisible();
+  await closePanel(page, panel);
 });
 
 test("client navigation preserves the document and mounts all dashboards", async ({ page }) => {

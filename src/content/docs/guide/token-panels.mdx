@@ -51,7 +51,7 @@ Its **Palette** tab exposes the raw Tier-1 colors as grouped `neutral`, `accent`
 
 The `/components/tokens` page starts with three static dashboards under **Declared defaults**. The `ui-defaults-light` and `ui-defaults-dark` instances, titled **UI tokens — mode-dependent defaults (light)** and **UI tokens — mode-dependent defaults (dark)**, use `include="mode-dependent"` to show the rows whose declared values differ by mode. The `ui-defaults-shared` instance, titled **UI tokens — shared defaults (mode-independent)**, uses `include="mode-independent"` and `chrome="host"` to show every other row once while following the site theme. They are read-only reference views with grouped palette strips, actual-size spacing rulers, and multiline typography specimens.
 
-The dashboards are isolated from both token panels and from saved tweaks. Editing either panel never changes these declared-default views. The live click-to-copy rows below them are a separate **Live values (host cascade)** area; those rows resolve values from the page's own `:root`, so they can reflect host-cascade values rather than the dashboard's declared UI defaults.
+The dashboards are isolated from both token panels and from saved tweaks. Editing either panel never changes these declared-default views. Use **Preview tokens →** above the dashboards to open the component-preview panel. The page is a declared-default reference; it does not list or copy live host-cascade values.
 
 For the component's API and the build-safe static-rendering pattern, see the [TokenDashboard reference](https://zdtp.zudolab.dev/docs/reference/token-dashboard/) and [static token dashboard recipe](https://zdtp.zudolab.dev/docs/recipes/static-token-dashboard/).
 
