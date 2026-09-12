@@ -1,4 +1,4 @@
-# Zudo Sg
+# zudo-sg
 
 Documentation site built with [zudo-doc](https://github.com/zudolab/zudo-doc) — a zfb-based documentation framework with MDX, Tailwind CSS v4, and Preact islands.
 
