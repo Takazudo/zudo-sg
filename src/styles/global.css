@@ -648,6 +648,7 @@ body {
 /* ========================================
  * Desktop sidebar toggle (W7A: unconditional — feature gates at runtime)
  * ======================================== */
+/* Duplicates @takazudo/zudo-doc/features.css; cleanup is a separate task. */
 
 @media (min-width: 1024px) {
   #desktop-sidebar {

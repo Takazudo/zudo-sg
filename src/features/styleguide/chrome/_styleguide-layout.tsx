@@ -32,6 +32,8 @@
 //                     `pages/lib/_sidebar-with-defaults.tsx` does — an override
 //                     slot is responsible for its own hydration marker (see
 //                     @takazudo/zudo-doc sidebar.d.ts).
+//   afterSidebar    → the package sidebar-toggle prepaint factory, which owns
+//                     the load island; its visibility script extends `head`.
 //   tocOverride     → the right-region CodeMirror code panel on detail pages
 //                     (#49). `<></>` (and `hideToc`) when absent so the content
 //                     band fills the freed width.
@@ -59,7 +61,15 @@ import { settings } from "@/config/settings";
 import { defaultLocale, type Locale } from "@/config/i18n";
 import { navNodes } from "@/styleguide/data/nav-nodes";
 import { SidebarTree } from "@takazudo/zudo-doc/sidebar-tree-island";
+import {
+  createSidebarPrepaint,
+  createSidebarVisibilityPrepaint,
+} from "@takazudo/zudo-doc/sidebar-prepaint";
 import { PanelStateHeadScript, PanelResizersInitScript } from "./panel-scripts";
+
+const sidebarToggleSettings = { sidebarToggle: settings.sidebarToggle };
+const SidebarPrepaint = createSidebarPrepaint(sidebarToggleSettings);
+const SidebarVisibilityPrepaint = createSidebarVisibilityPrepaint(sidebarToggleSettings);
 
 export interface StyleguideLayoutProps {
   /**
@@ -144,6 +154,7 @@ export function StyleguideLayout({
   const composedHead = (
     <>
       {head}
+      <SidebarVisibilityPrepaint hideSidebar={hideSidebar} />
       <PanelStateHeadScript />
     </>
   );
@@ -168,6 +179,7 @@ export function StyleguideLayout({
       {...(!hideSidebar ? { sidebarPersistKey: `sidebar-${lang}-components` } : {})}
       headerOverride={header}
       sidebarOverride={sidebarOverride}
+      afterSidebar={<SidebarPrepaint hideSidebar={hideSidebar} />}
       tocOverride={tocOverride}
       footerOverride={footer}
       bodyEndComponents={composedBodyEnd}
