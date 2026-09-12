@@ -5,16 +5,20 @@
 // `settings.chromeBindingsModule` points the zudo-doc routes plugin at this
 // module; it re-exports `chromeBindings` into `virtual:zudo-doc-chrome-bindings`,
 // which the injected chrome shim spreads into
-// `createChrome(routeCtx, { DocHistory, ...chromeBindings })`. Every slot we
+// `createChrome(routeCtx, { ...chromeBindings, DocHistory })`. Every slot we
 // omit keeps its package default (byte-identical to the un-bound injected path).
 //
-// We override ONE slot: BodyEndIslands. The package default explicitly excludes
+// We override BodyEndIslands. The package default explicitly excludes
 // the host token-panel bootstraps (it ships only the settings-derived package
 // islands), but this project mounts TWO custom zdtp panels — the doc-chrome
 // panel (`toggle-sg-doc-tweak`, opened by the header Design Tokens icon) and the
 // preview panel (`toggle-preview-token-panel`) — plus image/mermaid enlarge and
 // the sidebar-resizer init. All of that lives in `_body-end-islands.tsx`, so we
 // thread it verbatim here to preserve doc-page behaviour.
+//
+// docHistoryMeta supplies the slug-keyed metadata written by the doc-history
+// preBuild hook so the package can render Created / Updated / Author. The host
+// plugin serializes it for the renderer, keeping node:fs out of the page graph.
 //
 // Island registration (ADR "route-injection-seam.md", §Host-callables channel):
 // client islands reached ONLY through this virtual re-export are NOT guaranteed
@@ -29,6 +33,7 @@
 import type { ChromeHostBindings } from "@takazudo/zudo-doc/factory-context";
 import { settings } from "@/config/settings";
 import { BodyEndIslands } from "./_body-end-islands";
+import { docHistoryMeta } from "virtual:zudo-sg-doc-history-meta";
 
 // The package chrome calls the BodyEndIslands slot as a bare component; bind the
 // host `basePath` here (only consumed by the aiAssistant-gated modal, off in
@@ -39,4 +44,5 @@ const BodyEndIslandsBound: ChromeHostBindings["BodyEndIslands"] = (props) =>
 
 export const chromeBindings: ChromeHostBindings = {
   BodyEndIslands: BodyEndIslandsBound,
+  docHistoryMeta,
 };
