@@ -74,11 +74,11 @@ The section supplies zdtp's four public light/dark background and foreground inp
 
 Dashboard styling is delivered through the host CSS pipeline with `@import "@takazudo/zdtp/dashboard/styles.css"` in `src/styles/global.css`. This is separate from the panel's self-injected stylesheet. Loading the dashboard stylesheet through a per-page public asset would require a copy step for development and production and would introduce base-URL handling, so the public-asset alternative was rejected.
 
-The dashboard and the live token rows represent different token domains. The dashboards show declared `@zudo-sg/ui` defaults for light and dark mode. The live rows below them show values resolved from the host page's `:root`, which belongs to the documentation chrome cascade. The root manifest's spacing and font rows therefore cannot stand in for the UI package defaults: equal names or units do not make those declarations interchangeable.
+The page uses zdtp dashboards as its only token listing. The former host-cascade rows and copy controls have been removed; a small `PreviewTokensButton` island above the dashboards opens the existing preview panel. The root manifest still supplies the doc-chrome panel and remains separate from the UI dashboard inventory.
 
 `dashboardPreviewOverrides` is passed through the dashboard's `previewOverrides` prop to make the static samples explicit. The `light-dark()` semantic color rows receive color samples even though their panel editor entries are text declarations, and shadow declarations receive shadow samples. `previewBase: "--text-base"` supplies the shared font-size base for the line-height tiers. The API accepts a tier-level base, so it cannot select a different base for every `font-size-lh` row; this is the deliberate compromise for those per-size leading samples.
 
-The handmade renderers remain for now. A planned follow-up can remove them once the dashboard reaches parity with their useful coverage or a product decision sets a different reference surface. See the upstream [TokenDashboard reference](https://zdtp.zudolab.dev/docs/reference/token-dashboard/) and [static token dashboard recipe](https://zdtp.zudolab.dev/docs/recipes/static-token-dashboard/) for the component and static-rendering contracts.
+See the upstream [TokenDashboard reference](https://zdtp.zudolab.dev/docs/reference/token-dashboard/) and [static token dashboard recipe](https://zdtp.zudolab.dev/docs/recipes/static-token-dashboard/) for the component and static-rendering contracts.
 
 ## Panel tier previews
 

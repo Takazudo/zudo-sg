@@ -10,7 +10,7 @@ The styleguide ships two independent design-token panels. Each one edits a diffe
 
 | | Doc-chrome panel | Preview panel |
 |---|---|---|
-| **Trigger** | **Design Tokens** icon (sliders glyph) in the header — shown on **every** page, docs and styleguide alike | **Preview tokens** button (stacked-frames glyph) in a component detail page's workbench toolbar (`/components/<slug>`); also a "Preview tokens →" button on the `/components/tokens` toolbar |
+| **Trigger** | **Design Tokens** icon (sliders glyph) in the header — shown on **every** page, docs and styleguide alike | **Preview tokens** button (stacked-frames glyph) in a component detail page's workbench toolbar (`/components/<slug>`); also a "Preview tokens →" button above the dashboards on `/components/tokens` |
 | **What it edits** | The documentation site's own UI | The `@zudo-sg/ui` component tokens inside preview iframes |
 | **Where applied** | Host `<html>` `:root` | Preview iframes only |
 | **localStorage prefix** | `sg-doc-tweak` | `sg-preview-tweak` |
@@ -33,7 +33,7 @@ Use this panel when you want to adjust or export the documentation site's design
 
 ## Preview panel (Preview tokens)
 
-Click the **Preview tokens** button (the stacked-frames glyph) in a component detail page's workbench toolbar, or the "Preview tokens →" button on the `/components/tokens` toolbar, to open this panel.
+Click the **Preview tokens** button (the stacked-frames glyph) in a component detail page's workbench toolbar, or the "Preview tokens →" button above the dashboards on `/components/tokens`, to open this panel.
 
 The preview panel edits the `@zudo-sg/ui` design tokens — `--color-*`, `--spacing-*`, `--font-*`, `--radius-*`, `--shadow-*`. Instead of writing to the host `:root`, every change is sent directly into each registered preview iframe's `:root` via zudo-doc's theme bridge.
 
@@ -51,7 +51,7 @@ Its **Palette** tab exposes the raw Tier-1 colors as grouped `neutral`, `accent`
 
 The `/components/tokens` page starts with three static dashboards under **Declared defaults**. The `ui-defaults-light` and `ui-defaults-dark` instances, titled **UI tokens — mode-dependent defaults (light)** and **UI tokens — mode-dependent defaults (dark)**, use `include="mode-dependent"` to show the rows whose declared values differ by mode. The `ui-defaults-shared` instance, titled **UI tokens — shared defaults (mode-independent)**, uses `include="mode-independent"` and `chrome="host"` to show every other row once while following the site theme. They are read-only reference views with grouped palette strips, actual-size spacing rulers, and multiline typography specimens.
 
-The dashboards are isolated from both token panels and from saved tweaks. Editing either panel never changes these declared-default views. The live click-to-copy rows below them are a separate **Live values (host cascade)** area; those rows resolve values from the page's own `:root`, so they can reflect host-cascade values rather than the dashboard's declared UI defaults.
+The dashboards are isolated from both token panels and from saved tweaks. Editing either panel never changes these declared-default views. Use **Preview tokens →** above the dashboards to open the component-preview panel. The page is a declared-default reference; it does not list or copy live host-cascade values.
 
 For the component's API and the build-safe static-rendering pattern, see the [TokenDashboard reference](https://zdtp.zudolab.dev/docs/reference/token-dashboard/) and [static token dashboard recipe](https://zdtp.zudolab.dev/docs/recipes/static-token-dashboard/).
 

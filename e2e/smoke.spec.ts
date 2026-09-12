@@ -83,7 +83,7 @@ test("guide docs page returns 200", async ({ page }) => {
 
 // ── Styleguide /components routes ────────────────────────────────────────────
 // Wave 2 (#49): smoke checks for the component catalog, a detail page,
-// the token playground, and at least one preview iframe load.
+// the token reference, and at least one preview iframe load.
 
 test("/components catalog renders and includes the filter island marker", async ({ page }) => {
   const response = await page.goto("/components");
@@ -190,22 +190,13 @@ test("/components/<slug> detail page preview iframe loads", async ({ page }) => 
   await expect(iframe).toBeAttached({ timeout: 15_000 });
 });
 
-test("/components/tokens renders design-token playground", async ({ page }) => {
+test("/components/tokens renders the token reference and preview control", async ({ page }) => {
   const response = await page.goto("/components/tokens");
   expect(response?.status()).toBe(200);
-
-  // The page heading should be visible.
-  const heading = page.locator("h1").first();
-  await expect(heading).toBeVisible();
-
-  // The SSR token-grid root should be present (TokenPlayground island
-  // delegates click events against it).
-  const tokensRoot = page.locator("[data-sg-tokens-root]");
-  await expect(tokensRoot).toBeAttached();
-
-  // At least one token swatch (color section) should be rendered SSR.
-  const firstToken = page.locator("[data-sg-token]").first();
-  await expect(firstToken).toBeAttached();
+  await expect(page.locator("h1").first()).toBeVisible();
+  await expect(page.locator(".zdtp-dashboard")).toHaveCount(3);
+  await expect(page.getByRole("button", { name: "Preview tokens →", exact: true })).toBeVisible();
+  await expect(page.locator("[data-sg-tokens-root], [data-sg-token]")).toHaveCount(0);
 });
 
 test("styleguide sidebar preserves DOM identity and scroll across page transitions", async ({
