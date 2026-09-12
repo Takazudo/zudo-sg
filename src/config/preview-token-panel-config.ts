@@ -67,7 +67,7 @@ export const previewTokenPanelConfig: PanelConfig = {
   // event will NOT open this panel, and dispatching this event will NOT open
   // the doc-chrome panel.
   toggleEvent: "toggle-preview-token-panel",
-  // This is a public site: the /components/tokens page dispatches
+  // This is a public site: the /tokens page dispatches
   // "toggle-preview-token-panel" for every visitor, so default `true` would
   // arm owner-mode autoload for whoever opens it (README §10.1).
   autoRememberOnOpen: false,
