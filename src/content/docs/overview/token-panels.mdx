@@ -31,6 +31,12 @@ Use this panel when you want to adjust or export the documentation site's design
   Changes in this panel affect only the docs chrome — they do not reach the component previews in the iframes.
 </Note>
 
+## Saved override scoping
+
+Doc-chrome **Color** overrides are stored per scheme identity — **Default Light** and **Default Dark** — in the `color` slice of the `sg-doc-tweak-state-v4` envelope. Editing one mode therefore never replaces the other mode's saved mapping. **Palette**, **Spacing**, **Font**, and **Size** overrides are shared across modes within the active theme pack; non-default theme packs use the `sg-doc-tweak--<pack>` storage prefix.
+
+The preview panel's colors are unkeyed by design. Its `ui-color` tab is a generic tab: the `@zudo-sg/ui` family-named palette and `light-dark()` tokens do not fit zdtp's ramp-reference **Color** cluster, so adopting scheme scoping there would require redesigning its color model. The similar names are a coincidence: `settings.colorMode` detects doc-chrome schemes, while zdtp's `panelSettings.colorMode` controls the persisted **Color** identity; they are unrelated.
+
 ## Preview panel (Preview tokens)
 
 Click the **Preview tokens** button (the stacked-frames glyph) in a component detail page's workbench toolbar, or the "Preview tokens →" button above the dashboards on `/tokens`, to open this panel.
