@@ -18,6 +18,7 @@ describe("root zfb integration contract", () => {
   it("keeps preset plugins first and appends the token-panel proxy", () => {
     expect(config.plugins?.map(({ name }) => name)).toEqual([
       "@takazudo/zudo-doc/plugins/routes",
+      "@takazudo/zudo-doc/plugins/doc-history",
       "@takazudo/zudo-doc/plugins/search-index",
       "@takazudo/zudo-doc/plugins/theme-packs",
       "@takazudo/zudo-doc/plugins/llms-txt",
@@ -52,9 +53,9 @@ describe("root zfb integration contract", () => {
 
     expect(routeSettings).toEqual({ ...settings, designTokenPanel: false });
     expect(settings).toMatchObject({
-      logo: "/img/logo.svg",
+      logo: "auto",
       entryDocSlug: "guide",
-      tocToggle: false,
+      tocToggle: true,
       versions: [],
     });
   });
