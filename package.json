@@ -14,6 +14,7 @@
     "check:links:demo": "node scripts/check-links.mjs --dist=apps/demo/dist",
     "check:links:doc": "node scripts/check-links.mjs --dist=doc/dist",
     "build:doc": "pnpm --filter @zudo-sg/doc build",
+    "gen:logo": "node scripts/gen-auto-logo.mjs",
     "gen:z-index": "node scripts/gen-z-index.mjs",
     "check:z-index": "node scripts/gen-z-index.mjs --check",
     "gen:sg-registry": "node scripts/gen-sg-registry.mjs",
