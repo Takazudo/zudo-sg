@@ -53,6 +53,22 @@ async function expectChromeMatchesPage(root: Locator): Promise<void> {
   expect(colors[2]).toEqual(colors[0]);
 }
 
+async function expectPaddingMatchesHeader(root: Locator): Promise<void> {
+  const colors = await root.evaluate((node) => {
+    const canvas = document.createElement("canvas");
+    canvas.width = canvas.height = 1;
+    const context = canvas.getContext("2d")!;
+    return [".zdtp-dashboard__header", ".zdtp-dashboard__inventory"].map((selector) => {
+      context.clearRect(0, 0, 1, 1);
+      context.fillStyle = getComputedStyle(node.querySelector(selector)!).backgroundColor;
+      context.fillRect(0, 0, 1, 1);
+      return [...context.getImageData(0, 0, 1, 1).data];
+    });
+  });
+  expect(colors[1]).toEqual(colors[0]);
+  expect(colors[1]![3]).toBe(255);
+}
+
 async function rulerWidth(dashboardRoot: Locator): Promise<number> {
   return tokenRow(dashboardRoot, "--spacing-hsp-md")
     .locator(".zdtp-dashboard__sample--bar")
@@ -472,6 +488,8 @@ test("site theme changes the host while each dashboard keeps its own chrome", as
   const lightChrome = await computedBackground(dashboardHeader(light));
   const darkChrome = await computedBackground(dashboardHeader(dark));
   const sharedLightChrome = await computedBackground(dashboardHeader(shared));
+  await expectPaddingMatchesHeader(light);
+  await expectPaddingMatchesHeader(dark);
   await expectChromeMatchesPage(light);
   await expectChromeMatchesPage(shared);
   expect(darkChrome).not.toBe(lightChrome);
@@ -497,6 +515,8 @@ test("site theme changes the host while each dashboard keeps its own chrome", as
   );
   await expectChromeMatchesPage(dark);
   await expectChromeMatchesPage(shared);
+  await expectPaddingMatchesHeader(light);
+  await expectPaddingMatchesHeader(dark);
   const darkRegion = dark.locator('.zdtp-dashboard__region[data-scheme="dark"]');
   expect(
     await darkRegion.evaluate((region) => getComputedStyle(region).colorScheme),

@@ -287,6 +287,15 @@
   }
 }
 
+/* zdtp 0.8 paints regions but leaves their padded inventory wrapper transparent. */
+#ui-defaults-light > .zdtp-dashboard__inventory {
+  background: var(--zdtp-dashboard-light-bg);
+}
+
+#ui-defaults-dark > .zdtp-dashboard__inventory {
+  background: var(--zdtp-dashboard-dark-bg);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .sg-copy-btn,
   .sg-chip,
