@@ -70,6 +70,8 @@ The `/components/tokens` page renders three server-rendered `TokenDashboard` ins
 
 The shared view follows the site theme, and all three views remain read-only inventories of `@zudo-sg/ui` declared defaults.
 
+The section supplies zdtp's four public light/dark background and foreground inputs from the configured site color schemes. Dashboard headers and inventory regions therefore use the site's warm-neutral palette rather than zdtp's default blue-gray chrome. These are resolved declared colors, so live panel tweaks do not alter the static dashboard palette.
+
 Dashboard styling is delivered through the host CSS pipeline with `@import "@takazudo/zdtp/dashboard/styles.css"` in `src/styles/global.css`. This is separate from the panel's self-injected stylesheet. Loading the dashboard stylesheet through a per-page public asset would require a copy step for development and production and would introduce base-URL handling, so the public-asset alternative was rejected.
 
 The dashboard and the live token rows represent different token domains. The dashboards show declared `@zudo-sg/ui` defaults for light and dark mode. The live rows below them show values resolved from the host page's `:root`, which belongs to the documentation chrome cascade. The root manifest's spacing and font rows therefore cannot stand in for the UI package defaults: equal names or units do not make those declarations interchangeable.

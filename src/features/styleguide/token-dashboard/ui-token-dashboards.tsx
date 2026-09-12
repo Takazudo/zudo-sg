@@ -1,6 +1,9 @@
 /** @jsxRuntime automatic */
 /** @jsxImportSource preact */
 import { TokenDashboard } from "@takazudo/zdtp/dashboard";
+import { colorSchemes } from "@/config/color-schemes";
+import { resolveRampRef } from "@/config/color-scheme-utils";
+import { settings } from "@/config/settings";
 import {
   uiDashboardTabs,
   dashboardPreviewOverrides,
@@ -9,8 +12,20 @@ import {
 
 /** Static declared values; kept outside the live playground's copy boundary. */
 export function UiTokenDashboards() {
+  const chromeColors = Object.fromEntries(
+    (["light", "dark"] as const).flatMap((mode) => {
+      const schemeName = settings.colorMode
+        ? settings.colorMode[`${mode}Scheme`]
+        : settings.colorScheme;
+      const scheme = colorSchemes[schemeName]!;
+      return (["bg", "fg"] as const).map((role) => [
+        `--zdtp-dashboard-${mode}-${role}`,
+        resolveRampRef(scheme.map[role], scheme.ramps),
+      ]);
+    }),
+  );
   return (
-    <section class="mb-vsp-xl flex flex-col gap-vsp-lg">
+    <section class="mb-vsp-xl flex flex-col gap-vsp-lg" style={chromeColors}>
       <div class="max-w-[56rem]">
         <h2 class="mb-vsp-2xs text-xl font-semibold text-fg">Declared defaults</h2>
         <p class="text-muted">

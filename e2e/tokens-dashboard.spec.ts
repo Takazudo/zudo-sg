@@ -34,6 +34,25 @@ async function computedBackground(element: Locator): Promise<string> {
   return element.evaluate((node) => getComputedStyle(node).backgroundColor);
 }
 
+async function expectChromeMatchesPage(root: Locator): Promise<void> {
+  const colors = await root.evaluate((node) => {
+    const canvas = document.createElement("canvas");
+    canvas.width = canvas.height = 1;
+    const context = canvas.getContext("2d")!;
+    return [document.body, ...node.querySelectorAll(
+      ":scope > .zdtp-dashboard__header, .zdtp-dashboard__region",
+    )].map((element) => {
+      context.clearRect(0, 0, 1, 1);
+      context.fillStyle = getComputedStyle(element).backgroundColor;
+      context.fillRect(0, 0, 1, 1);
+      return [...context.getImageData(0, 0, 1, 1).data];
+    });
+  });
+  expect(colors).toHaveLength(3);
+  expect(colors[1]).toEqual(colors[0]);
+  expect(colors[2]).toEqual(colors[0]);
+}
+
 async function rulerWidth(dashboardRoot: Locator): Promise<number> {
   return tokenRow(dashboardRoot, "--spacing-hsp-md")
     .locator(".zdtp-dashboard__sample--bar")
@@ -489,6 +508,8 @@ test("site theme changes the host while each dashboard keeps its own chrome", as
   const lightChrome = await computedBackground(dashboardHeader(light));
   const darkChrome = await computedBackground(dashboardHeader(dark));
   const sharedLightChrome = await computedBackground(dashboardHeader(shared));
+  await expectChromeMatchesPage(light);
+  await expectChromeMatchesPage(shared);
   expect(darkChrome).not.toBe(lightChrome);
   await expect(light).toHaveAttribute("data-chrome", "light");
   await expect(dark).toHaveAttribute("data-chrome", "dark");
@@ -510,6 +531,8 @@ test("site theme changes the host while each dashboard keeps its own chrome", as
   expect(await computedBackground(dashboardHeader(shared))).not.toBe(
     sharedLightChrome,
   );
+  await expectChromeMatchesPage(dark);
+  await expectChromeMatchesPage(shared);
   const darkRegion = dark.locator('.zdtp-dashboard__region[data-scheme="dark"]');
   expect(
     await darkRegion.evaluate((region) => getComputedStyle(region).colorScheme),
