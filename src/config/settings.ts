@@ -80,7 +80,7 @@ The same library drives a multi-page demo site, so the components can be explore
     twitterCreator: "@Takazudo",
   } satisfies MetaTagsConfig as MetaTagsConfig,
   docsDir: "src/content/docs",
-  entryDocSlug: "guide",
+  entryDocSlug: "overview",
   defaultLocale: "en" as const,
   locales: {} as Record<string, LocaleConfig>,
   mermaid: true,
@@ -152,7 +152,7 @@ The same library drives a multi-page demo site, so the components can be explore
     copyright: `Copyright © ${new Date().getFullYear()} <a href="https://x.com/Takazudo">Takazudo</a>. Built with <a href="https://zudo-doc.takazudomodular.com/">zudo-doc</a>. Enjoy synth on <a href="https://takazudomodular.com/">Takazudo Modular</a>.`,
   } satisfies FooterConfig as FooterConfig | false,
   headerNav: [
-    { label: "Guide", path: "/docs/guide", categoryMatch: "guide" },
+    { label: "Overview", path: "/docs/overview", categoryMatch: "overview" },
     { label: "Components", path: "/components", categoryMatch: "components" },
     { label: "Design Tokens", path: "/tokens" },
     { label: "Doc", path: "https://zudo-sg-doc.takazudomodular.com" },

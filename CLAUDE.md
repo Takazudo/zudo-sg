@@ -28,7 +28,7 @@ src/
 │   └── content/          # MDX content components (admonitions, code-group, ...)
 ├── config/               # Settings, color schemes, design token manifests
 ├── content/
-│   └── docs/             # Slim root guide content
+│   └── docs/             # Slim root overview content
 ├── features/
 │   └── styleguide/       # /components catalog: chrome, preview, code-panel, search, token-tweak
 ├── styleguide/
@@ -46,7 +46,7 @@ The tree above covers only the root host's own `src/`. `packages/ui`'s
 component tree and `apps/demo`'s content/route tree are separate workspace
 packages — see "Monorepo Structure" below.
 
-Root `/docs` is intentionally slim and currently contains the root Guide. The
+Root `/docs` is intentionally slim and currently contains the root Overview. The
 full documentation site lives in `doc/` and is deployed separately at
 `https://zudo-sg-doc.takazudomodular.com/`; root nav/footer entries link there
 instead of duplicating that content.
@@ -117,8 +117,10 @@ Do NOT use h1 (`#`) in doc content — the page title from frontmatter is render
   Composer/Sitemapper data. Destructive current-only cleanup is required; do not add
   backward-compatibility readers, migrations, redirects, aliases, or old-name
   and old-storage fallbacks.
-- **Route invariant** — the styleguide-only root build emits 82 HTML routes
-  (zfb reports 83 pages, the 83rd being `/robots.txt`). Since zudo-doc 5.17.0 the
+- **Route invariant** — the styleguide-only root build emits 83 HTML routes
+  (zfb reports 84 pages, the 84th being `/robots.txt`). The new
+  `what-is-zudo-sg` identity page accounts for the additional docs route. Since
+  zudo-doc 5.17.0 the
   package injects `/sitemap.xml` only when `settings.sitemap` is enabled, and this
   project sets it to `false`, so no sitemap route is emitted. Do not remove provider
   guides or unrelated routes while cleaning product ownership.
