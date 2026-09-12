@@ -1,16 +1,12 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
-import type { ZfbPlugin } from "@takazudo/zfb/plugins";
-import type { ChromeHostBindings } from "@takazudo/zudo-doc/factory-context";
 
 // Node-side plugin only: zfb's embedded page renderer cannot call node:fs.
 // The chrome bindings import the generated data module through this alias.
 const moduleSpecifier = "virtual:zudo-sg-doc-history-meta";
 const generatedModulePath = ".zfb/doc-history-meta.mjs";
 
-export function loadDocHistoryMeta(
-  projectRoot: string,
-): NonNullable<ChromeHostBindings["docHistoryMeta"]> {
+export function loadDocHistoryMeta(projectRoot) {
   const metadataPath = resolve(projectRoot, ".zfb/doc-history-meta.json");
   return existsSync(metadataPath)
     ? JSON.parse(readFileSync(metadataPath, "utf8"))
@@ -38,4 +34,4 @@ export default {
       "utf8",
     );
   },
-} satisfies ZfbPlugin;
+};

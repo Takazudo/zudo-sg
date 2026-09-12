@@ -5,7 +5,7 @@ import { dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ZfbBuildHookContext, ZfbSetupContext } from "@takazudo/zfb/plugins";
-import plugin, { loadDocHistoryMeta } from "../../pages/lib/_doc-history-meta";
+import plugin, { loadDocHistoryMeta } from "../../pages/lib/_doc-history-meta.mjs";
 
 describe("doc-history metadata serialization", () => {
   let projectRoot: string;

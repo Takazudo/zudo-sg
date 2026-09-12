@@ -466,7 +466,9 @@ test("client navigation preserves the document and mounts all dashboards", async
   await expect(tokensLink).toHaveAttribute("href", TOKENS_PATH);
   await tokensLink.click();
   await swapped;
-  await expect(page).toHaveURL((url) => url.pathname === TOKENS_PATH);
+  await expect(page).toHaveURL(
+    (url) => url.pathname.replace(/\/$/, "") === TOKENS_PATH.replace(/\/$/, ""),
+  );
   await expectStandaloneTokensLayout(page);
 
   expect(

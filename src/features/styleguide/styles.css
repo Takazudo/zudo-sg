@@ -116,10 +116,12 @@
     margin-block-start: 0; /* cancel base margin-block so the border-top divider sits flush */
     border-left: 0;
     border-top: 1px solid var(--color-border);
-    padding-inline: var(--spacing-hsp-xl);
+    /* CodePanel keeps its own p-hsp-md breathing room; subtract that inner
+     * inset so the visible SOURCE content aligns with <main>'s 24px edge. */
+    padding-inline: calc(var(--spacing-hsp-xl) - var(--spacing-hsp-md));
 
     @media (min-width: 1024px) {
-      padding-inline: var(--spacing-hsp-2xl);
+      padding-inline: calc(var(--spacing-hsp-2xl) - var(--spacing-hsp-md));
     }
   }
   #sg-code-panel [data-sg-code-panel-resizer] {

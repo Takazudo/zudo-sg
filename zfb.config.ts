@@ -121,7 +121,9 @@ export default defineConfig({
     // Run after the preset's doc-history preBuild so the embedded renderer
     // receives freshly generated metadata without importing node:fs.
     {
-      name: "./pages/lib/_doc-history-meta.ts",
+      // Keep the Node-only plugin as native ESM. Pointing zfb at TypeScript
+      // leaves a .zfb-plugin-bundle-* transpilation artifact beside the source.
+      name: "./pages/lib/_doc-history-meta.mjs",
     },
     // Wires the preview design-token panel's Apply button to a same-origin
     // dev-only endpoint that persists tweaks into packages/ui/styles/colors.css

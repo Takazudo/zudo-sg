@@ -62,7 +62,7 @@ export function buildStyleguideChrome({
         lang={lang}
         currentPath={currentPath}
         {...(!hideSidebar ? { sidebarNodesOverride: navNodes } : {})}
-        currentSlug={activeSlug}
+        currentSlug={hideSidebar ? undefined : activeSlug}
       />
     ),
     footer: <FooterWithDefaults lang={lang} />,
