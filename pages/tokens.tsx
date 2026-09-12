@@ -8,14 +8,14 @@ import { TOKENS_SLUG } from "@/styleguide/data/registry";
 import { StyleguideLayout } from "@/features/styleguide/chrome/_styleguide-layout";
 import { UiTokenDashboards } from "@/features/styleguide/token-dashboard/ui-token-dashboards";
 import PreviewTokensButton from "@/features/styleguide/token-tweak/preview-tokens-button";
-import { composeMetaTitle } from "../lib/_compose-meta-title";
-import { buildStyleguideChrome } from "../lib/_styleguide-chrome";
+import { composeMetaTitle } from "./lib/_compose-meta-title";
+import { buildStyleguideChrome } from "./lib/_styleguide-chrome";
 
 export const frontmatter = { title: "Design Tokens" };
 
 export default function TokensPage(): JSX.Element {
   const locale = defaultLocale;
-  const currentPath = withBase("/components/tokens");
+  const currentPath = withBase("/tokens");
   const previewTokensButton = Island({
     when: "load",
     children: <PreviewTokensButton />,
@@ -25,6 +25,7 @@ export default function TokensPage(): JSX.Element {
     pageTitle: "Design Tokens",
     currentPath,
     activeSlug: TOKENS_SLUG,
+    hideSidebar: true,
   });
 
   return (
@@ -32,7 +33,7 @@ export default function TokensPage(): JSX.Element {
       title={composeMetaTitle("Design Tokens")}
       activeSlug={TOKENS_SLUG}
       lang={locale}
-      contentWide
+      hideSidebar
       {...chrome}
     >
       <div>

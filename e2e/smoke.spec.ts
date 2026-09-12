@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { withBase } from "../src/utils/base";
 
 async function clickAndWaitForSwap(page: Page, selector: string): Promise<boolean> {
   const swapPromise = page.evaluate(() => {
@@ -190,13 +191,24 @@ test("/components/<slug> detail page preview iframe loads", async ({ page }) => 
   await expect(iframe).toBeAttached({ timeout: 15_000 });
 });
 
-test("/components/tokens renders the token reference and preview control", async ({ page }) => {
-  const response = await page.goto("/components/tokens");
+test("/tokens renders the token reference and preview control without side columns", async ({ page }) => {
+  const response = await page.goto(withBase("/tokens"));
   expect(response?.status()).toBe(200);
   await expect(page.locator("h1").first()).toBeVisible();
+  await expect(page.locator("#desktop-sidebar")).toHaveClass("sr-only");
+  await expect(page.locator("#desktop-sidebar")).not.toHaveAttribute("data-zfb-transition-persist");
+  await expect(page.locator(".zd-doc-content-band")).toHaveAttribute("data-zd-nosidebar", "");
+  await expect(page.locator(".zd-doc-content-band")).not.toHaveAttribute("data-zd-wide");
+  await expect(page.locator(".zd-toc-col, .zd-desktop-sidebar-toggle")).toHaveCount(0);
   await expect(page.locator(".zdtp-dashboard")).toHaveCount(3);
   await expect(page.getByRole("button", { name: "Preview tokens →", exact: true })).toBeVisible();
   await expect(page.locator("[data-sg-tokens-root], [data-sg-token]")).toHaveCount(0);
+});
+
+test("the retired tokens route in Components returns 404", async ({ page }) => {
+  const retiredPath = withBase(["/components", "tokens"].join("/"));
+  const response = await page.goto(retiredPath);
+  expect(response?.status()).toBe(404);
 });
 
 test("styleguide sidebar preserves DOM identity and scroll across page transitions", async ({

@@ -70,13 +70,15 @@ export interface StyleguideLayoutProps {
   title: string;
   /**
    * Active sidebar slug for the initial SSR highlight. The catalog landing
-   * passes "" (the Overview leaf); a story detail page passes its story slug;
-   * the tokens route passes "tokens". `useActiveSlug` re-derives this from
+   * passes "" (the Overview leaf); a story detail page passes its story slug.
+   * Ignored when the sidebar is hidden. `useActiveSlug` re-derives this from
    * the URL on each page load, so this is just the initial value.
    */
   activeSlug?: string;
   /** Active locale; defaults to the configured defaultLocale. */
   lang?: Locale;
+  /** Hide the component sidebar for standalone pages such as /tokens. */
+  hideSidebar?: boolean;
   /** `<head>` content — the page passes `<HeadWithDefaults … />`. */
   head: ComponentChildren;
   /** Header region — the page passes `<HeaderWithDefaults … />`. */
@@ -106,6 +108,7 @@ export function StyleguideLayout({
   title,
   activeSlug,
   lang = defaultLocale,
+  hideSidebar = false,
   head,
   header,
   footer,
@@ -122,11 +125,14 @@ export function StyleguideLayout({
   // (DocLayout only does this for its built-in data path). Feeding the
   // styleguide `navNodes` is the only difference from the docs sidebar — no
   // rootMenuItems here, so the tree always shows the component tree (never the
-  // root-menu fallback). `currentSlug` seeds the SSR highlight.
-  const sidebarOverride = Island({
-    when: "load",
-    children: <SidebarTree nodes={navNodes} currentSlug={activeSlug} />,
-  }) as unknown as VNode;
+  // root-menu fallback). `currentSlug` seeds the SSR highlight. Hidden-sidebar
+  // pages keep the package's sr-only aside empty, without a component tree.
+  const sidebarOverride = hideSidebar
+    ? <></>
+    : Island({
+      when: "load",
+      children: <SidebarTree nodes={navNodes} currentSlug={activeSlug} />,
+    }) as unknown as VNode;
 
   // The right-region (DocLayout's TOC slot) hosts the detail-page code panel
   // (#49). Empty fragment when absent so `hideToc` lets the content band fill
@@ -156,9 +162,10 @@ export function StyleguideLayout({
       head={composedHead}
       lang={lang}
       noindex={settings.noindex}
+      hideSidebar={hideSidebar}
       hideToc={!showCodePanel}
       contentWide={contentWide}
-      sidebarPersistKey={`sidebar-${lang}-components`}
+      {...(!hideSidebar ? { sidebarPersistKey: `sidebar-${lang}-components` } : {})}
       headerOverride={header}
       sidebarOverride={sidebarOverride}
       tocOverride={tocOverride}
