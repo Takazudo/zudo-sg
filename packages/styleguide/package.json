@@ -102,6 +102,10 @@
     },
     "./routes-src/*": "./routes-src/*",
     "./virtual-modules.d.ts": "./virtual-modules.d.ts",
+    "./plugins/preview-css": {
+      "types": "./dist/plugins/preview-css.d.ts",
+      "default": "./dist/plugins/preview-css.js"
+    },
     "./styles.css": "./styles.css",
     "./safelist.css": "./dist/safelist.css",
     "./package.json": "./package.json"

@@ -51,16 +51,15 @@
    it simply keeps the ui value — no change, since this block does not touch them.
    The compat aliases (ink/paper/line/brand/…) are likewise unused by doc-chrome.
 
+   The preview iframe document (`<html data-sg-preview-doc>`) does NOT rely on
+   this bundle for its palette: it links the standalone preview stylesheet
+   (`previewStyles` → src/styles/preview-entry.css, compiled by
+   @takazudo/zudo-sg/plugins/preview-css and served at /_zudo-sg/preview.css),
+   whose token roots are rescoped to `:root[data-sg-preview-doc]` and so beat
+   the doc-chrome values below on that document only.
+
    See packages/ui/STORIES.md §1 "Required style imports". */
 @import "@zudo-sg/ui/styles/colors.css";
-
-/* Preview-iframe palette scope. Restores the @zudo-sg/ui semantic colors for
-   the chrome-free /components/preview document (`<html data-sg-preview-doc>`),
-   which has no --zd-* injected and would otherwise render the re-asserted
-   `--color-*` names below as undefined. Scoped by `html[data-sg-preview-doc]`
-   (specificity beats the :root the @theme emits), so it is order-independent
-   and never affects doc-chrome pages. See src/styles/preview.css. */
-@import "./preview.css";
 
 /* ========================================
  * @takazudo/zudo-doc package safelist
