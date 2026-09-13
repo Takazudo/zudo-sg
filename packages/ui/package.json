@@ -11,12 +11,13 @@
     "./src/*": "./src/*"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit",
-    "test": "vitest run --config vitest.config.ts",
+    "typecheck": "node ../../scripts/ensure-styleguide-build.mjs && tsc --noEmit",
+    "test": "node ../../scripts/ensure-styleguide-build.mjs && vitest run --config vitest.config.ts",
     "check": "pnpm run typecheck && pnpm run test"
   },
   "dependencies": {
     "@takazudo/zfb-md-wasm": "2.16.0",
+    "@takazudo/zudo-sg": "workspace:*",
     "dompurify": "^3.4.11"
   },
   "peerDependencies": {

@@ -15,13 +15,10 @@ The canonical types are `@takazudo/zudo-sg/stories`
 (`packages/styleguide/src/stories/types.ts` in this repo):
 `StoryMeta`, `Story<P>`, `StoryControl<P>`, `StoryModule`, `defineStory`.
 
-A component provider package (this repo's `@zudo-sg/ui`) keeps a
-byte-equivalent copy of the same type body at `packages/ui/src/stories/types.ts`
-so it stays installable and type-resolvable with no engine installed —
-external consumers of the provider typecheck stories from source, without a
-dependency on the engine package. A drift guard
-(`scripts/check-story-contract-sync.mjs`, wired into `pnpm check`) fails the
-build if the two copies diverge.
+A component provider package (this repo's `@zudo-sg/ui`) re-exports the same
+types from `packages/ui/src/stories/types.ts`, kept as its own module because
+the engine's `new-component` scaffold generates relative `../stories/types`
+imports.
 
 ## File location & discovery
 
