@@ -4,7 +4,7 @@
 //
 // A visual contact sheet: every tile carries its component RENDERED INLINE,
 // server-side, into the static HTML (#540). No preview iframes — see
-// src/features/styleguide/catalog/component-thumb.tsx for why 72 of them would
+// `@takazudo/zudo-sg/catalog`'s component-thumb.tsx for why 72 of them would
 // each have parsed the whole story set — so the catalogue costs nothing at
 // runtime and still shows components with JavaScript disabled.
 //
@@ -29,13 +29,14 @@
 
 import type { JSX, VNode } from "preact";
 import { Island } from "@takazudo/zfb";
+import { settings } from "@/config/settings";
 import { defaultLocale } from "@/config/i18n";
 import { withBase } from "@/utils/base";
+import { navNodes } from "@/styleguide/nav-nodes";
 import { getCategoryGroups, OVERVIEW_SLUG } from "@/styleguide/registry";
-import { StyleguideLayout } from "@/features/styleguide/chrome/_styleguide-layout";
-import { ComponentThumb } from "@/features/styleguide/catalog/component-thumb";
-import { TILE_SIZE_RESTORE_SCRIPT } from "@/features/styleguide/catalog/tile-size";
-import CatalogFilter from "@/features/styleguide/search/catalog-filter";
+import { StyleguideLayout } from "@takazudo/zudo-sg/chrome";
+import { ComponentThumb, TILE_SIZE_RESTORE_SCRIPT } from "@takazudo/zudo-sg/catalog";
+import { CatalogFilter } from "@takazudo/zudo-sg/search";
 import { composeMetaTitle } from "../lib/_compose-meta-title";
 import { buildStyleguideChrome } from "../lib/_styleguide-chrome";
 
@@ -80,6 +81,10 @@ export default function ComponentsIndexPage(): JSX.Element {
       lang={locale}
       contentWide
       head={composedHead}
+      navNodes={navNodes}
+      sidebarToggle={settings.sidebarToggle}
+      enableClientRouter={settings.dynamicPageTransition}
+      noindex={settings.noindex}
       {...chrome}
     >
       <header class="mb-vsp-lg max-w-[56rem]">

@@ -34,7 +34,7 @@ import {
   isTileSize,
   readTileSize,
   type TileSize,
-} from "@/features/styleguide/catalog/tile-size";
+} from "../catalog/tile-size.js";
 
 export interface CatalogFilterProps {
   /** Category labels in display order (drives the chip row). */

@@ -40,6 +40,22 @@
       "types": "./dist/cli/bin.d.ts",
       "default": "./dist/cli/bin.js"
     },
+    "./catalog": {
+      "types": "./dist/catalog/index.d.ts",
+      "default": "./dist/catalog/index.js"
+    },
+    "./chrome": {
+      "types": "./dist/chrome/index.d.ts",
+      "default": "./dist/chrome/index.js"
+    },
+    "./chrome/panel-contract": {
+      "types": "./dist/chrome/panel-contract.d.ts",
+      "default": "./dist/chrome/panel-contract.js"
+    },
+    "./search": {
+      "types": "./dist/search/index.d.ts",
+      "default": "./dist/search/index.js"
+    },
     "./preview": {
       "types": "./dist/preview/index.d.ts",
       "default": "./dist/preview/index.js"
@@ -85,6 +101,7 @@
     "check": "pnpm run check:no-host-alias && pnpm run typecheck && pnpm run build && pnpm run check:package-shape && pnpm run test"
   },
   "dependencies": {
+    "preact-render-to-string": "^6.6.6",
     "@codemirror/commands": "^6.0.0",
     "@codemirror/lang-css": "^6.0.0",
     "@codemirror/lang-javascript": "^6.0.0",
@@ -94,6 +111,7 @@
     "postcss": "^8.5.15"
   },
   "peerDependencies": {
+    "@takazudo/zfb": "2.16.0",
     "@takazudo/zdtp": "^0.8.0",
     "@takazudo/zudo-doc": ">=5.22.0",
     "preact": "^10.29.1"

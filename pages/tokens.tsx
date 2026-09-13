@@ -9,8 +9,9 @@ import { defaultLocale } from "@/config/i18n";
 import { settings } from "@/config/settings";
 import { uiDesignTokensManifest, uiTokenTabs } from "@/config/ui-token-tabs";
 import { withBase } from "@/utils/base";
+import { navNodes } from "@/styleguide/nav-nodes";
 import { TOKENS_SLUG } from "@/styleguide/registry";
-import { StyleguideLayout } from "@/features/styleguide/chrome/_styleguide-layout";
+import { StyleguideLayout } from "@takazudo/zudo-sg/chrome";
 import PreviewTokensButton from "@takazudo/zudo-sg/token-tweak/preview-tokens-button";
 import { composeMetaTitle } from "./lib/_compose-meta-title";
 import { buildStyleguideChrome } from "./lib/_styleguide-chrome";
@@ -57,6 +58,10 @@ export default function TokensPage(): JSX.Element {
       activeSlug={TOKENS_SLUG}
       lang={locale}
       hideSidebar
+      navNodes={navNodes}
+      sidebarToggle={settings.sidebarToggle}
+      enableClientRouter={settings.dynamicPageTransition}
+      noindex={settings.noindex}
       {...chrome}
     >
       <div>

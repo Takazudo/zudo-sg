@@ -34,15 +34,17 @@
 import type { JSX, VNode } from "preact";
 import { Island } from "@takazudo/zfb";
 import { getEntry } from "zfb/content";
+import { settings } from "@/config/settings";
 import { defaultLocale } from "@/config/i18n";
 import { withBase } from "@/utils/base";
+import { navNodes } from "@/styleguide/nav-nodes";
 import { getAllSlugs, getStoryBySlug } from "@/styleguide/registry";
 import {
   COMPONENT_DOCS_COLLECTION,
   componentDocSlug,
 } from "@takazudo/zudo-sg/registry";
 import { componentDocMdxComponents } from "@/components/content/component-doc-mdx-components";
-import { StyleguideLayout } from "@/features/styleguide/chrome/_styleguide-layout";
+import { StyleguideLayout } from "@takazudo/zudo-sg/chrome";
 import { DetailWorkbench, PREVIEW_ROUTE_PATH } from "@takazudo/zudo-sg/preview";
 import { CodePanel, type CodePanelVariant } from "@takazudo/zudo-sg/code-panel";
 import { composeMetaTitle } from "../lib/_compose-meta-title";
@@ -133,6 +135,10 @@ export default function StoryDetailPage(
         title={composeMetaTitle("Not found")}
         activeSlug={slug}
         lang={locale}
+        navNodes={navNodes}
+        sidebarToggle={settings.sidebarToggle}
+        enableClientRouter={settings.dynamicPageTransition}
+        noindex={settings.noindex}
         {...chrome}
         codePanel={codePanel}
       >
@@ -172,6 +178,10 @@ export default function StoryDetailPage(
       title={composeMetaTitle(entry.meta.title)}
       activeSlug={slug}
       lang={locale}
+      navNodes={navNodes}
+      sidebarToggle={settings.sidebarToggle}
+      enableClientRouter={settings.dynamicPageTransition}
+      noindex={settings.noindex}
       {...chrome}
       codePanel={codePanel}
       contentWide

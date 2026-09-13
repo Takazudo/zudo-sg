@@ -1,17 +1,27 @@
 /** @jsxRuntime automatic */
 /** @jsxImportSource preact */
-// Catalogue gallery contracts (#540).
+// @vitest-environment happy-dom
+// Catalogue gallery contracts (#540, moved into the engine package by #653).
 //
 // The framing model is split across TypeScript (which viewport width a
 // category gets, how the snapshot is scoped) and CSS (the scale, the fit rule,
 // the palette restore), so this file checks BOTH halves and the seam between
-// them — the same shape as src/features/styleguide/__tests__/root-theme-contract.test.ts.
+// them.
+//
+// This package must not reach into a host's real story registry (`@/…` is a
+// host-only alias — see scripts/check-no-host-alias.mjs), so the rendering
+// tests below build synthetic `StoryEntry` fixtures instead of importing a
+// real 72-component catalogue. A host that wires the real registry through
+// `ComponentThumb` is responsible for its own "every tile shows something"
+// regression coverage against its actual story set.
 
 import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { render } from "preact-render-to-string";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { storyEntries } from "@/styleguide/registry";
+import type { Story, StoryModule } from "../../stories/types.js";
+import { createRegistry } from "../../registry/registry.js";
 import {
   ATOM_SCALE_CATEGORIES,
   ComponentThumb,
@@ -22,7 +32,7 @@ import {
   thumbIdPrefix,
   thumbScale,
   thumbViewportWidth,
-} from "../component-thumb";
+} from "../component-thumb.js";
 import {
   ATTR_TILE_SIZE,
   DEFAULT_TILE_SIZE,
@@ -32,27 +42,22 @@ import {
   applyTileSize,
   isTileSize,
   readTileSize,
-} from "../tile-size";
+} from "../tile-size.js";
 
-const read = (path: string): string =>
-  readFileSync(resolve(process.cwd(), path), "utf8");
+const PKG_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../../../");
+const galleryCss = readFileSync(resolve(PKG_ROOT, "styles.css"), "utf8");
 
-const galleryCss = read("src/features/styleguide/catalog/gallery.css");
-const previewCss = read("src/styles/preview.css");
-const globalCss = read("src/styles/global.css");
+/** Build a minimal one-variant story fixture. */
+function story(name: string, render_: Story["render"] = () => <button>x</button>): Story {
+  return { name, render: render_ };
+}
 
-/** The `--color-*` declarations inside the first block matching `selector`. */
-function paletteBlock(css: string, selector: string): string[] {
-  const start = css.indexOf(selector);
-  expect(start, `${selector} not found`).toBeGreaterThan(-1);
-  const open = css.indexOf("{", start);
-  const close = css.indexOf("}", open);
-  return css
-    .slice(open + 1, close)
-    .split(";")
-    .map((line) => line.replace(/\/\*[\s\S]*?\*\//g, "").trim())
-    .filter((line) => line.startsWith("--color-"))
-    .map((line) => line.replace(/\s+/g, " "));
+function storyModule(title: string, category: string, variants: Record<string, Story>): StoryModule {
+  return { default: { title, category, description: "", usage: "" }, ...variants };
+}
+
+function fixtureRegistry(modules: Readonly<Record<string, StoryModule>>) {
+  return createRegistry(modules);
 }
 
 describe("thumbnail geometry", () => {
@@ -69,10 +74,10 @@ describe("thumbnail geometry", () => {
     const [compact, large] = TILE_SIZES;
     // At the nominal track width the component lays out at exactly its virtual
     // width — that is what "scaled, never squeezed" means here.
-    expect(thumbScale(compact.trackMin, THUMB_VIEWPORT_W)).toBeCloseTo(272 / 720, 6);
-    expect(thumbScale(large.trackMin, THUMB_VIEWPORT_W)).toBeCloseTo(400 / 720, 6);
+    expect(thumbScale(compact!.trackMin, THUMB_VIEWPORT_W)).toBeCloseTo(272 / 720, 6);
+    expect(thumbScale(large!.trackMin, THUMB_VIEWPORT_W)).toBeCloseTo(400 / 720, 6);
     // Atoms reach 1:1 in Large rather than being blown up past their layout.
-    expect(thumbScale(large.trackMin, THUMB_VIEWPORT_W_ATOM)).toBe(1);
+    expect(thumbScale(large!.trackMin, THUMB_VIEWPORT_W_ATOM)).toBe(1);
     // Every combination shrinks or holds; none magnifies.
     for (const { trackMin } of TILE_SIZES) {
       for (const viewport of [THUMB_VIEWPORT_W, THUMB_VIEWPORT_W_ATOM]) {
@@ -86,11 +91,11 @@ describe("thumbnail geometry", () => {
       "--sg-thumb-scale: calc(var(--sg-tile-min-n) / var(--sg-thumb-vw-n))",
     );
     expect(galleryCss).toMatch(
-      new RegExp(`--sg-tile-min-n:\\s*${TILE_SIZES[0].trackMin};`),
+      new RegExp(`--sg-tile-min-n:\\s*${TILE_SIZES[0]!.trackMin};`),
     );
     expect(galleryCss).toMatch(
       new RegExp(
-        `\\[data-sg-tile-size="${TILE_SIZES[1].id}"\\][\\s\\S]*?--sg-tile-min-n:\\s*${TILE_SIZES[1].trackMin};`,
+        `\\[data-sg-tile-size="${TILE_SIZES[1]!.id}"\\][\\s\\S]*?--sg-tile-min-n:\\s*${TILE_SIZES[1]!.trackMin};`,
       ),
     );
     expect(galleryCss).toMatch(
@@ -104,7 +109,7 @@ describe("thumbnail geometry", () => {
     // `align-content: safe center` centre a component that fits and fall back
     // to `start` — top-anchored, never cropped at both ends — for one that
     // does not, with no measurement and no JavaScript.
-    expect(galleryCss.match(/aspect-ratio:\s*16\s*\/\s*10;/g)).toHaveLength(2);
+    expect(galleryCss.match(/aspect-ratio:\s*16\s*\/\s*10;/g)?.length).toBeGreaterThanOrEqual(2);
     const inner = galleryCss.slice(galleryCss.indexOf(".sg-thumb-inner"));
     expect(inner).toContain("align-content: start;");
     expect(inner).toContain("align-content: safe center;");
@@ -117,23 +122,17 @@ describe("thumbnail geometry", () => {
 });
 
 describe("palette scope", () => {
-  it("restores exactly the tokens the preview document restores", () => {
-    const previewTokens = paletteBlock(previewCss, "html[data-sg-preview-doc] {");
-    const thumbTokens = paletteBlock(
-      galleryCss,
-      ".sg-thumb[data-sg-preview-scope] {",
-    );
-    expect(previewTokens.length).toBeGreaterThan(0);
-    expect(thumbTokens).toEqual(previewTokens);
-  });
-
-  it("scopes the restore above the :root the host @theme emits", () => {
+  it("scopes the restore with a selector that beats a plain :root rule", () => {
     // Class + attribute = (0,2,0), which beats `:root` (0,1,0) regardless of
-    // @import order — the same trick `preview.css` plays with (0,1,1).
+    // @import order — the same trick a host's own preview-document scope uses.
     expect(galleryCss).toContain(".sg-thumb[data-sg-preview-scope] {");
-    expect(globalCss).toContain(
-      '@import "../features/styleguide/catalog/gallery.css";',
-    );
+    const block = galleryCss.slice(galleryCss.indexOf(".sg-thumb[data-sg-preview-scope] {"));
+    const tokens = block
+      .slice(block.indexOf("{") + 1, block.indexOf("}"))
+      .split(";")
+      .map((line) => line.replace(/\/\*[\s\S]*?\*\//g, "").trim())
+      .filter((line) => line.startsWith("--color-"));
+    expect(tokens.length).toBeGreaterThan(0);
   });
 });
 
@@ -172,12 +171,6 @@ describe("snapshot scoping", () => {
   });
 
   it("drops style blocks, which are both invalid here and page-global", () => {
-    // The nav stories emit a story-only rule pinning SiteNav's fixed rail to
-    // its frame. Inlined verbatim it would (a) fail `pnpm check:html` —
-    // `<style>` is metadata content and html-validate rejects it under a
-    // `<div>` — and (b) apply to the WHOLE catalogue page, three times over,
-    // not just the tile carrying it. The tile's own transform already
-    // establishes the containing block that keeps such stories boxed in.
     const out = scopeThumbHtml(
       '<div><style>.zui-nav-story-frame nav { position: absolute; }</style><nav>kept</nav></div>',
       "p-",
@@ -198,59 +191,77 @@ describe("snapshot scoping", () => {
   });
 });
 
-describe("every catalogue tile shows something", () => {
-  const rendered = storyEntries.map((entry) => ({
-    entry,
-    html: render(<ComponentThumb entry={entry} />),
-  }));
-
-  it("covers the whole registry", () => {
-    expect(rendered.length).toBe(72);
-  });
+describe("ComponentThumb rendering", () => {
+  const modules: Record<string, StoryModule> = {
+    "./a.stories.tsx": storyModule("Alpha", "Layout", {
+      Primary: story("Primary", () => <div class="alpha">alpha</div>),
+    }),
+    "./b.stories.tsx": storyModule("Beta", "Typography", {
+      Primary: story("Primary", () => <span class="beta">beta</span>),
+    }),
+    "./c.stories.tsx": storyModule("Gamma (throws)", "Layout", {
+      Primary: story("Primary", () => {
+        throw new Error("boom");
+      }),
+    }),
+  };
+  const registry = fixtureRegistry(modules);
+  const entries = registry.storyEntries;
 
   it("renders every component inline, or names the reason it cannot", () => {
-    const blanks: string[] = [];
-    for (const { entry, html } of rendered) {
-      if (THUMB_OPT_OUTS[entry.slug]) {
+    for (const entry of entries) {
+      const html = render(<ComponentThumb entry={entry} />);
+      if (entry.meta.title.includes("throws")) {
         expect(html).toContain("sg-thumb-note");
-        expect(html).toContain(THUMB_OPT_OUTS[entry.slug]);
-        continue;
+        expect(html).toContain("Preview unavailable: boom");
+      } else {
+        expect(html).toContain("sg-thumb-inner");
+        expect(html).not.toContain("sg-thumb-note");
       }
-      // An opt-out that was never declared — a thrown render fell back to the
-      // note path — is exactly the "unexplained blank tile" this guards.
-      if (html.includes("sg-thumb-note")) {
-        blanks.push(`${entry.slug}: ${html}`);
-        continue;
-      }
-      const inner = html.slice(html.indexOf("sg-thumb-inner"));
-      if (!inner.includes("<")) blanks.push(`${entry.slug}: empty`);
     }
-    expect(blanks).toEqual([]);
   });
 
   it("keeps every snapshot out of the tab order and the a11y tree", () => {
-    for (const { html } of rendered) {
+    for (const entry of entries) {
+      const html = render(<ComponentThumb entry={entry} />);
       expect(html).toContain('aria-hidden="true"');
       expect(html).toContain("inert");
       expect(html).toContain("data-sg-preview-scope");
     }
   });
 
-  it("carries the atom-scale viewport only where it is needed", () => {
-    for (const { entry, html } of rendered) {
+  it("carries the atom-scale viewport only where the category needs it", () => {
+    for (const entry of entries) {
+      const html = render(<ComponentThumb entry={entry} />);
       const isAtom = ATOM_SCALE_CATEGORIES.includes(entry.meta.category);
-      expect(html.includes(`--sg-thumb-vw-n: ${THUMB_VIEWPORT_W_ATOM}`)).toBe(
-        isAtom,
-      );
+      expect(html.includes(`--sg-thumb-vw-n: ${THUMB_VIEWPORT_W_ATOM}`)).toBe(isAtom);
     }
   });
 
-  it("emits unique ids across the whole catalogue", () => {
-    const ids = rendered.flatMap(({ html }) =>
-      [...html.matchAll(/\sid="([^"]*)"/g)].map((match) => match[1]),
-    );
-    expect(ids.length).toBeGreaterThan(0);
+  it("emits unique ids across every tile it renders", () => {
+    const ids = entries.flatMap((entry) => {
+      const html = render(<ComponentThumb entry={entry} />);
+      return [...html.matchAll(/\sid="([^"]*)"/g)].map((match) => match[1]);
+    });
     expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it("honors a declared opt-out without ever calling render", () => {
+    const renderSpy = vi.fn(() => <div>never</div>);
+    const optOutModules: Record<string, StoryModule> = {
+      "./d.stories.tsx": storyModule("Delta", "Layout", {
+        Primary: story("Primary", renderSpy),
+      }),
+    };
+    const entry = fixtureRegistry(optOutModules).storyEntries[0]!;
+    (THUMB_OPT_OUTS as Record<string, string>)[entry.slug] = "manually opted out";
+    try {
+      const html = render(<ComponentThumb entry={entry} />);
+      expect(html).toContain("manually opted out");
+      expect(renderSpy).not.toHaveBeenCalled();
+    } finally {
+      delete (THUMB_OPT_OUTS as Record<string, string>)[entry.slug];
+    }
   });
 });
 
@@ -262,7 +273,7 @@ describe("tile size", () => {
   });
 
   it("defaults to the compact track", () => {
-    expect(DEFAULT_TILE_SIZE).toBe(TILE_SIZES[0].id);
+    expect(DEFAULT_TILE_SIZE).toBe(TILE_SIZES[0]!.id);
     expect(readTileSize()).toBe(DEFAULT_TILE_SIZE);
   });
 

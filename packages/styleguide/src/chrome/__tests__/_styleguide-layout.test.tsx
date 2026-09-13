@@ -1,6 +1,8 @@
+// @vitest-environment happy-dom
 import type { ComponentChildren, JSX } from "preact";
 import { render } from "preact-render-to-string";
 import { describe, expect, it, vi } from "vitest";
+import type { NavNode } from "../../registry/nav-nodes.js";
 
 // `@takazudo/zudo-doc/doclayout`'s real DocLayoutWithDefaults pulls in
 // `@takazudo/zfb-runtime`'s ClientRouter, which itself imports the bare
@@ -14,9 +16,9 @@ import { describe, expect, it, vi } from "vitest";
 // verified against the real package source at
 // `node_modules/@takazudo/zudo-doc/dist/doclayout/doc-layout.js` (#538).
 // This test's job is to prove StyleguideLayout forwards `contentWide` to
-// DocLayoutWithDefaults under that exact prop name; `pnpm check` (tsc)
-// separately proves the prop type lines up with the real package's
-// `DocLayoutProps`.
+// DocLayoutWithDefaults under that exact prop name; `pnpm --filter
+// @takazudo/zudo-sg check` (tsc) separately proves the prop type lines up
+// with the real package's `DocLayoutProps`.
 vi.mock("@takazudo/zudo-doc/doclayout", () => ({
   DocLayoutWithDefaults: (props: {
     contentWide?: boolean;
@@ -73,7 +75,9 @@ import {
   createSidebarPrepaint,
   createSidebarVisibilityPrepaint,
 } from "@takazudo/zudo-doc/sidebar-prepaint";
-import { settings } from "@/config/settings";
+
+const NAV_NODES: NavNode[] = [];
+const SIDEBAR_TOGGLE = true;
 
 function renderTokensLayout(
   contentWide?: boolean,
@@ -83,11 +87,16 @@ function renderTokensLayout(
     <StyleguideLayout
       title="Design Tokens"
       activeSlug="tokens"
+      lang="en"
       head={<></>}
       header={header}
       footer={<></>}
       bodyEnd={<></>}
       contentWide={contentWide}
+      navNodes={NAV_NODES}
+      sidebarToggle={SIDEBAR_TOGGLE}
+      enableClientRouter
+      noindex={false}
     >
       <p>content</p>
     </StyleguideLayout>,
@@ -128,9 +137,10 @@ describe("StyleguideLayout header slot (#541)", () => {
 });
 
 describe("StyleguideLayout sidebar toggle slots (#622)", () => {
-  it("binds both package factories to the sidebar toggle setting", () => {
+  it("binds both package factories to the sidebarToggle prop", () => {
+    renderTokensLayout();
     for (const factory of [createSidebarPrepaint, createSidebarVisibilityPrepaint]) {
-      expect(factory).toHaveBeenCalledWith({ sidebarToggle: settings.sidebarToggle });
+      expect(factory).toHaveBeenCalledWith({ sidebarToggle: SIDEBAR_TOGGLE });
     }
   });
 
@@ -152,10 +162,15 @@ describe("StyleguideLayout sidebar toggle slots (#622)", () => {
       <StyleguideLayout
         title="Design Tokens"
         hideSidebar
+        lang="en"
         head={<></>}
         header={<></>}
         footer={<></>}
         bodyEnd={<></>}
+        navNodes={NAV_NODES}
+        sidebarToggle={SIDEBAR_TOGGLE}
+        enableClientRouter
+        noindex={false}
       >
         <p>tokens</p>
       </StyleguideLayout>,

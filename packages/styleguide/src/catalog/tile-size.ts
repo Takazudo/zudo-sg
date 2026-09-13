@@ -2,8 +2,8 @@
 // control's option set, its localStorage key, and the `<html>` attribute the
 // gallery CSS keys off.
 //
-// Mirrors the house pattern in src/features/styleguide/chrome/panel-contract.ts
-// (+ panel-scripts-source.ts): pure constants and DOM helpers, importable from
+// Mirrors the house pattern in ../chrome/panel-contract.ts (+
+// panel-scripts-source.ts): pure constants and DOM helpers, importable from
 // SSR (constants only) and from the client island alike, with the inline
 // restore script built from those same constants so a rename flows through
 // instead of drifting.
@@ -12,7 +12,7 @@
 // wrapped so private-mode / disabled storage degrades to the default rather
 // than throwing.
 
-/** Attribute set on `<html>`; `gallery.css` reads it to pick the track size. */
+/** Attribute set on `<html>`; the package's `styles.css` reads it to pick the track size. */
 export const ATTR_TILE_SIZE = "data-sg-tile-size";
 
 /** localStorage key (styleguide-private `sg-` namespace). */
@@ -25,7 +25,7 @@ export interface TileSizeOption {
   label: string;
   /**
    * Grid track minimum in CSS px. Must equal the `--sg-tile-min-n` value the
-   * matching `gallery.css` rule sets — the unit test asserts the two agree.
+   * matching `styles.css` rule sets — the unit test asserts the two agree.
    */
   trackMin: number;
 }
@@ -63,9 +63,9 @@ export function applyTileSize(size: TileSize, el?: HTMLElement): void {
 
 /**
  * Inline `<head>` script source. Runs before first paint so a reader who chose
- * Large does not watch 72 tiles re-lay themselves out when the island mounts.
- * Built from the constants above; keep it dependency-free and self-contained —
- * an inline script cannot import this module at runtime.
+ * Large does not watch the whole grid re-lay itself out when the island
+ * mounts. Built from the constants above; keep it dependency-free and
+ * self-contained — an inline script cannot import this module at runtime.
  */
 export const TILE_SIZE_RESTORE_SCRIPT = [
   "try{",
