@@ -9,7 +9,7 @@
 // runtime and still shows components with JavaScript disabled.
 //
 // Data flow:
-//   getCategoryGroups()  [from src/styleguide/data/registry]
+//   getCategoryGroups()  [from src/styleguide/registry]
 //   → category-grouped tiles (SSR, no-JS, with data-sg-* attributes)
 //   → CatalogFilter island (filters by toggling `hidden` on tiles; also owns
 //     the tile-size segmented control)
@@ -31,7 +31,7 @@ import type { JSX, VNode } from "preact";
 import { Island } from "@takazudo/zfb";
 import { defaultLocale } from "@/config/i18n";
 import { withBase } from "@/utils/base";
-import { getCategoryGroups, OVERVIEW_SLUG } from "@/styleguide/data/registry";
+import { getCategoryGroups, OVERVIEW_SLUG } from "@/styleguide/registry";
 import { StyleguideLayout } from "@/features/styleguide/chrome/_styleguide-layout";
 import { ComponentThumb } from "@/features/styleguide/catalog/component-thumb";
 import { TILE_SIZE_RESTORE_SCRIPT } from "@/features/styleguide/catalog/tile-size";

@@ -261,13 +261,14 @@ export default meta;
 | `order`       | `number`        | no       | Sort hint within a category; alphabetical by `title` when omitted. |
 
 **`StoryCategory` is an open string** — any value is valid. zudo-sg's own
-declared order (`STORY_CATEGORIES` in `src/stories/types.ts`) is:
+declared order (`STORY_CATEGORIES` in `src/stories/categories.ts`) is:
 `"Actions" | "Typography" | "Layout" | "Data Display" | "Forms" | "Navigation" |
 "Content" | "Landing" | "News" | "Search" | "Feedback" | "Media"`.
-The catalog (`src/styleguide/data/registry.ts` `CATEGORY_ORDER` in the host)
-renders `STORY_CATEGORIES` in that declared order first, then appends any
+The catalog (the engine's `createRegistry` in `@takazudo/zudo-sg/registry`,
+fed `STORY_CATEGORIES` as `categoryOrder` by the host) renders that declared
+order first, then appends any
 category actually used by a story that isn't on the list, alphabetically —
-so a new category needs no edit to `types.ts` to work, though adding it there
+so a new category needs no edit to `categories.ts` to work, though adding it there
 keeps it out of the "unknown, appended alphabetically" tail.
 `scripts/new-component.mjs --category <Category>` accepts any string and
 warns (doesn't fail) when it isn't one of the declared ones.
@@ -569,7 +570,7 @@ src/<category-slug>/<component>/<component>.mdx
   category-nested layouts), so zfb's Rust pipeline compiles it at build time.
   The host detail page (`pages/components/[slug].tsx`) looks up the entry by
   deriving its slug from the story path
-  ([`src/styleguide/data/component-docs.ts`](../../src/styleguide/data/component-docs.ts))
+  ([`packages/styleguide/src/registry/component-docs.ts`](../styleguide/src/registry/component-docs.ts))
   and renders `<entry.Content>` inside a `.zd-content` wrapper. Discovery is
   therefore keyed off the **same** `packages/ui/src/` root the `gen-sg-registry`
   codegen walks, at whatever depth the story lives — no separate registration,

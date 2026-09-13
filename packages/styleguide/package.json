@@ -1,0 +1,62 @@
+{
+  "name": "@takazudo/zudo-sg",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "zudo-sg styleguide engine — story registry, catalog routes and preview machinery for zfb + zudo-doc hosts.",
+  "license": "MIT",
+  "author": "Takeshi Takatsudo",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Takazudo/zudo-sg.git",
+    "directory": "packages/styleguide"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./host-paths": {
+      "types": "./dist/host-paths.d.ts",
+      "default": "./dist/host-paths.js"
+    },
+    "./sg-routes": {
+      "types": "./dist/sg-routes.d.ts",
+      "default": "./dist/sg-routes.js"
+    },
+    "./stories": {
+      "types": "./dist/stories/index.d.ts",
+      "default": "./dist/stories/index.js"
+    },
+    "./registry": {
+      "types": "./dist/registry/index.d.ts",
+      "default": "./dist/registry/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "bin",
+    "routes-src",
+    "virtual-modules.d.ts",
+    "styles.css"
+  ],
+  "scripts": {
+    "build": "tsup && tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --config vitest.config.ts",
+    "check:no-host-alias": "node scripts/check-no-host-alias.mjs",
+    "check:package-shape": "node scripts/check-package-shape.mjs",
+    "check": "pnpm run check:no-host-alias && pnpm run typecheck && pnpm run build && pnpm run check:package-shape && pnpm run test"
+  },
+  "peerDependencies": {
+    "preact": "^10.29.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "preact": "^10.29.1",
+    "tsup": "^8.5.0",
+    "typescript": "^5.9.0",
+    "vitest": "^4.1.9"
+  }
+}

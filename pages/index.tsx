@@ -17,7 +17,7 @@ import { defaultLocale, t } from "@/config/i18n";
 import { withBase } from "@/utils/base";
 import { buildNavTree } from "@/utils/docs";
 import { resolveNavSource } from "./lib/_nav-source-docs";
-import { getCategoryGroups } from "@/styleguide/data/registry";
+import { getCategoryGroups } from "@/styleguide/registry";
 import { collectTags } from "@/utils/tags";
 import { toRouteSlug } from "@/utils/slug";
 import { AutoLogo } from "@takazudo/zudo-doc/auto-logo";

@@ -27,7 +27,7 @@
 //                     `HeadWithDefaults` / `BodyEndIslands`). No bespoke
 //                     styleguide chrome.
 //   sidebarOverride → root `SidebarTree` island fed the styleguide `navNodes`
-//                     (src/styleguide/data/nav-nodes.ts) instead of the docs
+//                     (src/styleguide/nav-nodes.ts) instead of the docs
 //                     tree. Wrapped here in `<Island when="load">` exactly like
 //                     `pages/lib/_sidebar-with-defaults.tsx` does — an override
 //                     slot is responsible for its own hydration marker (see
@@ -59,7 +59,7 @@ import { Island } from "@takazudo/zfb";
 import { DocLayoutWithDefaults } from "@takazudo/zudo-doc/doclayout";
 import { settings } from "@/config/settings";
 import { defaultLocale, type Locale } from "@/config/i18n";
-import { navNodes } from "@/styleguide/data/nav-nodes";
+import { navNodes } from "@/styleguide/nav-nodes";
 import { SidebarTree } from "@takazudo/zudo-doc/sidebar-tree-island";
 import {
   createSidebarPrepaint,

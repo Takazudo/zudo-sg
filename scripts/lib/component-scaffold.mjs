@@ -15,15 +15,15 @@ import { fileURLToPath } from "node:url";
 import { COMPONENTS_ROOT, UI_PACKAGE_NAME } from "./scaffold-config.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const TYPES_PATH = resolve(__dirname, "..", "..", "packages/ui/src/stories/types.ts");
+const TYPES_PATH = resolve(__dirname, "..", "..", "packages/ui/src/stories/categories.ts");
 
 /**
  * Reads zudo-sg's own declared category order straight out of
- * `STORY_CATEGORIES` in packages/ui/src/stories/types.ts's source text. This
+ * `STORY_CATEGORIES` in packages/ui/src/stories/categories.ts's source text. This
  * file is a dependency-free .mjs script (no TS import), so it regex-parses
  * the array literal rather than importing it — mirrors the parsing approach
  * `scripts/gen-z-index.mjs` uses for its own array. `StoryCategory` is an
- * open string (see types.ts), so this list is used only to decide whether
+ * open string (see stories/types.ts), so this list is used only to decide whether
  * `assertValidCategory` should print a "new category" warning — it never
  * rejects a value that isn't on it.
  */
@@ -64,8 +64,8 @@ export function assertValidName(name) {
  * packages/ui/src/stories/types.ts. This only throws for a malformed value;
  * a category outside `VALID_CATEGORIES` is accepted, with a warning printed
  * so the author notices they're introducing a new one (it sorts in
- * alphabetically after the declared categories — see
- * `src/styleguide/data/registry.ts` `CATEGORY_ORDER`).
+ * alphabetically after the declared categories — see `createRegistry` in
+ * packages/styleguide/src/registry/registry.ts).
  */
 export function assertValidCategory(category) {
   if (!category || typeof category !== "string" || category.trim() === "") {

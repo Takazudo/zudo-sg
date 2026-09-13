@@ -20,7 +20,7 @@
 //      search index for their enhancer), so no story can ever ship bytes that
 //      execute on the catalogue.
 // The scoping is done once, eagerly, at module init — mirroring
-// `storyEntries` in src/styleguide/data/registry.ts — which also keeps the
+// `storyEntries` in src/styleguide/registry.ts — which also keeps the
 // nested render out of the page's own render pass.
 //
 // Framing (virtual viewport, scale, fit) lives in catalog/gallery.css; this
@@ -29,7 +29,7 @@
 import type { JSX } from "preact";
 import { render as renderToStaticHtml } from "preact-render-to-string";
 import type { StoryCategory, StoryControl } from "@zudo-sg/ui";
-import { storyEntries, type StoryEntry } from "@/styleguide/data/registry";
+import { storyEntries, type StoryEntry } from "@/styleguide/registry";
 
 /** Virtual-viewport width (CSS px) a thumbnail lays its component out at. */
 export const THUMB_VIEWPORT_W = 720;

@@ -21,7 +21,7 @@ import type { JSX } from "preact";
 import { useEffect, useMemo, useState } from "preact/hooks";
 import type { StoryControl } from "@zudo-sg/ui";
 import { installIframeReceiver } from "@/features/styleguide/token-tweak/iframe-css-vars-bridge";
-import { getStoryBySlug } from "@/styleguide/data/registry";
+import { getStoryBySlug } from "@/styleguide/registry";
 import {
   MSG_HEIGHT,
   MSG_READY,

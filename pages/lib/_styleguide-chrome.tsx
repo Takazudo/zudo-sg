@@ -17,7 +17,7 @@
 import type { JSX } from "preact";
 import { settings } from "@/config/settings";
 import type { Locale } from "@/config/i18n";
-import { navNodes } from "@/styleguide/data/nav-nodes";
+import { navNodes } from "@/styleguide/nav-nodes";
 import { FooterWithDefaults } from "./_footer-with-defaults";
 import { HeaderWithDefaults } from "./_header-with-defaults";
 import { HeadWithDefaults } from "./_head-with-defaults";

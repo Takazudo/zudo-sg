@@ -8,7 +8,7 @@ import { getStoryBySlug } from "../registry";
  * checks only the default; this pins the full source order and the
  * `variants[0]`-is-default invariant at the data layer, deterministically.
  *
- * `registry.ts` sorts each story's variants by the codegen-emitted
+ * The engine's `createRegistry` sorts each story's variants by the codegen-emitted
  * `storyExportOrder` (source order) rather than the alphabetical key
  * enumeration of the `import * as` namespace it builds them from.
  */
