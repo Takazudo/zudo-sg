@@ -1,28 +1,33 @@
+// @vitest-environment happy-dom
+import "../../__tests__/dom-test-setup.js";
 import { h } from "preact";
 import { act, render } from "@testing-library/preact";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import PreviewApp from "../preview-app";
+import PreviewApp, { type PreviewAppProps } from "../preview-app.js";
 import {
   MSG_HEIGHT,
   MSG_READY,
   MSG_REQUEST_READY,
   MSG_SET_THEME,
   MSG_UPDATE_PROPS,
-} from "../messages";
+} from "../messages.js";
 
-vi.mock("@/styleguide/registry", () => ({
-  getStoryBySlug: () => ({
-    variants: [
-      {
-        exportName: "Fixture",
-        story: {
-          controls: [],
-          render: () => h("div", { style: { height: "100.25px" } }),
+// PreviewApp receives the registry as a prop (never island props — see the
+// component header); a structural fixture stands in for createRegistry().
+const registry = {
+  getStoryBySlug: () =>
+    ({
+      variants: [
+        {
+          exportName: "Fixture",
+          story: {
+            controls: [],
+            render: () => h("div", { style: { height: "100.25px" } }),
+          },
         },
-      },
-    ],
-  }),
-}));
+      ],
+    }) as unknown as ReturnType<PreviewAppProps["registry"]["getStoryBySlug"]>,
+};
 
 const FRACTIONAL_FIXTURE_CONTENT_BOTTOM = 100.25;
 const FRACTIONAL_FIXTURE_SCROLL_Y = 24;
@@ -96,7 +101,7 @@ describe("PreviewApp parent messaging", () => {
         }
       });
 
-    render(<PreviewApp />);
+    render(<PreviewApp registry={registry} />);
 
     expect(postMessage).toHaveBeenCalledWith({ type: MSG_READY }, "*");
     expect(document.documentElement.dataset.theme).toBe("dark");
@@ -124,7 +129,7 @@ describe("PreviewApp parent messaging", () => {
       .spyOn(window.parent, "postMessage")
       .mockImplementation(() => undefined);
 
-    render(<PreviewApp />);
+    render(<PreviewApp registry={registry} />);
     expect(postMessage).toHaveBeenCalledWith({ type: MSG_READY }, "*");
 
     act(() => {
@@ -150,7 +155,7 @@ describe("PreviewApp parent messaging", () => {
       .spyOn(window.parent, "postMessage")
       .mockImplementation(() => undefined);
 
-    render(<PreviewApp />);
+    render(<PreviewApp registry={registry} />);
 
     // Drop every call recorded during mount (the ready signal plus the
     // immediate/100ms/500ms height reports) so the assertions below can only
@@ -180,7 +185,7 @@ describe("PreviewApp height reporting", () => {
       .spyOn(window.parent, "postMessage")
       .mockImplementation(() => undefined);
 
-    render(<PreviewApp />);
+    render(<PreviewApp registry={registry} />);
 
     const heightMessageCount = (): number =>
       postMessage.mock.calls.filter(

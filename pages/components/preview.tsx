@@ -5,7 +5,9 @@
 // Loaded as the `src` of every VariantFrame iframe on the detail pages. Each
 // iframe passes `?slug=…&variant=…`; static hosting serves the SAME HTML for
 // all of them, so PreviewApp (client-only) resolves the variant from
-// `location.search`.
+// `location.search`. It is mounted through the no-props ConfiguredPreviewApp
+// wrapper (pages/lib/_configured-preview-app.tsx): island props are JSON, so
+// the registry's render closures must travel in-bundle, never as props.
 //
 // This page is intentionally chrome-free (no layout header/sidebar) — it is
 // only ever shown inside an iframe. It owns its OWN full `<html>` document
@@ -19,24 +21,24 @@
 // RESTORE the @zudo-sg/ui palette for the previewed components. See that file's
 // header for why a separate entrypoint can't do it (zfb builds one global
 // stylesheet). The design-token tweaker reaches it via the theme iframe-bridge
-// receiver that PreviewApp installs.
+// receiver that ConfiguredPreviewApp installs.
 
 import "../../src/styles/global.css";
 
 import type { JSX, VNode } from "preact";
 import { Island } from "@takazudo/zfb";
-import PreviewApp from "@/features/styleguide/preview/preview-app";
+import ConfiguredPreviewApp from "../lib/_configured-preview-app";
 
 export const frontmatter = { title: "Preview" };
 
 export default function PreviewRoute(): JSX.Element {
   // SSR-skip island: the variant only renders client-side (it depends on
   // `location.search`), so we render nothing server-side and let the runtime
-  // mount PreviewApp on load.
+  // mount ConfiguredPreviewApp on load.
   const app = Island({
     when: "load",
     ssrFallback: <div data-sg-preview-loading />,
-    children: <PreviewApp />,
+    children: <ConfiguredPreviewApp />,
   }) as unknown as VNode;
 
   return (
