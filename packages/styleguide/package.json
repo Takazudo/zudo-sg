@@ -80,6 +80,10 @@
       "types": "./dist/plugins/zdtp-apply-proxy.d.ts",
       "default": "./dist/plugins/zdtp-apply-proxy.js"
     },
+    "./preview-css": {
+      "types": "./dist/preview-css/index.d.ts",
+      "default": "./dist/preview-css/index.js"
+    },
     "./package.json": "./package.json"
   },
   "bin": {
@@ -108,7 +112,9 @@
     "@codemirror/state": "^6.0.0",
     "@codemirror/theme-one-dark": "^6.0.0",
     "@codemirror/view": "^6.0.0",
-    "postcss": "^8.5.15"
+    "postcss": "^8.5.15",
+    "@tailwindcss/node": "^4.2.0",
+    "@tailwindcss/oxide": "^4.2.0"
   },
   "peerDependencies": {
     "@takazudo/zfb": "2.16.0",
