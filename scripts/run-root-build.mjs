@@ -6,6 +6,7 @@ import {
   IMAGE_DIMENSIONS_CANNOT_STAT,
   rootBuildExitCode,
 } from "./lib/root-build-guard.mjs";
+import { ensureStyleguideBuild } from "./ensure-styleguide-build.mjs";
 
 const projectRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const pnpmCommand = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
@@ -101,6 +102,15 @@ export function runRootBuild(options = {}) {
 export { IMAGE_DIMENSIONS_CANNOT_STAT, rootBuildExitCode };
 
 export async function main(cliArgs = process.argv.slice(2), options = {}) {
+  // ensure-styleguide-build pre-step: the root host consumes
+  // @takazudo/zudo-sg from its gitignored dist/, so build it when incomplete.
+  const ensureBuild = options.ensureBuild ?? ensureStyleguideBuild;
+  const ensureCode = ensureBuild();
+  if (ensureCode !== 0) {
+    process.exitCode = ensureCode;
+    return;
+  }
+
   const result = await runRootBuild({ ...options, cliArgs });
 
   if (result.error) process.stderr.write(`${result.error.message}\n`);

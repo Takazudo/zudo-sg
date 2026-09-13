@@ -38,7 +38,7 @@
    `var(--zd-*)` role: the upstream SemanticKey set is closed, so there is no
    `--zd-border` to map to. Unlike the `--zd-*` set
    above this is a real value change — `--color-border` is consumed by the
-   styleguide catalog chrome (`src/features/styleguide/**`, `pages/components/**`:
+   styleguide catalog chrome (`@takazudo/zudo-sg` catalog routes:
    variant-frame, code-panel, catalog cards), so those borders move onto the
    deliberate ladder. Genuine docs pages (`.zd-content`, the
    zudo-doc package chrome) bind no `border-border`/`var(--color-border)`, so they
@@ -51,16 +51,15 @@
    it simply keeps the ui value — no change, since this block does not touch them.
    The compat aliases (ink/paper/line/brand/…) are likewise unused by doc-chrome.
 
+   The preview iframe document (`<html data-sg-preview-doc>`) does NOT rely on
+   this bundle for its palette: it links the standalone preview stylesheet
+   (`previewStyles` → src/styles/preview-entry.css, compiled by
+   @takazudo/zudo-sg/plugins/preview-css and served at /_zudo-sg/preview.css),
+   whose token roots are rescoped to `:root[data-sg-preview-doc]` and so beat
+   the doc-chrome values below on that document only.
+
    See packages/ui/STORIES.md §1 "Required style imports". */
 @import "@zudo-sg/ui/styles/colors.css";
-
-/* Preview-iframe palette scope. Restores the @zudo-sg/ui semantic colors for
-   the chrome-free /components/preview document (`<html data-sg-preview-doc>`),
-   which has no --zd-* injected and would otherwise render the re-asserted
-   `--color-*` names below as undefined. Scoped by `html[data-sg-preview-doc]`
-   (specificity beats the :root the @theme emits), so it is order-independent
-   and never affects doc-chrome pages. See src/styles/preview.css. */
-@import "./preview.css";
 
 /* ========================================
  * @takazudo/zudo-doc package safelist
@@ -111,7 +110,8 @@
 @import "@takazudo/zdtp/dashboard/styles.css";
 
 /* ========================================
- * Styleguide catalog — feature CSS import (#122, #167)
+ * @takazudo/zudo-sg catalog + chrome + search CSS (#122, #167, #540, moved
+ * to the engine package by #653)
  *
  * Grouped with the other @imports because CSS requires @import to precede
  * all non-import rules — it used to sit after every rule at the bottom of
@@ -133,19 +133,20 @@
  * `:has(#sg-code-panel)` ID argument), and this import still comes after
  * `tailwindcss/utilities` in source order — moved up INTO the top import
  * block, not above it — so the override holds either way. This file's own body
- * rules below share no selector+property pair with
- * the feature CSS (the only shared class, `.zd-doc-content-band`, is touched
- * for different properties there — max-width transition vs. flex-direction/
- * gap here), so relocating the import above them changes nothing.
- * ======================================== */
-@import "../features/styleguide/styles.css";
-/* Catalogue gallery — the inline-SSR thumbnail framing model (virtual
- * viewport + scale + fit), the tile grid, and the tile-size segmented
- * control. Split from styles.css because it is a self-contained feature
- * with a load-bearing header comment; same unlayered placement and same
- * rationale as the import above. See
- * src/features/styleguide/catalog/gallery.css (#540). */
-@import "../features/styleguide/catalog/gallery.css";
+ * rules below share no selector+property pair with the package CSS (the only
+ * shared class, `.zd-doc-content-band`, is touched for different properties
+ * there — max-width transition vs. flex-direction/gap here), so relocating
+ * the import above them changes nothing.
+ *
+ * Imported via the package's `@takazudo/zudo-sg/styles.css` export (#661) —
+ * combines what used to be two separate host imports (the chrome/search
+ * feature CSS and the catalogue gallery CSS) into the one file the package
+ * ships at its root. The generated `@takazudo/zudo-sg/safelist.css` import
+ * right below it covers the Tailwind utility classes referenced by this file
+ * and by the package's `.tsx` sources (extracted from `dist/**\/*.js` at
+ * package build time) for hosts that fall back to explicit @source scanning. */
+@import "@takazudo/zudo-sg/styles.css";
+@import "@takazudo/zudo-sg/safelist.css";
 
 /* Portable syntax paint + ProseMd typography. The provider owns these rules
  * directly; zudo-doc's feature stylesheet is not part of the component package
@@ -184,11 +185,9 @@
 /* The @zudo-sg/ui component library lives outside this app's tree; scan its
    source so Tailwind generates the utility classes the components emit. */
 @source "../../packages/ui/src/**/*.{tsx,ts,jsx,js}";
-/* Styleguide feature dirs — scan so Tailwind generates .sg-* classes used by
- * the /components catalog pages (created by the styleguide-into-docs migration). */
-@source "src/features/styleguide/**/*.{tsx,ts,jsx,js}";
-@source "src/styleguide/**/*.{tsx,ts,jsx,js}";
-@source "pages/components/**/*.{tsx,ts,jsx,js}";
+/* Host-owned live-demo islands (pages/preview/*). The catalog chrome's classes
+ * come from @takazudo/zudo-sg/safelist.css, not from host @source globs. */
+@source "src/features/styleguide/preview-demos/**/*.{tsx,ts,jsx,js}";
 /* ========================================
  * Design Token System
  *

@@ -10,16 +10,15 @@
 // /preview/dialog demo (#215/#212) onto the ported contact form (#228), now
 // that Dialog dies in the Wave-6 atomic swap (#235).
 //
-// Chrome-free (mirrors pages/components/preview.tsx): owns its own `<html>`
+// Chrome-free (mirrors the engine /components/preview route): owns its own `<html>`
 // document rather than going through the docs DocLayout, so it must
-// explicitly import the root CSS bundle for the rendered form's utility
-// classes + design tokens. Marked `data-sg-preview-doc` — the same attribute
-// pages/components/preview.tsx uses — rather than a page-specific one, so the
-// `html[data-sg-preview-doc]` palette restoration in src/styles/preview.css
-// (#223) applies here too: this document has no ColorSchemeProvider, so
-// without that scoped rule the re-asserted --color-accent/-danger/etc. tokens
-// (see global.css's collision-set comment) would resolve to the doc-chrome's
-// undefined --zd-* variables.
+// explicitly import the root CSS bundle for the page's own utility classes.
+// Marked `data-sg-preview-doc` — the same attribute
+// the engine preview route uses — and links the same standalone preview
+// stylesheet (/_zudo-sg/preview.css), whose `:root[data-sg-preview-doc]` token
+// roots restore the @zudo-sg/ui palette over the bundle's doc-chrome
+// re-assertion (this document has no ColorSchemeProvider, so the re-asserted
+// --color-accent/-danger/etc. would otherwise resolve to undefined --zd-*).
 //
 // All MSW/fetch/state logic lives in the ContactFormDemo island — this module
 // stays server-rendered scaffolding, per the previewRoute contract (mocking
@@ -31,6 +30,8 @@ import "../../src/styles/global.css";
 import type { JSX, VNode } from "preact";
 import { Island } from "@takazudo/zfb";
 import ContactFormDemo from "@/features/styleguide/preview-demos/contact-form-demo";
+import { withBase } from "@/utils/base";
+import { DEFAULT_PREVIEW_CSS_URL } from "@takazudo/zudo-sg/sg-context";
 
 export const frontmatter = { title: "Contact Form Preview" };
 
@@ -48,6 +49,7 @@ export default function ContactPreviewRoute(): JSX.Element {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="robots" content="noindex" />
         <title>Contact Form Preview</title>
+        <link rel="stylesheet" href={withBase(DEFAULT_PREVIEW_CSS_URL)} />
       </head>
       <body class="bg-bg p-hsp-xl">
         <h1 class="mb-vsp-md text-heading font-bold">Contact form — live demo</h1>

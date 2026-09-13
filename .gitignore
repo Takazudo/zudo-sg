@@ -6,6 +6,10 @@ dist
 # Route-injection staging dir written by @takazudo/zudo-doc/plugins/routes
 # (packageOwnedRoutes) at build time.
 .zudo-doc
+# @takazudo/zudo-sg build artifacts (tsup onSuccess): route entrypoint sources
+# mirrored from src/routes/ and the generated virtual-module declarations.
+packages/styleguide/routes-src/
+packages/styleguide/virtual-modules.d.ts
 
 # Playwright artifacts
 test-results/

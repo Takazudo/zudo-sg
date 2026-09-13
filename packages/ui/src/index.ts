@@ -12,7 +12,7 @@
 // NOT by the on-disk category-nested directory (shared/cards/media/chrome/
 // content/news/forms/search/landing) — a directory can span multiple
 // categories (e.g. shared/ has Actions, Layout, Navigation, and Content
-// components). scripts/lib/component-scaffold.mjs's `insertBarrelExport`
+// components). @takazudo/zudo-sg's src/cli/scaffold/component-scaffold.ts's `insertBarrelExport`
 // locates a component's section by matching its StoryCategory against a
 // "// ── <Category> ──" header, so every StoryCategory needs exactly one
 // section here (add one by hand if a new category is introduced).
@@ -292,6 +292,7 @@ export type {
   StoryModule,
 } from "./stories/types";
 export { defineStory } from "./stories/types";
+export { STORY_CATEGORIES } from "./stories/categories";
 
 // ── Utilities ────────────────────────────────────────────────────────────
 export { cx } from "./lib/cx";

@@ -2,25 +2,10 @@ import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { assertValidPanelConfig } from "@takazudo/zdtp/testing";
 
-// The runtime config deliberately keeps these browser/dev-only dependencies
-// outside the shared module. Mocking them lets this test inspect both configs
-// while keeping the test itself a plain structural/data check.
-vi.mock(
-  "@/features/styleguide/token-tweak/preview-iframe-registry",
-  () => ({
-    applyPreviewVars: vi.fn(),
-    clearPreviewVars: vi.fn(),
-  }),
-);
-vi.mock("virtual:zdtp-apply-config", () => ({
-  applyEndpoint: undefined,
-  applyRouting: undefined,
-}));
-
-import { previewTokenPanelConfig } from "../preview-token-panel-config";
+import { createPreviewTokenPanelConfig } from "@takazudo/zudo-sg/token-tweak";
 import {
   dashboardPreviewOverrides,
   UI_DASHBOARD_PREVIEW_TEXT,
@@ -34,6 +19,8 @@ import {
   UI_SIZE_TOKENS,
   UI_SPACING_TOKENS,
 } from "../ui-design-tokens-manifest";
+
+const previewTokenPanelConfig = createPreviewTokenPanelConfig({ tabs: uiTokenTabs });
 
 const MODULE_PATH = resolve(
   dirname(fileURLToPath(import.meta.url)),
@@ -84,8 +71,11 @@ describe("shared UI token tabs", () => {
     ].map((match) => match[1]);
 
     // The explicit extension is required by Node's native type stripping;
-    // normalize it when checking the contract's manifest-only allowlist.
+    // normalize it when checking the contract's allowlist. Tab-shaping
+    // logic now lives in the engine package (@takazudo/zudo-sg/token-dashboard);
+    // this module only assembles the host's generated manifest for it.
     expect(runtimeImports.map((specifier) => specifier?.replace(/\.ts$/, ""))).toEqual([
+      "@takazudo/zudo-sg/token-dashboard",
       "./ui-design-tokens-manifest",
     ]);
     expect(source).not.toContain("virtual:");

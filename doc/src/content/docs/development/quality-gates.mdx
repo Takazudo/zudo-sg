@@ -25,10 +25,12 @@ node scripts/check-links.mjs --dist=doc/dist
 
 ## Generated-data drift
 
-Generated files are checked in, but their source of truth lives elsewhere:
+Generated files are checked in, but their source of truth lives elsewhere. Both checks below wrap the `zudo-sg` CLI shipped by the `@takazudo/zudo-sg` styleguide engine (`packages/styleguide`), not a root-owned script:
 
-- `pnpm check:sg-registry` verifies the styleguide story registries generated from `packages/ui/src/**/*.stories.tsx`.
-- `pnpm check:token-manifest` verifies the UI token manifest generated from `packages/ui/styles/tokens.css` and `packages/ui/styles/colors.css`.
+- `pnpm check:sg-registry` runs `zudo-sg gen-registry --check`, verifying the styleguide story registries generated from `packages/ui/src/**/*.stories.tsx`.
+- `pnpm check:token-manifest` runs `zudo-sg gen-token-manifest --check`, verifying the UI token manifest generated from `packages/ui/styles/tokens.css` and `packages/ui/styles/colors.css`.
+
+Both commands read the host's `zudo-sg.config.mjs` for their inputs and outputs (components roots, category order, token CSS files); see [Component Catalog Pipeline](../architecture/component-catalog-pipeline.mdx) and [Design Tokens](../architecture/design-tokens.mdx).
 
 The docs workspace uses zudo-doc's package-owned default z-index tiers. It has no local z-index generator or drift check.
 
@@ -149,6 +151,18 @@ demo app's Playwright suite fails four tests: theme controls go missing, a Brows
 updating `aria-expanded`, and a page error surfaces reading Preact's internal `__H` field. None
 of this points at the change that was actually made; if you see these specific symptoms, check
 for contamination first with the recovery above before debugging further.
+
+## Engine foreign-install gate
+
+`pnpm verify:styleguide-install` proves the `@takazudo/zudo-sg` engine installs the same way a project outside this workspace would install it — not only through the workspace link the root host uses day to day:
+
+```sh
+pnpm verify:styleguide-install
+```
+
+It packs `packages/styleguide` with `pnpm pack`, installs the tarball plus exact `@takazudo/zfb`/`@takazudo/zudo-doc` pins into a copy of `fixtures/engine-host/` placed **outside** this repository (so its realpath resolves under `node_modules`, with no workspace link and no `packages: []` escape hatch), runs `zudo-sg gen-registry`, builds, and asserts the four injected routes plus the standalone preview stylesheet exist under the fixture's non-root `base` (`/styleguide/`). It then boots `zfb dev` once and asserts the dev-hydration seed puts `ConfiguredPreviewApp` into the built islands bundle — `zfb dev` only scans a host's own `pages/` for islands, so the fixture's `pages/lib/_zudo-sg-islands.ts` shim is exercised the same way the root host's is.
+
+Run this gate after any change under `packages/styleguide` that touches the routes plugin, the preview-CSS plugin, staging, or the CLI; it is not part of the inner loop or `pnpm check`.
 
 ## CI gate
 

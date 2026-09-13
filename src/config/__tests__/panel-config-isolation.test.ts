@@ -15,16 +15,6 @@ import {
   __resetPanelConfigForTests,
 } from "@takazudo/zdtp/testing";
 
-// Mock the preview-iframe-registry so the preview config module can import
-// without pulling in browser-side preview bridge code.
-vi.mock(
-  "@/features/styleguide/token-tweak/preview-iframe-registry",
-  () => ({
-    applyPreviewVars: vi.fn(),
-    clearPreviewVars: vi.fn(),
-  }),
-);
-
 // Mock @takazudo/zdtp — the configurePanel call happens in bootstrap modules,
 // not in config modules, so only the types/exports we directly use are needed.
 vi.mock("@takazudo/zdtp", () => ({}));
@@ -80,20 +70,16 @@ vi.mock("@/config/color-scheme-utils", () => ({
   ],
 }));
 
-// Mock the zfb-only virtual module (registered by
-// plugins/zdtp-apply-proxy-plugin.mjs's `setup` hook) — only zfb's own
-// bundler can resolve a "virtual:" specifier; vitest runs under plain Vite.
-vi.mock("virtual:zdtp-apply-config", () => ({
-  applyEndpoint: undefined,
-  applyRouting: undefined,
-}));
-
 import {
   buildDesignTokenPanelConfig,
   designTokenPanelConfig,
 } from "../design-token-panel-config";
-import { previewTokenPanelConfig } from "../preview-token-panel-config";
+import { createPreviewTokenPanelConfig } from "@takazudo/zudo-sg/token-tweak";
+import { uiTokenTabs } from "../ui-token-tabs";
 import { UI_PALETTE_COLORS } from "../ui-design-tokens-manifest";
+
+// Built exactly as the engine island builds it in a production build (no apply wiring).
+const previewTokenPanelConfig = createPreviewTokenPanelConfig({ tabs: uiTokenTabs });
 
 describe("panel config isolation", () => {
   it("storagePrefix values are distinct", () => {
@@ -297,15 +283,17 @@ describe("panel config isolation", () => {
     expect(typeof previewTokenPanelConfig.applySink?.clear).toBe("function");
   });
 
-  it("preview panel forwards applyEndpoint/applyRouting from virtual:zdtp-apply-config as-is", () => {
-    // The mock above stands in for the build-mode branch of
-    // plugins/zdtp-apply-proxy-plugin.mjs's setup() (both undefined) — the
-    // dev-mode branch (real endpoint + routing map) is covered by
-    // plugins/__tests__/zdtp-apply-proxy-plugin.test.ts. This test only
-    // guards that the config module still reads the two fields from the
-    // virtual module rather than hardcoding or dropping them.
+  it("preview panel forwards applyEndpoint/applyRouting as-is (undefined outside zfb dev)", () => {
+    // The dev/build gating itself is covered by the engine plugin's tests
+    // (packages/styleguide/src/plugins/__tests__/zdtp-apply-proxy.test.ts).
     expect(previewTokenPanelConfig.applyEndpoint).toBeUndefined();
     expect(previewTokenPanelConfig.applyRouting).toBeUndefined();
+    const devConfig = createPreviewTokenPanelConfig(
+      { tabs: uiTokenTabs },
+      { applyEndpoint: "/__zdtp/apply", applyRouting: { palette: "colors.css" } },
+    );
+    expect(devConfig.applyEndpoint).toBe("/__zdtp/apply");
+    expect(devConfig.applyRouting).toEqual({ palette: "colors.css" });
   });
 
   it("doc panel has no applySink (writes to host :root)", () => {

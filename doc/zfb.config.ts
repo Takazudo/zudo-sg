@@ -24,6 +24,18 @@ export default defineConfig(
       "/docs/claude-agents/",
       "/docs/claude-commands/",
     ],
+    // Package release history for the published engine (@takazudo/zudo-sg).
+    // The postBuild `changelog` plugin regenerates packages/styleguide/CHANGELOG.md
+    // from these MDX pages every `pnpm build:doc` — outputFile resolves against
+    // this workspace's projectRoot (doc/), so the "../" climbs back to the repo
+    // root. #668's /l-make-release run appends the next version's entry here.
+    changelogs: [
+      {
+        sourceDir: "src/content/docs/changelog/zudo-sg",
+        outputFile: "../packages/styleguide/CHANGELOG.md",
+        packageName: "@takazudo/zudo-sg",
+      },
+    ],
     headerNav: [
       {
         label: "Getting Started",
@@ -39,6 +51,16 @@ export default defineConfig(
         label: "Development",
         path: "/docs/development",
         categoryMatch: "development",
+      },
+      {
+        label: "Reference",
+        path: "/docs/reference",
+        categoryMatch: "reference",
+      },
+      {
+        label: "Changelog",
+        path: "/docs/changelog",
+        categoryMatch: "changelog",
       },
     ],
     headerRightItems: [

@@ -130,6 +130,7 @@ describe("runRootBuild", () => {
     process.exitCode = undefined;
     try {
       const pending = main(["--outdir", "custom-dist", "--strict-broken"], {
+        ensureBuild: () => 0,
         signalSource,
         stdout: stdout.stream,
         stderr: stderr.stream,
@@ -153,6 +154,31 @@ describe("runRootBuild", () => {
       "--strict-broken",
     ]);
     expect(rootBuildArgs()).toEqual(["exec", "zfb", "build"]);
+  });
+
+  it("runs the ensure-styleguide-build pre-step first and stops when it fails", async () => {
+    const calls: string[] = [];
+    const previousExitCode = process.exitCode;
+    process.exitCode = undefined;
+    let exitCode: typeof process.exitCode;
+    try {
+      await main([], {
+        ensureBuild: () => {
+          calls.push("ensure");
+          return 3;
+        },
+        spawnProcess: () => {
+          calls.push("spawn");
+          return new FakeChild();
+        },
+      });
+      exitCode = process.exitCode;
+    } finally {
+      process.exitCode = previousExitCode;
+    }
+
+    expect(calls).toEqual(["ensure"]);
+    expect(exitCode).toBe(3);
   });
 
   it("keeps a stdout diagnostic split across unrelated stderr chunks", async () => {

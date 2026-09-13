@@ -1,5 +1,7 @@
 import { defineConfig } from "@takazudo/zfb/config";
 import { zudoDocPreset } from "@takazudo/zudo-doc/preset";
+import { withZudoSg } from "@takazudo/zudo-sg/config";
+import zudoSgConfig from "./zudo-sg.config.mjs";
 import { settings } from "./src/config/settings";
 import { buildDocsSchema } from "./src/config/docs-schema";
 import { translations } from "./src/config/i18n";
@@ -41,21 +43,6 @@ const preset = zudoDocPreset({
   translations,
   colorSchemes,
 });
-const resolveMarkdownLinks = preset.resolveMarkdownLinks
-  ? {
-      ...preset.resolveMarkdownLinks,
-      // The root build runs from the monorepo root and zfb validates workspace
-      // MDX files it sees. Register the standalone doc workspace as a link
-      // resolution source so its required relative .mdx links do not warn
-      // during the root styleguide build. This only affects markdown-link
-      // validation/rewrite; the root site's page routes still come from the
-      // root `docs` collection below.
-      dirs: [
-        ...preset.resolveMarkdownLinks.dirs,
-        { dir: "doc/src/content/docs", routePrefix: "/docs/" },
-      ],
-    }
-  : preset.resolveMarkdownLinks;
 
 export default defineConfig({
   framework: "preact",
@@ -81,9 +68,12 @@ export default defineConfig({
   // mainFields is zfb's *documented* fix for this msw case (#676), so we use it.
   // zfb treats apps/ as an extra source root and recursively runs root markdown
   // processing over demo MDX; apps/demo owns its own config/public tree, so keep
-  // that separate build outside the root bundle.
+  // that separate build outside the root bundle. `doc/` is excluded for the
+  // same reason (#649 doc-site split): it is a standalone zudo-doc workspace
+  // with its own build/deploy, and root markdown-link resolution no longer
+  // registers `doc/src/content/docs` as a link-resolution source.
   bundle: {
-    exclude: ["apps/demo/**"],
+    exclude: ["apps/demo/**", "doc/**"],
     mainFields: ["main", "module"],
   },
   // Collections, markdown.features, codeHighlight, resolveMarkdownLinks,
@@ -91,45 +81,38 @@ export default defineConfig({
   // index, llms.txt, claude-resources) — see node_modules/@takazudo/zudo-doc
   // /dist/preset.d.ts for the full fragment this spreads in.
   ...preset,
-  // Per-component docs (#119): an OPTIONAL MDX file co-located with each
-  // component (`packages/ui/src/<name>/<name>.mdx`) rendered inline as a
-  // section on the host-owned `/components/<slug>` detail page (NOT its own
-  // route — nothing maps this collection into `resolveMarkdownLinks.dirs`, so
-  // zfb generates no page for it). The collection is rooted at the SAME glob
-  // root the #103/#224 story codegen walks (`packages/ui/src/**/`), keeping
-  // doc discovery co-located with story discovery at ANY depth — both the old
-  // one-level layout (`<name>/<name>.mdx`) and the new category-nested layout
-  // (`<category>/<name>/<name>.mdx`). `include: ["**/*.mdx"]` uses the
-  // globset dialect's `**` (matches zero or more directory components), so it
-  // covers both depths in one pattern while still ignoring `.tsx`/
-  // `.stories.tsx`/`__tests__`. Slug shape is the path relative to the
-  // collection root minus `.mdx` (e.g. `button/button` or
-  // `layout/badge-icon/badge-icon`); the detail page derives it from the
-  // story entry's dir (component-docs.ts's `componentDocSlug`, which is
-  // depth-agnostic string-prefix/suffix stripping — no change needed there).
-  collections: [
-    ...preset.collections,
+  // Styleguide engine (@takazudo/zudo-sg/config, ADR decision 9): appends the
+  // engine's routes / preview-css / zdtp-apply-proxy plugin descriptors and
+  // one `componentDocs` collection per `componentsRoots` entry (#119: the
+  // OPTIONAL co-located component MDX docs rendered on `/components/<slug>`)
+  // AFTER the zudo-doc preset's. The engine owns `/components`,
+  // `/components/[slug]`, `/components/preview` and `/tokens`; a host `pages/`
+  // file with one of those URL shapes would silently shadow the injected route.
+  // Their islands reach `zfb dev` through `pages/lib/_zudo-sg-islands.ts`.
+  ...withZudoSg(
     {
-      name: "componentDocs",
-      path: "packages/ui/src",
-      include: ["**/*.mdx"],
+      collections: preset.collections,
+      plugins: [
+        ...preset.plugins,
+        // Run after the preset's doc-history preBuild so the embedded renderer
+        // receives freshly generated metadata without importing node:fs.
+        {
+          // Keep the Node-only plugin as native ESM. Pointing zfb at TypeScript
+          // leaves a .zfb-plugin-bundle-* transpilation artifact beside the source.
+          name: "./pages/lib/_doc-history-meta.mjs",
+        },
+      ],
     },
-  ],
-  resolveMarkdownLinks,
-  plugins: [
-    ...preset.plugins,
-    // Run after the preset's doc-history preBuild so the embedded renderer
-    // receives freshly generated metadata without importing node:fs.
     {
-      // Keep the Node-only plugin as native ESM. Pointing zfb at TypeScript
-      // leaves a .zfb-plugin-bundle-* transpilation artifact beside the source.
-      name: "./pages/lib/_doc-history-meta.mjs",
+      ...zudoSgConfig,
+      // Preview design-token panel: dev-only same-origin Apply endpoint that
+      // persists tweaks into packages/ui/styles/*.css, plus the panel island's
+      // host tabs.
+      zdtpApplyProxy: {
+        routingFile: "./zdtp-panel-routing.json",
+        writeRoot: "./packages/ui/styles",
+        tabsModule: "./src/config/preview-token-panel-tabs.ts",
+      },
     },
-    // Wires the preview design-token panel's Apply button to a same-origin
-    // dev-only endpoint that persists tweaks into packages/ui/styles/colors.css
-    // — see plugins/zdtp-apply-proxy-plugin.mjs for the full pipeline + scope.
-    {
-      name: "./plugins/zdtp-apply-proxy-plugin.mjs",
-    },
-  ],
+  ),
 });

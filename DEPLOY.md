@@ -51,9 +51,11 @@ this checklist implements. If a Worker name or domain ever changes, update every
 
 Intentionally **not** tracked here (found via the same search, out of scope for this checklist):
 
-- `apps/demo/layouts/site-layout.tsx`, `src/config/settings.ts`, `doc/src/config/settings.ts` —
-  these consume a domain for a nav link or `siteUrl` config value; a stale one surfaces as a
-  broken link or wrong canonical URL, not a deploy failure, so they're app code, not deploy config
+- `apps/demo/layouts/site-layout.tsx`, `doc/src/config/settings.ts` — these consume a domain
+  for a nav link or `siteUrl` config value; a stale one surfaces as a broken link or wrong
+  canonical URL, not a deploy failure, so they're app code, not deploy config. (Root
+  `src/config/settings.ts` no longer references the doc domain at all — #649 removed its only
+  nav link to it.)
 - `doc/src/content/docs/architecture/monorepo-layout.mdx`, `doc/src/content/docs/getting-started/installation.mdx`,
   `doc/src/content/docs/getting-started/introduction.mdx` — narrative prose that mentions a
   domain in passing, not a mapping table that needs active upkeep

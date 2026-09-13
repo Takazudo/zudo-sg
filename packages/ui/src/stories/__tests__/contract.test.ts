@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { STORY_CATEGORIES } from "../types";
 import type { StoryMeta, Story } from "../types";
 import { STORY_MODULES } from "./story-modules";
 
@@ -14,7 +13,10 @@ describe("story-authoring contract", () => {
         expect(meta, "missing default meta export").toBeTruthy();
         expect(typeof meta?.title).toBe("string");
         expect(meta?.title.length).toBeGreaterThan(0);
-        expect(STORY_CATEGORIES).toContain(meta?.category);
+        // `category` is an open string (see StoryCategory in ../types) — not
+        // restricted to the STORY_CATEGORIES declared order.
+        expect(typeof meta?.category).toBe("string");
+        expect(meta?.category.length).toBeGreaterThan(0);
         expect(typeof meta?.description).toBe("string");
         expect(meta?.description.length).toBeGreaterThan(0);
         expect(typeof meta?.usage).toBe("string");

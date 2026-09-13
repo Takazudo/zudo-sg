@@ -1,0 +1,360 @@
+# ADR: Styleguide engine package (`@takazudo/zudo-sg`) — seam and contract
+
+Status: **Accepted** (epic #648, decision sub-task #650, 2026-09-13).
+Locks the contract every Wave 2+ sub-issue implements. Model: zudo-doc's
+package-owned route seam (`$HOME/repos/myoss/zudo-doc/packages/zudo-doc/docs/adr/route-injection-seam.md`).
+Toolchain the decisions were verified against: `@takazudo/zfb` **2.16.0**,
+`@takazudo/zudo-doc` 5.22.0, pnpm 11.5.2, Node 24.
+
+## Context
+
+zudo-sg's catalog (`src/features/styleguide/**`, `src/styleguide/data/**`,
+`pages/components/*`, `pages/tokens.tsx`, six codegens, the preview CSS
+"two worlds" dance) is 100 % host code. Every consumer copies it and decays
+(zzmod is 70 commits behind). The epic turns it into an installable engine
+package built the way `@takazudo/zudo-doc` is built. Before the move, a
+throwaway spike (`__inbox/engine-seam-spike/`, gitignored, not committed)
+proved the seam end-to-end against zfb 2.16.0 and surfaced three facts that
+change the plan the epic was written with. They are recorded first because
+the decisions below depend on them.
+
+### Spike findings that override the epic text
+
+1. **The node_modules virtual-module gap is closed in zfb 2.16.** A route
+   entrypoint whose realpath is under `node_modules/.pnpm/…/routes-src/`
+   imports `virtual:zudo-sg-context` / `virtual:zudo-sg-registry` and builds
+   (packed-tarball host, `stage: "never"`). `paths()` is extracted from that
+   `.tsx` and both injected islands register. **No `routes-src` staging is
+   needed** for the virtual channel. zudo-doc's staging predates this fix.
+2. **A `.zudo-sg/` stage dir cannot work in zfb 2.16.** The bundler's shadow
+   mirror prunes every hidden directory and honours `.gitignore`; the ONLY
+   hidden staging surface it materialises is the hardcoded allowlist
+   `.zudo-doc/routes-src/**` (`crates/zfb-build/src/bundler.rs`
+   `KNOWN_FIRST_PARTY_STAGING_DIRS`, zfb #1840). Staging into
+   `.zudo-sg/routes-src/` fails the build with
+   `Could not resolve "../.zudo-sg/routes-src/components-slug.tsx"`.
+   Combined with (1), the engine does not stage at all; the only working
+   staging fallback is `<projectRoot>/.zudo-doc/routes-src/zudo-sg/` (proven).
+3. **zfb's island scanner does not walk `virtual:` specifiers** (it skips every
+   bare specifier — `crates/zfb-islands/src/scanner.rs` `Resolver::resolve`).
+   A `"use client"` component reached ONLY through the host registry behind
+   `virtual:zudo-sg-registry` gets its SSR marker but no manifest entry
+   (`⚠ island marker "Counter" … has no matching registry entry and will not
+   hydrate`). Islands the package route imports statically register in every
+   shape. Two proven ways to register a host island on package routes:
+   (a) any host `pages/` file statically imports the module (the island
+   manifest is site-wide — `pages/index.tsx` importing the registry registered
+   `Counter`), (b) staging with a generated **relative** real-file re-export
+   (`_registry-source.ts`) instead of the virtual module. (a) costs nothing and
+   is the contract; (b) is the recorded fallback.
+4. **`zfb dev` never scans injected package routes for islands** (found by the
+   manager's browser check, amendment 2026-09-13). `crates/zfb/src/commands/dev.rs`
+   `rebundle_islands` seeds the island scanner from the host's `pages/` root
+   ONLY and passes an empty package-route entrypoint list ("dev's injected
+   routes are served live, not materialised — #1193 … codex P1 is
+   build-only"), while `zfb build` seeds every injected entrypoint
+   (`build.rs` "Seed package-route islands from each route's REAL
+   entrypoint"). Consequence: an island reachable only through a package route
+   registers in the build but NOT in dev — the dev log says
+   `no "use client" islands found; skipping islands bundle`, the preview page
+   ships no `islands.js` and `ConfiguredPreviewApp` never mounts. Reproduced in
+   BOTH shapes: the packed host (realpath under `node_modules`) and the
+   workspace-linked host (realpath outside `node_modules` — the root zudo-sg
+   dogfood case). So finding 3's rule generalises: **every island that must
+   hydrate in dev is statically reachable from a host `pages/` file**, package
+   islands included. Fix proven in dev with curl + Playwright (both shapes): a
+   package subpath `@takazudo/zudo-sg/islands` statically imports every engine
+   island (incl. `../routes-src/_preview-app.tsx`), and the host's
+   `pages/index.tsx` imports it once — `/assets/islands.js` then contains
+   `ConfiguredPreviewApp` and `Counter`, `html[data-sg-preview-hydrated="1"]`
+   is set, the previewed button computes `rgb(37, 99, 235)`, zero console
+   errors; the build is unchanged (the same island reached through two graphs
+   is deduped by path, no collision warning).
+
+## Decisions
+
+### 1. Package name and location
+
+`@takazudo/zudo-sg`, workspace directory `packages/styleguide`, `private: true`
+until #668 flips it for publishing. Public npm scope proven by
+`@takazudo/zudo-doc`; the git-spec alternative (`@zudo-sg/styleguide`, like the
+`@zudo-sg/ui` provider handoff) is rejected — that handoff shows the pain of
+SHA-pinned git specs for every consumer. The npm name is checked by hand
+before the first publish; the epic never publishes.
+
+### 2. Dist build, shipped route sources
+
+tsup with `bundle: false` (1:1 `src/<path>.ts(x)` → `dist/<path>.js`, keeps
+`"use client"` directives), declarations by a separate
+`tsc -p tsconfig.build.json` pass, `exports` map append-only (one subpath per
+feature dir; types + default per entry). Route entrypoints are shipped as
+**`.tsx` source** under `routes-src/` (zfb extracts `paths()` by AST from the
+source file; a compiled `.js` fails with "no top-level `paths` export"):
+`scripts/copy-routes-src.mjs` copies `src/routes/*.{ts,tsx}` → `routes-src/`
+rewriting `../<seg>/…` → `@takazudo/zudo-sg/<seg>` and `../<file>.js` →
+`@takazudo/zudo-sg/<file>`; `scripts/check-routes-src.mjs` guards presence +
+no residual parent-relative imports; `virtual-modules.d.ts` is generated from
+`src/routes/_virtual.d.ts`. Plugins are loaded by zfb's Node plugin host and
+must be JS: `dist/plugins/*.js`. `packages/styleguide` is consumed from `dist`
+even inside the workspace; `scripts/run-root-build.mjs` gains an
+`ensure-styleguide-build` pre-step (zudo-doc's `ensure-workspace-build.mjs`
+shape: every literal `./dist/**` exports target must exist, else build).
+Source-only exports (the `@zudo-sg/ui` shape) are rejected: plugins must be
+JS, and the safelist generator scans `dist`.
+
+### 3. Story contract home — option (ii), duplicated structural types + drift check
+
+- Canonical: `packages/styleguide/src/stories/types.ts`, exported as
+  `@takazudo/zudo-sg/stories` (`StoryMeta`, `Story<P>`, `StoryControl<P>`,
+  `StoryModule`, `defineStory`).
+- `packages/ui/src/stories/types.ts` keeps a **byte-equivalent copy** of the
+  type body (header comment may differ) so the provider tarball stays
+  installable and type-resolvable with NO engine installed — `@zudo-sg/ui`'s
+  barrel re-exports the story types, and consumers typecheck the provider from
+  source (`exports` → `./src/*`), so any `import … from "@takazudo/zudo-sg/…"`
+  inside the provider would be a TS2307 in every external consumer.
+- Drift guard: `scripts/check-story-contract-sync.mjs` (root; compares the
+  two files after stripping the leading comment block; wired into `pnpm check`).
+- Verification of the choice: `scripts/verify-ui-provider-install.mjs`'s
+  fixture consumer gets `src/story-contract.ts` importing
+  `type { Story, StoryMeta, StoryModule }` and `defineStory` from `@zudo-sg/ui`
+  and calling `defineStory(...)`; the existing `pnpm run typecheck` step then
+  proves the contract resolves from the installed tarball (owner: #652).
+- Rejected: (i) engine as optional peer + `import type` shim — the barrel
+  re-export makes the shim a hard type dependency for external consumers;
+  (iii) a third `stories` package — a publish and a peer for ~120 lines of
+  types.
+
+### 4. Preview stylesheet — standalone compile, one URL
+
+- Host option `previewStyles` (required, project-root-relative path, e.g.
+  `./src/styles/preview-entry.css`), compiled by
+  `@takazudo/zudo-sg/plugins/preview-css` with `@tailwindcss/node`
+  (`compile` → `@tailwindcss/oxide` `Scanner` over `compiler.sources` +
+  `compiler.root` → `compiler.build(candidates)` → `optimize`). Package
+  `dependencies`: `@tailwindcss/node ^4.2.0`, `@tailwindcss/oxide ^4.2.0`.
+- Option `previewCssUrl`, default **`/_zudo-sg/preview.css`**. Dev:
+  `devMiddleware` registers `${stripTrailingSlash(base)}${previewCssUrl}`
+  (zfb matches the FULL URL; `base` read from `ctx.config.base`), serves
+  `text/css; charset=utf-8`, `cache-control: no-store`, recompiles when any
+  compile dependency's mtime changed (the entry + every `onDependency` path).
+  Build: `postBuild` writes **`<outDir>/<previewCssUrl>`** — NOT nested under
+  the base segment — mirroring zfb's own `dist/assets/*` (linked as
+  `<base>/assets/*`) and zudo-doc's `search-index.json`. `previewMiddleware`
+  registers the same handler so `zfb preview` serves it too.
+- **Cascade rule (mandatory):** zfb injects the single global stylesheet into
+  every route, after the preview `<link>`, and has no per-route opt-out. The
+  compiler therefore rewrites `:root, :host {` → `:root[data-sg-preview-doc], :host {`
+  and `:root {` → `:root[data-sg-preview-doc] {` (the zzmod rule) so the
+  preview world's tokens beat the host bundle's colliding `--color-*` at
+  specificity (0,1,1) vs (0,1,0). The preview document's `<html>` carries
+  `data-sg-preview-doc`.
+- Host consequence: `src/styles/preview.css` and the `@theme` re-assertion
+  block in `src/styles/global.css` are deleted (#663); the root
+  `src/styles/preview-entry.css` = `tailwindcss/preflight` + `utilities` +
+  `@zudo-sg/ui/styles/tokens.css` + `colors.css` + `@source "../../packages/ui/src"`.
+
+### 5. Categories are data
+
+`StoryMeta.category: string`. Host `categoryOrder: string[]` in
+`zudo-sg.config.mjs` drives group order; categories not listed are appended
+after the listed ones in alphabetical order (never dropped, never an error).
+`STORY_CATEGORIES`, `StoryCategory`, `gen-story-categories.mjs` and the
+`GENERATED:STORY_CATEGORIES` marker blocks are removed (#651).
+
+### 6. Route patterns
+
+Option `routes` with defaults
+`{ componentsIndex: "/components", componentsSlug: "/components/[slug]", componentsPreview: "/components/preview", tokens: "/tokens" }`;
+entrypoints `routes-src/{components-index,components-slug,components-preview,tokens}.tsx`.
+Every internal href is built from `sgContext.routes` + `withBase`, never a
+literal. A host `pages/` file with the same URL shape shadows the injected
+route silently (zfb precedence) — that is the documented escape hatch, not a
+bug.
+
+### 7. What the host keeps
+
+`pages/index.tsx` (zfb can inject `/` since 2.16 but the root page stays
+host-owned: it is the site identity and it is the host's static-import root
+for site-wide islands), `pages/docs/versions.tsx`, `pages/preview/contact.tsx`
+
++ `src/features/styleguide/preview-demos/`, `pages/lib/_chrome-bindings.tsx` +
+
+`_body-end-islands.tsx` (doc-chrome token panel stays host-owned),
+`src/config/settings.ts` + `zfb.config.ts` (zudo-doc config),
+**`zudo-sg.config.mjs`**, the generated registry
+**`src/styleguide/sg-registry.ts`** (committed; `zudo-sg gen-registry --check`
+in CI), `src/config/ui-design-tokens-manifest.ts` (generated by the CLI),
+`packages/ui/styles/*.css` (token CSS), `src/styles/preview-entry.css`.
+**Island rule (amended for finding 4):** EVERY `"use client"` component that
+must hydrate on an engine route — the engine's own islands included, because
+`zfb dev` scans `pages/` only — is statically reachable from a host `pages/`
+file. The host keeps one shim, `pages/lib/_zudo-sg-islands.ts`, containing
+exactly `import "@takazudo/zudo-sg/islands";`, imported by `pages/index.tsx`
+(which already reaches the doc-chrome panels through `_body-end-islands.tsx`).
+`@takazudo/zudo-sg/islands` (`src/islands.ts` → `dist/islands.js`) is a
+side-effect module that statically imports every engine island:
+`DetailWorkbench`, `CodePanel`, `CatalogFilter`, `PreviewTokensButton`, the
+preview token panel bootstrap, and `../routes-src/_preview-app.tsx` (the
+configured preview wrapper, which lives in `routes-src/` because it imports
+the registry virtual module; the relative escape from `dist/` into
+`routes-src/` is deliberate and resolves in the published tarball).
+`fixtures/engine-host` (#665) ships the same shim. Stories' components need nothing: catalog thumbs are SSR-only and the
+preview app is one client island whose bundle carries the story closures.
+
+### 8. Framework scope
+
+Preact/zfb hosts only. React 19 hosts (zudo-text, pgen) are an explicit
+non-goal. The seam that would enable them later: a fourth host-path option
+`previewRendererModule` (host module exporting
+`renderPreview(node, container)` / `unmountPreview(container)`), re-exported
+as `virtual:zudo-sg-preview-renderer` with the same resolve/guard rules as
+decision 10; the routes-only preview wrapper would import it instead of
+Preact's `render`. Not built in this epic.
+
+### 9. Composition API
+
+`import { zudoSg, withZudoSg } from "@takazudo/zudo-sg/config"` (pure data,
+no `node:` imports — loadable by zfb's node-free config evaluation).
+`zudoSg(options)` returns `{ plugins, collections }`:
+
+- `plugins`: `{ name: "@takazudo/zudo-sg/plugins/routes", options }`,
+  `{ name: "@takazudo/zudo-sg/plugins/preview-css", options }`, and
+  `{ name: "@takazudo/zudo-sg/plugins/zdtp-apply-proxy", options }` (dev-only
+  by construction; from #657). Bare-specifier descriptors, never imported
+  functions.
+- `collections`: one per `componentsRoots[i].dir` —
+  `{ name: "componentDocs" (i = 0) | "componentDocs<i>", path: dir, include: ["**/*.mdx"] }`.
+
+Hosts write `plugins: [...preset.plugins, ...sg.plugins]`,
+`collections: [...preset.collections, ...sg.collections]`;
+`withZudoSg(presetFragment, options)` does exactly that merge (engine plugins
+AFTER the zudo-doc preset's). The routes plugin fails at `setup()` when no
+`@takazudo/zudo-doc/plugins/routes` descriptor is present in
+`ctx.config.plugins` (its routes import `virtual:zudo-doc-route-context` /
+`virtual:zudo-doc-chrome-bindings`; hosts need `packageOwnedRoutes: true`).
+
+### 10. Cross-sub-task constants (Waves 5–6 branch on these)
+
+| Constant | Value |
+|---|---|
+| Virtual modules | `virtual:zudo-sg-context` (export `sgContext`), `virtual:zudo-sg-registry` (re-exports `storyModules`, `storyExportOrder` from the host registry path) |
+| `sgContext` shape (JSON only) | `{ base, routes, categoryOrder, uiPackageName, previewCssUrl, catalog: { title, intro } }` |
+| Routes plugin options | `{ registryModule, routes, categoryOrder, uiPackageName, previewCssUrl, catalog }` |
+| Preview-CSS plugin options | `{ previewStyles, previewCssUrl }` |
+| Staging | **none** — inject `routes-src/*.tsx` from the package realpath (workspace or node_modules); no `.zudo-sg/` dir, nothing to gitignore |
+| Route entrypoints | link assets only (`<link href={withBase(sgContext.previewCssUrl)}>`), read data from the virtual modules, call zudo-doc factories (`createRouteContext`, `createChrome`) — never plugin helpers |
+| Preview island | `routes-src/_preview-app.tsx`: `"use client"`, default export `ConfiguredPreviewApp` (displayName equal), statically imported by `components-preview.tsx`, renders `<PreviewApp registry={registry}/>`; the registry travels as an in-bundle argument, NEVER as island props (`data-props` is JSON — render closures would be dropped) |
+| Dev-hydration seed | `@takazudo/zudo-sg/islands` → `./dist/islands.js` (side-effect imports of every engine island + `../routes-src/_preview-app.tsx`); host shim `pages/lib/_zudo-sg-islands.ts` = `import "@takazudo/zudo-sg/islands";`, imported by `pages/index.tsx`. Required for `zfb dev` (finding 4); harmless in `zfb build` |
+| Registry shim | `routes-src/_registry.ts` builds `createRegistry(storyModules, { categoryOrder, storyExportOrder })` once; every entrypoint and the preview wrapper import it |
+| Stylesheet exports | `@takazudo/zudo-sg/styles.css` → `./styles.css` (hand-authored catalog chrome CSS, package root); `@takazudo/zudo-sg/safelist.css` → `./dist/safelist.css` (generated `@source inline(...)`) |
+| Consumer CSS order | `@import "@takazudo/zudo-doc/features.css"` → `@import "@takazudo/zudo-sg/styles.css"` → `@import "@takazudo/zudo-sg/safelist.css"` → project `@theme {}`; the host keeps its own `@source` for its component package |
+| Host-path contract | option value = project-root-relative path string (absolute accepted); `resolve(ctx.projectRoot, value)`; must be an existing FILE; normalized to a forward-slash absolute path; the virtual module re-exports that absolute path verbatim (zfb remaps it into the shadow); missing/empty/directory → throw at `setup()`: `[zudo-sg] option "<name>" = "<value>" resolved to <abs> (relative to projectRoot <root>), which is not a file`; absent-and-required → `[zudo-sg] option "<name>" is required (project-root-relative path, e.g. "<example>")`. Shared module `packages/styleguide/src/host-paths.ts` (`resolveHostModule(projectRoot, optionName, value, { required, example })`, `withBaseUrl(base, path)`) |
+| `zudo-sg.config.mjs` | `{ componentsRoots: [{ dir, importBase }], registryOut: "./src/styleguide/sg-registry.ts", categoryOrder, uiPackageName: "@zudo-sg/ui", barrelIndex, tokens: { cssFiles, manifestOut }, previewStyles: "./src/styles/preview-entry.css", previewCssUrl?, routes?, catalog? }`; the routes plugin's `registryModule` is `registryOut` |
+| CLI | `bin: { "zudo-sg": "./bin/zudo-sg.js" }`; commands `gen-registry [--check]`, `new-component <name> --category <c> [--nested] [--skip-barrel]`, `gen-token-manifest [--check]` |
+| Fallback if a zfb release reintroduces the node_modules virtual gap | stage `routes-src/` into `<projectRoot>/.zudo-doc/routes-src/zudo-sg/` (the only allowlisted hidden dir) and, when host islands must register through the registry, overwrite the staged `_registry-source.ts` with a RELATIVE re-export (`../../../src/styleguide/sg-registry.ts`; an absolute path bundles the live tree next to the shadow → two preact copies → `Cannot read properties of undefined (reading '__H')` at SSR) |
+
+### 11. Package boundary
+
+`files: ["dist", "bin", "routes-src", "virtual-modules.d.ts", "styles.css", "CHANGELOG.md", "README.md"]`.
+The `doc/` workspace (zudo-sg-doc.takazudomodular.com), the root styleguide
+site, `apps/demo`, `packages/ui` and `fixtures/` are not part of the package;
+`scripts/check-pack.sh` (#668) packs and asserts the tarball has no `doc/`,
+`pages/`, `src/content`, `apps/`, `packages/ui` paths and that every `exports`
+target exists.
+
+### 12. Release scheme
+
+Stable only. `v*.*.*` tags publish `@takazudo/zudo-sg` to npm `latest`
+(`publish-zudo-sg.yml`, `NPM_TOKEN`, provenance). No `next` channel, no
+prerelease handling, no dist-tag cleanup. Version source of truth is
+`packages/styleguide/package.json`; the first release is one `/l-make-release`
+run from `main` after the epic merges.
+
+## Spike report — proof items (a)–(g)
+
+Spike layout: `__inbox/engine-seam-spike/engine/` (minimal
+`@takazudo/zudo-sg-spike`: `plugins/routes.js`, `plugins/preview-css.js`,
+`host-paths.js`, `config.js`, `routes-src/*.tsx`, `src/registry.ts`,
+`src/preview/preview-app.tsx`), a workspace-shaped host
+(`__inbox/engine-seam-spike/host`, `link:../engine` → realpath outside
+`node_modules`) and a packed host outside the workspace
+(`/tmp/claude-1000/zudo-sg-engine-spike-host`, `pnpm pack` tarball installed
+via `file:`, realpath under `node_modules/.pnpm/`, `base: "/spike/"`). Two host
+stories: `Button` (plain) and `Counter` (`"use client"`, flagged so the catalog
+route wraps its SSR thumb in `<Island>`).
+
+| Item | Result | Evidence |
+|---|---|---|
+| (a) plugin registers `virtual:zudo-sg-context` (JSON) + `virtual:zudo-sg-registry` (host-path re-export) and injects `/components`, `/components/[slug]`, `/components/preview`, `/tokens` | **pass** | `info package route \`/components\` → pages/components.tsx` ×4; `dist/components/index.html` carries the serialized context (`registryModule: …/host/src/styleguide/sg-registry.ts`) |
+| (b) dynamic `paths()` consumes the host registry synchronously | **pass** in all three shapes (workspace, staged, node_modules realpath) | `✓ 6 pages built` = `/`, `/components`, `/components/button`, `/components/counter`, `/components/preview`, `/tokens`; `dist/__zfb/routes.json` lists both slug params |
+| (c) generated registry imports real host story modules and they render | **pass** | SSR HTML: `<button data-ui-button="accent" class="bg-accent text-bg px-hsp-md py-vsp-sm">Primary action</button>` on `/components`; detail page emits one `<iframe src="/components/preview?slug=button&variant=Primary">` per variant; the islands bundle contains the story closures (`"Primary action"`, `data-ui-counter`) |
+| (d) two `"use client"` islands hydrate | **build: island 1 pass, island 2 pass under the locked rule. dev: BOTH fail without the host seed (finding 4); both pass with `pages/index.tsx` → `@takazudo/zudo-sg/islands` — browser-verified** | Build — island 1 `ConfiguredPreviewApp` (statically imported by the package preview route): SSR marker `data-zfb-island-skip-ssr="ConfiguredPreviewApp"` + manifest entry `…("default","ConfiguredPreviewApp","<pkg>/routes-src/_preview-app.tsx")` in `dist/assets/islands-*.js` in every shape. Island 2 `Counter` (reached only through the registry): marker `data-zfb-island="Counter" data-props='{"start":3}'` always; manifest entry ONLY when (i) a host `pages/` file statically imports the registry (`…("Counter","Counter","<host>/src/components/counter.tsx")`) or (ii) staged + relative file re-export; through the virtual channel alone zfb warns `island marker "Counter" … has no matching registry entry and will not hydrate` (scanner skips `virtual:`). Dev — without a host seed: `no "use client" islands found; skipping islands bundle`, `/assets/islands.js` 404, no `<script>` on the preview page (packed AND workspace hosts). With the seed (`import "@takazudo/zudo-sg-spike/islands"` + the registry import in `pages/index.tsx`): `/assets/islands.js` 200 (37–38 KB) containing `"ConfiguredPreviewApp"` and `"Counter"`, `<script type="module" src="/spike/assets/islands.js">` on the preview page; Playwright on `/spike/components/preview?slug=button&variant=Primary`: `hydrated: "1"`, `[data-sg-preview-app="button"]` rendered, button `background-color: rgb(37, 99, 235)`, `errs: []`; Counter clicks increment (manager's check). |
+| (e) `zfb build` and `zfb dev` work | **pass** (both hosts) | build: `✓ 6 pages built`; dev (port 4391, curl): `/components`, `/components/button`, `/components/counter`, `/components/preview`, `/tokens` → 200; markers and iframes identical to build; livereload script present |
+| (f) `pnpm pack` → install into a host OUTSIDE the workspace (realpath under `node_modules`) → builds | **pass, and no staging needed** | tarball = `config.js host-paths.js plugins/ routes-src/ src/ virtual-modules.d.ts`; installed at `node_modules/.pnpm/@takazudo+zudo-sg-spike@file+…/node_modules/@takazudo/zudo-sg-spike`; `stage: "never"` build injects from that realpath, resolves both virtual modules, extracts `paths()`, registers `ConfiguredPreviewApp` from the node_modules path, emits `dist/_zudo-sg/preview.css`; with `base: "/spike/"` HTML links `/spike/assets/*`, `/spike/_zudo-sg/preview.css`, `/spike/components/preview?…` while files sit at `dist/components/…`, `dist/assets/…` |
+| (g) host `previewStyles` compiled with `@tailwindcss/node` served at a base-aware URL in dev and emitted in build | **pass** | dev `GET /spike/_zudo-sg/preview.css` → 200 `text/css; charset=utf-8`, `cache-control: no-store`; `/_zudo-sg/preview.css` → 404 (base honoured); editing the imported `ui-tokens.css` changed `--color-accent: #2563eb` → `#0a5` on the next request (recompile log: `preview css compiled (… 59 candidates, 4 deps)`); output contains the UI tokens (`--color-accent`, `--spacing-hsp-md: 1rem`), story utilities (`.bg-accent`, `.px-hsp-md`, `.py-vsp-sm`, `.text-bg`), zero host `--zd-*`/`#ff0000` values, and every token block rescoped to `:root[data-sg-preview-doc]`; build writes `dist/_zudo-sg/preview.css` (4576 bytes) |
+
+Additional measurements: (1) staging into `.zudo-sg/routes-src/` fails
+(`Could not resolve "../.zudo-sg/routes-src/components-slug.tsx"`); staging
+into `.zudo-doc/routes-src/zudo-sg/` builds. (2) A staged real-file re-export
+with an ABSOLUTE host path crashes SSR with the two-preact `__H` error; the
+relative spelling works. (3) The host global bundle scanned the same component
+sources, so `.bg-accent`/`.px-hsp-md` exist in BOTH stylesheets with different
+token values — only the `:root[data-sg-preview-doc]` rescoping keeps the
+preview faithful. (4) The engine's own `node_modules` must not carry a second
+`preact` (workspace hosts dedupe via the store; the spike symlinked them).
+
+### Browser checks (done)
+
+- Packed host, `zfb dev`, `/spike/components/preview?slug=button&variant=Primary`:
+  WITHOUT the host seed the island never mounts (finding 4); WITH
+  `pages/index.tsx` → `@takazudo/zudo-sg-spike/islands` it mounts
+  (`html[data-sg-preview-hydrated="1"]`, `[data-sg-preview-app="button"]`,
+  computed background `rgb(37, 99, 235)` = the UI palette, not the host
+  bundle's `#ff0000`, no console errors).
+- Packed host, `/spike/components` with the `pages/index.tsx` registry import:
+  clicking the `Counter` thumb increments (island 2 hydrates through rule 7).
+- Not browser-checked: the built (`zfb build` + static serve) preview page —
+  the build manifest is structurally identical to the dev bundle after the
+  seed, and the build registered `ConfiguredPreviewApp` even without it.
+
+## Consequences for the sub-issues
+
+- #652: no `host-paths` staging concerns; engine `stories` types + provider
+  copy + `check-story-contract-sync.mjs` + the verify-ui-provider-install
+  story-contract file.
+- #654: the preview island needs the no-props `"use client"` wrapper from the
+  start (host `pages/lib/_configured-preview-app.tsx` until #662 moves it into
+  `routes-src/_preview-app.tsx`); while the host pages still exist they are the
+  dev seed, so nothing else is needed in Wave 3.
+- #662: ship `src/islands.ts` → `@takazudo/zudo-sg/islands`; the no-stub
+  build test must ALSO run `zfb dev` (or assert the dev islands bundle) with
+  the `pages/lib/_zudo-sg-islands.ts` shim in the temp copy.
+- #664: add `pages/lib/_zudo-sg-islands.ts` + its import in `pages/index.tsx`
+  when the host catalog pages are deleted — without it `pnpm dev` loses every
+  catalog island while `pnpm build` stays green.
+- #665: the fixture host ships the shim; the verify script also boots
+  `zfb dev` once and asserts `/styleguide/assets/islands.js` contains
+  `ConfiguredPreviewApp`.
+- #659: no staging, no `.zudo-sg/`; add the zudo-doc-routes-descriptor guard;
+  `stage`/`registryChannel` options do not exist.
+- #660/#663: `:root[data-sg-preview-doc]` rescoping is part of the compiler
+  output; build emits `<outDir>/_zudo-sg/preview.css`.
+- #664: no host route stub is required for hydration; keep `pages/index.tsx`
+  importing `_body-end-islands.tsx` and add the islands seed shim above.
+
+## Upstream notes (not blocking; for `/dev-upstream-report` when convenient)
+
+- zfb: the hidden-dir staging allowlist is hardcoded to `.zudo-doc/routes-src`
+  (`KNOWN_FIRST_PARTY_STAGING_DIRS`); a config knob or a generic
+  "injected-route entrypoint directories are staged" rule would let other
+  packages stage. Not needed now (the gap is closed), but the allowlist
+  comment itself says it is transitional.
+- zfb: the island scanner ignores plugin virtual modules; a plugin-provided
+  `virtual:` re-export cannot make a host island scanner-reachable. Documented
+  here as a contract limitation (same as zudo-doc's `chromeBindingsModule`).
+- zfb: `zfb dev` (`dev.rs` `rebundle_islands`) passes no package-route
+  entrypoints to the island scanner while `zfb build` does — injected-route
+  islands hydrate in build but not in dev unless a host `pages/` file reaches
+  them. The most impactful of the three; worth an upstream issue so the
+  `@takazudo/zudo-sg/islands` seed can eventually be dropped.

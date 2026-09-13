@@ -6,10 +6,11 @@
  * the regenerated output. `pnpm check:token-manifest` fails on drift.
  *
  * Source of truth: packages/ui/styles/tokens.css and packages/ui/styles/colors.css,
- * parsed by scripts/gen-token-manifest.mjs (scripts/lib/ui-token-manifest.mjs).
- * Only `default` values are derived from the CSS; `group`/`step`/`unit`/
+ * parsed by the `zudo-sg gen-token-manifest` CLI command
+ * (@takazudo/zudo-sg's src/cli/token-manifest/ui-token-manifest.ts). Only
+ * `default` values are derived from the CSS; `group`/`step`/`unit`/
  * `control`/`options`/`pill` are presentation metadata with no CSS
- * equivalent and are configured in that script's SPECS tables.
+ * equivalent and are configured in that module's SPECS tables.
  *
  * Covers: Color / Spacing / Font / Size tabs.
  * Does NOT include any --zd-* doc-chrome tokens.

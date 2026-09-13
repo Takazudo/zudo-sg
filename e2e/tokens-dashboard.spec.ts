@@ -4,7 +4,7 @@ import {
   UI_DASHBOARD_MODE_DEPENDENT_COUNT,
   UI_DASHBOARD_MODE_INDEPENDENT_COUNT,
   UI_DASHBOARD_TOKEN_COUNT,
-} from "../src/features/styleguide/token-dashboard/dashboard-inventory";
+} from "@takazudo/zudo-sg/token-dashboard";
 
 const TOKENS_PATH = withBase("/tokens");
 const PREVIEW_STATE_KEY = "sg-preview-tweak-state-v4";
@@ -528,6 +528,19 @@ test("the tokens mobile drawer opens at the root menu", async ({ page }) => {
     .toHaveAttribute("href", TOKENS_PATH);
   await expect(drawer.locator(`a[href="${withBase("/components/cta-button")}"]`))
     .toHaveCount(0);
+});
+
+// Counterpart on an engine component route (#664): the drawer carries the
+// registry-built component tree, not just the root menu.
+test("a component page mobile drawer opens at the component tree", async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 740 });
+  await page.goto(withBase("/components/typography"));
+  await page.waitForLoadState("networkidle");
+  await page.getByRole("button", { name: "Open sidebar", exact: true }).click();
+
+  const drawer = page.locator("aside[data-zd-mobile-sidebar]");
+  await expect(drawer.locator(`a[href="${withBase("/components/cta-button")}"]`))
+    .toHaveCount(1);
 });
 
 test("client navigation preserves the document and mounts all dashboards", async ({ page }) => {

@@ -33,7 +33,6 @@ import type { PairResult, SchemeReport } from "./contrast-pair-matrix";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const COLORS_CSS_PATH = resolve(__dirname, "../packages/ui/styles/colors.css");
 const SYNTAX_CSS_PATH = resolve(__dirname, "../packages/ui/styles/syntax-highlight.css");
-const PREVIEW_CSS_PATH = resolve(__dirname, "../src/styles/preview.css");
 const PROSE_MD_CSS_PATH = resolve(__dirname, "../packages/ui/src/content/prose-md/prose-md.css");
 
 export type Mode = "light" | "dark";
@@ -222,13 +221,13 @@ function palette(name: string, vars: Map<string, string>): string {
   return value.trim();
 }
 
-/** Merge the package palette with the real styleguide preview scope. */
+/**
+ * The preview document's palette: its standalone stylesheet
+ * (src/styles/preview-entry.css) carries colors.css verbatim, rescoped to
+ * `:root[data-sg-preview-doc]` so it beats the host re-assertion there.
+ */
 export function loadPreviewVars(): Map<string, string> {
-  const vars = loadVars();
-  for (const [name, value] of parseCssCustomProperties(readFileSync(PREVIEW_CSS_PATH, "utf8"))) {
-    vars.set(name, value);
-  }
-  return vars;
+  return loadVars();
 }
 
 /** Resolve a custom property from the merged preview source for one scheme. */
