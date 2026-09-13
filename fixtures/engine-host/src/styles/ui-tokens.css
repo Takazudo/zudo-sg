@@ -1,0 +1,8 @@
+/* Minimal token sheet for the fixture's ui/ components. */
+@theme {
+  --color-accent: #2563eb;
+  --color-fg: #0f172a;
+  --color-bg: #ffffff;
+  --spacing-hsp-md: 1rem;
+  --spacing-vsp-sm: 0.5rem;
+}

@@ -1,0 +1,7 @@
+/* Host `previewStyles` entry (ADR decision 4) — compiled standalone by
+   @takazudo/zudo-sg/plugins/preview-css. Preflight + utilities + this
+   fixture's own token sheet + an @source for the ui/ corpus. */
+@import "tailwindcss/preflight";
+@import "tailwindcss/utilities";
+@import "./ui-tokens.css";
+@source "../../ui";
