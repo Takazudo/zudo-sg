@@ -8,27 +8,29 @@
 // SAME HTML. The variant to show is therefore resolved CLIENT-SIDE from
 // `location.search` (`?slug=button&variant=Variants`), not from SSR props.
 //
-// This island imports the story registry directly (eager static imports), so
-// the variant `render()` closures are bundled into the island chunk and run in
-// the browser — no per-story lazy loader / codegen needed.
+// The story registry arrives as the `registry` prop. zfb serializes island
+// props to JSON (`data-props`), which would drop every variant `render()`
+// closure, so this component is NEVER mounted as an island directly: a
+// no-props `"use client"` wrapper (`ConfiguredPreviewApp`, ADR
+// docs/adr/styleguide-engine.md decision 10) imports the host registry
+// in-bundle and renders `<PreviewApp registry={registry} />`. The closures are
+// therefore bundled into the island chunk and run in the browser.
 //
-// Token tweaks: `installIframeReceiver` listens for the project-owned
-// `apply-css-vars` bridge messages (src/features/styleguide/token-tweak/
-// iframe-css-vars-bridge.ts) and writes them onto this document's :root, so
-// the design-token tweaker live-updates this preview.
+// Token tweaks: the same wrapper installs the `apply-css-vars` bridge receiver
+// (`installIframeReceiver`, token-tweak/iframe-css-vars-bridge.ts) so the
+// design-token tweaker live-updates this preview.
 
 import type { JSX } from "preact";
 import { useEffect, useMemo, useState } from "preact/hooks";
-import type { StoryControl } from "@zudo-sg/ui";
-import { installIframeReceiver } from "@/features/styleguide/token-tweak/iframe-css-vars-bridge";
-import { getStoryBySlug } from "@/styleguide/registry";
+import type { Registry } from "../registry/index.js";
+import type { StoryControl } from "../stories/index.js";
 import {
   MSG_HEIGHT,
   MSG_READY,
   isRequestReadyMessage,
   isSetThemeMessage,
   isUpdatePropsMessage,
-} from "./messages";
+} from "./messages.js";
 
 function readParams(): { slug: string; variant: string } {
   if (typeof location === "undefined") return { slug: "", variant: "" };
@@ -64,20 +66,22 @@ function reportHeight(): void {
   window.parent?.postMessage({ type: MSG_HEIGHT, height }, "*");
 }
 
-function PreviewApp(): JSX.Element {
+export interface PreviewAppProps {
+  /** The host's story registry (`createRegistry(...)` result). In-bundle only — never island props. */
+  registry: Pick<Registry, "getStoryBySlug">;
+}
+
+function PreviewApp({ registry }: PreviewAppProps): JSX.Element {
   const [{ slug, variant }] = useState(readParams);
   // Live prop overrides pushed from the parent's controls panel. Read on every
   // render and merged into the story's render args (see `merged` below).
   const [overrides, setOverrides] = useState<Record<string, unknown>>({});
 
-  const entry = useMemo(() => getStoryBySlug(slug), [slug]);
+  const entry = useMemo(() => registry.getStoryBySlug(slug), [registry, slug]);
   const variantEntry = useMemo(
     () => entry?.variants.find((v) => v.exportName === variant),
     [entry, variant],
   );
-
-  // Install the design-token bridge receiver once.
-  useEffect(() => installIframeReceiver(window), []);
 
   // Accept live prop and resolved-theme updates from the parent.
   //

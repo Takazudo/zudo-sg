@@ -1,14 +1,16 @@
+// @vitest-environment happy-dom
+import "../../__tests__/dom-test-setup.js";
 import { fireEvent, render, screen, waitFor } from "@testing-library/preact";
-import type { StoryControl } from "@zudo-sg/ui";
+import type { StoryControl } from "../../stories/index.js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AFTER_NAVIGATE_EVENT } from "@takazudo/zudo-doc/transitions";
-import { MSG_READY, MSG_REQUEST_READY, MSG_SET_THEME } from "../messages";
+import { MSG_READY, MSG_REQUEST_READY, MSG_SET_THEME } from "../messages.js";
 import VariantFrame, {
   DEFAULT_THEME_MODE,
   DEFAULT_VIEWPORT_ID,
   type ThemeMode,
   type ViewportId,
-} from "../variant-frame";
+} from "../variant-frame.js";
 
 function readyFrame(iframe: HTMLIFrameElement): void {
   window.dispatchEvent(
@@ -21,9 +23,9 @@ function readyFrame(iframe: HTMLIFrameElement): void {
 
 function themeMessages(spy: ReturnType<typeof vi.spyOn>): unknown[] {
   return spy.mock.calls
-    .map(([message]) => message)
+    .map(([message]: unknown[]) => message)
     .filter(
-      (message) =>
+      (message: unknown) =>
         typeof message === "object" &&
         message !== null &&
         (message as { type?: unknown }).type === MSG_SET_THEME,
@@ -63,6 +65,33 @@ describe("VariantFrame", () => {
     expect(iframe).toHaveAttribute(
       "sandbox",
       "allow-same-origin allow-scripts allow-forms",
+    );
+  });
+
+  it("builds the iframe src from the host's base-prefixed preview URL", () => {
+    render(
+      <VariantFrame
+        slug="cta-button"
+        exportName="Play ground"
+        name="CTA button"
+        themeMode={DEFAULT_THEME_MODE}
+        viewportId={DEFAULT_VIEWPORT_ID}
+        previewUrl="/sg/components/preview"
+      />,
+    );
+
+    expect(screen.getByTitle("cta-button — CTA button")).toHaveAttribute(
+      "src",
+      "/sg/components/preview?slug=cta-button&variant=Play%20ground",
+    );
+  });
+
+  it("defaults the iframe src to the unprefixed preview route", () => {
+    render(<Stage />);
+
+    expect(screen.getByTitle("cta-button — CTA button")).toHaveAttribute(
+      "src",
+      "/components/preview?slug=cta-button&variant=Playground",
     );
   });
 

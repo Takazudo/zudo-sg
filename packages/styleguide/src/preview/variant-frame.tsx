@@ -24,9 +24,8 @@
 
 import type { JSX } from "preact";
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
-import type { StoryControl } from "@zudo-sg/ui";
 import { onAfterNavigate } from "@takazudo/zudo-doc/transitions";
-import { withBase } from "@/utils/base";
+import type { StoryControl } from "../stories/index.js";
 import {
   MSG_REQUEST_READY,
   MSG_SET_THEME,
@@ -34,12 +33,12 @@ import {
   isHeightMessage,
   isReadyMessage,
   type PreviewTheme,
-} from "./messages";
-import { PREVIEW_ROUTE_PATH } from "./route";
+} from "./messages.js";
+import { PREVIEW_ROUTE_PATH } from "./route.js";
 import {
   registerPreviewIframe,
   unregisterPreviewIframe,
-} from "../token-tweak/preview-iframe-registry";
+} from "../token-tweak/preview-iframe-registry.js";
 
 // The preset tables live here, beside the stage that consumes them, and are
 // imported by the toolbar that drives them — the toolbar imports the stage
@@ -81,8 +80,8 @@ export const THEME_OPTIONS: ThemeOption[] = [
 export const DEFAULT_THEME_MODE: ThemeMode = "follow";
 
 function viewportWidth(id: ViewportId): string {
-  const preset = VIEWPORTS.find((v) => v.id === id);
-  return (preset ?? VIEWPORTS[VIEWPORTS.length - 1]).width;
+  const preset = VIEWPORTS.find((v) => v.id === id) ?? VIEWPORTS.at(-1);
+  return preset?.width ?? "100%";
 }
 
 function readCatalogTheme(): PreviewTheme | null {
@@ -102,10 +101,23 @@ export interface VariantFrameProps {
   themeMode: ThemeMode;
   /** Toolbar-owned viewport preset. */
   viewportId: ViewportId;
+  /**
+   * Base-prefixed URL of the preview route (the host's `withBase` applied to
+   * `routes.componentsPreview`). Defaults to the unprefixed PREVIEW_ROUTE_PATH.
+   */
+  previewUrl?: string;
 }
 
 function VariantFrame(props: VariantFrameProps): JSX.Element {
-  const { slug, exportName, name, controls, themeMode, viewportId } = props;
+  const {
+    slug,
+    exportName,
+    name,
+    controls,
+    themeMode,
+    viewportId,
+    previewUrl = PREVIEW_ROUTE_PATH,
+  } = props;
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const readyRef = useRef(false);
   // Mirror the prop into a ref so the `[]`-deps listeners below (message,
@@ -115,13 +127,14 @@ function VariantFrame(props: VariantFrameProps): JSX.Element {
   themeModeRef.current = themeMode;
   const [height, setHeight] = useState(180);
 
-  const src = useMemo(() => {
-    // PREVIEW_ROUTE_PATH is shared with css-injection.ts's iframe selector
-    // (see ./route.ts) — keep them in agreement by importing the constant,
-    // not by re-typing the literal (#48, #105).
-    const base = withBase(PREVIEW_ROUTE_PATH);
-    return `${base}?slug=${encodeURIComponent(slug)}&variant=${encodeURIComponent(exportName)}`;
-  }, [slug, exportName]);
+  // `previewUrl` is shared with css-injection.ts's iframe selector (the code
+  // panel receives the same value) — keep them in agreement by passing one
+  // value, not by re-typing the literal (#48, #105).
+  const src = useMemo(
+    () =>
+      `${previewUrl}?slug=${encodeURIComponent(slug)}&variant=${encodeURIComponent(exportName)}`,
+    [previewUrl, slug, exportName],
+  );
 
   function sendTheme(theme: PreviewTheme): void {
     iframeRef.current?.contentWindow?.postMessage(

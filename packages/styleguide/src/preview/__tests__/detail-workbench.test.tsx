@@ -1,11 +1,13 @@
+// @vitest-environment happy-dom
+import "../../__tests__/dom-test-setup.js";
 import { fireEvent, render, screen, waitFor } from "@testing-library/preact";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { MSG_READY, MSG_SET_THEME } from "../messages";
-import DetailWorkbench, { type WorkbenchVariant } from "../detail-workbench";
+import { MSG_READY, MSG_SET_THEME } from "../messages.js";
+import DetailWorkbench, { type WorkbenchVariant } from "../detail-workbench.js";
 import {
   ATTR_CODE_PANEL_HIDDEN,
   LS_CODE_PANEL_HIDDEN,
-} from "../../chrome/panel-contract";
+} from "../../chrome/panel-contract.js";
 
 const FOUR_VARIANTS: WorkbenchVariant[] = [
   { exportName: "Default", name: "Default" },
@@ -41,9 +43,9 @@ function themeSpies(): Array<ReturnType<typeof vi.spyOn>> {
 
 function lastTheme(spy: ReturnType<typeof vi.spyOn>): unknown {
   return spy.mock.calls
-    .map(([message]) => message)
+    .map(([message]: unknown[]) => message)
     .filter(
-      (message) =>
+      (message: unknown) =>
         typeof message === "object" &&
         message !== null &&
         (message as { type?: unknown }).type === MSG_SET_THEME,
