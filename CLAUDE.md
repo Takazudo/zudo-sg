@@ -46,10 +46,10 @@ The tree above covers only the root host's own `src/`. `packages/ui`'s
 component tree and `apps/demo`'s content/route tree are separate workspace
 packages — see "Monorepo Structure" below.
 
-Root `/docs` is intentionally slim and currently contains the root Overview. The
-full documentation site lives in `doc/` and is deployed separately at
-`https://zudo-sg-doc.takazudomodular.com/`; root nav/footer entries link there
-instead of duplicating that content.
+Root `/docs` is intentionally slim and currently contains the root Overview,
+self-contained and independent of the separately deployed `doc/` workspace —
+there is no navigation between the two sites and no root build/test/check
+coupling to `doc/` (see `doc/` under "Monorepo Structure" below).
 
 ## Content Conventions
 

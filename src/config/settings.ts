@@ -155,7 +155,6 @@ The same library drives a multi-page demo site, so the components can be explore
     { label: "Overview", path: "/docs/overview", categoryMatch: "overview" },
     { label: "Components", path: "/components", categoryMatch: "components" },
     { label: "Design Tokens", path: "/tokens" },
-    { label: "Doc", path: "https://zudo-sg-doc.takazudomodular.com" },
   ] satisfies HeaderNavItem[] as HeaderNavItem[],
   // NOTE: the framework's native `{ type: "trigger", trigger: "design-token-panel" }`
   // is intentionally NOT listed here. This site mounts two zdtp instances, so a

@@ -11,7 +11,6 @@ describe("root zfb integration contract", () => {
     ]);
     expect(config.resolveMarkdownLinks?.dirs.map(({ dir }) => dir)).toEqual([
       "src/content/docs",
-      "doc/src/content/docs",
     ]);
   });
 
@@ -40,7 +39,7 @@ describe("root zfb integration contract", () => {
 
   it("keeps the root bundle boundary and image dimensions enabled", () => {
     expect(config.bundle).toEqual({
-      exclude: ["apps/demo/**"],
+      exclude: ["apps/demo/**", "doc/**"],
       mainFields: ["main", "module"],
     });
     expect(config.markdown?.features?.imageDimensions).toEqual({});

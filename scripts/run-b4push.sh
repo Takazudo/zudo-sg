@@ -11,16 +11,18 @@ set -euo pipefail
 #   5. Unit tests (test:unit)
 #   6. Build (zfb build)
 #   7. Build demo (apps/demo — needed by check:links:demo and the demo-smoke e2e project)
-#   8. Build doc (doc — needed by check:links:doc)
-#   9. Link check (check:links + check:links:demo + check:links:doc)
-#   10. HTML validation (check:html)
-#   11. Playwright smoke e2e (test:e2e — styleguide + demo-smoke projects)
+#   8. Link check (check:links + check:links:demo)
+#   9. HTML validation (check:html)
+#   10. Playwright smoke e2e (test:e2e — styleguide + demo-smoke projects)
+#   11. Doc site (optional, separate from the root lifecycle — #649): build doc
+#       + check:links:doc
 #   12. Manual interactive smoke (operator-driven; auto-skipped when stdin is
 #       not a TTY, e.g. CI or agent-driven runs)
 #
 # Env overrides for non-interactive use:
-#   B4PUSH_SKIP_HTML_VALIDATE=1  — skip HTML validation (step 10)
-#   B4PUSH_SKIP_E2E=1            — skip Playwright smoke (step 11)
+#   B4PUSH_SKIP_HTML_VALIDATE=1  — skip HTML validation (step 9)
+#   B4PUSH_SKIP_E2E=1            — skip Playwright smoke (step 10)
+#   B4PUSH_SKIP_DOC=1            — skip the doc site build + link check (step 11)
 #   B4PUSH_SKIP_MANUAL_SMOKE=1   — force-skip the manual interactive smoke
 #                                  (step 12) even in an interactive shell
 
@@ -38,10 +40,10 @@ STEPS=(
   "Unit tests (test:unit)"
   "Build (zfb build)"
   "Build demo (apps/demo)"
-  "Build doc (doc)"
-  "Link check (check:links + demo + doc)"
+  "Link check (check:links + demo)"
   "HTML validation (html-validate)"
   "Playwright smoke e2e (test:e2e)"
+  "Doc site (optional): build doc + link check"
   "Manual interactive smoke"
 )
 TOTAL_STEPS=${#STEPS[@]}
@@ -134,24 +136,15 @@ else
   fail "Build demo"
 fi
 
-# ── Step 8: Build doc ─────────────────────────────────
-# doc/dist is needed by check:links:doc (step 9).
+# ── Step 8: Link check ─────────────────────────────────
 step
-if (cd "$ROOT_DIR" && pnpm build:doc); then
-  pass "Build doc passed"
-else
-  fail "Build doc"
-fi
-
-# ── Step 9: Link check ────────────────────────────────
-step
-if (cd "$ROOT_DIR" && pnpm check:links && pnpm check:links:demo && pnpm check:links:doc); then
+if (cd "$ROOT_DIR" && pnpm check:links && pnpm check:links:demo); then
   pass "Link check passed"
 else
   fail "Link check"
 fi
 
-# ── Step 10: HTML validation ──────────────────────────
+# ── Step 9: HTML validation ───────────────────────────
 step
 if [[ "${B4PUSH_SKIP_HTML_VALIDATE:-}" == "1" ]]; then
   skip "HTML validation (B4PUSH_SKIP_HTML_VALIDATE=1)"
@@ -163,7 +156,7 @@ else
   fi
 fi
 
-# ── Step 11: Playwright smoke e2e ─────────────────────
+# ── Step 10: Playwright smoke e2e ─────────────────────
 # Runs the styleguide + demo smoke fixtures against the pre-built dist/ and
 # apps/demo/dist to verify both sites render and have no console errors.
 # Excluded from CI b4push (CI runs E2E in the pr-checks smoke-e2e job instead)
@@ -176,6 +169,22 @@ else
     pass "Playwright smoke passed"
   else
     fail "Playwright smoke e2e"
+  fi
+fi
+
+# ── Step 11: Doc site (optional) ──────────────────────
+# doc/ (#649) is a standalone zudo-doc workspace with its own build/deploy,
+# decoupled from the root lifecycle. This step builds it and link-checks it
+# as a separate, independently-skippable block rather than gating the root
+# build/link-check steps above on it.
+step
+if [[ "${B4PUSH_SKIP_DOC:-}" == "1" ]]; then
+  skip "Doc site build + link check (B4PUSH_SKIP_DOC=1)"
+else
+  if (cd "$ROOT_DIR" && pnpm build:doc && pnpm check:links:doc); then
+    pass "Doc site build + link check passed"
+  else
+    fail "Doc site build + link check"
   fi
 fi
 
