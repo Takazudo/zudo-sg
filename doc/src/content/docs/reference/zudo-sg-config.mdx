@@ -79,6 +79,21 @@ collection per `componentsRoots` entry to a zudo-doc preset fragment. Engine
 plugins are appended AFTER the preset's — the routes plugin requires the
 zudo-doc routes descriptor to already be present.
 
+### Component MDX docs per components root
+
+Each `componentsRoots[i]` gets its own collection — `componentDocs` for index
+0, `componentDocs1`, `componentDocs2`, … after it — rooted at that entry's
+`dir` and including `**/*.mdx`. An optional doc co-located with a story
+(`<dir>/<path>/<name>.mdx` next to `<name>.stories.tsx`) renders as a trailing
+section on that component's detail page. `withZudoSg` also passes the routes
+plugin a data-only `componentDocs` option — one `{ keyPrefix, collection }`
+pair per root, where `keyPrefix` is the root's registry key prefix (`dir` with a
+leading `packages/` removed, e.g. `"packages/ui/src"` → `"ui/src"`, `"ui"` →
+`"ui"`) — so the detail route looks each story up in the collection of the
+root its registry key belongs to (the longest matching prefix wins). A routes
+plugin descriptor written by hand without `componentDocs` renders no
+component docs.
+
 ```ts
 import { defineConfig } from "@takazudo/zfb/config";
 import { zudoDocPreset } from "@takazudo/zudo-doc/preset";

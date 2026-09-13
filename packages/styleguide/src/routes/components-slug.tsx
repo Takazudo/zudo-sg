@@ -17,7 +17,7 @@ import { makeAdmonition } from "@takazudo/zudo-doc/content-admonition";
 import { StyleguideLayout } from "../chrome/index.js";
 import { CodePanel, type CodePanelVariant } from "../code-panel/index.js";
 import { DetailWorkbench } from "../preview/index.js";
-import { COMPONENT_DOCS_COLLECTION, componentDocSlug } from "../registry/index.js";
+import { resolveComponentDoc } from "../registry/index.js";
 import { componentHref } from "../sg-routes.js";
 import { chromeProps } from "./_chrome.js";
 import { ctx, withBase } from "./_context.js";
@@ -85,10 +85,10 @@ export default function ComponentsSlugRoute(props: SlugProps & { params: { slug:
     </aside>
   ) as unknown as VNode;
 
-  // `componentsRoots[0]`'s collection; its slug shape matches the registry
-  // path key (`./ui/src/<dir>/<name>.stories.tsx` → `<dir>/<name>`).
-  const docSlug = componentDocSlug(entry.path);
-  const doc = docSlug ? getEntry(COMPONENT_DOCS_COLLECTION, docSlug) : undefined;
+  // The collection of the components root this story's registry key belongs to
+  // (`./<keyPrefix>/<dir>/<name>.stories.tsx` → `<dir>/<name>`).
+  const docRef = resolveComponentDoc(entry.path, ctx.componentDocs);
+  const doc = docRef ? getEntry(docRef.collection, docRef.slug) : undefined;
 
   // `when: "load"`: the toolbar is the page's primary control surface; each
   // iframe is `loading="lazy"`, so below-the-fold previews still defer.

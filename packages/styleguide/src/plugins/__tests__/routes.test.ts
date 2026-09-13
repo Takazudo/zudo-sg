@@ -101,6 +101,7 @@ describe("resolveRoutesPluginOptions", () => {
       previewCssUrl: DEFAULT_PREVIEW_CSS_URL,
       catalog: { title: "Component catalog", intro: null },
       tokensManifestModule: null,
+      componentDocs: [],
     });
   });
 
@@ -123,6 +124,10 @@ describe("resolveRoutesPluginOptions", () => {
       uiPackageName: "@zudo-sg/ui",
       previewCssUrl: "/assets/sg-preview.css",
       catalog: { title: "UI kit", intro: "All the parts." },
+      componentDocs: [
+        { keyPrefix: "ui/src", collection: "componentDocs" },
+        { keyPrefix: "ui", collection: "componentDocs1" },
+      ],
     });
     expect(resolved.routes).toEqual({
       componentsIndex: "/components",
@@ -134,6 +139,10 @@ describe("resolveRoutesPluginOptions", () => {
     expect(resolved.uiPackageName).toBe("@zudo-sg/ui");
     expect(resolved.previewCssUrl).toBe("/assets/sg-preview.css");
     expect(resolved.catalog).toEqual({ title: "UI kit", intro: "All the parts." });
+    expect(resolved.componentDocs).toEqual([
+      { keyPrefix: "ui/src", collection: "componentDocs" },
+      { keyPrefix: "ui", collection: "componentDocs1" },
+    ]);
   });
 
   it("fails with the exact host-path message when registryModule is not a file (ADR decision 10)", () => {
@@ -170,6 +179,10 @@ describe("resolveRoutesPluginOptions", () => {
     [{ uiPackageName: "" }, /option "uiPackageName" must be a non-empty string/],
     [{ previewCssUrl: "preview.css" }, /option "previewCssUrl" = "preview.css" must be a root-absolute path/],
     [{ catalog: { heading: "x" } }, /option "catalog.heading" is not supported/],
+    [{ componentDocs: { keyPrefix: "ui" } }, /option "componentDocs" must be an array/],
+    [{ componentDocs: ["ui"] }, /option "componentDocs\[0\]" must be an object/],
+    [{ componentDocs: [{ keyPrefix: "ui" }] }, /"componentDocs\[0\]" requires non-empty "keyPrefix" and "collection"/],
+    [{ componentDocs: [{ keyPrefix: "ui", collection: "c", dir: "ui" }] }, /"componentDocs\[0\].dir" is not supported/],
   ])("rejects invalid options %j", (extra, message) => {
     expect(() => resolveRoutesPluginOptions(projectRoot, { registryModule: REGISTRY, ...extra })).toThrow(message);
   });
@@ -226,6 +239,7 @@ describe("virtual module sources", () => {
       uiPackageName: null,
       previewCssUrl: DEFAULT_PREVIEW_CSS_URL,
       catalog: { title: "t", intro: null },
+      componentDocs: [],
     });
     expect(source.startsWith("export const sgContext = {")).toBe(true);
   });
@@ -243,7 +257,13 @@ describe("buildTokensModuleSource", () => {
 describe("routes plugin setup", () => {
   it("registers both virtual modules and injects the four routes from the package realpath", async () => {
     const reg = runSetup(
-      { registryModule: REGISTRY, routes: { componentsIndex: "/ui" }, categoryOrder: ["Actions"], uiPackageName: "@zudo-sg/ui" },
+      {
+        registryModule: REGISTRY,
+        routes: { componentsIndex: "/ui" },
+        categoryOrder: ["Actions"],
+        uiPackageName: "@zudo-sg/ui",
+        componentDocs: [{ keyPrefix: "ui", collection: "componentDocs" }],
+      },
       { base: "/styleguide/" },
     );
 
@@ -256,6 +276,7 @@ describe("routes plugin setup", () => {
       uiPackageName: "@zudo-sg/ui",
       previewCssUrl: "/_zudo-sg/preview.css",
       catalog: { title: "Component catalog", intro: null },
+      componentDocs: [{ keyPrefix: "ui", collection: "componentDocs" }],
     });
     expect(await reg.virtualModules.get(REGISTRY_MODULE_ID)!()).toBe(
       `export { storyModules, storyExportOrder } from ${JSON.stringify(toForwardSlash(join(projectRoot, REGISTRY)))};\n`,

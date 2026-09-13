@@ -212,6 +212,21 @@ async function main() {
       assert(/<h1[^>]*>[^<]+<\/h1>/.test(detail), `${detailPath} has no story title heading`);
     }
 
+    // Component MDX docs resolve from the components root the story key belongs
+    // to — here a non-`ui/src` root (`dir: "ui"`), #670.
+    const buttonSlug = slugDirs.find((slug) => slug.includes("button"));
+    assert(buttonSlug, `no button detail route among ${slugDirs.join(", ")}`);
+    const buttonDetail = await read(hostDir, `dist/components/${buttonSlug}/index.html`);
+    assert(
+      buttonDetail.includes("Button usage notes") && buttonDetail.includes("co-located component doc"),
+      `dist/components/${buttonSlug}/index.html does not render ui/button/button.mdx`,
+    );
+    const cardSlug = slugDirs.find((slug) => slug.includes("card"));
+    assert(
+      cardSlug && !(await read(hostDir, `dist/components/${cardSlug}/index.html`)).includes("Button usage notes"),
+      "the Button component doc leaked onto the Card detail page",
+    );
+
     const previewHtml = await read(hostDir, "dist/components/preview/index.html");
     assert(
       previewHtml.includes('href="/styleguide/_zudo-sg/preview.css"') || previewHtml.includes("href=/styleguide/_zudo-sg/preview.css"),

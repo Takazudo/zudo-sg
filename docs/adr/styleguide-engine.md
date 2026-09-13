@@ -239,8 +239,8 @@ AFTER the zudo-doc preset's). The routes plugin fails at `setup()` when no
 | Constant | Value |
 |---|---|
 | Virtual modules | `virtual:zudo-sg-context` (export `sgContext`), `virtual:zudo-sg-registry` (re-exports `storyModules`, `storyExportOrder` from the host registry path) |
-| `sgContext` shape (JSON only) | `{ base, routes, categoryOrder, uiPackageName, previewCssUrl, catalog: { title, intro } }` |
-| Routes plugin options | `{ registryModule, routes, categoryOrder, uiPackageName, previewCssUrl, catalog }` |
+| `sgContext` shape (JSON only) | `{ base, routes, categoryOrder, uiPackageName, previewCssUrl, catalog: { title, intro }, componentDocs: Array<{ keyPrefix, collection }> }` (`componentDocs` added by #670) |
+| Routes plugin options | `{ registryModule, routes, categoryOrder, uiPackageName, previewCssUrl, catalog }` (+ `tokensManifestModule`; + `componentDocs` from #670 — `zudoSg()` pairs each `componentsRoots[i]` registry key prefix with `componentDocs*` collection `i`, and the detail route resolves a story's doc from the root its key belongs to) |
 | Preview-CSS plugin options | `{ previewStyles, previewCssUrl }` |
 | Staging | **none** — inject `routes-src/*.tsx` from the package realpath (workspace or node_modules); no `.zudo-sg/` dir, nothing to gitignore |
 | Route entrypoints | link assets only (`<link href={withBase(sgContext.previewCssUrl)}>`), read data from the virtual modules, call zudo-doc factories (`createRouteContext`, `createChrome`) — never plugin helpers |

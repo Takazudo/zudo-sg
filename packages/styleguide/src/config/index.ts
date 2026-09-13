@@ -7,6 +7,11 @@
 // Host paths are validated later, inside each plugin's `setup()` (fail-fast,
 // like zudo-doc's preset: a missing host module throws there, not here).
 
+import {
+  COMPONENT_DOCS_COLLECTION,
+  componentDocsCollectionName,
+  componentDocsRoots,
+} from "../registry/component-docs.js";
 import { DEFAULT_PREVIEW_CSS_URL } from "../sg-context.js";
 import type { SgRoutes } from "../sg-routes.js";
 
@@ -15,7 +20,8 @@ export const PREVIEW_CSS_PLUGIN_NAME = "@takazudo/zudo-sg/plugins/preview-css";
 export const ZDTP_APPLY_PROXY_PLUGIN_NAME = "@takazudo/zudo-sg/plugins/zdtp-apply-proxy";
 
 /** Collection name of `componentsRoots[0]`; later roots append their index. */
-export const COMPONENT_DOCS_COLLECTION_BASE = "componentDocs";
+export const COMPONENT_DOCS_COLLECTION_BASE = COMPONENT_DOCS_COLLECTION;
+export { componentDocsCollectionName };
 
 export interface ZudoSgPluginDescriptor {
   name: string;
@@ -63,10 +69,6 @@ function definedOnly(record: Record<string, unknown>): Record<string, unknown> {
   return Object.fromEntries(Object.entries(record).filter(([, value]) => value !== undefined));
 }
 
-export function componentDocsCollectionName(index: number): string {
-  return index === 0 ? COMPONENT_DOCS_COLLECTION_BASE : `${COMPONENT_DOCS_COLLECTION_BASE}${index}`;
-}
-
 /** Returns the engine's zfb plugin descriptors and content collections. */
 export function zudoSg(options: ZudoSgComposeOptions): ZudoSgFragment {
   if (!options || typeof options !== "object") {
@@ -86,6 +88,9 @@ export function zudoSg(options: ZudoSgComposeOptions): ZudoSgFragment {
         previewCssUrl,
         catalog: options.catalog,
         tokensManifestModule: options.tokens?.manifestOut,
+        // Pairs each root's registry key prefix with its collection below, so the
+        // detail route resolves a story's doc from the root its key belongs to.
+        componentDocs: componentDocsRoots(roots),
       }),
     },
     {

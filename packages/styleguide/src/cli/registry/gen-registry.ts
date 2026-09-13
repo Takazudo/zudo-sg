@@ -14,20 +14,13 @@ import {
   replaceBlock,
   type RegistryEntry,
 } from "./build-registry-source.js";
+import { deriveMapKeyPrefix } from "../../registry/component-docs.js";
 import { assertUniqueImportNames, discoverStories } from "./discover-stories.js";
 
 const STORY_MODULES_RELATIVE_PATH = "stories/__tests__/story-modules.ts";
 
-/**
- * `packages/ui/src` → `ui/src` — the `storyModules` map key prefix for a
- * components root. Strips a leading `packages/` segment (the repo's
- * workspace-package convention) so the key matches the glob-relative shape
- * the registry consumer expects; a root outside `packages/` keys off its
- * project-root-relative dir verbatim.
- */
-export function deriveMapKeyPrefix(dir: string): string {
-  return dir.replace(/^packages\//, "");
-}
+// Shared with the config module / detail route, which must resolve the same key prefix.
+export { deriveMapKeyPrefix };
 
 function buildEntriesForRoot(projectRoot: string, root: ZudoSgComponentsRoot): RegistryEntry[] {
   const absDir = resolve(projectRoot, root.dir);

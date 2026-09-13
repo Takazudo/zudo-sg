@@ -45,6 +45,10 @@ describe("zudoSg()", () => {
           previewCssUrl: "/_zudo-sg/preview.css",
           catalog: { title: "Catalog" },
           tokensManifestModule: "./src/config/ui-design-tokens-manifest.ts",
+          componentDocs: [
+            { keyPrefix: "ui/src", collection: "componentDocs" },
+            { keyPrefix: "extra/src", collection: "componentDocs1" },
+          ],
         },
       },
       {

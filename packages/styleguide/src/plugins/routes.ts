@@ -31,6 +31,7 @@ import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import type { ZfbPlugin, ZfbSetupContext } from "@takazudo/zfb/plugins";
 import { resolveHostModule, toForwardSlash } from "../host-paths.js";
+import type { ComponentDocsRoot } from "../registry/component-docs.js";
 import {
   DEFAULT_CATALOG_TITLE,
   DEFAULT_PREVIEW_CSS_URL,
@@ -84,6 +85,12 @@ export interface RoutesPluginOptions {
    * route renders without dashboards.
    */
   tokensManifestModule?: string;
+  /**
+   * Per components root: its `storyModules` key prefix (e.g. `"ui/src"`) and
+   * the content collection holding its MDX docs. `zudoSg()` fills this from
+   * `componentsRoots`; omitted → detail pages render no component docs.
+   */
+  componentDocs?: ComponentDocsRoot[];
 }
 
 export interface ResolvedRoutesPluginOptions {
@@ -96,6 +103,7 @@ export interface ResolvedRoutesPluginOptions {
   catalog: SgCatalogText;
   /** Forward-slash absolute path of the host token manifest, or `null`. */
   tokensManifestModule: string | null;
+  componentDocs: ComponentDocsRoot[];
 }
 
 export interface RouteInjection {
@@ -113,6 +121,7 @@ const OPTION_KEYS = new Set([
   "previewCssUrl",
   "catalog",
   "tokensManifestModule",
+  "componentDocs",
 ]);
 const ROUTE_KEYS = Object.keys(DEFAULT_SG_ROUTES) as Array<keyof SgRoutes>;
 const CATALOG_KEYS = new Set(["title", "intro"]);
@@ -181,6 +190,25 @@ function normalizeCatalog(value: unknown): SgCatalogText {
   };
 }
 
+function normalizeComponentDocs(value: unknown): ComponentDocsRoot[] {
+  if (value === undefined || value === null) return [];
+  if (!Array.isArray(value)) fail(`option "componentDocs" must be an array of { keyPrefix, collection }`);
+  return value.map((item, i) => {
+    if (!isPlainObject(item)) fail(`option "componentDocs[${i}]" must be an object ({ keyPrefix, collection })`);
+    for (const key of Object.keys(item)) {
+      if (key !== "keyPrefix" && key !== "collection") {
+        fail(`option "componentDocs[${i}].${key}" is not supported (expected keyPrefix, collection)`);
+      }
+    }
+    const keyPrefix = optionalString(`componentDocs[${i}].keyPrefix`, item.keyPrefix);
+    const collection = optionalString(`componentDocs[${i}].collection`, item.collection);
+    if (keyPrefix === undefined || collection === undefined) {
+      fail(`option "componentDocs[${i}]" requires non-empty "keyPrefix" and "collection" strings`);
+    }
+    return { keyPrefix, collection };
+  });
+}
+
 /** Validates the options block and resolves `registryModule`; throws `[zudo-sg] …` on invalid input. */
 export function resolveRoutesPluginOptions(
   projectRoot: string,
@@ -216,6 +244,7 @@ export function resolveRoutesPluginOptions(
     previewCssUrl: previewCssUrl === undefined ? DEFAULT_PREVIEW_CSS_URL : urlPath("previewCssUrl", previewCssUrl),
     catalog: normalizeCatalog(options.catalog),
     tokensManifestModule: tokensManifestModule ?? null,
+    componentDocs: normalizeComponentDocs(options.componentDocs),
   };
 }
 
@@ -240,6 +269,7 @@ export function buildSgContext(base: string | undefined, resolved: ResolvedRoute
     uiPackageName: resolved.uiPackageName,
     previewCssUrl: resolved.previewCssUrl,
     catalog: resolved.catalog,
+    componentDocs: resolved.componentDocs,
   };
 }
 
