@@ -8,41 +8,61 @@
 // zudo-doc removed that bridge as a "repository-owned" implementation
 // detail (zudolab/zudo-doc#2761) — it was never meant as public API. Since
 // this project is the only consumer, the bridge (envelope + sender +
-// receiver) is now owned here instead, ported as-is from the pre-4.0
-// implementation so the wire contract and behavior are unchanged.
+// receiver) is owned by the @takazudo/zudo-sg engine, ported from the pre-4.0
+// implementation so the wire contract is unchanged.
 //
 // Two directions:
 //   parent → iframe : apply-css-vars / clear-css-vars (see preview-iframe-registry.ts)
 //   iframe → parent : ready                            (`onIframeReady` below)
 
-const BRIDGE_SOURCE = "zudo-sg-token-tweak-bridge" as const;
+/** Envelope `source` tag. Part of the wire contract (e2e/preview-token-panel.spec.ts mirrors it). */
+export const BRIDGE_SOURCE = "zudo-sg-token-tweak-bridge" as const;
 
 export type CssVarPair = readonly [name: string, value: string];
 
-interface ApplyCssVarsMessage {
+export interface ApplyCssVarsMessage {
   source: typeof BRIDGE_SOURCE;
   type: "apply-css-vars";
   vars: ReadonlyArray<CssVarPair>;
 }
 
-interface ClearCssVarsMessage {
+export interface ClearCssVarsMessage {
   source: typeof BRIDGE_SOURCE;
   type: "clear-css-vars";
   names: ReadonlyArray<string>;
 }
 
-interface ReadyMessage {
+export interface ReadyMessage {
   source: typeof BRIDGE_SOURCE;
   type: "ready";
 }
 
-type BridgeMessage = ApplyCssVarsMessage | ClearCssVarsMessage | ReadyMessage;
+export type BridgeMessage = ApplyCssVarsMessage | ClearCssVarsMessage | ReadyMessage;
 
 /** Type guard. Accepts any postMessage payload and confirms it is a bridge envelope. */
-function isBridgeMessage(value: unknown): value is BridgeMessage {
+export function isBridgeMessage(value: unknown): value is BridgeMessage {
   if (!value || typeof value !== "object") return false;
-  const v = value as { source?: unknown; type?: unknown };
-  return v.source === BRIDGE_SOURCE && typeof v.type === "string";
+  const v = value as { source?: unknown; type?: unknown; vars?: unknown; names?: unknown };
+  if (v.source !== BRIDGE_SOURCE) return false;
+  switch (v.type) {
+    case "apply-css-vars":
+      return Array.isArray(v.vars) && v.vars.every(isCssVarPair);
+    case "clear-css-vars":
+      return Array.isArray(v.names) && v.names.every((name) => typeof name === "string");
+    case "ready":
+      return true;
+    default:
+      return false;
+  }
+}
+
+function isCssVarPair(value: unknown): value is CssVarPair {
+  return (
+    Array.isArray(value) &&
+    value.length === 2 &&
+    typeof value[0] === "string" &&
+    typeof value[1] === "string"
+  );
 }
 
 /** Send `apply-css-vars` to the iframe. No-op when the iframe has not loaded. */

@@ -17,7 +17,7 @@ import {
   sendClearCssVars,
   onIframeReady,
   type CssVarPair,
-} from "./iframe-css-vars-bridge";
+} from "./iframe-css-vars-bridge.js";
 
 const registered = new Set<HTMLIFrameElement>();
 const readyTeardowns = new Map<HTMLIFrameElement, () => void>();
