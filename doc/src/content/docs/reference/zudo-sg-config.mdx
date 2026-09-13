@@ -1,0 +1,107 @@
+---
+title: zudo-sg.config.mjs
+sidebar_position: 2
+description: Every field of the host zudo-sg.config.mjs file, its defaults, and the zfb composition snippet.
+---
+
+`zudo-sg.config.mjs` is the host project's config file, read by both the
+`zudo-sg` CLI (see [CLI](./cli)) and the `zfb.config.ts` composition helper
+below. It is plain data — a bare `import()` of its default export — so it
+never imports TypeScript or `node:` builtins.
+
+## Fields
+
+```ts
+interface ZudoSgConfig {
+  componentsRoots: Array<{ dir: string; importBase: string }>;
+  registryOut: string;
+  categoryOrder: string[];
+  uiPackageName: string;
+  barrelIndex: string | null;
+  tokens: { cssFiles: [string, string]; manifestOut: string };
+  previewStyles: string;
+  previewCssUrl?: string;
+  routes?: Record<string, string>;
+  catalog?: { title?: string; intro?: string };
+}
+```
+
+| field | type | default | meaning |
+|---|---|---|---|
+| `componentsRoots` | `Array<{ dir, importBase }>` | required | One entry per story corpus to scan. `dir` is project-root-relative (e.g. `"packages/ui/src"`); `importBase` is the package-scoped import specifier prefix used in generated registry imports and `usage` snippets (e.g. `"@zudo-sg/ui/src"`). |
+| `registryOut` | `string` | required | Project-root-relative output path for the generated story registry (e.g. `"./src/styleguide/sg-registry.ts"`). This is also the routes plugin's `registryModule`. |
+| `categoryOrder` | `string[]` | required (may be `[]`) | Display order for story categories. Categories not listed are appended alphabetically after these — never dropped, never an error. |
+| `uiPackageName` | `string` | required | npm package name components/stories are imported from in generated `usage` snippets (e.g. `"@zudo-sg/ui"`). |
+| `barrelIndex` | `string \| null` | required | Project-root-relative barrel file `new-component` inserts an export into, or `null` for a project with no barrel-file convention. |
+| `tokens.cssFiles` | `[string, string]` | required | `[tokensCssPath, colorsCssPath]`, project-root-relative. Position is significant: index 0 feeds spacing/font/size tokens, index 1 feeds the palette and semantic color tokens. |
+| `tokens.manifestOut` | `string` | required | Project-root-relative output path for the generated design-token manifest. |
+| `previewStyles` | `string` | required | Project-root-relative path to the host's preview stylesheet entry (compiled standalone by the preview-css plugin). |
+| `previewCssUrl` | `string` | `/_zudo-sg/preview.css` | URL the compiled preview stylesheet is served/emitted at. |
+| `routes` | `Record<string, string>` | see below | Overrides for the four catalog route patterns. |
+| `catalog` | `{ title?, intro? }` | `{ title: "Component catalog" }` | Catalog page heading text. |
+
+### `routes` defaults
+
+| key | default pattern |
+|---|---|
+| `componentsIndex` | `/components` |
+| `componentsSlug` | `/components/[slug]` (must contain the `[slug]` segment) |
+| `componentsPreview` | `/components/preview` |
+| `tokens` | `/tokens` |
+
+A host `pages/` file with the same URL shape silently shadows the injected
+route (zfb precedence) — this is the documented escape hatch, not a bug.
+
+## Example
+
+```js
+// zudo-sg.config.mjs
+/** @type {import("@takazudo/zudo-sg/cli").ZudoSgConfig} */
+export default {
+  componentsRoots: [{ dir: "packages/ui/src", importBase: "@zudo-sg/ui/src" }],
+  registryOut: "./src/styleguide/sg-registry.ts",
+  categoryOrder: ["Actions", "Typography", "Layout", "Forms"],
+  uiPackageName: "@zudo-sg/ui",
+  barrelIndex: "packages/ui/src/index.ts",
+  tokens: {
+    cssFiles: ["packages/ui/styles/tokens.css", "packages/ui/styles/colors.css"],
+    manifestOut: "./src/config/ui-design-tokens-manifest.ts",
+  },
+  previewStyles: "./src/styles/preview-entry.css",
+};
+```
+
+## Composing into `zfb.config.ts`
+
+`withZudoSg(presetFragment, sgConfig)` (from `@takazudo/zudo-sg/config`)
+appends the engine's plugin descriptors and one `componentDocs*` content
+collection per `componentsRoots` entry to a zudo-doc preset fragment. Engine
+plugins are appended AFTER the preset's — the routes plugin requires the
+zudo-doc routes descriptor to already be present.
+
+```ts
+import { defineConfig } from "@takazudo/zfb/config";
+import { zudoDocPreset } from "@takazudo/zudo-doc/preset";
+import { withZudoSg } from "@takazudo/zudo-sg/config";
+import zudoSgConfig from "./zudo-sg.config.mjs";
+import { settings } from "./src/config/settings";
+
+const preset = zudoDocPreset({ settings /* , ... */ });
+
+export default defineConfig({
+  framework: "preact",
+  ...preset,
+  ...withZudoSg(
+    { collections: preset.collections, plugins: preset.plugins },
+    zudoSgConfig,
+  ),
+});
+```
+
+:::warning[`packageOwnedRoutes: true` is required]
+The engine's routes plugin imports `virtual:zudo-doc-route-context` and
+`virtual:zudo-doc-chrome-bindings`, which only zudo-doc's own routes plugin
+registers. The host's `settings.packageOwnedRoutes` must be `true`, and the
+zudo-doc preset's plugins must be listed before the engine's (which
+`withZudoSg` already guarantees).
+:::

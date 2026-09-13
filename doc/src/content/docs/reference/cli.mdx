@@ -1,0 +1,64 @@
+---
+title: CLI
+sidebar_position: 3
+description: The zudo-sg CLI — gen-registry, new-component, and gen-token-manifest.
+---
+
+The `zudo-sg` CLI (`@takazudo/zudo-sg`'s `bin`) reads the host's
+[`zudo-sg.config.mjs`](./zudo-sg-config) and runs one of three commands. Every
+project script in this repo wraps the CLI behind an `ensure-styleguide-build`
+pre-step, so the commands below show both forms.
+
+```txt
+Usage: zudo-sg <command> [options]
+
+Commands:
+  gen-registry [--check]
+  new-component <name> --category <c> [--nested] [--skip-barrel]
+  gen-token-manifest [--check]
+```
+
+## `gen-registry`
+
+Scans every `zudo-sg.config.mjs` `componentsRoots[].dir` on the filesystem for
+`*.stories.tsx` files (see [Story Spec → File location & discovery](./story-spec#file-location-discovery))
+and writes an explicit-import registry to `registryOut`.
+
+```sh
+zudo-sg gen-registry          # write/update the registry
+zudo-sg gen-registry --check  # fail if the registry on disk is stale (no write)
+```
+
+In this repo: `pnpm gen:sg-registry` / `pnpm check:sg-registry`.
+
+## `new-component`
+
+Scaffolds a component, its story file, and a starter test, then runs
+`gen-registry`.
+
+```sh
+zudo-sg new-component <name> --category <Category> [--nested] [--skip-barrel]
+```
+
+| flag | meaning |
+|---|---|
+| `<name>` | Kebab-case component name. |
+| `--category <c>` | Required. A free-form string — any value is accepted; unlisted categories append alphabetically in the catalog (see [Story Spec](./story-spec#module-shape-categories-are-host-data-not-a-closed-type)). |
+| `--nested` | Scaffold into `<componentsRoot>/<category-slug>/<name>/` instead of the default flat `<componentsRoot>/<name>/`. `<category-slug>` is `<Category>` lowercased with spaces replaced by hyphens. |
+| `--skip-barrel` | Skip inserting an export into `barrelIndex` — use to place the export by hand, or to work around a same-name collision across two categories. |
+
+Scaffolds into `componentsRoots[0]` — the first entry is the scaffold target
+when a host declares more than one. In this repo: `pnpm new:component`.
+
+## `gen-token-manifest`
+
+Reads the two CSS files at `zudo-sg.config.mjs` `tokens.cssFiles` and writes a
+design-token manifest to `tokens.manifestOut`, consumed by the `/tokens` route
+and the preview design-token panel.
+
+```sh
+zudo-sg gen-token-manifest          # write/update the manifest
+zudo-sg gen-token-manifest --check  # fail if the manifest on disk is stale (no write)
+```
+
+In this repo: `pnpm gen:token-manifest` / `pnpm check:token-manifest`.

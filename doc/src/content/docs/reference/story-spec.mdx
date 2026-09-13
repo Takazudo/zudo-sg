@@ -1,0 +1,231 @@
+---
+title: Story Spec
+sidebar_position: 1
+description: The full *.stories.tsx authoring contract the @takazudo/zudo-sg catalog discovers and renders.
+---
+
+This is the complete authoring contract for `*.stories.tsx` files consumed by
+the `@takazudo/zudo-sg` engine's catalog (`/components`, `/components/[slug]`,
+`/components/preview`). If you are adding or changing a component's stories,
+everything you need is here.
+
+## Where the contract lives
+
+The canonical types are `@takazudo/zudo-sg/stories`
+(`packages/styleguide/src/stories/types.ts` in this repo):
+`StoryMeta`, `Story<P>`, `StoryControl<P>`, `StoryModule`, `defineStory`.
+
+A component provider package (this repo's `@zudo-sg/ui`) keeps a
+byte-equivalent copy of the same type body at `packages/ui/src/stories/types.ts`
+so it stays installable and type-resolvable with no engine installed —
+external consumers of the provider typecheck stories from source, without a
+dependency on the engine package. A drift guard
+(`scripts/check-story-contract-sync.mjs`, wired into `pnpm check`) fails the
+build if the two copies diverge.
+
+## File location & discovery
+
+A story file is named `<name>.stories.tsx` and lives under one of the
+project's configured `componentsRoots[].dir` (see
+[zudo-sg.config.mjs](./zudo-sg-config)). Two layouts are supported, and the
+engine's `discoverStories()` walks either one recursively, at any depth:
+
+- **Flat, one directory deep:** `<componentsRoot>/<name>/<name>.stories.tsx`
+  — e.g. `ui/button/button.stories.tsx`.
+- **Category-nested:** `<componentsRoot>/<category-slug>/<name>/<name>.stories.tsx`
+  — e.g. `packages/ui/src/cards/stat-card/stat-card.stories.tsx`.
+
+:::warning[Stories must live at least one directory below the components root]
+`discoverStories()` derives each entry's `import * as <name>` identifier from
+its **containing directory's path** relative to the components root — never
+from the file name alone. A story file placed directly at the components root
+(a **flat** `<componentsRoot>/button.stories.tsx`, with no directory in
+between) has no containing directory to derive an identifier from; every such
+file resolves to the same (empty) identifier and the registry generator throws
+on the second one it finds. Always nest at least one directory, even for a
+single-file component: `<componentsRoot>/button/button.stories.tsx`, not
+`<componentsRoot>/button.stories.tsx`.
+:::
+
+Two different categories MAY scaffold a same-named component (e.g.
+`layout/badge/` and `forms/badge/`) — identifiers are derived from the FULL
+relative directory path (every path segment, hyphen-joined then camelCased),
+so `layout/badge` and `forms/badge` fold to distinct identifiers
+(`layoutBadge`, `formsBadge`) and both are registered, not collided.
+
+**Discovery is codegen, not `import.meta.glob`.** zfb does not statically
+inline `import.meta.glob`, so the literal call would survive into the shared
+client islands bundle and throw in the browser. Instead, `zudo-sg gen-registry`
+(see [CLI](./cli)) globs every configured components root on the filesystem at
+codegen time and writes an explicit-import registry file
+(`zudo-sg.config.mjs`'s `registryOut`). Run it after adding, renaming, or
+removing a story file, and commit the regenerated file; `zudo-sg gen-registry
+--check` (wired into CI) fails the build on drift. Never hand-edit the
+generated file.
+
+## Module shape
+
+Every `*.stories.tsx` exports **exactly**:
+
+- a **default export** `meta: StoryMeta`, and
+- **one or more named exports**, each a `Story<P>`.
+
+Nothing else should be exported. The registry treats `default` as the meta and
+every other own enumerable export as a story.
+
+### `meta` — `StoryMeta`
+
+```ts
+import { defineStory, type StoryMeta } from "@takazudo/zudo-sg/stories";
+
+const meta: StoryMeta = {
+  title: "Button",
+  category: "Actions",
+  description: "Primary action control with three variants and three sizes.",
+  usage: `import { Button } from "@zudo-sg/ui";\n\n<Button>Save</Button>`,
+  order: 1,
+};
+export default meta;
+```
+
+| field | type | required | meaning |
+|---|---|---|---|
+| `title` | `string` | yes | Component display name; unique within its category. |
+| `category` | `string` | yes | Sidebar bucket — see "Categories are host data" below. |
+| `description` | `string` | yes | One sentence shown under the title. |
+| `usage` | `string` | yes | Verbatim import + minimal JSX shown in the catalog's "Usage" block, as a plain string. |
+| `order` | `number` | no | Sort hint within a category; alphabetical by `title` when omitted. |
+| `previewRoute` | `string` | no | A real page route that demos the component live — see "The `previewRoute` escape hatch" below. |
+
+### Categories are host data, not a closed type
+
+`StoryMeta.category` is an **open string** — any value is valid. A host
+declares its preferred display order as `categoryOrder: string[]` in
+`zudo-sg.config.mjs`; the catalog renders those categories first, in that
+order, then appends any category actually used by a story that isn't on the
+list, alphabetically. A new category needs no contract change to work.
+
+### Named exports — `Story<P>`
+
+`Story` is generic over the driving component's props — `Story<ButtonProps>`
+— so a variant's `controls` are checked against the component's real props:
+`prop` must name an actual key of `P`, and where `P` is informative (e.g. a
+string-literal union), `options`/`defaultValue` are restricted to that union
+too. `P` defaults to `Record<string, unknown>`, so the bare `Story` name still
+works for a variant with no `controls`, or whose `render` composes more than
+one component's props.
+
+```ts
+export const Variants = defineStory<ButtonProps>({
+  name: "Variants",
+  render: () => <div>…</div>,
+  controls: [
+    { type: "select", prop: "variant", label: "Variant",
+      options: ["primary", "secondary", "ghost"], defaultValue: "primary" },
+  ],
+  source: `<Button>Primary</Button>`,
+});
+```
+
+| field | type | required | meaning |
+|---|---|---|---|
+| `name` | `string` | yes | Variant label. Unique within the file. |
+| `render` | `(args?: Partial<P>) => VNode` | yes | **Pure, synchronous.** Returns the preview node. `args` is the merged control values, typed to `P`. No effects, no async, no data fetching. |
+| `controls` | `StoryControl<P>[]` | no | Declarative knob descriptors, keyed to real props of `P` — metadata only, see below. |
+| `source` | `string` | no | Verbatim JSX for the code panel — see "Source extraction" below. |
+
+`defineStory(story)` is an identity helper that pins the type for editor
+autocomplete; a plain object literal that satisfies `Story<P>` is equally
+valid.
+
+## Controls convention (optional, metadata-only)
+
+`controls` **describes** the knobs a variant could expose; it does not wire
+them up. The catalog decides whether and how to render live controls. A story
+with no `controls` renders fine as a static preview.
+
+```ts
+{ type: "select",  prop: "variant", label: "Variant", options: ["primary", "ghost"], defaultValue: "primary" }
+{ type: "boolean", prop: "block",   label: "Full width", defaultValue: false }
+{ type: "text",    prop: "label",   label: "Label", defaultValue: "Click me" }
+{ type: "number",  prop: "count",   label: "Count", defaultValue: 1, min: 0, max: 10 }
+{ type: "color",   prop: "accent",  label: "Accent", defaultValue: "#2563eb" }
+```
+
+`prop` is typed `keyof P & string` — it must name a real prop of the component
+`Story<P>` is parameterized over; renaming or removing that prop fails the
+control to typecheck. `defaultValue` (and `options`, for `select`) narrow to
+that prop's own value type where `P` is informative.
+
+## Source extraction
+
+The catalog shows a code panel per variant. Resolution order:
+
+1. **Explicit `source`** — if a `Story` sets `source`, the catalog shows that
+   string verbatim. Recommended for any variant whose `render` body is
+   non-obvious.
+2. **Fallback to `meta.usage`** — if a variant has no `source`, the catalog
+   may show `meta.usage` as the component-level example.
+3. No automatic AST extraction of `render` bodies is promised or required.
+
+## Browser-only / MSW rules
+
+The catalog renders stories during a **static build**. Therefore:
+
+- **`render` must be pure and synchronous.** No `useEffect`, no top-level
+  `await`, no network calls, no timers, no reliance on `window`/`document` at
+  render time.
+- **No data fetching, no MSW inside `render` or component source.** If a
+  component genuinely needs mocked network data to be honestly demoed, use the
+  `previewRoute` escape hatch below — never introduce request mocking into the
+  story layer itself.
+- **Self-contained markup.** A `render` must not depend on ambient page chrome
+  (sticky offsets, global providers). Where a component is normally
+  sticky/fixed, wrap it in a `render`-local container that neutralizes the
+  effect for the catalog cell.
+
+### The `previewRoute` escape hatch
+
+`previewRoute` is a **different mechanism** from the catalog's built-in
+variant iframes (every `Story` already renders inside an isolated
+`/components/preview` iframe that re-invokes `render`). `previewRoute` is an
+optional `StoryMeta` field naming a REAL page route the host builds and owns
+itself (e.g. `/preview/dialog-with-fetch`), completely outside the
+`render`/variant-iframe system. When set, the catalog shows it as a plain
+"Live demo" link, not an embedded frame.
+
+- `render` stays pure/synchronous/no-MSW regardless — `previewRoute` is an
+  escape hatch alongside `render`, never a way to relax that rule.
+- Request mocking is permitted only inside the page(s) reachable via
+  `previewRoute`, never in any `*.stories.tsx` file or component source.
+- Must be a real, same-origin path starting with `/` — not a protocol-relative
+  URL, not the preview-iframe URL, not a `render`-produced node.
+
+## `"use client"` islands and stories
+
+Catalog thumbnails and the detail page are SSR-only — a story component that
+is itself a `"use client"` island still renders as a plain (server-rendered)
+component inside the catalog. The **one** client island in the whole catalog
+is the preview app used by `/components/preview`, which re-invokes a variant's
+`render` inside an iframe; the registry travels into that island as an
+in-bundle argument, never as island props (island props serialize to JSON,
+which would drop render closures).
+
+## Authoring checklist
+
+When adding a component, ship its story in the same change:
+
+- [ ] `<componentsRoot>/<name>/<name>.stories.tsx` exists, at least one
+      directory below the components root (see "File location & discovery").
+- [ ] Default export is a `StoryMeta` with `title`, `category`, `description`,
+      `usage`.
+- [ ] At least one named `Story<P>` export with `name` and a pure, synchronous
+      `render`.
+- [ ] `source` set on any non-trivial variant.
+- [ ] `controls` added where live editing is meaningful; `prop` names a real
+      key of `P`.
+- [ ] `zudo-sg gen-registry` run and the regenerated registry committed.
+- [ ] Typecheck and unit tests pass.
+
+Use `zudo-sg new-component <name> --category <c> [--nested] [--skip-barrel]`
+(see [CLI](./cli)) to scaffold the whole checklist above in one command.
