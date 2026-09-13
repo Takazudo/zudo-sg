@@ -32,6 +32,10 @@
       "types": "./dist/registry/index.d.ts",
       "default": "./dist/registry/index.js"
     },
+    "./token-dashboard": {
+      "types": "./dist/token-dashboard/index.d.ts",
+      "default": "./dist/token-dashboard/index.js"
+    },
     "./preview": {
       "types": "./dist/preview/index.d.ts",
       "default": "./dist/preview/index.js"

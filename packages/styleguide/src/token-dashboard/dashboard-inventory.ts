@@ -1,9 +1,10 @@
 /**
  * Measured SSR inventory for the three declared-defaults dashboards.
  *
- * Keep these values in sync with the rows emitted by zdtp's `include` filters.
- * They are shared by the dashboard unit test and the tokens-dashboard e2e so
- * those checks use one measured source of truth.
+ * Keep these values in sync with the rows emitted by zdtp's `include` filters
+ * for the host's UI design-token manifest. They are shared by the dashboard
+ * unit test and the host's tokens-dashboard e2e so those checks use one
+ * measured source of truth.
  */
 export const UI_DASHBOARD_TOKEN_COUNT = 102;
 export const UI_DASHBOARD_MODE_DEPENDENT_COUNT = 15;

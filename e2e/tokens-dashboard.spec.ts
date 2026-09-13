@@ -4,7 +4,7 @@ import {
   UI_DASHBOARD_MODE_DEPENDENT_COUNT,
   UI_DASHBOARD_MODE_INDEPENDENT_COUNT,
   UI_DASHBOARD_TOKEN_COUNT,
-} from "../src/features/styleguide/token-dashboard/dashboard-inventory";
+} from "@takazudo/zudo-sg/token-dashboard";
 
 const TOKENS_PATH = withBase("/tokens");
 const PREVIEW_STATE_KEY = "sg-preview-tweak-state-v4";

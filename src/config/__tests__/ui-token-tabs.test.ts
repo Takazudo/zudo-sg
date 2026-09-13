@@ -71,8 +71,11 @@ describe("shared UI token tabs", () => {
     ].map((match) => match[1]);
 
     // The explicit extension is required by Node's native type stripping;
-    // normalize it when checking the contract's manifest-only allowlist.
+    // normalize it when checking the contract's allowlist. Tab-shaping
+    // logic now lives in the engine package (@takazudo/zudo-sg/token-dashboard);
+    // this module only assembles the host's generated manifest for it.
     expect(runtimeImports.map((specifier) => specifier?.replace(/\.ts$/, ""))).toEqual([
+      "@takazudo/zudo-sg/token-dashboard",
       "./ui-design-tokens-manifest",
     ]);
     expect(source).not.toContain("virtual:");
