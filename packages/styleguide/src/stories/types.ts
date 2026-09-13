@@ -7,7 +7,7 @@
  *
  * DUPLICATED ON PURPOSE (ADR `docs/adr/styleguide-engine.md` decision 3): the
  * component provider keeps a byte-equivalent copy of everything below this
- * header at `packages/ui/src/stories/types.ts`, so `@zudo-sg/ui` stays
+ * header at `packages/demo-ui/src/stories/types.ts`, so `@zudo-sg/demo-ui` stays
  * installable and type-resolvable with no engine installed. Edit both files
  * together; `pnpm check:story-contract-sync` fails on drift.
  */

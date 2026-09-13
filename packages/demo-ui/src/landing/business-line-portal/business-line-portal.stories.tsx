@@ -10,7 +10,7 @@ const meta: StoryMeta = {
   category: "Landing",
   description:
     "Card-grid portal listing a company's business lines, each linking through to its own line landing page. Supports filtering to a subset via `only`, and a `bare` mode for embedding in body copy.",
-  usage: `import { BusinessLinePortal } from "@zudo-sg/ui/src/landing/business-line-portal/business-line-portal";
+  usage: `import { BusinessLinePortal } from "@zudo-sg/demo-ui/src/landing/business-line-portal/business-line-portal";
 
 <BusinessLinePortal heading="Our business lines" lines={lines} />`,
   order: 4,

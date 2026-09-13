@@ -6,7 +6,7 @@ const meta: StoryMeta = {
   category: "Content",
   description:
     "Product-top card grid, one card per business category with a tagline and a short list of representative items.",
-  usage: `import { ProductCategoryGrid } from "@zudo-sg/ui/src/landing/product-category-grid/product-category-grid";
+  usage: `import { ProductCategoryGrid } from "@zudo-sg/demo-ui/src/landing/product-category-grid/product-category-grid";
 
 <ProductCategoryGrid heading="Our products" categories={categories} />`,
   order: 17,

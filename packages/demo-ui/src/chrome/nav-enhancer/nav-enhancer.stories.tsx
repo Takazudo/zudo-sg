@@ -8,8 +8,8 @@ const meta: StoryMeta = {
   category: "Navigation",
   description:
     "Render-null a11y island for SiteNav's <details>/<summary> accordion: syncs aria-expanded on toggle and closes the focused section on Escape. The accordion itself works with no JS — mount this alongside SiteNav (via the consumer's own Island with ssrFallback={null}) to layer the enhancement on top.",
-  usage: `import { SiteNav } from "@zudo-sg/ui";
-import NavEnhancer from "@zudo-sg/ui/src/chrome/nav-enhancer/nav-enhancer";
+  usage: `import { SiteNav } from "@zudo-sg/demo-ui";
+import NavEnhancer from "@zudo-sg/demo-ui/src/chrome/nav-enhancer/nav-enhancer";
 
 <SiteNav sections={sections} />
 <Island when="visible" ssrFallback={null}><NavEnhancer /></Island>`,

@@ -8,14 +8,14 @@
  * module loader doesn't alias to `preact/jsx-runtime`; see that file's
  * module doc for the full rationale).
  *
- * Builds the shared `@zudo-sg/ui` `SearchDoc` record (title/href/section/
+ * Builds the shared `@zudo-sg/demo-ui` `SearchDoc` record (title/href/section/
  * description/excerpt) for every content entry — the cross-site search
  * index embedded as JSON by `pages/search.tsx`. Unlike `getSiteTree`
  * (lib/site-tree.ts), `navHidden` entries are NOT excluded: a standalone
  * article hidden from nav/footer is exactly the kind of easy-to-lose-track-of
  * content cross-site search exists to surface.
  */
-import type { SearchDoc } from "@zudo-sg/ui/src/search/search-doc.ts";
+import type { SearchDoc } from "@zudo-sg/demo-ui/src/search/search-doc.ts";
 import type { ContentData } from "./content-schema";
 import { normalizeSlug, slugToHref } from "./site-tree-core";
 import { resolveSectionLabel } from "./section-label";

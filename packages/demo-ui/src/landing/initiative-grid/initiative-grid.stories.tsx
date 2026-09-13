@@ -6,7 +6,7 @@ const meta: StoryMeta = {
   category: "Content",
   description:
     "Sustainability-style \"initiative\" card grid, each card numbered and top-rule accented.",
-  usage: `import { InitiativeGrid } from "@zudo-sg/ui/src/landing/initiative-grid/initiative-grid";
+  usage: `import { InitiativeGrid } from "@zudo-sg/demo-ui/src/landing/initiative-grid/initiative-grid";
 
 <InitiativeGrid heading="Our initiatives" initiatives={initiatives} />`,
   order: 20,

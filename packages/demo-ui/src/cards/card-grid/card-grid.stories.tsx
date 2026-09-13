@@ -6,8 +6,8 @@ const meta: StoryMeta = {
   title: "CardGrid",
   category: "Data Display",
   description: "Responsive auto-fit grid wrapper for a run of Cards in a content body.",
-  usage: `import { CardGrid } from "@zudo-sg/ui/src/cards/card-grid/card-grid";
-import { Card } from "@zudo-sg/ui/src/cards/card/card";
+  usage: `import { CardGrid } from "@zudo-sg/demo-ui/src/cards/card-grid/card-grid";
+import { Card } from "@zudo-sg/demo-ui/src/cards/card/card";
 
 <CardGrid>
   <Card title="One">…</Card>

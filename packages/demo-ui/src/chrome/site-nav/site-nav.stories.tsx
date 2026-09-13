@@ -7,7 +7,7 @@ const meta: StoryMeta = {
   category: "Navigation",
   description:
     "Fixed left global nav rail: sections expand inline via native <details>/<summary> (no JS required); collapses to an off-canvas drawer below `sm`.",
-  usage: `import { SiteNav } from "@zudo-sg/ui";
+  usage: `import { SiteNav } from "@zudo-sg/demo-ui";
 
 <SiteNav sections={sections} currentSlug={currentSlug} />`,
 };

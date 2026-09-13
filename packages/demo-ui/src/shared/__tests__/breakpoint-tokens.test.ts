@@ -7,17 +7,17 @@ import { describe, expect, it } from "vitest";
 // (e.g. `md:` before `--breakpoint-md` existed) silently emits zero CSS
 // instead of erroring — SplitLayout stayed permanently stacked with no build
 // failure to catch it. This scans every production `.ts`/`.tsx` file across
-// the three consumers that share packages/ui/styles/tokens.css (root host,
-// @zudo-sg/ui itself, @zudo-sg/demo) for responsive-prefix usage and asserts
+// the three consumers that share packages/demo-ui/styles/tokens.css (root host,
+// @zudo-sg/demo-ui itself, @zudo-sg/demo) for responsive-prefix usage and asserts
 // each breakpoint name used is backed by a `--breakpoint-*` token, so a
 // missing token fails a test instead of silently no-op-ing in the browser.
 
-// packages/ui/src/shared/__tests__/breakpoint-tokens.test.ts -> repo root
+// packages/demo-ui/src/shared/__tests__/breakpoint-tokens.test.ts -> repo root
 const REPO_ROOT = resolve(__dirname, "../../../../../");
-const TOKENS_CSS_PATH = resolve(REPO_ROOT, "packages/ui/styles/tokens.css");
+const TOKENS_CSS_PATH = resolve(REPO_ROOT, "packages/demo-ui/styles/tokens.css");
 
 const SCAN_ROOTS = [
-  resolve(REPO_ROOT, "packages/ui/src"),
+  resolve(REPO_ROOT, "packages/demo-ui/src"),
   resolve(REPO_ROOT, "src"),
   resolve(REPO_ROOT, "apps/demo"),
 ];

@@ -8,7 +8,7 @@ const meta: StoryMeta = {
   category: "Navigation",
   description:
     "Full-bleed card link wrapper, plus the ViewAllLink accent text link used to point at a listing page.",
-  usage: `import { CardLink, ViewAllLink } from "@zudo-sg/ui/src/shared/card-link/card-link";
+  usage: `import { CardLink, ViewAllLink } from "@zudo-sg/demo-ui/src/shared/card-link/card-link";
 
 <CardLink href="/products"><Card>…</Card></CardLink>
 <ViewAllLink href="/news">View all news</ViewAllLink>`,

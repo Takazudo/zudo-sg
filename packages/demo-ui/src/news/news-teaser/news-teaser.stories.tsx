@@ -7,7 +7,7 @@ const meta: StoryMeta = {
   category: "News",
   description:
     "Landing-page 'News'/'IR News' excerpt band: a heading row with a 'view all' link, over NewsList's latest N rows (unfiltered). One component serves both feeds via `items`.",
-  usage: `import { NewsTeaser } from "@zudo-sg/ui";
+  usage: `import { NewsTeaser } from "@zudo-sg/demo-ui";
 
 <NewsTeaser heading="News" items={items} viewAllHref="/news" />`,
   order: 3,

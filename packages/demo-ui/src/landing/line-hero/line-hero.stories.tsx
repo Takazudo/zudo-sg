@@ -6,7 +6,7 @@ const meta: StoryMeta = {
   category: "Landing",
   description:
     "Shared hero for business-line landing pages, reused across every line with per-line copy. Pair with a `[data-line]` ancestor so its accent color follows that line's theme.",
-  usage: `import { LineHero } from "@zudo-sg/ui/src/landing/line-hero/line-hero";
+  usage: `import { LineHero } from "@zudo-sg/demo-ui/src/landing/line-hero/line-hero";
 
 <LineHero
   eyebrow="Vacuum Solutions — example-brand.com"

@@ -6,7 +6,7 @@ const meta: StoryMeta = {
   category: "Landing",
   description:
     "Top-page card grid summarizing a company's business segments, each linking through to its own detail page.",
-  usage: `import { BusinessSegments } from "@zudo-sg/ui/src/landing/business-segments/business-segments";
+  usage: `import { BusinessSegments } from "@zudo-sg/demo-ui/src/landing/business-segments/business-segments";
 
 <BusinessSegments heading="Our business" segments={segments} />`,
   order: 3,

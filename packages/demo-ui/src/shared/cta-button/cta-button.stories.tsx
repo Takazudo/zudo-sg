@@ -5,7 +5,7 @@ const meta: StoryMeta = {
   title: "CtaButton",
   category: "Actions",
   description: "Accent-filled or outlined call-to-action link, with an optional trailing arrow.",
-  usage: `import { CtaButton } from "@zudo-sg/ui/src/shared/cta-button/cta-button";
+  usage: `import { CtaButton } from "@zudo-sg/demo-ui/src/shared/cta-button/cta-button";
 
 <CtaButton href="/products" variant="primary">Browse products</CtaButton>`,
 };

@@ -6,7 +6,7 @@ const meta: StoryMeta = {
   category: "Data Display",
   description:
     "Company locations listed by group (department/region), each group heading rule-marked in accent, locations laid out in an auto-fill grid.",
-  usage: `import { LocationList } from "@zudo-sg/ui/src/landing/location-list/location-list";
+  usage: `import { LocationList } from "@zudo-sg/demo-ui/src/landing/location-list/location-list";
 
 <LocationList groups={groups} />`,
   order: 14,

@@ -3,15 +3,15 @@
  * source of truth for all editable design tokens.
  *
  * GENERATED — do not hand-edit. Run `pnpm gen:root-token-manifest` after
- * changing packages/ui/styles/tokens.css, packages/ui/styles/colors.css, or
+ * changing packages/demo-ui/styles/tokens.css, packages/demo-ui/styles/colors.css, or
  * src/styles/global.css, then commit the regenerated output.
  * `pnpm check:root-token-manifest` fails on drift.
  *
  * Source of truth, resolved via scripts/lib/css-var-resolver.mjs (#209) in
  * @import cascade order — this order MUST track global.css's own @import
  * lines, see the call-site comment in scripts/gen-root-token-manifest.mjs:
- *   1. packages/ui/styles/tokens.css  (shared spacing/font/radius/shadow/transition)
- *   2. packages/ui/styles/colors.css  (shared semantic colors — no spacing/font/size tokens)
+ *   1. packages/demo-ui/styles/tokens.css  (shared spacing/font/radius/shadow/transition)
+ *   2. packages/demo-ui/styles/colors.css  (shared semantic colors — no spacing/font/size tokens)
  *   3. src/styles/global.css itself   (root-specific @theme/:root overrides win on collision,
  *                                       e.g. --radius-lg, --radius-DEFAULT, --leading-snug,
  *                                       --spacing-icon-*)

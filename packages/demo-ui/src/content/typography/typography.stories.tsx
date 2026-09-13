@@ -27,7 +27,7 @@ const meta: StoryMeta = {
   title: "Typography",
   category: "Typography",
   description: "Full MDX general-element contract, demoed through the Prose* components rather than raw HTML.",
-  usage: `import { ProseH2, ProseP, ProseA } from "@zudo-sg/ui/src/content/…";
+  usage: `import { ProseH2, ProseP, ProseA } from "@zudo-sg/demo-ui/src/content/…";
 
 <ProseH2>Section</ProseH2>
 <ProseP>Body copy with an <ProseA href="#">inline link</ProseA>.</ProseP>`,

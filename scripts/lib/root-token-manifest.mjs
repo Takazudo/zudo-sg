@@ -2,7 +2,7 @@
 //
 // Project-specific layer on top of css-var-resolver.mjs (#209): knows which
 // `--custom-properties` reachable from `src/styles/global.css` (the ROOT
-// host's own token file, plus the shared @zudo-sg/ui files it @imports)
+// host's own token file, plus the shared @zudo-sg/demo-ui files it @imports)
 // belong in `src/config/design-tokens-manifest.ts`, and how to render that
 // file. Mirrors scripts/lib/ui-token-manifest.mjs's split, adapted for a
 // resolver-backed lookup instead of a single-file Map lookup — this manifest
@@ -50,7 +50,7 @@
 
 // ---------------------------------------------------------------------------
 // id / label derivation — mirrors ui-token-manifest.mjs's suffixOf(), minus
-// the "ui-" id prefix (this is the root manifest, not the @zudo-sg/ui one).
+// the "ui-" id prefix (this is the root manifest, not the @zudo-sg/demo-ui one).
 // ---------------------------------------------------------------------------
 
 const SPACING_PREFIX = "--spacing-";
@@ -412,15 +412,15 @@ export function renderRootTokenManifestFile(manifest) {
  * source of truth for all editable design tokens.
  *
  * GENERATED — do not hand-edit. Run \`pnpm gen:root-token-manifest\` after
- * changing packages/ui/styles/tokens.css, packages/ui/styles/colors.css, or
+ * changing packages/demo-ui/styles/tokens.css, packages/demo-ui/styles/colors.css, or
  * src/styles/global.css, then commit the regenerated output.
  * \`pnpm check:root-token-manifest\` fails on drift.
  *
  * Source of truth, resolved via scripts/lib/css-var-resolver.mjs (#209) in
  * @import cascade order — this order MUST track global.css's own @import
  * lines, see the call-site comment in scripts/gen-root-token-manifest.mjs:
- *   1. packages/ui/styles/tokens.css  (shared spacing/font/radius/shadow/transition)
- *   2. packages/ui/styles/colors.css  (shared semantic colors — no spacing/font/size tokens)
+ *   1. packages/demo-ui/styles/tokens.css  (shared spacing/font/radius/shadow/transition)
+ *   2. packages/demo-ui/styles/colors.css  (shared semantic colors — no spacing/font/size tokens)
  *   3. src/styles/global.css itself   (root-specific @theme/:root overrides win on collision,
  *                                       e.g. --radius-lg, --radius-DEFAULT, --leading-snug,
  *                                       --spacing-icon-*)

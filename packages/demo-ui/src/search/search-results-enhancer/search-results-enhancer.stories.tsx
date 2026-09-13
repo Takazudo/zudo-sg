@@ -9,8 +9,8 @@ const meta: StoryMeta = {
   description:
     "Render-null progressive-enhancement island for SearchResults. Renders nothing itself — on mount it live-filters the result list as the user types and keeps `?q=` in the URL in sync, by attaching behavior to the `data-search-*` hooks SearchResults already renders.",
   usage: `import { Island } from "@takazudo/zfb";
-import { SearchResults } from "@zudo-sg/ui/src/search/search-results/search-results";
-import SearchResultsEnhancer from "@zudo-sg/ui/src/search/search-results-enhancer/search-results-enhancer";
+import { SearchResults } from "@zudo-sg/demo-ui/src/search/search-results/search-results";
+import SearchResultsEnhancer from "@zudo-sg/demo-ui/src/search/search-results-enhancer/search-results-enhancer";
 
 <SearchResults docs={docs} query="" />
 <Island when="visible" ssrFallback={null}>

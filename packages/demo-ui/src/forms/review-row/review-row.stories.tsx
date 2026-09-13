@@ -6,7 +6,7 @@ const meta: StoryMeta = {
   category: "Forms",
   description:
     "One row of a form's confirm panel: a label plus a slot the paired *-form-enhancer fills in with the submitted value.",
-  usage: `import { ReviewRow } from "@zudo-sg/ui";
+  usage: `import { ReviewRow } from "@zudo-sg/demo-ui";
 
 <ReviewRow label="Name" reviewAttr="data-contact-review" field="name" />`,
   order: 7,

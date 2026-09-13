@@ -5,7 +5,7 @@ const meta: StoryMeta = {
   title: "ProseH3",
   category: "Typography",
   description: "MDX `h3` element override — subsection heading with an accent-colored left rule.",
-  usage: `import { ProseH3 } from "@zudo-sg/ui/src/content/prose-h3/prose-h3";
+  usage: `import { ProseH3 } from "@zudo-sg/demo-ui/src/content/prose-h3/prose-h3";
 
 <ProseH3>Subsection heading</ProseH3>`,
 };

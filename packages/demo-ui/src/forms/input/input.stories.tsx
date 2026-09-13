@@ -5,7 +5,7 @@ const meta: StoryMeta = {
   title: "Input",
   category: "Forms",
   description: "Single-line text input control — pairs with Field.",
-  usage: `import { Input } from "@zudo-sg/ui";
+  usage: `import { Input } from "@zudo-sg/demo-ui";
 
 <Input name="email" type="email" />`,
   order: 2,

@@ -11,7 +11,7 @@
 // human edits when a genuinely new token needs to appear in the panel.
 //
 // Ported from the host's former `scripts/lib/ui-token-manifest.mjs`. The
-// SPECS tables are specific to `@zudo-sg/ui`'s own token vocabulary (this is
+// SPECS tables are specific to `@zudo-sg/demo-ui`'s own token vocabulary (this is
 // a mechanical port behind `zudo-sg.config.mjs`, not a generalization of the
 // token schema itself — see docs/adr/styleguide-engine.md, issue #655).
 
@@ -335,13 +335,13 @@ export function renderUiTokenManifestFile(manifest: UiTokenManifest): string {
   const sizeLines = manifest.sizeTokens.map((t) => renderTokenDefObject(t, 2)).join("\n");
 
   return `/**
- * Design-token manifest for @zudo-sg/ui target-website tokens.
+ * Design-token manifest for @zudo-sg/demo-ui target-website tokens.
  *
  * GENERATED — do not hand-edit. Run \`pnpm gen:token-manifest\` after changing
- * packages/ui/styles/tokens.css or packages/ui/styles/colors.css, then commit
+ * packages/demo-ui/styles/tokens.css or packages/demo-ui/styles/colors.css, then commit
  * the regenerated output. \`pnpm check:token-manifest\` fails on drift.
  *
- * Source of truth: packages/ui/styles/tokens.css and packages/ui/styles/colors.css,
+ * Source of truth: packages/demo-ui/styles/tokens.css and packages/demo-ui/styles/colors.css,
  * parsed by the \`zudo-sg gen-token-manifest\` CLI command
  * (@takazudo/zudo-sg's src/cli/token-manifest/ui-token-manifest.ts). Only
  * \`default\` values are derived from the CSS; \`group\`/\`step\`/\`unit\`/
@@ -359,7 +359,7 @@ const FONT_WEIGHT_OPTIONS = [
 ] as const;
 
 /**
- * Tier-1 raw palette colors from \`packages/ui/styles/colors.css\` (the \`:root\`
+ * Tier-1 raw palette colors from \`packages/demo-ui/styles/colors.css\` (the \`:root\`
  * \`--palette-{group}-{step-or-role}\` block). This is the raw material beneath the
  * semantic \`--color-*\` tokens in UI_COLOR_TOKENS below — same three-tier
  * model the doc-chrome panel exposes via \`--palette-*\` ramps and \`--zd-*\`
@@ -386,7 +386,7 @@ ${paletteLines}
 ];
 
 /**
- * Color tokens from \`packages/ui/styles/colors.css\`.
+ * Color tokens from \`packages/demo-ui/styles/colors.css\`.
  *
  * All values use light-dark() for dual-scheme support. Defaults here are
  * the full CSS declarations including both light and dark sides.
@@ -400,7 +400,7 @@ ${colorLines}
 ];
 
 /**
- * Spacing tokens from \`packages/ui/styles/tokens.css\`.
+ * Spacing tokens from \`packages/demo-ui/styles/tokens.css\`.
  *
  * Coverage: ${manifest.spacingTokens.length} tokens total.
  */
@@ -409,7 +409,7 @@ ${spacingLines}
 ];
 
 /**
- * Font tokens from \`packages/ui/styles/tokens.css\`.
+ * Font tokens from \`packages/demo-ui/styles/tokens.css\`.
  *
  * Coverage: ${manifest.fontTokens.length} tokens total.
  */
@@ -418,7 +418,7 @@ ${fontLines}
 ];
 
 /**
- * Size tokens from \`packages/ui/styles/tokens.css\`.
+ * Size tokens from \`packages/demo-ui/styles/tokens.css\`.
  *
  * Coverage: ${manifest.sizeTokens.length} tokens total.
  * \`--radius-full\` carries a pill toggle (sentinel 9999px).

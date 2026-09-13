@@ -26,8 +26,8 @@ describe("root zudo-doc 5 theme contract", () => {
   it("keeps local theme authority and the load-bearing package CSS order", () => {
     expect(globalCss).not.toContain('@import "@takazudo/zudo-doc/theme.css"');
     const orderedImports = [
-      '@import "@zudo-sg/ui/styles/tokens.css"',
-      '@import "@zudo-sg/ui/styles/colors.css"',
+      '@import "@zudo-sg/demo-ui/styles/tokens.css"',
+      '@import "@zudo-sg/demo-ui/styles/colors.css"',
       '@import "@takazudo/zudo-doc/safelist.css"',
       '@import "@takazudo/zudo-doc/content.css"',
       '@import "@takazudo/zudo-doc/features.css"',

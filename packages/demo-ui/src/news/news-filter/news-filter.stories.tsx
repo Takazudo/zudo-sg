@@ -6,7 +6,7 @@ const meta: StoryMeta = {
   category: "News",
   description:
     "Category-filter button group for a news feed (progressive enhancement — see the component's JSDoc). This preview shows the static button states only; filtering behavior needs both a NewsList's rows in the same section and the paired NewsFilterEnhancer island mounted — see NewsList's \"With filter bar\" story for the full picture in a real app with the island running.",
-  usage: `import { NewsFilter } from "@zudo-sg/ui";
+  usage: `import { NewsFilter } from "@zudo-sg/demo-ui";
 
 <NewsFilter categories={["Corporate", "IR"]} />`,
   order: 2,

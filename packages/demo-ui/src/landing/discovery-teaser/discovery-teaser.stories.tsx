@@ -6,7 +6,7 @@ const meta: StoryMeta = {
   category: "Landing",
   description:
     "Top-page excerpt showing a handful of \"where our products show up\" scenes, teasing through to a fuller scene gallery page.",
-  usage: `import { DiscoveryTeaser } from "@zudo-sg/ui/src/landing/discovery-teaser/discovery-teaser";
+  usage: `import { DiscoveryTeaser } from "@zudo-sg/demo-ui/src/landing/discovery-teaser/discovery-teaser";
 
 <DiscoveryTeaser heading="Everyday places you'll find us" scenes={scenes} href="/company/discovery" />`,
   order: 5,

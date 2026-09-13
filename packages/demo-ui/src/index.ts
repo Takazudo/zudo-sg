@@ -1,4 +1,4 @@
-// @zudo-sg/ui — shared Preact component library.
+// @zudo-sg/demo-ui — shared Preact component library.
 //
 // Public barrel. Components are consumed FROM SOURCE (this package's "main" /
 // "exports" point at src/*.ts directly) — there is no build step; the consuming
@@ -8,7 +8,7 @@
 // generated explicit imports (see STORIES.md), so keeping them out of the
 // barrel avoids pulling story render trees into app bundles.
 //
-// Sections below are grouped by StoryCategory (packages/ui/src/stories/types.ts),
+// Sections below are grouped by StoryCategory (packages/demo-ui/src/stories/types.ts),
 // NOT by the on-disk category-nested directory (shared/cards/media/chrome/
 // content/news/forms/search/landing) — a directory can span multiple
 // categories (e.g. shared/ has Actions, Layout, Navigation, and Content

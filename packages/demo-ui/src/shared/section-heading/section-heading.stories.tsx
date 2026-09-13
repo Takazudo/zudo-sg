@@ -5,7 +5,7 @@ const meta: StoryMeta = {
   title: "SectionHeading",
   category: "Content",
   description: "Section header block: optional eyebrow, heading, and an optional intro paragraph.",
-  usage: `import { SectionHeading } from "@zudo-sg/ui/src/shared/section-heading/section-heading";
+  usage: `import { SectionHeading } from "@zudo-sg/demo-ui/src/shared/section-heading/section-heading";
 
 <SectionHeading heading="Product lines" intro="Four lines across two divisions." />`,
 };

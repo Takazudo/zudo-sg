@@ -79,8 +79,8 @@ async function main(): Promise<void> {
 
   const presets = getAllPresets();
   const reports = presets.map(({ name, scheme, source }) => evaluateScheme(name, scheme, source));
-  // Also audit the @zudo-sg/ui grouped-palette semantic tokens (rail + line
-  // accents included) — parsed straight from packages/ui/styles/colors.css.
+  // Also audit the @zudo-sg/demo-ui grouped-palette semantic tokens (rail + line
+  // accents included) — parsed straight from packages/demo-ui/styles/colors.css.
   reports.push(...evaluateUiSchemes());
 
   for (const report of reports) {

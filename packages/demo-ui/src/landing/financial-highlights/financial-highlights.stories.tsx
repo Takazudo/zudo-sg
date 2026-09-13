@@ -6,7 +6,7 @@ const meta: StoryMeta = {
   category: "Data Display",
   description:
     "IR \"financial highlights\" metrics summary grid. A metric with no `value` renders `pendingLabel` instead of an invented figure.",
-  usage: `import { FinancialHighlights } from "@zudo-sg/ui/src/landing/financial-highlights/financial-highlights";
+  usage: `import { FinancialHighlights } from "@zudo-sg/demo-ui/src/landing/financial-highlights/financial-highlights";
 
 <FinancialHighlights heading="Financial highlights" metrics={metrics} />`,
   order: 15,

@@ -23,7 +23,7 @@ const meta: StoryMeta = {
   title: "ProseMd",
   category: "Typography",
   description: "Renders a markdown string client-side (fence highlighting, sanitized output).",
-  usage: `import { ProseMd } from "@zudo-sg/ui/src/content/prose-md/prose-md";
+  usage: `import { ProseMd } from "@zudo-sg/demo-ui/src/content/prose-md/prose-md";
 
 <ProseMd markdown={"## Heading\\n\\nBody copy."} />`,
 };

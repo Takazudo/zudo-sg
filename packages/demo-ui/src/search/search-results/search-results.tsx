@@ -8,13 +8,13 @@
  * intentionally NOT mounted from inside this component.
  *
  * This is a plain props-only SSR component — no `@takazudo/zfb` import here,
- * per the package's "no zfb-runtime imports in packages/ui" rule. The
+ * per the package's "no zfb-runtime imports in packages/demo-ui" rule. The
  * consumer wires the enhancer itself:
  *
  * ```tsx
  * import { Island } from "@takazudo/zfb";
- * import { SearchResults } from "@zudo-sg/ui/src/search/search-results/search-results";
- * import SearchResultsEnhancer from "@zudo-sg/ui/src/search/search-results-enhancer/search-results-enhancer";
+ * import { SearchResults } from "@zudo-sg/demo-ui/src/search/search-results/search-results";
+ * import SearchResultsEnhancer from "@zudo-sg/demo-ui/src/search/search-results-enhancer/search-results-enhancer";
  *
  * <SearchResults docs={docs} query={query} />
  * <Island when="visible" ssrFallback={null}>

@@ -6,7 +6,7 @@ const meta: StoryMeta = {
   category: "Data Display",
   description:
     "Company-profile \"label / value\" definition list — rows separated by hairline rules, the whole table framed in one rounded border.",
-  usage: `import { CompanyProfileTable } from "@zudo-sg/ui/src/landing/company-profile-table/company-profile-table";
+  usage: `import { CompanyProfileTable } from "@zudo-sg/demo-ui/src/landing/company-profile-table/company-profile-table";
 
 <CompanyProfileTable rows={rows} />`,
   order: 11,

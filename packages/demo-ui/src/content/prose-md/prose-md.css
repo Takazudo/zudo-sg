@@ -7,7 +7,7 @@
  * `.zd-content`'s flow-space stylesheet is shipped by @takazudo/zudo-doc and
  * is not guaranteed to be present wherever ProseMd renders. So this file
  * ports the same Tailwind utility VALUES those components use, as plain
- * descendant selectors scoped off `.zc-prose-md`, bound to @zudo-sg/ui's
+ * descendant selectors scoped off `.zc-prose-md`, bound to @zudo-sg/demo-ui's
  * Tier-2 semantic tokens only (never the Tier-1 `--palette-*` values, never
  * Tailwind `dark:` — this project themes via `data-theme` + `light-dark()`,
  * baked into the tokens themselves).
@@ -15,9 +15,9 @@
  * `hi-*` fence token colors are owned by the consuming site's own stylesheet.
  * This file only lays out the `pre`/`code` box (padding, radius,
  * overflow-x, background), mirroring `.zd-content`'s own code-block rules
- * (@takazudo/zudo-doc/content.css) but bound to @zudo-sg/ui's own portable
+ * (@takazudo/zudo-doc/content.css) but bound to @zudo-sg/demo-ui's own portable
  * `--color-surface-2` rather than the root-only `--color-code-bg` — this
- * component ships from @zudo-sg/ui and must render correctly in any consumer,
+ * component ships from @zudo-sg/demo-ui and must render correctly in any consumer,
  * not just this repo's root app.
  */
 

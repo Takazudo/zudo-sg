@@ -6,7 +6,7 @@ const meta: StoryMeta = {
   category: "Layout",
   description:
     "Two-pane layout: stacked full-width panes below md, ratio-controlled side-by-side panes at md and above.",
-  usage: `import { SplitLayout } from "@zudo-sg/ui/src/shared/split-layout/split-layout";
+  usage: `import { SplitLayout } from "@zudo-sg/demo-ui/src/shared/split-layout/split-layout";
 
 <SplitLayout
   ratio="60/40"

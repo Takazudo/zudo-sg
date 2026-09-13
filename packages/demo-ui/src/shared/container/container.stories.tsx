@@ -6,7 +6,7 @@ const meta: StoryMeta = {
   category: "Layout",
   description:
     "Centers page content in a single ~88rem-wide column, with fluid inline padding that expands on wider viewports.",
-  usage: `import { Container } from "@zudo-sg/ui/src/shared/container/container";
+  usage: `import { Container } from "@zudo-sg/demo-ui/src/shared/container/container";
 
 <Container>
   <p>Page content…</p>

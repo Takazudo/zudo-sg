@@ -5,7 +5,7 @@ const meta: StoryMeta = {
   title: "ProseDl",
   category: "Typography",
   description: "MDX `dl`/`dt`/`dd` element overrides — a definition list with bold terms and muted descriptions.",
-  usage: `import { ProseDl, ProseDt, ProseDd } from "@zudo-sg/ui/src/content/prose-dl/prose-dl";
+  usage: `import { ProseDl, ProseDt, ProseDd } from "@zudo-sg/demo-ui/src/content/prose-dl/prose-dl";
 
 <ProseDl>
   <ProseDt>hsp</ProseDt>

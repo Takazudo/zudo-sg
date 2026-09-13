@@ -5,7 +5,7 @@ const meta: StoryMeta = {
   title: "Breadcrumbs",
   category: "Navigation",
   description: 'Home > section > current-page trail. Renders nothing for a single ("home only") crumb.',
-  usage: `import { Breadcrumbs } from "@zudo-sg/ui";
+  usage: `import { Breadcrumbs } from "@zudo-sg/demo-ui";
 
 <Breadcrumbs crumbs={crumbs} />`,
 };

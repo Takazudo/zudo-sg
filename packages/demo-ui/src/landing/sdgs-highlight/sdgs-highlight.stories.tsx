@@ -6,7 +6,7 @@ const meta: StoryMeta = {
   category: "Landing",
   description:
     "Top-page excerpt of a company's sustainability initiatives, shown as accent cards, teasing through to the full sustainability page.",
-  usage: `import { SdgsHighlight } from "@zudo-sg/ui/src/landing/sdgs-highlight/sdgs-highlight";
+  usage: `import { SdgsHighlight } from "@zudo-sg/demo-ui/src/landing/sdgs-highlight/sdgs-highlight";
 
 <SdgsHighlight heading="Working toward a sustainable future" initiatives={initiatives} href="/sustainability/sdgs" />`,
   order: 7,

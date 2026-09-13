@@ -7,7 +7,7 @@ const meta: StoryMeta = {
   category: "Search",
   description:
     "SSR-rendered cross-site search results list. Renders a full, correct list from `docs`/`query` alone — the companion `SearchResultsEnhancer` island (see its own story) adds live client-side filtering on top.",
-  usage: `import { SearchResults } from "@zudo-sg/ui/src/search/search-results/search-results";
+  usage: `import { SearchResults } from "@zudo-sg/demo-ui/src/search/search-results/search-results";
 
 <SearchResults docs={docs} query="" />`,
   order: 1,

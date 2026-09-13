@@ -6,7 +6,7 @@ const meta: StoryMeta = {
   category: "Forms",
   description:
     "Self-contained recruiting entry form (input -> confirm -> complete). This preview shows the SSR input panel only — the transitions are driven by the paired RecruitFormEnhancer island, mounted separately by a consuming app (see the component's JSDoc).",
-  usage: `import { RecruitEntryForm } from "@zudo-sg/ui";
+  usage: `import { RecruitEntryForm } from "@zudo-sg/demo-ui";
 
 <RecruitEntryForm defaultCategory="new-graduate" />`,
   order: 2,

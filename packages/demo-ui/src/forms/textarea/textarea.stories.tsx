@@ -5,7 +5,7 @@ const meta: StoryMeta = {
   title: "Textarea",
   category: "Forms",
   description: "Multi-line text input control (vertical resize only) — pairs with Field.",
-  usage: `import { Textarea } from "@zudo-sg/ui";
+  usage: `import { Textarea } from "@zudo-sg/demo-ui";
 
 <Textarea name="message" rows={6} />`,
   order: 3,

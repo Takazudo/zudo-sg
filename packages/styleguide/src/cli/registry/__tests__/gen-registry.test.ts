@@ -31,10 +31,10 @@ let sandbox: string;
 
 function baseConfig(): ZudoSgConfig {
   return {
-    componentsRoots: [{ dir: "packages/ui/src", importBase: "@zudo-sg/ui/src" }],
+    componentsRoots: [{ dir: "packages/demo-ui/src", importBase: "@zudo-sg/demo-ui/src" }],
     registryOut: "src/styleguide/sg-registry.ts",
     categoryOrder: [],
-    uiPackageName: "@zudo-sg/ui",
+    uiPackageName: "@zudo-sg/demo-ui",
     barrelIndex: null,
     previewStyles: "unused-preview.css",
   };
@@ -81,7 +81,7 @@ describe("runGenRegistry — old one-level layout (backward compatibility)", () 
     expect(result.entryCount).toBe(2);
 
     const registry = readRegistry();
-    expect(registry).toContain('import * as badge from "@zudo-sg/ui/src/badge/badge.stories.tsx";');
+    expect(registry).toContain('import * as badge from "@zudo-sg/demo-ui/src/badge/badge.stories.tsx";');
     expect(registry).toContain('"./ui/src/badge/badge.stories.tsx": badge as unknown as StoryModule,');
     expect(registry).toContain('"./ui/src/badge/badge.stories.tsx": ["Playground", "Soft"],');
 
@@ -106,7 +106,7 @@ describe("runGenRegistry — category-nested layout (#224)", () => {
 
     const registry = readRegistry();
     expect(registry).toContain(
-      'import * as layoutBadgeIcon from "@zudo-sg/ui/src/layout/badge-icon/badge-icon.stories.tsx";',
+      'import * as layoutBadgeIcon from "@zudo-sg/demo-ui/src/layout/badge-icon/badge-icon.stories.tsx";',
     );
     expect(registry).toContain(
       '"./ui/src/layout/badge-icon/badge-icon.stories.tsx": layoutBadgeIcon as unknown as StoryModule,',
@@ -128,8 +128,8 @@ describe("runGenRegistry — category-nested layout (#224)", () => {
     runGenRegistry(sandbox, baseConfig());
 
     const registry = readRegistry();
-    expect(registry).toContain('import * as layoutBadge from "@zudo-sg/ui/src/layout/badge/badge.stories.tsx";');
-    expect(registry).toContain('import * as formsBadge from "@zudo-sg/ui/src/forms/badge/badge.stories.tsx";');
+    expect(registry).toContain('import * as layoutBadge from "@zudo-sg/demo-ui/src/layout/badge/badge.stories.tsx";');
+    expect(registry).toContain('import * as formsBadge from "@zudo-sg/demo-ui/src/forms/badge/badge.stories.tsx";');
     expect(registry).toContain(
       '"./ui/src/layout/badge/badge.stories.tsx": layoutBadge as unknown as StoryModule,',
     );

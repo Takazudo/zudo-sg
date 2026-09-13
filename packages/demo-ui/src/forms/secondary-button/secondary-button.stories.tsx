@@ -6,7 +6,7 @@ const meta: StoryMeta = {
   title: "SecondaryButton",
   category: "Forms",
   description: "Outlined secondary form action (e.g. \"Back to edit\") — SubmitButton's sibling.",
-  usage: `import { SecondaryButton } from "@zudo-sg/ui";
+  usage: `import { SecondaryButton } from "@zudo-sg/demo-ui";
 
 <SecondaryButton>Back to edit</SecondaryButton>`,
   order: 6,

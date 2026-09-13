@@ -6,7 +6,7 @@ const meta: StoryMeta = {
   category: "News",
   description:
     "Small colored pill for a news item's category, derived from the accent token via color-mix (no dedicated per-category palette).",
-  usage: `import { CategoryBadge } from "@zudo-sg/ui";
+  usage: `import { CategoryBadge } from "@zudo-sg/demo-ui";
 
 <CategoryBadge category="IR" />`,
   order: 1,

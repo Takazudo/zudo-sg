@@ -6,7 +6,7 @@ const meta: StoryMeta = {
   category: "Content",
   description:
     "Vertical \"year / event\" company history timeline — accent year in the left column, a connecting rule + node in the middle, event copy on the right.",
-  usage: `import { HistoryTimeline } from "@zudo-sg/ui/src/landing/history-timeline/history-timeline";
+  usage: `import { HistoryTimeline } from "@zudo-sg/demo-ui/src/landing/history-timeline/history-timeline";
 
 <HistoryTimeline entries={entries} />`,
   order: 13,

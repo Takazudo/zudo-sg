@@ -6,7 +6,7 @@ const meta: StoryMeta = {
   category: "Typography",
   description:
     "MDX `p` element override — plain paragraph; flow spacing is owned by the consumer's content-flow stylesheet.",
-  usage: `import { ProseP } from "@zudo-sg/ui/src/content/prose-p/prose-p";
+  usage: `import { ProseP } from "@zudo-sg/demo-ui/src/content/prose-p/prose-p";
 
 <ProseP>Body copy.</ProseP>`,
 };

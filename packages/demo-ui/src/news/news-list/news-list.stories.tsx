@@ -6,7 +6,7 @@ const meta: StoryMeta = {
   category: "News",
   description:
     "Shared 'date / category badge / title' feed row for a news index or IR-news page. `items` is supplied by the caller (no content-layer dependency).",
-  usage: `import { NewsList } from "@zudo-sg/ui";
+  usage: `import { NewsList } from "@zudo-sg/demo-ui";
 
 <NewsList heading="News" items={items} />`,
   order: 1,

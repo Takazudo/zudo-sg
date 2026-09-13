@@ -5,7 +5,7 @@ const meta: StoryMeta = {
   title: "SubmitButton",
   category: "Forms",
   description: "Accent-filled primary form action. Defaults to type=\"submit\".",
-  usage: `import { SubmitButton } from "@zudo-sg/ui";
+  usage: `import { SubmitButton } from "@zudo-sg/demo-ui";
 
 <SubmitButton>Send</SubmitButton>`,
   order: 5,

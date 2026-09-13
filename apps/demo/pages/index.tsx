@@ -1,15 +1,15 @@
 import DefaultLayout from "../layouts/default";
-import { Container } from "@zudo-sg/ui/src/shared/container/container.tsx";
-import { LandingHero } from "@zudo-sg/ui/src/landing/landing-hero/landing-hero.tsx";
-import { NewsTeaser } from "@zudo-sg/ui/src/news/news-teaser/news-teaser.tsx";
-import { StatBand, type BandStat } from "@zudo-sg/ui/src/landing/stat-band/stat-band.tsx";
-import { FeatureSplit, type FeatureSplitPillar } from "@zudo-sg/ui/src/landing/feature-split/feature-split.tsx";
-import { BusinessSegments } from "@zudo-sg/ui/src/landing/business-segments/business-segments.tsx";
-import { DiscoveryTeaser, type DiscoveryScene } from "@zudo-sg/ui/src/landing/discovery-teaser/discovery-teaser.tsx";
-import { BusinessLinePortal } from "@zudo-sg/ui/src/landing/business-line-portal/business-line-portal.tsx";
-import { SdgsHighlight, type SdgsInitiative } from "@zudo-sg/ui/src/landing/sdgs-highlight/sdgs-highlight.tsx";
-import { RecruitBand } from "@zudo-sg/ui/src/landing/recruit-band/recruit-band.tsx";
-import { SectionNav, type SectionNavLink } from "@zudo-sg/ui/src/landing/section-nav/section-nav.tsx";
+import { Container } from "@zudo-sg/demo-ui/src/shared/container/container.tsx";
+import { LandingHero } from "@zudo-sg/demo-ui/src/landing/landing-hero/landing-hero.tsx";
+import { NewsTeaser } from "@zudo-sg/demo-ui/src/news/news-teaser/news-teaser.tsx";
+import { StatBand, type BandStat } from "@zudo-sg/demo-ui/src/landing/stat-band/stat-band.tsx";
+import { FeatureSplit, type FeatureSplitPillar } from "@zudo-sg/demo-ui/src/landing/feature-split/feature-split.tsx";
+import { BusinessSegments } from "@zudo-sg/demo-ui/src/landing/business-segments/business-segments.tsx";
+import { DiscoveryTeaser, type DiscoveryScene } from "@zudo-sg/demo-ui/src/landing/discovery-teaser/discovery-teaser.tsx";
+import { BusinessLinePortal } from "@zudo-sg/demo-ui/src/landing/business-line-portal/business-line-portal.tsx";
+import { SdgsHighlight, type SdgsInitiative } from "@zudo-sg/demo-ui/src/landing/sdgs-highlight/sdgs-highlight.tsx";
+import { RecruitBand } from "@zudo-sg/demo-ui/src/landing/recruit-band/recruit-band.tsx";
+import { SectionNav, type SectionNavLink } from "@zudo-sg/demo-ui/src/landing/section-nav/section-nav.tsx";
 
 import { getNews } from "../lib/news";
 import { BUSINESS_SEGMENTS } from "../config/segments";
@@ -121,7 +121,7 @@ const SECTION_NAV_LINKS: SectionNavLink[] = [
 ];
 
 /**
- * Landing page (`/`) — composed entirely from `@zudo-sg/ui`'s ported landing
+ * Landing page (`/`) — composed entirely from `@zudo-sg/demo-ui`'s ported landing
  * components (#230), with dummy copy/data matching the ported content
  * collection (#233). `BusinessLinePortal` reuses `config/lines.ts`
  * (BUSINESS_LINE_LIST) and `BusinessSegments` reuses `config/segments.ts`

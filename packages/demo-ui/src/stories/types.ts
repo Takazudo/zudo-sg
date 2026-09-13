@@ -1,5 +1,5 @@
 /**
- * @zudo-sg/ui — story-authoring contract (re-export)
+ * @zudo-sg/demo-ui — story-authoring contract (re-export)
  *
  * These types define the shape every `*.stories.tsx` module must satisfy so the
  * S6 styleguide catalog can discover and render stories. Discovery itself is
@@ -7,7 +7,7 @@
  * STORIES.md §2.
  *
  * The full prose contract — glob root, file location, source-extraction rules,
- * browser/MSW rules — lives in packages/ui/STORIES.md. Keep that doc in sync
+ * browser/MSW rules — lives in packages/demo-ui/STORIES.md. Keep that doc in sync
  * with the canonical contract at packages/styleguide/src/stories/types.ts.
  *
  * A story module exports exactly:

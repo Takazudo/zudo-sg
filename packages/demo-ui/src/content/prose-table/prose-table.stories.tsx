@@ -5,7 +5,7 @@ const meta: StoryMeta = {
   title: "ProseTable",
   category: "Typography",
   description: "MDX `table`/`th`/`td` element overrides — a compact bordered table.",
-  usage: `import { ProseTable, ProseTh, ProseTd } from "@zudo-sg/ui/src/content/prose-table/prose-table";
+  usage: `import { ProseTable, ProseTh, ProseTd } from "@zudo-sg/demo-ui/src/content/prose-table/prose-table";
 
 <ProseTable>
   <thead>

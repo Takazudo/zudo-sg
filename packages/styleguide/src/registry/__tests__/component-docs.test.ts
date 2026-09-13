@@ -9,7 +9,7 @@ import {
 
 describe("deriveMapKeyPrefix", () => {
   it("strips a leading packages/ segment, ./ and trailing slashes", () => {
-    expect(deriveMapKeyPrefix("packages/ui/src")).toBe("ui/src");
+    expect(deriveMapKeyPrefix("packages/demo-ui/src")).toBe("ui/src");
     expect(deriveMapKeyPrefix("ui")).toBe("ui");
     expect(deriveMapKeyPrefix("./ui/")).toBe("ui");
     expect(deriveMapKeyPrefix("src/components")).toBe("src/components");
@@ -18,7 +18,7 @@ describe("deriveMapKeyPrefix", () => {
 
 describe("componentDocsRoots", () => {
   it("pairs each components root's key prefix with its collection, in order", () => {
-    expect(componentDocsRoots([{ dir: "packages/ui/src" }, { dir: "ui" }])).toEqual([
+    expect(componentDocsRoots([{ dir: "packages/demo-ui/src" }, { dir: "ui" }])).toEqual([
       { keyPrefix: "ui/src", collection: "componentDocs" },
       { keyPrefix: "ui", collection: "componentDocs1" },
     ]);
@@ -28,9 +28,9 @@ describe("componentDocsRoots", () => {
 });
 
 describe("resolveComponentDoc", () => {
-  const single = componentDocsRoots([{ dir: "packages/ui/src" }]);
+  const single = componentDocsRoots([{ dir: "packages/demo-ui/src" }]);
 
-  it("keeps the root host's single packages/ui/src root resolution", () => {
+  it("keeps the root host's single packages/demo-ui/src root resolution", () => {
     expect(resolveComponentDoc("./ui/src/button/button.stories.tsx", single)).toEqual({
       collection: "componentDocs",
       slug: "button/button",
@@ -49,7 +49,7 @@ describe("resolveComponentDoc", () => {
   });
 
   it("resolves each story against the root its key belongs to across two roots", () => {
-    const roots = componentDocsRoots([{ dir: "packages/ui/src" }, { dir: "packages/extra/src" }]);
+    const roots = componentDocsRoots([{ dir: "packages/demo-ui/src" }, { dir: "packages/extra/src" }]);
     expect(resolveComponentDoc("./ui/src/button/button.stories.tsx", roots)).toEqual({
       collection: "componentDocs",
       slug: "button/button",
@@ -73,7 +73,7 @@ describe("resolveComponentDoc", () => {
   });
 
   it("returns null when no root matches or the path is not the story key shape", () => {
-    expect(resolveComponentDoc("packages/ui/src/button/button.stories.tsx", single)).toBe(null);
+    expect(resolveComponentDoc("packages/demo-ui/src/button/button.stories.tsx", single)).toBe(null);
     expect(resolveComponentDoc("./uix/button/button.stories.tsx", componentDocsRoots([{ dir: "ui" }]))).toBe(null);
     expect(resolveComponentDoc("./ui/src/button/button.tsx", single)).toBe(null);
     expect(resolveComponentDoc("./ui/src/.stories.tsx", single)).toBe(null);

@@ -35,7 +35,7 @@ export type NewsListProps = {
  * Unlike the reference this ports from, this component takes NO dependency on
  * a content layer — `items` is a required prop; deriving/filtering/limiting
  * the feed (equivalent to the reference's `getNews()`) is the consuming app's
- * job (@zudo-sg/ui takes no zfb-runtime dependency).
+ * job (@zudo-sg/demo-ui takes no zfb-runtime dependency).
  */
 export function NewsList({ items, showFilter = false, heading, class: cls }: NewsListProps) {
   const categories = uniqueCategories(items);

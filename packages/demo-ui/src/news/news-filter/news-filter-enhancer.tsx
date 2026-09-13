@@ -4,7 +4,7 @@
  * NewsFilterEnhancer — client island wiring NewsFilter's buttons to show/hide
  * NewsList's rows. Renders nothing (`null`); it only attaches behavior to the
  * SSR markup NewsFilter/NewsList already produced. Mounted by the consuming
- * app, not wrapped in `<Island>` here — @zudo-sg/ui takes no zfb dependency
+ * app, not wrapped in `<Island>` here — @zudo-sg/demo-ui takes no zfb dependency
  * (see news-filter.tsx's header comment for the full DOM contract).
  *
  * Without this island the filter buttons render but do nothing — NewsList's

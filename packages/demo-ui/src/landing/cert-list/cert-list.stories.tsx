@@ -6,7 +6,7 @@ const meta: StoryMeta = {
   category: "Content",
   description:
     "Management-certification list (e.g. ISO), each entry a code badge, name, and scope description.",
-  usage: `import { CertList } from "@zudo-sg/ui/src/landing/cert-list/cert-list";
+  usage: `import { CertList } from "@zudo-sg/demo-ui/src/landing/cert-list/cert-list";
 
 <CertList heading="Certifications" certs={certs} />`,
   order: 19,

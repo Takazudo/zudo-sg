@@ -6,8 +6,8 @@ const meta: StoryMeta = {
   title: "ProseUl",
   category: "Typography",
   description: "MDX `ul` element override — disc-marked list.",
-  usage: `import { ProseUl } from "@zudo-sg/ui/src/content/prose-ul/prose-ul";
-import { ProseLi } from "@zudo-sg/ui/src/content/prose-li/prose-li";
+  usage: `import { ProseUl } from "@zudo-sg/demo-ui/src/content/prose-ul/prose-ul";
+import { ProseLi } from "@zudo-sg/demo-ui/src/content/prose-li/prose-li";
 
 <ProseUl>
   <ProseLi>Item one</ProseLi>

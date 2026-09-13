@@ -20,7 +20,7 @@ export type ContactFormProps = {
  * unenhanced submit is a no-op (static fallback). The paired
  * `ContactFormEnhancer` island (same directory) is what drives the actual
  * input -> confirm -> complete flow and the optional async submit-adapter
- * error path — @zudo-sg/ui ships no zfb dependency, so mounting that island
+ * error path — @zudo-sg/demo-ui ships no zfb dependency, so mounting that island
  * (`<Island when="visible" ssrFallback={null}><ContactFormEnhancer /></Island>`)
  * is the consuming app's job, not this component's. It only needs to be
  * present somewhere in the same document; it finds this form via

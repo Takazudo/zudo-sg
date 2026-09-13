@@ -5,13 +5,13 @@
  * of zfb's single global bundle (src/styles/global.css) — and served/emitted
  * at the engine's `previewCssUrl` (docs/adr/styleguide-engine.md decision 4).
  * The compiler rescopes every `:root` token block to `:root[data-sg-preview-doc]`
- * so these @zudo-sg/ui tokens beat the host bundle's colliding `--color-*`.
- * `@source` is relative to this file: src/styles → repo root → packages/ui/src.
+ * so these @zudo-sg/demo-ui tokens beat the host bundle's colliding `--color-*`.
+ * `@source` is relative to this file: src/styles → repo root → packages/demo-ui/src.
  */
 
 @import "tailwindcss/preflight";
 @import "tailwindcss/utilities";
-@import "@zudo-sg/ui/styles/tokens.css";
-@import "@zudo-sg/ui/styles/colors.css";
+@import "@zudo-sg/demo-ui/styles/tokens.css";
+@import "@zudo-sg/demo-ui/styles/colors.css";
 
-@source "../../packages/ui/src";
+@source "../../packages/demo-ui/src";

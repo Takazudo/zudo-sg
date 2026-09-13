@@ -18,15 +18,15 @@
    breakpoints, and transition defaults.
    Single source of truth for the monorepo; any root-specific overrides
    (radius values, --leading-snug, shadow-lg) are re-defined in @theme below. */
-@import "@zudo-sg/ui/styles/tokens.css";
+@import "@zudo-sg/demo-ui/styles/tokens.css";
 
-/* Shared SEMANTIC COLOR tokens from @zudo-sg/ui — the grouped three-tier
+/* Shared SEMANTIC COLOR tokens from @zudo-sg/demo-ui — the grouped three-tier
    palette (bg, surface, surface-2, border, fg, muted, accent, accent-hover,
    the rail family, the state colors, focus, on-accent, plus a temporary
    compat-alias block of the old ink/paper/line/brand names), light + dark via
    light-dark(). Adds UI-only utilities WITHOUT changing the docs theme.
 
-   COLLISION SET — every name @zudo-sg/ui defines that ALSO exists in the host
+   COLLISION SET — every name @zudo-sg/demo-ui defines that ALSO exists in the host
    `@theme` below is RE-ASSERTED there to `var(--zd-*)`, which wins by source
    order (this import precedes that block), so doc-chrome is unchanged:
        bg, fg, surface, muted, accent, accent-hover, success, danger,
@@ -46,7 +46,7 @@
    equivalent), consumed by major styleguide divisions.
 
    The remaining NEW ui-only names — surface-2, focus, on-accent, loading-scrim,
-   and the rail family — are intentionally left at their @zudo-sg/ui values (NOT
+   and the rail family — are intentionally left at their @zudo-sg/demo-ui values (NOT
    re-asserted). Where a consumer does bind one (e.g. bg-surface-2 in the catalog)
    it simply keeps the ui value — no change, since this block does not touch them.
    The compat aliases (ink/paper/line/brand/…) are likewise unused by doc-chrome.
@@ -58,8 +58,8 @@
    whose token roots are rescoped to `:root[data-sg-preview-doc]` and so beat
    the doc-chrome values below on that document only.
 
-   See packages/ui/STORIES.md §1 "Required style imports". */
-@import "@zudo-sg/ui/styles/colors.css";
+   See packages/demo-ui/STORIES.md §1 "Required style imports". */
+@import "@zudo-sg/demo-ui/styles/colors.css";
 
 /* ========================================
  * @takazudo/zudo-doc package safelist
@@ -151,10 +151,10 @@
 /* Portable syntax paint + ProseMd typography. The provider owns these rules
  * directly; zudo-doc's feature stylesheet is not part of the component package
  * boundary and its earlier bridge is intentionally superseded here. */
-@import "../../packages/ui/styles/syntax-highlight.css";
+@import "../../packages/demo-ui/styles/syntax-highlight.css";
 
 /* ProseMd (#373) — scoped typography for the client-rendered markdown blob
- * (`packages/ui/src/content/prose-md/prose-md.tsx`). Ships from @zudo-sg/ui
+ * (`packages/demo-ui/src/content/prose-md/prose-md.tsx`). Ships from @zudo-sg/demo-ui
  * (portable, Tier-2-token-bound only) rather than root, but this IS the one
  * CSS graph zfb actually bundles, so it's wired in here — same reasoning as
  * the two feature imports above. Kept unlayered for the same reason they are:
@@ -162,7 +162,7 @@
  * pair with any Tailwind utility, so layering it would gain nothing and only
  * risk losing to `tailwindcss/utilities` if that ever changed. See the file's
  * own header for what it does and does not style. */
-@import "@zudo-sg/ui/src/content/prose-md/prose-md.css";
+@import "@zudo-sg/demo-ui/src/content/prose-md/prose-md.css";
 
 /* ========================================
  * Tailwind v4 content sources
@@ -182,9 +182,9 @@
 @source "src/hooks/**/*.{tsx,ts,jsx,js}";
 @source "src/utils/**/*.{tsx,ts,jsx,js}";
 @source "pages/**/*.{tsx,ts,jsx,js}";
-/* The @zudo-sg/ui component library lives outside this app's tree; scan its
+/* The @zudo-sg/demo-ui component library lives outside this app's tree; scan its
    source so Tailwind generates the utility classes the components emit. */
-@source "../../packages/ui/src/**/*.{tsx,ts,jsx,js}";
+@source "../../packages/demo-ui/src/**/*.{tsx,ts,jsx,js}";
 /* Host-owned live-demo islands (pages/preview/*). The catalog chrome's classes
  * come from @takazudo/zudo-sg/safelist.css, not from host @source globs. */
 @source "src/features/styleguide/preview-demos/**/*.{tsx,ts,jsx,js}";
@@ -203,10 +203,10 @@
    * Colors — Three-tier token system (root-specific, referencing semantic --zd-* roles)
    *
    * Spacing, typography, radius, shadows, breakpoints come from the shared
-   * @zudo-sg/ui token file imported above.
+   * @zudo-sg/demo-ui token file imported above.
    *
    * The `bg/fg/surface/muted/accent/accent-hover/success/danger/warning/info`
-   * declarations here double as the RE-ASSERTION that shadows @zudo-sg/ui's
+   * declarations here double as the RE-ASSERTION that shadows @zudo-sg/demo-ui's
    * grouped palette (imported above) with the doc-chrome --zd-* values — this
    * block comes later in source order, so doc-chrome renders unchanged. See the
    * colors.css import comment above for the full collision set + rationale.
@@ -246,14 +246,14 @@
    *
    * Literal oklch on the warm hue-65 base ramp (src/config/color-schemes.ts:
    * .965 / .705 / .480 / .300 / .185), per-mode via light-dark(). `color-scheme`
-   * is set by @zudo-sg/ui/styles/colors.css and pinned by [data-theme], so
+   * is set by @zudo-sg/demo-ui/styles/colors.css and pinned by [data-theme], so
    * light-dark() resolves to the active mode on every route. These are LOCAL
    * @theme tokens, NOT --zd-* roles: the upstream SemanticKey set is closed, so
    * no --zd-border/--zd-focus can be emitted — do NOT add border/focus roles to
    * src/config/color-schemes.ts.
    *
    * Border ladder (SITEWIDE): re-asserts --color-border to a deliberate value
-   * (it was an accidental leak of @zudo-sg/ui's --color-border via import order)
+   * (it was an accidental leak of @zudo-sg/demo-ui's --color-border via import order)
    * and adds --color-border-strong for major divisions. dark = .480 / .705 grades
    * (clearly visible on the .185 dark bg); light = analogous hairlines. Consumed
    * by the styleguide catalog; docs pages consume neither.
@@ -288,7 +288,7 @@
   --tracking-wider: 0.1em;
 
   /* ========================================
-   * Line height — snug step. The shared @zudo-sg/ui tokens.css now provides
+   * Line height — snug step. The shared @zudo-sg/demo-ui tokens.css now provides
    * --leading-snug: 1.4; this re-declares it at 1.375 for the denser
    * documentation context (later source order wins for root pages).
    * ======================================== */
@@ -472,7 +472,7 @@ body {
 }
 
 /* Provider-owned class-mode syntax paint is imported from
- * packages/ui/styles/syntax-highlight.css above. Host-only line/word
+ * packages/demo-ui/styles/syntax-highlight.css above. Host-only line/word
  * highlighting, code titles, and CodeGroup layout remain supplied by the doc
  * feature stylesheet where those doc features are rendered. */
 

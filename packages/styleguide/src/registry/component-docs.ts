@@ -32,7 +32,7 @@ export interface ComponentDocRef {
 }
 
 /**
- * `packages/ui/src` → `ui/src` — the `storyModules` map key prefix for a
+ * `packages/demo-ui/src` → `ui/src` — the `storyModules` map key prefix for a
  * components root. Strips a leading `./`, a leading `packages/` segment (the
  * repo's workspace-package convention) and trailing slashes; a root outside
  * `packages/` keys off its project-root-relative dir verbatim.

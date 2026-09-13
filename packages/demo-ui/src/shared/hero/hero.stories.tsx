@@ -6,7 +6,7 @@ const meta: StoryMeta = {
   category: "Content",
   description:
     "First-view hero band: eyebrow + display heading + lead + CTA row over a soft accent-tinted background.",
-  usage: `import { Hero } from "@zudo-sg/ui/src/shared/hero/hero";
+  usage: `import { Hero } from "@zudo-sg/demo-ui/src/shared/hero/hero";
 
 <Hero
   eyebrow="Welcome"

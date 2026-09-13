@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 // apps/demo smoke: verify the built demo site (Northwind) renders without JS
 // errors and that the key marketing-page components composed from
-// @zudo-sg/ui are present. Runs against the pre-built apps/demo/dist via the
+// @zudo-sg/demo-ui are present. Runs against the pre-built apps/demo/dist via the
 // "demo-smoke" project (see playwright.config.ts).
 //
 // The demo is a statically built multi-route site. Its native client router

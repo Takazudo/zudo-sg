@@ -6,7 +6,7 @@ const meta: StoryMeta = {
   category: "Content",
   description:
     "Numbered card grid for a \"where we create value\" positioning section — an accent number badge over a title and body.",
-  usage: `import { ValuePillars } from "@zudo-sg/ui/src/landing/value-pillars/value-pillars";
+  usage: `import { ValuePillars } from "@zudo-sg/demo-ui/src/landing/value-pillars/value-pillars";
 
 <ValuePillars heading="Where we create value" pillars={pillars} />`,
   order: 16,

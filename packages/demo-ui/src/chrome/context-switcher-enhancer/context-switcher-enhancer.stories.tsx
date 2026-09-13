@@ -9,8 +9,8 @@ const meta: StoryMeta = {
   category: "Navigation",
   description:
     "Render-null a11y island for SiteHeader's Browse category walk: syncs aria-expanded, adds click-to-pin, and Escape/outside-click to close. The panel already opens on hover/focus via pure CSS.",
-  usage: `import { SiteHeader } from "@zudo-sg/ui";
-import ContextSwitcherEnhancer from "@zudo-sg/ui/src/chrome/context-switcher-enhancer/context-switcher-enhancer";
+  usage: `import { SiteHeader } from "@zudo-sg/demo-ui";
+import ContextSwitcherEnhancer from "@zudo-sg/demo-ui/src/chrome/context-switcher-enhancer/context-switcher-enhancer";
 
 <SiteHeader sections={sections} />
 <Island when="visible" ssrFallback={null}><ContextSwitcherEnhancer /></Island>`,

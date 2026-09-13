@@ -6,7 +6,7 @@ const meta: StoryMeta = {
   category: "Layout",
   description:
     "Generic flex stack — vertical or horizontal — with bounded gap, cross-axis alignment, and main-axis justification. Horizontal stacks always wrap so they never force overflow.",
-  usage: `import { Stack } from "@zudo-sg/ui/src/shared/stack/stack";
+  usage: `import { Stack } from "@zudo-sg/demo-ui/src/shared/stack/stack";
 
 <Stack gap="md">
   <div>First</div>

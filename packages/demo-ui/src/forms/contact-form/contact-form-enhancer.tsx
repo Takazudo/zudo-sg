@@ -3,7 +3,7 @@
 /**
  * ContactFormEnhancer — client island driving ContactForm's input -> confirm
  * -> complete flow (see contact-form.tsx's header comment for the full DOM
- * contract and the "consumer mounts the island" note — @zudo-sg/ui takes no
+ * contract and the "consumer mounts the island" note — @zudo-sg/demo-ui takes no
  * zfb dependency, so this file is NOT wrapped in `<Island>` itself).
  *
  * Renders nothing (`null`) — it only attaches behavior to the SSR markup
@@ -24,7 +24,7 @@ export type ContactFormEnhancerProps = {
    * behavior). Provided -> "Send" awaits it with the collected field values;
    * a rejection keeps the confirm panel open and renders the error's message
    * in ContactForm's `[data-contact-error]` slot, the same
-   * stay-open-on-failure contract as @zudo-sg/ui's Dialog `onSubmit`. This is
+   * stay-open-on-failure contract as @zudo-sg/demo-ui's Dialog `onSubmit`. This is
    * the seam a later MSW-backed demo wires a real (mocked) request through —
    * no MSW or fetch usage belongs in this file.
    */

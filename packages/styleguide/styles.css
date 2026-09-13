@@ -19,7 +19,7 @@
  *                                         back to explicit @source scanning)
  *   4. the host's own project `@theme {}` block
  * The host keeps its OWN `@source` directives for its own component package
- * (e.g. `@source "../../packages/ui/src/**"`) — the engine's safelist only
+ * (e.g. `@source "../../packages/demo-ui/src/**"`) — the engine's safelist only
  * covers the engine package's compiled output, never consumer code.
  *
  * Combines what used to be two host files:
@@ -446,7 +446,7 @@
  * surrounding catalogue chrome keeps the doc palette.
  *
  * The declarations below are the canonical Tier-2 provider values (see
- * packages/ui/styles/colors.css) restored for exactly the names a host is
+ * packages/demo-ui/styles/colors.css) restored for exactly the names a host is
  * likely to re-assert. The ui-only names a host does NOT typically re-assert
  * (surface-2, rail-*, focus, on-accent, loading-scrim) already resolve to the
  * ui palette and need no restore here. */

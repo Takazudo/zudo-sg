@@ -6,7 +6,7 @@ import type { StoryModule } from "../types";
 // Explicit imports — NOT import.meta.glob. The S6 catalog discovers these via
 // explicit static imports from a REPO-ROOT registry — see STORIES.md §2. We
 // cannot reproduce that glob here: zfb forbids `../` parent-directory glob
-// patterns, and a glob test living inside packages/ui could only reach sibling
+// patterns, and a glob test living inside packages/demo-ui could only reach sibling
 // story files via `../`. (Confirmed: a `../**` glob in this directory breaks
 // `zfb build`.) So we import every story module explicitly and share this one
 // registry. The block below is codegen'd by the `zudo-sg gen-registry` CLI

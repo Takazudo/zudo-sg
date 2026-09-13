@@ -5,7 +5,7 @@
  * confirm -> complete flow. Same shape as ContactFormEnhancer (see its header
  * comment) — renders nothing, delegates DOM wiring to the shared
  * `createFormEnhancer` factory, and is mounted by the consuming app (not
- * wrapped in `<Island>` here — @zudo-sg/ui takes no zfb dependency).
+ * wrapped in `<Island>` here — @zudo-sg/demo-ui takes no zfb dependency).
  *
  * No submit-adapter prop: unlike ContactFormEnhancer, this form has no async
  * variant in this batch — "Submit this entry" always transitions straight to

@@ -6,7 +6,7 @@ const meta: StoryMeta = {
   category: "Landing",
   description:
     "Two-pillar positioning section for a company with two distinct sides (e.g. two business lines). Fixed 2-column layout, collapsing to 1 column on narrow screens.",
-  usage: `import { FeatureSplit } from "@zudo-sg/ui/src/landing/feature-split/feature-split";
+  usage: `import { FeatureSplit } from "@zudo-sg/demo-ui/src/landing/feature-split/feature-split";
 
 <FeatureSplit
   heading="Two strengths, one company"

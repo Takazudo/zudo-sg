@@ -5,7 +5,7 @@ const meta: StoryMeta = {
   title: "ProseEm",
   category: "Typography",
   description: "MDX `em` element override — italic inline emphasis.",
-  usage: `import { ProseEm } from "@zudo-sg/ui/src/content/prose-em/prose-em";
+  usage: `import { ProseEm } from "@zudo-sg/demo-ui/src/content/prose-em/prose-em";
 
 <ProseEm>emphasized text</ProseEm>`,
 };

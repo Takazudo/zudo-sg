@@ -6,7 +6,7 @@ const meta: StoryMeta = {
   title: "SiteFooter",
   category: "Navigation",
   description: "Sitemap-style footer: one auto-fit column per nav section, its children as links, plus a copyright + policy-link row.",
-  usage: `import { SiteFooter } from "@zudo-sg/ui";
+  usage: `import { SiteFooter } from "@zudo-sg/demo-ui";
 
 <SiteFooter sections={sections} />`,
 };

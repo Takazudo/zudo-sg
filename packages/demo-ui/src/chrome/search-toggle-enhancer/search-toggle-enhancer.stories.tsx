@@ -8,8 +8,8 @@ const meta: StoryMeta = {
   category: "Navigation",
   description:
     "Render-null a11y island for SiteHeader's search toggle: syncs aria-expanded to real focus-within state, focuses the input on click/tap, and Escape collapses it. The input already expands on focus-within via pure CSS — mount this alongside SiteHeader (via the consumer's own Island with ssrFallback={null}) to layer the enhancement on top.",
-  usage: `import { SiteHeader } from "@zudo-sg/ui";
-import SearchToggleEnhancer from "@zudo-sg/ui/src/chrome/search-toggle-enhancer/search-toggle-enhancer";
+  usage: `import { SiteHeader } from "@zudo-sg/demo-ui";
+import SearchToggleEnhancer from "@zudo-sg/demo-ui/src/chrome/search-toggle-enhancer/search-toggle-enhancer";
 
 <SiteHeader />
 <Island when="visible" ssrFallback={null}><SearchToggleEnhancer /></Island>`,

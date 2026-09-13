@@ -12,7 +12,7 @@ export type NewsFilterProps = {
  * already renders every row (see its `[data-news-category]` hook), so with no
  * client JS the buttons show but the list stays fully visible (the static
  * fallback). The paired `NewsFilterEnhancer` island (same directory) is what
- * wires clicks to show/hide rows; @zudo-sg/ui takes no zfb dependency, so
+ * wires clicks to show/hide rows; @zudo-sg/demo-ui takes no zfb dependency, so
  * mounting that island (`<Island when="visible" ssrFallback={null}>`) is the
  * consuming app's job, not this component's — it finds this filter and its
  * target list via `[data-news-filter]`/`[data-news-list]`, not DOM nesting.

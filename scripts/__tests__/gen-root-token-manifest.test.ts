@@ -7,7 +7,7 @@
 //
 // Two layers, both against the REAL project CSS (no synthetic fixtures):
 //  - Library level: build/render straight from the real
-//    packages/ui/styles/{tokens,colors}.css + src/styles/global.css content,
+//    packages/demo-ui/styles/{tokens,colors}.css + src/styles/global.css content,
 //    asserting the known unit-transform cases (#210's LOCKED spec) and that
 //    the render is idempotent against the committed generated manifest
 //    (src/config/design-tokens-manifest.ts).
@@ -48,8 +48,8 @@ const GENERATED_MANIFEST_PATH = join(
 
 function realResolver() {
   return createCssVarResolver([
-    { label: "packages/ui/styles/tokens.css", cssText: readFileSync(TOKENS_CSS_PATH, "utf8") },
-    { label: "packages/ui/styles/colors.css", cssText: readFileSync(COLORS_CSS_PATH, "utf8") },
+    { label: "packages/demo-ui/styles/tokens.css", cssText: readFileSync(TOKENS_CSS_PATH, "utf8") },
+    { label: "packages/demo-ui/styles/colors.css", cssText: readFileSync(COLORS_CSS_PATH, "utf8") },
     { label: "src/styles/global.css", cssText: readFileSync(GLOBAL_CSS_PATH, "utf8") },
   ]);
 }

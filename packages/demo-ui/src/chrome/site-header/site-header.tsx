@@ -4,7 +4,7 @@ import type { NavSection } from "../site-nav/site-nav";
 
 /**
  * Disclosure a11y-hook contract shared with `context-switcher-enhancer` and
- * `search-toggle-enhancer` (packages/ui/src/chrome/*-enhancer). Both panels
+ * `search-toggle-enhancer` (packages/demo-ui/src/chrome/*-enhancer). Both panels
  * open with pure CSS (`group-hover`/`focus-within` below) — the enhancers only
  * layer on `aria-expanded` sync, click-to-pin, and Escape/outside-click close.
  * Renaming any `data-ctx-*` / `data-search-*` attribute here must be mirrored

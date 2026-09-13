@@ -3,7 +3,7 @@
  * component and its CSR enhancer island. Building the actual index (crawling
  * content, deriving section labels, deriving excerpts) is host/build-time
  * work that depends on the consumer's own content pipeline — it stays out of
- * @zudo-sg/ui. This module only carries the wire shape + the pure filter both
+ * @zudo-sg/demo-ui. This module only carries the wire shape + the pure filter both
  * sides must apply identically so SSR and CSR results never drift.
  */
 

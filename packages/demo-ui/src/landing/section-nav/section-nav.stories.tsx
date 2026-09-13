@@ -6,7 +6,7 @@ const meta: StoryMeta = {
   category: "Landing",
   description:
     "Grid of navigation cards teasing a site's top-level sections, each with a short description and an internal- or external-link affordance.",
-  usage: `import { SectionNav } from "@zudo-sg/ui/src/landing/section-nav/section-nav";
+  usage: `import { SectionNav } from "@zudo-sg/demo-ui/src/landing/section-nav/section-nav";
 
 <SectionNav heading="Explore the site" links={links} />`,
   order: 8,

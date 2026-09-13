@@ -5,7 +5,7 @@ const meta: StoryMeta = {
   title: "Callout",
   category: "Feedback",
   description: "Call-out box for notes/asides in body copy, in an accent-tinted or neutral tone.",
-  usage: `import { Callout, Note } from "@zudo-sg/ui/src/cards/callout/callout";
+  usage: `import { Callout, Note } from "@zudo-sg/demo-ui/src/cards/callout/callout";
 
 <Callout tone="note" title="Note">Body copy.</Callout>
 <Note title="Note">Same as tone="note".</Note>`,

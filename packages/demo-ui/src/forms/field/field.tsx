@@ -19,7 +19,7 @@ export type FieldProps = {
  * a control (Input/Textarea/Select). When `hint` is set, this injects
  * `aria-describedby` onto the slotted control(s) so assistive tech reads the
  * hint on focus — the control just needs to forward unknown props (`{...rest}`
- * onto its root element, which every @zudo-sg/ui forms control does.
+ * onto its root element, which every @zudo-sg/demo-ui forms control does.
  */
 export function Field({ id, label, required = false, hint, class: cls, children }: FieldProps) {
   const hintId = hint ? `${id}-hint` : undefined;

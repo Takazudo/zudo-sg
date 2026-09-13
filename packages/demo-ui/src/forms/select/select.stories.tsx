@@ -6,7 +6,7 @@ const meta: StoryMeta = {
   category: "Forms",
   description:
     "Dropdown select with a token-styled arrow (native arrow hidden via appearance-none) — pairs with Field.",
-  usage: `import { Select } from "@zudo-sg/ui";
+  usage: `import { Select } from "@zudo-sg/demo-ui";
 
 <Select
   name="purpose"

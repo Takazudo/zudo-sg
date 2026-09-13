@@ -6,7 +6,7 @@ const meta: StoryMeta = {
   category: "Landing",
   description:
     "Company-at-a-glance summary band (founding year, capital, headcount, ...). Auto-fit grid with hairline dividers, no media queries.",
-  usage: `import { StatBand } from "@zudo-sg/ui/src/landing/stat-band/stat-band";
+  usage: `import { StatBand } from "@zudo-sg/demo-ui/src/landing/stat-band/stat-band";
 
 <StatBand stats={stats} />`,
   order: 9,

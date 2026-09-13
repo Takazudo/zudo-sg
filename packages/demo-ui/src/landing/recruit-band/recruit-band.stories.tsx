@@ -6,7 +6,7 @@ const meta: StoryMeta = {
   category: "Landing",
   description:
     "Full-width \"we're hiring\" band pairing a heading/lead with a single prominent CTA to a recruiting page. Same soft accent-tinted band idiom as Hero.",
-  usage: `import { RecruitBand } from "@zudo-sg/ui/src/landing/recruit-band/recruit-band";
+  usage: `import { RecruitBand } from "@zudo-sg/demo-ui/src/landing/recruit-band/recruit-band";
 
 <RecruitBand heading="Join our team" href="/recruit" />`,
   order: 6,

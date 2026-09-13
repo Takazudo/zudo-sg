@@ -7,7 +7,7 @@ const meta: StoryMeta = {
   category: "Forms",
   description:
     "Labeled form row: label + required/optional badge + optional hint, wrapping a control (Input/Textarea/Select).",
-  usage: `import { Field, Input } from "@zudo-sg/ui";
+  usage: `import { Field, Input } from "@zudo-sg/demo-ui";
 
 <Field id="name" label="Name" required>
   <Input id="name" name="name" />

@@ -5,7 +5,7 @@ const meta: StoryMeta = {
   title: "ProseH5",
   category: "Typography",
   description: "MDX `h5` element override — muted minor heading.",
-  usage: `import { ProseH5 } from "@zudo-sg/ui/src/content/prose-h5/prose-h5";
+  usage: `import { ProseH5 } from "@zudo-sg/demo-ui/src/content/prose-h5/prose-h5";
 
 <ProseH5>Minor heading</ProseH5>`,
 };

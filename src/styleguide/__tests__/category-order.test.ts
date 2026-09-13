@@ -6,7 +6,7 @@
 // the real registry's sidebar order.
 
 import { describe, expect, it } from "vitest";
-import { STORY_CATEGORIES } from "@zudo-sg/ui";
+import { STORY_CATEGORIES } from "@zudo-sg/demo-ui";
 import { CATEGORY_ORDER, getCategoryGroups } from "../registry";
 
 describe("CATEGORY_ORDER", () => {

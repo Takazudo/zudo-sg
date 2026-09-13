@@ -6,7 +6,7 @@ const meta: StoryMeta = {
   category: "Data Display",
   description:
     "Flat surface container with a border and rounded corners, in three variants and three padding sizes.",
-  usage: `import { Card } from "@zudo-sg/ui/src/cards/card/card";
+  usage: `import { Card } from "@zudo-sg/demo-ui/src/cards/card/card";
 
 <Card title="Card heading">Body copy.</Card>`,
 };

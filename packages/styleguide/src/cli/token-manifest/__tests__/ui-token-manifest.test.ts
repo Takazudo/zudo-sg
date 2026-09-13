@@ -71,8 +71,8 @@ function resolveColorToken(vars: Map<string, string>, cssVar: string, mode: "lig
 
 describe("buildUiTokenManifest", () => {
   it("derives id/label from cssVar, stripping the spacing- prefix for spacing tokens", () => {
-    const tokensCss = readFileSync(resolve(REPO_ROOT, "packages/ui/styles/tokens.css"), "utf8");
-    const colorsCss = readFileSync(resolve(REPO_ROOT, "packages/ui/styles/colors.css"), "utf8");
+    const tokensCss = readFileSync(resolve(REPO_ROOT, "packages/demo-ui/styles/tokens.css"), "utf8");
+    const colorsCss = readFileSync(resolve(REPO_ROOT, "packages/demo-ui/styles/colors.css"), "utf8");
     const manifest = buildUiTokenManifest({ tokensCss, colorsCss });
 
     const hsp2xs = manifest.spacingTokens.find((t) => t.cssVar === "--spacing-hsp-2xs");
@@ -112,7 +112,7 @@ describe("buildUiTokenManifest", () => {
   });
 
   it("keeps every semantic palette reference backed by a declared palette token", () => {
-    const colorsCss = readFileSync(resolve(REPO_ROOT, "packages/ui/styles/colors.css"), "utf8");
+    const colorsCss = readFileSync(resolve(REPO_ROOT, "packages/demo-ui/styles/colors.css"), "utf8");
     const vars = parseCssCustomProperties(colorsCss);
     const missingRefs: string[] = [];
 
@@ -128,7 +128,7 @@ describe("buildUiTokenManifest", () => {
   });
 
   it("keeps the locked four-stop neutral mappings and required text pairs", () => {
-    const colorsCss = readFileSync(resolve(REPO_ROOT, "packages/ui/styles/colors.css"), "utf8");
+    const colorsCss = readFileSync(resolve(REPO_ROOT, "packages/demo-ui/styles/colors.css"), "utf8");
     const vars = parseCssCustomProperties(colorsCss);
     expect([
       ["--palette-neutral-0", "oklch(0.970 0.006 75)"],
@@ -198,8 +198,8 @@ describe("buildUiTokenManifest", () => {
 
 describe("renderUiTokenManifestFile", () => {
   it("is idempotent and matches the committed manifest for the real project CSS", () => {
-    const tokensCss = readFileSync(resolve(REPO_ROOT, "packages/ui/styles/tokens.css"), "utf8");
-    const colorsCss = readFileSync(resolve(REPO_ROOT, "packages/ui/styles/colors.css"), "utf8");
+    const tokensCss = readFileSync(resolve(REPO_ROOT, "packages/demo-ui/styles/tokens.css"), "utf8");
+    const colorsCss = readFileSync(resolve(REPO_ROOT, "packages/demo-ui/styles/colors.css"), "utf8");
     const committed = readFileSync(resolve(REPO_ROOT, "src/config/ui-design-tokens-manifest.ts"), "utf8");
 
     const manifest = buildUiTokenManifest({ tokensCss, colorsCss });

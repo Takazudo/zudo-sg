@@ -6,7 +6,7 @@ const meta: StoryMeta = {
   category: "Content",
   description:
     "Enumerated \"large number + title + body\" strengths list, stacked vertically with hairline dividers between entries.",
-  usage: `import { StrengthList } from "@zudo-sg/ui/src/landing/strength-list/strength-list";
+  usage: `import { StrengthList } from "@zudo-sg/demo-ui/src/landing/strength-list/strength-list";
 
 <StrengthList heading="Our strengths" strengths={strengths} />`,
   order: 18,

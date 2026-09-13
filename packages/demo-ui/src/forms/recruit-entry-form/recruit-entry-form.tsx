@@ -18,7 +18,7 @@ export type RecruitEntryFormProps = {
  * -> complete), SSR-rendered as plain markup with no runtime behavior of its
  * own. Same progressive-enhancement shape as ContactForm (see its header
  * comment) — the paired `RecruitFormEnhancer` island (same directory) drives
- * the actual flow; @zudo-sg/ui ships no zfb dependency, so mounting that
+ * the actual flow; @zudo-sg/demo-ui ships no zfb dependency, so mounting that
  * island is the consuming app's job.
  *
  * DOM hooks the paired enhancer relies on:

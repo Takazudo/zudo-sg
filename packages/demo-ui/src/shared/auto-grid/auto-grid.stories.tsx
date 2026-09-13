@@ -7,7 +7,7 @@ const meta: StoryMeta = {
   category: "Layout",
   description:
     "Auto-fit/auto-fill responsive grid primitive for card-style listings, switching column density by minimum track width.",
-  usage: `import { AutoGrid } from "@zudo-sg/ui/src/shared/auto-grid/auto-grid";
+  usage: `import { AutoGrid } from "@zudo-sg/demo-ui/src/shared/auto-grid/auto-grid";
 
 <AutoGrid min="15rem">
   <Card title="One">…</Card>

@@ -5,7 +5,7 @@ const meta: StoryMeta = {
   title: "ProseA",
   category: "Typography",
   description: "MDX `a` element override — accent-colored underlined link, unstyled when it's a heading permalink (`class=\"hash-link\"`).",
-  usage: `import { ProseA } from "@zudo-sg/ui/src/content/prose-a/prose-a";
+  usage: `import { ProseA } from "@zudo-sg/demo-ui/src/content/prose-a/prose-a";
 
 <ProseA href="/docs">Read the docs</ProseA>`,
 };

@@ -6,7 +6,7 @@ const meta: StoryMeta = {
   category: "Media",
   description:
     "Labeled image stand-in used wherever the library has no real asset yet — also serves as the MDX `img` override target.",
-  usage: `import { PlaceholderBox } from "@zudo-sg/ui/src/media/placeholder-box/placeholder-box";
+  usage: `import { PlaceholderBox } from "@zudo-sg/demo-ui/src/media/placeholder-box/placeholder-box";
 
 <PlaceholderBox label="hero-image.png" aspect="16/9" />`,
 };

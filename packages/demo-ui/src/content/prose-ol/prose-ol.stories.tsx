@@ -6,8 +6,8 @@ const meta: StoryMeta = {
   title: "ProseOl",
   category: "Typography",
   description: "MDX `ol` element override — decimal-numbered list.",
-  usage: `import { ProseOl } from "@zudo-sg/ui/src/content/prose-ol/prose-ol";
-import { ProseLi } from "@zudo-sg/ui/src/content/prose-li/prose-li";
+  usage: `import { ProseOl } from "@zudo-sg/demo-ui/src/content/prose-ol/prose-ol";
+import { ProseLi } from "@zudo-sg/demo-ui/src/content/prose-li/prose-li";
 
 <ProseOl>
   <ProseLi>Step one</ProseLi>

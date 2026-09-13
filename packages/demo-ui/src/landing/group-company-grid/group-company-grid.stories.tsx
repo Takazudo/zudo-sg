@@ -6,7 +6,7 @@ const meta: StoryMeta = {
   category: "Content",
   description:
     "Card grid listing a company's group/subsidiary companies, each with its business, founding year, and (optional) location.",
-  usage: `import { GroupCompanyGrid } from "@zudo-sg/ui/src/landing/group-company-grid/group-company-grid";
+  usage: `import { GroupCompanyGrid } from "@zudo-sg/demo-ui/src/landing/group-company-grid/group-company-grid";
 
 <GroupCompanyGrid heading="Group companies" companies={companies} />`,
   order: 12,

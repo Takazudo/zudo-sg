@@ -9,7 +9,7 @@ const meta: StoryMeta = {
   category: "Navigation",
   description:
     "Full-width sticky desktop header: brand lockup, a real section-tree Browse disclosure, theme control, and utility navigation.",
-  usage: `import { SiteHeader } from "@zudo-sg/ui";
+  usage: `import { SiteHeader } from "@zudo-sg/demo-ui";
 
 <SiteHeader sections={sections} desktopThemeControl={<ThemeControl />} />`,
 };

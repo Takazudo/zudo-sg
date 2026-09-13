@@ -6,7 +6,7 @@ const meta: StoryMeta = {
   category: "Landing",
   description:
     "A page's main hero band — pins shared Hero to its largest heading scale for a top-level landing page.",
-  usage: `import { LandingHero } from "@zudo-sg/ui/src/landing/landing-hero/landing-hero";
+  usage: `import { LandingHero } from "@zudo-sg/demo-ui/src/landing/landing-hero/landing-hero";
 
 <LandingHero
   eyebrow="Sample Tagline"

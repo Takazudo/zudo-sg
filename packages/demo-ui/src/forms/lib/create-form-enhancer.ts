@@ -22,7 +22,7 @@
  * await it instead: success still shows "complete"; a rejection keeps the
  * confirm panel open and writes the error's message into the `[data-{ns}-error]`
  * slot (if present), the same stay-open-on-failure contract as
- * @zudo-sg/ui's Dialog `onSubmit`. While the adapter is in flight every
+ * @zudo-sg/demo-ui's Dialog `onSubmit`. While the adapter is in flight every
  * `[data-{ns}-action]` button is disabled and the root gets `aria-busy`.
  */
 

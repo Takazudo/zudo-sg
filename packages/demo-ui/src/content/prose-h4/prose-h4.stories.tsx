@@ -5,7 +5,7 @@ const meta: StoryMeta = {
   title: "ProseH4",
   category: "Typography",
   description: "MDX `h4` element override — body-sized bold heading.",
-  usage: `import { ProseH4 } from "@zudo-sg/ui/src/content/prose-h4/prose-h4";
+  usage: `import { ProseH4 } from "@zudo-sg/demo-ui/src/content/prose-h4/prose-h4";
 
 <ProseH4>Detail heading</ProseH4>`,
 };

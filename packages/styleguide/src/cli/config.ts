@@ -8,9 +8,9 @@ import { pathToFileURL } from "node:url";
 
 /** One corpus of `*.stories.tsx` files the registry codegen discovers. */
 export interface ZudoSgComponentsRoot {
-  /** Project-root-relative directory to scan, e.g. "packages/ui/src". */
+  /** Project-root-relative directory to scan, e.g. "packages/demo-ui/src". */
   dir: string;
-  /** Package-scoped import specifier prefix for files under `dir`, e.g. "@zudo-sg/ui/src". */
+  /** Package-scoped import specifier prefix for files under `dir`, e.g. "@zudo-sg/demo-ui/src". */
   importBase: string;
 }
 

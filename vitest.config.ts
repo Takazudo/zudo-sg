@@ -8,7 +8,7 @@ export default defineConfig({
   // rolldown, not esbuild — see the "Both esbuild and oxc options were set"
   // warning this replaced) takes tsconfig's `jsx` value literally and leaves
   // "preserve" JSX untranspiled, which then fails import-analysis.
-  // `packages/ui` and `apps/demo` dodge this because THEIR nearest
+  // `packages/demo-ui` and `apps/demo` dodge this because THEIR nearest
   // tsconfig.json already sets `jsx: "react-jsx"` / `jsxImportSource:
   // "preact"` (Vite resolves the nearest tsconfig per file). Root
   // `src/**/*.tsx` test files (#247) have no such override, so this explicit
@@ -47,8 +47,8 @@ export default defineConfig({
       "plugins/__tests__/**/*.test.ts",
       // @takazudo/zudo-sg engine package tests (also run by its own `test`).
       "packages/styleguide/src/**/__tests__/**/*.test.{ts,tsx}",
-      // @zudo-sg/ui component DOM tests (Testing Library + happy-dom).
-      "packages/ui/src/**/__tests__/**/*.test.{ts,tsx}",
+      // @zudo-sg/demo-ui component DOM tests (Testing Library + happy-dom).
+      "packages/demo-ui/src/**/__tests__/**/*.test.{ts,tsx}",
       // @zudo-sg/demo lib/config unit tests.
       "apps/demo/**/__tests__/**/*.test.{ts,tsx}",
     ],

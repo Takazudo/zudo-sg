@@ -6,7 +6,7 @@ const meta: StoryMeta = {
   title: "ProseBlockquote",
   category: "Typography",
   description: "MDX `blockquote` element override — muted italic text with a left rule.",
-  usage: `import { ProseBlockquote } from "@zudo-sg/ui/src/content/prose-blockquote/prose-blockquote";
+  usage: `import { ProseBlockquote } from "@zudo-sg/demo-ui/src/content/prose-blockquote/prose-blockquote";
 
 <ProseBlockquote>Quoted text.</ProseBlockquote>`,
 };

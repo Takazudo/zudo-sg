@@ -6,7 +6,7 @@ const meta: StoryMeta = {
   title: "ProseLi",
   category: "Typography",
   description: "MDX `li` element override — muted marker with nested-list spacing resets.",
-  usage: `import { ProseLi } from "@zudo-sg/ui/src/content/prose-li/prose-li";
+  usage: `import { ProseLi } from "@zudo-sg/demo-ui/src/content/prose-li/prose-li";
 
 <ProseLi>List item</ProseLi>`,
 };
