@@ -125,6 +125,21 @@ JS, and the safelist generator scans `dist`.
   (iii) a third `stories` package — a publish and a peer for ~120 lines of
   types.
 
+**Addendum (2026-09-14, #687):** the external-consumer justification above no
+longer applies — the standalone provider-package mode and its CI verification
+were removed (#686), so nothing typechecks `@zudo-sg/ui` from a bare tarball
+without the engine installed. `packages/ui/src/stories/types.ts` now
+re-exports the canonical types (and `defineStory`) from
+`@takazudo/zudo-sg/stories` instead of duplicating them; `@takazudo/zudo-sg`
+was added as a real `workspace:*` dependency of `packages/ui`. The file
+itself is kept (not inlined at import sites) because the engine's
+`new-component` scaffold (`packages/styleguide/src/cli/scaffold/`) generates
+relative `../stories/types` imports and its tests assert that path.
+`scripts/check-story-contract-sync.mjs` and `check:story-contract-sync` are
+deleted — a re-export cannot drift. `packages/ui`'s `typecheck`/`test`
+scripts now run `node ../../scripts/ensure-styleguide-build.mjs` first, since
+the engine's `./stories` export resolves through `packages/styleguide/dist`.
+
 ### 4. Preview stylesheet — standalone compile, one URL
 
 - Host option `previewStyles` (required, project-root-relative path, e.g.

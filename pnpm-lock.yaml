@@ -267,6 +267,9 @@ importers:
       '@takazudo/zfb-md-wasm':
         specifier: 2.16.0
         version: 2.16.0
+      '@takazudo/zudo-sg':
+        specifier: workspace:*
+        version: link:../styleguide
       dompurify:
         specifier: ^3.4.11
         version: 3.4.11

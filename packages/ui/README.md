@@ -40,19 +40,15 @@ are not scanned or imported when the pack is built.
 
 The complete story and sidecar rules live in [`STORIES.md`](./STORIES.md).
 
-## Story contract: a byte-equivalent copy, not a dependency
+## Story contract: a re-export of the engine's canonical types
 
 The canonical story types (`StoryMeta`, `Story<P>`, `StoryControl<P>`,
 `StoryModule`, `defineStory`) are owned by the `@takazudo/zudo-sg` styleguide
 engine (`packages/styleguide`, exported as `@takazudo/zudo-sg/stories`).
-`src/stories/types.ts` in this package keeps a **byte-equivalent copy** of
-that type body (only the header comment may differ) so the provider tarball
-stays installable and type-resolvable with no engine installed anywhere —
-`@zudo-sg/ui` is consumed from source by external consumers, and an
-`import … from "@takazudo/zudo-sg/…"` in that path would be a `TS2307` for
-every consumer that doesn't also install the engine. The root repo's
-`pnpm check:story-contract-sync` (`scripts/check-story-contract-sync.mjs`)
-guards the two files from drifting apart; see
+`src/stories/types.ts` in this package re-exports them from
+`@takazudo/zudo-sg/stories` (a real `workspace:*` dependency) rather than
+duplicating the type body — kept as its own module because the engine's
+`new-component` scaffold generates relative `../stories/types` imports. See
 `docs/adr/styleguide-engine.md` decision 3 for the full rationale.
 
 ## Exact Git installation

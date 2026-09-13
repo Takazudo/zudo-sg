@@ -15,10 +15,9 @@ directory layout and barrel, its scaffolder defaults, per-component MDX docs,
 and Composer sidecars (a separate, package-local mechanism).
 
 The TypeScript shapes referenced here live in
-[`src/stories/types.ts`](./src/stories/types.ts) — a byte-equivalent copy of
-`@takazudo/zudo-sg/stories`, kept in sync with the engine's canonical copy by
-`scripts/check-story-contract-sync.mjs` (repo root, wired into `pnpm check`).
-Keep this doc and that file in sync.
+[`src/stories/types.ts`](./src/stories/types.ts) — a re-export of the
+engine's canonical `@takazudo/zudo-sg/stories` types. Keep this doc and that
+file in sync.
 
 ---
 
