@@ -126,10 +126,19 @@ async function packEngine(destination) {
 
 function assertNoWhitelistEscape(files) {
   // ADR decision 11's whitelist: dist, bin, routes-src, virtual-modules.d.ts,
-  // styles.css (+ package.json, always included by npm/pnpm). CHANGELOG.md /
-  // README.md are #668's — the package's own `files` array may still omit
-  // them, and that is not this script's concern.
-  const allowedTopLevel = new Set(["dist", "bin", "routes-src", "virtual-modules.d.ts", "styles.css", "package.json"]);
+  // styles.css (+ package.json, always included by npm/pnpm), plus
+  // CHANGELOG.md / README.md added to `files` by #668 when the package went
+  // public.
+  const allowedTopLevel = new Set([
+    "dist",
+    "bin",
+    "routes-src",
+    "virtual-modules.d.ts",
+    "styles.css",
+    "package.json",
+    "CHANGELOG.md",
+    "README.md",
+  ]);
   const forbiddenSubstrings = ["doc/", "src/", "apps/", "packages/ui", "fixtures/"];
   for (const file of files) {
     // npm tarball entries are prefixed "package/".
