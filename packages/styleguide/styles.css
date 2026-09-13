@@ -1,12 +1,26 @@
 /* ============================================================================
- * @takazudo/zudo-sg — catalog, chrome and search CSS (#653)
+ * @takazudo/zudo-sg — catalog, chrome and search CSS (#653, #661)
  *
  * Hand-authored package stylesheet (ADR docs/adr/styleguide-engine.md
- * decision "Chrome CSS moves to the package root file"). A host imports this
- * file directly today (there is no `@takazudo/zudo-sg/styles.css` subpath
- * export yet — that wiring, plus Tailwind-class safelisting from `dist`, is
- * #661's job); once #661 lands, a host switches its import to the package
- * specifier with no change to this file's content.
+ * decision "Chrome CSS moves to the package root file"), shipped as the
+ * package-root `files` entry and exported as `@takazudo/zudo-sg/styles.css`
+ * (a host imports the package specifier, never this relative path).
+ *
+ * CONSUMER IMPORT ORDER (locked by the ADR, decision 10 "Consumer CSS
+ * order"): a host imports, in this order —
+ *   1. @takazudo/zudo-doc/features.css
+ *   2. @takazudo/zudo-sg/styles.css      (this file)
+ *   3. @takazudo/zudo-sg/safelist.css    (generated `@source inline(...)`
+ *                                         from `dist/**\/*.js`, covers the
+ *                                         Tailwind utility classes this file
+ *                                         and the package's `.tsx` sources
+ *                                         reference — e.g. `bg-accent`,
+ *                                         `px-hsp-md` — for hosts that fall
+ *                                         back to explicit @source scanning)
+ *   4. the host's own project `@theme {}` block
+ * The host keeps its OWN `@source` directives for its own component package
+ * (e.g. `@source "../../packages/ui/src/**"`) — the engine's safelist only
+ * covers the engine package's compiled output, never consumer code.
  *
  * Combines what used to be two host files:
  *   - src/features/styleguide/styles.css   (#sg-code-panel layout / sticky /

@@ -80,6 +80,8 @@
       "types": "./dist/plugins/zdtp-apply-proxy.d.ts",
       "default": "./dist/plugins/zdtp-apply-proxy.js"
     },
+    "./styles.css": "./styles.css",
+    "./safelist.css": "./dist/safelist.css",
     "./package.json": "./package.json"
   },
   "bin": {
@@ -98,7 +100,8 @@
     "test": "vitest run --config vitest.config.ts",
     "check:no-host-alias": "node scripts/check-no-host-alias.mjs",
     "check:package-shape": "node scripts/check-package-shape.mjs",
-    "check": "pnpm run check:no-host-alias && pnpm run typecheck && pnpm run build && pnpm run check:package-shape && pnpm run test"
+    "check:package-safelist": "node scripts/check-package-safelist.mjs",
+    "check": "pnpm run check:no-host-alias && pnpm run typecheck && pnpm run build && pnpm run check:package-shape && pnpm run check:package-safelist && pnpm run test"
   },
   "dependencies": {
     "preact-render-to-string": "^6.6.6",
