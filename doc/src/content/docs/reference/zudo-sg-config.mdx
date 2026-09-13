@@ -89,8 +89,8 @@ Each `componentsRoots[i]` gets its own collection — `componentDocs` for index
 section on that component's detail page. `withZudoSg` also passes the routes
 plugin a data-only `componentDocs` option — one `{ keyPrefix, collection }`
 pair per root, where `keyPrefix` is the root's registry key prefix (`dir` with a
-leading `packages/` removed, e.g. `"packages/demo-ui/src"` → `"ui/src"`, `"ui"` →
-`"ui"`) — so the detail route looks each story up in the collection of the
+leading `packages/` removed, e.g. `"packages/demo-ui/src"` → `"demo-ui/src"`, `"demo-ui"` →
+`"demo-ui"`) — so the detail route looks each story up in the collection of the
 root its registry key belongs to (the longest matching prefix wins). A routes
 plugin descriptor written by hand without `componentDocs` renders no
 component docs.
