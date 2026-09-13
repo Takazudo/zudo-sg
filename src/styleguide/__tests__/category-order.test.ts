@@ -1,9 +1,9 @@
-// Regression coverage for #651: CATEGORY_ORDER became an injected/computed
-// array (zudo-sg's own declared STORY_CATEGORIES order, plus any category
-// actually used by a story that isn't declared, appended alphabetically)
-// instead of a codegen'd copy of a closed StoryCategory union. This guards
-// the sidebar order for the real registry's 12 existing categories and the
-// "unknown categories append alphabetically" behavior in isolation.
+// Host integration coverage for #651: the root host's registry instance feeds
+// zudo-sg's own declared STORY_CATEGORIES as `categoryOrder` into the engine's
+// createRegistry. The ordering rules themselves (including "unlisted
+// categories append alphabetically") are unit-tested in the engine package
+// (packages/styleguide/src/registry/__tests__/registry.test.ts); this guards
+// the real registry's sidebar order.
 
 import { describe, expect, it } from "vitest";
 import { STORY_CATEGORIES } from "@zudo-sg/ui";

@@ -36,11 +36,11 @@ import { Island } from "@takazudo/zfb";
 import { getEntry } from "zfb/content";
 import { defaultLocale } from "@/config/i18n";
 import { withBase } from "@/utils/base";
-import { getAllSlugs, getStoryBySlug } from "@/styleguide/data/registry";
+import { getAllSlugs, getStoryBySlug } from "@/styleguide/registry";
 import {
   COMPONENT_DOCS_COLLECTION,
   componentDocSlug,
-} from "@/styleguide/data/component-docs";
+} from "@takazudo/zudo-sg/registry";
 import { componentDocMdxComponents } from "@/components/content/component-doc-mdx-components";
 import { StyleguideLayout } from "@/features/styleguide/chrome/_styleguide-layout";
 import DetailWorkbench from "@/features/styleguide/preview/detail-workbench";

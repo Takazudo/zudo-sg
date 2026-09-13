@@ -1,21 +1,15 @@
 /**
- * @zudo-sg/ui — story-authoring contract (shared types)
+ * @takazudo/zudo-sg — story-authoring contract (canonical copy)
  *
- * These types define the shape every `*.stories.tsx` module must satisfy so the
- * S6 styleguide catalog can discover and render stories. Discovery itself is
- * codegen (`scripts/gen-sg-registry.mjs`), not `import.meta.glob` — see
- * STORIES.md §2.
+ * The shape every `*.stories.tsx` module satisfies so the engine's registry
+ * (`@takazudo/zudo-sg/registry`) can discover and render stories. Exported as
+ * `@takazudo/zudo-sg/stories`.
  *
- * The full prose contract — glob root, file location, source-extraction rules,
- * browser/MSW rules — lives in packages/ui/STORIES.md. Keep this file and that
- * doc in sync; STORIES.md is the source of truth a reviewer reads, this file is
- * what TypeScript checks story modules against.
- *
- * A story module exports exactly:
- *   - a default-exported `meta: StoryMeta`
- *   - one or more named `Story` objects (the variants to render)
- * Nothing else should be exported. The registry keys stories by the module's
- * glob path and reads `meta` + every named export that is a `Story`.
+ * DUPLICATED ON PURPOSE (ADR `docs/adr/styleguide-engine.md` decision 3): the
+ * component provider keeps a byte-equivalent copy of everything below this
+ * header at `packages/ui/src/stories/types.ts`, so `@zudo-sg/ui` stays
+ * installable and type-resolvable with no engine installed. Edit both files
+ * together; `pnpm check:story-contract-sync` fails on drift.
  */
 
 import type { ComponentChildren } from "preact";

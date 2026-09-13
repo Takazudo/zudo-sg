@@ -10,7 +10,7 @@ import {
   MSG_UPDATE_PROPS,
 } from "../messages";
 
-vi.mock("@/styleguide/data/registry", () => ({
+vi.mock("@/styleguide/registry", () => ({
   getStoryBySlug: () => ({
     variants: [
       {

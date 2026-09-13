@@ -20,7 +20,7 @@ without the others:
    explicit-import registry (§2 below, first four rows).
 2. **The catalog UI chrome** — the pages/components that actually render that
    registry into a browsable styleguide (§2 below, `src/features/styleguide/*`
-   and `src/styleguide/data/`).
+   and `src/styleguide/`).
 3. **The component provider boundary** — typed `*.composer.tsx` sidecars, the
    generated pack, explicit provider CSS, and exact package-only Git handoff
    described in §6 below.
@@ -42,7 +42,7 @@ source, routes, storage, and deployment belong to
 | [`packages/ui/STORIES.md`](./packages/ui/STORIES.md) | The prose contract that `types.ts` implements — file location/discovery, module shape, controls convention, source extraction, browser/MSW rules, scaffolding. Keep it and `types.ts` in sync. | `<ui-package>/STORIES.md`. |
 | [`scripts/gen-sg-registry.mjs`](./scripts/gen-sg-registry.mjs) | Codegen that globs `<components-root>/**/*.stories.tsx` (any depth — covers both the one-level and category-nested layouts) on the filesystem and rewrites two explicit-import registries from it (story discovery can't be `import.meta.glob` — zfb doesn't statically inline that call, and the literal survives into the client islands bundle and throws in the browser). Needs the flag adaptations in §3 below. | `scripts/gen-sg-registry.mjs`. |
 | `src/features/styleguide/*` (21 files across `chrome/`, `code-panel/`, `preview/`, `search/`, `token-tweak/`, plus a top-level `styles.css`) | The catalog UI itself: layout chrome + header toggles, the code panel (source display, copy button, CSS injection, CodeMirror setup), the preview iframe/route, the sidebar search/filter, and the design-token live-tweak panel. | `src/features/styleguide/` (or wherever the adopting project's app-level `src/` lives). |
-| [`src/styleguide/data/`](./src/styleguide/data/) | The registry consumer: `sg-registry.ts` (codegen output), `registry.ts` (category grouping + variant ordering), `nav-nodes.ts`, `component-docs.ts`. | `src/styleguide/data/`. |
+| [`src/styleguide/`](./src/styleguide/) | The registry consumer: `data/sg-registry.ts` (codegen output) plus thin `registry.ts` / `nav-nodes.ts` instances built with `@takazudo/zudo-sg/registry` (category grouping, variant ordering, nav tree, component-doc slugs). | `src/styleguide/`. |
 | [`scripts/new-component.mjs`](./scripts/new-component.mjs) + [`scripts/lib/component-scaffold.mjs`](./scripts/lib/component-scaffold.mjs) + [`scripts/lib/scaffold-config.mjs`](./scripts/lib/scaffold-config.mjs) | The `pnpm new:component` scaffolder — generates a component skeleton, stories file, test file, barrel export, and re-runs the registry codegen in one command. | `scripts/new-component.mjs`, `scripts/lib/component-scaffold.mjs`, `scripts/lib/scaffold-config.mjs`. |
 | _(optional)_ [`scripts/gen-token-manifest.mjs`](./scripts/gen-token-manifest.mjs) + [`scripts/lib/ui-token-manifest.mjs`](./scripts/lib/ui-token-manifest.mjs) | Regenerates the shared UI package's design-token manifest (feeding the token-tweak panel) from `packages/ui/styles/tokens.css` / `colors.css` via a real CSS AST parse (postcss), rather than a hand-maintained copy. | `scripts/gen-token-manifest.mjs`, `scripts/lib/ui-token-manifest.mjs`. |
 | _(optional)_ [`scripts/gen-root-token-manifest.mjs`](./scripts/gen-root-token-manifest.mjs) + [`scripts/lib/root-token-manifest.mjs`](./scripts/lib/root-token-manifest.mjs) + [`scripts/lib/css-var-resolver.mjs`](./scripts/lib/css-var-resolver.mjs) | Regenerates the **root host's own** design-token manifest (`src/config/design-tokens-manifest.ts`) from `src/styles/global.css` plus the two shared `@zudo-sg/ui` files it `@import`s, via a cross-file CSS custom-property resolver — needed because the root manifest mixes shared-package tokens, root-specific `@theme` overrides, and `var()` indirection across files, which `gen-token-manifest.mjs`'s single-file parse can't follow (see #208/#209/#210/#211). | `scripts/gen-root-token-manifest.mjs`, `scripts/lib/root-token-manifest.mjs`, `scripts/lib/css-var-resolver.mjs`, `scripts/lib/css-var-parser.mjs`. |
@@ -100,7 +100,7 @@ read from — edit these three exported constants for your project's layout:
 
 `StoryCategory` is an **open string** — `packages/ui/src/stories/types.ts`
 declares `export type StoryCategory = string`, so any value is a valid
-`meta.category`. `STORY_CATEGORIES` in that same file is zudo-sg's own
+`meta.category`. `STORY_CATEGORIES` in the sibling `categories.ts` is zudo-sg's own
 ordered list of 12 categories (`Actions`, `Typography`, `Layout`,
 `Data Display`, `Forms`, `Navigation`, `Content`, `Landing`, `News`,
 `Search`, `Feedback`, `Media`) — data, not a type constraint. This is the
@@ -113,16 +113,17 @@ single directory can hold components from several `StoryCategory` values
 Two other places consume `STORY_CATEGORIES` directly (no codegen, no marker
 blocks):
 
-- `src/styleguide/data/registry.ts` `CATEGORY_ORDER` imports the value from
-  `@zudo-sg/ui` and appends any category actually used by a discovered
-  story that isn't in that list, alphabetically, after it.
+- `src/styleguide/registry.ts` imports the value from `@zudo-sg/ui` and
+  passes it as `categoryOrder` to the engine's `createRegistry`
+  (`@takazudo/zudo-sg/registry`), which appends any category actually used
+  by a discovered story that isn't in that list, alphabetically, after it.
 - `scripts/lib/component-scaffold.mjs` `VALID_CATEGORIES` regex-parses it
-  out of `types.ts`'s source text (a dependency-free `.mjs` script can't
+  out of `categories.ts`'s source text (a dependency-free `.mjs` script can't
   import a `.ts` module) — used only to print a "new category" warning from
   `pnpm new:component --category`, never to reject a value.
 
 To add, remove, or rename one of zudo-sg's own declared categories in a
-fork: edit `STORY_CATEGORIES` in `types.ts` — both consumers above read it
+fork: edit `STORY_CATEGORIES` in `categories.ts` — both consumers above read it
 directly, so there's nothing to regenerate. A category outside that list
 still works; it just sorts after the declared ones. (Adding a category also
 still needs a hand-added barrel section header, `// ── <Category> ──`, in

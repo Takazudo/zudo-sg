@@ -11,7 +11,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { render } from "preact-render-to-string";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { storyEntries } from "@/styleguide/data/registry";
+import { storyEntries } from "@/styleguide/registry";
 import {
   ATOM_SCALE_CATEGORIES,
   ComponentThumb,

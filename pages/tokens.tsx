@@ -4,7 +4,7 @@ import type { JSX, VNode } from "preact";
 import { Island } from "@takazudo/zfb";
 import { defaultLocale } from "@/config/i18n";
 import { withBase } from "@/utils/base";
-import { TOKENS_SLUG } from "@/styleguide/data/registry";
+import { TOKENS_SLUG } from "@/styleguide/registry";
 import { StyleguideLayout } from "@/features/styleguide/chrome/_styleguide-layout";
 import { UiTokenDashboards } from "@/features/styleguide/token-dashboard/ui-token-dashboards";
 import PreviewTokensButton from "@/features/styleguide/token-tweak/preview-tokens-button";

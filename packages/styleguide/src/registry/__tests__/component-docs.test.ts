@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   COMPONENT_DOCS_COLLECTION,
   componentDocSlug,
-} from "../component-docs";
+} from "../component-docs.js";
 
 describe("componentDocSlug", () => {
   it("derives the collection slug from a story registry path", () => {

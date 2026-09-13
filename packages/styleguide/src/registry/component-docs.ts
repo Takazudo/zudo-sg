@@ -9,9 +9,8 @@
 // shape `./ui/src/<name>/<name>.stories.tsx`, so the doc slug is that same path
 // with the `./ui/src/` prefix and `.stories.tsx` suffix stripped.
 //
-// This is pure string logic (no `zfb/content` import) so it lives in the
-// tsc-checked `src/` tree and is unit-testable; the detail page (under the
-// tsc-excluded `pages/` tree) feeds the result to `getEntry("componentDocs", …)`.
+// This is pure string logic (no `zfb/content` import) so it is unit-testable;
+// the detail route feeds the result to `getEntry("componentDocs", …)`.
 
 /** Collection name registered in zfb.config.ts for co-located component docs. */
 export const COMPONENT_DOCS_COLLECTION = "componentDocs";
