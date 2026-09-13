@@ -404,7 +404,7 @@ cannot do this (it must stay pure/synchronous/no-MSW, per the rules above).
 `previewRoute` is **not** the same mechanism as the catalog's built-in variant
 iframes. Every `Story` the catalog renders is already shown inside an
 isolated `/components/preview` iframe (`PREVIEW_ROUTE_PATH`, wired in
-`src/features/styleguide/preview/route.ts` + `variant-frame.tsx`) — that
+`packages/styleguide/src/preview/route.ts` + `variant-frame.tsx`) — that
 iframe always re-invokes one of THIS file's own `Story.render` functions, for
 the catalog's live-controls/CSS-injection pipeline. `previewRoute` is a
 **different, separate thing**: an optional `StoryMeta` field that names a REAL

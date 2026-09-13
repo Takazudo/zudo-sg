@@ -112,11 +112,16 @@ export default defineConfig({
       // leaves a .zfb-plugin-bundle-* transpilation artifact beside the source.
       name: "./pages/lib/_doc-history-meta.mjs",
     },
-    // Wires the preview design-token panel's Apply button to a same-origin
-    // dev-only endpoint that persists tweaks into packages/ui/styles/colors.css
-    // — see plugins/zdtp-apply-proxy-plugin.mjs for the full pipeline + scope.
+    // Preview design-token panel: dev-only same-origin Apply endpoint that
+    // persists tweaks into packages/ui/styles/*.css, plus the panel island's
+    // host tabs. Listed directly until zudoSg() emits this descriptor (#662).
     {
-      name: "./plugins/zdtp-apply-proxy-plugin.mjs",
+      name: "@takazudo/zudo-sg/plugins/zdtp-apply-proxy",
+      options: {
+        routingFile: "./zdtp-panel-routing.json",
+        writeRoot: "./packages/ui/styles",
+        tabsModule: "./src/config/preview-token-panel-tabs.ts",
+      },
     },
   ],
 });

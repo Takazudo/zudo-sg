@@ -24,9 +24,12 @@ export default defineConfig({
   resolve: {
     alias: {
       "@/": resolve(__dirname, "src") + "/",
-      // zfb-only virtual module (see vitest-stubs/zdtp-apply-config.ts) —
+      // zfb-only virtual module of @takazudo/zudo-sg/plugins/zdtp-apply-proxy —
       // plain Vite has no resolver for a "virtual:" specifier.
-      "virtual:zdtp-apply-config": resolve(__dirname, "vitest-stubs/zdtp-apply-config.ts"),
+      "virtual:zudo-sg-preview-token-panel": resolve(
+        __dirname,
+        "packages/styleguide/src/token-tweak/__tests__/stubs/virtual-preview-token-panel.ts",
+      ),
       // React → Preact compat aliases (mirrors production zfb/vite build).
       // Most-specific keys first so `react/jsx-runtime` is not swallowed by `react`.
       "react/jsx-runtime": "preact/jsx-runtime",

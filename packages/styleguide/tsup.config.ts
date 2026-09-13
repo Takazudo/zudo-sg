@@ -20,6 +20,8 @@ export default defineConfig((options) => ({
     "!src/**/__tests__/**",
     "!src/**/*.test.ts",
     "!src/**/*.test.tsx",
+    // Ambient declarations (e.g. virtual-module types) have no runtime output.
+    "!src/**/*.d.ts",
   ],
   format: "esm",
   bundle: false,
