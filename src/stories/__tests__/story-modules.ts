@@ -9,8 +9,8 @@ import type { StoryModule } from "../types";
 // patterns, and a glob test living inside packages/ui could only reach sibling
 // story files via `../`. (Confirmed: a `../**` glob in this directory breaks
 // `zfb build`.) So we import every story module explicitly and share this one
-// registry. The block below is codegen'd by `scripts/gen-sg-registry.mjs` from
-// the `*.stories.tsx` files on disk — never hand-edit it; run
+// registry. The block below is codegen'd by the `zudo-sg gen-registry` CLI
+// command from the `*.stories.tsx` files on disk — never hand-edit it; run
 // `pnpm gen:sg-registry` and commit the result.
 // GENERATED:SG_REGISTRY_BEGIN — do not hand-edit; run `pnpm gen:sg-registry`.
 import * as cardsCallout from "../../cards/callout/callout.stories";

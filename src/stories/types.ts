@@ -3,7 +3,7 @@
  *
  * These types define the shape every `*.stories.tsx` module must satisfy so the
  * S6 styleguide catalog can discover and render stories. Discovery itself is
- * codegen (`scripts/gen-sg-registry.mjs`), not `import.meta.glob` — see
+ * codegen (the `zudo-sg gen-registry` CLI command), not `import.meta.glob` — see
  * STORIES.md §2.
  *
  * The full prose contract — glob root, file location, source-extraction rules,
@@ -21,30 +21,13 @@
 import type { ComponentChildren } from "preact";
 
 /**
- * Top-level grouping in the catalog sidebar. Keep the set small + stable.
- *
- * Single source of truth for every consumer of the category set — codegen
- * (`scripts/gen-story-categories.mjs`) regex-parses this array literal
- * straight from this file's source text (no TS import, so plain Node scripts
- * can read it too) and rewrites the GENERATED:STORY_CATEGORIES marker blocks
- * in src/styleguide/data/registry.ts and scripts/lib/component-scaffold.mjs.
- * Add/remove/rename a category here, then run `pnpm gen:story-categories`.
+ * `StoryMeta.category` is an OPEN string — any value is valid, so a host
+ * extending the catalog can introduce a new category without touching this
+ * contract. Group order is data owned by the host (`categoryOrder`), not a
+ * type: the engine's `createRegistry` (`@takazudo/zudo-sg/registry`) renders
+ * the listed categories first and appends every unlisted one alphabetically.
  */
-export const STORY_CATEGORIES = [
-  "Actions",
-  "Typography",
-  "Layout",
-  "Data Display",
-  "Forms",
-  "Navigation",
-  "Content",
-  "Landing",
-  "News",
-  "Search",
-  "Feedback",
-  "Media",
-] as const;
-export type StoryCategory = (typeof STORY_CATEGORIES)[number];
+export type StoryCategory = string;
 
 /**
  * Per-file metadata. Default-exported from each `*.stories.tsx`.
