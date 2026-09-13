@@ -80,6 +80,16 @@
       "types": "./dist/plugins/zdtp-apply-proxy.d.ts",
       "default": "./dist/plugins/zdtp-apply-proxy.js"
     },
+    "./sg-context": {
+      "types": "./dist/sg-context.d.ts",
+      "default": "./dist/sg-context.js"
+    },
+    "./plugins/routes": {
+      "types": "./dist/plugins/routes.d.ts",
+      "default": "./dist/plugins/routes.js"
+    },
+    "./routes-src/*": "./routes-src/*",
+    "./virtual-modules.d.ts": "./virtual-modules.d.ts",
     "./package.json": "./package.json"
   },
   "bin": {
@@ -98,7 +108,9 @@
     "test": "vitest run --config vitest.config.ts",
     "check:no-host-alias": "node scripts/check-no-host-alias.mjs",
     "check:package-shape": "node scripts/check-package-shape.mjs",
-    "check": "pnpm run check:no-host-alias && pnpm run typecheck && pnpm run build && pnpm run check:package-shape && pnpm run test"
+    "check:routes-src": "node scripts/check-routes-src.mjs",
+    "check:virtual-modules": "node scripts/check-virtual-modules.mjs",
+    "check": "pnpm run check:no-host-alias && pnpm run typecheck && pnpm run build && pnpm run check:package-shape && pnpm run check:routes-src && pnpm run check:virtual-modules && pnpm run test"
   },
   "dependencies": {
     "preact-render-to-string": "^6.6.6",

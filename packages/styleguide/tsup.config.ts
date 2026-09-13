@@ -22,6 +22,8 @@ export default defineConfig((options) => ({
     "!src/**/*.test.tsx",
     // Ambient declarations (e.g. virtual-module types) have no runtime output.
     "!src/**/*.d.ts",
+    // Route entrypoints ship as `.tsx` source in routes-src/ (onSuccess below), never as dist JS.
+    "!src/routes/**",
   ],
   format: "esm",
   bundle: false,
@@ -30,4 +32,5 @@ export default defineConfig((options) => ({
   // Never clean under --watch: tsup cannot regenerate the tsc-owned .d.ts it
   // would wipe (zudolab/zudo-doc#3113).
   clean: !options.watch,
+  onSuccess: "node scripts/copy-routes-src.mjs && node scripts/copy-virtual-modules.mjs",
 }));
