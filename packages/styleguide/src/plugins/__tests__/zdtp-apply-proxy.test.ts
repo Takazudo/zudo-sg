@@ -30,7 +30,7 @@ import zdtpApplyProxyPlugin, {
 // there (duplicating a fixture routing file would drift from the real one).
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../../../../..");
 const ROUTING_FILE = "zdtp-panel-routing.json";
-const ROOT_OPTIONS = { routingFile: `./${ROUTING_FILE}`, writeRoot: "./packages/ui/styles" };
+const ROOT_OPTIONS = { routingFile: `./${ROUTING_FILE}`, writeRoot: "./packages/demo-ui/styles" };
 
 type SetupCtx = Parameters<NonNullable<typeof zdtpApplyProxyPlugin.setup>>[0];
 type DevCtx = Parameters<NonNullable<typeof zdtpApplyProxyPlugin.devMiddleware>>[0];
@@ -80,7 +80,7 @@ async function runSetup(
   };
 }
 
-// Mirrors the shape of packages/ui/styles/colors.css: a plain `:root` block
+// Mirrors the shape of packages/demo-ui/styles/colors.css: a plain `:root` block
 // holding the Tier-1 palette, plus a Tailwind v4 `@theme` block for the
 // Tier-2 semantic tokens. Production routing keeps "palette" writable and
 // leaves "color" unrouted; a focused test below routes "color" explicitly to
@@ -97,7 +97,7 @@ const COLORS_CSS_FIXTURE = `:root {
 }
 `;
 
-// Mirrors packages/ui/styles/tokens.css: entirely `@theme`, no top-level
+// Mirrors packages/demo-ui/styles/tokens.css: entirely `@theme`, no top-level
 // `:root` block at all.
 const TOKENS_CSS_FIXTURE = `@theme {
   --spacing-hsp-2xs: 0.125rem;
@@ -356,7 +356,7 @@ describe("resolveZdtpApplyProxyOptions", () => {
     expect(resolved).toEqual({
       enabled: true,
       routingFile: `${REPO_ROOT}/${ROUTING_FILE}`,
-      writeRoot: `${REPO_ROOT}/packages/ui/styles`,
+      writeRoot: `${REPO_ROOT}/packages/demo-ui/styles`,
       tabsModule: `${REPO_ROOT}/src/config/preview-token-panel-tabs.ts`,
     });
   });
@@ -366,7 +366,7 @@ describe("resolveZdtpApplyProxyOptions", () => {
   });
 
   it("requires routingFile and writeRoot", () => {
-    expect(() => resolveZdtpApplyProxyOptions(REPO_ROOT, { writeRoot: "./packages/ui/styles" })).toThrow(
+    expect(() => resolveZdtpApplyProxyOptions(REPO_ROOT, { writeRoot: "./packages/demo-ui/styles" })).toThrow(
       '[zudo-sg] option "routingFile" is required',
     );
     expect(() => resolveZdtpApplyProxyOptions(REPO_ROOT, { routingFile: `./${ROUTING_FILE}` })).toThrow(
@@ -390,7 +390,7 @@ describe(`setup() — ${VIRTUAL_MODULE_ID} dev/build gating`, () => {
     expect(specifier).toBe(VIRTUAL_MODULE_ID);
     expect(source).toContain(JSON.stringify(APPLY_PATH));
     expect(source).toContain('"palette"');
-    expect(source).toContain("packages/ui/styles/colors.css");
+    expect(source).toContain("packages/demo-ui/styles/colors.css");
     expect(watchFiles).toEqual([`${REPO_ROOT}/${ROUTING_FILE}`]);
   });
 
@@ -498,12 +498,12 @@ describe("optional @takazudo/zdtp peer", () => {
 // These exercise the plugin against the REAL committed zdtp-panel-routing.json
 // (not a hand-written fixture map, which would drift), writing into temp
 // fixtures shaped like the real @theme/:root blocks. The write-root is nested
-// so the real routing map's `packages/ui/styles/*.css` relative paths resolve
+// so the real routing map's `packages/demo-ui/styles/*.css` relative paths resolve
 // exactly as they do in the running dev server.
 const REAL_ROUTING = loadRoutingFromFile(join(REPO_ROOT, ROUTING_FILE));
-const STYLES_REL = "packages/ui/styles";
+const STYLES_REL = "packages/demo-ui/styles";
 
-// Shaped like packages/ui/styles/colors.css: Tier-1 palette in a `:root` block,
+// Shaped like packages/demo-ui/styles/colors.css: Tier-1 palette in a `:root` block,
 // Tier-2 `--color-*` (a light-dark() expression) in the `@theme` block.
 const REAL_COLORS_FIXTURE = `:root {
   --palette-base-0: oklch(.965 .004 65);
@@ -517,7 +517,7 @@ const REAL_COLORS_FIXTURE = `:root {
 }
 `;
 
-// Shaped like packages/ui/styles/tokens.css: one `@theme` block carrying one
+// Shaped like packages/demo-ui/styles/tokens.css: one `@theme` block carrying one
 // representative variable from each routed family. --shadow-card is
 // deliberately a multi-line, multi-layer value with commas inside oklch() to
 // exercise the value scanner.
@@ -541,14 +541,14 @@ const REAL_TOKENS_FIXTURE = `@theme {
 describe("zdtp-panel-routing.json (committed routing map)", () => {
   it("routes palette + color to colors.css and the tokens.css families", () => {
     expect(REAL_ROUTING).toMatchObject({
-      palette: "packages/ui/styles/colors.css",
-      color: "packages/ui/styles/colors.css",
-      spacing: "packages/ui/styles/tokens.css",
-      text: "packages/ui/styles/tokens.css",
-      font: "packages/ui/styles/tokens.css",
-      leading: "packages/ui/styles/tokens.css",
-      radius: "packages/ui/styles/tokens.css",
-      shadow: "packages/ui/styles/tokens.css",
+      palette: "packages/demo-ui/styles/colors.css",
+      color: "packages/demo-ui/styles/colors.css",
+      spacing: "packages/demo-ui/styles/tokens.css",
+      text: "packages/demo-ui/styles/tokens.css",
+      font: "packages/demo-ui/styles/tokens.css",
+      leading: "packages/demo-ui/styles/tokens.css",
+      radius: "packages/demo-ui/styles/tokens.css",
+      shadow: "packages/demo-ui/styles/tokens.css",
     });
   });
 
@@ -678,8 +678,8 @@ describe("apply routing — real map + native whole-payload coalescing", () => {
     expect(rows).toHaveLength(2);
     expect(new Set(rows.map((row) => row.file)).size).toBe(2);
     expect(rows.map((row) => row.file).sort()).toEqual([
-      "packages/ui/styles/colors.css",
-      "packages/ui/styles/tokens.css",
+      "packages/demo-ui/styles/colors.css",
+      "packages/demo-ui/styles/tokens.css",
     ]);
 
     const colorsRow = rows.find((row) => row.file.endsWith("colors.css"));

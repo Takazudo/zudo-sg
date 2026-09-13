@@ -57,7 +57,7 @@ export const APPLY_PATH = "/__zdtp/apply";
 export interface ZdtpApplyProxyOptions {
   /** Project-root-relative routing JSON (e.g. `./zdtp-panel-routing.json`). */
   routingFile: string;
-  /** Project-root-relative write sandbox directory (e.g. `./packages/ui/styles`). */
+  /** Project-root-relative write sandbox directory (e.g. `./packages/demo-ui/styles`). */
   writeRoot: string;
   /** Project-root-relative module exporting `tabs` (the manifest-derived zdtp tab set). */
   tabsModule?: string;
@@ -105,7 +105,7 @@ export function resolveZdtpApplyProxyOptions(
 
   if (writeRootValue === undefined) {
     throw new Error(
-      `[zudo-sg] option "writeRoot" is required (project-root-relative path, e.g. "./packages/ui/styles")`,
+      `[zudo-sg] option "writeRoot" is required (project-root-relative path, e.g. "./packages/demo-ui/styles")`,
     );
   }
   const writeRoot = toForwardSlash(

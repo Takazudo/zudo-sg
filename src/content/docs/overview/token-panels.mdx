@@ -11,7 +11,7 @@ The styleguide ships two independent design-token panels. Each one edits a diffe
 | | Doc-chrome panel | Preview panel |
 |---|---|---|
 | **Trigger** | **Design Tokens** icon (sliders glyph) in the header — shown on **every** page, docs and styleguide alike | **Preview tokens** button (stacked-frames glyph) in a component detail page's workbench toolbar (`/components/<slug>`); also a "Preview tokens →" button above the dashboards on `/tokens` |
-| **What it edits** | The documentation site's own UI | The `@zudo-sg/ui` component tokens inside preview iframes |
+| **What it edits** | The documentation site's own UI | The `@zudo-sg/demo-ui` component tokens inside preview iframes |
 | **Where applied** | Host `<html>` `:root` | Preview iframes only |
 | **localStorage prefix** | `sg-doc-tweak` | `sg-preview-tweak` |
 | **Console namespace** | `window.sgDoc` | `window.sgPreview` |
@@ -35,17 +35,17 @@ Use this panel when you want to adjust or export the documentation site's design
 
 Doc-chrome **Color** overrides are stored per scheme identity — **Default Light** and **Default Dark** — in the `color` slice of the `sg-doc-tweak-state-v4` envelope. Editing one mode therefore never replaces the other mode's saved mapping. **Palette**, **Spacing**, **Font**, and **Size** overrides are shared across modes within the active theme pack; non-default theme packs use the `sg-doc-tweak--<pack>` storage prefix.
 
-The preview panel's colors are unkeyed by design. Its `ui-color` tab is a generic tab: the `@zudo-sg/ui` family-named palette and `light-dark()` tokens do not fit zdtp's ramp-reference **Color** cluster, so adopting scheme scoping there would require redesigning its color model. The similar names are a coincidence: `settings.colorMode` detects doc-chrome schemes, while zdtp's `panelSettings.colorMode` controls the persisted **Color** identity; they are unrelated.
+The preview panel's colors are unkeyed by design. Its `ui-color` tab is a generic tab: the `@zudo-sg/demo-ui` family-named palette and `light-dark()` tokens do not fit zdtp's ramp-reference **Color** cluster, so adopting scheme scoping there would require redesigning its color model. The similar names are a coincidence: `settings.colorMode` detects doc-chrome schemes, while zdtp's `panelSettings.colorMode` controls the persisted **Color** identity; they are unrelated.
 
 ## Preview panel (Preview tokens)
 
 Click the **Preview tokens** button (the stacked-frames glyph) in a component detail page's workbench toolbar, or the "Preview tokens →" button above the dashboards on `/tokens`, to open this panel.
 
-The preview panel edits the `@zudo-sg/ui` design tokens — `--color-*`, `--spacing-*`, `--font-*`, `--radius-*`, `--shadow-*`. Instead of writing to the host `:root`, every change is sent directly into each registered preview iframe's `:root` via zudo-doc's theme bridge.
+The preview panel edits the `@zudo-sg/demo-ui` design tokens — `--color-*`, `--spacing-*`, `--font-*`, `--radius-*`, `--shadow-*`. Instead of writing to the host `:root`, every change is sent directly into each registered preview iframe's `:root` via zudo-doc's theme bridge.
 
 Its **Palette** tab exposes the raw Tier-1 colors as grouped `neutral`, `accent`, and `state` swatches, followed by one tier for each business line: `line-vacuum`, `line-process`, `line-laser`, `line-meeting`, and `line-beauty`. Each line has its own hue, and zdtp 0.6's palette validation requires one family per named tier, so the lines stay split into separate groups with their own OKLCH curves. The semantic **Color** tab keeps the unchanged `--color-*` names that point at those palette entries.
 
-**Why iframes only?** In `src/styles/global.css` the `@zudo-sg/ui` target tokens are aliased onto the doc chrome. Writing them to the host `:root` would corrupt the documentation site's appearance, so the panel deliberately routes all writes into the iframes and leaves the host untouched.
+**Why iframes only?** In `src/styles/global.css` the `@zudo-sg/demo-ui` target tokens are aliased onto the doc chrome. Writing them to the host `:root` would corrupt the documentation site's appearance, so the panel deliberately routes all writes into the iframes and leaves the host untouched.
 
 **Late-mounted iframes** are handled automatically: the registry replays the currently-active overrides into any iframe that loads after the panel has already applied changes. You will see the same token state regardless of which component page you navigate to.
 
@@ -68,7 +68,7 @@ Both panel footers also have an **Apply** button, next to Export / Reset / Load 
 This works today for every tab in the preview panel — **Color**, **Palette**, **Spacing**, **Font**, and **Size** — and only when running under `pnpm dev` (`zfb dev`). The doc-chrome panel has no apply endpoint at all. See the caveat below for what's still out of scope.
 
 <Warning title="Apply routes every preview-panel tab now; a few internal prefixes still 400">
-  The apply endpoint routes eight prefixes — `palette`, `color`, `spacing`, `text`, `font`, `leading`, `radius`, `shadow` — covering every tab the preview panel exposes: **Color** and **Palette** write into `packages/ui/styles/colors.css`; **Spacing**, **Font**, and **Size** (radius + shadow) write into `packages/ui/styles/tokens.css`. Apply sends **every currently-tweaked token across every tab in one request**. The pinned zdtp (>=0.4.7) groups that complete request by resolved target file, so it computes at most one rewrite per affected target file and returns one result row per affected file. Downgrading below 0.4.7 would reintroduce the historical same-file clobber hazard; this grouping does not make disk writes fully transactional.
+  The apply endpoint routes eight prefixes — `palette`, `color`, `spacing`, `text`, `font`, `leading`, `radius`, `shadow` — covering every tab the preview panel exposes: **Color** and **Palette** write into `packages/demo-ui/styles/colors.css`; **Spacing**, **Font**, and **Size** (radius + shadow) write into `packages/demo-ui/styles/tokens.css`. Apply sends **every currently-tweaked token across every tab in one request**. The pinned zdtp (>=0.4.7) groups that complete request by resolved target file, so it computes at most one rewrite per affected target file and returns one result row per affected file. Downgrading below 0.4.7 would reintroduce the historical same-file clobber hazard; this grouping does not make disk writes fully transactional.
 
   The failure window is narrowed, not eliminated: any CSS var whose prefix isn't in the routing map — e.g. `--breakpoint-*`, `--default-transition-*` (Tailwind plumbing, deliberately left out of every tab) — still fails the whole request with "Unsupported cssVar prefix" (400) if it ever reaches the endpoint. None of the tokens the preview panel currently exposes fall into that category, so hitting this 400 through normal panel use shouldn't happen today — but a future token family added to a tab without a matching routing entry would trip it again.
 </Warning>

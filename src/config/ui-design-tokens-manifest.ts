@@ -1,11 +1,11 @@
 /**
- * Design-token manifest for @zudo-sg/ui target-website tokens.
+ * Design-token manifest for @zudo-sg/demo-ui target-website tokens.
  *
  * GENERATED — do not hand-edit. Run `pnpm gen:token-manifest` after changing
- * packages/ui/styles/tokens.css or packages/ui/styles/colors.css, then commit
+ * packages/demo-ui/styles/tokens.css or packages/demo-ui/styles/colors.css, then commit
  * the regenerated output. `pnpm check:token-manifest` fails on drift.
  *
- * Source of truth: packages/ui/styles/tokens.css and packages/ui/styles/colors.css,
+ * Source of truth: packages/demo-ui/styles/tokens.css and packages/demo-ui/styles/colors.css,
  * parsed by the `zudo-sg gen-token-manifest` CLI command
  * (@takazudo/zudo-sg's src/cli/token-manifest/ui-token-manifest.ts). Only
  * `default` values are derived from the CSS; `group`/`step`/`unit`/
@@ -23,7 +23,7 @@ const FONT_WEIGHT_OPTIONS = [
 ] as const;
 
 /**
- * Tier-1 raw palette colors from `packages/ui/styles/colors.css` (the `:root`
+ * Tier-1 raw palette colors from `packages/demo-ui/styles/colors.css` (the `:root`
  * `--palette-{group}-{step-or-role}` block). This is the raw material beneath the
  * semantic `--color-*` tokens in UI_COLOR_TOKENS below — same three-tier
  * model the doc-chrome panel exposes via `--palette-*` ramps and `--zd-*`
@@ -85,7 +85,7 @@ export const UI_PALETTE_COLORS: readonly UiPaletteColor[] = [
 ];
 
 /**
- * Color tokens from `packages/ui/styles/colors.css`.
+ * Color tokens from `packages/demo-ui/styles/colors.css`.
  *
  * All values use light-dark() for dual-scheme support. Defaults here are
  * the full CSS declarations including both light and dark sides.
@@ -310,7 +310,7 @@ export const UI_COLOR_TOKENS: readonly TokenDef[] = [
 ];
 
 /**
- * Spacing tokens from `packages/ui/styles/tokens.css`.
+ * Spacing tokens from `packages/demo-ui/styles/tokens.css`.
  *
  * Coverage: 15 tokens total.
  */
@@ -453,7 +453,7 @@ export const UI_SPACING_TOKENS: readonly TokenDef[] = [
 ];
 
 /**
- * Font tokens from `packages/ui/styles/tokens.css`.
+ * Font tokens from `packages/demo-ui/styles/tokens.css`.
  *
  * Coverage: 22 tokens total.
  */
@@ -669,7 +669,7 @@ export const UI_FONT_TOKENS: readonly TokenDef[] = [
 ];
 
 /**
- * Size tokens from `packages/ui/styles/tokens.css`.
+ * Size tokens from `packages/demo-ui/styles/tokens.css`.
  *
  * Coverage: 8 tokens total.
  * `--radius-full` carries a pill toggle (sentinel 9999px).

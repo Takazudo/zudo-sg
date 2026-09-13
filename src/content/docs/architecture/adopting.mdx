@@ -24,6 +24,10 @@ The engine is a zfb plugin package built for **Preact + zfb hosts only**. It dep
    - `previewStyles`: the project-root-relative CSS entry the preview iframes should compile (see [Tokens and preview CSS](./tokens-and-preview-css)).
    - Optionally `categoryOrder`, `uiPackageName`, `tokens: { cssFiles, manifestOut }`, and `routes` overrides for the four URL patterns.
 
+   <Note>
+     `componentsRoots` always points at a component package the adopting project brings itself — the engine installs no component set of its own. The `new-component` CLI command scaffolds one component at a time into that package; it never installs or seeds a starter library. A components-only package with its stories co-located beside each component (the shape this repository's own `@zudo-sg/demo-ui` uses) is the recommended structure to point `componentsRoots` at.
+   </Note>
+
 3. **Compose `zudoSg()` / `withZudoSg()` into `zfb.config.ts`.** `withZudoSg(presetFragment, zudoSgConfig)` appends the engine's plugin descriptors and content collections after a zudo-doc preset's own — the routes plugin fails fast at setup if it can't find the zudo-doc routes descriptor already in the list, so order matters:
 
    ```ts

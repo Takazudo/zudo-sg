@@ -5,9 +5,9 @@
 //
 // Mounted by pages/preview/contact.tsx — a real, live-fetching page reachable
 // at /preview/contact, per the previewRoute escape hatch documented in
-// packages/ui/STORIES.md §6. That contract requires request mocking to live
+// packages/demo-ui/STORIES.md §6. That contract requires request mocking to live
 // ENTIRELY inside the demo page/island, never in *.stories.tsx or component
-// source under packages/ui/src — this file is where it belongs.
+// source under packages/demo-ui/src — this file is where it belongs.
 //
 // On mount, starts an MSW browser worker registered at a base-aware
 // `/preview/` service-worker scope (see withBase), exactly as the retired
@@ -43,9 +43,9 @@
 // (see pages/lib/_body-end-islands.tsx's orphan-component note).
 import type { JSX } from "preact";
 import { useEffect, useState } from "preact/hooks";
-import { ContactForm } from "@zudo-sg/ui/src/forms/contact-form/contact-form.tsx";
-import ContactFormEnhancer from "@zudo-sg/ui/src/forms/contact-form/contact-form-enhancer.tsx";
-import type { FormSubmitAdapter } from "@zudo-sg/ui/src/forms/lib/create-form-enhancer.ts";
+import { ContactForm } from "@zudo-sg/demo-ui/src/forms/contact-form/contact-form.tsx";
+import ContactFormEnhancer from "@zudo-sg/demo-ui/src/forms/contact-form/contact-form-enhancer.tsx";
+import type { FormSubmitAdapter } from "@zudo-sg/demo-ui/src/forms/lib/create-form-enhancer.ts";
 import { withBase } from "@/utils/base";
 
 const SUCCESS_PATH = "/preview/api/contact-demo/send";

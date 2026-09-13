@@ -1,14 +1,14 @@
 /**
  * Bound MDX section components — thin wrappers pairing the generic,
- * prop-driven `@zudo-sg/ui` section components with this demo's own
+ * prop-driven `@zudo-sg/demo-ui` section components with this demo's own
  * fictional dummy dataset, registered under the same tag names the content
  * collection already uses (`<CompanyProfileTable />`, `<HistoryTimeline />`,
  * ..) — see `_mdx-components.ts`, which registers these (not the raw
- * `@zudo-sg/ui` components) into the MDX component map.
+ * `@zudo-sg/demo-ui` components) into the MDX component map.
  *
- * `@zudo-sg/ui`'s ported section components take no default data (unlike
+ * `@zudo-sg/demo-ui`'s ported section components take no default data (unlike
  * the reference implementation these are ported from, whose components
- * baked mock data in as prop defaults, since `@zudo-sg/ui` stays free of any
+ * baked mock data in as prop defaults, since `@zudo-sg/demo-ui` stays free of any
  * app-specific content) — every consuming app supplies its own. Each of
  * these tags is used in exactly one content page, so this file's per-tag
  * dataset is that page's single answer; content itself stays exactly what
@@ -18,32 +18,32 @@
  * `NewsList` here is a live variant: it reads the `category`/`limit` props
  * the content collection already passes (`content/news/index.mdx`,
  * `content/ir/news.mdx`) and derives `items` from `lib/news.ts`'s
- * `getNews()` at render time — `@zudo-sg/ui`'s `NewsList` itself takes no
+ * `getNews()` at render time — `@zudo-sg/demo-ui`'s `NewsList` itself takes no
  * content-collection dependency, by design.
  */
 import {
   CompanyProfileTable as CompanyProfileTableBase,
   type CompanyProfileRow,
-} from "@zudo-sg/ui/src/landing/company-profile-table/company-profile-table.tsx";
+} from "@zudo-sg/demo-ui/src/landing/company-profile-table/company-profile-table.tsx";
 import {
   HistoryTimeline as HistoryTimelineBase,
   type HistoryEntry,
-} from "@zudo-sg/ui/src/landing/history-timeline/history-timeline.tsx";
+} from "@zudo-sg/demo-ui/src/landing/history-timeline/history-timeline.tsx";
 import {
   LocationList as LocationListBase,
   type LocationGroup,
-} from "@zudo-sg/ui/src/landing/location-list/location-list.tsx";
-import { GroupCompanyGrid as GroupCompanyGridBase } from "@zudo-sg/ui/src/landing/group-company-grid/group-company-grid.tsx";
-import type { GroupCompany } from "@zudo-sg/ui/src/landing/group-company-grid/group-company-grid.tsx";
-import { ProductCategoryGrid as ProductCategoryGridBase } from "@zudo-sg/ui/src/landing/product-category-grid/product-category-grid.tsx";
-import { StrengthList as StrengthListBase, type Strength } from "@zudo-sg/ui/src/landing/strength-list/strength-list.tsx";
-import { BusinessLinePortal as BusinessLinePortalBase } from "@zudo-sg/ui/src/landing/business-line-portal/business-line-portal.tsx";
-import { FinancialHighlights as FinancialHighlightsBase } from "@zudo-sg/ui/src/landing/financial-highlights/financial-highlights.tsx";
-import type { FinancialMetric } from "@zudo-sg/ui/src/landing/financial-highlights/financial-highlights.tsx";
-import { CertList as CertListBase, type Cert } from "@zudo-sg/ui/src/landing/cert-list/cert-list.tsx";
-import { InitiativeGrid as InitiativeGridBase, type Initiative } from "@zudo-sg/ui/src/landing/initiative-grid/initiative-grid.tsx";
-import { ValuePillars as ValuePillarsBase, type ValuePillar } from "@zudo-sg/ui/src/landing/value-pillars/value-pillars.tsx";
-import { NewsList as NewsListBase } from "@zudo-sg/ui/src/news/news-list/news-list.tsx";
+} from "@zudo-sg/demo-ui/src/landing/location-list/location-list.tsx";
+import { GroupCompanyGrid as GroupCompanyGridBase } from "@zudo-sg/demo-ui/src/landing/group-company-grid/group-company-grid.tsx";
+import type { GroupCompany } from "@zudo-sg/demo-ui/src/landing/group-company-grid/group-company-grid.tsx";
+import { ProductCategoryGrid as ProductCategoryGridBase } from "@zudo-sg/demo-ui/src/landing/product-category-grid/product-category-grid.tsx";
+import { StrengthList as StrengthListBase, type Strength } from "@zudo-sg/demo-ui/src/landing/strength-list/strength-list.tsx";
+import { BusinessLinePortal as BusinessLinePortalBase } from "@zudo-sg/demo-ui/src/landing/business-line-portal/business-line-portal.tsx";
+import { FinancialHighlights as FinancialHighlightsBase } from "@zudo-sg/demo-ui/src/landing/financial-highlights/financial-highlights.tsx";
+import type { FinancialMetric } from "@zudo-sg/demo-ui/src/landing/financial-highlights/financial-highlights.tsx";
+import { CertList as CertListBase, type Cert } from "@zudo-sg/demo-ui/src/landing/cert-list/cert-list.tsx";
+import { InitiativeGrid as InitiativeGridBase, type Initiative } from "@zudo-sg/demo-ui/src/landing/initiative-grid/initiative-grid.tsx";
+import { ValuePillars as ValuePillarsBase, type ValuePillar } from "@zudo-sg/demo-ui/src/landing/value-pillars/value-pillars.tsx";
+import { NewsList as NewsListBase } from "@zudo-sg/demo-ui/src/news/news-list/news-list.tsx";
 
 import { BUSINESS_SEGMENTS } from "../config/segments";
 import { BUSINESS_LINE_LIST } from "../config/lines";

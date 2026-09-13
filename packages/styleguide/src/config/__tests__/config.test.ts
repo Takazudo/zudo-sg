@@ -15,19 +15,19 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 
 const OPTIONS: ZudoSgComposeOptions = {
   componentsRoots: [
-    { dir: "packages/ui/src", importBase: "@zudo-sg/ui/src" },
+    { dir: "packages/demo-ui/src", importBase: "@zudo-sg/demo-ui/src" },
     { dir: "packages/extra/src", importBase: "@zudo-sg/extra/src" },
   ],
   registryOut: "./src/styleguide/sg-registry.ts",
   categoryOrder: ["Actions", "Forms"],
-  uiPackageName: "@zudo-sg/ui",
-  barrelIndex: "packages/ui/src/index.ts",
+  uiPackageName: "@zudo-sg/demo-ui",
+  barrelIndex: "packages/demo-ui/src/index.ts",
   tokens: { cssFiles: ["a.css", "b.css"], manifestOut: "./src/config/ui-design-tokens-manifest.ts" },
   previewStyles: "./src/styles/preview-entry.css",
   catalog: { title: "Catalog" },
   zdtpApplyProxy: {
     routingFile: "./zdtp-panel-routing.json",
-    writeRoot: "./packages/ui/styles",
+    writeRoot: "./packages/demo-ui/styles",
     tabsModule: "./src/config/preview-token-panel-tabs.ts",
   },
 };
@@ -48,12 +48,12 @@ describe("zudoSg()", () => {
         options: {
           registryModule: "./src/styleguide/sg-registry.ts",
           categoryOrder: ["Actions", "Forms"],
-          uiPackageName: "@zudo-sg/ui",
+          uiPackageName: "@zudo-sg/demo-ui",
           previewCssUrl: "/_zudo-sg/preview.css",
           catalog: { title: "Catalog" },
           tokensManifestModule: "./src/config/ui-design-tokens-manifest.ts",
           componentDocs: [
-            { keyPrefix: "ui/src", collection: "componentDocs" },
+            { keyPrefix: "demo-ui/src", collection: "componentDocs" },
             { keyPrefix: "extra/src", collection: "componentDocs1" },
           ],
         },
@@ -66,7 +66,7 @@ describe("zudoSg()", () => {
         name: ZDTP_APPLY_PROXY_PLUGIN_NAME,
         options: {
           routingFile: "./zdtp-panel-routing.json",
-          writeRoot: "./packages/ui/styles",
+          writeRoot: "./packages/demo-ui/styles",
           tabsModule: "./src/config/preview-token-panel-tabs.ts",
         },
       },
@@ -94,7 +94,7 @@ describe("zudoSg()", () => {
 
   it("registers one componentDocs collection per components root", () => {
     expect(zudoSg(OPTIONS).collections).toEqual([
-      { name: "componentDocs", path: "packages/ui/src", include: ["**/*.mdx"] },
+      { name: "componentDocs", path: "packages/demo-ui/src", include: ["**/*.mdx"] },
       { name: "componentDocs1", path: "packages/extra/src", include: ["**/*.mdx"] },
     ]);
   });

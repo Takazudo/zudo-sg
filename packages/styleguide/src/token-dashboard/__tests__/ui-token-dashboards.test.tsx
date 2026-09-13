@@ -8,7 +8,7 @@ import { createTokenDashboards } from "../create-token-dashboards.js";
 
 /**
  * Small, self-contained manifest fixture (a curated subset of real
- * `@zudo-sg/ui` token shapes) — the package must not import a host's
+ * `@zudo-sg/demo-ui` token shapes) — the package must not import a host's
  * generated manifest, so this proves `createTokenDashboards` works from
  * plain data alone. Two `light-dark()` color tokens are mode-dependent;
  * everything else is mode-independent.

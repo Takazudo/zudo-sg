@@ -1,6 +1,6 @@
 "use client";
 
-import { ThemeControl } from "@zudo-sg/ui/src/shared/theme-control/theme-control.tsx";
+import { ThemeControl } from "@zudo-sg/demo-ui/src/shared/theme-control/theme-control.tsx";
 
 /**
  * Scanner-visible client wrapper around the shared Preact-hook control.

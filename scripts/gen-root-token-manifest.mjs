@@ -3,7 +3,7 @@
 //
 // Codegen (#211, wired in): regenerates src/config/design-tokens-manifest.ts
 // — the ROOT host's own token manifest — from the real ROOT source of truth:
-// src/styles/global.css and the two shared @zudo-sg/ui files it @imports, via
+// src/styles/global.css and the two shared @zudo-sg/demo-ui files it @imports, via
 // the css-var-resolver.mjs cross-file resolver (#209). Replaces the hand copy
 // scripts/gen-token-manifest.mjs's own header comment used to scope OUT of
 // that generator's simpler single-file-parse contract (see #208/#210/#211).
@@ -18,7 +18,7 @@
 //                                                        # up to date (exit 1 on
 //                                                        # drift, no write)
 //
-// MAINTENANCE: edit src/styles/global.css / packages/ui/styles/{tokens,colors}.css
+// MAINTENANCE: edit src/styles/global.css / packages/demo-ui/styles/{tokens,colors}.css
 // (the source of truth) or the SPECS tables in scripts/lib/root-token-manifest.mjs,
 // then run `pnpm gen:root-token-manifest` and commit the regenerated manifest.
 // Never hand-edit src/config/design-tokens-manifest.ts.
@@ -35,8 +35,8 @@ import {
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, "..");
 
-const TOKENS_CSS_PATH = resolve(ROOT, "packages/ui/styles/tokens.css");
-const COLORS_CSS_PATH = resolve(ROOT, "packages/ui/styles/colors.css");
+const TOKENS_CSS_PATH = resolve(ROOT, "packages/demo-ui/styles/tokens.css");
+const COLORS_CSS_PATH = resolve(ROOT, "packages/demo-ui/styles/colors.css");
 const GLOBAL_CSS_PATH = resolve(ROOT, "src/styles/global.css");
 const MANIFEST_PATH = resolve(ROOT, "src/config/design-tokens-manifest.ts");
 
@@ -48,8 +48,8 @@ function main() {
   const globalCss = readFileSync(GLOBAL_CSS_PATH, "utf8");
 
   // Source order MUST track the literal @import order in src/styles/global.css:
-  //   global.css:21  @import "@zudo-sg/ui/styles/tokens.css"
-  //   global.css:30  @import "@zudo-sg/ui/styles/colors.css"
+  //   global.css:21  @import "@zudo-sg/demo-ui/styles/tokens.css"
+  //   global.css:30  @import "@zudo-sg/demo-ui/styles/colors.css"
   // global.css's own declarations (its @theme override block + :root block)
   // come after all of its @import lines — CSS requires @import to precede
   // other rules — and are supplied here as the LAST source, so they win on
@@ -59,8 +59,8 @@ function main() {
   // lines are ever reordered or a new source file is added to the chain,
   // THIS ARRAY MUST BE UPDATED TO MATCH.
   const resolver = createCssVarResolver([
-    { label: "packages/ui/styles/tokens.css", cssText: tokensCss },
-    { label: "packages/ui/styles/colors.css", cssText: colorsCss },
+    { label: "packages/demo-ui/styles/tokens.css", cssText: tokensCss },
+    { label: "packages/demo-ui/styles/colors.css", cssText: colorsCss },
     { label: "src/styles/global.css", cssText: globalCss },
   ]);
 

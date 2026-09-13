@@ -20,7 +20,7 @@ import {
 } from "../component-scaffold.js";
 import { parseArgs } from "../new-component.js";
 
-const UI_PACKAGE_NAME = "@zudo-sg/ui";
+const UI_PACKAGE_NAME = "@zudo-sg/demo-ui";
 const VALID_CATEGORIES = [
   "Actions",
   "Typography",
@@ -164,11 +164,11 @@ describe("categorySlug", () => {
 
 describe("assertUnusedName", () => {
   it("passes when the name isn't taken", () => {
-    expect(() => assertUnusedName("demo-widget", ["badge", "button"], "packages/ui/src")).not.toThrow();
+    expect(() => assertUnusedName("demo-widget", ["badge", "button"], "packages/demo-ui/src")).not.toThrow();
   });
 
   it("throws when the name is already a component directory", () => {
-    expect(() => assertUnusedName("badge", ["badge", "button"], "packages/ui/src")).toThrow(/already exists/);
+    expect(() => assertUnusedName("badge", ["badge", "button"], "packages/demo-ui/src")).toThrow(/already exists/);
   });
 });
 

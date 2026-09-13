@@ -106,11 +106,11 @@ export default defineConfig({
     {
       ...zudoSgConfig,
       // Preview design-token panel: dev-only same-origin Apply endpoint that
-      // persists tweaks into packages/ui/styles/*.css, plus the panel island's
+      // persists tweaks into packages/demo-ui/styles/*.css, plus the panel island's
       // host tabs.
       zdtpApplyProxy: {
         routingFile: "./zdtp-panel-routing.json",
-        writeRoot: "./packages/ui/styles",
+        writeRoot: "./packages/demo-ui/styles",
         tabsModule: "./src/config/preview-token-panel-tabs.ts",
       },
     },

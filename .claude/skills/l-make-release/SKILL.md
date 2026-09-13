@@ -36,7 +36,7 @@ the GitHub Release. **One invocation takes the release all the way to npm.**
   **Version source of truth is `packages/styleguide/package.json`**'s
   `version` field. The root `package.json` stays `private: true` and is
   **never** touched by this skill — the styleguide host site, `apps/demo`,
-  `doc/`, and `packages/ui` all have their own lifecycle and are not part of
+  `doc/`, and `packages/demo-ui` all have their own lifecycle and are not part of
   this release.
 - **Stable only** (ADR `docs/adr/styleguide-engine.md` decision 12). There is
   **no `next` dist-tag, no prerelease suffix, no `next`/`stable` argument** for
@@ -95,7 +95,7 @@ it.
   tag is pushed (Step 9), the fix is to cut a **new** version, not retry the
   same one — see [Failure Recovery](#failure-recovery).
 - This skill never mutates the root `package.json`, `apps/demo`, `doc/`, or
-  `packages/ui` — the styleguide engine is the only release surface here.
+  `packages/demo-ui` — the styleguide engine is the only release surface here.
 
 ## Step 1: Preconditions
 

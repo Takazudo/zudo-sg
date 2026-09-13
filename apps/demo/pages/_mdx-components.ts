@@ -22,7 +22,7 @@
  *       _mdx-content-sections.tsx's header doc for why the data lives there
  *       rather than inline in content).
  *   h2-h6 / p / a / strong / em / ul / ol / li / blockquote / table / th /
- *   td / dl / dt / dd → Prose* typography overrides (@zudo-sg/ui/src/content).
+ *   td / dl / dt / dd → Prose* typography overrides (@zudo-sg/demo-ui/src/content).
  *       `defaultComponents` (spread below) only covers h2-h4/p/a/strong/
  *       blockquote/ul/ol/table/code — the Prose* overrides here take
  *       precedence for every one of those plus the tags it doesn't cover
@@ -32,12 +32,12 @@
 import { defaultComponents } from "@takazudo/zfb";
 import type { MdxComponents } from "@takazudo/zfb";
 
-import { Card } from "@zudo-sg/ui/src/cards/card/card.tsx";
-import { CardGrid } from "@zudo-sg/ui/src/cards/card-grid/card-grid.tsx";
-import { Callout, Note } from "@zudo-sg/ui/src/cards/callout/callout.tsx";
-import { LineHero } from "@zudo-sg/ui/src/landing/line-hero/line-hero.tsx";
-import { ContactForm } from "@zudo-sg/ui/src/forms/contact-form/contact-form.tsx";
-import { RecruitEntryForm } from "@zudo-sg/ui/src/forms/recruit-entry-form/recruit-entry-form.tsx";
+import { Card } from "@zudo-sg/demo-ui/src/cards/card/card.tsx";
+import { CardGrid } from "@zudo-sg/demo-ui/src/cards/card-grid/card-grid.tsx";
+import { Callout, Note } from "@zudo-sg/demo-ui/src/cards/callout/callout.tsx";
+import { LineHero } from "@zudo-sg/demo-ui/src/landing/line-hero/line-hero.tsx";
+import { ContactForm } from "@zudo-sg/demo-ui/src/forms/contact-form/contact-form.tsx";
+import { RecruitEntryForm } from "@zudo-sg/demo-ui/src/forms/recruit-entry-form/recruit-entry-form.tsx";
 
 import {
   CompanyProfileTable,
@@ -54,21 +54,21 @@ import {
   NewsList,
 } from "./_mdx-content-sections";
 
-import { ProseH2 } from "@zudo-sg/ui/src/content/prose-h2/prose-h2.tsx";
-import { ProseH3 } from "@zudo-sg/ui/src/content/prose-h3/prose-h3.tsx";
-import { ProseH4 } from "@zudo-sg/ui/src/content/prose-h4/prose-h4.tsx";
-import { ProseH5 } from "@zudo-sg/ui/src/content/prose-h5/prose-h5.tsx";
-import { ProseH6 } from "@zudo-sg/ui/src/content/prose-h6/prose-h6.tsx";
-import { ProseP } from "@zudo-sg/ui/src/content/prose-p/prose-p.tsx";
-import { ProseA } from "@zudo-sg/ui/src/content/prose-a/prose-a.tsx";
-import { ProseStrong } from "@zudo-sg/ui/src/content/prose-strong/prose-strong.tsx";
-import { ProseEm } from "@zudo-sg/ui/src/content/prose-em/prose-em.tsx";
-import { ProseUl } from "@zudo-sg/ui/src/content/prose-ul/prose-ul.tsx";
-import { ProseOl } from "@zudo-sg/ui/src/content/prose-ol/prose-ol.tsx";
-import { ProseLi } from "@zudo-sg/ui/src/content/prose-li/prose-li.tsx";
-import { ProseBlockquote } from "@zudo-sg/ui/src/content/prose-blockquote/prose-blockquote.tsx";
-import { ProseTable, ProseTh, ProseTd } from "@zudo-sg/ui/src/content/prose-table/prose-table.tsx";
-import { ProseDl, ProseDt, ProseDd } from "@zudo-sg/ui/src/content/prose-dl/prose-dl.tsx";
+import { ProseH2 } from "@zudo-sg/demo-ui/src/content/prose-h2/prose-h2.tsx";
+import { ProseH3 } from "@zudo-sg/demo-ui/src/content/prose-h3/prose-h3.tsx";
+import { ProseH4 } from "@zudo-sg/demo-ui/src/content/prose-h4/prose-h4.tsx";
+import { ProseH5 } from "@zudo-sg/demo-ui/src/content/prose-h5/prose-h5.tsx";
+import { ProseH6 } from "@zudo-sg/demo-ui/src/content/prose-h6/prose-h6.tsx";
+import { ProseP } from "@zudo-sg/demo-ui/src/content/prose-p/prose-p.tsx";
+import { ProseA } from "@zudo-sg/demo-ui/src/content/prose-a/prose-a.tsx";
+import { ProseStrong } from "@zudo-sg/demo-ui/src/content/prose-strong/prose-strong.tsx";
+import { ProseEm } from "@zudo-sg/demo-ui/src/content/prose-em/prose-em.tsx";
+import { ProseUl } from "@zudo-sg/demo-ui/src/content/prose-ul/prose-ul.tsx";
+import { ProseOl } from "@zudo-sg/demo-ui/src/content/prose-ol/prose-ol.tsx";
+import { ProseLi } from "@zudo-sg/demo-ui/src/content/prose-li/prose-li.tsx";
+import { ProseBlockquote } from "@zudo-sg/demo-ui/src/content/prose-blockquote/prose-blockquote.tsx";
+import { ProseTable, ProseTh, ProseTd } from "@zudo-sg/demo-ui/src/content/prose-table/prose-table.tsx";
+import { ProseDl, ProseDt, ProseDd } from "@zudo-sg/demo-ui/src/content/prose-dl/prose-dl.tsx";
 import { MdxImage } from "./_mdx-image";
 
 export const mdxComponents: MdxComponents = {

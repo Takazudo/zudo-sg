@@ -121,7 +121,7 @@ describe("resolveRoutesPluginOptions", () => {
       registryModule: REGISTRY,
       routes: { componentsSlug: "/ui/[slug]", tokens: "/design/tokens" },
       categoryOrder: ["Actions", "Forms"],
-      uiPackageName: "@zudo-sg/ui",
+      uiPackageName: "@zudo-sg/demo-ui",
       previewCssUrl: "/assets/sg-preview.css",
       catalog: { title: "UI kit", intro: "All the parts." },
       componentDocs: [
@@ -136,7 +136,7 @@ describe("resolveRoutesPluginOptions", () => {
       tokens: "/design/tokens",
     });
     expect(resolved.categoryOrder).toEqual(["Actions", "Forms"]);
-    expect(resolved.uiPackageName).toBe("@zudo-sg/ui");
+    expect(resolved.uiPackageName).toBe("@zudo-sg/demo-ui");
     expect(resolved.previewCssUrl).toBe("/assets/sg-preview.css");
     expect(resolved.catalog).toEqual({ title: "UI kit", intro: "All the parts." });
     expect(resolved.componentDocs).toEqual([
@@ -265,7 +265,7 @@ describe("routes plugin setup", () => {
         registryModule: REGISTRY,
         routes: { componentsIndex: "/ui" },
         categoryOrder: ["Actions"],
-        uiPackageName: "@zudo-sg/ui",
+        uiPackageName: "@zudo-sg/demo-ui",
         componentDocs: [{ keyPrefix: "ui", collection: "componentDocs" }],
       },
       { base: "/styleguide/" },
@@ -277,7 +277,7 @@ describe("routes plugin setup", () => {
       base: "/styleguide/",
       routes: { ...DEFAULT_SG_ROUTES, componentsIndex: "/ui" },
       categoryOrder: ["Actions"],
-      uiPackageName: "@zudo-sg/ui",
+      uiPackageName: "@zudo-sg/demo-ui",
       previewCssUrl: "/_zudo-sg/preview.css",
       catalog: { title: "Component catalog", intro: null },
       componentDocs: [{ keyPrefix: "ui", collection: "componentDocs" }],

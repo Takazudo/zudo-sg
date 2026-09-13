@@ -35,7 +35,7 @@ FAILURES=()
 STEPS=(
   "Format check (mdx)"
   "Design token lint (lint:tokens)"
-  "Codegen/provider drift check (codegen checks + UI provider boundary)"
+  "Codegen drift check"
   "Type checking (zfb check)"
   "Unit tests (test:unit)"
   "Build (zfb build)"
@@ -84,18 +84,18 @@ fi
 # ── Step 3: Codegen drift check ───────────────────────
 # Verifies generated files are in sync with their source of truth: the z-index
 # block in src/styles/global.css (from src/config/z-index-tokens.ts), the story
-# registry at src/styleguide/sg-registry.ts (from packages/ui/src/*/*.stories.tsx,
+# registry at src/styleguide/sg-registry.ts (from packages/demo-ui/src/*/*.stories.tsx,
 # via the `zudo-sg gen-registry` CLI driven by zudo-sg.config.mjs — categories
 # are open strings, not a generated marker block; see
-# packages/ui/src/stories/categories.ts), the UI token manifest (from
-# packages/ui/styles/{tokens,colors}.css, via `zudo-sg gen-token-manifest`),
+# packages/demo-ui/src/stories/categories.ts), the UI token manifest (from
+# packages/demo-ui/styles/{tokens,colors}.css, via `zudo-sg gen-token-manifest`),
 # and the ROOT host's own token manifest (from src/styles/global.css + the two
-# shared @zudo-sg/ui files it @imports, resolved cross-file — see
+# shared @zudo-sg/demo-ui files it @imports, resolved cross-file — see
 # scripts/gen-root-token-manifest.mjs).
 # Catches a hand-edited generated block or a forgotten `pnpm gen:*` re-run
 # before it reaches CI.
 step
-if (cd "$ROOT_DIR" && pnpm run check:z-index && pnpm run check:sg-registry && pnpm run check:composer-pack && pnpm run check:ui-provider-boundary && pnpm run check:token-manifest && pnpm run check:root-token-manifest); then
+if (cd "$ROOT_DIR" && pnpm run check:z-index && pnpm run check:sg-registry && pnpm run check:token-manifest && pnpm run check:root-token-manifest); then
   pass "Codegen drift check passed"
 else
   fail "Codegen drift check"

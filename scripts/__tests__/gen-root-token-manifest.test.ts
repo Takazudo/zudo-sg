@@ -7,7 +7,7 @@
 //
 // Two layers, both against the REAL project CSS (no synthetic fixtures):
 //  - Library level: build/render straight from the real
-//    packages/ui/styles/{tokens,colors}.css + src/styles/global.css content,
+//    packages/demo-ui/styles/{tokens,colors}.css + src/styles/global.css content,
 //    asserting the known unit-transform cases (#210's LOCKED spec) and that
 //    the render is idempotent against the committed generated manifest
 //    (src/config/design-tokens-manifest.ts).
@@ -36,8 +36,8 @@ import {
 const THIS_DIR = dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = resolve(THIS_DIR, "..", "..");
 
-const TOKENS_CSS_PATH = join(PROJECT_ROOT, "packages", "ui", "styles", "tokens.css");
-const COLORS_CSS_PATH = join(PROJECT_ROOT, "packages", "ui", "styles", "colors.css");
+const TOKENS_CSS_PATH = join(PROJECT_ROOT, "packages", "demo-ui", "styles", "tokens.css");
+const COLORS_CSS_PATH = join(PROJECT_ROOT, "packages", "demo-ui", "styles", "colors.css");
 const GLOBAL_CSS_PATH = join(PROJECT_ROOT, "src", "styles", "global.css");
 const GENERATED_MANIFEST_PATH = join(
   PROJECT_ROOT,
@@ -48,8 +48,8 @@ const GENERATED_MANIFEST_PATH = join(
 
 function realResolver() {
   return createCssVarResolver([
-    { label: "packages/ui/styles/tokens.css", cssText: readFileSync(TOKENS_CSS_PATH, "utf8") },
-    { label: "packages/ui/styles/colors.css", cssText: readFileSync(COLORS_CSS_PATH, "utf8") },
+    { label: "packages/demo-ui/styles/tokens.css", cssText: readFileSync(TOKENS_CSS_PATH, "utf8") },
+    { label: "packages/demo-ui/styles/colors.css", cssText: readFileSync(COLORS_CSS_PATH, "utf8") },
     { label: "src/styles/global.css", cssText: readFileSync(GLOBAL_CSS_PATH, "utf8") },
   ]);
 }
@@ -194,7 +194,7 @@ beforeEach(() => {
   mkdirSync(sandboxParent, { recursive: true });
   sandbox = mkdtempSync(join(sandboxParent, "sandbox-"));
   mkdirSync(join(sandbox, "scripts", "lib"), { recursive: true });
-  mkdirSync(join(sandbox, "packages", "ui", "styles"), { recursive: true });
+  mkdirSync(join(sandbox, "packages", "demo-ui", "styles"), { recursive: true });
   mkdirSync(join(sandbox, "src", "styles"), { recursive: true });
   mkdirSync(join(sandbox, "src", "config"), { recursive: true });
 
@@ -206,11 +206,11 @@ beforeEach(() => {
   // Seed with the REAL project CSS content (not synthetic fixtures) so the
   // sandbox run resolves the same values the library-level tests assert.
   writeFileSync(
-    join(sandbox, "packages", "ui", "styles", "tokens.css"),
+    join(sandbox, "packages", "demo-ui", "styles", "tokens.css"),
     readFileSync(TOKENS_CSS_PATH, "utf8"),
   );
   writeFileSync(
-    join(sandbox, "packages", "ui", "styles", "colors.css"),
+    join(sandbox, "packages", "demo-ui", "styles", "colors.css"),
     readFileSync(COLORS_CSS_PATH, "utf8"),
   );
   writeFileSync(join(sandbox, "src", "styles", "global.css"), readFileSync(GLOBAL_CSS_PATH, "utf8"));

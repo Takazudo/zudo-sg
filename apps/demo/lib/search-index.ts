@@ -8,7 +8,7 @@
  * doc for why the zfb-calling half and the pure half are split.
  */
 import { getCollection } from "@takazudo/zfb/content";
-import type { SearchDoc } from "@zudo-sg/ui/src/search/search-doc.ts";
+import type { SearchDoc } from "@zudo-sg/demo-ui/src/search/search-doc.ts";
 import { buildContentSchema } from "./content-schema";
 import { buildSearchIndex } from "./search-index-core";
 

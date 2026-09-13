@@ -1,7 +1,7 @@
 /** @jsxRuntime automatic */
 /** @jsxImportSource preact */
 // Live demo page for the ContactForm component's `previewRoute`
-// (packages/ui/STORIES.md §6) — reachable directly at `/preview/contact`,
+// (packages/demo-ui/STORIES.md §6) — reachable directly at `/preview/contact`,
 // surfaced from the catalog detail page as a plain "Live demo" link. This is
 // NOT the catalog's variant iframe system (`/components/preview`); it's a
 // real page the story author owns, used precisely because a real async-submit
@@ -16,13 +16,13 @@
 // Marked `data-sg-preview-doc` — the same attribute
 // the engine preview route uses — and links the same standalone preview
 // stylesheet (/_zudo-sg/preview.css), whose `:root[data-sg-preview-doc]` token
-// roots restore the @zudo-sg/ui palette over the bundle's doc-chrome
+// roots restore the @zudo-sg/demo-ui palette over the bundle's doc-chrome
 // re-assertion (this document has no ColorSchemeProvider, so the re-asserted
 // --color-accent/-danger/etc. would otherwise resolve to undefined --zd-*).
 //
 // All MSW/fetch/state logic lives in the ContactFormDemo island — this module
 // stays server-rendered scaffolding, per the previewRoute contract (mocking
-// must never reach packages/ui/src or *.stories.tsx, and page modules here
+// must never reach packages/demo-ui/src or *.stories.tsx, and page modules here
 // are SSR code so the browser-only bits must be client-island-only).
 
 import "../../src/styles/global.css";

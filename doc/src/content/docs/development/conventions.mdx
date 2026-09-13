@@ -12,11 +12,11 @@ Use Preact islands only when a feature needs client-side interactivity. Island m
 
 ## Component authoring
 
-Shared UI components live under `packages/ui/src/<component>/`. Use kebab-case component directory names and co-locate the component, story, tests, and optional component MDX docs.
+Shared UI components live under `packages/demo-ui/src/<component>/`. Use kebab-case component directory names and co-locate the component, story, tests, and optional component MDX docs.
 
 When a component is added or renamed:
 
-- keep exports in `packages/ui/src/index.ts` sorted into the existing category sections;
+- keep exports in `packages/demo-ui/src/index.ts` sorted into the existing category sections;
 - add or update `*.stories.tsx` for catalog coverage;
 - run `pnpm gen:sg-registry` when story files change;
 - keep component markup on semantic token utilities.

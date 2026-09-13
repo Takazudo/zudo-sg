@@ -15,13 +15,10 @@ The canonical types are `@takazudo/zudo-sg/stories`
 (`packages/styleguide/src/stories/types.ts` in this repo):
 `StoryMeta`, `Story<P>`, `StoryControl<P>`, `StoryModule`, `defineStory`.
 
-A component provider package (this repo's `@zudo-sg/ui`) keeps a
-byte-equivalent copy of the same type body at `packages/ui/src/stories/types.ts`
-so it stays installable and type-resolvable with no engine installed —
-external consumers of the provider typecheck stories from source, without a
-dependency on the engine package. A drift guard
-(`scripts/check-story-contract-sync.mjs`, wired into `pnpm check`) fails the
-build if the two copies diverge.
+A host's own component package (this repo's `@zudo-sg/demo-ui`) re-exports the
+same types from `packages/demo-ui/src/stories/types.ts`, kept as its own
+module because the engine's `new-component` scaffold generates relative
+`../stories/types` imports.
 
 ## File location & discovery
 
@@ -33,7 +30,7 @@ engine's `discoverStories()` walks either one recursively, at any depth:
 - **Flat, one directory deep:** `<componentsRoot>/<name>/<name>.stories.tsx`
   — e.g. `ui/button/button.stories.tsx`.
 - **Category-nested:** `<componentsRoot>/<category-slug>/<name>/<name>.stories.tsx`
-  — e.g. `packages/ui/src/cards/stat-card/stat-card.stories.tsx`.
+  — e.g. `packages/demo-ui/src/cards/stat-card/stat-card.stories.tsx`.
 
 :::warning[Stories must live at least one directory below the components root]
 `discoverStories()` derives each entry's `import * as <name>` identifier from
@@ -82,7 +79,7 @@ const meta: StoryMeta = {
   title: "Button",
   category: "Actions",
   description: "Primary action control with three variants and three sizes.",
-  usage: `import { Button } from "@zudo-sg/ui";\n\n<Button>Save</Button>`,
+  usage: `import { Button } from "@zudo-sg/demo-ui";\n\n<Button>Save</Button>`,
   order: 1,
 };
 export default meta;

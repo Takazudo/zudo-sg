@@ -11,8 +11,7 @@
 // into `/styleguide/assets/islands.js` — dev scans host `pages/` only, so
 // without `pages/lib/_zudo-sg-islands.ts` this would 404 / omit the marker.
 //
-// Model: scripts/test-ui-provider-package.mjs (isolated copy + frozen
-// install) and scripts/__tests__/zudo-sg-no-stub-build.slow.test.ts (build +
+// Model: scripts/__tests__/zudo-sg-no-stub-build.slow.test.ts (build +
 // dev boot, free-port + process-group kill).
 
 import { spawn } from "node:child_process";
@@ -109,8 +108,8 @@ function stopDevServer(child) {
 async function packEngine(destination) {
   await mkdir(destination, { recursive: true });
   // `pnpm --filter @takazudo/zudo-sg pack`: the package has no lockfile of its
-  // own (unlike packages/ui), so this runs safely from the repo root — no
-  // standalone-tree contamination risk (see CLAUDE.md's packages/ui warning).
+  // own (unlike packages/demo-ui), so this runs safely from the repo root — no
+  // standalone-tree contamination risk (see CLAUDE.md's packages/demo-ui warning).
   const stdout = await runCapture(
     "corepack",
     ["pnpm", "--filter", "@takazudo/zudo-sg", "pack", "--pack-destination", destination],
@@ -139,7 +138,7 @@ function assertNoWhitelistEscape(files) {
     "CHANGELOG.md",
     "README.md",
   ]);
-  const forbiddenSubstrings = ["doc/", "src/", "apps/", "packages/ui", "fixtures/"];
+  const forbiddenSubstrings = ["doc/", "src/", "apps/", "packages/demo-ui", "fixtures/"];
   for (const file of files) {
     // npm tarball entries are prefixed "package/".
     const relative = file.replace(/^package\//u, "");

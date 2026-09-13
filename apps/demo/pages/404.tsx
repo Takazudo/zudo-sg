@@ -1,5 +1,5 @@
 import DefaultLayout from "../layouts/default";
-import { Container } from "@zudo-sg/ui/src/shared/container/container.tsx";
+import { Container } from "@zudo-sg/demo-ui/src/shared/container/container.tsx";
 
 export const frontmatter = { title: "404" };
 

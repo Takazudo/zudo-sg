@@ -1,15 +1,10 @@
 /**
- * @takazudo/zudo-sg — story-authoring contract (canonical copy)
+ * @takazudo/zudo-sg — story-authoring contract
  *
  * The shape every `*.stories.tsx` module satisfies so the engine's registry
  * (`@takazudo/zudo-sg/registry`) can discover and render stories. Exported as
- * `@takazudo/zudo-sg/stories`.
- *
- * DUPLICATED ON PURPOSE (ADR `docs/adr/styleguide-engine.md` decision 3): the
- * component provider keeps a byte-equivalent copy of everything below this
- * header at `packages/ui/src/stories/types.ts`, so `@zudo-sg/ui` stays
- * installable and type-resolvable with no engine installed. Edit both files
- * together; `pnpm check:story-contract-sync` fails on drift.
+ * `@takazudo/zudo-sg/stories`; host component packages (e.g.
+ * `packages/demo-ui/src/stories/types.ts`) re-export it rather than copy it.
  */
 
 import type { ComponentChildren } from "preact";

@@ -7,7 +7,7 @@ set -euo pipefail
 #
 #   1. asserts the tarball's file listing matches the `files` whitelist and
 #      leaks none of the host-only paths (doc/, pages/, src/content, apps/,
-#      packages/ui, fixtures/);
+#      packages/demo-ui, fixtures/);
 #   2. asserts every literal (non-wildcard) `exports` target resolves inside
 #      the tarball;
 #   3. installs the tarball into a scratch project exactly like an external
@@ -50,7 +50,7 @@ LISTING_FILE="$WORK_DIR/listing.txt"
 tar -tzf "$TARBALL" | sed 's|^package/||' >"$LISTING_FILE"
 
 ALLOWED_TOP_LEVEL="dist bin routes-src virtual-modules.d.ts styles.css CHANGELOG.md README.md package.json"
-FORBIDDEN_PREFIXES="doc/ pages/ src/content apps/ packages/ui fixtures/"
+FORBIDDEN_PREFIXES="doc/ pages/ src/content apps/ packages/demo-ui fixtures/"
 
 while IFS= read -r rel; do
   [ -z "$rel" ] && continue
