@@ -26,6 +26,10 @@ Consumers import the shared UI token CSS after Tailwind preflight and utilities:
 
 `tokens.css` defines spacing, typography, radius, shadow, and related non-color tokens. `colors.css` defines the UI package color system. Components use semantic utilities such as `bg-accent`, `text-fg`, `border-border`, and `bg-surface-2`; they do not reach into raw palette variables.
 
+## The preview stylesheet is compiled standalone
+
+The catalog's preview iframe (and the `/tokens` dashboards) render `@zudo-sg/ui` components inside the host document, which already ships its own doc-chrome Tailwind bundle. Injecting the host's global stylesheet into that preview would let it collide with the UI package's own `--color-*`/`--zd-*` tokens. Instead, the engine's preview-CSS plugin (`@takazudo/zudo-sg/plugins/preview-css`, one of the plugin descriptors `withZudoSg()` appends in `zfb.config.ts`) compiles the host's `previewStyles` entry (`zudo-sg.config.mjs`; this repo: `./src/styles/preview-entry.css` — Tailwind preflight + utilities + `@zudo-sg/ui/styles/{tokens,colors}.css`) as its own standalone stylesheet with `@tailwindcss/node`, and rewrites every `:root`/`:host` selector to `:root[data-sg-preview-doc]`/`:host` so the preview world's tokens win the cascade at higher specificity than the host bundle's colliding roots. It is served at one URL (`previewCssUrl`, default `/_zudo-sg/preview.css`) in both `zfb dev` and `zfb build`, recompiling in dev whenever the entry or an `@import`ed file changes.
+
 ## Three-tier color strategy
 
 The UI package follows the [Three-Tier Color Strategy](https://zudo-css-wisdom.takazudomodular.com/docs/styling/color/three-tier-color-strategy/):
@@ -52,15 +56,15 @@ The preview token panel is a second panel instance for `@zudo-sg/ui`. It has sep
 
 ## Shared build-safe tabs (`src/config/ui-token-tabs.ts`)
 
-`src/config/ui-token-tabs.ts` is the single source for the `@zudo-sg/ui` tab data used by the runtime preview panel and the static dashboard. It shapes the generated UI token manifest into `uiTokenTabs`, and exports `uiDashboardTabs` as the same array so tab order, defaults, item identities, palette grouping, and preview metadata cannot drift between the two consumers. `dashboardPreviewOverrides` supplies the dashboard's read-only sample choices for rows whose editor metadata cannot express the desired sample.
+`src/config/ui-token-tabs.ts` shapes the generated UI token manifest into `uiTokenTabs` and `dashboardPreviewOverrides` for the host's own preview token panel (`src/config/preview-token-panel-tabs.ts`, `src/config/preview-token-panel-config.ts` — the dev-only zdtp panel that writes into registered styleguide iframes). The static `/tokens` dashboard route itself is now injected by the `@takazudo/zudo-sg` engine rather than by this host file: the engine ships its own build-safe tab-shaping module (`packages/styleguide/src/token-dashboard/ui-token-tabs.ts`), fed by the manifest through the routes plugin's `virtual:zudo-sg-tokens` module (source: `zudo-sg.config.mjs`'s `tokens.manifestOut`, the same generated `ui-design-tokens-manifest.ts` the host module also reads). The two copies stay equivalent because both derive their shaping logic from the same generated manifest and the same `zudo-sg.config.mjs` token configuration — see `docs/adr/styleguide-engine.md` for the composition contract.
 
-Keep this module importable by plain Node during a build. Its runtime dependency is the generated `ui-design-tokens-manifest.ts`; zdtp and dashboard imports are type-only, and the module contains data-shaping code without browser globals, a dev-server module, or panel setup. The preview-only wiring stays in `preview-token-panel-config.ts`: `virtual:zdtp-apply-config`, the preview-iframe registry, and the `applySink` (along with the endpoint and routing values that serve that sink) remain outside the shared module.
+Keep the host module importable by plain Node during a build. Its runtime dependency is the generated `ui-design-tokens-manifest.ts`; zdtp and dashboard imports are type-only, and the module contains data-shaping code without browser globals, a dev-server module, or panel setup.
 
-`src/config/__tests__/ui-token-tabs.test.ts` enforces this boundary by checking the runtime import allowlist, importing the module with Node's native type stripping, and asserting that `uiDashboardTabs` and the preview config use the same tab array. It also checks the manifest mapping, the per-line palette order, and the dashboard override coverage.
+`src/config/__tests__/ui-token-tabs.test.ts` enforces this boundary by checking the runtime import allowlist and importing the module with Node's native type stripping. It also checks the manifest mapping, the per-line palette order, and the dashboard override coverage.
 
 ## Static token dashboard
 
-The `/tokens` page renders three server-rendered `TokenDashboard` instances. They do not use a client island, panel state, browser globals, or hydration: the light and dark views use `include="mode-dependent"` and show only rows whose declared values differ by mode, while the shared view uses `include="mode-independent"` and shows every other row once. The page uses the shared `uiDashboardTabs` data and `dashboardPreviewOverrides`, then gives the instances these stable IDs and titles:
+The `/tokens` route is injected by the `@takazudo/zudo-sg` engine (`packages/styleguide/src/routes/tokens.tsx`) and renders three server-rendered `TokenDashboard` instances (`@takazudo/zudo-sg/token-dashboard`). They do not use a client island, panel state, browser globals, or hydration: the light and dark views use `include="mode-dependent"` and show only rows whose declared values differ by mode, while the shared view uses `include="mode-independent"` and shows every other row once. The route uses the engine's own `uiDashboardTabs` data (built from the manifest virtual module) and `dashboardPreviewOverrides`, then gives the instances these stable IDs and titles:
 
 | ID | `TokenDashboard` props | Title |
 | --- | --- | --- |

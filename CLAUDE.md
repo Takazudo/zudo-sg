@@ -91,6 +91,20 @@ Do NOT use h1 (`#`) in doc content — the page title from frontmatter is render
 
 ## Component provider and product split
 
+- **Engine vs host.** `packages/styleguide` (published as `@takazudo/zudo-sg`)
+  is the installable styleguide engine, built the way `@takazudo/zudo-doc` is
+  built: it owns the story registry/scaffold/token-manifest CLI (`zudo-sg`),
+  the catalog/detail/preview/tokens routes, the preview iframe app, the code
+  panel, the preview token panel + iframe bridge, and the token dashboards.
+  This root project is the engine's dogfooding host — it owns its component
+  library (`packages/ui`), its stories, the small `zudo-sg.config.mjs`, its
+  token CSS, and the zudo-doc site config that composes the engine in via
+  `withZudoSg()` (`zfb.config.ts`). Full seam contract:
+  `docs/adr/styleguide-engine.md`; `fixtures/engine-host` +
+  `scripts/verify-styleguide-install.mjs` prove the same install works for a
+  foreign project (packed tarball, non-root `base`, outside the workspace).
+  This is a different axis from the provider/product split below (engine vs.
+  host, not UI-provider vs. Composer/Sitemapper product).
 - **zudo-sg owns the provider** — components, stories, typed
   `*.composer.tsx` sidecars, generated `packages/ui/src/composer-pack.ts`, and
   the explicit `packages/ui/styles/composer.css` entry live here.

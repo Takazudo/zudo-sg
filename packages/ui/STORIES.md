@@ -160,14 +160,17 @@ codegen details below).
 - **Discovery is codegen, not `import.meta.glob`.** zfb does not statically
   inline `import.meta.glob` — the literal call survives into the shared client
   islands bundle and throws in the browser (`import.meta.glob` is undefined
-  there). So the catalog cannot use a runtime glob at all. Instead,
-  [`scripts/gen-sg-registry.mjs`](../../scripts/gen-sg-registry.mjs) (repo
-  root) globs `packages/ui/src/**/*.stories.tsx` (any depth — both layouts
-  above) **on the filesystem at codegen time** and regenerates two
-  explicit-import lists from what it finds:
+  there). So the catalog cannot use a runtime glob at all. Instead, the
+  `zudo-sg gen-registry` CLI command — shipped by the `@takazudo/zudo-sg`
+  styleguide engine (`packages/styleguide/src/cli/registry/gen-registry.ts`),
+  invoked at the repo root as `pnpm gen:sg-registry` / `pnpm check:sg-registry`
+  — reads each `componentsRoots[]` entry from the host's `zudo-sg.config.mjs`,
+  globs it for `*.stories.tsx` (any depth — both layouts above) **on the
+  filesystem at codegen time**, and regenerates two explicit-import lists from
+  what it finds:
 
-  - `src/styleguide/data/sg-registry.ts` (repo root) — the catalog's
-    path→module registry.
+  - `src/styleguide/sg-registry.ts` (repo root; the path is
+    `zudo-sg.config.mjs`'s `registryOut`) — the catalog's path→module registry.
   - the `GENERATED:SG_REGISTRY_BEGIN`…`END` block in
     [`src/stories/__tests__/story-modules.ts`](./src/stories/__tests__/story-modules.ts)
     — the shared `STORY_MODULES` registry imported by `contract.test.ts` and
@@ -187,8 +190,8 @@ codegen details below).
   identifiers, both entries present in the generated map, neither silently
   overwriting the other. The generator also asserts every derived identifier
   is unique across the whole discovery pass and throws (no write) if it ever
-  finds two directories that fold to the same one — see
-  `scripts/__tests__/gen-sg-registry.test.ts`.
+  finds two directories that fold to the same one — see the CLI's own
+  `packages/styleguide/src/cli/registry/__tests__/` suite.
 
 - **After adding, renaming, or removing a story file**, run
   `pnpm gen:sg-registry` from the repo root and commit the regenerated files.
@@ -270,8 +273,8 @@ order first, then appends any
 category actually used by a story that isn't on the list, alphabetically —
 so a new category needs no edit to `categories.ts` to work, though adding it there
 keeps it out of the "unknown, appended alphabetically" tail.
-`scripts/new-component.mjs --category <Category>` accepts any string and
-warns (doesn't fail) when it isn't one of the declared ones.
+`zudo-sg new-component --category <Category>` (`pnpm new:component`) accepts
+any string and warns (doesn't fail) when it isn't one of the declared ones.
 
 This field is the sidebar bucket only — it is **independent of the directory
 layout** in §2. A category-nested component's directory slug (`layout/`,
@@ -523,30 +526,34 @@ contract test as-is (the two placeholder `variant`s exist so nothing is
 half-typed). Fill in the `TODO`s — the real markup, variant classes, and
 description — then run `pnpm check` and `pnpm test:unit` before shipping.
 
-The scaffolder's own logic (name/category validation, the category→slug
-mapping, templates, and the barrel-insertion algorithm) lives in
-`scripts/lib/component-scaffold.mjs` and is unit-tested in
-`scripts/__tests__/component-scaffold.test.ts`; the CLI entry point is
-`scripts/new-component.mjs`.
+The scaffolder is CLI machinery owned by the `@takazudo/zudo-sg` styleguide
+engine, not by this package or the root repo's own `scripts/`: name/category
+validation, the category→slug mapping, templates, and the barrel-insertion
+algorithm live in `packages/styleguide/src/cli/scaffold/component-scaffold.ts`
+and are unit-tested in `packages/styleguide/src/cli/scaffold/__tests__/`; the
+CLI entry point is `zudo-sg new-component` (`packages/styleguide/src/cli/scaffold/new-component.ts`),
+wrapped at the repo root as `pnpm new:component`.
 
 ### Configuring the scaffolder (a fork with a different layout)
 
-`scripts/lib/scaffold-config.mjs` is the single source of truth both
-`new-component.mjs` and `gen-sg-registry.mjs` read from:
+The scaffolder and the registry codegen both resolve their paths from the
+host's `zudo-sg.config.mjs`, not from a scripts-owned config file — see
+`packages/styleguide/src/cli/config.ts`'s `ZudoSgConfig`:
 
-- `COMPONENTS_ROOT` (default `"packages/ui/src"`) — the directory scanned/
-  written to for `<name>/<name>.{tsx,stories.tsx}`.
-- `BARREL_INDEX` (default `"packages/ui/src/index.ts"`) — the barrel file
-  new-component.mjs inserts an `export { … }` block into. Set to `null` if a
-  project has no barrel-file convention; new-component.mjs then always skips
+- `componentsRoots[0].dir` (this repo: `"packages/ui/src"`) — the directory
+  scanned/written to for `<name>/<name>.{tsx,stories.tsx}`. `new-component`
+  reads only `componentsRoots[0]`; `gen-registry` walks every entry.
+- `barrelIndex` (this repo: `"packages/ui/src/index.ts"`) — the barrel file
+  `new-component` inserts an `export { … }` block into. Set to `null` for a
+  project with no barrel-file convention; `new-component` then always skips
   the insert step, same as always passing `--skip-barrel`.
-- `UI_PACKAGE_NAME` (default `"@zudo-sg/ui"`) — the npm package name used in
+- `uiPackageName` (this repo: `"@zudo-sg/ui"`) — the npm package name used in
   generated `usage` snippets and in the package-scoped import specifiers
-  `gen-sg-registry.mjs` emits into `src/styleguide/data/sg-registry.ts`. If
-  `COMPONENTS_ROOT` moves, keep `packages/ui/package.json`'s `exports` map
-  wildcard (`"./<basename>/*": "./<basename>/*"`) matching the new root's
-  basename — `gen-sg-registry.mjs` derives its package-scoped import root
-  from `UI_PACKAGE_NAME` + that basename.
+  `gen-registry` emits into `registryOut`. If `componentsRoots[0].dir` moves,
+  keep `packages/ui/package.json`'s `exports` map wildcard
+  (`"./<basename>/*": "./<basename>/*"`) matching the new root's basename, and
+  update `componentsRoots[0].importBase` to match — `gen-registry` derives its
+  package-scoped import root from that field, not from `uiPackageName` alone.
 
 ## 9. Per-component docs (optional MDX)
 

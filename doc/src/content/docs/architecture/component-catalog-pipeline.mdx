@@ -16,11 +16,11 @@ The catalog renders stories during static build, so story rendering must not dep
 
 ## Codegen replaces runtime globbing
 
-The catalog does not discover stories with `import.meta.glob` at runtime. zfb does not inline that call into shared client islands, so zudo-sg uses code generation instead.
+The catalog does not discover stories with `import.meta.glob` at runtime. zfb does not inline that call into shared client islands, so the `@takazudo/zudo-sg` engine's CLI uses code generation instead.
 
-`scripts/gen-sg-registry.mjs` scans `packages/ui/src/**/*.stories.tsx` (any nesting depth) and regenerates explicit import registries:
+`zudo-sg gen-registry` — shipped by the engine (`packages/styleguide`) and driven by the host's `zudo-sg.config.mjs` (`componentsRoots`, `registryOut`, `categoryOrder`) — scans `packages/ui/src/**/*.stories.tsx` (any nesting depth) and regenerates explicit import registries:
 
-- `src/styleguide/data/sg-registry.ts` for the root styleguide catalog.
+- `src/styleguide/sg-registry.ts` for the root styleguide catalog.
 - `packages/ui/src/stories/__tests__/story-modules.ts` for story contract and drift tests.
 
 After adding, renaming, or deleting a story file, run:
@@ -35,7 +35,7 @@ CI and local quality gates run:
 pnpm check:sg-registry
 ```
 
-That check fails when the generated registries no longer match the story files on disk.
+That check fails when the generated registries no longer match the story files on disk. Both `pnpm` scripts wrap the same `zudo-sg` CLI command (`gen-registry` / `gen-registry --check`); see [Quality Gates](../development/quality-gates.mdx).
 
 :::note[Generated blocks]
 Do not hand-edit code between `GENERATED:SG_REGISTRY_BEGIN` and `GENERATED:SG_REGISTRY_END`. Regenerate it from the story files.
@@ -51,7 +51,7 @@ packages/ui/src/cards/card/card.stories.tsx
 packages/ui/src/cards/card/card.mdx
 ```
 
-The root host compiles those MDX files through a `componentDocs` collection rooted at `packages/ui/src`. Component detail pages look up the matching MDX entry from the same component path the story registry uses, so there is no separate registration step.
+`withZudoSg()` (`zfb.config.ts`) adds one `componentDocs` content collection per `componentsRoots[]` entry, rooted at `packages/ui/src`, so zfb compiles those MDX files as part of the normal build. The engine's `/components/[slug]` detail route (`packages/styleguide/src/routes/components-slug.tsx`) looks up the matching MDX entry from the same component path the story registry uses, so there is no separate registration step.
 
 ## Authoring checklist
 
