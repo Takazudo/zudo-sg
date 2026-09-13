@@ -1,25 +1,23 @@
-// scripts/__tests__/ui-token-manifest.test.ts
+// Ported from the host's former scripts/__tests__/ui-token-manifest.test.ts.
+// Covers id/label derivation, default-value resolution from parsed CSS, and
+// the drift error thrown when a spec'd token disappears from its source CSS.
 //
-// Unit tests for scripts/lib/ui-token-manifest.mjs — the spec tables +
-// builder/renderer that scripts/gen-token-manifest.mjs drives. Covers id/label
-// derivation, default-value resolution from parsed CSS, and the drift error
-// thrown when a spec'd token disappears from its source CSS.
+// Some cases below deliberately read the REAL host project's CSS/manifest
+// files (this package is developed in-repo, dogfooding the root zudo-sg
+// host) — the relative paths climb out of the package to the monorepo root:
+// packages/styleguide/src/cli/token-manifest/__tests__ -> ... -> <repo root>.
 
 import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { rgb as culoriRgb } from "culori";
 import { describe, expect, it } from "vitest";
-import { parseCssCustomProperties } from "../lib/css-var-parser.mjs";
-import {
-  buildFromSpecs,
-  buildPaletteColors,
-  buildUiTokenManifest,
-  renderUiTokenManifestFile,
-  SIZE_SPECS,
-} from "../lib/ui-token-manifest.mjs";
+import { parseCssCustomProperties } from "../css-var-parser.js";
+import { buildFromSpecs, buildPaletteColors, buildUiTokenManifest, renderUiTokenManifestFile, SIZE_SPECS } from "../ui-token-manifest.js";
 
-// Covers every var SIZE_SPECS looks up, so buildFromSpecs(SIZE_SPECS, ...)
-// can run against a small fixture instead of the full project CSS.
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const REPO_ROOT = resolve(__dirname, "../../../../../..");
+
 const FIXTURE_SIZE_CSS = `
   @theme {
     --radius-DEFAULT: 0.25rem;
@@ -33,43 +31,39 @@ const FIXTURE_SIZE_CSS = `
   }
 `;
 
-function relativeLuminance(cssColor) {
+function relativeLuminance(cssColor: string): number {
   const result = culoriRgb(cssColor);
   if (!result) throw new Error(`Cannot parse CSS color: ${cssColor}`);
-  const toLinear = (value) => {
+  const toLinear = (value: number) => {
     const c = Math.max(0, Math.min(1, value));
     return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
   };
-  return (
-    0.2126 * toLinear(result.r) +
-    0.7152 * toLinear(result.g) +
-    0.0722 * toLinear(result.b)
-  );
+  return 0.2126 * toLinear(result.r) + 0.7152 * toLinear(result.g) + 0.0722 * toLinear(result.b);
 }
 
-function contrastRatio(a, b) {
+function contrastRatio(a: string, b: string): number {
   const la = relativeLuminance(a);
   const lb = relativeLuminance(b);
   const [light, dark] = la > lb ? [la, lb] : [lb, la];
   return (light + 0.05) / (dark + 0.05);
 }
 
-function resolveColorValue(vars, value, mode) {
+function resolveColorValue(vars: Map<string, string>, value: string, mode: "light" | "dark"): string {
   const trimmed = value.trim();
   const lightDark = /^light-dark\((.*),\s*(.*)\)$/.exec(trimmed);
   if (lightDark) {
-    return resolveColorValue(vars, mode === "light" ? lightDark[1] : lightDark[2], mode);
+    return resolveColorValue(vars, mode === "light" ? (lightDark[1] as string) : (lightDark[2] as string), mode);
   }
   const ref = /^var\((--[^)]+)\)$/.exec(trimmed);
   if (ref) {
-    const target = vars.get(ref[1]);
+    const target = vars.get(ref[1] as string);
     if (!target) throw new Error(`Missing CSS var ${ref[1]}`);
     return resolveColorValue(vars, target, mode);
   }
   return trimmed;
 }
 
-function resolveColorToken(vars, cssVar, mode) {
+function resolveColorToken(vars: Map<string, string>, cssVar: string, mode: "light" | "dark"): string {
   const value = vars.get(cssVar);
   if (!value) throw new Error(`Missing CSS var ${cssVar}`);
   return resolveColorValue(vars, value, mode);
@@ -77,35 +71,15 @@ function resolveColorToken(vars, cssVar, mode) {
 
 describe("buildUiTokenManifest", () => {
   it("derives id/label from cssVar, stripping the spacing- prefix for spacing tokens", () => {
-    // Full CSS needed since every spec entry is looked up; fixture above
-    // only covers a subset, so use the real project files for this pass.
-    const tokensCss = readFileSync(
-      resolve(__dirname, "../../packages/ui/styles/tokens.css"),
-      "utf8",
-    );
-    const colorsCss = readFileSync(
-      resolve(__dirname, "../../packages/ui/styles/colors.css"),
-      "utf8",
-    );
+    const tokensCss = readFileSync(resolve(REPO_ROOT, "packages/ui/styles/tokens.css"), "utf8");
+    const colorsCss = readFileSync(resolve(REPO_ROOT, "packages/ui/styles/colors.css"), "utf8");
     const manifest = buildUiTokenManifest({ tokensCss, colorsCss });
 
-    const hsp2xs = manifest.spacingTokens.find(
-      (t) => t.cssVar === "--spacing-hsp-2xs",
-    );
-    expect(hsp2xs).toMatchObject({
-      id: "ui-hsp-2xs",
-      label: "hsp-2xs",
-      group: "hsp",
-      default: "0.125rem",
-    });
+    const hsp2xs = manifest.spacingTokens.find((t) => t.cssVar === "--spacing-hsp-2xs");
+    expect(hsp2xs).toMatchObject({ id: "ui-hsp-2xs", label: "hsp-2xs", group: "hsp", default: "0.125rem" });
 
-    const fontSizeLh = manifest.fontTokens.find(
-      (t) => t.cssVar === "--text-xs--line-height",
-    );
-    expect(fontSizeLh).toMatchObject({
-      id: "ui-text-xs--line-height",
-      label: "text-xs / lh",
-    });
+    const fontSizeLh = manifest.fontTokens.find((t) => t.cssVar === "--text-xs--line-height");
+    expect(fontSizeLh).toMatchObject({ id: "ui-text-xs--line-height", label: "text-xs / lh" });
 
     const colorBg = manifest.colorTokens.find((t) => t.cssVar === "--color-bg");
     expect(colorBg).toMatchObject({
@@ -117,42 +91,18 @@ describe("buildUiTokenManifest", () => {
   });
 
   it("resolves default values from the CSS, not from any hardcoded copy", () => {
-    // A CSS-only change (no spec change) must change the built default —
-    // this is the actual drift guarantee `check:token-manifest` relies on.
-    const edited = FIXTURE_SIZE_CSS.replace(
-      "--radius-sm: 0.25rem;",
-      "--radius-sm: 0.30rem;",
-    );
-    const before = buildFromSpecs(
-      SIZE_SPECS,
-      parseCssCustomProperties(FIXTURE_SIZE_CSS),
-      "fixture",
-    );
-    const after = buildFromSpecs(
-      SIZE_SPECS,
-      parseCssCustomProperties(edited),
-      "fixture",
-    );
-    expect(before.find((t) => t.cssVar === "--radius-sm")?.default).toBe(
-      "0.25rem",
-    );
-    expect(after.find((t) => t.cssVar === "--radius-sm")?.default).toBe(
-      "0.30rem",
-    );
+    const edited = FIXTURE_SIZE_CSS.replace("--radius-sm: 0.25rem;", "--radius-sm: 0.30rem;");
+    const before = buildFromSpecs(SIZE_SPECS, parseCssCustomProperties(FIXTURE_SIZE_CSS), "fixture");
+    const after = buildFromSpecs(SIZE_SPECS, parseCssCustomProperties(edited), "fixture");
+    expect(before.find((t) => t.cssVar === "--radius-sm")?.default).toBe("0.25rem");
+    expect(after.find((t) => t.cssVar === "--radius-sm")?.default).toBe("0.30rem");
   });
 
   it("throws a clear error when a spec'd cssVar is missing from its source CSS", () => {
-    const withoutRadiusSm = FIXTURE_SIZE_CSS.replace(
-      "--radius-sm: 0.25rem;",
-      "",
+    const withoutRadiusSm = FIXTURE_SIZE_CSS.replace("--radius-sm: 0.25rem;", "");
+    expect(() => buildFromSpecs(SIZE_SPECS, parseCssCustomProperties(withoutRadiusSm), "fixture")).toThrow(
+      /--radius-sm/,
     );
-    expect(() =>
-      buildFromSpecs(
-        SIZE_SPECS,
-        parseCssCustomProperties(withoutRadiusSm),
-        "fixture",
-      ),
-    ).toThrow(/--radius-sm/);
   });
 
   it("throws when a palette color referenced by the spec is missing", () => {
@@ -162,20 +112,15 @@ describe("buildUiTokenManifest", () => {
   });
 
   it("keeps every semantic palette reference backed by a declared palette token", () => {
-    const colorsCss = readFileSync(
-      resolve(__dirname, "../../packages/ui/styles/colors.css"),
-      "utf8",
-    );
+    const colorsCss = readFileSync(resolve(REPO_ROOT, "packages/ui/styles/colors.css"), "utf8");
     const vars = parseCssCustomProperties(colorsCss);
-    const missingRefs = [];
+    const missingRefs: string[] = [];
 
     for (const [cssVar, value] of vars.entries()) {
       if (!cssVar.startsWith("--color-")) continue;
       const refs = value.matchAll(/var\((--palette-[^)]+)\)/g);
       for (const [, ref] of refs) {
-        if (ref && !vars.has(ref)) {
-          missingRefs.push(`${cssVar} -> ${ref}`);
-        }
+        if (ref && !vars.has(ref)) missingRefs.push(`${cssVar} -> ${ref}`);
       }
     }
 
@@ -183,10 +128,7 @@ describe("buildUiTokenManifest", () => {
   });
 
   it("keeps the locked four-stop neutral mappings and required text pairs", () => {
-    const colorsCss = readFileSync(
-      resolve(__dirname, "../../packages/ui/styles/colors.css"),
-      "utf8",
-    );
+    const colorsCss = readFileSync(resolve(REPO_ROOT, "packages/ui/styles/colors.css"), "utf8");
     const vars = parseCssCustomProperties(colorsCss);
     expect([
       ["--palette-neutral-0", "oklch(0.970 0.006 75)"],
@@ -225,7 +167,7 @@ describe("buildUiTokenManifest", () => {
       "--color-rail-fg": "var(--palette-neutral-0)",
       "--color-rail-muted": "var(--palette-neutral-1)",
     });
-    const pairs = [
+    const pairs: Array<[string, string]> = [
       ["--color-fg", "--color-bg"],
       ["--color-fg", "--color-surface"],
       ["--color-fg", "--color-surface-2"],
@@ -238,17 +180,15 @@ describe("buildUiTokenManifest", () => {
       ["--color-accent", "--color-bg"],
       ["--color-accent-hover", "--color-bg"],
     ];
-    const failures = [];
+    const failures: string[] = [];
 
-    for (const mode of ["light", "dark"]) {
+    for (const mode of ["light", "dark"] as const) {
       for (const [fgVar, bgVar] of pairs) {
         const fg = resolveColorToken(vars, fgVar, mode);
         const bg = resolveColorToken(vars, bgVar, mode);
         const ratio = contrastRatio(fg, bg);
         const threshold = fgVar === "--color-fg" ? 7 : 4.5;
-        if (ratio < threshold) {
-          failures.push(`${mode}: ${fgVar} on ${bgVar} = ${ratio.toFixed(2)}`);
-        }
+        if (ratio < threshold) failures.push(`${mode}: ${fgVar} on ${bgVar} = ${ratio.toFixed(2)}`);
       }
     }
 
@@ -258,18 +198,9 @@ describe("buildUiTokenManifest", () => {
 
 describe("renderUiTokenManifestFile", () => {
   it("is idempotent and matches the committed manifest for the real project CSS", () => {
-    const tokensCss = readFileSync(
-      resolve(__dirname, "../../packages/ui/styles/tokens.css"),
-      "utf8",
-    );
-    const colorsCss = readFileSync(
-      resolve(__dirname, "../../packages/ui/styles/colors.css"),
-      "utf8",
-    );
-    const committed = readFileSync(
-      resolve(__dirname, "../../src/config/ui-design-tokens-manifest.ts"),
-      "utf8",
-    );
+    const tokensCss = readFileSync(resolve(REPO_ROOT, "packages/ui/styles/tokens.css"), "utf8");
+    const colorsCss = readFileSync(resolve(REPO_ROOT, "packages/ui/styles/colors.css"), "utf8");
+    const committed = readFileSync(resolve(REPO_ROOT, "src/config/ui-design-tokens-manifest.ts"), "utf8");
 
     const manifest = buildUiTokenManifest({ tokensCss, colorsCss });
     const rendered = renderUiTokenManifestFile(manifest);

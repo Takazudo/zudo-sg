@@ -4,7 +4,7 @@
 
 import { createRegistry } from "@takazudo/zudo-sg/registry";
 import { STORY_CATEGORIES } from "@zudo-sg/ui";
-import { storyExportOrder, storyModules } from "./data/sg-registry";
+import { storyExportOrder, storyModules } from "./sg-registry";
 
 export { OVERVIEW_SLUG, TOKENS_SLUG } from "@takazudo/zudo-sg/registry";
 export type { CategoryGroup, StoryEntry, VariantEntry } from "@takazudo/zudo-sg/registry";

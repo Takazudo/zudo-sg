@@ -1,13 +1,13 @@
-// Unit tests for scripts/lib/component-scaffold.mjs — the pure helpers
-// behind `pnpm new:component` (scripts/new-component.mjs). These exercise
-// validation, name conversion, template shape, and the barrel-insertion
-// algorithm directly (no fs, no child process) — see check-links.test.ts /
-// gen-z-index.test.ts for the full-script spawn-test pattern used elsewhere;
-// that isn't needed here since none of this logic touches the filesystem.
+// Ported from the host's former scripts/__tests__/component-scaffold.test.ts.
+// Exercises validation, name conversion, template shape, and the
+// barrel-insertion algorithm directly (no fs, no child process). The former
+// module-level `VALID_CATEGORIES` / `UI_PACKAGE_NAME` / `COMPONENTS_ROOT`
+// constants are now explicit parameters (sourced from the host's
+// `zudo-sg.config.mjs` at the CLI orchestration layer) — this fixture
+// declares its own equivalents.
 
 import { describe, expect, it, vi } from "vitest";
 import {
-  VALID_CATEGORIES,
   assertUnusedName,
   assertValidCategory,
   assertValidName,
@@ -17,24 +17,26 @@ import {
   storiesTemplate,
   testTemplate,
   toPascalCase,
-} from "../lib/component-scaffold.mjs";
-import { BARREL_INDEX, COMPONENTS_ROOT, UI_PACKAGE_NAME } from "../lib/scaffold-config.mjs";
-import { parseArgs } from "../new-component.mjs";
+} from "../component-scaffold.js";
+import { parseArgs } from "../new-component.js";
 
-describe("scaffold-config", () => {
-  it("exposes the default components root, barrel index, and package name", () => {
-    expect(COMPONENTS_ROOT).toBe("packages/ui/src");
-    expect(BARREL_INDEX).toBe("packages/ui/src/index.ts");
-    expect(UI_PACKAGE_NAME).toBe("@zudo-sg/ui");
-  });
+const UI_PACKAGE_NAME = "@zudo-sg/ui";
+const VALID_CATEGORIES = [
+  "Actions",
+  "Typography",
+  "Layout",
+  "Data Display",
+  "Forms",
+  "Navigation",
+  "Content",
+  "Landing",
+  "News",
+  "Search",
+  "Feedback",
+  "Media",
+];
 
-  it("nests BARREL_INDEX under COMPONENTS_ROOT (the barrel lives inside the scanned tree)", () => {
-    expect(BARREL_INDEX).not.toBeNull();
-    expect(BARREL_INDEX?.startsWith(`${COMPONENTS_ROOT}/`)).toBe(true);
-  });
-});
-
-describe("new-component.mjs parseArgs", () => {
+describe("new-component parseArgs", () => {
   it("parses name, --category, and defaults --skip-barrel/--nested to false", () => {
     expect(parseArgs(["demo-widget", "--category", "Layout"])).toEqual({
       name: "demo-widget",
@@ -81,9 +83,7 @@ describe("new-component.mjs parseArgs", () => {
   });
 
   it("parses --nested regardless of position, combined with --skip-barrel", () => {
-    expect(
-      parseArgs(["--nested", "demo-widget", "--skip-barrel", "--category", "Layout"]),
-    ).toEqual({
+    expect(parseArgs(["--nested", "demo-widget", "--skip-barrel", "--category", "Layout"])).toEqual({
       name: "demo-widget",
       category: "Layout",
       skipBarrel: true,
@@ -118,10 +118,10 @@ describe("assertValidName", () => {
 });
 
 describe("assertValidCategory", () => {
-  it("accepts every declared category (VALID_CATEGORIES) without warning", () => {
+  it("accepts every declared category without warning", () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     for (const category of VALID_CATEGORIES) {
-      expect(() => assertValidCategory(category)).not.toThrow();
+      expect(() => assertValidCategory(category, VALID_CATEGORIES)).not.toThrow();
     }
     expect(warnSpy).not.toHaveBeenCalled();
     warnSpy.mockRestore();
@@ -129,20 +129,20 @@ describe("assertValidCategory", () => {
 
   it("accepts a new (undeclared) category — categories are open", () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-    expect(() => assertValidCategory("Widgets")).not.toThrow();
+    expect(() => assertValidCategory("Widgets", VALID_CATEGORIES)).not.toThrow();
     warnSpy.mockRestore();
   });
 
   it("warns when the category isn't declared", () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-    assertValidCategory("Widgets");
+    assertValidCategory("Widgets", VALID_CATEGORIES);
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("Widgets"));
     warnSpy.mockRestore();
   });
 
   it("rejects an empty or non-string category", () => {
-    expect(() => assertValidCategory("")).toThrow();
-    expect(() => assertValidCategory(undefined)).toThrow();
+    expect(() => assertValidCategory("", VALID_CATEGORIES)).toThrow();
+    expect(() => assertValidCategory(undefined, VALID_CATEGORIES)).toThrow();
   });
 });
 
@@ -164,11 +164,11 @@ describe("categorySlug", () => {
 
 describe("assertUnusedName", () => {
   it("passes when the name isn't taken", () => {
-    expect(() => assertUnusedName("demo-widget", ["badge", "button"])).not.toThrow();
+    expect(() => assertUnusedName("demo-widget", ["badge", "button"], "packages/ui/src")).not.toThrow();
   });
 
   it("throws when the name is already a component directory", () => {
-    expect(() => assertUnusedName("badge", ["badge", "button"])).toThrow(/already exists/);
+    expect(() => assertUnusedName("badge", ["badge", "button"], "packages/ui/src")).toThrow(/already exists/);
   });
 });
 
@@ -185,11 +185,7 @@ describe("componentTemplate", () => {
   });
 
   it("uses a one-deeper relative lib/cx import when nested (category-dir scaffold)", () => {
-    const src = componentTemplate({
-      pascalName: "DemoWidget",
-      kebabName: "demo-widget",
-      nested: true,
-    });
+    const src = componentTemplate({ pascalName: "DemoWidget", kebabName: "demo-widget", nested: true });
     expect(src).toContain(`import { cx } from "../../lib/cx";`);
     expect(src).not.toContain(`from "../lib/cx"`);
   });
@@ -197,11 +193,14 @@ describe("componentTemplate", () => {
 
 describe("storiesTemplate", () => {
   it("emits a StoryMeta + typed Playground story", () => {
-    const src = storiesTemplate({ pascalName: "DemoWidget", kebabName: "demo-widget", category: "Layout" });
+    const src = storiesTemplate({
+      pascalName: "DemoWidget",
+      kebabName: "demo-widget",
+      category: "Layout",
+      uiPackageName: UI_PACKAGE_NAME,
+    });
     expect(src).toContain(`import { DemoWidget, type DemoWidgetProps } from "./demo-widget";`);
     expect(src).toContain('category: "Layout",');
-    // The usage snippet's import specifier is derived from scaffold-config's
-    // UI_PACKAGE_NAME, not hardcoded — see component-scaffold.mjs.
     expect(src).toContain(`import { DemoWidget } from "${UI_PACKAGE_NAME}";`);
     expect(src).toContain("export const Playground: Story<DemoWidgetProps> = {");
     expect(src).toContain('prop: "variant"');
@@ -209,7 +208,13 @@ describe("storiesTemplate", () => {
   });
 
   it("uses a one-deeper relative stories/types import when nested (category-dir scaffold)", () => {
-    const src = storiesTemplate({ pascalName: "DemoWidget", kebabName: "demo-widget", category: "Layout", nested: true });
+    const src = storiesTemplate({
+      pascalName: "DemoWidget",
+      kebabName: "demo-widget",
+      category: "Layout",
+      uiPackageName: UI_PACKAGE_NAME,
+      nested: true,
+    });
     expect(src).toContain(`import type { StoryMeta, Story } from "../../stories/types";`);
     expect(src).not.toContain('from "../stories/types"');
   });
@@ -225,9 +230,6 @@ describe("testTemplate", () => {
 });
 
 describe("insertBarrelExport", () => {
-  // Trimmed fixture mirroring packages/ui/src/index.ts's real shape: a
-  // header-then-blocks section per category, blocks separated by one blank
-  // line, no blank line between a header and its first block.
   const FIXTURE = [
     `// ── Actions ──────────────────────────────────────────────────────────────`,
     `export { Button } from "./button/button";`,
@@ -247,11 +249,7 @@ describe("insertBarrelExport", () => {
   ].join("\n");
 
   it("inserts the new export block into the matching category section", () => {
-    const result = insertBarrelExport(FIXTURE, {
-      pascalName: "Stat",
-      kebabName: "stat",
-      category: "Data Display",
-    });
+    const result = insertBarrelExport(FIXTURE, { pascalName: "Stat", kebabName: "stat", category: "Data Display" });
     expect(result).toContain(
       `export { Badge } from "./badge/badge";\nexport type { BadgeProps, BadgeTone, BadgeVariant } from "./badge/badge";\n\n` +
         `export { Stat } from "./stat/stat";\nexport type { StatProps, StatVariant } from "./stat/stat";\n\n` +
@@ -260,26 +258,16 @@ describe("insertBarrelExport", () => {
   });
 
   it("sorts alphabetically within the section (inserts before a later name)", () => {
-    const result = insertBarrelExport(FIXTURE, {
-      pascalName: "Avatar",
-      kebabName: "avatar",
-      category: "Actions",
-    });
-    const avatarIdx = result.indexOf('export { Avatar }');
-    const buttonIdx = result.indexOf('export { Button }');
-    const linkIdx = result.indexOf('export { Link }');
+    const result = insertBarrelExport(FIXTURE, { pascalName: "Avatar", kebabName: "avatar", category: "Actions" });
+    const avatarIdx = result.indexOf("export { Avatar }");
+    const buttonIdx = result.indexOf("export { Button }");
+    const linkIdx = result.indexOf("export { Link }");
     expect(avatarIdx).toBeGreaterThan(-1);
     expect(avatarIdx).toBeLessThan(buttonIdx);
     expect(buttonIdx).toBeLessThan(linkIdx);
   });
 
   it("sorts a LAST-alphabetical name to the END even past a `default as` re-export block", () => {
-    // Regression (#292): the real index.ts has `export { default as XEnhancer }`
-    // blocks. The old sort key captured the first raw token ("default"), which
-    // is lowercase and therefore sorts AFTER every PascalCase name in a
-    // case-sensitive compare — so inserting a late name (e.g. "Zebra") matched
-    // the `default`-keyed block first and landed at the TOP of the section
-    // instead of the end. The key must derive from the BOUND name.
     const withDefaultAs = [
       `// ── Forms ────────────────────────────────────────────────────────────────`,
       `export { default as ContactFormEnhancer } from "./contact-form/contact-form-enhancer";`,
@@ -301,45 +289,29 @@ describe("insertBarrelExport", () => {
     const zebraIdx = result.indexOf("export { Zebra }");
     const textareaIdx = result.indexOf("export { Textarea }");
     const utilitiesIdx = result.indexOf("// ── Utilities");
-    // Lands AFTER Textarea (last existing entry) and BEFORE the next header.
     expect(zebraIdx).toBeGreaterThan(textareaIdx);
     expect(zebraIdx).toBeLessThan(utilitiesIdx);
     expect(result).toContain(`export { Zebra } from "./forms/zebra/zebra";`);
   });
 
   it("matches the category case-insensitively against a differently-cased header", () => {
-    // The real file's header reads "Data display" (lowercase d) for the
-    // "Data Display" StoryCategory — the match must not be case-sensitive.
-    const result = insertBarrelExport(FIXTURE, {
-      pascalName: "Stat",
-      kebabName: "stat",
-      category: "Data Display",
-    });
-    expect(result).toContain('export { Stat }');
+    const result = insertBarrelExport(FIXTURE, { pascalName: "Stat", kebabName: "stat", category: "Data Display" });
+    expect(result).toContain("export { Stat }");
   });
 
   it("throws when no section header matches the category", () => {
-    const noNavFixture = FIXTURE; // fixture has no Navigation section
     expect(() =>
-      insertBarrelExport(noNavFixture, { pascalName: "NavMenu", kebabName: "nav-menu", category: "Navigation" }),
+      insertBarrelExport(FIXTURE, { pascalName: "NavMenu", kebabName: "nav-menu", category: "Navigation" }),
     ).toThrow(/no ".*" section header/);
   });
 
   it("keeps no blank line between a header and the first block", () => {
-    const result = insertBarrelExport(FIXTURE, {
-      pascalName: "Avatar",
-      kebabName: "avatar",
-      category: "Actions",
-    });
+    const result = insertBarrelExport(FIXTURE, { pascalName: "Avatar", kebabName: "avatar", category: "Actions" });
     expect(result).toContain(
       `// ── Actions ──────────────────────────────────────────────────────────────\nexport { Avatar }`,
     );
   });
 
-  // #289 — a --nested scaffold auto-inserts into the barrel (the `!nested`
-  // gate that used to skip this entirely is gone), using the nested
-  // `./<category-slug>/<name>/<name>` import specifier instead of the flat
-  // `./<name>/<name>` one.
   describe("nested: true (category-nested import specifier)", () => {
     it("imports from ./<category-slug>/<name>/<name>, alphabetically in the matching section", () => {
       const result = insertBarrelExport(FIXTURE, {
@@ -363,37 +335,24 @@ describe("insertBarrelExport", () => {
         category: "Actions",
         nested: true,
       });
-      const avatarIdx = result.indexOf('export { Avatar }');
-      const buttonIdx = result.indexOf('export { Button }');
+      const avatarIdx = result.indexOf("export { Avatar }");
+      const buttonIdx = result.indexOf("export { Button }");
       expect(result).toContain(`export { Avatar } from "./actions/avatar/avatar";`);
       expect(avatarIdx).toBeGreaterThan(-1);
       expect(avatarIdx).toBeLessThan(buttonIdx);
     });
 
     it("defaults nested to false (flat import specifier) when omitted", () => {
-      const result = insertBarrelExport(FIXTURE, {
-        pascalName: "Stat",
-        kebabName: "stat",
-        category: "Data Display",
-      });
+      const result = insertBarrelExport(FIXTURE, { pascalName: "Stat", kebabName: "stat", category: "Data Display" });
       expect(result).toContain(`export { Stat } from "./stat/stat";`);
       expect(result).not.toContain("./data-display/stat/stat");
     });
   });
 
-  // #289 — the barrel cannot hold two exports of the same Pascal name, even
-  // though two different categories may each scaffold a same-named component
-  // on disk (STORIES.md §2). insertBarrelExport must fail loudly instead of
-  // silently producing a colliding export.
   describe("duplicate Pascal name across categories", () => {
     it("throws a clear, actionable error instead of inserting a colliding export", () => {
       expect(() =>
-        insertBarrelExport(FIXTURE, {
-          pascalName: "Badge",
-          kebabName: "badge",
-          category: "Actions",
-          nested: true,
-        }),
+        insertBarrelExport(FIXTURE, { pascalName: "Badge", kebabName: "badge", category: "Actions", nested: true }),
       ).toThrow(/"Badge" is already exported from ".\/badge\/badge" in the "Data display" section/);
     });
 
@@ -429,14 +388,7 @@ describe("insertBarrelExport", () => {
     });
 
     it("does not throw for a name that only appears in a type export", () => {
-      // Guards against over-matching: a *Props/*Variant type export sharing a
-      // token with pascalName must not be mistaken for a value-export
-      // collision.
-      const result = insertBarrelExport(FIXTURE, {
-        pascalName: "ButtonProps",
-        kebabName: "button-props",
-        category: "Actions",
-      });
+      const result = insertBarrelExport(FIXTURE, { pascalName: "ButtonProps", kebabName: "button-props", category: "Actions" });
       expect(result).toContain(`export { ButtonProps } from "./button-props/button-props";`);
     });
   });

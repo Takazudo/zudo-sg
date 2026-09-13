@@ -1,7 +1,8 @@
 // Styleguide story registry — the single story-discovery point.
 //
-// GENERATED FILE — the block below is codegen'd by `scripts/gen-sg-registry.mjs`
-// from the `*.stories.tsx` files under packages/ui/src/*/*.stories.tsx. Never
+// GENERATED FILE — the block below is codegen'd by the `zudo-sg gen-registry`
+// CLI command (`pnpm gen:sg-registry`, driven by `zudo-sg.config.mjs`) from
+// the `*.stories.tsx` files under packages/ui/src/*/*.stories.tsx. Never
 // hand-edit between the markers; run `pnpm gen:sg-registry` after adding or
 // removing a story file and commit the result. `pnpm check:sg-registry` fails
 // CI on drift.
@@ -21,7 +22,7 @@
 // keeps resolution within node_modules (which zfb includes in the shadow).
 // The `./src/*` export wildcard in packages/ui/package.json makes this work.
 //
-// The consumer (`src/styleguide/data/registry.ts`) keys off the path→module
+// The consumer (`src/styleguide/registry.ts`) keys off the path→module
 // map via `Object.entries`. Keys use a glob-relative shape
 // (`./ui/src/<name>/<name>.stories.tsx`) matching the pattern the root registry
 // uses, so the registry.ts logic is a direct port without key-shape changes.

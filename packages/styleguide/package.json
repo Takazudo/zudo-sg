@@ -36,6 +36,10 @@
       "types": "./dist/token-dashboard/index.d.ts",
       "default": "./dist/token-dashboard/index.js"
     },
+    "./cli": {
+      "types": "./dist/cli/bin.d.ts",
+      "default": "./dist/cli/bin.js"
+    },
     "./preview": {
       "types": "./dist/preview/index.d.ts",
       "default": "./dist/preview/index.js"
@@ -62,6 +66,9 @@
     },
     "./package.json": "./package.json"
   },
+  "bin": {
+    "zudo-sg": "./bin/zudo-sg.js"
+  },
   "files": [
     "dist",
     "bin",
@@ -83,7 +90,8 @@
     "@codemirror/lang-javascript": "^6.0.0",
     "@codemirror/state": "^6.0.0",
     "@codemirror/theme-one-dark": "^6.0.0",
-    "@codemirror/view": "^6.0.0"
+    "@codemirror/view": "^6.0.0",
+    "postcss": "^8.5.15"
   },
   "peerDependencies": {
     "@takazudo/zdtp": "^0.8.0",
@@ -102,6 +110,7 @@
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/preact": "^3.2.4",
     "@types/node": "^22.0.0",
+    "culori": "^4.0.2",
     "happy-dom": "^16.8.1",
     "preact": "^10.29.1",
     "tsup": "^8.5.0",
