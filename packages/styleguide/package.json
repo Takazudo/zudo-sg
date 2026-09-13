@@ -36,6 +36,30 @@
       "types": "./dist/token-dashboard/index.d.ts",
       "default": "./dist/token-dashboard/index.js"
     },
+    "./preview": {
+      "types": "./dist/preview/index.d.ts",
+      "default": "./dist/preview/index.js"
+    },
+    "./code-panel": {
+      "types": "./dist/code-panel/index.d.ts",
+      "default": "./dist/code-panel/index.js"
+    },
+    "./token-tweak": {
+      "types": "./dist/token-tweak/index.d.ts",
+      "default": "./dist/token-tweak/index.js"
+    },
+    "./token-tweak/preview-token-panel-bootstrap": {
+      "types": "./dist/token-tweak/preview-token-panel-bootstrap.d.ts",
+      "default": "./dist/token-tweak/preview-token-panel-bootstrap.js"
+    },
+    "./token-tweak/preview-tokens-button": {
+      "types": "./dist/token-tweak/preview-tokens-button.d.ts",
+      "default": "./dist/token-tweak/preview-tokens-button.js"
+    },
+    "./plugins/zdtp-apply-proxy": {
+      "types": "./dist/plugins/zdtp-apply-proxy.d.ts",
+      "default": "./dist/plugins/zdtp-apply-proxy.js"
+    },
     "./package.json": "./package.json"
   },
   "files": [
@@ -53,13 +77,32 @@
     "check:package-shape": "node scripts/check-package-shape.mjs",
     "check": "pnpm run check:no-host-alias && pnpm run typecheck && pnpm run build && pnpm run check:package-shape && pnpm run test"
   },
+  "dependencies": {
+    "@codemirror/commands": "^6.0.0",
+    "@codemirror/lang-css": "^6.0.0",
+    "@codemirror/lang-javascript": "^6.0.0",
+    "@codemirror/state": "^6.0.0",
+    "@codemirror/theme-one-dark": "^6.0.0",
+    "@codemirror/view": "^6.0.0"
+  },
   "peerDependencies": {
-    "preact": "^10.29.1",
-    "@takazudo/zdtp": "^0.8.0"
+    "@takazudo/zdtp": "^0.8.0",
+    "@takazudo/zudo-doc": ">=5.22.0",
+    "preact": "^10.29.1"
+  },
+  "peerDependenciesMeta": {
+    "@takazudo/zdtp": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@takazudo/zdtp": "0.8.0",
+    "@takazudo/zfb": "2.16.0",
+    "@takazudo/zudo-doc": "5.22.0",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/preact": "^3.2.4",
     "@types/node": "^22.0.0",
+    "happy-dom": "^16.8.1",
     "preact": "^10.29.1",
     "tsup": "^8.5.0",
     "typescript": "^5.9.0",

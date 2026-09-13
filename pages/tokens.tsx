@@ -11,7 +11,7 @@ import { uiDesignTokensManifest, uiTokenTabs } from "@/config/ui-token-tabs";
 import { withBase } from "@/utils/base";
 import { TOKENS_SLUG } from "@/styleguide/registry";
 import { StyleguideLayout } from "@/features/styleguide/chrome/_styleguide-layout";
-import PreviewTokensButton from "@/features/styleguide/token-tweak/preview-tokens-button";
+import PreviewTokensButton from "@takazudo/zudo-sg/token-tweak/preview-tokens-button";
 import { composeMetaTitle } from "./lib/_compose-meta-title";
 import { buildStyleguideChrome } from "./lib/_styleguide-chrome";
 

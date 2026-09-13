@@ -7,7 +7,7 @@
 // page-level toolbar (theme / viewport / layout / code-panel / preview tokens)
 // plus one isolated preview iframe stage per variant. The toolbar owns that
 // state and passes it down as props — see the header of
-// `src/features/styleguide/preview/detail-workbench.tsx` for why it is one
+// `packages/styleguide/src/preview/detail-workbench.tsx` for why it is one
 // island and not a toolbar broadcasting to independent stages (#541).
 //
 // Width (#541): the page opts into the DocLayout WIDE band so the preview
@@ -43,9 +43,8 @@ import {
 } from "@takazudo/zudo-sg/registry";
 import { componentDocMdxComponents } from "@/components/content/component-doc-mdx-components";
 import { StyleguideLayout } from "@/features/styleguide/chrome/_styleguide-layout";
-import DetailWorkbench from "@/features/styleguide/preview/detail-workbench";
-import CodePanel from "@/features/styleguide/code-panel/code-panel";
-import type { CodePanelVariant } from "@/features/styleguide/code-panel/code-panel";
+import { DetailWorkbench, PREVIEW_ROUTE_PATH } from "@takazudo/zudo-sg/preview";
+import { CodePanel, type CodePanelVariant } from "@takazudo/zudo-sg/code-panel";
 import { composeMetaTitle } from "../lib/_compose-meta-title";
 import { buildStyleguideChrome } from "../lib/_styleguide-chrome";
 
@@ -66,6 +65,9 @@ export default function StoryDetailPage(
   const locale = defaultLocale;
   const entry = getStoryBySlug(slug);
   const currentPath = withBase(`/components/${slug}`);
+  // One base-prefixed preview URL for both islands: VariantFrame builds each
+  // iframe `src` from it and the code panel's CSS injection selects by it.
+  const previewUrl = withBase(PREVIEW_ROUTE_PATH);
 
   // Chrome slots — composed here (in the page tree) and passed into the shell.
   // HeadWithDefaults runs its `title` through composeMetaTitle internally
@@ -101,6 +103,7 @@ export default function StoryDetailPage(
         <CodePanel
           storyTitle={entry.meta.title}
           variants={panelVariants}
+          previewUrl={previewUrl}
         />
       ),
     }) as unknown as VNode;
@@ -154,6 +157,7 @@ export default function StoryDetailPage(
     children: (
       <DetailWorkbench
         slug={slug}
+        previewUrl={previewUrl}
         variants={entry.variants.map((v) => ({
           exportName: v.exportName,
           name: v.name,

@@ -47,7 +47,7 @@ import { MermaidEnlarge, MermaidEnlargeSsrFallback } from "@takazudo/zudo-doc/me
 
 import ClientRouterBootstrap from "@/components/client-router-bootstrap";
 import DesignTokenPanelBootstrap from "@/components/design-token-panel-bootstrap";
-import PreviewTokenPanelBootstrap from "@/components/preview-token-panel-bootstrap";
+import PreviewTokenPanelBootstrap from "@takazudo/zudo-sg/token-tweak/preview-token-panel-bootstrap";
 
 // Set explicit `displayName` on each host-defined island so zfb's
 // `captureComponentName` produces a stable marker even after the SSR
