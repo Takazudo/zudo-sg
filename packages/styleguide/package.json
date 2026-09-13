@@ -32,6 +32,18 @@
       "types": "./dist/registry/index.d.ts",
       "default": "./dist/registry/index.js"
     },
+    "./catalog": {
+      "types": "./dist/catalog/index.d.ts",
+      "default": "./dist/catalog/index.js"
+    },
+    "./chrome": {
+      "types": "./dist/chrome/index.d.ts",
+      "default": "./dist/chrome/index.js"
+    },
+    "./search": {
+      "types": "./dist/search/index.d.ts",
+      "default": "./dist/search/index.js"
+    },
     "./package.json": "./package.json"
   },
   "files": [
@@ -49,10 +61,17 @@
     "check:package-shape": "node scripts/check-package-shape.mjs",
     "check": "pnpm run check:no-host-alias && pnpm run typecheck && pnpm run build && pnpm run check:package-shape && pnpm run test"
   },
+  "dependencies": {
+    "preact-render-to-string": "^6.6.6"
+  },
   "peerDependencies": {
+    "@takazudo/zfb": "2.16.0",
+    "@takazudo/zudo-doc": "5.22.0",
     "preact": "^10.29.1"
   },
   "devDependencies": {
+    "@takazudo/zfb": "2.16.0",
+    "@takazudo/zudo-doc": "5.22.0",
     "@types/node": "^22.0.0",
     "preact": "^10.29.1",
     "tsup": "^8.5.0",

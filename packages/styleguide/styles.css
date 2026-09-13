@@ -1,0 +1,598 @@
+/* ============================================================================
+ * @takazudo/zudo-sg — catalog, chrome and search CSS (#653)
+ *
+ * Hand-authored package stylesheet (ADR docs/adr/styleguide-engine.md
+ * decision "Chrome CSS moves to the package root file"). A host imports this
+ * file directly today (there is no `@takazudo/zudo-sg/styles.css` subpath
+ * export yet — that wiring, plus Tailwind-class safelisting from `dist`, is
+ * #661's job); once #661 lands, a host switches its import to the package
+ * specifier with no change to this file's content.
+ *
+ * Combines what used to be two host files:
+ *   - src/features/styleguide/styles.css   (#sg-code-panel layout / sticky /
+ *     resizer / responsive, [data-sg-*-hidden] toggle rules, and the .sg-*
+ *     feature class family for chrome + search + the detail workbench toolbar)
+ *   - src/features/styleguide/catalog/gallery.css (the inline-SSR thumbnail
+ *     framing model: virtual viewport + scale + fit, the tile grid, and the
+ *     tile-size segmented control)
+ * kept in the same relative order so the cascade is unchanged from before the
+ * move.
+ * ========================================================================== */
+
+:root {
+  /* Header height — referenced by the native header and the code panel's sticky
+   * offset. Matches DocLayout's fixed header offset (`top-[3.5rem]`).
+   * Selector/var names stay in sync with src/chrome/panel-contract.ts. */
+  --sg-header-h: 3.5rem;
+  /* Default code-panel width — the resizer (chrome/panel-scripts.tsx) overrides
+   * this var per-user at runtime in px, so this stays the single source of the
+   * default width. The panel and the preview share one band bounded by the
+   * sidebar, so every px the panel takes at rest comes straight out of the
+   * previews the route exists to show. The floor still clears
+   * MIN_CODE_PANEL_W in panel-contract.ts. */
+  --sg-code-panel-w: clamp(18rem, 26vw, 26rem);
+  /* Code-panel resizer grab-strip width — no shared spacing rung matches
+   * 10px, so this stays a dedicated local constant. The strip is centered
+   * over the panel's 1px left border via the calc() below (left = -half
+   * width). */
+  --sg-code-panel-resizer-w: 0.625rem; /* 10px */
+}
+
+/* ── Code panel: right-region layout (fills DocLayout's TOC column) ──
+ * Frame VISUALS: the left bar/gutter is owned here so it is guaranteed to
+ * render (the element carries no native border utility) — a 1px border-ladder
+ * divider + hsp-lg left padding + vsp-md block margin match the reference's
+ * right code-area frame (issue #60). Below the side-by-side breakpoint this
+ * swaps for a top divider (see the max-width:1279px block). --color-border,
+ * not --color-muted (a TEXT token), keeps structural dividers separate from
+ * text roles. */
+#sg-code-panel {
+  position: relative;
+  flex-shrink: 0;
+  width: var(--sg-code-panel-w);
+  align-self: stretch;
+  margin-block: var(--spacing-vsp-md);
+  padding-left: var(--spacing-hsp-lg);
+  border-left: 1px solid var(--color-border);
+}
+
+/* Side-by-side only from 1280px (#541, raised from 1024): between the two the
+ * band minus the sidebar leaves the preview and the panel squeezing each
+ * other, so mid-widths stack instead. Matches DocLayout's own xl TOC-column
+ * breakpoint. */
+@media (min-width: 1280px) {
+  #sg-code-panel {
+    position: sticky;
+    top: var(--sg-header-h);
+    max-height: calc(100vh - var(--sg-header-h));
+    overflow-y: auto;
+  }
+}
+
+/* Resizer handle — absolutely positioned grab strip at the code panel's edge,
+ * targeted by its data-attr (the drag wiring in panel-scripts.tsx uses the same
+ * attribute). Under the styleguide accent budget, hover is a resting/decorative
+ * tint — neutral. The [data-sg-dragging] active-drag state is the
+ * whitelisted pressed-control role, so it keeps the accent tint. The keyboard
+ * focus outline (panel-scripts-source.ts's ACCENT_OUTLINE) is untouched — also
+ * a whitelisted role. (The sidebar's own resizer is provided by DocLayout /
+ * SidebarResizerInit.) */
+#sg-code-panel [data-sg-code-panel-resizer] {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(var(--sg-code-panel-resizer-w) / -2);
+  width: var(--sg-code-panel-resizer-w);
+  cursor: col-resize;
+  z-index: var(--z-index-local-1);
+  background: transparent;
+}
+#sg-code-panel [data-sg-code-panel-resizer]:hover {
+  background: color-mix(in oklch, var(--color-border-strong) 50%, transparent);
+}
+#sg-code-panel [data-sg-code-panel-resizer][data-sg-dragging] {
+  background: color-mix(in oklch, var(--color-accent) 30%, transparent);
+}
+
+/* Visibility toggle for the code panel. */
+:root[data-sg-code-panel-hidden] #sg-code-panel {
+  display: none;
+}
+
+/* Below the side-by-side breakpoint the framework .zd-doc-content-band stays an
+ * unconditional flex row — it never wraps on its own. Force a column stack
+ * when the code panel is present so it lands below the preview, then keep the
+ * panel full-width, swap its left border for a top divider, and drop the
+ * resizer. */
+@media (max-width: 1279px) {
+  .zd-doc-content-band:has(#sg-code-panel) {
+    flex-direction: column;
+    gap: 0;
+    align-items: stretch;
+  }
+  #sg-code-panel {
+    width: 100%;
+    position: static;
+    max-height: none;
+    /* Floor for the flex-1 min-h-0 Live-CSS CodeMirror editor — without a
+     * fixed ancestor height the editor collapses to ~0 in column flow. */
+    min-height: 24rem;
+    margin-block-start: 0; /* cancel base margin-block so the border-top divider sits flush */
+    border-left: 0;
+    border-top: 1px solid var(--color-border);
+    /* CodePanel keeps its own p-hsp-md breathing room; subtract that inner
+     * inset so the visible SOURCE content aligns with <main>'s 24px edge. */
+    padding-inline: calc(var(--spacing-hsp-xl) - var(--spacing-hsp-md));
+
+    @media (min-width: 1024px) {
+      padding-inline: calc(var(--spacing-hsp-2xl) - var(--spacing-hsp-md));
+    }
+  }
+  #sg-code-panel [data-sg-code-panel-resizer] {
+    display: none;
+  }
+}
+
+/* ============================================================================
+ * Styleguide catalog content + interactive affordances
+ * ========================================================================== */
+
+/* --- Copy-to-clipboard button (snippets + code panel) --------------------- */
+.sg-copy-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-hsp-2xs);
+  padding: var(--spacing-vsp-3xs) var(--spacing-hsp-xs);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-muted);
+  font-size: var(--text-micro);
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    color 0.15s ease,
+    border-color 0.15s ease,
+    background-color 0.15s ease;
+}
+@media (hover: hover) {
+  .sg-copy-btn:hover {
+    color: var(--color-fg);
+    border-color: var(--color-border);
+  }
+}
+.sg-copy-btn:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+.sg-copy-btn[data-copied] {
+  color: var(--color-success);
+  border-color: var(--color-success);
+}
+
+/* --- Landing search + tag filter ------------------------------------------ */
+.sg-filter {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-vsp-sm);
+  margin-bottom: var(--spacing-vsp-xl);
+}
+.sg-filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-hsp-md);
+}
+.sg-search-field {
+  display: flex;
+  flex: 1;
+  min-width: 14rem;
+  align-items: center;
+  gap: var(--spacing-hsp-sm);
+  padding: var(--spacing-vsp-xs) var(--spacing-hsp-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  transition: border-color 0.15s ease;
+}
+.sg-search-field:focus-within {
+  border-color: var(--color-accent);
+}
+.sg-search-input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-fg);
+  font-size: var(--text-small);
+  outline: none;
+}
+.sg-search-input::placeholder {
+  color: var(--color-muted);
+}
+.sg-search-input::-webkit-search-cancel-button {
+  appearance: none;
+}
+.sg-search-clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--spacing-icon-md);
+  height: var(--spacing-icon-md);
+  border: 0;
+  border-radius: var(--radius-full);
+  background: var(--color-surface-2);
+  color: var(--color-muted);
+  font-size: var(--text-small);
+  line-height: 1;
+  cursor: pointer;
+}
+.sg-search-clear:hover {
+  color: var(--color-fg);
+}
+
+/* --- Chips (category filter + token copy-mode) ---------------------------- */
+.sg-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-hsp-xs);
+}
+.sg-chip {
+  padding: var(--spacing-vsp-3xs) var(--spacing-hsp-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+  color: var(--color-muted);
+  font-size: var(--text-caption);
+  cursor: pointer;
+  transition:
+    color 0.15s ease,
+    border-color 0.15s ease,
+    background-color 0.15s ease;
+}
+@media (hover: hover) {
+  .sg-chip:hover {
+    border-color: var(--color-border);
+    color: var(--color-fg);
+  }
+}
+.sg-chip:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+.sg-chip[aria-pressed="true"] {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+/* --- Detail-page workbench toolbar ---------------------------------------- */
+/* One page-level toolbar owns theme / viewport / layout / code-panel /
+ * preview-tokens for every stage below it (see preview/detail-workbench.tsx).
+ */
+.sg-workbench-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-hsp-md);
+  margin-bottom: var(--spacing-vsp-md);
+  padding: var(--spacing-vsp-2xs) var(--spacing-hsp-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  /* Opaque — the stages scroll underneath it when it is pinned below. */
+  background: var(--color-surface);
+}
+
+/* Pinned only in the side-by-side desktop layout, where the strip is one or two
+ * rows and keeping "show this in dark" one click away part way down a long
+ * variant list is the whole point of hoisting these controls out of the stage
+ * headers. It wraps to four rows on a phone, where pinning would spend a fifth
+ * of the viewport on chrome for the entire scroll. */
+@media (min-width: 1280px) {
+  .sg-workbench-toolbar {
+    position: sticky;
+    top: var(--sg-header-h);
+    /* Above the stages it scrolls over; below the framework header band. */
+    z-index: var(--z-index-local-2);
+  }
+}
+
+/* zdtp 0.8 paints regions but leaves their padded inventory wrapper transparent. */
+#ui-defaults-light > .zdtp-dashboard__inventory {
+  background: var(--zdtp-dashboard-light-bg);
+}
+
+#ui-defaults-dark > .zdtp-dashboard__inventory {
+  background: var(--zdtp-dashboard-dark-bg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sg-copy-btn,
+  .sg-chip,
+  .sg-search-field {
+    transition: none;
+  }
+}
+
+/* ============================================================================
+ * /components catalogue gallery — inline, server-rendered thumbnails (#540)
+ *
+ * The catalogue used to be N blocks of text. Each tile now carries the real
+ * component, rendered SERVER-SIDE into the static HTML (see
+ * src/catalog/component-thumb.tsx) — no iframes, so the page costs no extra
+ * runtime and the thumbnails survive JS being disabled.
+ *
+ * THE FRAMING MODEL (the load-bearing part of this section)
+ *
+ * A component squeezed into a 272px tile renders its MOBILE layout and tells
+ * you nothing about the component. So each thumbnail is a two-box sandwich:
+ *
+ *   .sg-thumb        the visible tile slot — fluid width (the grid track),
+ *                    16:10, clipped.
+ *   .sg-thumb-inner  a VIRTUAL VIEWPORT: a real desktop-width layout box
+ *                    (~720px, or ~400px for atom-scale categories) that is
+ *                    scaled down onto the slot with `transform: scale()`.
+ *
+ * The scale is a plain number — `track-min ÷ virtual-viewport-width` — and the
+ * virtual viewport's width is derived back out of it as `100% / scale`. That
+ * inversion is what keeps the layout honest while the track stays fluid: at
+ * the nominal track width the component lays out at exactly its virtual width,
+ * and in a stretched track it lays out slightly WIDER (never squeezed), with
+ * the apparent text size identical in every tile because the scale is constant.
+ *
+ * WHY THE VIRTUAL VIEWPORT ALSO CARRIES THE ASPECT RATIO
+ * `transform` does not affect layout, so alignment decided in the tile's own
+ * coordinate space would compare a 450px-tall layout box against a 170px-tall
+ * slot and top-anchor everything. Giving the virtual viewport the SAME 16:10
+ * ratio makes its height the exact pre-image of the slot's height, so
+ * `align-content: safe center` decides fit at full scale and is then scaled
+ * down with everything else: a component that fits is centred, one that
+ * overflows is top-anchored (`safe` falls back to `start`) and clipped, never
+ * cropped at both ends.
+ *
+ * PALETTE SCOPE — load-bearing, see the block on `.sg-thumb[data-sg-preview-scope]`.
+ * ========================================================================== */
+
+:root {
+  /* Grid track minimum for the tile-size control, as a UNITLESS number so the
+   * scale below can divide by it. `--sg-tile-min-n * 1px` is its length twin.
+   * Compact is the default; `data-sg-tile-size` is set on <html> by the
+   * catalogue's restore script + segmented control (see catalog/tile-size.ts).
+   * Keep these two numbers in sync with TILE_SIZES there — the unit test
+   * asserts they match. */
+  --sg-tile-min-n: 272;
+  /* Virtual-viewport width, unitless. Overridden per tile (inline style) to
+   * THUMB_VIEWPORT_W_ATOM for the atom-scale categories. */
+  --sg-thumb-vw-n: 720;
+}
+:root[data-sg-tile-size="large"] {
+  --sg-tile-min-n: 400;
+}
+
+/* --- Catalogue grid ------------------------------------------------------- */
+
+.sg-gallery-section {
+  margin-bottom: var(--spacing-vsp-xl);
+}
+
+.sg-grid {
+  display: grid;
+  /* `min(100%, …)` keeps a single track from exceeding the band on narrow
+   * viewports — without it the 400px Large track overflows a 390px phone and
+   * the whole page scrolls horizontally. */
+  grid-template-columns: repeat(
+    auto-fill,
+    minmax(min(100%, calc(var(--sg-tile-min-n) * 1px)), 1fr)
+  );
+  gap: var(--spacing-hsp-lg);
+}
+
+.sg-tile {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  transition: border-color 0.15s ease;
+}
+/* Resting hover is neutral (accent budget): the border ladder steps up rather
+ * than spending accent on a pointer state. */
+@media (hover: hover) {
+  .sg-tile:has(> [data-sg-card]:hover) {
+    border-color: var(--color-border-strong);
+  }
+}
+.sg-tile:has(> [data-sg-card]:focus-visible) {
+  border-color: var(--color-border-strong);
+}
+
+/* --- Thumbnail slot ------------------------------------------------------- */
+
+.sg-thumb {
+  position: relative;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg);
+  /* Decorative: the tile's anchor is the only interactive element. `inert` on
+   * the element itself removes the rendered component from the tab order and
+   * the accessibility tree; this is the pointer half of the same guarantee. */
+  pointer-events: none;
+}
+
+/* PALETTE SCOPE.
+ *
+ * A host `@theme` typically RE-ASSERTS the overlapping `--color-*` names to
+ * its own doc-chrome roles at `:root` (0,1,0), so a component rendered on a
+ * doc-chrome page would silently take the DOC palette instead of its own.
+ * This selector is (0,2,0) — class + attribute — so it wins over `:root`
+ * regardless of @import order, and is scoped to the thumbnail so the
+ * surrounding catalogue chrome keeps the doc palette.
+ *
+ * The declarations below are the canonical Tier-2 provider values (see
+ * packages/ui/styles/colors.css) restored for exactly the names a host is
+ * likely to re-assert. The ui-only names a host does NOT typically re-assert
+ * (surface-2, rail-*, focus, on-accent, loading-scrim) already resolve to the
+ * ui palette and need no restore here. */
+.sg-thumb[data-sg-preview-scope] {
+  --color-bg:           light-dark(var(--palette-neutral-0), var(--palette-neutral-3));
+  --color-surface:      light-dark(var(--palette-neutral-0), var(--palette-neutral-3));
+  --color-fg:           light-dark(var(--palette-neutral-3), var(--palette-neutral-0));
+  --color-muted:        light-dark(var(--palette-neutral-2), var(--palette-neutral-1));
+  --color-accent:       light-dark(var(--palette-accent-2), var(--palette-accent-1));
+  --color-accent-hover: light-dark(var(--palette-accent-3), var(--palette-accent-0));
+  /* Restore the provider border after a host's doc-ramp re-assertion. */
+  --color-border:      light-dark(var(--palette-neutral-1), var(--palette-neutral-2));
+  --color-success: light-dark(var(--palette-state-success), var(--palette-state-success-dark));
+  --color-danger:  light-dark(var(--palette-state-danger),  var(--palette-state-danger-dark));
+  --color-warning: light-dark(var(--palette-state-warning), var(--palette-state-warning-dark));
+  --color-info:    light-dark(var(--palette-state-info),    var(--palette-state-info-dark));
+}
+
+/* Bottom fade for a component taller than its slot. Painted in the slot's own
+ * background, so over the empty space under a component that fits it is
+ * invisible — no measurement needed to decide whether to show it. */
+.sg-thumb::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  height: var(--spacing-vsp-md);
+  background: linear-gradient(to top, var(--color-bg), transparent);
+}
+
+.sg-thumb-inner {
+  /* The virtual viewport. `100% / scale` resolves to the nominal virtual width
+   * at the nominal track width, and a little wider in a stretched track. */
+  --sg-thumb-scale: calc(var(--sg-tile-min-n) / var(--sg-thumb-vw-n));
+  width: calc(100% / var(--sg-thumb-scale));
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  padding: var(--spacing-hsp-xl);
+  display: grid;
+  /* Fallback first: a browser without the `safe` keyword top-anchors, which is
+   * the outcome that never crops. */
+  align-content: start;
+  align-content: safe center;
+  transform: scale(var(--sg-thumb-scale));
+  /* Also establishes the containing block for any `position: fixed` descendant
+   * (e.g. a mobile nav's fixed bar), so a thumbnail cannot escape its tile. */
+  transform-origin: top left;
+}
+
+/* Documented per-component opt-out (THUMB_OPT_OUTS): a static, legible note in
+ * place of a rendered component, at tile scale rather than virtual scale. */
+.sg-thumb-note {
+  display: flex;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-hsp-lg);
+  color: var(--color-muted);
+  font-size: var(--text-caption);
+  text-align: center;
+  text-wrap: balance;
+}
+
+/* --- Tile meta (the card link) -------------------------------------------- */
+
+.sg-tile-meta {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--spacing-vsp-3xs);
+  padding: var(--spacing-hsp-md);
+  color: inherit;
+  text-decoration: none;
+}
+.sg-tile-meta:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: calc(-2 * var(--spacing-px));
+}
+.sg-tile-title {
+  color: var(--color-fg);
+  font-size: var(--text-caption);
+  font-weight: 600;
+}
+/* Links carry an underline affordance for pointer AND keyboard alike. */
+.sg-tile-meta:hover .sg-tile-title,
+.sg-tile-meta:focus-visible .sg-tile-title {
+  text-decoration: underline;
+}
+.sg-tile-desc {
+  /* Two-line clamp keeps every tile in a row the same height. */
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  color: var(--color-muted);
+  font-size: var(--text-caption);
+  line-height: var(--leading-snug);
+}
+.sg-tile-count {
+  margin-top: auto;
+  color: var(--color-muted);
+  /* True metadata (a count) — the one role --text-micro is for. */
+  font-size: var(--text-micro);
+}
+
+/* --- Segmented control (tile size) ---------------------------------------- */
+
+.sg-seg {
+  display: inline-flex;
+  gap: var(--spacing-hsp-2xs);
+  padding: var(--spacing-hsp-2xs);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+.sg-seg-btn {
+  position: relative;
+  padding: var(--spacing-vsp-3xs) var(--spacing-hsp-md);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-muted);
+  font-size: var(--text-caption);
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+@media (hover: hover) {
+  .sg-seg-btn:hover {
+    color: var(--color-fg);
+  }
+}
+.sg-seg-btn:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+/* Selected = NEUTRAL raised fill. The house accent budget is one filled-accent
+ * element per viewport and the catalogue already spends it on the pressed
+ * category chip, so selection here is carried by the raised surface plus the
+ * accent UNDERLINE marker below — never an accent background. */
+.sg-seg-btn[aria-pressed="true"] {
+  background: var(--color-surface-2);
+  box-shadow: var(--shadow-card);
+  color: var(--color-fg);
+}
+.sg-seg-btn[aria-pressed="true"]::after {
+  content: "";
+  position: absolute;
+  inset-inline: var(--spacing-hsp-md);
+  bottom: var(--spacing-hsp-2xs);
+  height: calc(2 * var(--spacing-px));
+  border-radius: var(--radius-full);
+  background: var(--color-accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sg-tile,
+  .sg-seg-btn {
+    transition: none;
+  }
+}

@@ -1,3 +1,4 @@
+// @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { AFTER_NAVIGATE_EVENT } from "@takazudo/zudo-doc/transitions";
 import {

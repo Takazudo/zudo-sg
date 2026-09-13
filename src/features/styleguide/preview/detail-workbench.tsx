@@ -41,7 +41,7 @@ import {
   ATTR_CODE_PANEL_HIDDEN,
   isCodePanelHidden,
   toggleCodePanel,
-} from "../chrome/panel-contract";
+} from "@takazudo/zudo-sg/chrome";
 
 /** How the stages are arranged in the preview column. */
 type StageLayout = "stacked" | "grid";

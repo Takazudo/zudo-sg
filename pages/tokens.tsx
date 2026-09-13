@@ -2,10 +2,12 @@
 /** @jsxImportSource preact */
 import type { JSX, VNode } from "preact";
 import { Island } from "@takazudo/zfb";
+import { settings } from "@/config/settings";
 import { defaultLocale } from "@/config/i18n";
 import { withBase } from "@/utils/base";
+import { navNodes } from "@/styleguide/nav-nodes";
 import { TOKENS_SLUG } from "@/styleguide/registry";
-import { StyleguideLayout } from "@/features/styleguide/chrome/_styleguide-layout";
+import { StyleguideLayout } from "@takazudo/zudo-sg/chrome";
 import { UiTokenDashboards } from "@/features/styleguide/token-dashboard/ui-token-dashboards";
 import PreviewTokensButton from "@/features/styleguide/token-tweak/preview-tokens-button";
 import { composeMetaTitle } from "./lib/_compose-meta-title";
@@ -34,6 +36,10 @@ export default function TokensPage(): JSX.Element {
       activeSlug={TOKENS_SLUG}
       lang={locale}
       hideSidebar
+      navNodes={navNodes}
+      sidebarToggle={settings.sidebarToggle}
+      enableClientRouter={settings.dynamicPageTransition}
+      noindex={settings.noindex}
       {...chrome}
     >
       <div>

@@ -1,35 +1,38 @@
 /** @jsxRuntime automatic */
 /** @jsxImportSource preact */
-// Inline, server-rendered thumbnails for the /components catalogue (#540).
+// Inline, server-rendered thumbnails for a host's `/components` catalogue
+// (#540, moved into the engine package by #653).
 //
-// The catalogue page already imports the story registry server-side, so it can
+// The catalogue page already has the story registry server-side, so it can
 // call `story.render(...)` directly instead of booting a preview iframe per
-// tile. That matters: `/components/preview` boots a bundle that STATICALLY
-// imports all 72 story modules, so 72 iframes would mean 72 browsing contexts
-// each parsing the whole story set, all still alive after a full scroll.
-// Rendering inline costs zero runtime, and the thumbnails land in the static
-// HTML — the catalogue shows components with JavaScript disabled.
+// tile. That matters: a preview route boots a bundle that STATICALLY imports
+// every story module, so N iframes would mean N browsing contexts each
+// parsing the whole story set, all still alive after a full scroll. Rendering
+// inline costs zero runtime, and the thumbnails land in the static HTML — the
+// catalogue shows components with JavaScript disabled.
 //
 // WHY THE HTML GOES THROUGH A STRING
 // A thumbnail is a SNAPSHOT, not a live component: it is `inert`, decorative,
-// and 72 of them share one document. Rendering to a string lets us
+// and shares its document with every other tile. Rendering to a string lets us
 //   1. prefix every `id` (and every attribute that references one) per tile, so
-//      72 snapshots cannot collide — `zui-nav-toggle` alone appears in three
-//      stories, and duplicate ids silently redirect `<label for>` across tiles;
-//   2. drop `<script>` blocks (two stories embed a `type="application/json"`
-//      search index for their enhancer), so no story can ever ship bytes that
-//      execute on the catalogue.
-// The scoping is done once, eagerly, at module init — mirroring
-// `storyEntries` in src/styleguide/registry.ts — which also keeps the
-// nested render out of the page's own render pass.
+//      tiles cannot collide — an id used by more than one story would silently
+//      redirect `<label for>` (or similar) across tiles;
+//   2. drop `<script>` blocks (a story may embed a `type="application/json"`
+//      search index for its own enhancer), so no story can ever ship bytes
+//      that execute on the catalogue.
+// The scoping happens lazily, per slug, memoized in `thumbCache` below — a
+// component thumbnail is computed once no matter how many times its tile
+// re-renders (a static build renders the catalogue page once, so in practice
+// this runs once per story anyway; the memo just keeps a second render, or a
+// future dynamic caller, from re-rendering to a string twice).
 //
-// Framing (virtual viewport, scale, fit) lives in catalog/gallery.css; this
-// module only supplies the per-tile geometry variable and the markup.
+// Framing (virtual viewport, scale, fit) lives in the package's `styles.css`;
+// this module only supplies the per-tile geometry variable and the markup.
 
 import type { JSX } from "preact";
 import { render as renderToStaticHtml } from "preact-render-to-string";
-import type { StoryCategory, StoryControl } from "@zudo-sg/ui";
-import { storyEntries, type StoryEntry } from "@/styleguide/registry";
+import type { StoryControl } from "../stories/types.js";
+import type { StoryEntry } from "../registry/registry.js";
 
 /** Virtual-viewport width (CSS px) a thumbnail lays its component out at. */
 export const THUMB_VIEWPORT_W = 720;
@@ -40,8 +43,12 @@ export const THUMB_VIEWPORT_W = 720;
  */
 export const THUMB_VIEWPORT_W_ATOM = 400;
 
-/** Categories that use the atom-scale virtual viewport. */
-export const ATOM_SCALE_CATEGORIES: readonly StoryCategory[] = [
+/**
+ * Categories that use the atom-scale virtual viewport. Category values are
+ * plain strings (host-declared `categoryOrder`, ADR decision 5) — the engine
+ * does not own a closed category union.
+ */
+export const ATOM_SCALE_CATEGORIES: readonly string[] = [
   "Typography",
   "Actions",
   "Feedback",
@@ -56,30 +63,28 @@ export const ATOM_SCALE_CATEGORIES: readonly StoryCategory[] = [
  * island to show anything at all, or escapes its tile; the value is the reason,
  * rendered in the tile so a reader never meets an unexplained blank.
  *
- * Intentionally empty: all 72 components render server-side today (the unit
- * test in `__tests__/component-thumb.test.tsx` is the guard), and
- * `position: fixed` escapes are contained by the scale transform's containing
- * block rather than opted out. `buildThumb` also falls back to this path on a
- * thrown render, so one broken story degrades to a labelled tile instead of
+ * Intentionally empty by default — a host wires its own entries in only where
+ * a real story needs the opt-out. `buildThumb` also falls back to this path on
+ * a thrown render, so one broken story degrades to a labelled tile instead of
  * taking the whole catalogue build down.
  */
 export const THUMB_OPT_OUTS: Readonly<Record<string, string>> = {};
 
 /** Virtual-viewport width for a category's tiles. */
-export function thumbViewportWidth(category: StoryCategory): number {
+export function thumbViewportWidth(category: string): number {
   return ATOM_SCALE_CATEGORIES.includes(category)
     ? THUMB_VIEWPORT_W_ATOM
     : THUMB_VIEWPORT_W;
 }
 
 /**
- * The scale `gallery.css` applies, as a number: the tile's track minimum over
- * the virtual-viewport width.
+ * The scale the package's `styles.css` applies, as a number: the tile's track
+ * minimum over the virtual-viewport width.
  *
  * Deliberately has no runtime caller. The CSS owns the arithmetic — it computes
  * `--sg-thumb-scale` from the same two custom properties so the tile-size
- * control can change the track without re-rendering 72 thumbnails — and this is
- * the checkable mirror of it, which the contract test in `__tests__` pins
+ * control can change the track without re-rendering every thumbnail — and this
+ * is the checkable mirror of it, which the contract test in `__tests__` pins
  * against both the CSS formula and TILE_SIZES.
  */
 export function thumbScale(trackMin: number, viewportWidth: number): number {
@@ -117,24 +122,24 @@ const FRAGMENT_HREF_RE = /\shref="#([^"\s]+)"/g;
 const FRAGMENT_URL_RE = /url\(#([^)"\s]+)\)/g;
 
 /**
- * Make one rendered story safe to inline alongside 71 others: strip `<script>`
- * and `<style>` blocks, and namespace every id (and every reference to one)
- * under `prefix`, so intra-tile wiring — a `<label for>`, an `aria-controls`,
- * an SVG `url(#gradient)` — keeps working while nothing leaks across tiles.
+ * Make one rendered story safe to inline alongside every other tile: strip
+ * `<script>` and `<style>` blocks, and namespace every id (and every
+ * reference to one) under `prefix`, so intra-tile wiring — a `<label for>`, an
+ * `aria-controls`, an SVG `url(#gradient)` — keeps working while nothing leaks
+ * across tiles.
  *
  * `<style>` is stripped for two independent reasons, either of which alone
  * would justify it. It is invalid here: `<style>` is metadata content, so
- * html-validate rejects it under a `<div>` (`element-permitted-content`), and
- * `pnpm check:html` is a release gate. And it is *global*: the nav stories emit
- * a story-only rule pinning SiteNav's fixed rail to its frame, which inlined
- * verbatim would apply to the whole catalogue page — three times over — not
- * just the tile that carries it. Nothing is lost: the tile's `transform`
- * already establishes a containing block, which is what actually keeps the
- * fixed-position nav stories inside their own boxes here.
+ * html-validate rejects it under a `<div>` (`element-permitted-content`). And
+ * it is *global*: a story-only rule pinning something to its own frame would,
+ * inlined verbatim, apply to the whole catalogue page rather than just the
+ * tile that carries it. Nothing is lost: the tile's `transform` already
+ * establishes a containing block, which is what actually keeps
+ * fixed-position content inside its own box here.
  *
  * Attribute-shaped text inside a component's own *content* (a code sample that
  * literally prints ` id="…"`) would be rewritten too. That is cosmetic in a
- * decorative snapshot and no current story does it.
+ * decorative snapshot.
  */
 export function scopeThumbHtml(html: string, prefix: string): string {
   const scopeRefList = (value: string): string =>
@@ -169,8 +174,9 @@ function buildThumb(entry: StoryEntry): Thumb {
 
   // `variants[0]` is the first-AUTHORED story, and its export name is read from
   // the registry — never assumed to be "Default", which many components have
-  // no such export for (hero is Primary/Secondary, cta-button Playground/Pair).
+  // no such export for.
   const variant = entry.variants[0];
+  if (!variant) return { kind: "note", reason: "No variants declared" };
   try {
     // `render` returns ComponentChildren (possibly a string or an array), so
     // wrap it in a fragment rather than casting it to a VNode.
@@ -186,10 +192,23 @@ function buildThumb(entry: StoryEntry): Thumb {
   }
 }
 
-/** All thumbnails, rendered once at module init (eager + synchronous). */
-const thumbBySlug = new Map<string, Thumb>(
-  storyEntries.map((entry) => [entry.slug, buildThumb(entry)]),
-);
+/**
+ * Per-slug memo. Populated lazily on first render — the engine has no access
+ * to a host's full story list up front (that would be a `@/`-style host
+ * import), so unlike the old host-owned module this cannot warm the whole
+ * cache eagerly at import time. A host that renders every `ComponentThumb`
+ * once per build (the catalogue page's normal use) gets the same effective
+ * behavior: each thumbnail is still computed exactly once.
+ */
+const thumbCache = new Map<string, Thumb>();
+
+function getThumb(entry: StoryEntry): Thumb {
+  const cached = thumbCache.get(entry.slug);
+  if (cached) return cached;
+  const thumb = buildThumb(entry);
+  thumbCache.set(entry.slug, thumb);
+  return thumb;
+}
 
 export interface ComponentThumbProps {
   entry: StoryEntry;
@@ -197,12 +216,12 @@ export interface ComponentThumbProps {
 
 /**
  * One tile's thumbnail slot. `aria-hidden` + `inert` keep the snapshot out of
- * the accessibility tree AND out of the tab order — 72 rendered components
- * carry a lot of focusable controls, and focusable content inside an
+ * the accessibility tree AND out of the tab order — a catalogue page renders a
+ * lot of focusable controls this way, and focusable content inside an
  * `aria-hidden` subtree is an accessibility defect, not just noise.
  */
 export function ComponentThumb({ entry }: ComponentThumbProps): JSX.Element {
-  const thumb = thumbBySlug.get(entry.slug) ?? buildThumb(entry);
+  const thumb = getThumb(entry);
   const viewportWidth = thumbViewportWidth(entry.meta.category);
 
   return (

@@ -111,7 +111,8 @@
 @import "@takazudo/zdtp/dashboard/styles.css";
 
 /* ========================================
- * Styleguide catalog — feature CSS import (#122, #167)
+ * @takazudo/zudo-sg catalog + chrome + search CSS (#122, #167, #540, moved
+ * to the engine package by #653)
  *
  * Grouped with the other @imports because CSS requires @import to precede
  * all non-import rules — it used to sit after every rule at the bottom of
@@ -133,19 +134,17 @@
  * `:has(#sg-code-panel)` ID argument), and this import still comes after
  * `tailwindcss/utilities` in source order — moved up INTO the top import
  * block, not above it — so the override holds either way. This file's own body
- * rules below share no selector+property pair with
- * the feature CSS (the only shared class, `.zd-doc-content-band`, is touched
- * for different properties there — max-width transition vs. flex-direction/
- * gap here), so relocating the import above them changes nothing.
- * ======================================== */
-@import "../features/styleguide/styles.css";
-/* Catalogue gallery — the inline-SSR thumbnail framing model (virtual
- * viewport + scale + fit), the tile grid, and the tile-size segmented
- * control. Split from styles.css because it is a self-contained feature
- * with a load-bearing header comment; same unlayered placement and same
- * rationale as the import above. See
- * src/features/styleguide/catalog/gallery.css (#540). */
-@import "../features/styleguide/catalog/gallery.css";
+ * rules below share no selector+property pair with the package CSS (the only
+ * shared class, `.zd-doc-content-band`, is touched for different properties
+ * there — max-width transition vs. flex-direction/gap here), so relocating
+ * the import above them changes nothing.
+ *
+ * Imported today by relative path (no `@takazudo/zudo-sg/styles.css` subpath
+ * export exists yet — that wiring, plus Tailwind-class safelisting, is
+ * #661's job). Combines what used to be two separate host imports (the
+ * chrome/search feature CSS and the catalogue gallery CSS) into the one file
+ * the package now ships at its root. */
+@import "../../packages/styleguide/styles.css";
 
 /* Portable syntax paint + ProseMd typography. The provider owns these rules
  * directly; zudo-doc's feature stylesheet is not part of the component package
