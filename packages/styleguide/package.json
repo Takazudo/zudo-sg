@@ -40,6 +40,10 @@
       "types": "./dist/chrome/index.d.ts",
       "default": "./dist/chrome/index.js"
     },
+    "./chrome/panel-contract": {
+      "types": "./dist/chrome/panel-contract.d.ts",
+      "default": "./dist/chrome/panel-contract.js"
+    },
     "./search": {
       "types": "./dist/search/index.d.ts",
       "default": "./dist/search/index.js"

@@ -37,11 +37,18 @@ import VariantFrame, {
   type ThemeMode,
   type ViewportId,
 } from "./variant-frame";
+// Imports the narrow `/chrome/panel-contract` subpath rather than the
+// `/chrome` barrel: the barrel also re-exports StyleguideLayout, which
+// statically imports `@takazudo/zfb`'s Island — fine in a real (bundled) zfb
+// build, but that transitive node_modules-to-node_modules "react" import
+// breaks under plain Vitest/Node module evaluation (see the seam comment in
+// packages/styleguide/src/chrome/__tests__/_styleguide-layout.test.tsx). This
+// island only needs the pure, framework-free DOM/localStorage helpers.
 import {
   ATTR_CODE_PANEL_HIDDEN,
   isCodePanelHidden,
   toggleCodePanel,
-} from "@takazudo/zudo-sg/chrome";
+} from "@takazudo/zudo-sg/chrome/panel-contract";
 
 /** How the stages are arranged in the preview column. */
 type StageLayout = "stacked" | "grid";

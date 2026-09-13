@@ -5,7 +5,7 @@ import DetailWorkbench, { type WorkbenchVariant } from "../detail-workbench";
 import {
   ATTR_CODE_PANEL_HIDDEN,
   LS_CODE_PANEL_HIDDEN,
-} from "@takazudo/zudo-sg/chrome";
+} from "@takazudo/zudo-sg/chrome/panel-contract";
 
 const FOUR_VARIANTS: WorkbenchVariant[] = [
   { exportName: "Default", name: "Default" },
