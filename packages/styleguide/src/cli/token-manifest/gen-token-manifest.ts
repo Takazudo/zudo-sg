@@ -12,6 +12,7 @@ import { buildUiTokenManifest, renderUiTokenManifestFile } from "./ui-token-mani
 export interface GenTokenManifestResult {
   tokenCount: number;
   changed: boolean;
+  manifestOut: string;
 }
 
 export interface GenTokenManifestOptions {
@@ -28,12 +29,24 @@ export class TokenManifestDriftError extends Error {
   }
 }
 
+export class TokensConfigMissingError extends Error {
+  constructor() {
+    super(
+      "[zudo-sg] gen-token-manifest needs a `tokens` entry in zudo-sg.config.mjs " +
+        "(`tokens: { cssFiles: [tokensCssPath, colorsCssPath], manifestOut }`).",
+    );
+    this.name = "TokensConfigMissingError";
+  }
+}
+
 export function runGenTokenManifest(
   projectRoot: string,
   config: ZudoSgConfig,
   options: GenTokenManifestOptions = {},
 ): GenTokenManifestResult {
-  const [tokensCssPath, colorsCssPath] = config.tokens.cssFiles;
+  const { tokens } = config;
+  if (!tokens) throw new TokensConfigMissingError();
+  const [tokensCssPath, colorsCssPath] = tokens.cssFiles;
   const tokensCss = readFileSync(resolve(projectRoot, tokensCssPath), "utf8");
   const colorsCss = readFileSync(resolve(projectRoot, colorsCssPath), "utf8");
   const manifest = buildUiTokenManifest({ tokensCss, colorsCss });
@@ -46,7 +59,7 @@ export function runGenTokenManifest(
     manifest.fontTokens.length +
     manifest.sizeTokens.length;
 
-  const manifestPath = resolve(projectRoot, config.tokens.manifestOut);
+  const manifestPath = resolve(projectRoot, tokens.manifestOut);
   let current: string | null;
   try {
     current = readFileSync(manifestPath, "utf8");
@@ -55,11 +68,11 @@ export function runGenTokenManifest(
   }
 
   if (options.check) {
-    if (current !== next) throw new TokenManifestDriftError(config.tokens.manifestOut);
-    return { tokenCount, changed: false };
+    if (current !== next) throw new TokenManifestDriftError(tokens.manifestOut);
+    return { tokenCount, changed: false, manifestOut: tokens.manifestOut };
   }
 
-  if (current === next) return { tokenCount, changed: false };
+  if (current === next) return { tokenCount, changed: false, manifestOut: tokens.manifestOut };
   writeFileSync(manifestPath, next);
-  return { tokenCount, changed: true };
+  return { tokenCount, changed: true, manifestOut: tokens.manifestOut };
 }

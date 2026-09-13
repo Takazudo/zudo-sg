@@ -6,7 +6,7 @@
 import { loadZudoSgConfig } from "./config.js";
 import { SgRegistryDriftError, runGenRegistry } from "./registry/gen-registry.js";
 import { parseArgs, runNewComponent } from "./scaffold/new-component.js";
-import { runGenTokenManifest, TokenManifestDriftError } from "./token-manifest/gen-token-manifest.js";
+import { runGenTokenManifest, TokenManifestDriftError, TokensConfigMissingError } from "./token-manifest/gen-token-manifest.js";
 
 const USAGE = `Usage: zudo-sg <command> [options]
 
@@ -62,11 +62,11 @@ export async function runZudoSgCli(argv: string[], projectRoot: string = process
         } else if (!result.changed) {
           console.log(`Token manifest already up to date (${result.tokenCount} entries); no change.`);
         } else {
-          console.log(`Wrote ${config.tokens.manifestOut} (${result.tokenCount} entries).`);
+          console.log(`Wrote ${result.manifestOut} (${result.tokenCount} entries).`);
         }
         return 0;
       } catch (err) {
-        if (err instanceof TokenManifestDriftError) {
+        if (err instanceof TokenManifestDriftError || err instanceof TokensConfigMissingError) {
           console.error(err.message);
           return 1;
         }

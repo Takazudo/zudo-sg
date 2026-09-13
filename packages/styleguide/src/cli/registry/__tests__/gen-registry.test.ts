@@ -36,7 +36,6 @@ function baseConfig(): ZudoSgConfig {
     categoryOrder: [],
     uiPackageName: "@zudo-sg/ui",
     barrelIndex: null,
-    tokens: { cssFiles: ["unused-tokens.css", "unused-colors.css"], manifestOut: "unused-manifest.ts" },
     previewStyles: "unused-preview.css",
   };
 }
