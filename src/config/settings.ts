@@ -153,6 +153,7 @@ The same library drives a multi-page demo site, so the components can be explore
   } satisfies FooterConfig as FooterConfig | false,
   headerNav: [
     { label: "Overview", path: "/docs/overview", categoryMatch: "overview" },
+    { label: "Architecture", path: "/docs/architecture", categoryMatch: "architecture" },
     { label: "Components", path: "/components", categoryMatch: "components" },
     { label: "Design Tokens", path: "/tokens" },
   ] satisfies HeaderNavItem[] as HeaderNavItem[],

@@ -1,0 +1,26 @@
+---
+title: Relationship to zudo-doc
+description: "How the styleguide engine builds on zudo-doc's own package-owned route seam, and where each site's documentation lives."
+sidebar_position: 6
+---
+
+`@takazudo/zudo-sg` is not a competitor to [zudo-doc](https://github.com/zudolab/zudo-doc) — it is a second package built on top of the same seam zudo-doc itself uses, installed into a zudo-doc-based host.
+
+## Same seam, one layer up
+
+zudo-doc already injects package-owned routes into a host build — the documentation routes, the 404 page, the sitemap and robots routes on this very site all come from the `@takazudo/zudo-doc` package rather than from host-owned `pages/` files. The styleguide engine's four catalog routes (`/components`, `/components/[slug]`, `/components/preview`, `/tokens`) are injected the same way, through the same kind of plugin/virtual-module boundary — the engine's routes plugin in fact requires zudo-doc's own routes plugin to already be present, because the engine's route entrypoints call zudo-doc's chrome factories directly rather than reimplementing header/footer/sidebar rendering.
+
+In short: zudo-doc turns a zfb project into a documentation site; the styleguide engine turns that same documentation site into a component catalog as well, without either package needing to know about the other's internals beyond the shared virtual-module contract.
+
+## Two sites, two audiences, no shared navigation
+
+This repository builds and deploys **two separate sites** from one workspace, and the split is deliberate:
+
+- **This root site** — what you're reading now — is the styleguide host: the component catalog, live previews, and a slim `/docs` section (this Architecture category included) that explains the shape of things at a concept level.
+- **The `doc/` workspace** is a separate, independently deployed zudo-doc site that owns the *full* documentation, including the complete story-authoring spec this page's sibling pages only summarize.
+
+There is no navigation between the two sites, and root-site content that goes deeper than a concept-level explanation belongs on the `doc/` site instead of here. If a page on this site starts feeling like it needs to teach the full authoring contract — every control type, every source-display rule, the scaffolding CLI's every flag — that content belongs on the `doc/` site, not expanded here.
+
+## Why this matters for anyone extending zudo-sg
+
+If you're building something similar — a package that injects its own routes into a zudo-doc host — this repository's `docs/adr/styleguide-engine.md` records the concrete contract the engine follows (virtual module names, plugin option shapes, the island-registration rule) at implementation detail the pages in this Architecture category deliberately leave out. That ADR, and zudo-doc's own route-injection ADR it's modeled on, are the places to look for the exact mechanics; this category is the map, not the specification.
