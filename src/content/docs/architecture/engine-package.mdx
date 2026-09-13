@@ -1,0 +1,53 @@
+---
+title: The engine package
+description: What @takazudo/zudo-sg owns, what a host keeps, and how the routes reach a build.
+sidebar_position: 3
+---
+
+`@takazudo/zudo-sg` is a workspace package (`packages/styleguide` in this repo) built the same way `@takazudo/zudo-doc` is built: an installable zfb package that injects routes, registers virtual modules, and ships a CLI, rather than host-owned files a project copies and lets drift.
+
+## The zudo-doc analogy
+
+Anyone familiar with `@takazudo/zudo-doc`'s package-owned routes (the `/docs`, `/404`, `/robots.txt` routes this same host already gets from that package) already knows the shape zudo-sg follows for its own four routes — `/components`, `/components/[slug]`, `/components/preview`, and `/tokens`. Both packages:
+
+- inject route entrypoints from their own package realpath, not from files copied into the host;
+- pass data across the plugin boundary through `virtual:*` modules rather than direct imports;
+- let a host `pages/` file at the same URL pattern silently shadow the injected route as an escape hatch, not an error.
+
+zudo-sg's routes plugin (`@takazudo/zudo-sg/plugins/routes`) in fact *requires* zudo-doc's routes plugin to already be registered — the engine's route entrypoints call zudo-doc's chrome factories (`createRouteContext`, `createChrome`) and import zudo-doc's own virtual modules to do it. The engine builds its catalog chrome on top of zudo-doc's, it does not reimplement it.
+
+## What the engine owns
+
+- **Route entrypoints** for the four catalog URLs. Each one only links preview CSS, reads its data from the virtual modules, and calls the zudo-doc chrome factories — it never reaches into a plugin's internals directly.
+- **Virtual modules**: `virtual:zudo-sg-context` (a plain JSON `sgContext` — base path, route patterns, category order, the preview CSS URL, catalog title/intro), `virtual:zudo-sg-registry` (a re-export of the host's generated story registry), and `virtual:zudo-sg-tokens` (the design-token manifest that feeds the `/tokens` route's dashboards, when the host supplies one).
+- **Three plugins**, composed by `zudoSg()` / `withZudoSg()` (`@takazudo/zudo-sg/config`): the routes plugin above, a preview-CSS plugin (see [Tokens and preview CSS](./tokens-and-preview-css)), and a dev-only design-token-panel apply proxy that persists live panel tweaks back into host CSS source.
+- **A CLI** (`zudo-sg`, from the package's `bin`): `gen-registry [--check]` discovers `*.stories.tsx` files and writes the host's story registry; `new-component <name> --category <c> [--nested] [--skip-barrel]` scaffolds a component; `gen-token-manifest [--check]` regenerates the design-token manifest the `/tokens` route reads.
+- **A dev-hydration seed**, `@takazudo/zudo-sg/islands` — see the note on islands below.
+
+## What the host keeps
+
+- **`zudo-sg.config.mjs`** — the host's own data: where component story roots live, the generated registry's output path, category order, the UI package name, the preview stylesheet entry, and token manifest paths. This is what `withZudoSg(preset, options)` reads to build the plugin descriptors above.
+- **The generated registry** (`src/styleguide/sg-registry.ts` in this host) and **the generated token manifest** — both are CLI output, committed so the build never has to run codegen implicitly, and checked in CI with the CLI's `--check` flags.
+- **The preview stylesheet entry** the preview-CSS plugin compiles (this host's `src/styles/preview-entry.css`).
+- **The doc-chrome bindings** (`chromeBindingsModule`) that let the host override specific chrome slots — this project overrides `Header` (so catalog routes' mobile drawer can show the component tree) and `BodyEndIslands` (so the host's own design-token-panel islands mount on every route) while leaving every other slot at the package default.
+- **One page**, `pages/index.tsx`, kept host-owned rather than injected — it is the site's identity page and, not incidentally, the host's static-import root for site-wide islands (see below).
+
+## The story model, at a glance
+
+The catalog is entirely data-driven from `*.stories.tsx` files. Each file default-exports a `StoryMeta` — a display title, a category, a one-line description, and a usage snippet — plus one or more named variants, each pairing a `render` function with a label. The catalog groups every component by category, lists its variants, and (for variants that opt in) exposes live-editable controls that re-render the same preview with tweaked props.
+
+Categories are plain strings, not a fixed enum: a host lists the categories it wants to appear first, in order, via `categoryOrder` in `zudo-sg.config.mjs`, and any category a story uses that isn't in that list is still rendered, appended alphabetically after the named ones. Nothing needs to be registered up front for a new category to show up.
+
+This is the concept-level shape only. The full authoring contract — control types, source-display rules, the live preview-props channel, and the scaffolding CLI — is the package's own documentation, not this site (see [Relationship to zudo-doc](./relationship-to-zudo-doc) for why the root site and the package docs stay two separate places).
+
+## No staging
+
+Earlier zfb releases required a package injecting routes from outside a project's own source tree to stage its route entrypoints into a project-local hidden directory before the bundler would resolve them. That gap is closed as of the zfb release this engine targets: a route entrypoint's virtual-module imports resolve correctly straight from the package's own realpath, whether the package is workspace-linked or installed from a tarball into `node_modules`. The engine therefore ships its route entrypoints as `.tsx` source (not compiled `.js` — the bundler extracts each route's dynamic `paths()` by parsing the source file) and injects them directly, with nothing to stage and nothing under the host's own tree to `.gitignore`.
+
+## Static islands, not virtual-module islands
+
+One consequence of the routes travelling through virtual modules is worth calling out because it shapes how every `"use client"` island in the catalog gets wired up: a client island reached *only* through a `virtual:*` re-export does not reliably register with the bundler's island scanner, because the scanner does not resolve bare `virtual:` specifiers. An island a route reaches by a direct, real-file import registers normally.
+
+The engine's own islands (the component detail workbench, the code panel, the catalog filter, the preview design-token button and panel) are therefore collected into one side-effect module, `@takazudo/zudo-sg/islands`, that statically imports every one of them. A host imports that module exactly once from an actual `pages/` file — in this project, a one-line shim (`pages/lib/_zudo-sg-islands.ts`) imported by `pages/index.tsx` — which is enough to put every engine island into the site-wide island manifest.
+
+This seed matters more in dev than in a production build: the dev server scans only a host's own `pages/` tree for islands, never the routes a package injects, so without the seed an engine island that only a package route reaches hydrates when the site is built but not while running the dev server. The same seed is harmless (and redundant) once a production build is made, since the build's island scan does walk injected route entrypoints directly.

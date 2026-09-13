@@ -1,0 +1,52 @@
+---
+title: Adopting the engine
+description: How another zfb/zudo-doc host installs @takazudo/zudo-sg.
+sidebar_position: 4
+---
+
+`@takazudo/zudo-sg` is built to be installed into a project the same way `@takazudo/zudo-doc` is: as a package, not as files copied by hand. This page walks through the shape of that install.
+
+<Note>
+  This repository's own `ADOPTING.md` predates the engine package and describes the older, manual-copy path (copying source files like `src/features/styleguide/*` directly). Once a project can depend on `@takazudo/zudo-sg` as a package, this page supersedes that checklist.
+</Note>
+
+## Prerequisites
+
+The engine is a zfb plugin package built for **Preact + zfb hosts only**. It depends on a `@takazudo/zudo-doc`-based host already having its own package-owned routes turned on (`packageOwnedRoutes: true`) — the engine's own route entrypoints call zudo-doc's chrome factories and reuse zudo-doc's virtual modules to render. A React host is an explicit non-goal for this release; see the note on scope at the end of this page.
+
+## Install steps
+
+1. **Add the package.** Install `@takazudo/zudo-sg` alongside the `@takazudo/zfb`/`@takazudo/zudo-doc` versions the host already pins.
+
+2. **Write `zudo-sg.config.mjs`** at the project root — plain data, loaded by both the CLI and the build config. At minimum it needs:
+   - `componentsRoots`: one entry per directory of `*.stories.tsx` files to catalog (`{ dir, importBase }`).
+   - `registryOut`: where the generated registry file should be written.
+   - `previewStyles`: the project-root-relative CSS entry the preview iframes should compile (see [Tokens and preview CSS](./tokens-and-preview-css)).
+   - Optionally `categoryOrder`, `uiPackageName`, `tokens: { cssFiles, manifestOut }`, and `routes` overrides for the four URL patterns.
+
+3. **Compose `zudoSg()` / `withZudoSg()` into `zfb.config.ts`.** `withZudoSg(presetFragment, zudoSgConfig)` appends the engine's plugin descriptors and content collections after a zudo-doc preset's own — the routes plugin fails fast at setup if it can't find the zudo-doc routes descriptor already in the list, so order matters:
+
+   ```ts
+   import { zudoDocPreset } from "@takazudo/zudo-doc/preset";
+   import { withZudoSg } from "@takazudo/zudo-sg/config";
+   import zudoSgConfig from "./zudo-sg.config.mjs";
+
+   const preset = zudoDocPreset({ settings /* … */ });
+
+   export default defineConfig({
+     // …
+     ...withZudoSg(preset, zudoSgConfig),
+   });
+   ```
+
+4. **Generate the registry.** Run the engine's `gen-registry` CLI command (wired here as `pnpm gen:sg-registry`) to discover every `*.stories.tsx` file under the configured `componentsRoots` and write the explicit-import registry file `registryOut` points at. Commit the generated file — it is read at both build and dev time, and a `--check` mode (`gen-registry --check`) is meant to run in CI so a stale registry fails the build instead of silently drifting.
+
+5. **Add the preview stylesheet.** Point `previewStyles` at a real CSS entry file that imports the component library's own tokens (and Tailwind's base layers, if the library is Tailwind-based). The engine's preview-CSS plugin compiles it standalone and serves/writes it under its own URL — see the next page for why this has to stay a separate compile from the host's own stylesheet.
+
+6. **Add `@source` for the component package**, in whatever Tailwind entry the host already maintains for its own utilities, so the host's own bundle keeps scanning the component sources it needs classes generated from — this is unrelated to the engine's preview stylesheet, which does its own independent scan.
+
+7. **Seed the dev islands.** Add a host `pages/` file that imports `@takazudo/zudo-sg/islands` (a one-line side-effect import is enough) and make sure it's reached from a page the host already statically imports — `pages/index.tsx`, typically. Without this, the catalog's interactive previews hydrate in a production build but not under the dev server. See [The engine package](./engine-package) for why.
+
+## Scope: Preact/zfb only, for now
+
+React hosts are an explicit non-goal of this release. The seam that would make a future React (or other framework) integration possible is a host-supplied preview-renderer module, resolved the same way the other host paths are — but that seam is not built yet; adopting the engine today means adopting it into a Preact/zfb host.

@@ -4,16 +4,20 @@ description: The styleguide host, component library, and demo app that make up z
 sidebar_position: 2
 ---
 
-zudo-sg brings the component source, its styleguide, and a multi-page demo app together in one workspace.
-
-## The styleguide host
-
-The root application is a styleguide host built on [zudo-doc](https://github.com/zudolab/zudo-doc). It provides the component catalog, live previews, and host-specific tools for exploring the library.
+zudo-sg brings a shared component library, an installable styleguide engine that catalogs it, and a multi-page demo app together in one workspace.
 
 ## The component library
 
-zudo-sg provides the `@zudo-sg/ui` component library. The host consumes the package from source, and the library contains around 70 Preact components that are shared by the styleguide and other applications.
+zudo-sg provides the `@zudo-sg/ui` component library — around 70 Preact components, consumed from source, shared by the styleguide and other applications. The library itself has no dependency on a styleguide or a story format; anything that imports it gets only the components.
+
+## The styleguide engine
+
+The root application is a styleguide host built on [zudo-doc](https://github.com/zudolab/zudo-doc), dogfooding an installable engine package, `@takazudo/zudo-sg`, that this repository also builds and owns. The engine injects the component catalog's routes, live previews, and design-token tooling into a zudo-doc-based host the same way zudo-doc itself injects its own documentation routes — see [Architecture](/docs/architecture) for how the pieces fit together.
 
 ## The multi-page demo
 
 The `apps/demo` workspace is a multi-page demo application powered by the same component library. It shows how the components work together in a complete product-style experience.
+
+## Two independently deployed sites
+
+This root site and the separate `doc/` workspace are two different builds with no navigation between them. This site's `/docs` section stays concept-level; the full engine documentation — the complete story-authoring spec included — lives on the `doc/` site instead.
