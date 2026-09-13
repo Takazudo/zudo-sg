@@ -1,9 +1,10 @@
 import type { StoryMeta, Story } from "../../stories/types";
 import { Callout, Note, type CalloutProps } from "./callout";
-import { calloutDisplay } from "./callout.composer";
 
 const meta: StoryMeta = {
-  ...calloutDisplay,
+  title: "Callout",
+  category: "Feedback",
+  description: "Call-out box for notes/asides in body copy, in an accent-tinted or neutral tone.",
   usage: `import { Callout, Note } from "@zudo-sg/ui/src/cards/callout/callout";
 
 <Callout tone="note" title="Note">Body copy.</Callout>

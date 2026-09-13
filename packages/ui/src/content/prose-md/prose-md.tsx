@@ -2,8 +2,7 @@
 
 /**
  * ProseMd — renders a `markdown` string client-side via the markdown runtime
- * (`./markdown-runtime`, #371) and opts into the Composer as a
- * `"markdown-source"` inline-editable field (#372, #368).
+ * (`./markdown-runtime`, #371).
  *
  * Three-state render:
  *   - pending  — the raw markdown text in a quiet placeholder block. This is
@@ -27,12 +26,9 @@
  * for the exact `markdown` value that produced it.
  *
  * The wrapper only accepts `markdown` + `class` — no `{...rest}` prop spread,
- * unlike the sibling `Prose*` element overrides. That's a deliberate,
- * unrelated choice: `src/composer/model/reserved-keys.ts`'s
- * `RESERVED_PROP_KEYS` gate gets involved elsewhere (persisted-prop
- * prototype-pollution guarding), not here — this component simply has no
- * other prop to forward, and the rendered root's content is fully owned by
- * the sanitized markdown HTML.
+ * unlike the sibling `Prose*` element overrides. This component simply has
+ * no other prop to forward, and the rendered root's content is fully owned
+ * by the sanitized markdown HTML.
  */
 import { useEffect, useState } from "preact/hooks";
 import { cx } from "../../lib/cx";
@@ -65,7 +61,7 @@ function summarizeError(diagnostics: MarkdownDiagnostic[]): string {
   return primary?.message ?? "Unable to render this markdown.";
 }
 
-/** Client-side markdown renderer. Opts into the Composer via `prose-md.stories.tsx`. */
+/** Client-side markdown renderer. */
 export function ProseMd({ markdown, class: cls }: ProseMdProps) {
   const [state, setState] = useState<RenderState>({ status: "pending", markdown });
 

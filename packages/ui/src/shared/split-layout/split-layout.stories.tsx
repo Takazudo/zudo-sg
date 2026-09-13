@@ -1,9 +1,11 @@
 import type { StoryMeta, Story } from "../../stories/types";
 import { SplitLayout, type SplitLayoutProps } from "./split-layout";
-import { splitLayoutDisplay } from "./split-layout.composer";
 
 const meta: StoryMeta = {
-  ...splitLayoutDisplay,
+  title: "SplitLayout",
+  category: "Layout",
+  description:
+    "Two-pane layout: stacked full-width panes below md, ratio-controlled side-by-side panes at md and above.",
   usage: `import { SplitLayout } from "@zudo-sg/ui/src/shared/split-layout/split-layout";
 
 <SplitLayout

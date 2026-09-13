@@ -1,9 +1,10 @@
 import type { StoryMeta, Story } from "../../stories/types";
 import { CtaButton, type CtaButtonProps } from "./cta-button";
-import { ctaButtonDisplay } from "./cta-button.composer";
 
 const meta: StoryMeta = {
-  ...ctaButtonDisplay,
+  title: "CtaButton",
+  category: "Actions",
+  description: "Accent-filled or outlined call-to-action link, with an optional trailing arrow.",
   usage: `import { CtaButton } from "@zudo-sg/ui/src/shared/cta-button/cta-button";
 
 <CtaButton href="/products" variant="primary">Browse products</CtaButton>`,

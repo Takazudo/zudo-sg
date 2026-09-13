@@ -21,7 +21,6 @@ describe("story-authoring contract", () => {
         expect(meta?.description.length).toBeGreaterThan(0);
         expect(typeof meta?.usage).toBe("string");
         expect(meta?.usage.length).toBeGreaterThan(0);
-        expect(meta).not.toHaveProperty("composer");
       });
 
       it("previewRoute, when present, is a real same-origin page path (STORIES.md §6)", () => {

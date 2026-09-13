@@ -107,12 +107,10 @@ const ALLOWED_ATTR = [
 
 /**
  * `ALLOW_DATA_ATTR` defaults to true and is NOT narrowed by an explicit
- * `ALLOWED_ATTR`, so raw `<span data-zc-node-id="…">` in an author's markdown
- * would survive into the composer canvas — where `src/features/composer/
- * preview/renderer.ts` routes events with `closest("[data-zc-node-id]")` /
- * `closest("[data-zc-affordance]")` and would treat the prose as another
- * node. Nothing this pipeline emits needs a `data-*` attribute, so drop the
- * whole class. `aria-*` stays allowed for the heading-link labels.
+ * `ALLOWED_ATTR`, so raw `data-*` attributes in an author's markdown would
+ * otherwise survive sanitization unchecked. Nothing this pipeline emits
+ * needs a `data-*` attribute, so drop the whole class. `aria-*` stays
+ * allowed for the heading-link labels.
  */
 const SANITIZE_CONFIG = { ALLOWED_TAGS, ALLOWED_ATTR, ALLOW_DATA_ATTR: false };
 

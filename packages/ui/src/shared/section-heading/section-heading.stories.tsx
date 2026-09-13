@@ -1,9 +1,10 @@
 import type { StoryMeta, Story } from "../../stories/types";
 import { SectionHeading, type SectionHeadingProps } from "./section-heading";
-import { sectionHeadingDisplay } from "./section-heading.composer";
 
 const meta: StoryMeta = {
-  ...sectionHeadingDisplay,
+  title: "SectionHeading",
+  category: "Content",
+  description: "Section header block: optional eyebrow, heading, and an optional intro paragraph.",
   usage: `import { SectionHeading } from "@zudo-sg/ui/src/shared/section-heading/section-heading";
 
 <SectionHeading heading="Product lines" intro="Four lines across two divisions." />`,
