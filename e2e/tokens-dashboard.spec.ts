@@ -127,7 +127,8 @@ async function setPanelValue(
 ): Promise<void> {
   const tab = panel.getByRole("tab", { name: tabName, exact: true });
   await expect(tab).toBeVisible({ timeout: 5_000 });
-  await tab.click({ force: true });
+  await tab.dispatchEvent("click");
+  await expect(tab).toHaveAttribute("aria-selected", "true");
 
   const input = panel.getByLabel(label);
   await expect(input).toBeVisible({ timeout: 3_000 });
@@ -384,7 +385,11 @@ test("dashboard defaults stay isolated from saved preview and doc-chrome panel s
     ),
   ).toBe(declaredAccent);
   const reloadedPreviewPanel = await openPanel(page, "toggle-preview-token-panel");
-  await reloadedPreviewPanel.getByRole("tab", { name: /^Color(?: \d+ changed tokens?)?$/ }).click();
+  const reloadedPreviewColorTab = reloadedPreviewPanel.getByRole("tab", {
+    name: /^Color(?: \d+ changed tokens?)?$/,
+  });
+  await reloadedPreviewColorTab.dispatchEvent("click");
+  await expect(reloadedPreviewColorTab).toHaveAttribute("aria-selected", "true");
   await expect(reloadedPreviewPanel.getByLabel("--color-accent value")).toHaveValue(
     COLOR_SENTINEL,
   );
@@ -399,7 +404,11 @@ test("dashboard defaults stay isolated from saved preview and doc-chrome panel s
 
   await page.reload();
   const reloadedDocPanel = await openPanel(page, "toggle-sg-doc-tweak");
-  await reloadedDocPanel.getByRole("tab", { name: /^Spacing(?: \d+ changed tokens?)?$/ }).click();
+  const reloadedDocSpacingTab = reloadedDocPanel.getByRole("tab", {
+    name: /^Spacing(?: \d+ changed tokens?)?$/,
+  });
+  await reloadedDocSpacingTab.dispatchEvent("click");
+  await expect(reloadedDocSpacingTab).toHaveAttribute("aria-selected", "true");
   await expect(reloadedDocPanel.getByLabel("--spacing-hsp-md value")).toHaveValue("2.25");
   await closePanel(page, reloadedDocPanel);
 
