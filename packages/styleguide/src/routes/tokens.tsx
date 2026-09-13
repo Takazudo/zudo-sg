@@ -3,7 +3,7 @@
 // Injected at `sgContext.routes.tokens` — the declared-defaults design-token
 // dashboards. The manifest arrives through `virtual:zudo-sg-tokens` (routes
 // plugin `tokensManifestModule` = `zudo-sg.config.mjs` `tokens.manifestOut`);
-// without one the page renders its header only.
+// without one (no `tokens` config) the page renders its header and an empty-state note.
 
 import type { JSX, VNode } from "preact";
 import { Island } from "@takazudo/zfb";
@@ -64,7 +64,12 @@ export default function TokensRoute(): JSX.Element {
           ? createTokenDashboards(tokensManifest, buildUiTokenTabs(tokensManifest), {
               chromeStyle: buildDashboardChromeStyle(),
             })
-          : null}
+          : (
+            <p class="text-muted" data-zudo-sg-tokens-empty>
+              No design-token manifest is configured. Add <code>tokens</code> to <code>zudo-sg.config.mjs</code> and
+              run <code>zudo-sg gen-token-manifest</code> to render the dashboards here.
+            </p>
+          )}
       </div>
     </StyleguideLayout>
   );

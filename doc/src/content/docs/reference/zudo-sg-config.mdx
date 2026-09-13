@@ -18,7 +18,7 @@ interface ZudoSgConfig {
   categoryOrder: string[];
   uiPackageName: string;
   barrelIndex: string | null;
-  tokens: { cssFiles: [string, string]; manifestOut: string };
+  tokens?: { cssFiles: [string, string]; manifestOut: string };
   previewStyles: string;
   previewCssUrl?: string;
   routes?: Record<string, string>;
@@ -33,8 +33,9 @@ interface ZudoSgConfig {
 | `categoryOrder` | `string[]` | required (may be `[]`) | Display order for story categories. Categories not listed are appended alphabetically after these — never dropped, never an error. |
 | `uiPackageName` | `string` | required | npm package name components/stories are imported from in generated `usage` snippets (e.g. `"@zudo-sg/ui"`). |
 | `barrelIndex` | `string \| null` | required | Project-root-relative barrel file `new-component` inserts an export into, or `null` for a project with no barrel-file convention. |
-| `tokens.cssFiles` | `[string, string]` | required | `[tokensCssPath, colorsCssPath]`, project-root-relative. Position is significant: index 0 feeds spacing/font/size tokens, index 1 feeds the palette and semantic color tokens. |
-| `tokens.manifestOut` | `string` | required | Project-root-relative output path for the generated design-token manifest. |
+| `tokens` | `{ cssFiles, manifestOut }` | omitted | Optional. Needed only for `gen-token-manifest` and the `/tokens` dashboards. When omitted, `gen-token-manifest` exits with an error, `zudoSg()` passes no `tokensManifestModule`, and the `/tokens` route renders its header with an empty-state note. `gen-registry` and `new-component` never read it. |
+| `tokens.cssFiles` | `[string, string]` | required when `tokens` is set | `[tokensCssPath, colorsCssPath]`, project-root-relative. Position is significant: index 0 feeds spacing/font/size tokens, index 1 feeds the palette and semantic color tokens. |
+| `tokens.manifestOut` | `string` | required when `tokens` is set | Project-root-relative output path for the generated design-token manifest. |
 | `previewStyles` | `string` | required | Project-root-relative path to the host's preview stylesheet entry (compiled standalone by the preview-css plugin). |
 | `previewCssUrl` | `string` | `/_zudo-sg/preview.css` | URL the compiled preview stylesheet is served/emitted at. |
 | `routes` | `Record<string, string>` | see below | Overrides for the four catalog route patterns. |

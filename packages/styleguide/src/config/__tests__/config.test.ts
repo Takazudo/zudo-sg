@@ -33,6 +33,13 @@ const OPTIONS: ZudoSgComposeOptions = {
 };
 
 describe("zudoSg()", () => {
+  it("omits tokensManifestModule when the config has no tokens entry", () => {
+    const { tokens: _tokens, ...withoutTokens } = OPTIONS;
+    const { plugins } = zudoSg(withoutTokens);
+    expect(plugins[0]?.name).toBe(ROUTES_PLUGIN_NAME);
+    expect(plugins[0]?.options).not.toHaveProperty("tokensManifestModule");
+  });
+
   it("returns the three engine plugin descriptors in order, with the ADR option shapes", () => {
     const { plugins } = zudoSg(OPTIONS);
     expect(plugins).toEqual([

@@ -42,7 +42,12 @@ export interface ZudoSgConfig {
    * export into, or `null` for a project with no barrel-file convention.
    */
   barrelIndex: string | null;
-  tokens: ZudoSgTokensConfig;
+  /**
+   * Design-token manifest inputs for `gen-token-manifest` and the `/tokens`
+   * dashboards. Omitted → `gen-token-manifest` exits with an error and the
+   * `/tokens` route renders an empty state.
+   */
+  tokens?: ZudoSgTokensConfig;
   /** Project-root-relative path to the host's preview stylesheet entry. */
   previewStyles: string;
   previewCssUrl?: string;

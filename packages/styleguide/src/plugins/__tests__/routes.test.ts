@@ -232,6 +232,10 @@ describe("virtual module sources", () => {
 });
 
 describe("buildTokensModuleSource", () => {
+  it("exports a null manifest when no tokensManifestModule is configured", () => {
+    expect(buildTokensModuleSource(null)).toBe("export const tokensManifest = null;\n");
+  });
+
   it("assembles the UiDesignTokensManifest from the generated manifest's named exports", () => {
     expect(buildTokensModuleSource("/host/src/config/m.ts")).toBe(
       'import { UI_PALETTE_COLORS, UI_COLOR_TOKENS, UI_SPACING_TOKENS, UI_FONT_TOKENS, UI_SIZE_TOKENS } from "/host/src/config/m.ts";\n' +

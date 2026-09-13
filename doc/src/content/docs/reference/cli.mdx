@@ -55,6 +55,8 @@ when a host declares more than one. In this repo: `pnpm new:component`.
 Reads the two CSS files at `zudo-sg.config.mjs` `tokens.cssFiles` and writes a
 design-token manifest to `tokens.manifestOut`, consumed by the `/tokens` route
 and the preview design-token panel.
+Requires the optional `tokens` entry; without it the command prints an error
+and exits 1.
 
 ```sh
 zudo-sg gen-token-manifest          # write/update the manifest

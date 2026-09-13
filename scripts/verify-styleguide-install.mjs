@@ -219,6 +219,11 @@ async function main() {
     );
 
     assert(existsSync(path.join(hostDir, "dist/tokens/index.html")), "missing dist/tokens/index.html");
+    // The fixture declares no `tokens` config (#672): /tokens must render its empty state.
+    assert(
+      (await read(hostDir, "dist/tokens/index.html")).includes("data-zudo-sg-tokens-empty"),
+      "dist/tokens/index.html lacks the no-manifest empty state",
+    );
     assert(existsSync(path.join(hostDir, "dist/_zudo-sg/preview.css")), "missing dist/_zudo-sg/preview.css (base-unnested, ADR decision 4)");
 
     console.log("zfb dev (dev-hydration seed, ADR finding 4)");
