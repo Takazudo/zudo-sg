@@ -1,0 +1,30 @@
+---
+title: Tokens and preview CSS
+description: "Why the component previews compile a standalone stylesheet instead of sharing the host's own bundle."
+sidebar_position: 5
+---
+
+Every component preview in the catalog is rendered against its own, separately compiled stylesheet — not the documentation site's own CSS bundle. This page explains why that separation exists and how it's kept intact.
+
+## The problem: one shared bundle, two unrelated token sets
+
+A styleguide host typically has its own design tokens for its own chrome (colors, spacing, and type scale for the docs site itself) *and* needs to render live previews of a component library that has its own, unrelated design tokens. If both were compiled into one Tailwind bundle, both token sets would collide: a `--color-accent` meant for the previewed component library and a `--color-accent` meant for the host's own chrome would fight for the same custom property, and whichever CSS rule won by specificity would silently corrupt the other.
+
+## The fix: a standalone compile, one URL
+
+The engine compiles the host-supplied preview stylesheet entry (`previewStyles` in `zudo-sg.config.mjs`) independently, using Tailwind's compiler directly rather than going through the host's own build pipeline. The result is served — and, at build time, written — under one dedicated URL, `/_zudo-sg/preview.css` by default (configurable via `previewCssUrl`), placed at the site root rather than nested under any per-route path, mirroring how the framework's own static assets are linked.
+
+Because zfb injects that one global stylesheet link into every route with no per-route opt-out, the compiler doesn't just compile the preview CSS in isolation — it also rewrites every top-level `:root { … }` and `:root, :host { … }` block in the compiled output to `:root[data-sg-preview-doc] { … }` (and `:root[data-sg-preview-doc], :host { … }`). The previewed document's own `<html>` element carries that `data-sg-preview-doc` attribute, so the previewed tokens win on specificity over the host's colliding custom properties without needing the host bundle to be touched at all.
+
+## Dev and build both serve it
+
+- **In dev**, a middleware registers the full URL (base prefix included) and recompiles whenever any input the compile depends on has changed — the stylesheet entry itself, anything it `@import`s, and the actual component source files the Tailwind scanner reads classes from (so editing a component's className list is enough to trigger a recompile, not just editing the CSS entry).
+- **In a production build**, the compiled stylesheet is written directly under the URL path within the build output, not nested inside the base segment — the same placement convention the framework uses for its own generated assets.
+
+## What the host keeps
+
+The host still owns and maintains its *own* stylesheet for its own chrome — nothing about this changes how the documentation site styles itself. What the host gives up is trying to render component previews through that same stylesheet: the preview CSS entry it points the engine at is a dedicated, standalone entry (in this project, `src/styles/preview-entry.css`) that pulls in the component library's own token and utility layers, kept deliberately separate from the host's chrome stylesheet.
+
+<Note>
+  A previous, pre-engine version of this host kept a hand-maintained duplicate of the component library's tokens re-asserted inside its own global stylesheet, specifically to make previews look right. That workaround is gone — the standalone compile described above replaces it.
+</Note>

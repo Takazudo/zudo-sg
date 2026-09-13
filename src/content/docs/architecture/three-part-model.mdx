@@ -1,0 +1,29 @@
+---
+title: The three-part model
+description: Why components, the apps that use them, and the styleguide that previews them are three separate concerns.
+sidebar_position: 2
+---
+
+zudo-sg's architecture separates three things that are easy to conflate into one project: the components themselves, the applications that consume them, and the tool that catalogs and previews them.
+
+## Components standalone
+
+`@zudo-sg/ui` is a plain Preact component library. It has no dependency on a styleguide, a story format, or a documentation site — importing a button or a card pulls in only the component and its styles. This is what makes the library reusable: any Preact/zfb project can depend on it without also adopting zudo-sg's catalog machinery.
+
+## An app uses them
+
+A product application imports components from the library the same way any consumer would — no styleguide-specific wiring required. Several real projects have taken this path independently, which is the original motivation for pulling the shared library out of the styleguide host in the first place: without a clean boundary, every consuming app either duplicated component source or drifted out of sync with it.
+
+## zudo-sg previews them
+
+The styleguide — now the installable `@takazudo/zudo-sg` engine — is a *separate* consumer of the same library. It discovers components through their story files, renders them in a browsable catalog, and provides live preview, design-token tuning, and source-code panels. Nothing about the components themselves depends on the engine; a component library can exist and ship without ever being cataloged.
+
+## Why the split matters
+
+Keeping these three roles distinct is what lets each one evolve independently:
+
+- The component library's public contract is its exports and its story files, not its styleguide page markup.
+- An app that consumes the library never has to install or configure the styleguide engine.
+- The styleguide engine can be installed into a *different* project than the one that authors the components, previewing a library it does not own.
+
+The rest of this section describes the engine side of that split: what `@takazudo/zudo-sg` owns as an installable package, how it composes into a host's build, and how its preview styling stays isolated from the host's own design system.
