@@ -31,7 +31,8 @@ describe("root zudo-doc 5 theme contract", () => {
       '@import "@takazudo/zudo-doc/safelist.css"',
       '@import "@takazudo/zudo-doc/content.css"',
       '@import "@takazudo/zudo-doc/features.css"',
-      '@import "../../packages/styleguide/styles.css"',
+      '@import "@takazudo/zudo-sg/styles.css"',
+      '@import "@takazudo/zudo-sg/safelist.css"',
     ];
     const positions = orderedImports.map((entry) => globalCss.indexOf(entry));
 
