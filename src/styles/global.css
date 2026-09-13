@@ -139,12 +139,15 @@
  * there — max-width transition vs. flex-direction/gap here), so relocating
  * the import above them changes nothing.
  *
- * Imported today by relative path (no `@takazudo/zudo-sg/styles.css` subpath
- * export exists yet — that wiring, plus Tailwind-class safelisting, is
- * #661's job). Combines what used to be two separate host imports (the
- * chrome/search feature CSS and the catalogue gallery CSS) into the one file
- * the package now ships at its root. */
-@import "../../packages/styleguide/styles.css";
+ * Imported via the package's `@takazudo/zudo-sg/styles.css` export (#661) —
+ * combines what used to be two separate host imports (the chrome/search
+ * feature CSS and the catalogue gallery CSS) into the one file the package
+ * ships at its root. The generated `@takazudo/zudo-sg/safelist.css` import
+ * right below it covers the Tailwind utility classes referenced by this file
+ * and by the package's `.tsx` sources (extracted from `dist/**\/*.js` at
+ * package build time) for hosts that fall back to explicit @source scanning. */
+@import "@takazudo/zudo-sg/styles.css";
+@import "@takazudo/zudo-sg/safelist.css";
 
 /* Portable syntax paint + ProseMd typography. The provider owns these rules
  * directly; zudo-doc's feature stylesheet is not part of the component package

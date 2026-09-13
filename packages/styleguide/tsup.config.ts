@@ -32,5 +32,9 @@ export default defineConfig((options) => ({
   // Never clean under --watch: tsup cannot regenerate the tsc-owned .d.ts it
   // would wipe (zudolab/zudo-doc#3113).
   clean: !options.watch,
-  onSuccess: "node scripts/copy-routes-src.mjs && node scripts/copy-virtual-modules.mjs",
+  // Post-build steps (one-shot and each --watch recompile). Must run AFTER
+  // tsup, not before: a one-shot build's `clean` wipes dist/ first, and the
+  // safelist generator only scans compiled JS (#661; model: @takazudo/zudo-doc).
+  onSuccess:
+    "node scripts/copy-routes-src.mjs && node scripts/copy-virtual-modules.mjs && node scripts/gen-safelist.mjs",
 }));

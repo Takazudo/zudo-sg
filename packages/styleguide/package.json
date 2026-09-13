@@ -94,6 +94,8 @@
     },
     "./routes-src/*": "./routes-src/*",
     "./virtual-modules.d.ts": "./virtual-modules.d.ts",
+    "./styles.css": "./styles.css",
+    "./safelist.css": "./dist/safelist.css",
     "./package.json": "./package.json"
   },
   "bin": {
@@ -114,7 +116,8 @@
     "check:package-shape": "node scripts/check-package-shape.mjs",
     "check:routes-src": "node scripts/check-routes-src.mjs",
     "check:virtual-modules": "node scripts/check-virtual-modules.mjs",
-    "check": "pnpm run check:no-host-alias && pnpm run typecheck && pnpm run build && pnpm run check:package-shape && pnpm run check:routes-src && pnpm run check:virtual-modules && pnpm run test"
+    "check:package-safelist": "node scripts/check-package-safelist.mjs",
+    "check": "pnpm run check:no-host-alias && pnpm run typecheck && pnpm run build && pnpm run check:package-shape && pnpm run check:routes-src && pnpm run check:virtual-modules && pnpm run check:package-safelist && pnpm run test"
   },
   "dependencies": {
     "preact-render-to-string": "^6.6.6",
