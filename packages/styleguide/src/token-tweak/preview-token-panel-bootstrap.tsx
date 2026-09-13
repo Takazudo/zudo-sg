@@ -24,10 +24,15 @@ function getConfig(): PanelConfig {
   return config;
 }
 
-function PreviewTokenPanelBootstrap(): JSX.Element | null {
+// Combined `export default function Name() {}` form, not a separate
+// `function Name() {}` + `export default Name;` — tsup/esbuild's ESM
+// transform renames the latter's binding to `<name>_default` in the
+// compiled dist output, which breaks zfb's island scanner (it matches the
+// SSR marker against the exported identifier name). See the sibling
+// islands (CodePanel, DetailWorkbench, PreviewTokensButton) for the same
+// pattern, proven to survive the tsup build.
+export default function PreviewTokenPanelBootstrap(): JSX.Element | null {
   if (tabs) bootstrapPreviewTokenPanel(getConfig);
   return null;
 }
 PreviewTokenPanelBootstrap.displayName = "PreviewTokenPanelBootstrap";
-
-export default PreviewTokenPanelBootstrap;
