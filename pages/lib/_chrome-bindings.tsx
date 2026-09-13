@@ -60,8 +60,10 @@ let packageHeader: PackageHeader | undefined;
 
 const HeaderBound: ChromeHostBindings["Header"] = (props) => {
   if (props.sidebarNodesOverride) return HeaderWithDefaults(props as HeaderWithDefaultsProps);
-  // Built lazily with the same context composition createChrome uses, so the
-  // package default renders exactly as it would with no Header binding.
+  // Built lazily with createChrome's context composition. The doc routes' extra
+  // DesignTokenPanelBootstrap binding only feeds a header gate that
+  // `designTokenPanel: false` (zfb.config.ts) already closes, so doc-route HTML
+  // stays identical to the unbound package header (diffed in #664).
   packageHeader ??= createHeaderWithDefaults({
     ...createRouteContext(routeContext as unknown as RouteContextPayload),
     components: {},
