@@ -36,8 +36,8 @@ import {
 const THIS_DIR = dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = resolve(THIS_DIR, "..", "..");
 
-const TOKENS_CSS_PATH = join(PROJECT_ROOT, "packages", "ui", "styles", "tokens.css");
-const COLORS_CSS_PATH = join(PROJECT_ROOT, "packages", "ui", "styles", "colors.css");
+const TOKENS_CSS_PATH = join(PROJECT_ROOT, "packages", "demo-ui", "styles", "tokens.css");
+const COLORS_CSS_PATH = join(PROJECT_ROOT, "packages", "demo-ui", "styles", "colors.css");
 const GLOBAL_CSS_PATH = join(PROJECT_ROOT, "src", "styles", "global.css");
 const GENERATED_MANIFEST_PATH = join(
   PROJECT_ROOT,
@@ -194,7 +194,7 @@ beforeEach(() => {
   mkdirSync(sandboxParent, { recursive: true });
   sandbox = mkdtempSync(join(sandboxParent, "sandbox-"));
   mkdirSync(join(sandbox, "scripts", "lib"), { recursive: true });
-  mkdirSync(join(sandbox, "packages", "ui", "styles"), { recursive: true });
+  mkdirSync(join(sandbox, "packages", "demo-ui", "styles"), { recursive: true });
   mkdirSync(join(sandbox, "src", "styles"), { recursive: true });
   mkdirSync(join(sandbox, "src", "config"), { recursive: true });
 
@@ -206,11 +206,11 @@ beforeEach(() => {
   // Seed with the REAL project CSS content (not synthetic fixtures) so the
   // sandbox run resolves the same values the library-level tests assert.
   writeFileSync(
-    join(sandbox, "packages", "ui", "styles", "tokens.css"),
+    join(sandbox, "packages", "demo-ui", "styles", "tokens.css"),
     readFileSync(TOKENS_CSS_PATH, "utf8"),
   );
   writeFileSync(
-    join(sandbox, "packages", "ui", "styles", "colors.css"),
+    join(sandbox, "packages", "demo-ui", "styles", "colors.css"),
     readFileSync(COLORS_CSS_PATH, "utf8"),
   );
   writeFileSync(join(sandbox, "src", "styles", "global.css"), readFileSync(GLOBAL_CSS_PATH, "utf8"));

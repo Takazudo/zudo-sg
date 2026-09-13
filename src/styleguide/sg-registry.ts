@@ -2,7 +2,7 @@
 //
 // GENERATED FILE — the block below is codegen'd by the `zudo-sg gen-registry`
 // CLI command (`pnpm gen:sg-registry`, driven by `zudo-sg.config.mjs`) from
-// the `*.stories.tsx` files under packages/ui/src/*/*.stories.tsx. Never
+// the `*.stories.tsx` files under packages/demo-ui/src/*/*.stories.tsx. Never
 // hand-edit between the markers; run `pnpm gen:sg-registry` after adding or
 // removing a story file and commit the result. `pnpm check:sg-registry` fails
 // CI on drift.
@@ -17,14 +17,14 @@
 //
 // WHY PACKAGE PATH IMPORTS (NOT RELATIVE):
 // zfb creates a shadow copy of the project root during bundling, so relative
-// paths that escape the project root (e.g. ../../../../packages/ui/src/…)
-// resolve outside the shadow tree and fail. Importing via `@zudo-sg/ui/src/*`
+// paths that escape the project root (e.g. ../../../../packages/demo-ui/src/…)
+// resolve outside the shadow tree and fail. Importing via `@zudo-sg/demo-ui/src/*`
 // keeps resolution within node_modules (which zfb includes in the shadow).
-// The `./src/*` export wildcard in packages/ui/package.json makes this work.
+// The `./src/*` export wildcard in packages/demo-ui/package.json makes this work.
 //
 // The consumer (`src/styleguide/registry.ts`) keys off the path→module
 // map via `Object.entries`. Keys use a glob-relative shape
-// (`./ui/src/<name>/<name>.stories.tsx`) matching the pattern the root registry
+// (`./demo-ui/src/<name>/<name>.stories.tsx`) matching the pattern the root registry
 // uses, so the registry.ts logic is a direct port without key-shape changes.
 
 // GENERATED:SG_REGISTRY_BEGIN — do not hand-edit; run `pnpm gen:sg-registry`.

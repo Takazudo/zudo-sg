@@ -53,7 +53,7 @@ describe("zudoSg()", () => {
           catalog: { title: "Catalog" },
           tokensManifestModule: "./src/config/ui-design-tokens-manifest.ts",
           componentDocs: [
-            { keyPrefix: "ui/src", collection: "componentDocs" },
+            { keyPrefix: "demo-ui/src", collection: "componentDocs" },
             { keyPrefix: "extra/src", collection: "componentDocs1" },
           ],
         },

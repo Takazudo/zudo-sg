@@ -42,11 +42,11 @@ function baseConfig(): ZudoSgConfig {
 
 beforeEach(() => {
   sandbox = mkdtempSync(join(tmpdir(), "gen-registry-"));
-  mkdirSync(join(sandbox, "packages", "ui", "src", "stories", "__tests__"), { recursive: true });
+  mkdirSync(join(sandbox, "packages", "demo-ui", "src", "stories", "__tests__"), { recursive: true });
   mkdirSync(join(sandbox, "src", "styleguide"), { recursive: true });
   writeFileSync(join(sandbox, "src", "styleguide", "sg-registry.ts"), REGISTRY_SEED);
   writeFileSync(
-    join(sandbox, "packages", "ui", "src", "stories", "__tests__", "story-modules.ts"),
+    join(sandbox, "packages", "demo-ui", "src", "stories", "__tests__", "story-modules.ts"),
     STORY_MODULES_SEED,
   );
 });
@@ -56,7 +56,7 @@ afterEach(() => {
 });
 
 function writeStory(relDir: string, stem: string, exportNames: string[] = ["Playground"]) {
-  const dir = join(sandbox, "packages", "ui", "src", relDir);
+  const dir = join(sandbox, "packages", "demo-ui", "src", relDir);
   mkdirSync(dir, { recursive: true });
   writeFileSync(join(dir, `${stem}.stories.tsx`), STORY_BODY(exportNames));
 }
@@ -67,7 +67,7 @@ function readRegistry() {
 
 function readStoryModules() {
   return readFileSync(
-    join(sandbox, "packages", "ui", "src", "stories", "__tests__", "story-modules.ts"),
+    join(sandbox, "packages", "demo-ui", "src", "stories", "__tests__", "story-modules.ts"),
     "utf-8",
   );
 }
@@ -82,8 +82,8 @@ describe("runGenRegistry — old one-level layout (backward compatibility)", () 
 
     const registry = readRegistry();
     expect(registry).toContain('import * as badge from "@zudo-sg/demo-ui/src/badge/badge.stories.tsx";');
-    expect(registry).toContain('"./ui/src/badge/badge.stories.tsx": badge as unknown as StoryModule,');
-    expect(registry).toContain('"./ui/src/badge/badge.stories.tsx": ["Playground", "Soft"],');
+    expect(registry).toContain('"./demo-ui/src/badge/badge.stories.tsx": badge as unknown as StoryModule,');
+    expect(registry).toContain('"./demo-ui/src/badge/badge.stories.tsx": ["Playground", "Soft"],');
 
     const storyModules = readStoryModules();
     expect(storyModules).toContain('import * as badge from "../../badge/badge.stories";');
@@ -109,7 +109,7 @@ describe("runGenRegistry — category-nested layout (#224)", () => {
       'import * as layoutBadgeIcon from "@zudo-sg/demo-ui/src/layout/badge-icon/badge-icon.stories.tsx";',
     );
     expect(registry).toContain(
-      '"./ui/src/layout/badge-icon/badge-icon.stories.tsx": layoutBadgeIcon as unknown as StoryModule,',
+      '"./demo-ui/src/layout/badge-icon/badge-icon.stories.tsx": layoutBadgeIcon as unknown as StoryModule,',
     );
 
     const storyModules = readStoryModules();
@@ -131,10 +131,10 @@ describe("runGenRegistry — category-nested layout (#224)", () => {
     expect(registry).toContain('import * as layoutBadge from "@zudo-sg/demo-ui/src/layout/badge/badge.stories.tsx";');
     expect(registry).toContain('import * as formsBadge from "@zudo-sg/demo-ui/src/forms/badge/badge.stories.tsx";');
     expect(registry).toContain(
-      '"./ui/src/layout/badge/badge.stories.tsx": layoutBadge as unknown as StoryModule,',
+      '"./demo-ui/src/layout/badge/badge.stories.tsx": layoutBadge as unknown as StoryModule,',
     );
     expect(registry).toContain(
-      '"./ui/src/forms/badge/badge.stories.tsx": formsBadge as unknown as StoryModule,',
+      '"./demo-ui/src/forms/badge/badge.stories.tsx": formsBadge as unknown as StoryModule,',
     );
   });
 
@@ -146,9 +146,9 @@ describe("runGenRegistry — category-nested layout (#224)", () => {
     runGenRegistry(sandbox, baseConfig());
     const registry = readRegistry();
 
-    const badgeIdx = registry.indexOf('"./ui/src/badge/badge.stories.tsx"');
-    const contentIdx = registry.indexOf('"./ui/src/content/content-not-a-component.stories.tsx"');
-    const heroIdx = registry.indexOf('"./ui/src/landing/hero-band/hero-band.stories.tsx"');
+    const badgeIdx = registry.indexOf('"./demo-ui/src/badge/badge.stories.tsx"');
+    const contentIdx = registry.indexOf('"./demo-ui/src/content/content-not-a-component.stories.tsx"');
+    const heroIdx = registry.indexOf('"./demo-ui/src/landing/hero-band/hero-band.stories.tsx"');
     expect(badgeIdx).toBeGreaterThan(-1);
     expect(contentIdx).toBeGreaterThan(-1);
     expect(heroIdx).toBeGreaterThan(-1);
@@ -163,7 +163,7 @@ describe("runGenRegistry — category-nested layout (#224)", () => {
 
     runGenRegistry(sandbox, baseConfig());
     const registry = readRegistry();
-    expect(registry).toContain('"./ui/src/badge/badge.stories.tsx"');
+    expect(registry).toContain('"./demo-ui/src/badge/badge.stories.tsx"');
     expect(registry).not.toContain("badge-fixture");
     expect(registry).not.toContain("section-heading");
   });
