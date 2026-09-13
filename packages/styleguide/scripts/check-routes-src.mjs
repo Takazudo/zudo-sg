@@ -21,12 +21,14 @@ const SRC_ROUTES = join(PKG_ROOT, "src", "routes");
 const ROUTES_SRC = join(PKG_ROOT, "routes-src");
 const PKG_NAME = "@takazudo/zudo-sg";
 
-// Must match ROUTE_ENTRYPOINTS in src/plugins/routes.ts.
+// ROUTE_ENTRYPOINTS in src/plugins/routes.ts, plus the preview island wrapper
+// that src/islands.ts imports through `../routes-src/_preview-app.tsx`.
 const REQUIRED_ENTRYPOINTS = [
   "components-index.tsx",
   "components-slug.tsx",
   "components-preview.tsx",
   "tokens.tsx",
+  "_preview-app.tsx",
 ];
 
 const RESIDUAL_RE = /(?:\bfrom\s*|\bimport\s*\(\s*|\bimport\s+)(["'])\.\.\/[^"']*\1/;

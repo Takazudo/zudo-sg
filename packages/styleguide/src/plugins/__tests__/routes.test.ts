@@ -9,6 +9,8 @@ import routesPlugin, {
   PLUGIN_NAME,
   REGISTRY_MODULE_ID,
   ROUTE_ENTRYPOINTS,
+  TOKENS_MODULE_ID,
+  buildTokensModuleSource,
   ZUDO_DOC_ROUTES_PLUGIN_NAME,
   assertZudoDocRoutesPlugin,
   buildContextModuleSource,
@@ -98,7 +100,19 @@ describe("resolveRoutesPluginOptions", () => {
       uiPackageName: null,
       previewCssUrl: DEFAULT_PREVIEW_CSS_URL,
       catalog: { title: "Component catalog", intro: null },
+      tokensManifestModule: null,
     });
+  });
+
+  it("resolves an optional tokensManifestModule through the host-path contract", () => {
+    touch(join(projectRoot, "src/config/tokens-manifest.ts"));
+    expect(
+      resolveRoutesPluginOptions(projectRoot, { registryModule: REGISTRY, tokensManifestModule: "./src/config/tokens-manifest.ts" })
+        .tokensManifestModule,
+    ).toBe(toForwardSlash(join(projectRoot, "src/config/tokens-manifest.ts")));
+    expect(() =>
+      resolveRoutesPluginOptions(projectRoot, { registryModule: REGISTRY, tokensManifestModule: "./nope.ts" }),
+    ).toThrow(/option "tokensManifestModule" = "\.\/nope\.ts" resolved to/);
   });
 
   it("keeps host values and merges partial route patterns over the defaults", () => {
@@ -217,6 +231,15 @@ describe("virtual module sources", () => {
   });
 });
 
+describe("buildTokensModuleSource", () => {
+  it("assembles the UiDesignTokensManifest from the generated manifest's named exports", () => {
+    expect(buildTokensModuleSource("/host/src/config/m.ts")).toBe(
+      'import { UI_PALETTE_COLORS, UI_COLOR_TOKENS, UI_SPACING_TOKENS, UI_FONT_TOKENS, UI_SIZE_TOKENS } from "/host/src/config/m.ts";\n' +
+        "export const tokensManifest = { paletteColors: UI_PALETTE_COLORS, colorTokens: UI_COLOR_TOKENS, spacingTokens: UI_SPACING_TOKENS, fontTokens: UI_FONT_TOKENS, sizeTokens: UI_SIZE_TOKENS };\n",
+    );
+  });
+});
+
 describe("routes plugin setup", () => {
   it("registers both virtual modules and injects the four routes from the package realpath", async () => {
     const reg = runSetup(
@@ -224,7 +247,8 @@ describe("routes plugin setup", () => {
       { base: "/styleguide/" },
     );
 
-    expect([...reg.virtualModules.keys()]).toEqual([CONTEXT_MODULE_ID, REGISTRY_MODULE_ID]);
+    expect([...reg.virtualModules.keys()]).toEqual([CONTEXT_MODULE_ID, REGISTRY_MODULE_ID, TOKENS_MODULE_ID]);
+    expect(await reg.virtualModules.get(TOKENS_MODULE_ID)!()).toBe("export const tokensManifest = null;\n");
     expect(await loadContext(reg)).toEqual({
       base: "/styleguide/",
       routes: { ...DEFAULT_SG_ROUTES, componentsIndex: "/ui" },

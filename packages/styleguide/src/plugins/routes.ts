@@ -13,8 +13,10 @@
 //   2. requires the `@takazudo/zudo-doc/plugins/routes` descriptor — the engine
 //      routes import `virtual:zudo-doc-route-context` /
 //      `virtual:zudo-doc-chrome-bindings`, which only that plugin registers;
-//   3. registers `virtual:zudo-sg-context` (JSON data only) and
-//      `virtual:zudo-sg-registry` (re-export of the host registry file);
+//   3. registers `virtual:zudo-sg-context` (JSON data only),
+//      `virtual:zudo-sg-registry` (re-export of the host registry file) and
+//      `virtual:zudo-sg-tokens` (the `/tokens` route's design-token manifest,
+//      assembled from the host `tokensManifestModule` or `null`);
 //   4. injects the four routes, pointing at `routes-src/<entry>.tsx` under this
 //      package's own realpath.
 //
@@ -44,6 +46,20 @@ export const ZUDO_DOC_ROUTES_PLUGIN_NAME = "@takazudo/zudo-doc/plugins/routes";
 
 export const CONTEXT_MODULE_ID = "virtual:zudo-sg-context";
 export const REGISTRY_MODULE_ID = "virtual:zudo-sg-registry";
+export const TOKENS_MODULE_ID = "virtual:zudo-sg-tokens";
+
+/**
+ * Named exports of a `zudo-sg gen-token-manifest` output file, keyed by the
+ * `UiDesignTokensManifest` field each one fills (see
+ * cli/token-manifest/ui-token-manifest.ts).
+ */
+export const TOKENS_MANIFEST_EXPORTS: Readonly<Record<string, string>> = Object.freeze({
+  paletteColors: "UI_PALETTE_COLORS",
+  colorTokens: "UI_COLOR_TOKENS",
+  spacingTokens: "UI_SPACING_TOKENS",
+  fontTokens: "UI_FONT_TOKENS",
+  sizeTokens: "UI_SIZE_TOKENS",
+});
 
 /** Route key → `routes-src/` entrypoint file (ADR decision 6). */
 export const ROUTE_ENTRYPOINTS: Readonly<Record<keyof SgRoutes, string>> = Object.freeze({
@@ -61,6 +77,13 @@ export interface RoutesPluginOptions {
   uiPackageName?: string;
   previewCssUrl?: string;
   catalog?: { title?: string; intro?: string };
+  /**
+   * Project-root-relative generated token manifest (`zudo-sg.config.mjs`
+   * `tokens.manifestOut`). Addition beyond the ADR's locked option list: the
+   * `/tokens` route has no other channel to the host manifest. Omitted → the
+   * route renders without dashboards.
+   */
+  tokensManifestModule?: string;
 }
 
 export interface ResolvedRoutesPluginOptions {
@@ -71,6 +94,8 @@ export interface ResolvedRoutesPluginOptions {
   uiPackageName: string | null;
   previewCssUrl: string;
   catalog: SgCatalogText;
+  /** Forward-slash absolute path of the host token manifest, or `null`. */
+  tokensManifestModule: string | null;
 }
 
 export interface RouteInjection {
@@ -87,6 +112,7 @@ const OPTION_KEYS = new Set([
   "uiPackageName",
   "previewCssUrl",
   "catalog",
+  "tokensManifestModule",
 ]);
 const ROUTE_KEYS = Object.keys(DEFAULT_SG_ROUTES) as Array<keyof SgRoutes>;
 const CATALOG_KEYS = new Set(["title", "intro"]);
@@ -174,6 +200,13 @@ export function resolveRoutesPluginOptions(
     example: "./src/styleguide/sg-registry.ts",
   });
   const previewCssUrl = optionalString("previewCssUrl", options.previewCssUrl);
+  const tokensValue = options.tokensManifestModule;
+  if (tokensValue !== undefined && tokensValue !== null && typeof tokensValue !== "string") {
+    fail(`option "tokensManifestModule" must be a string (project-root-relative path)`);
+  }
+  const tokensManifestModule = resolveHostModule(projectRoot, "tokensManifestModule", tokensValue, {
+    example: "./src/config/ui-design-tokens-manifest.ts",
+  });
 
   return {
     registryModule,
@@ -182,6 +215,7 @@ export function resolveRoutesPluginOptions(
     uiPackageName: optionalString("uiPackageName", options.uiPackageName) ?? null,
     previewCssUrl: previewCssUrl === undefined ? DEFAULT_PREVIEW_CSS_URL : urlPath("previewCssUrl", previewCssUrl),
     catalog: normalizeCatalog(options.catalog),
+    tokensManifestModule: tokensManifestModule ?? null,
   };
 }
 
@@ -215,6 +249,16 @@ export function buildContextModuleSource(context: SgContext): string {
 
 export function buildRegistryModuleSource(registryModule: string): string {
   return `export { storyModules, storyExportOrder } from ${JSON.stringify(toForwardSlash(registryModule))};\n`;
+}
+
+export function buildTokensModuleSource(tokensManifestModule: string | null): string {
+  if (tokensManifestModule === null) return "export const tokensManifest = null;\n";
+  const names = Object.values(TOKENS_MANIFEST_EXPORTS);
+  const fields = Object.entries(TOKENS_MANIFEST_EXPORTS).map(([field, name]) => `${field}: ${name}`);
+  return (
+    `import { ${names.join(", ")} } from ${JSON.stringify(toForwardSlash(tokensManifestModule))};\n` +
+    `export const tokensManifest = { ${fields.join(", ")} };\n`
+  );
 }
 
 /**
@@ -262,6 +306,7 @@ export function createRoutesPlugin({ packageRoot = resolvePackageRoot }: CreateR
       const context = buildSgContext(ctx.config.base, resolved);
       ctx.addVirtualModule(CONTEXT_MODULE_ID, () => buildContextModuleSource(context));
       ctx.addVirtualModule(REGISTRY_MODULE_ID, () => buildRegistryModuleSource(resolved.registryModule));
+      ctx.addVirtualModule(TOKENS_MODULE_ID, () => buildTokensModuleSource(resolved.tokensManifestModule));
 
       for (const { pattern, entrypoint } of injections) {
         ctx.injectRoute(pattern, entrypoint);
