@@ -50,7 +50,7 @@ export const settings = {
   siteUrl: "" as string,
   // -------------------------------------------------------------------------
   siteDescription:
-    "A zudo-doc-based styleguide host and provider of the @zudo-sg/ui component library.",
+    "A zudo-doc-based styleguide host and provider of the @zudo-sg/demo-ui component library.",
   base: "/",
   trailingSlash: false as boolean,
   noindex: false as boolean,
@@ -58,14 +58,14 @@ export const settings = {
   githubUrl: false as string | false,
   home: {
     wide: true,
-    introMarkdown: `zudo-sg is a zudo-doc-based styleguide host and the provider of the @zudo-sg/ui component library.
+    introMarkdown: `zudo-sg is a zudo-doc-based styleguide host and the provider of the @zudo-sg/demo-ui component library.
 
 Two live design-token panels let you tune the doc chrome and component previews side by side.
 
 The same library drives a multi-page demo site, so the components can be explored in both a styleguide and a complete product experience.
 
 - [Overview](/docs/overview) — Learn what zudo-sg provides.
-- [Components](/components) — Browse the @zudo-sg/ui component catalog.
+- [Components](/components) — Browse the @zudo-sg/demo-ui component catalog.
 - [Design Tokens](/tokens) — Explore and tune the shared design tokens.`,
     sitemapHeading: "",
   },

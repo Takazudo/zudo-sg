@@ -2,7 +2,7 @@
  * zdtp PanelConfig factory for the PREVIEW design-token panel instance.
  *
  * This panel tweaks the host's target-website tokens (the component
- * package's CSS, e.g. @zudo-sg/ui) and pushes them to the styleguide preview
+ * package's CSS, e.g. @zudo-sg/demo-ui) and pushes them to the styleguide preview
  * iframes via the sink API. It is intentionally distinct from the host-owned
  * doc-chrome panel (`sg-doc-tweak`):
  *

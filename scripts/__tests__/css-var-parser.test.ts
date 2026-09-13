@@ -41,7 +41,7 @@ describe("parseCssCustomProperties", () => {
   });
 
   it("collapses a multi-line, alignment-padded value to one normalized line", () => {
-    // Mirrors --shadow-card in packages/ui/styles/tokens.css: multi-line,
+    // Mirrors --shadow-card in packages/demo-ui/styles/tokens.css: multi-line,
     // double-spaced for column alignment, comma-separated oklch() layers.
     const css = `
       @theme {

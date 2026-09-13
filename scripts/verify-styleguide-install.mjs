@@ -108,8 +108,8 @@ function stopDevServer(child) {
 async function packEngine(destination) {
   await mkdir(destination, { recursive: true });
   // `pnpm --filter @takazudo/zudo-sg pack`: the package has no lockfile of its
-  // own (unlike packages/ui), so this runs safely from the repo root — no
-  // standalone-tree contamination risk (see CLAUDE.md's packages/ui warning).
+  // own (unlike packages/demo-ui), so this runs safely from the repo root — no
+  // standalone-tree contamination risk (see CLAUDE.md's packages/demo-ui warning).
   const stdout = await runCapture(
     "corepack",
     ["pnpm", "--filter", "@takazudo/zudo-sg", "pack", "--pack-destination", destination],
@@ -138,7 +138,7 @@ function assertNoWhitelistEscape(files) {
     "CHANGELOG.md",
     "README.md",
   ]);
-  const forbiddenSubstrings = ["doc/", "src/", "apps/", "packages/ui", "fixtures/"];
+  const forbiddenSubstrings = ["doc/", "src/", "apps/", "packages/demo-ui", "fixtures/"];
   for (const file of files) {
     // npm tarball entries are prefixed "package/".
     const relative = file.replace(/^package\//u, "");

@@ -7,10 +7,10 @@ import type { ZudoSgConfig } from "../../config.js";
 import { runGenTokenManifest, TokensConfigMissingError } from "../gen-token-manifest.js";
 
 const CONFIG_WITHOUT_TOKENS: ZudoSgConfig = vi.hoisted(() => ({
-  componentsRoots: [{ dir: "packages/ui/src", importBase: "@zudo-sg/ui/src" }],
+  componentsRoots: [{ dir: "packages/demo-ui/src", importBase: "@zudo-sg/demo-ui/src" }],
   registryOut: "src/styleguide/sg-registry.ts",
   categoryOrder: [],
-  uiPackageName: "@zudo-sg/ui",
+  uiPackageName: "@zudo-sg/demo-ui",
   barrelIndex: null,
   previewStyles: "preview.css",
 }));

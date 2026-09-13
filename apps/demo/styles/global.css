@@ -8,7 +8,7 @@
  *
  * Shared tokens (spacing, typography, radius, shadows, breakpoints, and the
  * `--z-index-ui-*` semantic scale) AND the semantic color set come from
- * @zudo-sg/ui — the single source of truth for the whole monorepo. This file
+ * @zudo-sg/demo-ui — the single source of truth for the whole monorepo. This file
  * adds only site-specific CSS: the content-prose contract and the SPA
  * transition/loading-overlay wiring.
  */
@@ -19,14 +19,14 @@
 /* Shared tight-token set — spacing (hsp/vsp), font-sizes, font-weights,
    line-heights, font-families, radius, shadows, breakpoints, z-index.
    Single source of truth for the monorepo; do NOT duplicate these here. */
-@import "@zudo-sg/ui/styles/tokens.css";
+@import "@zudo-sg/demo-ui/styles/tokens.css";
 
 /* Shared semantic color tokens (bg/surface/border/fg/muted/accent/rail family)
    with light + dark values via light-dark(). This is the color
-   contract @zudo-sg/ui components depend on — importing it keeps the demo
+   contract @zudo-sg/demo-ui components depend on — importing it keeps the demo
    dark-correct and palette-consistent with the rest of the monorepo. Do NOT
    redefine these names here. */
-@import "@zudo-sg/ui/styles/colors.css";
+@import "@zudo-sg/demo-ui/styles/colors.css";
 
 /* Per-line theming (`[data-line="<key>"]` → --color-accent overrides).
    Imported right after colors.css so its overrides win. */
@@ -46,7 +46,7 @@
 @source "components/**/*.{tsx,ts,jsx,js}";
 /* The component library lives outside this app's tree; scan it so Tailwind
    picks up the utility classes the components emit. */
-@source "../../packages/ui/src/**/*.{tsx,ts,jsx,js}";
+@source "../../packages/demo-ui/src/**/*.{tsx,ts,jsx,js}";
 
 /* ── Base styles ─────────────────────────────────────────────────────── */
 @layer base {

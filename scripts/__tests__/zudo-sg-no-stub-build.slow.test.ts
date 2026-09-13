@@ -38,7 +38,7 @@ const COPY_ENTRIES = [
   "pages",
   "public",
   "src",
-  "packages/ui",
+  "packages/demo-ui",
 ];
 
 const ENGINE_ISLANDS = ["ConfiguredPreviewApp", "DetailWorkbench", "CodePanel", "CatalogFilter", "PreviewTokensButton"];

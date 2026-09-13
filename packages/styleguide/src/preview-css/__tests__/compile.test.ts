@@ -102,12 +102,12 @@ describe("compilePreviewCss — root host src/styles/preview-entry.css", () => {
 
   it("lists the entry and the UI token files as dependencies", () => {
     expect(result.dependencies[0]).toBe(fwd(HOST_ENTRY));
-    expect(result.dependencies).toContain(fwd(join(REPO_ROOT, "packages/ui/styles/tokens.css")));
-    expect(result.dependencies).toContain(fwd(join(REPO_ROOT, "packages/ui/styles/colors.css")));
+    expect(result.dependencies).toContain(fwd(join(REPO_ROOT, "packages/demo-ui/styles/tokens.css")));
+    expect(result.dependencies).toContain(fwd(join(REPO_ROOT, "packages/demo-ui/styles/colors.css")));
   });
 
   it("scans the UI package sources", () => {
-    const uiSrc = fwd(join(REPO_ROOT, "packages/ui/src/"));
+    const uiSrc = fwd(join(REPO_ROOT, "packages/demo-ui/src/"));
     expect(result.sourceFiles.some((file) => file.startsWith(uiSrc))).toBe(true);
   });
 });

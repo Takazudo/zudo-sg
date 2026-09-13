@@ -1,8 +1,8 @@
 /**
  * scripts/ui-contrast-pairs.ts
  *
- * WCAG contrast audit for the @zudo-sg/ui grouped-palette semantic tokens
- * (packages/ui/styles/colors.css). Complements contrast-pair-matrix.ts, which
+ * WCAG contrast audit for the @zudo-sg/demo-ui grouped-palette semantic tokens
+ * (packages/demo-ui/styles/colors.css). Complements contrast-pair-matrix.ts, which
  * audits the host doc-chrome `--zd-*` scheme resolved from color-schemes.ts.
  *
  * The ui palette's values live in CSS (Tier-1 `--palette-*` rungs + Tier-2
@@ -31,9 +31,9 @@ import { colorMixSrgb, contrastRatio } from "../src/config/contrast-utils";
 import type { PairResult, SchemeReport } from "./contrast-pair-matrix";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const COLORS_CSS_PATH = resolve(__dirname, "../packages/ui/styles/colors.css");
-const SYNTAX_CSS_PATH = resolve(__dirname, "../packages/ui/styles/syntax-highlight.css");
-const PROSE_MD_CSS_PATH = resolve(__dirname, "../packages/ui/src/content/prose-md/prose-md.css");
+const COLORS_CSS_PATH = resolve(__dirname, "../packages/demo-ui/styles/colors.css");
+const SYNTAX_CSS_PATH = resolve(__dirname, "../packages/demo-ui/styles/syntax-highlight.css");
+const PROSE_MD_CSS_PATH = resolve(__dirname, "../packages/demo-ui/src/content/prose-md/prose-md.css");
 
 export type Mode = "light" | "dark";
 
@@ -373,7 +373,7 @@ function evaluateMode(mode: Mode, vars: Map<string, string>): SchemeReport {
 
   const passCount = pairs.filter((p) => p.pass).length;
   return {
-    name: `@zudo-sg/ui (${mode})`,
+    name: `@zudo-sg/demo-ui (${mode})`,
     source: "uiColors",
     pairs,
     passCount,
@@ -382,7 +382,7 @@ function evaluateMode(mode: Mode, vars: Map<string, string>): SchemeReport {
   };
 }
 
-/** Evaluate the @zudo-sg/ui semantic pairs for both schemes. */
+/** Evaluate the @zudo-sg/demo-ui semantic pairs for both schemes. */
 export function evaluateUiSchemes(): SchemeReport[] {
   const vars = loadVars();
   return [evaluateMode("light", vars), evaluateMode("dark", vars)];

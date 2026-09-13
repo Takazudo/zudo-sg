@@ -237,7 +237,7 @@ function VariantFrame(props: VariantFrameProps): JSX.Element {
         class="flex overflow-x-auto bg-bg p-hsp-md focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus"
       >
         <div class="mx-auto shrink-0" style={{ width: viewportWidth(viewportId) }}>
-          {/* `allow-forms` is required by `packages/ui/src/forms/` stories:
+          {/* `allow-forms` is required by `packages/demo-ui/src/forms/` stories:
               #499 saw Chromium block submission without it (the submit
               listener did not fire and the frame did not navigate), while
               with it the listener fired and the frame navigated to the real

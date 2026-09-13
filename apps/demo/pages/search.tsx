@@ -15,9 +15,9 @@
  */
 import { Island, type IslandProps } from "@takazudo/zfb";
 import DefaultLayout from "../layouts/default";
-import { Container } from "@zudo-sg/ui/src/shared/container/container.tsx";
-import { SearchResults } from "@zudo-sg/ui/src/search/search-results/search-results.tsx";
-import SearchResultsEnhancer from "@zudo-sg/ui/src/search/search-results-enhancer/search-results-enhancer.tsx";
+import { Container } from "@zudo-sg/demo-ui/src/shared/container/container.tsx";
+import { SearchResults } from "@zudo-sg/demo-ui/src/search/search-results/search-results.tsx";
+import SearchResultsEnhancer from "@zudo-sg/demo-ui/src/search/search-results-enhancer/search-results-enhancer.tsx";
 import { getSearchIndex } from "../lib/search-index";
 
 // `frontmatter` must be a literal object — zfb statically extracts it from
@@ -43,7 +43,7 @@ export default function SearchPage() {
         </div>
       </Container>
 
-      {/* @zudo-sg/ui's SearchResults deliberately does not mount its own
+      {/* @zudo-sg/demo-ui's SearchResults deliberately does not mount its own
           enhancer (see that component's module doc) — this is the consumer
           wiring it, exactly per its documented example. */}
       <Island when="visible" ssrFallback={null}>

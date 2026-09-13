@@ -3,7 +3,7 @@
  * after a soft (SPA) navigation.
  *
  * Problem: the left rail (`<nav id="zui-nav-drawer">`, see
- * `@zudo-sg/ui/src/chrome/site-nav`) is persisted across SPA swaps via
+ * `@zudo-sg/demo-ui/src/chrome/site-nav`) is persisted across SPA swaps via
  * `data-zfb-transition-persist` (View Transitions — wired in a later wave),
  * so its DOM node survives navigation. The new page's freshly-rendered rail
  * markup (with the correct `data-current`/`open` state) is discarded as part
@@ -23,7 +23,7 @@
  * off the `toggle` event this triggers.
  *
  * Matching the current section mirrors the server-side `isCurrentSection`
- * in `@zudo-sg/ui/src/chrome/site-nav/site-nav.tsx`: normalize each child
+ * in `@zudo-sg/demo-ui/src/chrome/site-nav/site-nav.tsx`: normalize each child
  * link's href and the section-top href, compare against the current
  * pathname.
  */

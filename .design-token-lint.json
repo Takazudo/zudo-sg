@@ -18,7 +18,7 @@
   "allowed": ["p-0", "m-0", "gap-0", "p-1px"],
   "patterns": [
     "src/**/*.{tsx,ts,jsx,js}",
-    "packages/ui/src/**/*.{tsx,ts,jsx,js}",
+    "packages/demo-ui/src/**/*.{tsx,ts,jsx,js}",
     "apps/demo/**/*.{tsx,ts,jsx,js}",
     "pages/**/*.{tsx,ts,jsx,js}"
   ],

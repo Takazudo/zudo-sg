@@ -13,7 +13,7 @@
 import type { FunctionComponent } from "preact";
 import { Island, type IslandProps } from "@takazudo/zfb";
 import DefaultLayout from "../layouts/default";
-import { Container } from "@zudo-sg/ui/src/shared/container/container.tsx";
+import { Container } from "@zudo-sg/demo-ui/src/shared/container/container.tsx";
 import { mdxComponents } from "./_mdx-components";
 import { normalizeSlug, deriveLineKey } from "../lib/site-tree";
 import type { ContentData } from "../lib/content-schema";
@@ -24,8 +24,8 @@ import type { ContentData } from "../lib/content-schema";
 // enhancer's own header comment) rather than DOM nesting, so mounting both
 // unconditionally on every content page is safe — a page without either
 // form's markup just runs a no-op query.
-import ContactFormEnhancer from "@zudo-sg/ui/src/forms/contact-form/contact-form-enhancer.tsx";
-import RecruitFormEnhancer from "@zudo-sg/ui/src/forms/recruit-entry-form/recruit-form-enhancer.tsx";
+import ContactFormEnhancer from "@zudo-sg/demo-ui/src/forms/contact-form/contact-form-enhancer.tsx";
+import RecruitFormEnhancer from "@zudo-sg/demo-ui/src/forms/recruit-entry-form/recruit-form-enhancer.tsx";
 
 type ContentEntry = {
   slug: string;

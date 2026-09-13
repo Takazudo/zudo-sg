@@ -139,7 +139,7 @@ async function clickPanelAction(page: Page, label: string): Promise<void> {
 /**
  * Navigate to the "Size" tab in the currently-open panel and set --radius-md
  * to a specific rem value using the text input (aria-label: "--radius-md value").
- * The row's unit is rem (it is authored as rem in packages/ui/styles/tokens.css),
+ * The row's unit is rem (it is authored as rem in packages/demo-ui/styles/tokens.css),
  * so typing "20" commits "20rem" — see #580.
  *
  * This drives the panel's own Size tab input, which calls the sink's apply()
@@ -278,7 +278,7 @@ test("preview panel: overrides reach iframe :root; host <html> is unchanged", as
   const radiusOverride = "20px";
 
   // Capture the host <html> baseline BEFORE applying. The host :root legitimately
-  // defines base @zudo-sg/ui tokens (src/styles/global.css aliases them onto the
+  // defines base @zudo-sg/demo-ui tokens (src/styles/global.css aliases them onto the
   // doc chrome), so these are NOT empty — the correct isolation assertion is that
   // the preview override does not CHANGE the host value, not that it equals "".
   const hostBrandBefore = await getHostRootVar(page, "--color-accent");

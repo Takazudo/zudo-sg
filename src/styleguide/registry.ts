@@ -3,7 +3,7 @@
 // its declared category order. Built once at module init (eager + synchronous).
 
 import { createRegistry } from "@takazudo/zudo-sg/registry";
-import { STORY_CATEGORIES } from "@zudo-sg/ui";
+import { STORY_CATEGORIES } from "@zudo-sg/demo-ui";
 import { storyExportOrder, storyModules } from "./sg-registry";
 
 export { OVERVIEW_SLUG, TOKENS_SLUG } from "@takazudo/zudo-sg/registry";
