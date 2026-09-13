@@ -14,3 +14,7 @@ declare module "virtual:zudo-sg-registry" {
   export const storyModules: Record<string, import("../stories/index.js").StoryModule>;
   export const storyExportOrder: Record<string, string[]>;
 }
+
+declare module "virtual:zudo-sg-tokens" {
+  export const tokensManifest: import("../token-dashboard/index.js").UiDesignTokensManifest | null;
+}

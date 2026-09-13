@@ -74,6 +74,7 @@ beforeEach(() => {
 afterEach(() => {
   document.body.innerHTML = "";
   document.documentElement.removeAttribute("data-theme");
+  document.documentElement.removeAttribute("data-sg-preview-hydrated");
   vi.useRealTimers();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
@@ -229,5 +230,13 @@ describe("PreviewApp height reporting", () => {
       { type: MSG_HEIGHT, height: 85 },
       "*",
     );
+  });
+});
+
+describe("PreviewApp hydration marker", () => {
+  it("sets html[data-sg-preview-hydrated=\"1\"] once mounted", () => {
+    expect(document.documentElement.hasAttribute("data-sg-preview-hydrated")).toBe(false);
+    render(<PreviewApp registry={registry} />);
+    expect(document.documentElement.getAttribute("data-sg-preview-hydrated")).toBe("1");
   });
 });

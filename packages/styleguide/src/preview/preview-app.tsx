@@ -117,6 +117,8 @@ function PreviewApp({ registry }: PreviewAppProps): JSX.Element {
       }
     }
     window.addEventListener("message", onMessage);
+    // Hydration marker read by the dev/e2e acceptance checks (ADR proof table).
+    document.documentElement.dataset.sgPreviewHydrated = "1";
     window.parent?.postMessage({ type: MSG_READY }, "*");
     return () => window.removeEventListener("message", onMessage);
   }, []);

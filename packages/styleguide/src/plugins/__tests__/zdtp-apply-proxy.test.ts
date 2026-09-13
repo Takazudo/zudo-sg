@@ -353,9 +353,16 @@ describe("resolveZdtpApplyProxyOptions", () => {
       ...ROOT_OPTIONS,
       tabsModule: "./src/config/preview-token-panel-tabs.ts",
     });
-    expect(resolved.routingFile).toBe(`${REPO_ROOT}/${ROUTING_FILE}`);
-    expect(resolved.writeRoot).toBe(`${REPO_ROOT}/packages/ui/styles`);
-    expect(resolved.tabsModule).toBe(`${REPO_ROOT}/src/config/preview-token-panel-tabs.ts`);
+    expect(resolved).toEqual({
+      enabled: true,
+      routingFile: `${REPO_ROOT}/${ROUTING_FILE}`,
+      writeRoot: `${REPO_ROOT}/packages/ui/styles`,
+      tabsModule: `${REPO_ROOT}/src/config/preview-token-panel-tabs.ts`,
+    });
+  });
+
+  it("is disabled (not an error) when neither routingFile nor writeRoot is given — zudoSg() without zdtpApplyProxy", () => {
+    expect(resolveZdtpApplyProxyOptions(REPO_ROOT, {})).toEqual({ enabled: false, tabsModule: undefined });
   });
 
   it("requires routingFile and writeRoot", () => {
@@ -405,6 +412,14 @@ describe(`setup() — ${VIRTUAL_MODULE_ID} dev/build gating`, () => {
     );
     const withoutTabs = await runSetup("dev");
     expect(withoutTabs.source).toContain("export const tabs = undefined;");
+  });
+
+  it("a disabled plugin still registers the virtual module, with no Apply wiring even in dev", async () => {
+    const { source, watchFiles } = await runSetup("dev", {});
+    expect(source).toContain("export const tabs = undefined;");
+    expect(source).toContain("applyEndpoint = undefined");
+    expect(source).toContain("applyRouting = undefined");
+    expect(watchFiles).toBeUndefined();
   });
 
   it("fails fast at setup() when an option does not resolve", async () => {

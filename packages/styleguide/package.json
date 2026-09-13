@@ -92,6 +92,14 @@
       "types": "./dist/plugins/routes.d.ts",
       "default": "./dist/plugins/routes.js"
     },
+    "./config": {
+      "types": "./dist/config/index.d.ts",
+      "default": "./dist/config/index.js"
+    },
+    "./islands": {
+      "types": "./dist/islands.d.ts",
+      "default": "./dist/islands.js"
+    },
     "./routes-src/*": "./routes-src/*",
     "./virtual-modules.d.ts": "./virtual-modules.d.ts",
     "./plugins/preview-css": {

@@ -63,11 +63,10 @@ export interface ZdtpApplyProxyOptions {
   tabsModule?: string;
 }
 
-export interface ResolvedZdtpApplyProxyOptions {
-  routingFile: string;
-  writeRoot: string;
-  tabsModule: string | undefined;
-}
+export type ResolvedZdtpApplyProxyOptions =
+  | { enabled: true; routingFile: string; writeRoot: string; tabsModule: string | undefined }
+  /** Neither `routingFile` nor `writeRoot` given (`zudoSg()` without `zdtpApplyProxy`): no Apply endpoint. */
+  | { enabled: false; tabsModule: string | undefined };
 
 function isDirectory(absPath: string): boolean {
   try {
@@ -91,15 +90,19 @@ export function resolveZdtpApplyProxyOptions(
     return value;
   };
 
+  const tabsModule = resolveHostModule(projectRoot, "tabsModule", str("tabsModule"), {
+    example: "./src/config/preview-token-panel-tabs.ts",
+  });
+  const writeRootValue = str("writeRoot");
+  if (str("routingFile") === undefined && writeRootValue === undefined) {
+    return { enabled: false, tabsModule };
+  }
+
   const routingFile = resolveHostModule(projectRoot, "routingFile", str("routingFile"), {
     required: true,
     example: "./zdtp-panel-routing.json",
   });
-  const tabsModule = resolveHostModule(projectRoot, "tabsModule", str("tabsModule"), {
-    example: "./src/config/preview-token-panel-tabs.ts",
-  });
 
-  const writeRootValue = str("writeRoot");
   if (writeRootValue === undefined) {
     throw new Error(
       `[zudo-sg] option "writeRoot" is required (project-root-relative path, e.g. "./packages/ui/styles")`,
@@ -114,7 +117,7 @@ export function resolveZdtpApplyProxyOptions(
     );
   }
 
-  return { routingFile, writeRoot, tabsModule };
+  return { enabled: true, routingFile, writeRoot, tabsModule };
 }
 
 let warnedMissingZdtp = false;
@@ -228,8 +231,8 @@ export async function buildVirtualModuleSource(
       ? `export { tabs } from ${JSON.stringify(resolved.tabsModule)};`
       : "export const tabs = undefined;",
   ];
-  const server = command === "dev" ? await loadZdtpServer(logger, importer) : null;
-  if (server) {
+  const server = command === "dev" && resolved.enabled ? await loadZdtpServer(logger, importer) : null;
+  if (server && resolved.enabled) {
     const routing = server.loadRoutingFromFile(resolved.routingFile);
     lines.push(
       `export const applyEndpoint = ${JSON.stringify(APPLY_PATH)};`,
@@ -250,12 +253,13 @@ export function createZdtpApplyProxyPlugin(importer?: ZdtpServerImporter): ZfbPl
       ctx.addVirtualModule(
         VIRTUAL_MODULE_ID,
         () => buildVirtualModuleSource(ctx.command, resolved, ctx.logger, importer),
-        ctx.command === "dev" ? { watchFiles: [resolved.routingFile] } : undefined,
+        ctx.command === "dev" && resolved.enabled ? { watchFiles: [resolved.routingFile] } : undefined,
       );
     },
 
     async devMiddleware(ctx: ZfbDevMiddlewareContext) {
       const resolved = resolveZdtpApplyProxyOptions(ctx.projectRoot, ctx.options);
+      if (!resolved.enabled) return;
       const server = await loadZdtpServer(ctx.logger, importer);
       ctx.register(
         APPLY_PATH,
