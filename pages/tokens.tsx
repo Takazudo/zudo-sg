@@ -2,16 +2,39 @@
 /** @jsxImportSource preact */
 import type { JSX, VNode } from "preact";
 import { Island } from "@takazudo/zfb";
+import { createTokenDashboards } from "@takazudo/zudo-sg/token-dashboard";
+import { colorSchemes } from "@/config/color-schemes";
+import { resolveRampRef } from "@/config/color-scheme-utils";
 import { defaultLocale } from "@/config/i18n";
+import { settings } from "@/config/settings";
+import { uiDesignTokensManifest, uiTokenTabs } from "@/config/ui-token-tabs";
 import { withBase } from "@/utils/base";
 import { TOKENS_SLUG } from "@/styleguide/registry";
 import { StyleguideLayout } from "@/features/styleguide/chrome/_styleguide-layout";
-import { UiTokenDashboards } from "@/features/styleguide/token-dashboard/ui-token-dashboards";
 import PreviewTokensButton from "@/features/styleguide/token-tweak/preview-tokens-button";
 import { composeMetaTitle } from "./lib/_compose-meta-title";
 import { buildStyleguideChrome } from "./lib/_styleguide-chrome";
 
 export const frontmatter = { title: "Design Tokens" };
+
+/** Per-mode chrome colors for the declared-defaults dashboards, resolved
+ * from this site's own color-scheme settings (host-specific; the package
+ * never resolves this itself — see `createTokenDashboards`'s `chromeStyle`
+ * option). */
+function buildDashboardChromeStyle(): Record<string, string> {
+  return Object.fromEntries(
+    (["light", "dark"] as const).flatMap((mode) => {
+      const schemeName = settings.colorMode
+        ? settings.colorMode[`${mode}Scheme`]
+        : settings.colorScheme;
+      const scheme = colorSchemes[schemeName]!;
+      return (["bg", "fg"] as const).map((role) => [
+        `--zdtp-dashboard-${mode}-${role}`,
+        resolveRampRef(scheme.map[role], scheme.ramps),
+      ]);
+    }),
+  );
+}
 
 export default function TokensPage(): JSX.Element {
   const locale = defaultLocale;
@@ -46,7 +69,9 @@ export default function TokensPage(): JSX.Element {
           </p>
           {previewTokensButton}
         </header>
-        <UiTokenDashboards />
+        {createTokenDashboards(uiDesignTokensManifest, uiTokenTabs, {
+          chromeStyle: buildDashboardChromeStyle(),
+        })}
       </div>
     </StyleguideLayout>
   );

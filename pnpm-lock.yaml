@@ -209,6 +209,9 @@ importers:
 
   packages/styleguide:
     devDependencies:
+      '@takazudo/zdtp':
+        specifier: 0.8.0
+        version: 0.8.0(preact@10.29.2)
       '@types/node':
         specifier: ^22.0.0
         version: 22.19.21
