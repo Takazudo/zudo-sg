@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -32,7 +32,11 @@ describe("compilePreviewCss — self-contained fixture", () => {
   let result: CompilePreviewCssResult;
 
   beforeAll(async () => {
-    dir = await mkdtemp(join(tmpdir(), "zudo-sg-preview-css-"));
+    // macOS: os.tmpdir() returns the /var/folders/... symlink, but the
+    // Tailwind oxide scanner (Rust) reports realpath'd /private/var/folders/...
+    // paths for dependencies/sourceFiles. Canonicalize here so path
+    // comparisons below match what the compiler actually returns.
+    dir = await realpath(await mkdtemp(join(tmpdir(), "zudo-sg-preview-css-")));
     await mkdir(join(dir, "content"));
     await writeFile(join(dir, "content/card.html"), '<div class="bg-brand"></div>');
     await writeFile(join(dir, "tokens.css"), ":root {\n  --palette-brand: #0a5;\n}\n");
