@@ -21,7 +21,7 @@ router) is covered by T0 unit tests today, with L4 E2E coverage added in T1.
 | Tier | Status | What runs |
 |------|--------|-----------|
 | T0 | Active | typecheck + unit tests — inner loop, constant feedback |
-| T1 | Active | PR CI gate: lint-tokens + codegen/provider drift + typecheck + unit + provider conformance + root/demo/doc builds + smoke-e2e + dist-checks |
+| T1 | Active | PR CI gate: lint-tokens + codegen drift + typecheck + unit + root/demo/doc builds + smoke-e2e + dist-checks |
 | T2 | Not needed | T1 budget is well under 10 min; no split needed |
 | T3 | Deferred to release | see below |
 | T4 | Local b4push only | convenience pre-push pass (not enforcement) |
@@ -58,7 +58,7 @@ Steps in `scripts/run-b4push.sh`:
 1. Format check (Markdown/MDX, including tracked skills) —
    `pnpm dlx @takazudo/mdx-formatter --check '**/*.md' '**/*.mdx' '.claude/**/*.md'`
 2. Design token lint — `pnpm lint:tokens`
-3. Codegen/provider drift checks — all `check:*` generators plus the UI provider boundary
+3. Codegen drift checks — all `check:*` generators
 4. Type checking — `pnpm check`
 5. Unit tests — `pnpm test:unit`
 6. Root build — `pnpm build`
@@ -75,11 +75,10 @@ The `pr-checks.yml` workflow runs on every PR targeting `main` or `base/**` and 
 the single source of truth for pass/fail. Jobs mirror the b4push steps:
 
 - **lint-tokens** — `pnpm lint:tokens`
-- **codegen-drift** — z-index, story registry/category, Composer provider pack,
-  provider boundary, and UI/root token-manifest drift checks
+- **codegen-drift** — z-index, story registry/category, and UI/root
+  token-manifest drift checks
 - **typecheck** — `pnpm check`
 - **unit** — `pnpm test:unit`
-- **provider-conformance** — standalone UI package checks and exact provider install
 - **build** — `pnpm build` (produces and caches `dist/`)
 - **build-demo** — `pnpm --filter @zudo-sg/demo build` (produces and caches
   `apps/demo/dist`), then `pnpm check:links:demo` against it

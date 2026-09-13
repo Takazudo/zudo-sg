@@ -11,8 +11,7 @@
 // into `/styleguide/assets/islands.js` — dev scans host `pages/` only, so
 // without `pages/lib/_zudo-sg-islands.ts` this would 404 / omit the marker.
 //
-// Model: scripts/test-ui-provider-package.mjs (isolated copy + frozen
-// install) and scripts/__tests__/zudo-sg-no-stub-build.slow.test.ts (build +
+// Model: scripts/__tests__/zudo-sg-no-stub-build.slow.test.ts (build +
 // dev boot, free-port + process-group kill).
 
 import { spawn } from "node:child_process";
