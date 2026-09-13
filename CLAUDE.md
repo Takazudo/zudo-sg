@@ -30,7 +30,8 @@ src/
 │   └── content/          # MDX content components (admonitions, code-group, ...)
 ├── config/               # Settings, color schemes, design token manifests
 ├── content/
-│   └── docs/             # Slim root overview content
+│   └── docs/             # Root overview + the "Architecture" category
+│                         # (the styleguide engine, from the reader's side)
 ├── features/
 │   └── styleguide/
 │       └── preview-demos/ # Live-demo islands for host preview pages (/preview/contact)
@@ -56,10 +57,14 @@ The tree above covers only the root host's own `src/`. `packages/ui`'s
 component tree and `apps/demo`'s content/route tree are separate workspace
 packages — see "Monorepo Structure" below.
 
-Root `/docs` is intentionally slim and currently contains the root Overview,
-self-contained and independent of the separately deployed `doc/` workspace —
-there is no navigation between the two sites and no root build/test/check
-coupling to `doc/` (see `doc/` under "Monorepo Structure" below).
+Root `/docs` contains the root Overview plus an `Architecture` category
+(the three-part model, the engine package, adopting it, tokens/preview CSS,
+and its relationship to `@takazudo/zudo-doc`) — a concept-level explanation of
+the styleguide engine for readers of this site, not the full story-authoring
+spec. It is self-contained and independent of the separately deployed `doc/`
+workspace — there is no navigation between the two sites and no root
+build/test/check coupling to `doc/` (see `doc/` under "Monorepo Structure"
+below).
 
 ## Content Conventions
 
@@ -91,6 +96,20 @@ Do NOT use h1 (`#`) in doc content — the page title from frontmatter is render
 
 ## Component provider and product split
 
+- **Engine vs host.** `packages/styleguide` (published as `@takazudo/zudo-sg`)
+  is the installable styleguide engine, built the way `@takazudo/zudo-doc` is
+  built: it owns the story registry/scaffold/token-manifest CLI (`zudo-sg`),
+  the catalog/detail/preview/tokens routes, the preview iframe app, the code
+  panel, the preview token panel + iframe bridge, and the token dashboards.
+  This root project is the engine's dogfooding host — it owns its component
+  library (`packages/ui`), its stories, the small `zudo-sg.config.mjs`, its
+  token CSS, and the zudo-doc site config that composes the engine in via
+  `withZudoSg()` (`zfb.config.ts`). Full seam contract:
+  `docs/adr/styleguide-engine.md`; `fixtures/engine-host` +
+  `scripts/verify-styleguide-install.mjs` prove the same install works for a
+  foreign project (packed tarball, non-root `base`, outside the workspace).
+  This is a different axis from the provider/product split below (engine vs.
+  host, not UI-provider vs. Composer/Sitemapper product).
 - **zudo-sg owns the provider** — components, stories, typed
   `*.composer.tsx` sidecars, generated `packages/ui/src/composer-pack.ts`, and
   the explicit `packages/ui/styles/composer.css` entry live here.
@@ -127,14 +146,16 @@ Do NOT use h1 (`#`) in doc content — the page title from frontmatter is render
   Composer/Sitemapper data. Destructive current-only cleanup is required; do not add
   backward-compatibility readers, migrations, redirects, aliases, or old-name
   and old-storage fallbacks.
-- **Route invariant** — the styleguide-only root build emits 83 HTML routes
-  (zfb reports 84 pages, the 84th being `/robots.txt`). The four catalog routes
+- **Route invariant** — the styleguide-only root build emits 89 HTML routes
+  (zfb reports 90 pages, the 90th being `/robots.txt`). The four catalog routes
   are injected by `@takazudo/zudo-sg` (`dist/__zfb/routes.json` lists them as
   `pages/components.tsx`, `pages/components/[slug].tsx`,
   `pages/components/preview.tsx`, `pages/tokens.tsx` overlay sources) and none
-  may be shadowed by a host page. The new
-  `what-is-zudo-sg` identity page accounts for the additional docs route. Since
-  zudo-doc 5.17.0 the
+  may be shadowed by a host page. The `what-is-zudo-sg` identity page and the
+  six-page `src/content/docs/architecture/` category (`index`,
+  `three-part-model`, `engine-package`, `adopting`, `tokens-and-preview-css`,
+  `relationship-to-zudo-doc`, plus its `Architecture` header-nav entry)
+  account for the routes beyond the pre-epic 83. Since zudo-doc 5.17.0 the
   package injects `/sitemap.xml` only when `settings.sitemap` is enabled, and this
   project sets it to `false`, so no sitemap route is emitted. Do not remove provider
   guides or unrelated routes while cleaning product ownership.

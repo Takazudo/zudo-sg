@@ -6,31 +6,36 @@ description: The workspace areas and how the root styleguide, shared UI package,
 
 ## Workspace shape
 
-zudo-sg is a pnpm workspace. The root package is the styleguide host, `packages/ui` is the source package every site consumes, `apps/demo` is a static consumer app, and `doc` is the documentation site you are reading now.
+zudo-sg is a pnpm workspace. The root package is the styleguide host, `packages/styleguide` is the installable styleguide engine the host dogfoods, `packages/ui` is the component source package every site consumes, `apps/demo` is a static consumer app, and `doc` is the documentation site you are reading now.
 
 ```txt
 .
 |-- pages/
 |-- src/
+|-- packages/styleguide/
 |-- packages/ui/
 |-- apps/demo/
 `-- doc/
 ```
 
-The root host is built with zfb, zudo-doc, MDX, Tailwind CSS v4, and Preact. It owns styleguide-specific pages such as `/`, `/components/*`, and `/docs/versions`; package-injected zudo-doc routes own the general docs chrome, 404, and robots behavior (plus the sitemap when `settings.sitemap` is enabled, which the root host leaves off).
+The root host is built with zfb, zudo-doc, MDX, Tailwind CSS v4, and Preact. It owns its own site-identity pages such as `/` and `/docs/versions`; package-injected zudo-doc routes own the general docs chrome, 404, and robots behavior (plus the sitemap when `settings.sitemap` is enabled, which the root host leaves off); package-injected `@takazudo/zudo-sg` routes own the component catalog (`/components`, `/components/[slug]`, `/components/preview`, `/tokens`). See [Component Catalog Pipeline](./component-catalog-pipeline.mdx) for how the engine is composed into the host build.
+
+## The styleguide engine (`packages/styleguide`)
+
+`packages/styleguide` is `@takazudo/zudo-sg`, an installable zfb/zudo-doc plugin package built the same way `@takazudo/zudo-doc` itself is built: a tsup `dist/` build, route entrypoints shipped as `.tsx` source under `routes-src/` (zfb extracts a route's `paths()` export by AST, so a compiled `.js` route does not work), and a `zudo-sg` CLI (`bin/zudo-sg.js`). It owns the story registry/scaffold/token-manifest CLI commands, the catalog/detail/preview/tokens routes, the preview iframe app, the code panel, the preview token panel, and the token dashboards — everything that used to be hand-copied host application code. The full seam contract (virtual modules, staging, the host-path option channel, the dev-hydration seed) is recorded in `docs/adr/styleguide-engine.md` at the repository root.
 
 ## Root styleguide host
 
-The root host is deployed as `zudo-sg` at `https://zudo-sg.takazudomodular.com/`. Its key directories are:
+The root host is deployed as `zudo-sg` at `https://zudo-sg.takazudomodular.com/`. It is the engine's dogfooding host — the same install a foreign project would perform, proven against a packed tarball by `fixtures/engine-host` (see [Quality Gates](../development/quality-gates.mdx)). Its key directories are:
 
-- `pages/`: file-based routes owned by the host.
+- `pages/`: file-based routes owned by the host (`/`, `/docs/versions`, `/preview/contact`; the four catalog routes above are package-injected, not host files).
 - `src/components/`: server-rendered JSX components and content components.
 - `src/config/`: settings, color schemes, token manifests, and navigation config.
-- `src/features/styleguide/`: component catalog chrome, previews, code panels, search, and token-tweak UI.
-- `src/styleguide/data/`: generated and hand-authored catalog data.
+- `src/styleguide/`: the generated story registry (`sg-registry.ts`) plus the thin `registry.ts`/`nav-nodes.ts` instances built with the engine's `@takazudo/zudo-sg/registry`.
+- `zudo-sg.config.mjs`: the host-level config the `zudo-sg` CLI and the `withZudoSg()` plugin composition both read (components roots, category order, token CSS files, the preview stylesheet entry).
 - `src/styles/global.css`: root design tokens and Tailwind configuration.
 
-Use server-rendered JSX by default in this host. Add Preact islands only when a feature needs client-side behavior.
+Use server-rendered JSX by default in this host. Add Preact islands only when a feature needs client-side behavior, reached through a static import chain from a host `pages/` file — `zfb dev` only scans host `pages/` for islands, so `pages/index.tsx` keeps a small `pages/lib/_zudo-sg-islands.ts` shim (`import "@takazudo/zudo-sg/islands";`) to keep the engine's own islands hydrating in dev.
 
 ## Shared UI package
 
