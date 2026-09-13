@@ -208,10 +208,17 @@ importers:
         version: 5.9.3
 
   packages/styleguide:
+    dependencies:
+      postcss:
+        specifier: ^8.5.15
+        version: 8.5.15
     devDependencies:
       '@types/node':
         specifier: ^22.0.0
         version: 22.19.21
+      culori:
+        specifier: ^4.0.2
+        version: 4.0.2
       preact:
         specifier: ^10.29.1
         version: 10.29.2

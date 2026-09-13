@@ -32,7 +32,14 @@
       "types": "./dist/registry/index.d.ts",
       "default": "./dist/registry/index.js"
     },
+    "./cli": {
+      "types": "./dist/cli/bin.d.ts",
+      "default": "./dist/cli/bin.js"
+    },
     "./package.json": "./package.json"
+  },
+  "bin": {
+    "zudo-sg": "./bin/zudo-sg.js"
   },
   "files": [
     "dist",
@@ -52,8 +59,12 @@
   "peerDependencies": {
     "preact": "^10.29.1"
   },
+  "dependencies": {
+    "postcss": "^8.5.15"
+  },
   "devDependencies": {
     "@types/node": "^22.0.0",
+    "culori": "^4.0.2",
     "preact": "^10.29.1",
     "tsup": "^8.5.0",
     "typescript": "^5.9.0",

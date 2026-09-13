@@ -1,18 +1,21 @@
-// scripts/lib/ui-token-manifest.mjs
-//
-// Project-specific layer on top of css-var-parser.mjs: knows which
-// `--custom-properties` from `packages/ui/styles/{tokens,colors}.css` belong
-// in `src/config/ui-design-tokens-manifest.ts`, and how to render that file.
+// Project-specific layer on top of css-var-parser.ts: knows which
+// `--custom-properties` from a components root's token CSS files belong in
+// the generated design-tokens manifest, and how to render that file.
 //
 // Split rationale: `id`, `label`, and `default` are fully derivable from the
 // CSS (the var name + its parsed value) — deriving them keeps the manifest
-// impossible to typo out of sync with its own cssVar. `group`, `step`, `unit`,
-// `control`, `options`, and `pill` are presentation metadata with no CSS
+// impossible to typo out of sync with its own cssVar. `group`/`step`/`unit`/
+// `control`/`options`/`pill` are presentation metadata with no CSS
 // equivalent (CSS has no notion of "render this as a select" or "step by
 // 0.025") — those live in the SPECS tables below and are the one thing a
-// human edits when a *new* token needs to appear in the panel.
+// human edits when a genuinely new token needs to appear in the panel.
+//
+// Ported from the host's former `scripts/lib/ui-token-manifest.mjs`. The
+// SPECS tables are specific to `@zudo-sg/ui`'s own token vocabulary (this is
+// a mechanical port behind `zudo-sg.config.mjs`, not a generalization of the
+// token schema itself — see docs/adr/styleguide-engine.md, issue #655).
 
-import { parseCssCustomProperties } from "./css-var-parser.mjs";
+import { parseCssCustomProperties } from "./css-var-parser.js";
 
 // ---------------------------------------------------------------------------
 // id / label derivation — same rule for every token, see comments inline.
@@ -22,27 +25,24 @@ const SPACING_PREFIX = "--spacing-";
 
 /**
  * Strip the leading `--` from a cssVar, except for `--spacing-*` tokens where
- * the `spacing-` segment is also dropped (`--spacing-hsp-2xs` -> `hsp-2xs`) —
- * matches the hand-written manifest's existing id/label shape, where the
- * spacing axis name (hsp/vsp) stands alone without a redundant "spacing-"
- * prefix.
+ * the `spacing-` segment is also dropped (`--spacing-hsp-2xs` -> `hsp-2xs`).
  */
-function suffixOf(cssVar) {
+function suffixOf(cssVar: string): string {
   if (cssVar.startsWith(SPACING_PREFIX)) {
     return cssVar.slice(SPACING_PREFIX.length);
   }
   return cssVar.slice(2);
 }
 
-function idOf(cssVar) {
+function idOf(cssVar: string): string {
   return `ui-${suffixOf(cssVar)}`;
 }
 
 /**
- * `--text-xs--line-height` gets the compact "text-xs / lh" label
- * (matches the hand-written manifest) instead of the verbose raw suffix.
+ * `--text-xs--line-height` gets the compact "text-xs / lh" label instead of
+ * the verbose raw suffix.
  */
-function labelOf(cssVar) {
+function labelOf(cssVar: string): string {
   const suffix = suffixOf(cssVar);
   const lineHeightMatch = suffix.match(/^(.*)--line-height$/);
   if (lineHeightMatch) return `${lineHeightMatch[1]} / lh`;
@@ -55,16 +55,42 @@ function labelOf(cssVar) {
 // parsed CSS so a value can never drift from its source declaration.
 // ---------------------------------------------------------------------------
 
-const FONT_WEIGHT_OPTIONS = [
-  "100", "200", "300", "400", "500", "600", "700", "800", "900",
-];
+const FONT_WEIGHT_OPTIONS = ["100", "200", "300", "400", "500", "600", "700", "800", "900"];
+
+export interface TokenSpec {
+  cssVar: string;
+  group: string;
+  step?: number;
+  unit?: string;
+  control?: string;
+  options?: string[];
+  pill?: { value: string; customDefault: string };
+  note?: string;
+}
+
+export interface BuiltToken {
+  id: string;
+  cssVar: string;
+  label: string;
+  group: string;
+  default: string;
+  step?: number;
+  unit?: string;
+  control?: string;
+  options?: string[];
+  pill?: { value: string; customDefault: string };
+  note?: string;
+}
+
+export interface PaletteEntry {
+  name: string;
+  value: string;
+}
 
 /**
- * Tier-1 raw palette — every `--palette-*` in colors.css's `:root` block.
- * Order matches the section order in colors.css (neutral, accent, state, line)
- * purely for readability; has no functional effect. The panel's PALETTE_TAB
- * groups these into neutral / accent / state / line families (see
- * `splitPaletteName` in preview-token-panel-config.ts).
+ * Tier-1 raw palette — every `--palette-*` in the colors CSS file's `:root`
+ * block. Order matches the section order in that file (neutral, accent,
+ * state, line) purely for readability; has no functional effect.
  */
 export const PALETTE_NAMES = [
   "neutral-0", "neutral-1", "neutral-2", "neutral-3",
@@ -81,14 +107,12 @@ export const PALETTE_NAMES = [
 ];
 
 /**
- * Tier-2 CANONICAL semantic color tokens (the grouped three-tier scheme). The
- * temporary compat aliases (ink/paper/line/brand/…) are intentionally omitted —
- * they exist only to keep old components rendering until the Wave-6 atomic swap
- * and should not clutter the tweak panel. All render as free-text rows
- * (`light-dark()` / `color-mix()` expressions can't drive a single-axis
- * slider), so `control: "text"` is applied uniformly in buildColorTokens().
+ * Tier-2 canonical semantic color tokens (the grouped three-tier scheme).
+ * All render as free-text rows (`light-dark()` / `color-mix()` expressions
+ * can't drive a single-axis slider), so `control: "text"` is applied
+ * uniformly in buildColorTokens().
  */
-export const COLOR_SPECS = [
+export const COLOR_SPECS: TokenSpec[] = [
   { cssVar: "--color-bg", group: "surface" },
   { cssVar: "--color-surface", group: "surface" },
   { cssVar: "--color-surface-2", group: "surface" },
@@ -105,8 +129,7 @@ export const COLOR_SPECS = [
   {
     cssVar: "--color-on-accent",
     group: "accent",
-    note:
-      "Foreground token for text/icons on filled accent/state surfaces (consumed via `text-on-accent`).",
+    note: "Foreground token for text/icons on filled accent/state surfaces (consumed via `text-on-accent`).",
   },
   { cssVar: "--color-focus", group: "accent" },
   { cssVar: "--color-rail-bg", group: "rail" },
@@ -121,8 +144,8 @@ export const COLOR_SPECS = [
   { cssVar: "--color-info", group: "state" },
 ];
 
-/** Horizontal (hsp) + vertical (vsp) spacing axes from tokens.css. */
-export const SPACING_SPECS = [
+/** Horizontal (hsp) + vertical (vsp) spacing axes. */
+export const SPACING_SPECS: TokenSpec[] = [
   { cssVar: "--spacing-hsp-2xs", group: "hsp", step: 0.025, unit: "rem" },
   { cssVar: "--spacing-hsp-xs", group: "hsp", step: 0.025, unit: "rem" },
   { cssVar: "--spacing-hsp-sm", group: "hsp", step: 0.025, unit: "rem" },
@@ -141,7 +164,7 @@ export const SPACING_SPECS = [
 ];
 
 /** Font sizes, paired line-heights, weights, line-heights, families. */
-export const FONT_SPECS = [
+export const FONT_SPECS: TokenSpec[] = [
   { cssVar: "--text-xs", group: "font-size", step: 0.05, unit: "rem" },
   { cssVar: "--text-sm", group: "font-size", step: 0.05, unit: "rem" },
   { cssVar: "--text-base", group: "font-size", step: 0.05, unit: "rem" },
@@ -156,38 +179,10 @@ export const FONT_SPECS = [
   { cssVar: "--text-xl--line-height", group: "font-size-lh", step: 0.05, unit: "" },
   { cssVar: "--text-2xl--line-height", group: "font-size-lh", step: 0.05, unit: "" },
 
-  {
-    cssVar: "--font-weight-normal",
-    group: "font-weight",
-    step: 1,
-    unit: "",
-    control: "select",
-    options: FONT_WEIGHT_OPTIONS,
-  },
-  {
-    cssVar: "--font-weight-medium",
-    group: "font-weight",
-    step: 1,
-    unit: "",
-    control: "select",
-    options: FONT_WEIGHT_OPTIONS,
-  },
-  {
-    cssVar: "--font-weight-semibold",
-    group: "font-weight",
-    step: 1,
-    unit: "",
-    control: "select",
-    options: FONT_WEIGHT_OPTIONS,
-  },
-  {
-    cssVar: "--font-weight-bold",
-    group: "font-weight",
-    step: 1,
-    unit: "",
-    control: "select",
-    options: FONT_WEIGHT_OPTIONS,
-  },
+  { cssVar: "--font-weight-normal", group: "font-weight", step: 1, unit: "", control: "select", options: FONT_WEIGHT_OPTIONS },
+  { cssVar: "--font-weight-medium", group: "font-weight", step: 1, unit: "", control: "select", options: FONT_WEIGHT_OPTIONS },
+  { cssVar: "--font-weight-semibold", group: "font-weight", step: 1, unit: "", control: "select", options: FONT_WEIGHT_OPTIONS },
+  { cssVar: "--font-weight-bold", group: "font-weight", step: 1, unit: "", control: "select", options: FONT_WEIGHT_OPTIONS },
 
   { cssVar: "--leading-tight", group: "line-height", step: 0.05, unit: "" },
   { cssVar: "--leading-snug", group: "line-height", step: 0.05, unit: "" },
@@ -202,23 +197,15 @@ export const FONT_SPECS = [
  * Radius + shadow. Shadows are free-text rows: multi-layer `box-shadow`
  * expressions can't be driven by a single-axis slider.
  */
-export const SIZE_SPECS = [
-  // `unit` MUST match the unit the token is authored in (packages/ui/styles/tokens.css),
-  // because the panel appends it to whatever bare number the user types. These four are
-  // rem there (0.25rem / 0.25rem / 0.5rem / 1rem); declaring "px" made a typed `2.5`
-  // commit `2.5px` instead of `2.5rem` — a silent ~6x shrink (#580). `--radius-full` is
+export const SIZE_SPECS: TokenSpec[] = [
+  // `unit` MUST match the unit the token is authored in, because the panel
+  // appends it to whatever bare number the user types. `--radius-full` is
   // the exception: its value really is the px pill sentinel `9999px`.
   { cssVar: "--radius-DEFAULT", group: "radius", step: 0.05, unit: "rem" },
   { cssVar: "--radius-sm", group: "radius", step: 0.05, unit: "rem" },
   { cssVar: "--radius-md", group: "radius", step: 0.05, unit: "rem" },
   { cssVar: "--radius-lg", group: "radius", step: 0.05, unit: "rem" },
-  {
-    cssVar: "--radius-full",
-    group: "radius",
-    step: 1,
-    unit: "px",
-    pill: { value: "9999px", customDefault: "16px" },
-  },
+  { cssVar: "--radius-full", group: "radius", step: 1, unit: "px", pill: { value: "9999px", customDefault: "16px" } },
   { cssVar: "--shadow-card", group: "shadow", step: 1, unit: "", control: "text" },
   { cssVar: "--shadow-raised", group: "shadow", step: 1, unit: "", control: "text" },
   { cssVar: "--shadow-overlay", group: "shadow", step: 1, unit: "", control: "text" },
@@ -228,32 +215,32 @@ export const SIZE_SPECS = [
 // Building — resolve each spec's `default` against the parsed CSS.
 // ---------------------------------------------------------------------------
 
-export function lookup(vars, cssVar, sourceLabel) {
+export function lookup(vars: Map<string, string>, cssVar: string, sourceLabel: string): string {
   const value = vars.get(cssVar);
   if (value === undefined) {
     throw new Error(
       `${cssVar} is listed in the token manifest spec but was not found in ${sourceLabel}. ` +
-        "Either the CSS var was renamed/removed (update the spec in scripts/lib/ui-token-manifest.mjs), " +
+        "Either the CSS var was renamed/removed (update the spec in ui-token-manifest.ts), " +
         "or this is a real drift.",
     );
   }
   return value;
 }
 
-export function buildPaletteColors(colorVars) {
+export function buildPaletteColors(colorVars: Map<string, string>): PaletteEntry[] {
   return PALETTE_NAMES.map((name) => ({
     name,
-    value: lookup(colorVars, `--palette-${name}`, "packages/ui/styles/colors.css"),
+    value: lookup(colorVars, `--palette-${name}`, "the colors CSS file"),
   }));
 }
 
-export function buildColorTokens(colorVars) {
+export function buildColorTokens(colorVars: Map<string, string>): BuiltToken[] {
   return COLOR_SPECS.map(({ cssVar, group, note }) => ({
     id: idOf(cssVar),
     cssVar,
     label: labelOf(cssVar),
     group,
-    default: lookup(colorVars, cssVar, "packages/ui/styles/colors.css"),
+    default: lookup(colorVars, cssVar, "the colors CSS file"),
     step: 1,
     unit: "",
     control: "text",
@@ -261,7 +248,7 @@ export function buildColorTokens(colorVars) {
   }));
 }
 
-export function buildFromSpecs(specs, tokenVars, sourceLabel) {
+export function buildFromSpecs(specs: TokenSpec[], tokenVars: Map<string, string>, sourceLabel: string): BuiltToken[] {
   return specs.map(({ cssVar, group, step, unit, control, options, pill }) => ({
     id: idOf(cssVar),
     cssVar,
@@ -276,23 +263,29 @@ export function buildFromSpecs(specs, tokenVars, sourceLabel) {
   }));
 }
 
+export interface UiTokenManifest {
+  paletteColors: PaletteEntry[];
+  colorTokens: BuiltToken[];
+  spacingTokens: BuiltToken[];
+  fontTokens: BuiltToken[];
+  sizeTokens: BuiltToken[];
+}
+
 /**
- * Parse `tokensCss` (packages/ui/styles/tokens.css) and `colorsCss`
- * (packages/ui/styles/colors.css) and build the full manifest data — the same
- * shape as the arrays exported by `src/config/ui-design-tokens-manifest.ts`,
- * minus the TS syntax.
- *
- * @param {{ tokensCss: string, colorsCss: string }} sources
+ * Parse `tokensCss` (the components root's main tokens file) and
+ * `colorsCss` (its colors file) and build the full manifest data — the same
+ * shape as the arrays exported by the generated manifest, minus the TS
+ * syntax.
  */
-export function buildUiTokenManifest({ tokensCss, colorsCss }) {
+export function buildUiTokenManifest({ tokensCss, colorsCss }: { tokensCss: string; colorsCss: string }): UiTokenManifest {
   const tokenVars = parseCssCustomProperties(tokensCss);
   const colorVars = parseCssCustomProperties(colorsCss);
   return {
     paletteColors: buildPaletteColors(colorVars),
     colorTokens: buildColorTokens(colorVars),
-    spacingTokens: buildFromSpecs(SPACING_SPECS, tokenVars, "packages/ui/styles/tokens.css"),
-    fontTokens: buildFromSpecs(FONT_SPECS, tokenVars, "packages/ui/styles/tokens.css"),
-    sizeTokens: buildFromSpecs(SIZE_SPECS, tokenVars, "packages/ui/styles/tokens.css"),
+    spacingTokens: buildFromSpecs(SPACING_SPECS, tokenVars, "the tokens CSS file"),
+    fontTokens: buildFromSpecs(FONT_SPECS, tokenVars, "the tokens CSS file"),
+    sizeTokens: buildFromSpecs(SIZE_SPECS, tokenVars, "the tokens CSS file"),
   };
 }
 
@@ -300,11 +293,11 @@ export function buildUiTokenManifest({ tokensCss, colorsCss }) {
 // Rendering — manifest data -> the literal .ts source text.
 // ---------------------------------------------------------------------------
 
-function jsStringLiteral(value) {
+function jsStringLiteral(value: string): string {
   return JSON.stringify(value);
 }
 
-function renderTokenDefObject(token, indent) {
+function renderTokenDefObject(token: BuiltToken, indent: number): string {
   const pad = " ".repeat(indent);
   const fields = [
     `id: ${jsStringLiteral(token.id)}`,
@@ -313,7 +306,7 @@ function renderTokenDefObject(token, indent) {
     `group: ${jsStringLiteral(token.group)}`,
     `default: ${jsStringLiteral(token.default)}`,
     `step: ${token.step}`,
-    `unit: ${jsStringLiteral(token.unit)}`,
+    `unit: ${jsStringLiteral(token.unit ?? "")}`,
   ];
   if (token.control) fields.push(`control: ${jsStringLiteral(token.control)}`);
   if (token.options) {
@@ -329,16 +322,12 @@ function renderTokenDefObject(token, indent) {
   return `${note}${pad}{\n${body}\n${pad}},`;
 }
 
-function renderPaletteEntry(entry) {
+function renderPaletteEntry(entry: PaletteEntry): string {
   return `  { name: ${jsStringLiteral(entry.name)}, value: ${jsStringLiteral(entry.value)} },`;
 }
 
-/**
- * Render the full `src/config/ui-design-tokens-manifest.ts` source.
- *
- * @param {ReturnType<typeof buildUiTokenManifest>} manifest
- */
-export function renderUiTokenManifestFile(manifest) {
+/** Render the full generated manifest `.ts` source. */
+export function renderUiTokenManifestFile(manifest: UiTokenManifest): string {
   const paletteLines = manifest.paletteColors.map(renderPaletteEntry).join("\n");
   const colorLines = manifest.colorTokens.map((t) => renderTokenDefObject(t, 2)).join("\n");
   const spacingLines = manifest.spacingTokens.map((t) => renderTokenDefObject(t, 2)).join("\n");
@@ -353,10 +342,11 @@ export function renderUiTokenManifestFile(manifest) {
  * the regenerated output. \`pnpm check:token-manifest\` fails on drift.
  *
  * Source of truth: packages/ui/styles/tokens.css and packages/ui/styles/colors.css,
- * parsed by scripts/gen-token-manifest.mjs (scripts/lib/ui-token-manifest.mjs).
- * Only \`default\` values are derived from the CSS; \`group\`/\`step\`/\`unit\`/
+ * parsed by the \`zudo-sg gen-token-manifest\` CLI command
+ * (@takazudo/zudo-sg's src/cli/token-manifest/ui-token-manifest.ts). Only
+ * \`default\` values are derived from the CSS; \`group\`/\`step\`/\`unit\`/
  * \`control\`/\`options\`/\`pill\` are presentation metadata with no CSS
- * equivalent and are configured in that script's SPECS tables.
+ * equivalent and are configured in that module's SPECS tables.
  *
  * Covers: Color / Spacing / Font / Size tabs.
  * Does NOT include any --zd-* doc-chrome tokens.
