@@ -148,6 +148,8 @@ the panel *edits* a value in the UI, not how it is read from or written to `loca
 and asserts `loadPersistedState` round-trips fractional line-height values unchanged, with no
 `legacyIdRenameMap` involved.
 
+For the persisted-state boundary behind these tests, see the styleguide's [Token Panels guide](https://zudo-sg.takazudomodular.com/docs/overview/token-panels/): doc-chrome **Color** state is keyed by `Default Light` / `Default Dark` scheme identity inside `sg-doc-tweak-state-v4`, while **Palette**, **Spacing**, **Font**, and **Size** remain shared within a theme pack and preview-panel colors stay unkeyed by design.
+
 ## Preview panel font specimens use instance values
 
 The preview panel's five font tiers now enable previews. This retires the workaround from
