@@ -41,21 +41,6 @@ const preset = zudoDocPreset({
   translations,
   colorSchemes,
 });
-const resolveMarkdownLinks = preset.resolveMarkdownLinks
-  ? {
-      ...preset.resolveMarkdownLinks,
-      // The root build runs from the monorepo root and zfb validates workspace
-      // MDX files it sees. Register the standalone doc workspace as a link
-      // resolution source so its required relative .mdx links do not warn
-      // during the root styleguide build. This only affects markdown-link
-      // validation/rewrite; the root site's page routes still come from the
-      // root `docs` collection below.
-      dirs: [
-        ...preset.resolveMarkdownLinks.dirs,
-        { dir: "doc/src/content/docs", routePrefix: "/docs/" },
-      ],
-    }
-  : preset.resolveMarkdownLinks;
 
 export default defineConfig({
   framework: "preact",
@@ -81,9 +66,12 @@ export default defineConfig({
   // mainFields is zfb's *documented* fix for this msw case (#676), so we use it.
   // zfb treats apps/ as an extra source root and recursively runs root markdown
   // processing over demo MDX; apps/demo owns its own config/public tree, so keep
-  // that separate build outside the root bundle.
+  // that separate build outside the root bundle. `doc/` is excluded for the
+  // same reason (#649 doc-site split): it is a standalone zudo-doc workspace
+  // with its own build/deploy, and root markdown-link resolution no longer
+  // registers `doc/src/content/docs` as a link-resolution source.
   bundle: {
-    exclude: ["apps/demo/**"],
+    exclude: ["apps/demo/**", "doc/**"],
     mainFields: ["main", "module"],
   },
   // Collections, markdown.features, codeHighlight, resolveMarkdownLinks,
@@ -115,7 +103,6 @@ export default defineConfig({
       include: ["**/*.mdx"],
     },
   ],
-  resolveMarkdownLinks,
   plugins: [
     ...preset.plugins,
     // Run after the preset's doc-history preBuild so the embedded renderer

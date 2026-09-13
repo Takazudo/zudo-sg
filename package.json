@@ -8,7 +8,7 @@
     "dev": "zfb dev",
     "build": "node scripts/run-root-build.mjs",
     "preview": "zfb preview",
-    "check": "pnpm check:composable-component-report && zfb check && pnpm --filter @zudo-sg/ui typecheck && pnpm --filter @zudo-sg/demo typecheck && pnpm --filter @zudo-sg/doc check",
+    "check": "pnpm check:composable-component-report && zfb check && pnpm --filter @zudo-sg/ui typecheck && pnpm --filter @zudo-sg/demo typecheck",
     "check:html": "html-validate \"dist/**/*.html\"",
     "check:links": "node scripts/check-links.mjs",
     "check:links:demo": "node scripts/check-links.mjs --dist=apps/demo/dist",
