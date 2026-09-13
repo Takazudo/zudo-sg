@@ -7,14 +7,16 @@
 // gitignored. Model: zudo-doc's scripts/ensure-workspace-build.mjs.
 //
 // Existence, not freshness: every literal `./dist/**` exports target (JS and
-// .d.ts) must exist, else the package is rebuilt. After editing package
+// .d.ts), every `routes-src/` copy of a `src/routes/` entrypoint, and
+// `virtual-modules.d.ts` must exist, else the package is rebuilt (all three
+// are gitignored build output — the routes plugin injects `routes-src/*.tsx`). After editing package
 // sources, run `pnpm --filter @takazudo/zudo-sg build` (or `--force` here).
 //
 // Usage:
 //   node scripts/ensure-styleguide-build.mjs          # build only if incomplete
 //   node scripts/ensure-styleguide-build.mjs --force  # always rebuild
 
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -35,10 +37,22 @@ export function declaredDistTargets(exportsMap) {
   return [...targets];
 }
 
-/** Returns the missing dist targets of a package dir (empty when complete). */
+/** `routes-src/` files the build generates: one per `src/routes/*.{ts,tsx}` (no .d.ts / tests), plus `virtual-modules.d.ts`. */
+export function generatedRouteTargets(pkgDir) {
+  const srcRoutes = join(pkgDir, "src/routes");
+  if (!existsSync(srcRoutes)) return [];
+  const routes = readdirSync(srcRoutes, { withFileTypes: true })
+    .filter((e) => e.isFile() && /\.tsx?$/.test(e.name) && !e.name.endsWith(".d.ts") && !/\.test\.tsx?$/.test(e.name))
+    .map((e) => `./routes-src/${e.name}`);
+  return [...routes, "./virtual-modules.d.ts"];
+}
+
+/** Returns the missing build outputs of a package dir (empty when complete). */
 export function missingDistTargets(pkgDir) {
   const manifest = JSON.parse(readFileSync(join(pkgDir, "package.json"), "utf8"));
-  return declaredDistTargets(manifest.exports).filter((file) => !existsSync(join(pkgDir, file)));
+  return [...declaredDistTargets(manifest.exports), ...generatedRouteTargets(pkgDir)].filter(
+    (file) => !existsSync(join(pkgDir, file)),
+  );
 }
 
 export function ensureStyleguideBuild({ force = false, root = ROOT, log = console.log } = {}) {
@@ -49,7 +63,7 @@ export function ensureStyleguideBuild({ force = false, root = ROOT, log = consol
     if (missing.length === 0) return 0;
     const sample = missing.slice(0, 2).join(", ");
     const rest = missing.length > 2 ? `, +${missing.length - 2} more` : "";
-    reason = `missing ${missing.length} exports target(s): ${sample}${rest}`;
+    reason = `missing ${missing.length} build output(s): ${sample}${rest}`;
   }
 
   log(`[ensure-styleguide-build] building ${PACKAGE.name} (${reason})`);

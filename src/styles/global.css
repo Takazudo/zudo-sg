@@ -38,7 +38,7 @@
    `var(--zd-*)` role: the upstream SemanticKey set is closed, so there is no
    `--zd-border` to map to. Unlike the `--zd-*` set
    above this is a real value change — `--color-border` is consumed by the
-   styleguide catalog chrome (`src/features/styleguide/**`, `pages/components/**`:
+   styleguide catalog chrome (`@takazudo/zudo-sg` catalog routes:
    variant-frame, code-panel, catalog cards), so those borders move onto the
    deliberate ladder. Genuine docs pages (`.zd-content`, the
    zudo-doc package chrome) bind no `border-border`/`var(--color-border)`, so they
@@ -185,11 +185,9 @@
 /* The @zudo-sg/ui component library lives outside this app's tree; scan its
    source so Tailwind generates the utility classes the components emit. */
 @source "../../packages/ui/src/**/*.{tsx,ts,jsx,js}";
-/* Styleguide feature dirs — scan so Tailwind generates .sg-* classes used by
- * the /components catalog pages (created by the styleguide-into-docs migration). */
-@source "src/features/styleguide/**/*.{tsx,ts,jsx,js}";
-@source "src/styleguide/**/*.{tsx,ts,jsx,js}";
-@source "pages/components/**/*.{tsx,ts,jsx,js}";
+/* Host-owned live-demo islands (pages/preview/*). The catalog chrome's classes
+ * come from @takazudo/zudo-sg/safelist.css, not from host @source globs. */
+@source "src/features/styleguide/preview-demos/**/*.{tsx,ts,jsx,js}";
 /* ========================================
  * Design Token System
  *

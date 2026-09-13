@@ -68,7 +68,7 @@ function extractInternalLinks(html) {
   let stripped = html.replace(/<link\s[^>]*>/gi, "");
 
   // Strip the styleguide code panel (`<aside id="sg-code-panel">…</aside>`,
-  // pages/components/[slug].tsx) before scanning. It SSRs a story's verbatim
+  // the engine component detail route) before scanning. It SSRs a story's verbatim
   // JSX source into a plain `<pre><code>` fallback (see
   // packages/styleguide/src/code-panel/source-editor.tsx) whose quote
   // characters are not escaped by Preact's text-node serialization — so a
@@ -86,7 +86,7 @@ function extractInternalLinks(html) {
   // Also strip any `<pre>…</pre>` blocks (displayed source / code samples).
   // The code panel above is not the only place a story's verbatim source is
   // SSR'd: component detail pages also render `meta.usage` inside a plain
-  // `<pre><code>` "Usage" snippet (pages/components/[slug].tsx). Same escaping
+  // `<pre><code>` "Usage" snippet (engine detail route). Same escaping
   // gap — Preact does not escape quote characters in text nodes, so a fictional
   // `href="…"` shown as source text matches the href regex like a real
   // `<a href>`. Real navigational links never live inside `<pre>`, so stripping

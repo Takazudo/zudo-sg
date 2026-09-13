@@ -1,13 +1,15 @@
 // #662 no-stub proof for the @takazudo/zudo-sg engine routes (slow tier).
 //
-// Copies the root host into a temp dir WITHOUT `pages/components/*` and
-// `pages/tokens.tsx`, but WITH the ADR decision 7 islands seed
-// (`pages/lib/_zudo-sg-islands.ts`, imported by `pages/index.tsx`), then:
+// Copies the root host into a temp dir as-is. Since #664 the root host has no
+// `pages/components/*` / `pages/tokens.tsx` and ships the ADR decision 7
+// islands seed (`pages/lib/_zudo-sg-islands.ts`, imported by
+// `pages/index.tsx`), so the copy IS the dogfood shape; a host page that
+// reappears at an engine URL fails the "none shadowed" assertion. Then:
 //
 //   1. `zfb build` — the four injected routes own their URLs and render the
 //      registry's stories; the preview island is registered STRUCTURALLY
 //      (SSR marker + islands manifest entry). zfb silently drops colliding
-//      injected routes, so the normal shadowed root build proves nothing here.
+//      injected routes, so the build log's shadowing lines are asserted too.
 //   2. `zfb dev` — `/assets/islands.js` carries `ConfiguredPreviewApp`. zfb dev
 //      scans host `pages/` only (ADR finding 4); without the seed the preview
 //      island is missing from the dev bundle and never hydrates.
@@ -16,16 +18,7 @@
 // Model: zudo-doc's src/__tests__/route-injection-build.slow.test.ts.
 
 import { execSync, spawn, type ChildProcess } from "node:child_process";
-import {
-  cpSync,
-  existsSync,
-  mkdtempSync,
-  readdirSync,
-  readFileSync,
-  rmSync,
-  symlinkSync,
-  writeFileSync,
-} from "node:fs";
+import { cpSync, existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, symlinkSync } from "node:fs";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -70,21 +63,6 @@ function copyHost(): string {
     });
   }
   symlinkSync(join(REPO_ROOT, "node_modules"), join(dir, "node_modules"));
-
-  // Delete the host catalog stubs so the injected engine routes own the URLs.
-  rmSync(join(dir, "pages/components"), { recursive: true, force: true });
-  rmSync(join(dir, "pages/tokens.tsx"), { force: true });
-  // Only the host preview stub imported it; left in pages/ it collides with the
-  // engine's ConfiguredPreviewApp under zfb dev's pages/ scan.
-  rmSync(join(dir, "pages/lib/_configured-preview-app.tsx"), { force: true });
-
-  // ADR decision 7 dev-hydration seed.
-  writeFileSync(join(dir, "pages/lib/_zudo-sg-islands.ts"), 'import "@takazudo/zudo-sg/islands";\n');
-  const indexPath = join(dir, "pages/index.tsx");
-  const index = readFileSync(indexPath, "utf8");
-  if (!index.includes("_zudo-sg-islands")) {
-    writeFileSync(indexPath, index.replace(/^(import [^\n]+\n)/m, `$1import "./lib/_zudo-sg-islands";\n`));
-  }
   return dir;
 }
 
