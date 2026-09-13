@@ -53,7 +53,7 @@ silently shadows the injected route. `pages/index.tsx` must keep importing
 `pages/lib/_zudo-sg-islands.ts` (`zfb dev` scans only host `pages/` for islands)
 and `pages/lib/_body-end-islands.tsx`.
 
-The tree above covers only the root host's own `src/`. `packages/ui`'s
+The tree above covers only the root host's own `src/`. `packages/demo-ui`'s
 component tree and `apps/demo`'s content/route tree are separate workspace
 packages — see "Monorepo Structure" below.
 
@@ -94,7 +94,7 @@ Do NOT use h1 (`#`) in doc content — the page title from frontmatter is render
   There is no `client:load`-style directive; that was an Astro-era convention this project
   no longer uses.
 
-## Component provider and product split
+## Demo component library
 
 - **Engine vs host.** `packages/styleguide` (published as `@takazudo/zudo-sg`)
   is the installable styleguide engine, built the way `@takazudo/zudo-doc` is
@@ -102,52 +102,20 @@ Do NOT use h1 (`#`) in doc content — the page title from frontmatter is render
   the catalog/detail/preview/tokens routes, the preview iframe app, the code
   panel, the preview token panel + iframe bridge, and the token dashboards.
   This root project is the engine's dogfooding host — it owns its component
-  library (`packages/ui`), its stories, the small `zudo-sg.config.mjs`, its
-  token CSS, and the zudo-doc site config that composes the engine in via
+  library (`packages/demo-ui`), its stories, the small `zudo-sg.config.mjs`,
+  its token CSS, and the zudo-doc site config that composes the engine in via
   `withZudoSg()` (`zfb.config.ts`). Full seam contract:
   `docs/adr/styleguide-engine.md`; `fixtures/engine-host` +
   `scripts/verify-styleguide-install.mjs` prove the same install works for a
   foreign project (packed tarball, non-root `base`, outside the workspace).
-  This is a different axis from the provider/product split below (engine vs.
-  host, not UI-provider vs. Composer/Sitemapper product).
-- **zudo-sg owns the provider** — components, stories, typed
-  `*.composer.tsx` sidecars, generated `packages/ui/src/composer-pack.ts`, and
-  the explicit `packages/ui/styles/composer.css` entry live here.
-- **Authoring rule** — use `defineComponent` from
-  `@zudo-composer/component-contract` in a co-located sidecar. Persisted
-  component `id`, `schemaVersion`, field `prop`, and slot `id`/`prop` are
-  explicit stable keys. `source.module` is the public `@zudo-sg/ui` package
-  export, never a private `/src/*` path. Export display metadata from the
-  sidecar; the story imports/spreads it, but no provider code imports stories.
-- **Generated boundary** — `pnpm gen:composer-pack` discovers sidecars and
-  generates the manifest/runtime pack. `pnpm check:composer-pack` rejects
-  drift. Consumers import `@zudo-sg/ui/composer-pack` and
-  `@zudo-sg/ui/styles/composer.css`.
-- **Immutable handoff** — `ui-provider-handoff.json` records the package tree,
-  package-only commit, exact Git spec, and exact component-contract commit.
-  Finish package docs/code first, advance local `package/ui-v1`, then run
-  `pnpm verify:ui-provider-install -- --exact`. Never pre-claim the post-merge
-  source SHA or CI URL.
-- **Local gate sequencing** — `packages/ui` is also a standalone package with its own
-  lockfile; running `pnpm` with a working directory or `--dir` inside `packages/ui` (even a
-  no-op) auto-installs its standalone dependency set and diverges the tree from the root
-  workspace. The canonical local sequence, the lockfile-refresh procedure, and the
-  `rm -rf packages/ui/node_modules && pnpm install` recovery are documented in
-  `doc/src/content/docs/development/quality-gates.mdx` ("Standalone provider package gate").
-  `pnpm test:ui-provider-package` and `pnpm verify:ui-provider-install -- --exact` are already
-  isolated and safe to run as-is.
-- **zudo-composer owns the products** — the standalone repository owns both
-  Composer and Sitemapper, including their clean storage/schema identities,
-  routes, application UI, and deployment.
-- **zudo-sg owns the styleguide and provider** — the host routes, catalog,
-  stories, provider sidecars/pack/CSS, and provider verification remain here;
-  no Composer or Sitemapper application code lives in this repository.
-- **No compatibility contract** — there are zero users and zero production
-  Composer/Sitemapper data. Destructive current-only cleanup is required; do not add
-  backward-compatibility readers, migrations, redirects, aliases, or old-name
-  and old-storage fallbacks.
-- **Route invariant** — the styleguide-only root build emits 89 HTML routes
-  (zfb reports 90 pages, the 90th being `/robots.txt`). The four catalog routes
+- **`@zudo-sg/demo-ui` is this repo's showcase library, not a shipped
+  provider.** It is a components-only package with co-located stories under
+  `packages/demo-ui` — the recommended structure for a project's own
+  component set adopting the engine. It is not installed by the engine or its
+  scaffold CLI, and it is not consumed by any other product; `zudo-composer`
+  (Composer/Sitemapper) is a separate repository with no coupling to this one.
+- **Route invariant** — the styleguide-only root build emits 88 HTML routes
+  (zfb reports 89 pages, the 89th being `/robots.txt`). The four catalog routes
   are injected by `@takazudo/zudo-sg` (`dist/__zfb/routes.json` lists them as
   `pages/components.tsx`, `pages/components/[slug].tsx`,
   `pages/components/preview.tsx`, `pages/tokens.tsx` overlay sources) and none
@@ -157,11 +125,10 @@ Do NOT use h1 (`#`) in doc content — the page title from frontmatter is render
   `relationship-to-zudo-doc`, plus its `Architecture` header-nav entry)
   account for the routes beyond the pre-epic 83. Since zudo-doc 5.17.0 the
   package injects `/sitemap.xml` only when `settings.sitemap` is enabled, and this
-  project sets it to `false`, so no sitemap route is emitted. Do not remove provider
-  guides or unrelated routes while cleaning product ownership.
+  project sets it to `false`, so no sitemap route is emitted.
 
-See `packages/ui/STORIES.md` §10, `packages/ui/README.md`, and
-`ui-provider-handoff.json` for the permanent provider contract.
+See `packages/demo-ui/STORIES.md` §10 and `packages/demo-ui/README.md` for the
+component library's authoring conventions.
 
 ## Monorepo Structure
 
@@ -170,10 +137,10 @@ This is a pnpm workspace monorepo:
 - **Root (`.`)** — the zudo-doc styleguide host and component catalog
 - **`doc/`** (`@zudo-sg/doc`) — the full docs workspace; owns Claude resource
   generation and doc-lookup skill setup
-- **`packages/ui`** (`@zudo-sg/ui`) — shared Preact component library: ~70
-  components under `src/<category>/<component>/`, grouped into 9 category
-  directories (`cards/ chrome/ content/ forms/ landing/ media/ news/ search/
-  shared/`)
+- **`packages/demo-ui`** (`@zudo-sg/demo-ui`) — shared Preact component
+  library: ~70 components under `src/<category>/<component>/`, grouped into 9
+  category directories (`cards/ chrome/ content/ forms/ landing/ media/ news/
+  search/ shared/`)
 - **`apps/demo`** (`@zudo-sg/demo`) — multi-page corporate demo site
   (Tailwind v4, no SSR): a ~70-entry content collection under `content/`
   drives nav/footer/breadcrumbs from frontmatter, plus cross-site search
@@ -181,24 +148,25 @@ This is a pnpm workspace monorepo:
   (`components/router/`), and per-business-line theming (`config/lines.ts`,
   `styles/lines.css`)
 
-`@zudo-sg/ui` is consumed from **source** — its `exports` map points at `./src/*`
-directly and it has no `build` script, so edits are picked up by consumers immediately;
-there is no dist step to run.
+`@zudo-sg/demo-ui` is consumed from **source** — its `exports` map points at
+`./src/*` directly and it has no `build` script, so edits are picked up by
+consumers immediately; there is no dist step to run.
 
 To build all packages: `pnpm install && pnpm build` (root only; apps/demo builds with `pnpm --filter @zudo-sg/demo build`).
 
 ### Design tokens
 
-`@zudo-sg/ui` colors follow a grouped three-tier strategy: Tier-1
+`@zudo-sg/demo-ui` colors follow a grouped three-tier strategy: Tier-1
 `--palette-{group}-{n}` ramps (`base`, `accent`, `state`, plus a `line-*`
 ramp per business line) feed Tier-2 semantic `@theme` roles (`bg`, `surface`,
 `surface-2`, `border`, `fg`, `muted`, `accent`, `accent-hover`, `on-accent`,
 `focus`, the `rail-*` family, and the state colors), defined in
-`packages/ui/styles/colors.css`. Components bind only to the Tier-2 semantic
-utilities (`bg-accent`, `text-fg`, `border-border`, …) — the Tier-1 palette
-is a plain `:root` block, never `@theme`, so no `bg-palette-*` utility is
-ever generated. Full contract: `packages/ui/STORIES.md` §"Three-tier color
-system". This is independent of the doc-chrome's own `--zd-*` token world
+`packages/demo-ui/styles/colors.css`. Components bind only to the Tier-2
+semantic utilities (`bg-accent`, `text-fg`, `border-border`, …) — the Tier-1
+palette is a plain `:root` block, never `@theme`, so no `bg-palette-*` utility
+is ever generated. Full contract: `packages/demo-ui/STORIES.md`
+§"Three-tier color system". This is independent of the doc-chrome's own
+`--zd-*` token world
 (`src/styles/global.css`) — see `.claude/skills/zudo-doc-design-system/SKILL.md`
 for how the two worlds relate.
 

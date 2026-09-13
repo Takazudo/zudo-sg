@@ -8,7 +8,7 @@ A pnpm-workspace monorepo producing four artifacts from one shared component lib
 
 - **Root** — the styleguide host and component catalog → `https://zudo-sg.takazudomodular.com/`
 - **`doc/`** — the full documentation workspace → `https://zudo-sg-doc.takazudomodular.com/`
-- **`packages/ui`** — shared Preact component library (single source of truth)
+- **`packages/demo-ui`** — shared Preact component library (single source of truth)
 - **`apps/demo`** — demo marketing site → `https://zudo-sg-demo-site.takazudomodular.com/`
 
 The root site and the `doc/` workspace are two independently built, tested, and
@@ -20,26 +20,16 @@ full zudo-sg documentation.
 ## Repository ownership
 
 This repository owns the styleguide, its component stories, and the
-`@zudo-sg/ui` component provider. Composer metadata is authored beside each
-opted-in component in a typed `*.composer.tsx` sidecar and assembled into the
-public `@zudo-sg/ui/composer-pack` export. Stories consume sidecar display
-metadata for the catalog, but story modules are not inputs to the provider.
+`@zudo-sg/demo-ui` component library. `demo-ui` is this repo's own showcase
+library — a components-only package with co-located stories, catalogued to
+prove the styleguide engine on a real project. It is not installed by the
+engine or its scaffold CLI, and it is not shipped as a provider to any other
+product.
 
 The standalone [zudo-composer](https://github.com/Takazudo/zudo-composer)
-repository owns the Composer and Sitemapper products after the split: their
-routes, application code, persistence, CI, and deployment live there. The
-former in-repo applications and `/composer`, `/composer/preview`, and
-`/sitemapper` routes have been removed from zudo-sg.
-
-There are currently zero users and zero production Composer/Sitemapper data.
-No backward-compatibility, migration, redirect, alias, or old-storage obligation
-exists. The split was intentionally destructive and current-only.
-
-The immutable provider coordinates live in
-[`ui-provider-handoff.json`](./ui-provider-handoff.json). Contributors finish
-all `packages/ui` changes before advancing the package-only `package/ui-v1`
-ref, then run `pnpm verify:ui-provider-install -- --exact`. A source `main` SHA
-or green CI URL is recorded only after the merge and checks actually exist.
+repository owns the Composer and Sitemapper products, including their routes,
+application code, persistence, CI, and deployment. zudo-composer has no
+coupling to this repository.
 
 ## Commands
 
@@ -55,7 +45,4 @@ pnpm build:doc
 
 # Dev server for the styleguide host
 pnpm dev
-
-# Verify the exact package-only provider handoff
-pnpm verify:ui-provider-install -- --exact
 ```

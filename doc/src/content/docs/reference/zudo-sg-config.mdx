@@ -28,10 +28,10 @@ interface ZudoSgConfig {
 
 | field | type | default | meaning |
 |---|---|---|---|
-| `componentsRoots` | `Array<{ dir, importBase }>` | required | One entry per story corpus to scan. `dir` is project-root-relative (e.g. `"packages/ui/src"`); `importBase` is the package-scoped import specifier prefix used in generated registry imports and `usage` snippets (e.g. `"@zudo-sg/ui/src"`). |
+| `componentsRoots` | `Array<{ dir, importBase }>` | required | One entry per story corpus to scan. `dir` is project-root-relative (e.g. `"packages/demo-ui/src"`); `importBase` is the package-scoped import specifier prefix used in generated registry imports and `usage` snippets (e.g. `"@zudo-sg/demo-ui/src"`). |
 | `registryOut` | `string` | required | Project-root-relative output path for the generated story registry (e.g. `"./src/styleguide/sg-registry.ts"`). This is also the routes plugin's `registryModule`. |
 | `categoryOrder` | `string[]` | required (may be `[]`) | Display order for story categories. Categories not listed are appended alphabetically after these — never dropped, never an error. |
-| `uiPackageName` | `string` | required | npm package name components/stories are imported from in generated `usage` snippets (e.g. `"@zudo-sg/ui"`). |
+| `uiPackageName` | `string` | required | npm package name components/stories are imported from in generated `usage` snippets (e.g. `"@zudo-sg/demo-ui"`). |
 | `barrelIndex` | `string \| null` | required | Project-root-relative barrel file `new-component` inserts an export into, or `null` for a project with no barrel-file convention. |
 | `tokens` | `{ cssFiles, manifestOut }` | omitted | Optional. Needed only for `gen-token-manifest` and the `/tokens` dashboards. When omitted, `gen-token-manifest` exits with an error, `zudoSg()` passes no `tokensManifestModule`, and the `/tokens` route renders its header with an empty-state note. `gen-registry` and `new-component` never read it. |
 | `tokens.cssFiles` | `[string, string]` | required when `tokens` is set | `[tokensCssPath, colorsCssPath]`, project-root-relative. Position is significant: index 0 feeds spacing/font/size tokens, index 1 feeds the palette and semantic color tokens. |
@@ -59,13 +59,13 @@ route (zfb precedence) — this is the documented escape hatch, not a bug.
 // zudo-sg.config.mjs
 /** @type {import("@takazudo/zudo-sg/cli").ZudoSgConfig} */
 export default {
-  componentsRoots: [{ dir: "packages/ui/src", importBase: "@zudo-sg/ui/src" }],
+  componentsRoots: [{ dir: "packages/demo-ui/src", importBase: "@zudo-sg/demo-ui/src" }],
   registryOut: "./src/styleguide/sg-registry.ts",
   categoryOrder: ["Actions", "Typography", "Layout", "Forms"],
-  uiPackageName: "@zudo-sg/ui",
-  barrelIndex: "packages/ui/src/index.ts",
+  uiPackageName: "@zudo-sg/demo-ui",
+  barrelIndex: "packages/demo-ui/src/index.ts",
   tokens: {
-    cssFiles: ["packages/ui/styles/tokens.css", "packages/ui/styles/colors.css"],
+    cssFiles: ["packages/demo-ui/styles/tokens.css", "packages/demo-ui/styles/colors.css"],
     manifestOut: "./src/config/ui-design-tokens-manifest.ts",
   },
   previewStyles: "./src/styles/preview-entry.css",
@@ -89,7 +89,7 @@ Each `componentsRoots[i]` gets its own collection — `componentDocs` for index
 section on that component's detail page. `withZudoSg` also passes the routes
 plugin a data-only `componentDocs` option — one `{ keyPrefix, collection }`
 pair per root, where `keyPrefix` is the root's registry key prefix (`dir` with a
-leading `packages/` removed, e.g. `"packages/ui/src"` → `"ui/src"`, `"ui"` →
+leading `packages/` removed, e.g. `"packages/demo-ui/src"` → `"ui/src"`, `"ui"` →
 `"ui"`) — so the detail route looks each story up in the collection of the
 root its registry key belongs to (the longest matching prefix wins). A routes
 plugin descriptor written by hand without `componentDocs` renders no
