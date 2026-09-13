@@ -291,7 +291,7 @@ export type {
   StoryControl,
   StoryModule,
 } from "./stories/types";
-export { defineStory } from "./stories/types";
+export { defineStory, STORY_CATEGORIES } from "./stories/types";
 
 // ── Utilities ────────────────────────────────────────────────────────────
 export { cx } from "./lib/cx";

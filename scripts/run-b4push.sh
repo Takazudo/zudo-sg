@@ -91,7 +91,7 @@ fi
 # Catches a hand-edited generated block or a forgotten `pnpm gen:*` re-run
 # before it reaches CI.
 step
-if (cd "$ROOT_DIR" && pnpm run check:z-index && pnpm run check:sg-registry && pnpm run check:composer-pack && pnpm run check:ui-provider-boundary && pnpm run check:story-categories && pnpm run check:token-manifest && pnpm run check:root-token-manifest); then
+if (cd "$ROOT_DIR" && pnpm run check:z-index && pnpm run check:sg-registry && pnpm run check:composer-pack && pnpm run check:ui-provider-boundary && pnpm run check:token-manifest && pnpm run check:root-token-manifest); then
   pass "Codegen drift check passed"
 else
   fail "Codegen drift check"

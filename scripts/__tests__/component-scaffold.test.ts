@@ -5,7 +5,7 @@
 // gen-z-index.test.ts for the full-script spawn-test pattern used elsewhere;
 // that isn't needed here since none of this logic touches the filesystem.
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   VALID_CATEGORIES,
   assertUnusedName,
@@ -118,14 +118,31 @@ describe("assertValidName", () => {
 });
 
 describe("assertValidCategory", () => {
-  it("accepts every StoryCategory member", () => {
+  it("accepts every declared category (VALID_CATEGORIES) without warning", () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     for (const category of VALID_CATEGORIES) {
       expect(() => assertValidCategory(category)).not.toThrow();
     }
+    expect(warnSpy).not.toHaveBeenCalled();
+    warnSpy.mockRestore();
   });
 
-  it("rejects an unknown category", () => {
-    expect(() => assertValidCategory("Widgets")).toThrow(/Widgets/);
+  it("accepts a new (undeclared) category — categories are open", () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    expect(() => assertValidCategory("Widgets")).not.toThrow();
+    warnSpy.mockRestore();
+  });
+
+  it("warns when the category isn't declared", () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    assertValidCategory("Widgets");
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("Widgets"));
+    warnSpy.mockRestore();
+  });
+
+  it("rejects an empty or non-string category", () => {
+    expect(() => assertValidCategory("")).toThrow();
+    expect(() => assertValidCategory(undefined)).toThrow();
   });
 });
 

@@ -98,30 +98,35 @@ read from — edit these three exported constants for your project's layout:
 
 ### The `StoryCategory` set
 
-`StoryCategory` is a closed union of 12 members (`Actions`, `Typography`,
-`Layout`, `Data Display`, `Forms`, `Navigation`, `Content`, `Landing`,
-`News`, `Search`, `Feedback`, `Media`), declared once in
-`packages/ui/src/stories/types.ts` (`STORY_CATEGORIES`). This is the
+`StoryCategory` is an **open string** — `packages/ui/src/stories/types.ts`
+declares `export type StoryCategory = string`, so any value is a valid
+`meta.category`. `STORY_CATEGORIES` in that same file is zudo-sg's own
+ordered list of 12 categories (`Actions`, `Typography`, `Layout`,
+`Data Display`, `Forms`, `Navigation`, `Content`, `Landing`, `News`,
+`Search`, `Feedback`, `Media`) — data, not a type constraint. This is the
 **sidebar-grouping taxonomy** the catalog sorts stories into — it is
 independent of, and larger than, the 9 on-disk category-nested directories
 (`cards/ chrome/ content/ forms/ landing/ media/ news/ search/ shared/`): a
 single directory can hold components from several `StoryCategory` values
-(e.g. `shared/` spans `Actions`, `Layout`, `Navigation`, and `Content`). Two
-other files need the same set as a **runtime** array (a plain `.mjs` script
-can't import a `.ts` type), so `pnpm gen:story-categories`
-(`scripts/gen-story-categories.mjs`) regex-parses `STORY_CATEGORIES` out of
-`types.ts`'s source text and rewrites the `GENERATED:STORY_CATEGORIES`
-marker blocks in:
+(e.g. `shared/` spans `Actions`, `Layout`, `Navigation`, and `Content`).
 
-- `src/styleguide/data/registry.ts` (`CATEGORY_ORDER`)
-- `scripts/lib/component-scaffold.mjs` (`VALID_CATEGORIES`)
+Two other places consume `STORY_CATEGORIES` directly (no codegen, no marker
+blocks):
 
-To add, remove, or rename a category in a fork: edit `STORY_CATEGORIES` in
-`types.ts`, then run `pnpm gen:story-categories` and commit the regenerated
-files. Never hand-edit between the marker comments — the next codegen run
-overwrites it. (Adding a category also still needs a hand-added barrel
-section header, `// ── <Category> ──`, in the UI package's story index —
-that's intentionally out of scope for the codegen.)
+- `src/styleguide/data/registry.ts` `CATEGORY_ORDER` imports the value from
+  `@zudo-sg/ui` and appends any category actually used by a discovered
+  story that isn't in that list, alphabetically, after it.
+- `scripts/lib/component-scaffold.mjs` `VALID_CATEGORIES` regex-parses it
+  out of `types.ts`'s source text (a dependency-free `.mjs` script can't
+  import a `.ts` module) — used only to print a "new category" warning from
+  `pnpm new:component --category`, never to reject a value.
+
+To add, remove, or rename one of zudo-sg's own declared categories in a
+fork: edit `STORY_CATEGORIES` in `types.ts` — both consumers above read it
+directly, so there's nothing to regenerate. A category outside that list
+still works; it just sorts after the declared ones. (Adding a category also
+still needs a hand-added barrel section header, `// ── <Category> ──`, in
+the UI package's story index — that's a separate, manual step.)
 
 ### Branding / site identity
 
@@ -189,16 +194,16 @@ worth checking those for current status before working around them yourself:
   yet for a component that genuinely needs live data (e.g. an async dialog
   flow) beyond "layer interactivity separately." Tracked by the
   [Interactive Story Pattern epic (#212)](https://github.com/Takazudo/zudo-sg/issues/212).
-- **`gen-z-index.mjs` and `gen-story-categories.mjs` parse TypeScript source
+- **`gen-z-index.mjs` and `component-scaffold.mjs` parse TypeScript source
   as text, not via import.** Both are dependency-free `.mjs` scripts that
   can't resolve `.ts` imports, so they regex-parse the relevant array literal
   (`Z_INDEX_TIERS`, `STORY_CATEGORIES`) directly out of the source file's
   text, with a comment-stripping pass to reduce (not eliminate) sensitivity
   to reformatting. A source-shape change the parser doesn't anticipate (e.g.
   a new field inserted before the ones it looks for) can still silently
-  mis-parse rather than fail loudly — check each generator's own header
-  comment for exactly what shape it expects before reformatting the file it
-  reads from.
+  mis-parse rather than fail loudly — check each script's own header comment
+  for exactly what shape it expects before reformatting the file it reads
+  from.
 
 ---
 
@@ -351,7 +356,10 @@ are never required inputs to Composer or Sitemapper.
   - [#186](https://github.com/Takazudo/zudo-sg/issues/186) — `gen-z-index.mjs`
     regex fragility (→ §5's parsing note).
   - [#182](https://github.com/Takazudo/zudo-sg/issues/182) — `StoryCategory`
-    duplicated with no drift guard (→ `gen-story-categories.mjs`, §2).
+    duplicated with no drift guard (→ §2; since
+    [#651](https://github.com/Takazudo/zudo-sg/issues/651), `StoryCategory`
+    is an open string and `STORY_CATEGORIES` is read directly, not
+    duplicated).
   - [#181](https://github.com/Takazudo/zudo-sg/issues/181) — deploy identity
     scattered with no single source (→ §3).
   - [#180](https://github.com/Takazudo/zudo-sg/issues/180) — branding config

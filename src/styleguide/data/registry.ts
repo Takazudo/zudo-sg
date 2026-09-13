@@ -6,27 +6,30 @@
 // shaping over that map: it is SSR-safe (no DOM, no fs, no async) so every
 // page and the preview app can import it freely.
 
+import { STORY_CATEGORIES } from "@zudo-sg/ui";
 import type { StoryCategory, StoryMeta, Story } from "@zudo-sg/ui";
 import { storyModules, storyExportOrder } from "./sg-registry";
 
-/** Declared category order — mirrors the closed union in @zudo-sg/ui/stories/types. */
-export const CATEGORY_ORDER: StoryCategory[] = [
-  // GENERATED:STORY_CATEGORIES_BEGIN — do not hand-edit; run pnpm gen:story-categories.
-  // Source of truth: packages/ui/src/stories/types.ts (STORY_CATEGORIES).
-  "Actions",
-  "Typography",
-  "Layout",
-  "Data Display",
-  "Forms",
-  "Navigation",
-  "Content",
-  "Landing",
-  "News",
-  "Search",
-  "Feedback",
-  "Media",
-  // GENERATED:STORY_CATEGORIES_END
-];
+/**
+ * Sidebar category order: zudo-sg's own declared order (`STORY_CATEGORIES`
+ * in @zudo-sg/ui/stories/types) first, then any category actually used by a
+ * discovered story that isn't in that list, appended alphabetically.
+ * Categories are an open string (see `StoryCategory`), so a new component
+ * can introduce one without editing this file.
+ */
+function computeCategoryOrder(): StoryCategory[] {
+  const declared: readonly string[] = STORY_CATEGORIES;
+  const unknown = new Set<string>();
+  for (const mod of Object.values(storyModules)) {
+    const meta = mod.default as StoryMeta | undefined;
+    if (meta?.category && !declared.includes(meta.category)) {
+      unknown.add(meta.category);
+    }
+  }
+  return [...declared, ...[...unknown].sort((a, b) => a.localeCompare(b))];
+}
+
+export const CATEGORY_ORDER: StoryCategory[] = computeCategoryOrder();
 
 /**
  * Slugs reserved by the styleguide chrome — Overview (route "/components")
