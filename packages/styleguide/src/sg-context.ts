@@ -2,6 +2,7 @@
 // docs/adr/styleguide-engine.md decision 10). Emitted as JSON by
 // `@takazudo/zudo-sg/plugins/routes`; nothing callable may ride it.
 
+import type { ComponentDocsRoot } from "./registry/component-docs.js";
 import type { SgRoutes } from "./sg-routes.js";
 
 /** Default URL of the standalone-compiled preview stylesheet (ADR decision 4). */
@@ -26,4 +27,6 @@ export interface SgContext {
   /** Root-absolute preview stylesheet URL, before the base prefix. */
   previewCssUrl: string;
   catalog: SgCatalogText;
+  /** One entry per components root: its registry key prefix + MDX docs collection (`[]` = no docs). */
+  componentDocs: ComponentDocsRoot[];
 }

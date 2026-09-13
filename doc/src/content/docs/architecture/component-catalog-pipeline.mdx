@@ -51,7 +51,7 @@ packages/ui/src/cards/card/card.stories.tsx
 packages/ui/src/cards/card/card.mdx
 ```
 
-`withZudoSg()` (`zfb.config.ts`) adds one `componentDocs` content collection per `componentsRoots[]` entry, rooted at `packages/ui/src`, so zfb compiles those MDX files as part of the normal build. The engine's `/components/[slug]` detail route (`packages/styleguide/src/routes/components-slug.tsx`) looks up the matching MDX entry from the same component path the story registry uses, so there is no separate registration step.
+`withZudoSg()` (`zfb.config.ts`) adds one `componentDocs` content collection per `componentsRoots[]` entry, rooted at that entry's `dir` (`packages/ui/src` here), so zfb compiles those MDX files as part of the normal build. The engine's `/components/[slug]` detail route (`packages/styleguide/src/routes/components-slug.tsx`) looks up the matching MDX entry in the collection of the components root the story's registry key belongs to, from the same component path the story registry uses, so there is no separate registration step.
 
 ## Authoring checklist
 
