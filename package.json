@@ -37,6 +37,7 @@
     "contrast:audit": "tsx scripts/contrast-audit.ts",
     "lint:tokens": "node $(realpath node_modules/@takazudo/zudo-design-token-lint/dist/cli.js)",
     "test:unit": "node scripts/ensure-styleguide-build.mjs && vitest run",
+    "test:slow": "node scripts/ensure-styleguide-build.mjs && vitest run --config vitest.slow.config.ts",
     "test:e2e": "playwright test",
     "test:e2e:ci": "playwright test --reporter=list",
     "b4push": "bash scripts/run-b4push.sh",

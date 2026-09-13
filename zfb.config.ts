@@ -1,5 +1,7 @@
 import { defineConfig } from "@takazudo/zfb/config";
 import { zudoDocPreset } from "@takazudo/zudo-doc/preset";
+import { withZudoSg } from "@takazudo/zudo-sg/config";
+import zudoSgConfig from "./zudo-sg.config.mjs";
 import { settings } from "./src/config/settings";
 import { buildDocsSchema } from "./src/config/docs-schema";
 import { translations } from "./src/config/i18n";
@@ -79,59 +81,36 @@ export default defineConfig({
   // index, llms.txt, claude-resources) — see node_modules/@takazudo/zudo-doc
   // /dist/preset.d.ts for the full fragment this spreads in.
   ...preset,
-  // Per-component docs (#119): an OPTIONAL MDX file co-located with each
-  // component (`packages/ui/src/<name>/<name>.mdx`) rendered inline as a
-  // section on the host-owned `/components/<slug>` detail page (NOT its own
-  // route — nothing maps this collection into `resolveMarkdownLinks.dirs`, so
-  // zfb generates no page for it). The collection is rooted at the SAME glob
-  // root the #103/#224 story codegen walks (`packages/ui/src/**/`), keeping
-  // doc discovery co-located with story discovery at ANY depth — both the old
-  // one-level layout (`<name>/<name>.mdx`) and the new category-nested layout
-  // (`<category>/<name>/<name>.mdx`). `include: ["**/*.mdx"]` uses the
-  // globset dialect's `**` (matches zero or more directory components), so it
-  // covers both depths in one pattern while still ignoring `.tsx`/
-  // `.stories.tsx`/`__tests__`. Slug shape is the path relative to the
-  // collection root minus `.mdx` (e.g. `button/button` or
-  // `layout/badge-icon/badge-icon`); the detail page derives it from the
-  // story entry's dir (component-docs.ts's `componentDocSlug`, which is
-  // depth-agnostic string-prefix/suffix stripping — no change needed there).
-  collections: [
-    ...preset.collections,
+  // Styleguide engine (@takazudo/zudo-sg/config, ADR decision 9): appends the
+  // engine's routes / preview-css / zdtp-apply-proxy plugin descriptors and
+  // one `componentDocs` collection per `componentsRoots` entry (#119: the
+  // OPTIONAL co-located component MDX docs rendered on `/components/<slug>`)
+  // AFTER the zudo-doc preset's. The host `pages/components/*` and
+  // `pages/tokens.tsx` stubs still shadow the injected routes until #664.
+  ...withZudoSg(
     {
-      name: "componentDocs",
-      path: "packages/ui/src",
-      include: ["**/*.mdx"],
+      collections: preset.collections,
+      plugins: [
+        ...preset.plugins,
+        // Run after the preset's doc-history preBuild so the embedded renderer
+        // receives freshly generated metadata without importing node:fs.
+        {
+          // Keep the Node-only plugin as native ESM. Pointing zfb at TypeScript
+          // leaves a .zfb-plugin-bundle-* transpilation artifact beside the source.
+          name: "./pages/lib/_doc-history-meta.mjs",
+        },
+      ],
     },
-  ],
-  plugins: [
-    ...preset.plugins,
-    // Run after the preset's doc-history preBuild so the embedded renderer
-    // receives freshly generated metadata without importing node:fs.
     {
-      // Keep the Node-only plugin as native ESM. Pointing zfb at TypeScript
-      // leaves a .zfb-plugin-bundle-* transpilation artifact beside the source.
-      name: "./pages/lib/_doc-history-meta.mjs",
-    },
-    // Preview design-token panel: dev-only same-origin Apply endpoint that
-    // persists tweaks into packages/ui/styles/*.css, plus the panel island's
-    // host tabs. Listed directly until zudoSg() emits this descriptor (#662).
-    {
-      name: "@takazudo/zudo-sg/plugins/zdtp-apply-proxy",
-      options: {
+      ...zudoSgConfig,
+      // Preview design-token panel: dev-only same-origin Apply endpoint that
+      // persists tweaks into packages/ui/styles/*.css, plus the panel island's
+      // host tabs.
+      zdtpApplyProxy: {
         routingFile: "./zdtp-panel-routing.json",
         writeRoot: "./packages/ui/styles",
         tabsModule: "./src/config/preview-token-panel-tabs.ts",
       },
     },
-    // Standalone preview stylesheet: compiles `previewStyles` (the same path
-    // zudo-sg.config.mjs declares) and serves it in dev/preview at
-    // `<base>/_zudo-sg/preview.css`, emitting `dist/_zudo-sg/preview.css` on
-    // build. Listed directly until zudoSg() emits this descriptor (#662).
-    {
-      name: "@takazudo/zudo-sg/plugins/preview-css",
-      options: {
-        previewStyles: "./src/styles/preview-entry.css",
-      },
-    },
-  ],
+  ),
 });

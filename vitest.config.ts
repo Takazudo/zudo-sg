@@ -1,4 +1,4 @@
-import { defineConfig } from "vitest/config";
+import { configDefaults, defineConfig } from "vitest/config";
 import { resolve } from "node:path";
 
 export default defineConfig({
@@ -52,6 +52,8 @@ export default defineConfig({
       // @zudo-sg/demo lib/config unit tests.
       "apps/demo/**/__tests__/**/*.test.{ts,tsx}",
     ],
+    // Real `zfb build` / `zfb dev` proofs run via `pnpm test:slow` (vitest.slow.config.ts).
+    exclude: [...configDefaults.exclude, "**/*.slow.test.ts"],
     // happy-dom provides the DOM for @testing-library/preact. The non-DOM
     // suites (slug, generate, escape-for-mdx) run fine under it too.
     environment: "happy-dom",

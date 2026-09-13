@@ -46,7 +46,7 @@ export default function TokensRoute(): JSX.Element {
 
   return (
     <StyleguideLayout
-      {...chromeProps({ pageTitle: "Design Tokens", path: ctx.routes.tokens })}
+      {...chromeProps({ pageTitle: "Design Tokens", path: ctx.routes.tokens, activeSlug: TOKENS_SLUG, hideSidebar: true })}
       activeSlug={TOKENS_SLUG}
       hideSidebar
     >

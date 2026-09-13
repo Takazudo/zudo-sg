@@ -51,6 +51,7 @@ export default function ComponentsSlugRoute(props: SlugProps & { params: { slug:
   const chrome = chromeProps({
     pageTitle: entry ? entry.meta.title : "Not found",
     path: componentHref(ctx.routes, slug),
+    activeSlug: slug,
   });
 
   if (!entry) {

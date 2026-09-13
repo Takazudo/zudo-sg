@@ -37,6 +37,10 @@ export interface ChromeSlotOptions {
   path: string;
   /** Extra `<head>` content appended after HeadWithDefaults. */
   extraHead?: JSX.Element;
+  /** Active styleguide slug; with `hideSidebar` unset it also scopes the mobile drawer. */
+  activeSlug?: string;
+  /** Standalone page (e.g. /tokens): the mobile drawer keeps the root menu. */
+  hideSidebar?: boolean;
 }
 
 type ChromeProps = Pick<
@@ -45,9 +49,18 @@ type ChromeProps = Pick<
 >;
 
 /** Every StyleguideLayout prop that comes from the doc chrome and the site settings. */
-export function chromeProps({ pageTitle, path, extraHead }: ChromeSlotOptions): ChromeProps {
+export function chromeProps({ pageTitle, path, extraHead, activeSlug, hideSidebar = false }: ChromeSlotOptions): ChromeProps {
   const { HeadWithDefaults, HeaderWithDefaults, FooterWithDefaults, BodyEndIslands } = chrome;
   const head = <HeadWithDefaults title={pageTitle} />;
+  // `sidebarNodesOverride` is not part of zudo-doc's HeaderWithDefaultsProps:
+  // createChrome forwards every prop to the host's `Header` chrome binding when
+  // one is bound (a host header that feeds its mobile drawer from it), while
+  // the package default header ignores it and its drawer shows the root menu.
+  const headerProps = {
+    lang: locale,
+    currentPath: withBase(path),
+    ...(hideSidebar ? {} : { sidebarNodesOverride: navNodes, currentSlug: activeSlug }),
+  } as Parameters<typeof HeaderWithDefaults>[0];
   return {
     title: composeMetaTitle(pageTitle),
     lang: locale,
@@ -59,9 +72,7 @@ export function chromeProps({ pageTitle, path, extraHead }: ChromeSlotOptions): 
     ) : (
       head
     ),
-    // zudo-doc's package HeaderWithDefaults has no sidebar-nodes override, so
-    // its mobile drawer shows the root menu rather than the component tree.
-    header: <HeaderWithDefaults lang={locale} currentPath={withBase(path)} />,
+    header: <HeaderWithDefaults {...headerProps} />,
     footer: <FooterWithDefaults lang={locale} />,
     bodyEnd: <BodyEndIslands basePath={ctx.base} />,
     navNodes,

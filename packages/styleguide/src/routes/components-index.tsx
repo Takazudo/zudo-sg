@@ -36,6 +36,7 @@ export default function ComponentsIndexRoute(): JSX.Element {
         // Restore the persisted tile size before first paint so the grid does
         // not re-flow when the island mounts.
         extraHead: <script dangerouslySetInnerHTML={{ __html: TILE_SIZE_RESTORE_SCRIPT }} />,
+        activeSlug: OVERVIEW_SLUG,
       })}
       activeSlug={OVERVIEW_SLUG}
       contentWide

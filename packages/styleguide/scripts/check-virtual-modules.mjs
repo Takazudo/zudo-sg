@@ -24,6 +24,7 @@ try {
 const required = [
   'declare module "virtual:zudo-sg-context"',
   'declare module "virtual:zudo-sg-registry"',
+  'declare module "virtual:zudo-sg-tokens"',
   "export const sgContext",
   "export const storyModules",
   "export const storyExportOrder",
@@ -38,4 +39,4 @@ if (missing.length > 0) {
   for (const m of missing) console.error(`  - ${m}`);
   process.exit(1);
 }
-console.log("OK — virtual-modules.d.ts declares virtual:zudo-sg-context and virtual:zudo-sg-registry.");
+console.log("OK — virtual-modules.d.ts declares virtual:zudo-sg-context, virtual:zudo-sg-registry and virtual:zudo-sg-tokens.");

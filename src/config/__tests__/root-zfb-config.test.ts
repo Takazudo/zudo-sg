@@ -14,7 +14,7 @@ describe("root zfb integration contract", () => {
     ]);
   });
 
-  it("keeps metadata serialization after preset history and before the token-panel proxy", () => {
+  it("keeps metadata serialization after preset history and appends the zudo-sg engine plugins last", () => {
     expect(config.plugins?.map(({ name }) => name)).toEqual([
       "@takazudo/zudo-doc/plugins/routes",
       "@takazudo/zudo-doc/plugins/doc-history",
@@ -23,8 +23,9 @@ describe("root zfb integration contract", () => {
       "@takazudo/zudo-doc/plugins/llms-txt",
       "@takazudo/zudo-doc/plugins/img-src-check",
       "./pages/lib/_doc-history-meta.mjs",
-      "@takazudo/zudo-sg/plugins/zdtp-apply-proxy",
+      "@takazudo/zudo-sg/plugins/routes",
       "@takazudo/zudo-sg/plugins/preview-css",
+      "@takazudo/zudo-sg/plugins/zdtp-apply-proxy",
     ]);
   });
 
