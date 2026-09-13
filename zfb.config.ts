@@ -118,6 +118,13 @@ export default defineConfig({
   resolveMarkdownLinks,
   plugins: [
     ...preset.plugins,
+    // Run after the preset's doc-history preBuild so the embedded renderer
+    // receives freshly generated metadata without importing node:fs.
+    {
+      // Keep the Node-only plugin as native ESM. Pointing zfb at TypeScript
+      // leaves a .zfb-plugin-bundle-* transpilation artifact beside the source.
+      name: "./pages/lib/_doc-history-meta.mjs",
+    },
     // Wires the preview design-token panel's Apply button to a same-origin
     // dev-only endpoint that persists tweaks into packages/ui/styles/colors.css
     // — see plugins/zdtp-apply-proxy-plugin.mjs for the full pipeline + scope.

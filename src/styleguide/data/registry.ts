@@ -29,13 +29,13 @@ export const CATEGORY_ORDER: StoryCategory[] = [
 ];
 
 /**
- * Slugs reserved by the styleguide chrome's leading sidebar leaves — Overview
- * (route "/components") and Design Tokens (route "/components/tokens"). These are NOT story slugs.
+ * Slugs reserved by the styleguide chrome — Overview (route "/components")
+ * and Design Tokens (route "/tokens"). These are NOT story slugs.
  * `buildEntries()` seeds the de-dupe set with them so a future story whose
  * title slugifies to one of these (e.g. a story titled "Tokens" → "tokens")
- * is auto-suffixed (→ "tokens-2") instead of colliding with the chrome route
- * and the sidebar's active-item highlight. `nav-nodes.ts` consumes these same
- * constants for its reserved leaves (single source of truth for the contract).
+ * is auto-suffixed (→ "tokens-2"). Keep "tokens" reserved after moving the
+ * dashboard out of Components so the retired component URL stays unavailable.
+ * `nav-nodes.ts` uses OVERVIEW_SLUG for the catalog's leading sidebar leaf.
  */
 export const OVERVIEW_SLUG = "";
 export const TOKENS_SLUG = "tokens";

@@ -204,7 +204,7 @@ function buildColorExtras(mode: PanelMode): ColorClusterExtras {
     defaultShikiTheme: DEFAULT_SHIKI_THEME,
     colorSchemes: {},
     panelSettings: {
-      colorScheme: settings.colorScheme,
+      colorScheme: mode === "dark" ? darkScheme : lightScheme,
       colorMode: { defaultMode: mode, lightScheme, darkScheme },
     },
   };

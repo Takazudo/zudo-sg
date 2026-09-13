@@ -88,7 +88,10 @@ vi.mock("virtual:zdtp-apply-config", () => ({
   applyRouting: undefined,
 }));
 
-import { designTokenPanelConfig } from "../design-token-panel-config";
+import {
+  buildDesignTokenPanelConfig,
+  designTokenPanelConfig,
+} from "../design-token-panel-config";
 import { previewTokenPanelConfig } from "../preview-token-panel-config";
 import { UI_PALETTE_COLORS } from "../ui-design-tokens-manifest";
 
@@ -187,6 +190,26 @@ describe("panel config isolation", () => {
     expect(colorTab?.colorExtras?.baseRoles).toEqual({});
   });
 
+  it.each([
+    ["light", "Default Light"],
+    ["dark", "Default Dark"],
+  ] as const)(
+    "doc panel builder scopes color scheme to %s mode",
+    (mode, colorScheme) => {
+      const colorTab = buildDesignTokenPanelConfig(mode).tabs.find(
+        (tab) => tab.id === "color",
+      );
+      expect(colorTab?.colorExtras?.panelSettings).toEqual({
+        colorScheme,
+        colorMode: {
+          defaultMode: mode,
+          lightScheme: "Default Light",
+          darkScheme: "Default Dark",
+        },
+      });
+    },
+  );
+
   it("preview panel has a reserved 'palette' tab grouping families, separate from the 'ui-color' tab", () => {
     const paletteTab = previewTokenPanelConfig.tabs.find((t) => t.id === "palette");
     expect(paletteTab).toBeDefined();
@@ -254,6 +277,7 @@ describe("panel config isolation", () => {
     }
 
     const colorTab = previewTokenPanelConfig.tabs.find((t) => t.id === "ui-color");
+    expect(colorTab?.colorExtras).toBeUndefined();
     expect(colorTab?.tiers.some((t) => t.id === "ui-palette")).toBe(false);
   });
 
@@ -316,6 +340,36 @@ describe("panel config isolation", () => {
     expect(previews).toEqual(
       expect.arrayContaining(["size", "line-height", "weight", "family"]),
     );
+  });
+
+  it("doc-chrome panel carries spacing and size tier previews", () => {
+    const spacingTab = designTokenPanelConfig.tabs.find((t) => t.id === "spacing");
+    expect(spacingTab?.tiers.map(({ id, preview }) => ({ id, preview }))).toEqual([
+      { id: "hsp", preview: "bar" },
+      { id: "vsp", preview: "bar" },
+      { id: "icon", preview: "bar" },
+      { id: "layout", preview: undefined },
+    ]);
+
+    const sizeTab = designTokenPanelConfig.tabs.find((t) => t.id === "size");
+    expect(sizeTab?.tiers.map(({ id, preview }) => ({ id, preview }))).toEqual([
+      { id: "radius", preview: "radius" },
+      { id: "transition", preview: "duration" },
+    ]);
+  });
+
+  it("preview panel carries spacing and radius tier previews", () => {
+    const spacingTab = previewTokenPanelConfig.tabs.find((t) => t.id === "spacing");
+    expect(spacingTab?.tiers.map(({ id, preview }) => ({ id, preview }))).toEqual([
+      { id: "hsp", preview: "bar" },
+      { id: "vsp", preview: "bar" },
+    ]);
+
+    const sizeTab = previewTokenPanelConfig.tabs.find((t) => t.id === "size");
+    expect(sizeTab?.tiers.map(({ id, preview }) => ({ id, preview }))).toEqual([
+      { id: "radius", preview: "radius" },
+      { id: "shadow", preview: undefined },
+    ]);
   });
 
   // The testing entry is deliberately unmocked: run zdtp's public validator,

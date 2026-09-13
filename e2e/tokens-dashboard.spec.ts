@@ -1,14 +1,48 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
+import { withBase } from "../src/utils/base";
 import {
   UI_DASHBOARD_MODE_DEPENDENT_COUNT,
   UI_DASHBOARD_MODE_INDEPENDENT_COUNT,
   UI_DASHBOARD_TOKEN_COUNT,
 } from "../src/features/styleguide/token-dashboard/dashboard-inventory";
 
-const TOKENS_PATH = "/components/tokens";
+const TOKENS_PATH = withBase("/tokens");
 const PREVIEW_STATE_KEY = "sg-preview-tweak-state-v4";
 const DOC_STATE_KEY = "sg-doc-tweak-state-v4";
 const COLOR_SENTINEL = "oklch(0.42 0.18 210)";
+const DOC_COLOR_SENTINEL = "#123456";
+
+async function expectStandaloneTokensLayout(page: Page): Promise<void> {
+  const sidebar = page.locator("#desktop-sidebar");
+  await expect(sidebar).toHaveClass("sr-only");
+  await expect(sidebar).not.toHaveAttribute("data-zfb-transition-persist");
+  await expect(sidebar.locator("a")).toHaveCount(0);
+
+  const band = page.locator(".zd-doc-content-band");
+  await expect(band).toHaveAttribute("data-zd-nosidebar", "");
+  await expect(band).not.toHaveAttribute("data-zd-wide");
+  await expect(page.locator(".zd-toc-col, .zd-desktop-sidebar-toggle")).toHaveCount(0);
+
+  const geometry = await band.evaluate((element) => {
+    const bounds = element.getBoundingClientRect();
+    const rootFontSize = parseFloat(getComputedStyle(document.documentElement).fontSize);
+    return {
+      maxWidthRem: parseFloat(getComputedStyle(element).maxWidth) / rootFontSize,
+      centerOffset: Math.abs(
+        bounds.left - (document.documentElement.clientWidth - bounds.width) / 2,
+      ),
+    };
+  });
+  expect(geometry.maxWidthRem).toBe(80);
+  expect(geometry.centerOffset).toBeLessThanOrEqual(1);
+
+  const headerNav = page.getByRole("navigation", { name: "Main", exact: true });
+  const tokensLink = headerNav.getByRole("link", { name: "Design Tokens", exact: true });
+  await expect(tokensLink).toHaveAttribute("href", TOKENS_PATH);
+  await expect(tokensLink).toHaveAttribute("aria-current", "page");
+  await expect(headerNav.getByRole("link", { name: "Components", exact: true }))
+    .not.toHaveAttribute("aria-current");
+}
 
 function dashboard(page: Page, mode: "light" | "dark"): Locator {
   return page.locator(
@@ -93,13 +127,27 @@ async function setPanelValue(
 ): Promise<void> {
   const tab = panel.getByRole("tab", { name: tabName, exact: true });
   await expect(tab).toBeVisible({ timeout: 5_000 });
-  await tab.click();
+  await tab.click({ force: true });
 
   const input = panel.getByLabel(label);
   await expect(input).toBeVisible({ timeout: 3_000 });
   await input.fill(value);
   await input.dispatchEvent("input");
   await page.waitForTimeout(150);
+}
+
+async function setDocColorLiteral(
+  panel: Locator,
+  cssVar: string,
+  value: string,
+): Promise<void> {
+  await panel.getByRole("tab", { name: "Color", exact: true }).click();
+  await panel.getByLabel(`${cssVar} tier reference`).selectOption({ label: "Literal…" });
+  await panel.getByRole("button", { name: `${cssVar}: ${cssVar}` }).click();
+  const input = panel.getByRole("dialog", { name: `${cssVar} color picker` })
+    .getByLabel("Hex color value");
+  await input.fill(value);
+  await input.dispatchEvent("input");
 }
 
 async function closePanel(page: Page, panel: Locator): Promise<void> {
@@ -154,6 +202,7 @@ test("JS-off desktop renders the declared dashboards and their reference geometr
   try {
     const response = await page.goto(TOKENS_PATH);
     expect(response?.status()).toBe(200);
+    await expectStandaloneTokensLayout(page);
 
     const light = dashboard(page, "light");
     const dark = dashboard(page, "dark");
@@ -367,6 +416,90 @@ test("dashboard defaults stay isolated from saved preview and doc-chrome panel s
   await page.evaluate(() => localStorage.clear());
 });
 
+test("doc-chrome Color overrides are scheme-scoped while Spacing stays shared", async ({
+  page,
+}) => {
+  await page.addInitScript(() => localStorage.clear());
+  await page.goto(TOKENS_PATH);
+
+  const html = page.locator("html");
+  const themeToggle = page.locator('button[aria-label^="Switch to "]:visible').first();
+  await expect(themeToggle).toBeVisible();
+  if ((await html.getAttribute("data-theme")) !== "light") {
+    await themeToggle.click();
+    await expect(html).toHaveAttribute("data-theme", "light");
+  }
+
+  async function toggleThemeAndReacquirePanel(
+    panel: Locator,
+    mode: "light" | "dark",
+  ): Promise<Locator> {
+    const previousShell = await panel.elementHandle();
+    if (!previousShell) throw new Error("Expected the token panel shell to be mounted");
+
+    await themeToggle.click();
+    await expect(html).toHaveAttribute("data-theme", mode);
+    await expect
+      .poll(() => previousShell.evaluate((element) => element.isConnected))
+      .toBe(false);
+
+    const nextPanel = page.locator(".tokenpanel-shell").first();
+    await expect(nextPanel).toBeVisible({ timeout: 10_000 });
+    return nextPanel;
+  }
+
+  let panel = await openPanel(page, "toggle-sg-doc-tweak");
+  await setDocColorLiteral(panel, "--zd-bg", DOC_COLOR_SENTINEL);
+  let lightPersistedLiteral: unknown;
+  await expect
+    .poll(async () => {
+      const state = await readPersistedState(page, DOC_STATE_KEY);
+      const color = state.color as Record<string, unknown> | undefined;
+      const light = color?.["Default Light"] as {
+        semanticMappings?: Record<string, { literal?: unknown }>;
+      } | undefined;
+      lightPersistedLiteral = light?.semanticMappings?.bg?.literal;
+      return typeof lightPersistedLiteral === "string" &&
+        lightPersistedLiteral !== "oklch(.965 .004 65)";
+    })
+    .toBe(true);
+  expect(typeof lightPersistedLiteral).toBe("string");
+
+  panel = await toggleThemeAndReacquirePanel(panel, "dark");
+  await panel.getByRole("tab", { name: /^Color(?: \d+ changed tokens?)?$/ }).click();
+  await expect(panel.getByLabel("--zd-bg tier reference")).not.toHaveValue("__literal__");
+  await expect
+    .poll(async () => {
+      const state = await readPersistedState(page, DOC_STATE_KEY);
+      const color = state.color as Record<string, unknown> | undefined;
+      return Object.keys(color ?? {}).sort();
+    })
+    .toEqual(["Default Light"]);
+
+  panel = await toggleThemeAndReacquirePanel(panel, "light");
+  await panel.getByRole("tab", { name: /^Color(?: \d+ changed tokens?)?$/ }).click();
+  await expect(panel.getByLabel("--zd-bg tier reference")).toHaveValue("__literal__");
+  await panel.getByRole("button", { name: "--zd-bg: --zd-bg" }).click();
+  await expect(
+    panel.getByRole("dialog", { name: "--zd-bg color picker" })
+      .getByLabel("Hex color value"),
+  ).toHaveValue(DOC_COLOR_SENTINEL);
+
+  await setPanelValue(page, panel, "Spacing", "--spacing-hsp-md value", "2.25");
+  await expect
+    .poll(async () => {
+      const state = await readPersistedState(page, DOC_STATE_KEY);
+      return (state.spacing as Record<string, unknown> | undefined)?.["hsp-md"];
+    })
+    .toBe("2.25rem");
+
+  panel = await toggleThemeAndReacquirePanel(panel, "dark");
+  await panel.getByRole("tab", { name: /^Spacing(?: \d+ changed tokens?)?$/ }).click();
+  await expect(panel.getByLabel("--spacing-hsp-md value")).toHaveValue("2.25");
+  await closePanel(page, panel);
+  await page.evaluate(() => localStorage.clear());
+});
+
 test("token reference keeps preview editing without legacy listing or copy controls", async ({ page }) => {
   await page.goto(TOKENS_PATH);
   await expect(page.locator(".zdtp-dashboard")).toHaveCount(3);
@@ -381,9 +514,30 @@ test("token reference keeps preview editing without legacy listing or copy contr
   await closePanel(page, panel);
 });
 
+test("the tokens mobile drawer opens at the root menu", async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 740 });
+  await page.goto(TOKENS_PATH);
+  // The mobile toggle hydrates when visible; wait for its module before clicking.
+  await page.waitForLoadState("networkidle");
+  await page.getByRole("button", { name: "Open sidebar", exact: true }).click();
+
+  const drawer = page.locator("aside[data-zd-mobile-sidebar]");
+  await expect(drawer.getByRole("link", { name: "Components", exact: true }))
+    .toHaveAttribute("href", withBase("/components"));
+  await expect(drawer.getByRole("link", { name: "Design Tokens", exact: true }))
+    .toHaveAttribute("href", TOKENS_PATH);
+  await expect(drawer.locator(`a[href="${withBase("/components/cta-button")}"]`))
+    .toHaveCount(0);
+});
+
 test("client navigation preserves the document and mounts all dashboards", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
-  await page.goto("/components");
+  await page.goto(withBase("/components"));
+  await expect(page.locator("#desktop-sidebar"))
+    .toHaveAttribute("data-zfb-transition-persist", "sidebar-en-components");
+  await expect(page.locator("#desktop-sidebar").getByRole("link", {
+    name: "Design Tokens", exact: true,
+  })).toHaveCount(0);
   await page.evaluate(() => {
     (window as Window & { __sgSpaMarker?: boolean }).__sgSpaMarker = true;
   });
@@ -405,10 +559,16 @@ test("client navigation preserves the document and mounts all dashboards", async
         );
       }),
   );
-  const tokensLink = page.locator('#desktop-sidebar a[href="/components/tokens"]');
+  const tokensLink = page.getByRole("navigation", { name: "Main", exact: true })
+    .getByRole("link", { name: "Design Tokens", exact: true });
   await expect(tokensLink).toBeVisible();
+  await expect(tokensLink).toHaveAttribute("href", TOKENS_PATH);
   await tokensLink.click();
   await swapped;
+  await expect(page).toHaveURL(
+    (url) => url.pathname.replace(/\/$/, "") === TOKENS_PATH.replace(/\/$/, ""),
+  );
+  await expectStandaloneTokensLayout(page);
 
   expect(
     await page.evaluate(

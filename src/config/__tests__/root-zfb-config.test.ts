@@ -15,13 +15,15 @@ describe("root zfb integration contract", () => {
     ]);
   });
 
-  it("keeps preset plugins first and appends the token-panel proxy", () => {
+  it("keeps metadata serialization after preset history and before the token-panel proxy", () => {
     expect(config.plugins?.map(({ name }) => name)).toEqual([
       "@takazudo/zudo-doc/plugins/routes",
+      "@takazudo/zudo-doc/plugins/doc-history",
       "@takazudo/zudo-doc/plugins/search-index",
       "@takazudo/zudo-doc/plugins/theme-packs",
       "@takazudo/zudo-doc/plugins/llms-txt",
       "@takazudo/zudo-doc/plugins/img-src-check",
+      "./pages/lib/_doc-history-meta.mjs",
       "./plugins/zdtp-apply-proxy-plugin.mjs",
     ]);
   });
@@ -52,9 +54,9 @@ describe("root zfb integration contract", () => {
 
     expect(routeSettings).toEqual({ ...settings, designTokenPanel: false });
     expect(settings).toMatchObject({
-      logo: "/img/logo.svg",
-      entryDocSlug: "guide",
-      tocToggle: false,
+      logo: "auto",
+      entryDocSlug: "overview",
+      tocToggle: true,
       versions: [],
     });
   });

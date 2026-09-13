@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { withBase } from "../src/utils/base";
 
 async function clickAndWaitForSwap(page: Page, selector: string): Promise<boolean> {
   const swapPromise = page.evaluate(() => {
@@ -32,9 +33,9 @@ async function clickAndWaitForSwap(page: Page, selector: string): Promise<boolea
 // Intentionally minimal — a single page load that confirms:
 //   1. The root page returns HTTP 200 and visible content.
 //   2. No JavaScript runtime errors.
-//   3. No failed (>= 400) same-origin resource requests — the home hero masks
-//      /img/logo.svg and the <head> links the favicon set, so a missing brand
-//      asset surfaces here (#123).
+//   3. No failed (>= 400) same-origin resource requests — the home hero renders
+//      its brand mark inline via AutoLogo and the <head> links the generated
+//      favicon set, so a missing static asset surfaces here (#123).
 //   4. A docs content page returns 200.
 // Deeper interactive flows belong in dedicated T1 specs added later.
 
@@ -44,12 +45,13 @@ test("home page renders without JS errors or failed asset requests", async ({ pa
     jsErrors.push(err.message);
   });
 
-  // 404 detection (#123): real favicon + logo assets now ship in public/, so any
-  // >= 400 response is a genuine regression (a missing asset), not scaffold
-  // noise. This replaces the former unused isScaffoldResourceError() filter,
-  // which silently tolerated every 404. The home route exercises both the
-  // favicon links (<head>) and the /img/logo.svg CSS mask (hero), so removing
-  // or renaming either asset fails this test.
+  // 404 detection (#123): generated favicon assets ship in public/, and the
+  // home hero renders its brand mark inline via AutoLogo, so any >= 400 response
+  // is a genuine regression (a missing asset), not scaffold noise. This replaces
+  // the former unused isScaffoldResourceError() filter, which silently tolerated
+  // every 404. The home route exercises both the favicon links (<head>) and the
+  // inline AutoLogo hero, so removing or renaming a referenced favicon asset
+  // fails this test.
   const failedResponses: string[] = [];
   page.on("response", (res) => {
     if (res.status() >= 400) failedResponses.push(`${res.status()} ${res.url()}`);
@@ -66,19 +68,22 @@ test("home page renders without JS errors or failed asset requests", async ({ pa
 
   // No uncaught JavaScript errors.
   expect(jsErrors).toEqual([]);
-  // No missing static assets (favicon set + hero logo mask).
+  // No missing static assets (favicon set; the hero logo is inline AutoLogo).
   expect(failedResponses).toEqual([]);
 });
 
-test("guide docs page returns 200", async ({ page }) => {
+test("overview docs page returns 200 and the old guide route returns 404", async ({ page }) => {
   // /docs/ has no index.html on the scaffold (trailingSlash: false, no root
   // docs index page). Navigate to the first real docs page instead.
-  const response = await page.goto("/docs/guide");
+  const response = await page.goto("/docs/overview");
   expect(response?.status()).toBe(200);
 
   // Confirm a heading is present
   const heading = page.locator("h1").first();
   await expect(heading).toBeVisible();
+
+  const oldRouteResponse = await page.goto("/docs/" + "guide");
+  expect(oldRouteResponse?.status()).toBe(404);
 });
 
 // ── Styleguide /components routes ────────────────────────────────────────────
@@ -190,13 +195,24 @@ test("/components/<slug> detail page preview iframe loads", async ({ page }) => 
   await expect(iframe).toBeAttached({ timeout: 15_000 });
 });
 
-test("/components/tokens renders the token reference and preview control", async ({ page }) => {
-  const response = await page.goto("/components/tokens");
+test("/tokens renders the token reference and preview control without side columns", async ({ page }) => {
+  const response = await page.goto(withBase("/tokens"));
   expect(response?.status()).toBe(200);
   await expect(page.locator("h1").first()).toBeVisible();
+  await expect(page.locator("#desktop-sidebar")).toHaveClass("sr-only");
+  await expect(page.locator("#desktop-sidebar")).not.toHaveAttribute("data-zfb-transition-persist");
+  await expect(page.locator(".zd-doc-content-band")).toHaveAttribute("data-zd-nosidebar", "");
+  await expect(page.locator(".zd-doc-content-band")).not.toHaveAttribute("data-zd-wide");
+  await expect(page.locator(".zd-toc-col, .zd-desktop-sidebar-toggle")).toHaveCount(0);
   await expect(page.locator(".zdtp-dashboard")).toHaveCount(3);
   await expect(page.getByRole("button", { name: "Preview tokens →", exact: true })).toBeVisible();
   await expect(page.locator("[data-sg-tokens-root], [data-sg-token]")).toHaveCount(0);
+});
+
+test("the retired tokens route in Components returns 404", async ({ page }) => {
+  const retiredPath = withBase(["/components", "tokens"].join("/"));
+  const response = await page.goto(retiredPath);
+  expect(response?.status()).toBe(404);
 });
 
 test("styleguide sidebar preserves DOM identity and scroll across page transitions", async ({

@@ -60,7 +60,7 @@ Keep this module importable by plain Node during a build. Its runtime dependency
 
 ## Static token dashboard
 
-The `/components/tokens` page renders three server-rendered `TokenDashboard` instances. They do not use a client island, panel state, browser globals, or hydration: the light and dark views use `include="mode-dependent"` and show only rows whose declared values differ by mode, while the shared view uses `include="mode-independent"` and shows every other row once. The page uses the shared `uiDashboardTabs` data and `dashboardPreviewOverrides`, then gives the instances these stable IDs and titles:
+The `/tokens` page renders three server-rendered `TokenDashboard` instances. They do not use a client island, panel state, browser globals, or hydration: the light and dark views use `include="mode-dependent"` and show only rows whose declared values differ by mode, while the shared view uses `include="mode-independent"` and shows every other row once. The page uses the shared `uiDashboardTabs` data and `dashboardPreviewOverrides`, then gives the instances these stable IDs and titles:
 
 | ID | `TokenDashboard` props | Title |
 | --- | --- | --- |
@@ -147,6 +147,8 @@ the panel *edits* a value in the UI, not how it is read from or written to `loca
 `panel-config-isolation.test.ts` `state-continuity` block seeds v2/v3/v4 legacy envelopes directly
 and asserts `loadPersistedState` round-trips fractional line-height values unchanged, with no
 `legacyIdRenameMap` involved.
+
+For the persisted-state boundary behind these tests, see the styleguide's [Token Panels guide](https://zudo-sg.takazudomodular.com/docs/overview/token-panels/): doc-chrome **Color** state is keyed by `Default Light` / `Default Dark` scheme identity inside `sg-doc-tweak-state-v4`, while **Palette**, **Spacing**, **Font**, and **Size** remain shared within a theme pack and preview-panel colors stay unkeyed by design.
 
 ## Preview panel font specimens use instance values
 

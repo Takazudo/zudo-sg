@@ -70,7 +70,7 @@ export default function StoryDetailPage(
   // Chrome slots — composed here (in the page tree) and passed into the shell.
   // HeadWithDefaults runs its `title` through composeMetaTitle internally
   // (→ "<title> | <siteName>"), so pass the RAW page title here — that yields
-  // an og:title ("Button | Zudo Sg") matching the `<title>` element. The
+  // an og:title ("Button | zudo-sg") matching the `<title>` element. The
   // shell's `title` prop below is the pre-composed `<title>` value.
   const pageTitle = entry ? entry.meta.title : "Not found";
   const chrome = buildStyleguideChrome({

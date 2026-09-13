@@ -3,31 +3,32 @@
 // Page module for the site index route.
 //
 // Default-locale (EN) site index. Static route — no paths() export needed.
-// Collects the EN docs tree and renders the site-map grid plus optional
-// tag count.
+// Collects the EN docs and component trees and renders the home intro,
+// site-map grid, and optional tag count.
 //
 // Data flow:
-//   getCollection("docs")   [sync, zfb ADR-004]
-//   → buildNavTree()        builds the nav tree for the sitemap grid
-//   → collectTags()         counts unique tags for the tag section header
-//   → DocLayoutWithDefaults renders the page with no sidebar/TOC
+//   resolveNavSource() + getCategoryGroups() → three-entry sitemap tree
+//   routeContext.homeIntros → server-rendered CompactProse (never an island)
+//   collectTags() → optional tag section
+//   DocLayoutWithDefaults → page with no sidebar/TOC
 
 import { settings } from "@/config/settings";
 import { defaultLocale, t } from "@/config/i18n";
 import { withBase } from "@/utils/base";
-import {
-  buildNavTree,
-  groupSatelliteNodes,
-} from "@/utils/docs";
+import { buildNavTree } from "@/utils/docs";
 import { resolveNavSource } from "./lib/_nav-source-docs";
-import { getCategoryOrder } from "@/utils/nav-scope";
+import { getCategoryGroups } from "@/styleguide/data/registry";
 import { collectTags } from "@/utils/tags";
 import { toRouteSlug } from "@/utils/slug";
+import { AutoLogo } from "@takazudo/zudo-doc/auto-logo";
 import { DocLayoutWithDefaults } from "@takazudo/zudo-doc/doclayout";
+import { CompactProse } from "@takazudo/zudo-doc/home-intro";
+import type { SidebarNavNode } from "@takazudo/zudo-doc/sidebar";
 import type { JSX } from "preact";
 import type { VNode } from "preact";
 import { Island } from "@takazudo/zfb";
 import { SiteTreeNav } from "@takazudo/zudo-doc/site-tree-nav-island";
+import { routeContext } from "virtual:zudo-doc-route-context";
 import { FooterWithDefaults } from "./lib/_footer-with-defaults";
 import { HeaderWithDefaults } from "./lib/_header-with-defaults";
 import { HeadWithDefaults } from "./lib/_head-with-defaults";
@@ -42,9 +43,51 @@ export default function IndexPage(): JSX.Element {
   // Identity-stable nav source (draft-filtered, unlisted retained). navDocs is
   // pre-filtered (isNavVisible) and shared with the nav-tree fast-path.
   const { navDocs, categoryMeta } = resolveNavSource(locale, undefined);
-  const tree = buildNavTree(navDocs, locale, categoryMeta);
-  const categoryOrder = getCategoryOrder();
-  const groupedTree = groupSatelliteNodes(tree, categoryOrder);
+  const docsTree = buildNavTree(navDocs, locale, categoryMeta);
+  const componentCategories: SidebarNavNode[] = getCategoryGroups().map((group, categoryIndex) => ({
+    slug: `category:${group.category}`,
+    label: group.category,
+    position: categoryIndex,
+    hasPage: false,
+    children: group.stories.map((story, storyIndex) => ({
+      slug: story.slug,
+      label: story.meta.title,
+      position: storyIndex,
+      href: withBase(`/components/${story.slug}`),
+      hasPage: true,
+      children: [],
+    })),
+  }));
+  const tree: SidebarNavNode[] = [
+    {
+      slug: "overview",
+      label: "Overview",
+      position: 0,
+      href: withBase("/docs/overview"),
+      hasPage: true,
+      children: docsTree,
+    },
+    {
+      slug: "components",
+      label: "Components",
+      position: 1,
+      href: withBase("/components"),
+      hasPage: true,
+      children: componentCategories,
+    },
+    {
+      slug: "tokens",
+      label: "Design Tokens",
+      position: 2,
+      href: withBase("/tokens"),
+      hasPage: true,
+      children: [],
+    },
+  ];
+
+  // The prepared Markdown belongs to this SSR module, not the sitemap island.
+  const intro = routeContext.homeIntros[locale] ?? null;
+  const hasIntro = Boolean(intro?.nodes.length);
 
   // Drop category_no_page index files so the count matches the number of tag
   // pages actually built (the tag routes exclude them too).
@@ -55,7 +98,6 @@ export default function IndexPage(): JSX.Element {
 
   const ctaNav = settings.headerNav[0] ?? null;
   const overview = ctaNav ? withBase(ctaNav.path) : null;
-  const logoUrl = withBase("/img/logo.svg");
 
   return (
     <DocLayoutWithDefaults
@@ -66,6 +108,7 @@ export default function IndexPage(): JSX.Element {
       noindex={settings.noindex}
       hideSidebar={true}
       hideToc={true}
+      contentWide={settings.home.wide}
       // Empty fragment suppresses DocLayoutWithDefaults' empty-data default
       // Sidebar island — its marker never hydrates for published-package
       // consumers (zfb#999) and zfb >= next.38 warns about it; the sidebar is
@@ -76,24 +119,16 @@ export default function IndexPage(): JSX.Element {
       bodyEndComponents={<BodyEndIslands basePath={settings.base ?? "/"} />}
     >
       {/* Hero: logo left, title+desc+links right, block centered */}
-      <div class="flex justify-center mb-vsp-xl">
-        <div class="flex flex-col items-center text-center gap-hsp-md lg:flex-row lg:text-left lg:gap-hsp-xl">
-          {/* Theme-adaptive logo: SVG used as a CSS mask over `bg-fg` so the
-              foreground color follows the active theme (white on dark, black on
-              light). The neighboring <h1>{settings.siteName}</h1> provides the
-              accessible name; mirrors zudolab/zudo-design-token-lint#65. */}
-          <div
-            class="w-[320px] max-w-full aspect-[1200/630] bg-fg shrink-0"
-            style={{
-              WebkitMask: `url(${logoUrl}) center/contain no-repeat`,
-              mask: `url(${logoUrl}) center/contain no-repeat`,
-            }}
-            aria-hidden="true"
+      <div class="zd-home-hero mb-vsp-xl">
+        <div class="zd-home-inner flex flex-col items-center justify-center text-center gap-hsp-md lg:flex-row lg:text-left lg:gap-hsp-xl">
+          <AutoLogo
+            seed={settings.siteName}
+            class="w-[320px] max-w-full aspect-[1200/630] text-fg shrink-0"
           />
-          <div>
-            <h1 class="text-heading font-bold mb-vsp-2xs">{settings.siteName}</h1>
+          <div class="zd-home-copy min-w-0 lg:flex-1">
+            <h1 class="text-heading font-bold mb-vsp-2xs break-words">{settings.siteName}</h1>
             <p class="text-muted text-small mb-vsp-sm">{settings.siteDescription}</p>
-            <div class="flex items-center justify-center lg:justify-start gap-hsp-md text-small">
+            <div class="zd-home-links flex flex-wrap items-center justify-center lg:justify-start gap-hsp-md text-small">
               {overview && (
                 <>
                   <a href={overview} class="text-fg underline hover:text-accent">
@@ -136,20 +171,29 @@ export default function IndexPage(): JSX.Element {
         </div>
       </div>
 
-      {/* Sitemap grid — restored to the original SiteTreeNav island (refs #1453).
-          The Astro reference used <Island when="idle"><SiteTreeNav ...></Island>.
-          DocsSitemap (vertical <details> list) was incorrect; SiteTreeNav gives
-          the responsive multi-column grid the reference renders. */}
-      {Island({
-        when: "idle",
-        children: (
-          <SiteTreeNav
-            tree={groupedTree}
-            categoryOrder={categoryOrder}
-            categoryIgnore={["inbox", "develop"]}
-          />
-        ),
-      }) as unknown as VNode}
+      {hasIntro && (
+        <>
+          <hr class="zd-home-rule" data-home-rule="upper" />
+          <div class="zd-home-intro">
+            <div class="zd-home-inner">
+              <CompactProse intro={intro} />
+            </div>
+          </div>
+        </>
+      )}
+
+      <hr class="zd-home-rule" data-home-rule="lower" />
+      <section class="zd-home-sitemap">
+        {Island({
+          when: "idle",
+          children: (
+            <SiteTreeNav
+              tree={tree}
+              initiallyCollapsedCategorySlugs={["overview", "components"]}
+            />
+          ),
+        }) as unknown as VNode}
+      </section>
 
       {settings.docTags && tagCount > 0 && (
         <section class="mt-vsp-xl">

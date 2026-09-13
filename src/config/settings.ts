@@ -43,18 +43,32 @@ export const settings = {
   // externally defined by @takazudo/zudo-doc — and can't be physically
   // relocated here without restructuring those package types. Each carries
   // a cross-reference comment pointing back to this block.
-  siteName: "Zudo Sg",
-  logo: "/img/logo.svg",
+  siteName: "zudo-sg",
+  logo: "auto",
   // Falsy siteUrl silently omits OGP absolute image URLs and canonical link
   // tags from build output — see the module-load warning below.
   siteUrl: "" as string,
   // -------------------------------------------------------------------------
-  siteDescription: "" as string,
+  siteDescription:
+    "A zudo-doc-based styleguide host and provider of the @zudo-sg/ui component library.",
   base: "/",
   trailingSlash: false as boolean,
   noindex: false as boolean,
   editUrl: false as string | false,
   githubUrl: false as string | false,
+  home: {
+    wide: true,
+    introMarkdown: `zudo-sg is a zudo-doc-based styleguide host and the provider of the @zudo-sg/ui component library.
+
+Two live design-token panels let you tune the doc chrome and component previews side by side.
+
+The same library drives a multi-page demo site, so the components can be explored in both a styleguide and a complete product experience.
+
+- [Overview](/docs/overview) — Learn what zudo-sg provides.
+- [Components](/components) — Browse the @zudo-sg/ui component catalog.
+- [Design Tokens](/tokens) — Explore and tune the shared design tokens.`,
+    sitemapHeading: "",
+  },
   metaTags: {
     description: true,
     keywords: "",
@@ -66,7 +80,7 @@ export const settings = {
     twitterCreator: "@Takazudo",
   } satisfies MetaTagsConfig as MetaTagsConfig,
   docsDir: "src/content/docs",
-  entryDocSlug: "guide",
+  entryDocSlug: "overview",
   defaultLocale: "en" as const,
   locales: {} as Record<string, LocaleConfig>,
   mermaid: true,
@@ -74,7 +88,7 @@ export const settings = {
   transclude: false as boolean,
   sitemap: false,
   docTags: false,
-  docMetainfo: false,
+  docMetainfo: true,
   tagPlacement: "after-title" as TagPlacement,
   tagGovernance: "off" as TagGovernanceMode,
   tagVocabulary: false as boolean,
@@ -92,11 +106,11 @@ export const settings = {
   packageOwnedRoutes: true as boolean,
   dynamicPageTransition: true as boolean,
   // Host-callables channel for the injected routes: a module exporting
-  // `chromeBindings: ChromeHostBindings`. Only the BodyEndIslands slot is
-  // overridden (the two zdtp token panels + image/mermaid enlarge); every other
-  // slot keeps its package default. Lives under pages/lib/ so it can import the
-  // host BodyEndIslands island chain without dragging pages/* into the src tsc
-  // program. See pages/lib/_chrome-bindings.tsx.
+  // `chromeBindings: ChromeHostBindings`. Binds BodyEndIslands (the two zdtp
+  // token panels + image/mermaid enlarge) and docHistoryMeta (Created / Updated /
+  // Author); every other slot keeps its package default. Lives under pages/lib/
+  // so it can import the host BodyEndIslands island chain without dragging
+  // pages/* into the src tsc program. See pages/lib/_chrome-bindings.tsx.
   chromeBindingsModule: "./pages/lib/_chrome-bindings.tsx" as string,
   aiAssistant: false as boolean,
   aiChatDemoMode: false as boolean,
@@ -107,7 +121,7 @@ export const settings = {
   tocMaxDepth: 4 as number,
   sidebarResizer: true as boolean,
   sidebarToggle: true as boolean,
-  tocToggle: false as boolean,
+  tocToggle: true as boolean,
   imageEnlarge: true as boolean,
   // Package default for an opt-in feature not enabled here.
   assetViewer: false as boolean,
@@ -122,7 +136,8 @@ export const settings = {
   // Package default for an opt-in feature not enabled here.
   assetViewerIndexing: false as false,
   findInPage: false as boolean,
-  docHistory: false as boolean,
+  docHistory: true as boolean,
+  docHistoryUi: false,
   docHistoryExclude: [] as string[],
   bodyFootUtilArea: false as false,
   htmlPreview: undefined as HtmlPreviewConfig | undefined,
@@ -131,22 +146,15 @@ export const settings = {
   codexResources: false as { codexDir: string; projectRoot?: string } | false,
   defaultLocaleOnlyPrefixes: [] as string[],
   footer: {
-    links: [
-      {
-        title: "Docs",
-        items: [
-          { label: "Guide", href: "/docs/guide" },
-          { label: "Doc site", href: "https://zudo-sg-doc.takazudomodular.com" },
-        ],
-      },
-    ],
+    links: [],
     // Branding identity field (#194) — kept here because FooterConfig is
     // externally typed by @takazudo/zudo-doc; see the Branding block above.
-    copyright: "Copyright © 2026 Your Name. Built with zudo-doc.",
+    copyright: `Copyright © ${new Date().getFullYear()} <a href="https://x.com/Takazudo">Takazudo</a>. Built with <a href="https://zudo-doc.takazudomodular.com/">zudo-doc</a>. Enjoy synth on <a href="https://takazudomodular.com/">Takazudo Modular</a>.`,
   } satisfies FooterConfig as FooterConfig | false,
   headerNav: [
-    { label: "Guide", path: "/docs/guide", categoryMatch: "guide" },
+    { label: "Overview", path: "/docs/overview", categoryMatch: "overview" },
     { label: "Components", path: "/components", categoryMatch: "components" },
+    { label: "Design Tokens", path: "/tokens" },
     { label: "Doc", path: "https://zudo-sg-doc.takazudomodular.com" },
   ] satisfies HeaderNavItem[] as HeaderNavItem[],
   // NOTE: the framework's native `{ type: "trigger", trigger: "design-token-panel" }`

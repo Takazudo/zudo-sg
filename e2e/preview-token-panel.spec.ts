@@ -289,9 +289,13 @@ test("preview panel: overrides reach iframe :root; host <html> is unchanged", as
     ["--radius-md", radiusOverride],
   ]);
 
-  // Assert iframe :root has the overrides applied.
-  expect(await getIframeRootVar(frame, "--color-accent")).toBe(brandOverride);
-  expect(await getIframeRootVar(frame, "--radius-md")).toBe(radiusOverride);
+  // Assert iframe :root has the overrides applied. The postMessage receiver
+  // runs asynchronously, so poll the observable state instead of relying on
+  // the helper's short scheduling settle under parallel browser load.
+  await expect.poll(() => getIframeRootVar(frame, "--color-accent"))
+    .toBe(brandOverride);
+  await expect.poll(() => getIframeRootVar(frame, "--radius-md"))
+    .toBe(radiusOverride);
 
   // Assert host <html> is UNCHANGED by the preview override — the applySink
   // routes writes to iframes only, never to the host :root.

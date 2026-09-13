@@ -445,7 +445,7 @@ export function renderRootTokenManifestFile(manifest) {
  *
  * Imported by:
  *  - src/config/design-token-panel-config.ts  (groups items into TabConfig.tiers)
- *  - pages/components/tokens.tsx              (spacing / font-size token rows)
+ *  - pages/tokens.tsx                         (spacing / font-size token rows)
  *
  * \`TokenDef.advanced\` was dropped upstream (zdtp 8abb1e4) — items previously
  * gated behind an "Advanced" disclosure now live in their own tier, so the
