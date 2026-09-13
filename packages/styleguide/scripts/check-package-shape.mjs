@@ -15,8 +15,8 @@ import { fileURLToPath } from "node:url";
 const PKG_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const manifest = JSON.parse(readFileSync(join(PKG_ROOT, "package.json"), "utf8"));
 
-// `CHANGELOG.md` / `README.md` join this list when the package goes public (#668).
-const REQUIRED_FILES = ["dist", "bin", "routes-src", "virtual-modules.d.ts", "styles.css"];
+// `CHANGELOG.md` / `README.md` joined this list when the package went public (#668).
+const REQUIRED_FILES = ["dist", "bin", "routes-src", "virtual-modules.d.ts", "styles.css", "CHANGELOG.md", "README.md"];
 
 const errors = [];
 

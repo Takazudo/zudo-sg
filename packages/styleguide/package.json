@@ -1,7 +1,6 @@
 {
   "name": "@takazudo/zudo-sg",
   "version": "0.1.0",
-  "private": true,
   "type": "module",
   "description": "zudo-sg styleguide engine — story registry, catalog routes and preview machinery for zfb + zudo-doc hosts.",
   "license": "MIT",
@@ -113,12 +112,18 @@
   "bin": {
     "zudo-sg": "./bin/zudo-sg.js"
   },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
   "files": [
     "dist",
     "bin",
     "routes-src",
     "virtual-modules.d.ts",
-    "styles.css"
+    "styles.css",
+    "CHANGELOG.md",
+    "README.md"
   ],
   "scripts": {
     "build": "tsup && tsc -p tsconfig.build.json",
@@ -144,9 +149,9 @@
     "@tailwindcss/oxide": "^4.2.0"
   },
   "peerDependencies": {
-    "@takazudo/zfb": "2.16.0",
+    "@takazudo/zfb": "^2.16.0",
     "@takazudo/zdtp": "^0.8.0",
-    "@takazudo/zudo-doc": ">=5.22.0",
+    "@takazudo/zudo-doc": "^5.22.0",
     "preact": "^10.29.1"
   },
   "peerDependenciesMeta": {

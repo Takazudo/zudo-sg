@@ -1,0 +1,102 @@
+# Publish @takazudo/zudo-sg to npm.
+#
+# Triggered by a pushed `v*.*.*` tag on this repo (the styleguide engine's own
+# release cadence — separate from main-deploy.yml, which redeploys the sites
+# on every push to `main`). Modeled on
+# $HOME/repos/myoss/zdtl/.github/workflows/publish.yml.
+#
+# STABLE-ONLY (ADR docs/adr/styleguide-engine.md decision 12): there is no
+# `next` prerelease channel for this package. The tag/version must match
+# `v*.*.*` / `X.Y.Z` or the job fails fast — no dist-tag branching, no stale-
+# `next` cleanup step (there is no `next` tag to ever go stale).
+#
+# `/l-make-release` (.claude/skills/l-make-release/SKILL.md) is the only
+# intended caller of the tag push that fires this workflow.
+
+name: Publish zudo-sg to npm
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+
+# Single group: only one publish of this package should ever run at a time.
+concurrency:
+  group: publish-zudo-sg
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    name: Build, verify, and publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      # workflow_dispatch allows a manual run (e.g. to retry a failed
+      # publish), but `--no-git-checks` below means it would otherwise publish
+      # from ANY ref. Guard manual runs to version tag refs only, and do it
+      # first so a bad manual trigger fails before spending CI time on
+      # checkout/install/build.
+      - name: Guard workflow_dispatch to v*.*.* tag refs
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          if [ "$GITHUB_REF_TYPE" != "tag" ] || ! echo "$GITHUB_REF_NAME" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::workflow_dispatch must be run from a v*.*.* tag ref, not '$GITHUB_REF'"
+            exit 1
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Stable-only guard, mirrored from the tag pattern: the package version
+      # actually being published must also be a clean X.Y.Z. This catches a
+      # manual package.json edit that slipped a prerelease suffix in under a
+      # tag that otherwise matched v*.*.* (the tag glob alone can't see the
+      # package.json content).
+      - name: Guard stable-only version
+        run: |
+          VERSION=$(node -p "require('./packages/styleguide/package.json').version")
+          if ! echo "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::packages/styleguide/package.json version '$VERSION' is not a stable X.Y.Z — this package has no next/prerelease channel (ADR decision 12)"
+            exit 1
+          fi
+          echo "Publishing @takazudo/zudo-sg@$VERSION to dist-tag latest"
+
+      - name: Build + typecheck + test the package
+        run: pnpm --filter @takazudo/zudo-sg check
+
+      - name: Verify foreign install (fixtures/engine-host)
+        run: pnpm verify:styleguide-install
+
+      # Real-artifact gate, run BEFORE `pnpm publish`: packs the tree,
+      # installs the tarball into a scratch project exactly like a consumer
+      # would, and imports the exports map. Last chance to catch a
+      # files[]/bin/exports regression before it ships to the registry.
+      - name: Check pack (verify published artifact)
+        run: bash scripts/check-pack.sh
+
+      # NPM_TOKEN MUST be an Automation-type token: scoped publish
+      # (@takazudo/*) requires 2FA, and only an Automation (or 2FA-bypassing
+      # granular) token can publish unattended in CI. A standard user token
+      # fails with an OTP/EOTP error (see packages/styleguide/RELEASE.md).
+      - name: Publish package
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: pnpm --filter @takazudo/zudo-sg publish --tag latest --access public --no-git-checks --provenance
