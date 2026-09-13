@@ -191,7 +191,7 @@
   /* Bind to the provider-owned code surface, falling back to a bg/surface-2
      mix only where no code
      surface is defined. A surface-2-only fallback is a mid tone in dark and
-     pushes hi-* tokens under WCAG AA — see src/styles/preview.css. */
+     pushes hi-* tokens under WCAG AA — see scripts/ui-contrast-pairs.ts. */
   background-color: var(
     --zfb-hi-bg,
     color-mix(in oklch, var(--color-bg) 80%, var(--color-surface-2))

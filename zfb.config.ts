@@ -123,5 +123,15 @@ export default defineConfig({
         tabsModule: "./src/config/preview-token-panel-tabs.ts",
       },
     },
+    // Standalone preview stylesheet: compiles `previewStyles` (the same path
+    // zudo-sg.config.mjs declares) and serves it in dev/preview at
+    // `<base>/_zudo-sg/preview.css`, emitting `dist/_zudo-sg/preview.css` on
+    // build. Listed directly until zudoSg() emits this descriptor (#662).
+    {
+      name: "@takazudo/zudo-sg/plugins/preview-css",
+      options: {
+        previewStyles: "./src/styles/preview-entry.css",
+      },
+    },
   ],
 });

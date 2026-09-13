@@ -35,6 +35,7 @@ export default {
     cssFiles: ["packages/ui/styles/tokens.css", "packages/ui/styles/colors.css"],
     manifestOut: "./src/config/ui-design-tokens-manifest.ts",
   },
-  // Consumed by the (not-yet-built) preview-css plugin, not by this CLI.
+  // Consumed by @takazudo/zudo-sg/plugins/preview-css (zfb.config.ts), not by
+  // this CLI. Keep the plugin descriptor's `previewStyles` in sync.
   previewStyles: "./src/styles/preview-entry.css",
 };
