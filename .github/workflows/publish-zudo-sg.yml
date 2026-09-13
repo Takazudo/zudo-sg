@@ -77,6 +77,10 @@ jobs:
             echo "::error::packages/styleguide/package.json version '$VERSION' is not a stable X.Y.Z — this package has no next/prerelease channel (ADR decision 12)"
             exit 1
           fi
+          if [ "$GITHUB_REF_NAME" != "v$VERSION" ]; then
+            echo "::error::tag '$GITHUB_REF_NAME' does not match packages/styleguide/package.json version 'v$VERSION'"
+            exit 1
+          fi
           echo "Publishing @takazudo/zudo-sg@$VERSION to dist-tag latest"
 
       - name: Build + typecheck + test the package

@@ -367,7 +367,35 @@ export function emitSafelist(tokens) {
 
 // ── Main ───────────────────────────────────────────────────────────────────
 
-function main() {
+// Route entrypoints ship as `.tsx` source (copied to routes-src/; tsup excludes
+// src/routes/** from dist), so their utility classes never reach dist/**/*.js.
+const ROUTES_SRC_DIR = resolve(__dirname, "../src/routes");
+
+/** Transpile route `.tsx` to JS so JSX text/attributes lex as string literals. */
+async function extractRouteTokens(tokens) {
+  let entries;
+  try {
+    entries = readdirSync(ROUTES_SRC_DIR).filter((name) => /\.tsx?$/.test(name) && !name.endsWith(".d.ts") && !/\.test\.tsx?$/.test(name));
+  } catch {
+    return;
+  }
+  const { default: ts } = await import("typescript");
+  for (const name of entries.sort()) {
+    const source = readFileSync(join(ROUTES_SRC_DIR, name), "utf8");
+    const { outputText } = ts.transpileModule(source, {
+      compilerOptions: {
+        target: ts.ScriptTarget.ES2022,
+        module: ts.ModuleKind.ESNext,
+        jsx: ts.JsxEmit.ReactJSX,
+        jsxImportSource: "preact",
+      },
+      fileName: name,
+    });
+    extractTokens(outputText, tokens);
+  }
+}
+
+async function main() {
   const files = findJsFiles(DIST_DIR);
   if (files.length === 0) {
     process.stderr.write(`gen-safelist: no .js files found in ${DIST_DIR}\n`);
@@ -379,6 +407,7 @@ function main() {
     const src = readFileSync(file, "utf8");
     extractTokens(src, tokens);
   }
+  await extractRouteTokens(tokens);
 
   const css = emitSafelist(tokens);
   writeFileSync(OUT_FILE, css, "utf8");
@@ -392,5 +421,5 @@ function main() {
 // without this guard the import would scan + rewrite dist/safelist.css as a side
 // effect and process.exit(1) on a dist-less checkout, breaking `pnpm test`.
 if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])) {
-  main();
+  await main();
 }

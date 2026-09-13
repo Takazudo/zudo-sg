@@ -114,7 +114,8 @@ export function discoverStories(absRoot: string): DiscoveredStory[] {
     const body = readFileSync(resolve(absRoot, relDir, file), "utf8");
     return {
       relDirStem: relDir ? `${relDir}/${stem}` : stem,
-      importName: dirPathToImportName(relDir),
+      // A story directly under the root has no containing dir; fall back to its stem.
+      importName: dirPathToImportName(relDir || stem),
       exportOrder: scanExportOrder(body),
     };
   });

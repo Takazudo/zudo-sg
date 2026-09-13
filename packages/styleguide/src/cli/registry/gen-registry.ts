@@ -14,7 +14,7 @@ import {
   replaceBlock,
   type RegistryEntry,
 } from "./build-registry-source.js";
-import { discoverStories } from "./discover-stories.js";
+import { assertUniqueImportNames, discoverStories } from "./discover-stories.js";
 
 const STORY_MODULES_RELATIVE_PATH = "stories/__tests__/story-modules.ts";
 
@@ -66,6 +66,8 @@ export function runGenRegistry(
     entries: buildEntriesForRoot(projectRoot, root),
   }));
   const allEntries = perRootEntries.flatMap((r) => r.entries).sort((a, b) => a.mapKey.localeCompare(b.mapKey));
+  // discoverStories only checks within one root; all roots share one import scope.
+  assertUniqueImportNames(allEntries);
 
   const registryPath = resolve(projectRoot, config.registryOut);
   const registrySrc = readFileSync(registryPath, "utf8");
