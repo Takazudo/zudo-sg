@@ -1,10 +1,12 @@
 import type { StoryMeta, Story } from "../../stories/types";
 import { AutoGrid, type AutoGridProps } from "./auto-grid";
 import { Card } from "../../cards/card/card";
-import { autoGridDisplay } from "./auto-grid.composer";
 
 const meta: StoryMeta = {
-  ...autoGridDisplay,
+  title: "AutoGrid",
+  category: "Layout",
+  description:
+    "Auto-fit/auto-fill responsive grid primitive for card-style listings, switching column density by minimum track width.",
   usage: `import { AutoGrid } from "@zudo-sg/ui/src/shared/auto-grid/auto-grid";
 
 <AutoGrid min="15rem">

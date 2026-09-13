@@ -1,9 +1,11 @@
 import type { StoryMeta, Story } from "../../stories/types";
 import { Stack, type StackProps } from "./stack";
-import { stackDisplay } from "./stack.composer";
 
 const meta: StoryMeta = {
-  ...stackDisplay,
+  title: "Stack",
+  category: "Layout",
+  description:
+    "Generic flex stack — vertical or horizontal — with bounded gap, cross-axis alignment, and main-axis justification. Horizontal stacks always wrap so they never force overflow.",
   usage: `import { Stack } from "@zudo-sg/ui/src/shared/stack/stack";
 
 <Stack gap="md">

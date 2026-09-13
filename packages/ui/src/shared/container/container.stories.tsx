@@ -1,9 +1,11 @@
 import type { StoryMeta, Story } from "../../stories/types";
 import { Container, type ContainerProps } from "./container";
-import { containerDisplay } from "./container.composer";
 
 const meta: StoryMeta = {
-  ...containerDisplay,
+  title: "Container",
+  category: "Layout",
+  description:
+    "Centers page content in a single ~88rem-wide column, with fluid inline padding that expands on wider viewports.",
   usage: `import { Container } from "@zudo-sg/ui/src/shared/container/container";
 
 <Container>

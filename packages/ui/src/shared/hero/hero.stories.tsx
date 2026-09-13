@@ -1,9 +1,11 @@
 import type { StoryMeta, Story } from "../../stories/types";
 import { Hero, type HeroProps } from "./hero";
-import { heroDisplay } from "./hero.composer";
 
 const meta: StoryMeta = {
-  ...heroDisplay,
+  title: "Hero",
+  category: "Content",
+  description:
+    "First-view hero band: eyebrow + display heading + lead + CTA row over a soft accent-tinted background.",
   usage: `import { Hero } from "@zudo-sg/ui/src/shared/hero/hero";
 
 <Hero

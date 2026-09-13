@@ -1,9 +1,11 @@
 import type { StoryMeta, Story } from "../../stories/types";
 import { PlaceholderBox, type PlaceholderBoxProps } from "./placeholder-box";
-import { placeholderBoxDisplay } from "./placeholder-box.composer";
 
 const meta: StoryMeta = {
-  ...placeholderBoxDisplay,
+  title: "PlaceholderBox",
+  category: "Media",
+  description:
+    "Labeled image stand-in used wherever the library has no real asset yet — also serves as the MDX `img` override target.",
   usage: `import { PlaceholderBox } from "@zudo-sg/ui/src/media/placeholder-box/placeholder-box";
 
 <PlaceholderBox label="hero-image.png" aspect="16/9" />`,

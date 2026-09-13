@@ -172,7 +172,7 @@ describe("renderMarkdown — sanitization", () => {
     expect(html).toContain("x");
   });
 
-  it("drops data-* attributes so prose cannot impersonate a composer node", async () => {
+  it("drops data-* attributes so prose cannot masquerade as an app-owned node", async () => {
     const { html } = await render(
       '<span data-zc-node-id="root" data-zc-affordance="">x</span>\n',
     );

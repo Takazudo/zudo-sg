@@ -1,9 +1,11 @@
 import type { StoryMeta, Story } from "../../stories/types";
 import { Card, type CardProps } from "./card";
-import { cardDisplay } from "./card.composer";
 
 const meta: StoryMeta = {
-  ...cardDisplay,
+  title: "Card",
+  category: "Data Display",
+  description:
+    "Flat surface container with a border and rounded corners, in three variants and three padding sizes.",
   usage: `import { Card } from "@zudo-sg/ui/src/cards/card/card";
 
 <Card title="Card heading">Body copy.</Card>`,
