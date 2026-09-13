@@ -4,7 +4,7 @@ Status: **Accepted** (epic #648, decision sub-task #650, 2026-09-13).
 Locks the contract every Wave 2+ sub-issue implements. Model: zudo-doc's
 package-owned route seam (`$HOME/repos/myoss/zudo-doc/packages/zudo-doc/docs/adr/route-injection-seam.md`).
 Toolchain the decisions were verified against: `@takazudo/zfb` **2.16.0**,
-`@takazudo/zudo-doc` 5.22.0, pnpm 11.5.2, Node 24.
+`@takazudo/zudo-doc` 5.24.0, pnpm 11.5.2, Node 24.
 
 ## Context
 

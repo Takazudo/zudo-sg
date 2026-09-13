@@ -162,7 +162,7 @@
   "devDependencies": {
     "@takazudo/zdtp": "0.8.0",
     "@takazudo/zfb": "2.16.0",
-    "@takazudo/zudo-doc": "5.22.0",
+    "@takazudo/zudo-doc": "5.24.0",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/preact": "^3.2.4",
     "@types/node": "^22.0.0",
