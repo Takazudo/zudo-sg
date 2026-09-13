@@ -1,8 +1,10 @@
 /**
- * Local integration contract around zudo-doc 5.2's native lazy bootstrap.
+ * Local integration contract around zudo-doc 5.2's native lazy bootstrap for
+ * the host-owned doc-chrome panel. The preview panel's twin suite lives with
+ * the engine (packages/styleguide/src/token-tweak/__tests__/).
  * Upstream owns import retry, persisted-state probing, current-channel
- * replacement, and in-flight deduplication; these tests ensure both local
- * instances enter that bootstrap without pulling zdtp during hydration and
+ * replacement, and in-flight deduplication; these tests ensure the local
+ * instance enters that bootstrap without pulling zdtp during hydration and
  * retain their project-owned pre-hydration/console seams.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -34,21 +36,10 @@ vi.mock("@/config/design-token-panel-config", () => ({
     mode,
   }),
 }));
-vi.mock("@/config/preview-token-panel-config", () => ({
-  previewTokenPanelConfig: {
-    storagePrefix: "sg-preview-tweak",
-    consoleNamespace: "sgPreview",
-    modalClassPrefix: "sg-preview-modal",
-    schemaId: "preview/v1",
-    exportFilenameBase: "preview",
-    toggleEvent: "toggle-preview-token-panel",
-    tabs: [],
-  },
-}));
 
 interface Harness {
   component: string;
-  namespace: "sgDoc" | "sgPreview";
+  namespace: "sgDoc";
   scriptId: string;
   toggleEvent: string;
   storagePrefix: string;
@@ -61,13 +52,6 @@ const harnesses: Harness[] = [
     scriptId: "zdtp-doc-prehydrate",
     toggleEvent: "toggle-sg-doc-tweak",
     storagePrefix: "sg-doc-tweak",
-  },
-  {
-    component: "@/components/preview-token-panel-bootstrap",
-    namespace: "sgPreview",
-    scriptId: "zdtp-preview-prehydrate",
-    toggleEvent: "toggle-preview-token-panel",
-    storagePrefix: "sg-preview-tweak",
   },
 ];
 

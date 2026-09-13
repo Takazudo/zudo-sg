@@ -11,7 +11,7 @@
 // Design-token tweaks reach the iframe via a SEPARATE channel — the
 // project-owned iframe-css-vars bridge (`apply-css-vars` envelope) — not
 // these messages. See
-// src/features/styleguide/token-tweak/iframe-css-vars-bridge.ts.
+// ../token-tweak/iframe-css-vars-bridge.ts.
 
 export const MSG_UPDATE_PROPS = "sg:updateProps" as const;
 export const MSG_SET_THEME = "sg:setTheme" as const;

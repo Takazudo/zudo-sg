@@ -20,7 +20,7 @@ import type { JSX } from "preact";
 import { useEffect } from "preact/hooks";
 import { PreviewApp } from "@takazudo/zudo-sg/preview";
 import { registry } from "@/styleguide/registry";
-import { installIframeReceiver } from "@/features/styleguide/token-tweak/iframe-css-vars-bridge";
+import { installIframeReceiver } from "@takazudo/zudo-sg/token-tweak";
 
 export default function ConfiguredPreviewApp(): JSX.Element {
   useEffect(() => installIframeReceiver(window), []);
