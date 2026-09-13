@@ -28,7 +28,7 @@
 
 import type { JSX } from "preact";
 import { useEffect, useState } from "preact/hooks";
-import type { StoryControl } from "@zudo-sg/ui";
+import type { StoryControl } from "../stories/index.js";
 import VariantFrame, {
   DEFAULT_THEME_MODE,
   DEFAULT_VIEWPORT_ID,
@@ -36,12 +36,12 @@ import VariantFrame, {
   VIEWPORTS,
   type ThemeMode,
   type ViewportId,
-} from "./variant-frame";
+} from "./variant-frame.js";
 import {
   ATTR_CODE_PANEL_HIDDEN,
   isCodePanelHidden,
   toggleCodePanel,
-} from "../chrome/panel-contract";
+} from "../chrome/panel-contract.js";
 
 /** How the stages are arranged in the preview column. */
 type StageLayout = "stacked" | "grid";
@@ -97,6 +97,8 @@ export interface WorkbenchVariant {
 export interface DetailWorkbenchProps {
   slug: string;
   variants: WorkbenchVariant[];
+  /** Base-prefixed preview route URL, forwarded to every stage (see VariantFrame). */
+  previewUrl?: string;
 }
 
 function segmentClass(selected: boolean): string {
@@ -106,6 +108,7 @@ function segmentClass(selected: boolean): string {
 export default function DetailWorkbench({
   slug,
   variants,
+  previewUrl,
 }: DetailWorkbenchProps): JSX.Element {
   const [themeMode, setThemeMode] = useState<ThemeMode>(DEFAULT_THEME_MODE);
   const [viewportId, setViewportId] = useState<ViewportId>(DEFAULT_VIEWPORT_ID);
@@ -249,6 +252,7 @@ export default function DetailWorkbench({
             controls={variant.controls}
             themeMode={themeMode}
             viewportId={viewportId}
+            previewUrl={previewUrl}
           />
         ))}
       </div>

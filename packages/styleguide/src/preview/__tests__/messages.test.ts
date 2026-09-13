@@ -6,7 +6,7 @@ import {
   isReadyMessage,
   isRequestReadyMessage,
   isSetThemeMessage,
-} from "../messages";
+} from "../messages.js";
 
 describe("isRequestReadyMessage", () => {
   it("accepts the parent readiness probe", () => {

@@ -8,24 +8,6 @@ importers:
 
   .:
     dependencies:
-      '@codemirror/commands':
-        specifier: ^6.0.0
-        version: 6.10.3
-      '@codemirror/lang-css':
-        specifier: ^6.0.0
-        version: 6.3.1
-      '@codemirror/lang-javascript':
-        specifier: ^6.0.0
-        version: 6.2.5
-      '@codemirror/state':
-        specifier: ^6.0.0
-        version: 6.6.0
-      '@codemirror/theme-one-dark':
-        specifier: ^6.0.0
-        version: 6.1.3
-      '@codemirror/view':
-        specifier: ^6.0.0
-        version: 6.43.1
       '@takazudo/zdtp':
         specifier: 0.8.0
         version: 0.8.0(preact@10.29.2)
@@ -208,10 +190,41 @@ importers:
         version: 5.9.3
 
   packages/styleguide:
+    dependencies:
+      '@codemirror/commands':
+        specifier: ^6.0.0
+        version: 6.10.3
+      '@codemirror/lang-css':
+        specifier: ^6.0.0
+        version: 6.3.1
+      '@codemirror/lang-javascript':
+        specifier: ^6.0.0
+        version: 6.2.5
+      '@codemirror/state':
+        specifier: ^6.0.0
+        version: 6.6.0
+      '@codemirror/theme-one-dark':
+        specifier: ^6.0.0
+        version: 6.1.3
+      '@codemirror/view':
+        specifier: ^6.0.0
+        version: 6.43.1
     devDependencies:
+      '@takazudo/zudo-doc':
+        specifier: 5.22.0
+        version: 5.22.0(@takazudo/zdtp@0.7.0(preact@10.29.2))(@takazudo/zfb-md-wasm@2.16.0)(@takazudo/zfb-runtime@2.16.0(@takazudo/zfb@2.16.0))(@takazudo/zfb@2.16.0)(@takazudo/zudo-doc-history-server@5.22.0)(@types/node@22.19.21)(diff@8.0.4)(katex@0.16.47)(preact@10.29.2)(zod@4.4.3)
+      '@testing-library/jest-dom':
+        specifier: ^6.9.1
+        version: 6.9.1
+      '@testing-library/preact':
+        specifier: ^3.2.4
+        version: 3.2.4(preact@10.29.2)
       '@types/node':
         specifier: ^22.0.0
         version: 22.19.21
+      happy-dom:
+        specifier: ^16.8.1
+        version: 16.8.1
       preact:
         specifier: ^10.29.1
         version: 10.29.2

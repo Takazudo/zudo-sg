@@ -15,9 +15,9 @@
 
 import type { JSX } from "preact";
 import { useRef, useState } from "preact/hooks";
-import SourceEditor from "./source-editor";
-import CopyButton from "./copy-button";
-import { injectCssToAllPreviews } from "./css-injection";
+import SourceEditor from "./source-editor.js";
+import CopyButton from "./copy-button.js";
+import { injectCssToAllPreviews } from "./css-injection.js";
 
 export interface CodePanelVariant {
   exportName: string;
@@ -29,6 +29,8 @@ export interface CodePanelVariant {
 export interface CodePanelProps {
   storyTitle: string;
   variants: CodePanelVariant[];
+  /** Base-prefixed preview route URL — the same value DetailWorkbench receives. */
+  previewUrl?: string;
 }
 
 const STARTER_CSS = `/* Live CSS — edits inject into every preview above.
@@ -39,6 +41,7 @@ const STARTER_CSS = `/* Live CSS — edits inject into every preview above.
 export default function CodePanel({
   storyTitle,
   variants,
+  previewUrl,
 }: CodePanelProps): JSX.Element {
   const [activeVariant, setActiveVariant] = useState(
     variants[0]?.exportName ?? "",
@@ -50,7 +53,7 @@ export default function CodePanel({
   function handleCssChange(css: string): void {
     window.clearTimeout(debounceRef.current);
     debounceRef.current = window.setTimeout(() => {
-      injectCssToAllPreviews("live", css);
+      injectCssToAllPreviews("live", css, previewUrl);
     }, 250);
   }
 

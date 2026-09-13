@@ -32,6 +32,14 @@
       "types": "./dist/registry/index.d.ts",
       "default": "./dist/registry/index.js"
     },
+    "./preview": {
+      "types": "./dist/preview/index.d.ts",
+      "default": "./dist/preview/index.js"
+    },
+    "./code-panel": {
+      "types": "./dist/code-panel/index.d.ts",
+      "default": "./dist/code-panel/index.js"
+    },
     "./package.json": "./package.json"
   },
   "files": [
@@ -49,11 +57,24 @@
     "check:package-shape": "node scripts/check-package-shape.mjs",
     "check": "pnpm run check:no-host-alias && pnpm run typecheck && pnpm run build && pnpm run check:package-shape && pnpm run test"
   },
+  "dependencies": {
+    "@codemirror/commands": "^6.0.0",
+    "@codemirror/lang-css": "^6.0.0",
+    "@codemirror/lang-javascript": "^6.0.0",
+    "@codemirror/state": "^6.0.0",
+    "@codemirror/theme-one-dark": "^6.0.0",
+    "@codemirror/view": "^6.0.0"
+  },
   "peerDependencies": {
+    "@takazudo/zudo-doc": ">=5.22.0",
     "preact": "^10.29.1"
   },
   "devDependencies": {
+    "@takazudo/zudo-doc": "5.22.0",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/preact": "^3.2.4",
     "@types/node": "^22.0.0",
+    "happy-dom": "^16.8.1",
     "preact": "^10.29.1",
     "tsup": "^8.5.0",
     "typescript": "^5.9.0",

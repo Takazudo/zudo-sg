@@ -30,7 +30,7 @@ export default function SourceEditor({
 
   useEffect(() => {
     let disposed = false;
-    void import("./editor-setup").then(({ createEditorView }) => {
+    void import("./editor-setup.js").then(({ createEditorView }) => {
       if (disposed || !containerRef.current) return;
       viewRef.current = createEditorView(value, containerRef.current, {
         language,
