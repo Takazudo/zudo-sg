@@ -1,53 +1,83 @@
 // Exercises the apply pipeline wiring headlessly — no dev server, no
 // browser. `createDevMiddlewareHandler` is the same factory
-// `devMiddleware(ctx)` builds in plugins/zdtp-apply-proxy-plugin.mjs; we call
-// it directly against a temp CSS fixture and assert the file is rewritten
-// (or correctly left untouched on each documented error path).
+// `devMiddleware(ctx)` builds in ../zdtp-apply-proxy.ts; we call it directly
+// against a temp CSS fixture and assert the file is rewritten (or correctly
+// left untouched on each documented error path).
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 // Imported straight from zdtp so the canonical whole-payload test can drive
 // the upstream handler directly, and load the real committed routing map the
-// plugin ships with.
+// root host ships with.
 import { createApplyHandler, loadRoutingFromFile } from "@takazudo/zdtp/server";
 import zdtpApplyProxyPlugin, {
   APPLY_PATH,
-  ROUTING_FILE,
+  PLUGIN_NAME,
+  VIRTUAL_MODULE_ID,
+  __resetZdtpWarningForTests,
+  buildVirtualModuleSource,
   createDevMiddlewareHandler,
+  createZdtpApplyProxyPlugin,
+  loadZdtpServer,
+  resolveZdtpApplyProxyOptions,
   toFetchRequest,
-} from "../zdtp-apply-proxy-plugin.mjs";
+} from "../zdtp-apply-proxy.js";
 
-// Real repo root — the `setup()` dev-mode test reads the actual
-// zdtp-panel-routing.json committed there (loadRoutingFromFile has no test
-// seam, and duplicating a fixture routing file would drift from the real one).
-const REPO_ROOT = dirname(dirname(dirname(fileURLToPath(import.meta.url))));
+// Real repo root (packages/styleguide/src/plugins/__tests__ → five levels up).
+// The dev-mode setup test reads the actual zdtp-panel-routing.json committed
+// there (duplicating a fixture routing file would drift from the real one).
+const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../../../../..");
+const ROUTING_FILE = "zdtp-panel-routing.json";
+const ROOT_OPTIONS = { routingFile: `./${ROUTING_FILE}`, writeRoot: "./packages/ui/styles" };
 
 type SetupCtx = Parameters<NonNullable<typeof zdtpApplyProxyPlugin.setup>>[0];
+type DevCtx = Parameters<NonNullable<typeof zdtpApplyProxyPlugin.devMiddleware>>[0];
 
-function runSetup(command: "dev" | "build") {
-  let virtualModuleSource = "";
+const missingZdtp = () => Promise.reject(new Error("Cannot find package '@takazudo/zdtp'"));
+
+function makeLogger() {
+  return { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() };
+}
+
+async function runSetup(
+  command: "dev" | "build",
+  options: Record<string, unknown> = ROOT_OPTIONS,
+  plugin = zdtpApplyProxyPlugin,
+) {
+  const registrations: Array<{
+    specifier: string;
+    loader: () => string | Promise<string>;
+    watchFiles?: string[];
+  }> = [];
   const ctx = {
     command,
     projectRoot: REPO_ROOT,
     config: {},
-    options: {},
-    logger: { info() {}, warn() {}, error() {} },
+    options,
+    logger: makeLogger(),
     addAlias() {},
-    addVirtualModule(_specifier: string, loader: () => string | Promise<string>) {
-      const result = loader();
-      if (typeof result !== "string") {
-        throw new Error("expected the zdtp-apply-config loader to be synchronous");
-      }
-      virtualModuleSource = result;
+    addVirtualModule(
+      specifier: string,
+      loader: () => string | Promise<string>,
+      opts?: { watchFiles?: string[] },
+    ) {
+      registrations.push({ specifier, loader, watchFiles: opts?.watchFiles });
     },
     injectRoute() {},
     addClientEntry() {},
   } as unknown as SetupCtx;
 
-  zdtpApplyProxyPlugin.setup?.(ctx);
-  return virtualModuleSource;
+  await plugin.setup?.(ctx);
+  expect(registrations).toHaveLength(1);
+  const [registration] = registrations;
+  return {
+    specifier: registration!.specifier,
+    watchFiles: registration!.watchFiles,
+    source: await registration!.loader(),
+    logger: ctx.logger as ReturnType<typeof makeLogger>,
+  };
 }
 
 // Mirrors the shape of packages/ui/styles/colors.css: a plain `:root` block
@@ -310,26 +340,142 @@ describe("toFetchRequest", () => {
   });
 });
 
-describe("ROUTING_FILE", () => {
-  it("names the repo-root routing JSON consumed by both the client config and this plugin", () => {
-    expect(ROUTING_FILE).toBe("zdtp-panel-routing.json");
+describe("plugin identity", () => {
+  it("is named after its package subpath (the zudoSg() descriptor name)", () => {
+    expect(zdtpApplyProxyPlugin.name).toBe(PLUGIN_NAME);
+    expect(PLUGIN_NAME).toBe("@takazudo/zudo-sg/plugins/zdtp-apply-proxy");
   });
 });
 
-describe("setup() — virtual:zdtp-apply-config dev/build gating", () => {
-  it("injects the real endpoint + routing map during `zfb dev`", () => {
-    const source = runSetup("dev");
+describe("resolveZdtpApplyProxyOptions", () => {
+  it("resolves routingFile / writeRoot / tabsModule against the project root", () => {
+    const resolved = resolveZdtpApplyProxyOptions(REPO_ROOT, {
+      ...ROOT_OPTIONS,
+      tabsModule: "./src/config/preview-token-panel-tabs.ts",
+    });
+    expect(resolved.routingFile).toBe(`${REPO_ROOT}/${ROUTING_FILE}`);
+    expect(resolved.writeRoot).toBe(`${REPO_ROOT}/packages/ui/styles`);
+    expect(resolved.tabsModule).toBe(`${REPO_ROOT}/src/config/preview-token-panel-tabs.ts`);
+  });
+
+  it("requires routingFile and writeRoot", () => {
+    expect(() => resolveZdtpApplyProxyOptions(REPO_ROOT, { writeRoot: "./packages/ui/styles" })).toThrow(
+      '[zudo-sg] option "routingFile" is required',
+    );
+    expect(() => resolveZdtpApplyProxyOptions(REPO_ROOT, { routingFile: `./${ROUTING_FILE}` })).toThrow(
+      '[zudo-sg] option "writeRoot" is required',
+    );
+  });
+
+  it("rejects a missing routing file and a writeRoot that is not a directory", () => {
+    expect(() =>
+      resolveZdtpApplyProxyOptions(REPO_ROOT, { ...ROOT_OPTIONS, routingFile: "./nope.json" }),
+    ).toThrow("which is not a file");
+    expect(() =>
+      resolveZdtpApplyProxyOptions(REPO_ROOT, { ...ROOT_OPTIONS, writeRoot: `./${ROUTING_FILE}` }),
+    ).toThrow("which is not a directory");
+  });
+});
+
+describe(`setup() — ${VIRTUAL_MODULE_ID} dev/build gating`, () => {
+  it("injects the real endpoint + routing map during `zfb dev` and watches the routing file", async () => {
+    const { specifier, source, watchFiles } = await runSetup("dev");
+    expect(specifier).toBe(VIRTUAL_MODULE_ID);
     expect(source).toContain(JSON.stringify(APPLY_PATH));
     expect(source).toContain('"palette"');
     expect(source).toContain("packages/ui/styles/colors.css");
+    expect(watchFiles).toEqual([`${REPO_ROOT}/${ROUTING_FILE}`]);
   });
 
-  it("injects nothing during `zfb build` — not even the routing map's file paths", () => {
-    const source = runSetup("build");
+  it("injects nothing during `zfb build` — not even the routing map's file paths", async () => {
+    const { source } = await runSetup("build");
     expect(source).toContain("applyEndpoint = undefined");
     expect(source).toContain("applyRouting = undefined");
     expect(source).not.toContain("colors.css");
     expect(source).not.toContain(APPLY_PATH);
+  });
+
+  it("re-exports `tabs` from the host tabsModule in every command, else exports undefined", async () => {
+    const withTabs = await runSetup("build", {
+      ...ROOT_OPTIONS,
+      tabsModule: "./src/config/preview-token-panel-tabs.ts",
+    });
+    expect(withTabs.source).toContain(
+      `export { tabs } from ${JSON.stringify(`${REPO_ROOT}/src/config/preview-token-panel-tabs.ts`)};`,
+    );
+    const withoutTabs = await runSetup("dev");
+    expect(withoutTabs.source).toContain("export const tabs = undefined;");
+  });
+
+  it("fails fast at setup() when an option does not resolve", async () => {
+    await expect(runSetup("build", { ...ROOT_OPTIONS, tabsModule: "./missing.ts" })).rejects.toThrow(
+      '[zudo-sg] option "tabsModule" = "./missing.ts"',
+    );
+  });
+});
+
+describe("optional @takazudo/zdtp peer", () => {
+  beforeEach(() => __resetZdtpWarningForTests());
+
+  it("loadZdtpServer resolves null and warns once when the import rejects", async () => {
+    const logger = makeLogger();
+    await expect(loadZdtpServer(logger, missingZdtp)).resolves.toBeNull();
+    await expect(loadZdtpServer(logger, missingZdtp)).resolves.toBeNull();
+    expect(logger.warn).toHaveBeenCalledTimes(1);
+    expect(String(logger.warn.mock.calls[0]?.[0])).toContain("@takazudo/zdtp is not installed");
+  });
+
+  it("the dev virtual module degrades to undefined apply fields without zdtp", async () => {
+    const { source, logger } = await runSetup("dev", ROOT_OPTIONS, createZdtpApplyProxyPlugin(missingZdtp));
+    expect(source).toContain("applyEndpoint = undefined");
+    expect(source).toContain("applyRouting = undefined");
+    expect(logger.warn).toHaveBeenCalledTimes(1);
+  });
+
+  it("buildVirtualModuleSource never imports zdtp for a build", async () => {
+    const importer = vi.fn(missingZdtp);
+    const resolved = resolveZdtpApplyProxyOptions(REPO_ROOT, ROOT_OPTIONS);
+    await buildVirtualModuleSource("build", resolved, makeLogger(), importer);
+    expect(importer).not.toHaveBeenCalled();
+  });
+
+  it("devMiddleware still registers; POST answers 503 and writes nothing", async () => {
+    const handlers = new Map<string, (req: Parameters<ReturnType<typeof createDevMiddlewareHandler>>[0]) => unknown>();
+    const ctx = {
+      projectRoot: REPO_ROOT,
+      config: {},
+      options: ROOT_OPTIONS,
+      logger: makeLogger(),
+      register(path: string, handler: never) {
+        handlers.set(path, handler);
+      },
+    } as unknown as DevCtx;
+    await createZdtpApplyProxyPlugin(missingZdtp).devMiddleware?.(ctx);
+    const handler = handlers.get(APPLY_PATH);
+    expect(handler).toBeDefined();
+
+    const res = (await handler!({
+      method: "POST",
+      url: APPLY_PATH,
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ tokens: { "--palette-base-4": "red" } }),
+    })) as { status: number; body?: string };
+    expect(res.status).toBe(503);
+    expect(JSON.parse(res.body ?? "{}")).toEqual({ ok: false, error: "@takazudo/zdtp is not installed" });
+  });
+
+  it("createDevMiddlewareHandler answers 503 without touching the sandbox", async () => {
+    const handler = createDevMiddlewareHandler({
+      rootDir: sandbox,
+      writeRoot: sandbox,
+      routing: { palette: "colors.css" },
+      importer: missingZdtp,
+      logger: makeLogger(),
+    });
+    const before = readColorsCss();
+    const res = await post(handler, { tokens: { "--palette-base-4": "oklch(.250 .006 65)" } });
+    expect(res.status).toBe(503);
+    expect(readColorsCss()).toBe(before);
   });
 });
 

@@ -40,6 +40,22 @@
       "types": "./dist/code-panel/index.d.ts",
       "default": "./dist/code-panel/index.js"
     },
+    "./token-tweak": {
+      "types": "./dist/token-tweak/index.d.ts",
+      "default": "./dist/token-tweak/index.js"
+    },
+    "./token-tweak/preview-token-panel-bootstrap": {
+      "types": "./dist/token-tweak/preview-token-panel-bootstrap.d.ts",
+      "default": "./dist/token-tweak/preview-token-panel-bootstrap.js"
+    },
+    "./token-tweak/preview-tokens-button": {
+      "types": "./dist/token-tweak/preview-tokens-button.d.ts",
+      "default": "./dist/token-tweak/preview-tokens-button.js"
+    },
+    "./plugins/zdtp-apply-proxy": {
+      "types": "./dist/plugins/zdtp-apply-proxy.d.ts",
+      "default": "./dist/plugins/zdtp-apply-proxy.js"
+    },
     "./package.json": "./package.json"
   },
   "files": [
@@ -66,10 +82,18 @@
     "@codemirror/view": "^6.0.0"
   },
   "peerDependencies": {
+    "@takazudo/zdtp": "^0.8.0",
     "@takazudo/zudo-doc": ">=5.22.0",
     "preact": "^10.29.1"
   },
+  "peerDependenciesMeta": {
+    "@takazudo/zdtp": {
+      "optional": true
+    }
+  },
   "devDependencies": {
+    "@takazudo/zdtp": "0.8.0",
+    "@takazudo/zfb": "2.16.0",
     "@takazudo/zudo-doc": "5.22.0",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/preact": "^3.2.4",

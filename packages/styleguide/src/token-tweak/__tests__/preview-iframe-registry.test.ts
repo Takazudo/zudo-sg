@@ -9,7 +9,7 @@ const clearCalls: Array<{ iframe: unknown; names: ReadonlyArray<string> }> = [];
 // Per-iframe `ready` callbacks captured from onIframeReady, keyed by contentWindow.
 const readyCallbacks = new Map<unknown, () => void>();
 
-vi.mock("../iframe-css-vars-bridge", () => ({
+vi.mock("../iframe-css-vars-bridge.js", () => ({
   sendApplyCssVars: (iframe: unknown, vars: ReadonlyArray<readonly [string, string]>) => {
     applyCalls.push({ iframe, vars });
   },
@@ -22,7 +22,7 @@ vi.mock("../iframe-css-vars-bridge", () => ({
   },
 }));
 
-type Registry = typeof import("../preview-iframe-registry");
+type Registry = typeof import("../preview-iframe-registry.js");
 
 /** A minimal iframe stand-in: only `contentWindow` is read by the registry. */
 function makeIframe(id: string): HTMLIFrameElement {
@@ -43,7 +43,7 @@ beforeEach(async () => {
   // The registry keeps module-level state (registered set + override map), so
   // re-import a fresh module instance for each test.
   vi.resetModules();
-  registry = await import("../preview-iframe-registry");
+  registry = await import("../preview-iframe-registry.js");
 });
 
 afterEach(() => {
