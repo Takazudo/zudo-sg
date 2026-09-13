@@ -244,7 +244,7 @@ type.)
 ```ts
 const meta: StoryMeta = {
   title: "Button",            // display name; unique within a category
-  category: "Actions",        // sidebar bucket (closed set, see below)
+  category: "Actions",        // sidebar bucket (open string, see below)
   description: "Primary action control with three variants and three sizes.",
   usage: `import { Button } from "@zudo-sg/ui";\n\n<Button>Save</Button>`,
   order: 1,                   // optional; lower sorts earlier within a category
@@ -255,17 +255,22 @@ export default meta;
 | field         | type            | required | meaning |
 |---------------|-----------------|----------|---------|
 | `title`       | `string`        | yes      | Component display name; unique within its category. |
-| `category`    | `StoryCategory` | yes      | Top-level sidebar group. **Closed set** (below). |
+| `category`    | `StoryCategory` | yes      | Top-level sidebar group. **Open string** (below). |
 | `description` | `string`        | yes      | One sentence under the title. |
 | `usage`       | `string`        | yes      | Verbatim import + minimal JSX, shown in a code block. Plain string so the catalog renders it as-is. |
 | `order`       | `number`        | no       | Sort hint within a category; alphabetical by `title` when omitted. |
 
-**`StoryCategory` is a closed union** — use one of:
+**`StoryCategory` is an open string** — any value is valid. zudo-sg's own
+declared order (`STORY_CATEGORIES` in `src/stories/types.ts`) is:
 `"Actions" | "Typography" | "Layout" | "Data Display" | "Forms" | "Navigation" |
 "Content" | "Landing" | "News" | "Search" | "Feedback" | "Media"`.
-Adding a category means editing `StoryCategory` in `src/stories/types.ts` (so the
-catalog and the authors share one list). The catalog should render categories in
-the union's declared order.
+The catalog (`src/styleguide/data/registry.ts` `CATEGORY_ORDER` in the host)
+renders `STORY_CATEGORIES` in that declared order first, then appends any
+category actually used by a story that isn't on the list, alphabetically —
+so a new category needs no edit to `types.ts` to work, though adding it there
+keeps it out of the "unknown, appended alphabetically" tail.
+`scripts/new-component.mjs --category <Category>` accepts any string and
+warns (doesn't fail) when it isn't one of the declared ones.
 
 This field is the sidebar bucket only — it is **independent of the directory
 layout** in §2. A category-nested component's directory slug (`layout/`,
@@ -442,8 +447,9 @@ export default meta;
 When adding a component, ship its story in the same change:
 
 - [ ] `src/<component>/<component>.stories.tsx` exists (co-located).
-- [ ] Default export is a `StoryMeta` with `title`, `category` (from the closed
-      set), `description`, `usage`.
+- [ ] Default export is a `StoryMeta` with `title`, `category` (any string;
+      prefer zudo-sg's own declared `STORY_CATEGORIES` order), `description`,
+      `usage`.
 - [ ] At least one named `Story<P>` export (`P` = the component's props) with
       `name` + pure synchronous `render`.
 - [ ] `source` set on any non-trivial variant.
@@ -476,9 +482,11 @@ pnpm new:component demo-widget --category Layout --nested
   - `--nested` mode: must not already exist under
     `packages/ui/src/<category-slug>/` — the SAME name in a DIFFERENT
     category is fine (that's the point of category-nesting; see §2).
-- `<Category>` must be one of the `StoryCategory` union members (§3):
-  `Actions`, `Typography`, `Layout`, `Data Display`, `Forms`, `Navigation`,
-  `Content`, `Landing`, `News`, `Search`, `Feedback`, `Media`.
+- `<Category>` is a free-form string (`StoryCategory` is open, §3); prefer
+  one of zudo-sg's own declared categories: `Actions`, `Typography`,
+  `Layout`, `Data Display`, `Forms`, `Navigation`, `Content`, `Landing`,
+  `News`, `Search`, `Feedback`, `Media`. A new category is accepted with a
+  warning and sorts alphabetically after these in the sidebar.
 - `--nested` scaffolds into `packages/ui/src/<category-slug>/<name>/` instead
   of the flat `packages/ui/src/<name>/`, where `<category-slug>` is
   `<Category>` lowercased with spaces replaced by hyphens (e.g.

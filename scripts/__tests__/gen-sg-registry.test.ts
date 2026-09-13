@@ -4,7 +4,7 @@
 // config.mjs, so we copy both into a fresh temp dir with fixture
 // `*.stories.tsx` files and seeded generated-block targets per test —
 // hermetic, no network, and the real project's files are never touched. See
-// gen-story-categories.test.ts / gen-z-index.test.ts for the same pattern.
+// gen-z-index.test.ts for the same pattern.
 //
 // These tests exercise the #224 recursive-discovery rewrite specifically:
 // the old one-level layout (`<name>/<name>.stories.tsx`) must still resolve

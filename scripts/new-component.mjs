@@ -14,8 +14,10 @@
 //   node scripts/new-component.mjs <name> --category <Category> [--nested]
 //
 // <name>     must be kebab-case. Unique within its scaffold scope (below).
-// <Category> must be one of the StoryCategory union members (see
-//            scripts/lib/component-scaffold.mjs → VALID_CATEGORIES).
+// <Category> is a free-form string (StoryCategory is open — see
+//            packages/ui/src/stories/types.ts). Passing one of zudo-sg's own
+//            declared categories (scripts/lib/component-scaffold.mjs →
+//            VALID_CATEGORIES) avoids a "new category" warning.
 // --nested   scaffolds into the category-nested layout,
 //            packages/ui/src/<category-slug>/<name>/, instead of the default
 //            one-level packages/ui/src/<name>/. `<name>` only needs to be
@@ -86,7 +88,7 @@ export function parseArgs(argv) {
 function printUsage() {
   console.error(
     `Usage: pnpm new:component <name> --category <Category> [--skip-barrel] [--nested]\n` +
-      `  <Category> must be one of: ${VALID_CATEGORIES.join(", ")}\n` +
+      `  <Category> is a free-form string. zudo-sg's own declared categories: ${VALID_CATEGORIES.join(", ")}\n` +
       `  --skip-barrel skips inserting the export into ${BARREL_INDEX ?? "the barrel file"}.\n` +
       `  --nested scaffolds packages/ui/src/<category-slug>/<name>/ — still inserts into the\n` +
       `    barrel by default (import path adjusted for the nesting); --skip-barrel opts out.`,

@@ -21,14 +21,23 @@
 import type { ComponentChildren } from "preact";
 
 /**
- * Top-level grouping in the catalog sidebar. Keep the set small + stable.
- *
- * Single source of truth for every consumer of the category set — codegen
- * (`scripts/gen-story-categories.mjs`) regex-parses this array literal
- * straight from this file's source text (no TS import, so plain Node scripts
- * can read it too) and rewrites the GENERATED:STORY_CATEGORIES marker blocks
- * in src/styleguide/data/registry.ts and scripts/lib/component-scaffold.mjs.
- * Add/remove/rename a category here, then run `pnpm gen:story-categories`.
+ * `StoryMeta.category` is an OPEN string — any value is valid, so a host
+ * extending the catalog can introduce a new category without touching this
+ * file (see `src/styleguide/data/registry.ts` `CATEGORY_ORDER`, which
+ * appends any category it discovers that isn't in `STORY_CATEGORIES` below,
+ * alphabetically, after the declared order).
+ */
+export type StoryCategory = string;
+
+/**
+ * zudo-sg's own declared category order — data, not a type. This is the
+ * sidebar order the catalog renders these categories in; it is read
+ * directly (not codegen'd into a duplicated array) by
+ * `src/styleguide/data/registry.ts` (imports the value) and
+ * `scripts/lib/component-scaffold.mjs` (regex-parses this file's source
+ * text, since it's a dependency-free .mjs script that can't import TS) —
+ * see that file's header for why. Add/remove/rename a category here; there
+ * is no codegen step to run afterward.
  */
 export const STORY_CATEGORIES = [
   "Actions",
@@ -44,7 +53,6 @@ export const STORY_CATEGORIES = [
   "Feedback",
   "Media",
 ] as const;
-export type StoryCategory = (typeof STORY_CATEGORIES)[number];
 
 /**
  * Per-file metadata. Default-exported from each `*.stories.tsx`.

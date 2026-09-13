@@ -9,32 +9,43 @@
 // reading packages/ui/src/index.ts, writing the generated files, and running
 // scripts/gen-sg-registry.mjs.
 
+import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { COMPONENTS_ROOT, UI_PACKAGE_NAME } from "./scaffold-config.mjs";
 
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const TYPES_PATH = resolve(__dirname, "..", "..", "packages/ui/src/stories/types.ts");
+
 /**
- * Mirrors `StoryCategory` in packages/ui/src/stories/types.ts. This file is a
- * dependency-free .mjs script (no TS import), so the array body is codegen —
- * see scripts/gen-story-categories.mjs, which regex-parses STORY_CATEGORIES
- * out of types.ts and rewrites the marker block below. Run
- * `pnpm gen:story-categories` after changing the category set in types.ts.
+ * Reads zudo-sg's own declared category order straight out of
+ * `STORY_CATEGORIES` in packages/ui/src/stories/types.ts's source text. This
+ * file is a dependency-free .mjs script (no TS import), so it regex-parses
+ * the array literal rather than importing it — mirrors the parsing approach
+ * `scripts/gen-z-index.mjs` uses for its own array. `StoryCategory` is an
+ * open string (see types.ts), so this list is used only to decide whether
+ * `assertValidCategory` should print a "new category" warning — it never
+ * rejects a value that isn't on it.
  */
-export const VALID_CATEGORIES = [
-  // GENERATED:STORY_CATEGORIES_BEGIN — do not hand-edit; run pnpm gen:story-categories.
-  // Source of truth: packages/ui/src/stories/types.ts (STORY_CATEGORIES).
-  "Actions",
-  "Typography",
-  "Layout",
-  "Data Display",
-  "Forms",
-  "Navigation",
-  "Content",
-  "Landing",
-  "News",
-  "Search",
-  "Feedback",
-  "Media",
-  // GENERATED:STORY_CATEGORIES_END
-];
+function readDeclaredCategories() {
+  const src = readFileSync(TYPES_PATH, "utf8");
+  const arrayMatch = src.match(/export const STORY_CATEGORIES\s*=\s*\[([\s\S]*?)\]/);
+  if (!arrayMatch) {
+    throw new Error(`Could not locate "export const STORY_CATEGORIES = [ ... ]" in ${TYPES_PATH}`);
+  }
+  const body = arrayMatch[1].replace(/\/\/.*$/gm, "");
+  const categories = [];
+  const stringRe = /"((?:[^"\\]|\\.)*)"/g;
+  let m;
+  while ((m = stringRe.exec(body)) !== null) categories.push(m[1]);
+  if (categories.length === 0) {
+    throw new Error(`STORY_CATEGORIES in ${TYPES_PATH} parsed to an empty list`);
+  }
+  return categories;
+}
+
+/** zudo-sg's own declared category order (see readDeclaredCategories above). */
+export const VALID_CATEGORIES = readDeclaredCategories();
 
 const KEBAB_NAME_RE = /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/;
 
@@ -48,11 +59,23 @@ export function assertValidName(name) {
   }
 }
 
-/** Throws unless `category` is a member of VALID_CATEGORIES. */
+/**
+ * Categories are open (any non-empty string) — see `StoryCategory` in
+ * packages/ui/src/stories/types.ts. This only throws for a malformed value;
+ * a category outside `VALID_CATEGORIES` is accepted, with a warning printed
+ * so the author notices they're introducing a new one (it sorts in
+ * alphabetically after the declared categories — see
+ * `src/styleguide/data/registry.ts` `CATEGORY_ORDER`).
+ */
 export function assertValidCategory(category) {
+  if (!category || typeof category !== "string" || category.trim() === "") {
+    throw new Error(`"${category}" is not a valid --category — expected a non-empty string.`);
+  }
   if (!VALID_CATEGORIES.includes(category)) {
-    throw new Error(
-      `"${category}" is not a valid --category — expected one of: ${VALID_CATEGORIES.join(", ")}.`,
+    console.warn(
+      `new-component: "${category}" is a new category — not one of zudo-sg's declared ` +
+        `categories (${VALID_CATEGORIES.join(", ")}). It will appear in the sidebar after ` +
+        `those, alphabetically among any other new categories.`,
     );
   }
 }
