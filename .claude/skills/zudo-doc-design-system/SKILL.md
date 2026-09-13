@@ -92,11 +92,11 @@ token file above. Know which world the file you're editing belongs to:
   the border ladder section below). Never assume a color utility means the
   same thing in both worlds — check which file you're in.
 - The chrome-free `/components/preview` iframe document (`<html data-sg-preview-doc>`) has no
-  `--zd-*` injected, so `src/styles/preview.css` restores the overlapping `@zudo-sg/ui`
-  semantic colors that the root-host re-assertion above would otherwise leave undefined. It is
-  not a standalone entrypoint: `global.css` imports it into the one site-wide stylesheet. Its rules are scoped to
-  `html[data-sg-preview-doc]` (specificity beats the `:root` the `@theme` block emits, so it's
-  order-independent and never affects regular doc-chrome pages).
+  `--zd-*` injected, so it links a standalone preview stylesheet: `src/styles/preview-entry.css`
+  (`previewStyles`), compiled by `@takazudo/zudo-sg/plugins/preview-css` and served/emitted at
+  `/_zudo-sg/preview.css`. Its token roots are rescoped to `:root[data-sg-preview-doc]`, which
+  outranks the `:root` the host `@theme` re-assertion emits in the injected global bundle, so the
+  previewed components get `@zudo-sg/ui`'s own palette while regular doc-chrome pages are untouched.
 
 ### Color Tokens (three-tier system)
 
@@ -122,9 +122,8 @@ different concrete tokens:
 ### Border ladder
 
 The complete structural border ladder is defined in `src/styles/global.css`.
-The component-preview scope in `src/styles/preview.css` restores only the
-provider's `--color-border` value after the host re-assertion; it is not a
-second token source and does not mirror `--color-border-strong`:
+The preview document's standalone stylesheet (`/_zudo-sg/preview.css`) carries only the
+provider's own `--color-border`; it does not mirror the host-only `--color-border-strong`:
 
 | Token | Role |
 |---|---|
