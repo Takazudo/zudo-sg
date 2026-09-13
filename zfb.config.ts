@@ -85,8 +85,10 @@ export default defineConfig({
   // engine's routes / preview-css / zdtp-apply-proxy plugin descriptors and
   // one `componentDocs` collection per `componentsRoots` entry (#119: the
   // OPTIONAL co-located component MDX docs rendered on `/components/<slug>`)
-  // AFTER the zudo-doc preset's. The host `pages/components/*` and
-  // `pages/tokens.tsx` stubs still shadow the injected routes until #664.
+  // AFTER the zudo-doc preset's. The engine owns `/components`,
+  // `/components/[slug]`, `/components/preview` and `/tokens`; a host `pages/`
+  // file with one of those URL shapes would silently shadow the injected route.
+  // Their islands reach `zfb dev` through `pages/lib/_zudo-sg-islands.ts`.
   ...withZudoSg(
     {
       collections: preset.collections,

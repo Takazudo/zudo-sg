@@ -8,8 +8,8 @@
 // scripts/gen-token-manifest.mjs's own header comment used to scope OUT of
 // that generator's simpler single-file-parse contract (see #208/#210/#211).
 //
-// design-tokens-manifest.ts is a live consumer target (design-token-panel-config.ts,
-// pages/tokens.tsx) — same treatment as scripts/gen-token-manifest.mjs /
+// design-tokens-manifest.ts is a live consumer target (design-token-panel-config.ts)
+// — same treatment as scripts/gen-token-manifest.mjs /
 // ui-design-tokens-manifest.ts.
 //
 // Usage:

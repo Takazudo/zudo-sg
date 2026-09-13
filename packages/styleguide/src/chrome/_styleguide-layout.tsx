@@ -13,8 +13,7 @@
 // singletons directly — those flow in as props (`navNodes`, `sidebarToggle`,
 // `enableClientRouter`, `noindex`, `lang`). The host composes them from its own
 // `settings` object and its generated `navNodes` tree (see
-// `src/styleguide/nav-nodes.ts` in the root host) and passes them straight
-// through.
+// `src/routes/_chrome.tsx`) and passes them straight through.
 //
 // Slot wiring (DocLayoutWithDefaults):
 //   header / footer / head / bodyEnd → passed in by the host page (its docs

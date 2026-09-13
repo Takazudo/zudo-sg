@@ -9,7 +9,7 @@
 // (via `data-sg-*` attributes) means we don't re-ship the registry into the
 // island chunk — the island is tiny and the catalog stays crawlable.
 //
-// Contract with the SSR markup (pages/components/index.tsx):
+// Contract with the SSR markup (src/routes/components-index.tsx):
 //   - The grid root carries `[data-sg-catalog]`.
 //   - Each card is `[data-sg-card]` with `data-name`, `data-category`,
 //     `data-keywords` (lowercased, space-joined search haystack). The card is

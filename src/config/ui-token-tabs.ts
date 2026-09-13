@@ -10,7 +10,7 @@
  * (`UiDesignTokensManifest`) and builds the tabs array ONCE, so the runtime
  * preview panel (`preview-token-panel-config.ts`) and the static token
  * dashboard (rendered via `@takazudo/zudo-sg/token-dashboard`'s
- * `createTokenDashboards`, see `pages/tokens.tsx`) share the identical tab
+ * `createTokenDashboards` on the engine's `/tokens` route) share the identical tab
  * identities, ordering, defaults, and preview metadata.
  */
 

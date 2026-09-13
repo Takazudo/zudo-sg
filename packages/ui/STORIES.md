@@ -568,7 +568,7 @@ src/<category-slug>/<component>/<component>.mdx
   `packages/ui/src` (`include: ["**/*.mdx"]` — the globset `**` matches zero
   or more directory components, so one pattern covers both the flat and
   category-nested layouts), so zfb's Rust pipeline compiles it at build time.
-  The host detail page (`pages/components/[slug].tsx`) looks up the entry by
+  The engine detail route (`packages/styleguide/src/routes/components-slug.tsx`) looks up the entry by
   deriving its slug from the story path
   ([`packages/styleguide/src/registry/component-docs.ts`](../styleguide/src/registry/component-docs.ts))
   and renders `<entry.Content>` inside a `.zd-content` wrapper. Discovery is
