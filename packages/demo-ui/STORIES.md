@@ -1,4 +1,4 @@
-# Story-authoring notes (`@zudo-sg/ui`)
+# Story-authoring notes (`@zudo-sg/demo-ui`)
 
 **The canonical, full story-authoring contract now lives at the
 `@takazudo/zudo-sg` engine's doc site:**
@@ -10,9 +10,9 @@ module shape, `StoryMeta`/`Story<P>` fields, controls, source extraction, the
 directory-depth discovery constraint, and browser/MSW rules for every host of
 the engine, not only this package. Sections below that used to hold that
 generic material now just point there; **this document keeps only what's
-specific to `@zudo-sg/ui`** — how it's consumed (no build step), its own
-directory layout and barrel, its scaffolder defaults, per-component MDX docs,
-and Composer sidecars (a separate, package-local mechanism).
+specific to `@zudo-sg/demo-ui`** — how it's consumed (no build step), its own
+directory layout and barrel, its scaffolder defaults, and per-component MDX
+docs.
 
 The TypeScript shapes referenced here live in
 [`src/stories/types.ts`](./src/stories/types.ts) — a re-export of the
@@ -23,7 +23,7 @@ file in sync.
 
 ## 1. How the package is consumed: **from source**
 
-`@zudo-sg/ui` has **no build step**. Its `package.json` points `main` and the
+`@zudo-sg/demo-ui` has **no build step**. Its `package.json` points `main` and the
 `"."` export at `src/index.ts` directly:
 
 ```jsonc
@@ -44,7 +44,7 @@ compile or publish before consuming. Two consequences for the catalog:
    utility classes the components emit are generated. Add a content source:
 
    ```css
-   @source "../../packages/ui/src/**/*.{tsx,ts,jsx,js}";
+   @source "../../packages/demo-ui/src/**/*.{tsx,ts,jsx,js}";
    ```
 
    (Adjust the relative prefix to the catalog's CSS location. The demo does
@@ -60,8 +60,8 @@ Tailwind's preflight + utilities, in this order:
 ```css
 @import "tailwindcss/preflight";
 @import "tailwindcss/utilities";
-@import "@zudo-sg/ui/styles/tokens.css";   /* spacing, type, radius, shadow */
-@import "@zudo-sg/ui/styles/colors.css";   /* semantic colors, light + dark  */
+@import "@zudo-sg/demo-ui/styles/tokens.css";   /* spacing, type, radius, shadow */
+@import "@zudo-sg/demo-ui/styles/colors.css";   /* semantic colors, light + dark  */
 ```
 
 `colors.css` sets `color-scheme: light dark` on `:root` and declares every color
@@ -100,7 +100,7 @@ semantic layer — plain `:root` vars still resolve through `var()` inside the
 Both tiers live in **`colors.css`** — the Tier-1 palette is inlined at the top
 of that file, the Tier-2 `@theme` block follows. It is deliberately **not** split
 into a sibling `palette.css`: the **single consumer import contract** requires
-every consumer to do exactly one `@import "@zudo-sg/ui/styles/colors.css"`, and
+every consumer to do exactly one `@import "@zudo-sg/demo-ui/styles/colors.css"`, and
 the consumer Tailwind/Lightning pipeline inlines that package import's contents
 but leaves a *nested* relative `@import "./palette.css"` as a literal, misplaced
 `@import` that the browser then ignores — silently dropping the palette. Inlining
@@ -126,7 +126,7 @@ no component-owned CSS file, on top of the two required imports above, is
 normally needed. `ProseMd` (#373) is the first exception: it mounts an opaque,
 runtime-rendered HTML fragment (arbitrary markdown → `<h2>/<p>/<ul>/...`) that
 no `Prose*` per-element override can reach, so it ships its own scoped
-stylesheet, co-located at `@zudo-sg/ui/src/content/prose-md/prose-md.css`
+stylesheet, co-located at `@zudo-sg/demo-ui/src/content/prose-md/prose-md.css`
 (exposed via the package's `./src/*` export, like any other source file).
 
 **A consumer that renders `ProseMd` must import that file too**, in addition
@@ -134,7 +134,7 @@ to `tokens.css` + `colors.css` above — omitting it does not break anything,
 it just leaves `ProseMd` rendering unstyled native HTML (the two required
 imports alone are not sufficient for this one component). This repo's root
 app wires it into its single bundled stylesheet via
-`src/styles/global.css`'s `@import "@zudo-sg/ui/src/content/prose-md/prose-md.css"`
+`src/styles/global.css`'s `@import "@zudo-sg/demo-ui/src/content/prose-md/prose-md.css"`
 — see that import's comment for why, and `prose-md.css`'s own header for what
 it does and does not style. A future consumer outside this repo (e.g. a
 sibling workspace's own CSS graph) needs the equivalent import wired in
@@ -173,7 +173,7 @@ engine's own [Story Spec → File location & discovery](https://zudo-sg-doc.taka
 - **Naming:** always `*.stories.tsx` (the `.stories` infix is the discovery key).
 - **Discovery is codegen, not `import.meta.glob`.** zfb does not statically
   inline `import.meta.glob`, so the catalog cannot use a runtime glob. The
-  `zudo-sg` CLI's `gen-registry` command globs `packages/ui/src/**/*.stories.tsx`
+  `zudo-sg` CLI's `gen-registry` command globs `packages/demo-ui/src/**/*.stories.tsx`
   (any depth — both layouts above) on the filesystem at codegen time and
   writes an explicit-import registry to `src/styleguide/sg-registry.ts` (repo
   root; this repo's `zudo-sg.config.mjs` `registryOut`), plus the
@@ -190,7 +190,7 @@ engine's own [Story Spec → File location & discovery](https://zudo-sg-doc.taka
 
 ### The barrel: organized by category, not by directory
 
-`packages/ui/src/index.ts` (the barrel) exports the full current component
+`packages/demo-ui/src/index.ts` (the barrel) exports the full current component
 set, grouped into one `// ── <Category> ──` section per declared category
 (`src/stories/categories.ts`'s `STORY_CATEGORIES`) — not by the on-disk
 category-nested directory (a directory can span several categories). This
@@ -203,9 +203,9 @@ to resolve name collisions incrementally.
 barrel, same as a flat scaffold.** A category-nested scaffold is fully
 catalog-visible and testable the moment it's created regardless — the
 registry (`sg-registry.ts` / `story-modules.ts`) imports every story via its
-package subpath (`@zudo-sg/ui/src/<category>/<name>/<name>.stories.tsx`),
+package subpath (`@zudo-sg/demo-ui/src/<category>/<name>/<name>.stories.tsx`),
 **never** via the barrel — but by default it's *also* reachable from
-`@zudo-sg/ui`'s top-level import the moment it's scaffolded: the scaffolder
+`@zudo-sg/demo-ui`'s top-level import the moment it's scaffolded: the scaffolder
 inserts its `export { … }` / `export type { … }` pair alphabetically into the
 matching `// ── <Category> ──` section (see `index.ts`'s own header comment),
 importing from the nested path `./<category-slug>/<name>/<name>`. Pass
@@ -258,7 +258,7 @@ no network calls, no MSW, no reliance on ambient page chrome) — see the
 for the full rules and the `previewRoute` escape hatch (a real page route for
 components that can only be honestly demoed with live/mocked network data;
 MSW is permitted only inside that page, never in a `*.stories.tsx` file or any
-component source under `packages/ui/src`).
+component source under `packages/demo-ui/src`).
 
 This package's `previewRoute` demo pages live under `pages/preview/*.tsx` at
 the repo root (e.g. `pages/preview/contact.tsx`); the catalog's own variant
@@ -293,25 +293,25 @@ whole checklist above in one command, in either directory layout from §2:
 # retained for forks that prefer a flat convention):
 pnpm new:component demo-widget --category Layout
 
-# Category-nested (current convention — packages/ui/src/<category-slug>/<name>/):
+# Category-nested (current convention — packages/demo-ui/src/<category-slug>/<name>/):
 pnpm new:component demo-widget --category Layout --nested
 ```
 
 - `<name>` must be kebab-case.
-  - Flat mode: must not already exist under `packages/ui/src/`.
+  - Flat mode: must not already exist under `packages/demo-ui/src/`.
   - `--nested` mode: must not already exist under
-    `packages/ui/src/<category-slug>/` — the SAME name in a DIFFERENT
+    `packages/demo-ui/src/<category-slug>/` — the SAME name in a DIFFERENT
     category is fine (that's the point of category-nesting; see §2).
 - `<Category>` is a free-form string (`StoryCategory` is open, §3); prefer
   one of zudo-sg's own declared categories: `Actions`, `Typography`,
   `Layout`, `Data Display`, `Forms`, `Navigation`, `Content`, `Landing`,
   `News`, `Search`, `Feedback`, `Media`. A new category is accepted with a
   warning and sorts alphabetically after these in the sidebar.
-- `--nested` scaffolds into `packages/ui/src/<category-slug>/<name>/` instead
-  of the flat `packages/ui/src/<name>/`, where `<category-slug>` is
+- `--nested` scaffolds into `packages/demo-ui/src/<category-slug>/<name>/` instead
+  of the flat `packages/demo-ui/src/<name>/`, where `<category-slug>` is
   `<Category>` lowercased with spaces replaced by hyphens (e.g.
   `"Data Display"` → `data-display`). A nested scaffold auto-inserts into the
-  barrel (`packages/ui/src/index.ts`) exactly like a flat scaffold, importing
+  barrel (`packages/demo-ui/src/index.ts`) exactly like a flat scaffold, importing
   from the nested path `./<category-slug>/<name>/<name>` — see "The barrel:
   organized by `StoryCategory`, not by directory" in §2. Scaffolding a name
   that's already exported from the barrel under a different category fails
@@ -324,13 +324,13 @@ pnpm new:component demo-widget --category Layout --nested
 It creates, following the existing house pattern (variant union + `Record`
 class map + `class?` passthrough + the shared focus-visible outline classes):
 
-- `packages/ui/src/<name>/<name>.tsx` (or, nested,
-  `packages/ui/src/<category-slug>/<name>/<name>.tsx`) — typed-props component
+- `packages/demo-ui/src/<name>/<name>.tsx` (or, nested,
+  `packages/demo-ui/src/<category-slug>/<name>/<name>.tsx`) — typed-props component
   skeleton.
 - …`/<name>.stories.tsx` — `StoryMeta` + a typed `Story<Props>` `Playground`
   variant with a controls skeleton (§3/§4).
 - …`/__tests__/<name>.test.tsx` — a starter test suite.
-- The barrel export in `packages/ui/src/index.ts`, inserted alphabetically
+- The barrel export in `packages/demo-ui/src/index.ts`, inserted alphabetically
   into the matching `// ── <Category> ──` section — for both flat and
   `--nested` scaffolds, unless `--skip-barrel` is passed or this project has
   no barrel-file convention (see below).
@@ -354,13 +354,13 @@ for the full flag contract.
 The CLI reads this repo's root `zudo-sg.config.mjs`, not a per-package config
 file. The fields that shape `new-component`'s output for this package:
 
-- `componentsRoots[0].dir` = `"packages/ui/src"` — the directory scanned/
+- `componentsRoots[0].dir` = `"packages/demo-ui/src"` — the directory scanned/
   written to for `<name>/<name>.{tsx,stories.tsx}`.
-- `barrelIndex` = `"packages/ui/src/index.ts"` — the barrel file
+- `barrelIndex` = `"packages/demo-ui/src/index.ts"` — the barrel file
   `new-component` inserts an `export { … }` block into. `null` skips the
   insert step for a project with no barrel-file convention (same as always
   passing `--skip-barrel`).
-- `uiPackageName` = `"@zudo-sg/ui"` — used in generated `usage` snippets and
+- `uiPackageName` = `"@zudo-sg/demo-ui"` — used in generated `usage` snippets and
   the package-scoped import specifiers the registry codegen emits.
 
 See [zudo-sg.config.mjs reference](https://zudo-sg-doc.takazudomodular.com/docs/reference/zudo-sg-config)
@@ -383,14 +383,14 @@ src/<category-slug>/<component>/<component>.mdx
   no `.mdx` renders no extra section on its detail page — nothing else to do.
 - **How it renders.** The doc is a
   [`componentDocs`](../../zfb.config.ts) content collection rooted at
-  `packages/ui/src` (`include: ["**/*.mdx"]` — the globset `**` matches zero
+  `packages/demo-ui/src` (`include: ["**/*.mdx"]` — the globset `**` matches zero
   or more directory components, so one pattern covers both the flat and
   category-nested layouts), so zfb's Rust pipeline compiles it at build time.
   The engine detail route (`packages/styleguide/src/routes/components-slug.tsx`) looks up the entry by
   deriving its slug from the story path
   ([`packages/styleguide/src/registry/component-docs.ts`](../styleguide/src/registry/component-docs.ts))
   and renders `<entry.Content>` inside a `.zd-content` wrapper. Discovery is
-  therefore keyed off the **same** `packages/ui/src/` root the `gen-sg-registry`
+  therefore keyed off the **same** `packages/demo-ui/src/` root the `gen-sg-registry`
   codegen walks, at whatever depth the story lives — no separate registration,
   no codegen change.
 - **Authoring.** Start headings at `##` (the page title is already the `<h1>`).
@@ -416,147 +416,13 @@ src/<category-slug>/<component>/<component>.mdx
   `resolveMarkdownLinks.dirs`, so these files never get their own URL — they
   only ever render inline on the component detail page.
 
-## 10. Composer component sidecars
+## 10. No provider layer
 
-Composer definitions are independent from the story system. An opted-in
-component owns a co-located `component-name.composer.tsx` sidecar authored with
-`defineComponent` from `@zudo-composer/component-contract`. Story modules never
-carry a `composer` property and Composer providers never import story modules.
-
-The sidecar is also the single source for display metadata. Its story imports
-and spreads the exported display object:
-
-```tsx
-// cta-button.composer.tsx
-import { defineComponent } from "@zudo-composer/component-contract";
-import { CtaButton, type CtaButtonProps } from "./cta-button";
-
-export const ctaButtonDisplay = {
-  title: "CtaButton",
-  category: "Actions",
-  description: "Accent-filled or outlined call-to-action link.",
-} as const;
-
-export const ctaButtonComposer = defineComponent<CtaButtonProps>()(CtaButton, {
-  id: "ui.cta-button",
-  schemaVersion: 1,
-  ...ctaButtonDisplay,
-  source: { module: "@zudo-sg/ui", exportKind: "named", exportName: "CtaButton" },
-  defaults: { href: "/products", variant: "primary", children: "Browse" },
-  fields: [
-    { prop: "variant", label: "Variant", schema: { type: "string", enum: ["primary", "secondary"] }, editor: { kind: "select" } },
-    { prop: "children", label: "Label", schema: { type: "string" }, editor: { kind: "text" }, inlineEdit: true },
-  ],
-  adapters: {
-    inlineEditor: { field: "children", resolveElement: (root: HTMLElement) => root },
-  },
-});
-
-// cta-button.stories.tsx
-import { ctaButtonDisplay } from "./cta-button.composer";
-
-const meta: StoryMeta = { ...ctaButtonDisplay, usage: "…" };
-export default meta;
-```
-
-Definitions carry stable `id` and `schemaVersion` values, one public package
-`source`, JSON-safe `defaults`, recursive schema/editor-paired `fields`, stable structural
-`slots`, the trusted `component`, and optional trusted `render` /
-`inlineEditor` adapters. There is no source adapter or unused constraints bag.
-
-The public source module is the package root (`@zudo-sg/ui`), never a private
-`/src/*` path. A field `prop` is a persisted JSON-value key. A slot has both a
-stable persisted `id` and the real component `prop` it fills; `accepts` omitted
-means any component in the pack, and `cardinality` is `single` or `many`.
-
-Field `prop` names are persisted document keys, not presentation labels. Mark a
-field `required: true` when insertion requires a valid default. A component or
-slot rename does not authorize changing persisted keys; change
-`schemaVersion` only when the persisted component contract actually breaks.
-
-### Generated pack and explicit CSS
-
-From the zudo-sg source repository root, `pnpm gen:composer-pack` scans
-`packages/ui/src/**/*.composer.tsx` and generates
-[`src/composer-pack.ts`](./src/composer-pack.ts). Each sidecar must export
-exactly one `defineComponent(...)` value. The public
-`@zudo-sg/ui/composer-pack` export contains:
-
-- `componentPack` — the validated trusted pack;
-- `componentPackManifest` — JSON-safe definitions for chooser/inspector/source
-  consumers; and
-- `componentRuntimeRegistry` — trusted component and runtime-adapter bindings.
-
-Run the root `pnpm check:composer-pack` script in checks; never hand-edit the
-generated file.
-Consumers must also import `@zudo-sg/ui/styles/composer.css`. That explicit CSS
-entry owns Tailwind preflight/utilities, provider tokens/colors, syntax styles,
-ProseMd styles, and the `@source "../src"` scan needed by the real components.
-Importing the pack alone intentionally does not inject CSS.
-
-The generated public pack is consumed directly by the standalone
-`zudo-composer` provider boundary. It does not import stories or depend on a
-styleguide registry; Composer and Sitemapper product ownership belongs to the
-standalone zudo-composer repository.
-
-### Inline-edit modes
-
-A canonical text field's editor carries the optional `mode`; `inlineEdit: true`
-marks the one top-level field that may be edited on the canvas:
-
-- `"plain"` (default, omitting `mode` means this) — the existing auto-commit
-  inline session (wave-8 / #257, #288): edits commit as the user types/blurs.
-- `"markdown-source"` — the canvas inline editor shows the raw markdown source
-  as plain text and routes through the explicit-save session instead (no
-  auto-commit anywhere) — see epic #368. This is a PARALLEL path keyed off the
-  mode marker, not a modification of the `"plain"` session.
-
-```tsx
-fields: [
-  {
-    prop: "markdown",
-    label: "Body",
-    schema: { type: "string" },
-    editor: { kind: "text", mode: "markdown-source" },
-    inlineEdit: true,
-  },
-],
-```
-
-### Invariants (enforced by the contract + type system)
-
-- component `id` and slot `id`s must **not** derive from title, slug, category,
-  or file path, and stay stable across renames/moves.
-- Structural slots are opt-in only — `children` is never inferred as a slot from
-  `ComponentChildren`; it can be a scalar `text` field or a container slot.
-- One prop cannot be both a scalar field and a structural slot.
-- `defaults` (and all field values) must be JSON-safe; functions/VNodes never
-  enter the serializable manifest.
-- At most one inline-editable field per component (MVP).
-- A field declaring `inlineEdit` MUST have a matching `adapters.inlineEditor`
-  whose `field` references that same prop (#372) — the host validator rejects
-  an inlineEdit field with no adapter (or one that targets a different field)
-  as an authoring-time error, rather than letting it silently never become
-  editable (`inlineEditableForEntry()` would otherwise just return `null`).
-
-The independent contract package owns the authoring types and the generated
-manifest is always canonical contract-v2 syntax. Providers must not recreate a
-legacy field projection at the consumer boundary.
-
-### Package-only handoff
-
-External consumers use the literal exact Git specs recorded in the source
-repository's `ui-provider-handoff.json`. The UI spec points at a commit on
-`package/ui-v1` whose repository root tree must exactly equal
-`HEAD:packages/ui`; the contract spec points at its own exact package commit.
-Never use Git subdirectory `path:` syntax, `workspace:`, `file:`, `link:`, or a
-sibling-repository path.
-
-Finish all package code and documentation before advancing `package/ui-v1`,
-then refresh the handoff tree/SHA/spec and run the zudo-sg source-root command
-`pnpm verify:ui-provider-install -- --exact`. Do not write a future source-main
-SHA or CI URL into documentation before the merge and green checks exist.
-
-There are zero users and zero production Composer/Sitemapper data. No backward
-compatibility, migration, redirect, alias, or old-storage fallback is required;
-destructive clean-current-schema changes are explicitly allowed.
+This package ships components and stories only — there is no Composer
+sidecar, generated component pack, or provider CSS entry. `@zudo-sg/demo-ui`
+is this repo's own demo/showcase library, not something installed by the
+engine or consumed by another product; the standalone
+[zudo-composer](https://github.com/Takazudo/zudo-composer) repository has no
+coupling to this package. Authoring a new component stops at the checklist in
+§7 (component + story, optionally an MDX doc per §9) — there is no further
+sidecar or handoff step.

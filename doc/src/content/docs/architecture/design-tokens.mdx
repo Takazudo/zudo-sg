@@ -9,7 +9,7 @@ description: The doc-chrome and UI token systems, the three-tier color strategy,
 zudo-sg has two related token systems:
 
 - Doc chrome tokens control the root styleguide and zudo-doc shell: navigation, docs pages, code blocks, sidebars, and styleguide chrome.
-- UI package tokens control target-site components exported by `@zudo-sg/ui`.
+- UI package tokens control target-site components exported by `@zudo-sg/demo-ui`.
 
 Keep those worlds separate. A styleguide chrome color scheme is not automatically the same as the target website palette, even though both can be edited from zdtp-powered panels.
 
@@ -20,15 +20,15 @@ Consumers import the shared UI token CSS after Tailwind preflight and utilities:
 ```css
 @import "tailwindcss/preflight";
 @import "tailwindcss/utilities";
-@import "@zudo-sg/ui/styles/tokens.css";
-@import "@zudo-sg/ui/styles/colors.css";
+@import "@zudo-sg/demo-ui/styles/tokens.css";
+@import "@zudo-sg/demo-ui/styles/colors.css";
 ```
 
 `tokens.css` defines spacing, typography, radius, shadow, and related non-color tokens. `colors.css` defines the UI package color system. Components use semantic utilities such as `bg-accent`, `text-fg`, `border-border`, and `bg-surface-2`; they do not reach into raw palette variables.
 
 ## The preview stylesheet is compiled standalone
 
-The catalog's preview iframe (and the `/tokens` dashboards) render `@zudo-sg/ui` components inside the host document, which already ships its own doc-chrome Tailwind bundle. Injecting the host's global stylesheet into that preview would let it collide with the UI package's own `--color-*`/`--zd-*` tokens. Instead, the engine's preview-CSS plugin (`@takazudo/zudo-sg/plugins/preview-css`, one of the plugin descriptors `withZudoSg()` appends in `zfb.config.ts`) compiles the host's `previewStyles` entry (`zudo-sg.config.mjs`; this repo: `./src/styles/preview-entry.css` — Tailwind preflight + utilities + `@zudo-sg/ui/styles/{tokens,colors}.css`) as its own standalone stylesheet with `@tailwindcss/node`, and rewrites every `:root`/`:host` selector to `:root[data-sg-preview-doc]`/`:host` so the preview world's tokens win the cascade at higher specificity than the host bundle's colliding roots. It is served at one URL (`previewCssUrl`, default `/_zudo-sg/preview.css`) in both `zfb dev` and `zfb build`, recompiling in dev whenever the entry or an `@import`ed file changes.
+The catalog's preview iframe (and the `/tokens` dashboards) render `@zudo-sg/demo-ui` components inside the host document, which already ships its own doc-chrome Tailwind bundle. Injecting the host's global stylesheet into that preview would let it collide with the UI package's own `--color-*`/`--zd-*` tokens. Instead, the engine's preview-CSS plugin (`@takazudo/zudo-sg/plugins/preview-css`, one of the plugin descriptors `withZudoSg()` appends in `zfb.config.ts`) compiles the host's `previewStyles` entry (`zudo-sg.config.mjs`; this repo: `./src/styles/preview-entry.css` — Tailwind preflight + utilities + `@zudo-sg/demo-ui/styles/{tokens,colors}.css`) as its own standalone stylesheet with `@tailwindcss/node`, and rewrites every `:root`/`:host` selector to `:root[data-sg-preview-doc]`/`:host` so the preview world's tokens win the cascade at higher specificity than the host bundle's colliding roots. It is served at one URL (`previewCssUrl`, default `/_zudo-sg/preview.css`) in both `zfb dev` and `zfb build`, recompiling in dev whenever the entry or an `@import`ed file changes.
 
 ## Three-tier color strategy
 
@@ -36,8 +36,8 @@ The UI package follows the [Three-Tier Color Strategy](https://zudo-css-wisdom.t
 
 | Tier | Purpose | Source |
 | --- | --- | --- |
-| Palette | Raw OKLCH values named `--palette-{group}-{step-or-role}` | `packages/ui/styles/colors.css` |
-| Semantic | `--color-*` roles backed by palette refs, with a few zudo-doc-style AA-tuned light-mode literals | `packages/ui/styles/colors.css` |
+| Palette | Raw OKLCH values named `--palette-{group}-{step-or-role}` | `packages/demo-ui/styles/colors.css` |
+| Semantic | `--color-*` roles backed by palette refs, with a few zudo-doc-style AA-tuned light-mode literals | `packages/demo-ui/styles/colors.css` |
 | Component | Scoped overrides when a component truly needs them | component code or CSS |
 
 Palette groups used by the UI palette tab are `neutral`, `accent`, `state`, and one tier per business line: `line-vacuum`, `line-process`, `line-laser`, `line-meeting`, and `line-beauty`. `neutral` is the grayscale / warm-neutral ramp, `accent` is the amber action ramp, `state` contains named status colors (danger/success/warning/info), and each `line-*` group supplies a business line's own accent + hover pair, layered in through a `[data-line="<key>"]` override of the semantic `--color-accent`/`--color-accent-hover` roles below — components never bind to a `line-*` palette entry directly. Keeping each line in its own tier gives it an independent OKLCH curve and satisfies zdtp 0.6's named-palette prefix validation.
@@ -52,7 +52,7 @@ Palette variables live in plain `:root`, not Tailwind `@theme`, so Tailwind does
 
 The zudo-doc 3.x chrome uses a ramp-native model for its own color schemes. It exposes palette ramps and semantic `--zd-*` roles through the root design-token panel. That model is for the documentation and styleguide shell, not for target-site UI components.
 
-The preview token panel is a second panel instance for `@zudo-sg/ui`. It has separate storage keys, event names, and an apply sink that writes preview values into registered styleguide iframes instead of the host document root.
+The preview token panel is a second panel instance for `@zudo-sg/demo-ui`. It has separate storage keys, event names, and an apply sink that writes preview values into registered styleguide iframes instead of the host document root.
 
 ## Shared build-safe tabs (`src/config/ui-token-tabs.ts`)
 
@@ -72,7 +72,7 @@ The `/tokens` route is injected by the `@takazudo/zudo-sg` engine (`packages/sty
 | `ui-defaults-dark` | `mode="dark"`, `chrome="dark"`, `include="mode-dependent"` | **UI tokens — mode-dependent defaults (dark)** |
 | `ui-defaults-shared` | `chrome="host"`, `include="mode-independent"` | **UI tokens — shared defaults (mode-independent)** |
 
-The shared view follows the site theme, and all three views remain read-only inventories of `@zudo-sg/ui` declared defaults.
+The shared view follows the site theme, and all three views remain read-only inventories of `@zudo-sg/demo-ui` declared defaults.
 
 The section supplies zdtp's four public light/dark background and foreground inputs from the configured site color schemes. Dashboard headers and inventory regions therefore use the site's warm-neutral palette rather than zdtp's default blue-gray chrome. These are resolved declared colors, so live panel tweaks do not alter the static dashboard palette.
 
@@ -213,7 +213,7 @@ The public-validator request was tracked in
   no dev-only gate protecting it here.
 - **The doc-chrome panel config has no `applyEndpoint`/`applyRouting`.** Only the preview panel
   config wires those fields (from `virtual:zdtp-apply-config`). `zdtp-panel-routing.json`
-  deliberately routes writes only to `packages/ui/styles/*.css` — letting a slider rewrite the
+  deliberately routes writes only to `packages/demo-ui/styles/*.css` — letting a slider rewrite the
   site's own chrome CSS is a separate, riskier change that was not requested.
 - **`dock` is left at its zdtp default** (`{ reflow: 'body-margin' }`) on both configs — no
   observed problem motivated overriding it.
@@ -243,7 +243,7 @@ one-click path to permanent autoload for a first-time visitor.
 
 The zdtp panels can preview token changes in the browser. During local development, the apply pipeline can persist supported edits back to CSS source through the zdtp apply proxy wiring.
 
-For UI package tokens, the generated manifest comes from `packages/ui/styles/tokens.css` and `packages/ui/styles/colors.css`. If those CSS files change, regenerate the manifest and commit the result:
+For UI package tokens, the generated manifest comes from `packages/demo-ui/styles/tokens.css` and `packages/demo-ui/styles/colors.css`. If those CSS files change, regenerate the manifest and commit the result:
 
 ```sh
 pnpm gen:token-manifest

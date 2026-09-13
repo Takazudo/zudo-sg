@@ -1,19 +1,19 @@
-# @zudo-sg/ui — reference-component token map
+# @zudo-sg/demo-ui — reference-component token map
 
 Mechanical mapping table for the **port batches** that move the reference
-implementation's site components into `@zudo-sg/ui`. Every design-token
-utility / CSS var those components use is listed here with its **new** @zudo-sg/ui
+implementation's site components into `@zudo-sg/demo-ui`. Every design-token
+utility / CSS var those components use is listed here with its **new** @zudo-sg/demo-ui
 equivalent. Apply this table mechanically per component; where a row says
 _rename_, change the class; where it says _same_, leave it.
 
-Sources of truth: `packages/ui/styles/colors.css` (colors) and
-`packages/ui/styles/tokens.css` (text / z-index / radius / leading). This table
+Sources of truth: `packages/demo-ui/styles/colors.css` (colors) and
+`packages/demo-ui/styles/tokens.css` (text / z-index / radius / leading). This table
 was built against the full, deduplicated utility inventory of
 the reference implementation's site components (every distinct utility below actually appears there).
 
 Two things to internalise before porting:
 
-1. **Colors map 1:1 by name.** @zudo-sg/ui adopted the reference's own Tier-2
+1. **Colors map 1:1 by name.** @zudo-sg/demo-ui adopted the reference's own Tier-2
    color names (`bg`, `surface`, `surface-2`, `border`, `fg`, `muted`, `accent`,
    `accent-hover`, the `rail-*` family, `loading-scrim`). So `bg-surface` stays
    `bg-surface`, `text-rail-fg` stays `text-rail-fg`, etc. No color class needs
@@ -30,7 +30,7 @@ values now come from the warm grouped palette (amber accent, four-stop warm-neut
 warm dark rail) instead of the reference's blue/navy, but the token _names_ are
 identical, so the classes are unchanged.
 
-| Reference utility (any `bg-/text-/border-/outline-/ring-/…` prefix) | @zudo-sg/ui | Note |
+| Reference utility (any `bg-/text-/border-/outline-/ring-/…` prefix) | @zudo-sg/demo-ui | Note |
 |---|---|---|
 | `…-bg` | `…-bg` | same |
 | `…-surface` | `…-surface` | same |
@@ -60,14 +60,14 @@ Confirmed present in the reference implementation's site components: `text-fg`, 
 The reference labels filled-accent buttons with **`text-bg`** (the page-bg color
 used as foreground — it flips with the scheme, so it stays readable on the
 scheme-appropriate accent). That maps 1:1 to `text-bg` and still works.
-@zudo-sg/ui additionally ships a semantic **`--color-on-accent`** (`text-on-accent`)
+@zudo-sg/demo-ui additionally ships a semantic **`--color-on-accent`** (`text-on-accent`)
 with the same light/dark behaviour — prefer it in new/edited markup for clarity,
 but `text-bg` needs no change.
 
 ### State colors
 
 The reference implementation's site components use **no** `success` / `danger` / `warning` / `info`
-utilities (the reference's design system had no state colors). @zudo-sg/ui defines
+utilities (the reference's design system had no state colors). @zudo-sg/demo-ui defines
 them anyway (`bg-success`, `text-danger`, …, `light-dark()` pairs from
 `color-schemes.ts`) for the existing 11 components and future needs.
 
@@ -108,12 +108,12 @@ reference's blue/navy). Raw values live in `colors.css` Tier-1.
 
 ## 3. Font-size utilities — RENAME (shift one rung)
 
-@zudo-sg/ui's semantic size scale differs from the reference's by one rung
+@zudo-sg/demo-ui's semantic size scale differs from the reference's by one rung
 (`text-body` is 20px here vs 16px there — it is a locked external contract used by
 zudo-doc prose and cannot move). **Map by pixel size** so ported components keep
 their intended sizes:
 
-| Reference utility | px | @zudo-sg/ui utility | px | Action |
+| Reference utility | px | @zudo-sg/demo-ui utility | px | Action |
 |---|---|---|---|---|
 | `text-caption` | 12 | `text-micro`   | 12 | **rename** |
 | `text-small`   | 14 | `text-caption` | 14 | **rename** |
@@ -126,16 +126,16 @@ Used by components (confirmed): `text-body`, `text-caption`, `text-small`,
 `text-title`, `text-heading`, `text-display`. No `text-scale-*` is used in
 components (styleguide-only). If a future component uses the raw scale, map
 `text-scale-{2xs,sm,md,lg,xl,2xl}` → `text-{xs,sm,base,lg,xl,2xl}` (both by px);
-the reference's `text-scale-xs` (13px) has no @zudo-sg/ui rung — use `text-xs` (12px).
+the reference's `text-scale-xs` (13px) has no @zudo-sg/demo-ui rung — use `text-xs` (12px).
 
 ---
 
 ## 4. Z-index utilities — RENAME (`z-ui-` prefix)
 
-@zudo-sg/ui's semantic z scale is namespaced `--z-index-ui-*` to stay collision-free
+@zudo-sg/demo-ui's semantic z scale is namespaced `--z-index-ui-*` to stay collision-free
 with the doc host's own `z-*` scale (which owns `dropdown`/`modal`/`toast`). Rename:
 
-| Reference utility | @zudo-sg/ui utility | value |
+| Reference utility | @zudo-sg/demo-ui utility | value |
 |---|---|---|
 | `z-base`     | `z-ui-base`     | 0 |
 | `z-sticky`   | `z-ui-sticky`   | 10 |
@@ -151,10 +151,10 @@ Raw `var(--z-index-<name>)` → `var(--z-index-ui-<name>)`.
 
 ## 5. Radius utilities
 
-| Reference utility | px | @zudo-sg/ui | Action |
+| Reference utility | px | @zudo-sg/demo-ui | Action |
 |---|---|---|---|
 | `rounded` | 4 | `rounded` | same (`--radius-DEFAULT` = 4px) |
-| `rounded-lg` | 8 | `rounded-md` | **rename** (@zudo-sg/ui `rounded-lg` is **16px**; use `rounded-md` = 8px to keep the size) |
+| `rounded-lg` | 8 | `rounded-md` | **rename** (@zudo-sg/demo-ui `rounded-lg` is **16px**; use `rounded-md` = 8px to keep the size) |
 | `rounded-md` | 8 | `rounded-md` | same (8px) |
 | `rounded-full` | pill | `rounded-full` | same |
 
@@ -165,12 +165,12 @@ Used by components (confirmed): `rounded`, `rounded-lg`, `rounded-md`,
 
 ## 6. Line-height utilities
 
-| Reference utility | @zudo-sg/ui | Note |
+| Reference utility | @zudo-sg/demo-ui | Note |
 |---|---|---|
 | `leading-none` | `leading-none` | same (Tailwind static `line-height: 1`) |
 | `leading-tight` | `leading-tight` | same (1.25) |
 | `leading-snug` | `leading-snug` | same (1.4 — added to `tokens.css`) |
-| `leading-relaxed` | `leading-relaxed` | value differs: ref 1.7 → @zudo-sg/ui **1.75** (accept, or set an arbitrary `leading-[1.7]` if exact) |
+| `leading-relaxed` | `leading-relaxed` | value differs: ref 1.7 → @zudo-sg/demo-ui **1.75** (accept, or set an arbitrary `leading-[1.7]` if exact) |
 
 Used by components (confirmed): `leading-none`, `leading-tight`, `leading-snug`,
 `leading-relaxed`.
@@ -180,8 +180,8 @@ Used by components (confirmed): `leading-none`, `leading-tight`, `leading-snug`,
 ## 7. Spacing (context)
 
 Not renamed — the `hsp-*` / `vsp-*` axis names are identical. **But the pixel
-values differ** between the reference and @zudo-sg/ui (e.g. reference `hsp-2xs` = 4px
-vs @zudo-sg/ui 2px; reference `vsp-xl` = 64px vs @zudo-sg/ui 40px). Ported layouts will
+values differ** between the reference and @zudo-sg/demo-ui (e.g. reference `hsp-2xs` = 4px
+vs @zudo-sg/demo-ui 2px; reference `vsp-xl` = 64px vs @zudo-sg/demo-ui 40px). Ported layouts will
 shift; verify spacing-sensitive components visually and adjust the axis step
 where the design needs it. A full spacing remap is out of scope for this map
 (color / z-index / text are the renaming surface).
@@ -196,14 +196,14 @@ on `var(--text-display)`, or `var(--radius-lg)` in a `.stories.tsx`). A raw
 `var()` is NOT caught by the utility-class renames above, so apply the SAME
 remap to the custom-property name:
 
-| Raw ref in reference | @zudo-sg/ui | Note |
+| Raw ref in reference | @zudo-sg/demo-ui | Note |
 |---|---|---|
 | `var(--color-<name>)` | `var(--color-<name>)` | same — colors are 1:1 by name (accent/bg/border/surface/fg/muted, all observed in `color-mix` tints) |
 | `var(--text-caption)` | `var(--text-micro)` | 12px — same shift-one-rung as §3 |
 | `var(--text-small)` | `var(--text-caption)` | 14px |
 | `var(--text-body)` | `var(--text-small)` | 16px |
 | `var(--text-title|--text-heading|--text-display)` | unchanged | same px |
-| `var(--radius-lg)` | `var(--radius-md)` | 8px — @zudo-sg/ui `--radius-lg` is 16px (see §5) |
+| `var(--radius-lg)` | `var(--radius-md)` | 8px — @zudo-sg/demo-ui `--radius-lg` is 16px (see §5) |
 
 No raw `var(--z-index-*)`, `var(--leading-*)`, or `var(--ds-*)` references exist
 in the reference components. (`--color-loading-scrim` appears only in a doc

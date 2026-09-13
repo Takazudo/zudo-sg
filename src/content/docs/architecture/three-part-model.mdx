@@ -8,7 +8,9 @@ zudo-sg's architecture separates three things that are easy to conflate into one
 
 ## Components standalone
 
-`@zudo-sg/ui` is a plain Preact component library. It has no dependency on a styleguide, a story format, or a documentation site — importing a button or a card pulls in only the component and its styles. This is what makes the library reusable: any Preact/zfb project can depend on it without also adopting zudo-sg's catalog machinery.
+`@zudo-sg/demo-ui` is a plain Preact component library. It has no dependency on a styleguide, a story format, or a documentation site — importing a button or a card pulls in only the component and its styles. This is what makes the library reusable: any Preact/zfb project can depend on it without also adopting zudo-sg's catalog machinery.
+
+`@zudo-sg/demo-ui` is this site's own example library — it exists to prove the styleguide engine on a real project, and this repository dogfoods its own tooling against it. It is not installed by the engine or by its `new-component` scaffold CLI, and it ships nothing to other projects: adopting the engine never pulls this library in. A components-only package with its stories co-located beside each component — the shape `@zudo-sg/demo-ui` itself uses — is the recommended structure for a project's own component set; see [Adopting the engine](./adopting) for how a project wires its own package in. [zudo-composer](https://github.com/Takazudo/zudo-composer) is a separate project with no coupling to zudo-sg.
 
 ## An app uses them
 
