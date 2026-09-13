@@ -1,0 +1,9 @@
+packages: []
+allowBuilds:
+  esbuild: true
+minimumReleaseAgeExclude:
+  - "@takazudo/zfb"
+  - "@takazudo/zfb-runtime"
+  - "@takazudo/zfb-md-wasm"
+  - "@takazudo/zudo-doc"
+  - "@takazudo/zdtp"
