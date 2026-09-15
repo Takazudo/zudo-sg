@@ -41,13 +41,20 @@ enable them later).
 ## Installation
 
 ```sh
-pnpm add @takazudo/zudo-sg
+pnpm add @takazudo/zudo-sg@latest @takazudo/zfb@^2.17.0 @takazudo/zfb-md-wasm@^2.17.0 @takazudo/zfb-runtime@^2.17.0 @takazudo/zudo-doc@^5.24.0 @takazudo/zdtp@^0.8.0 diff@^8.0.4 katex@^0.16.38 preact@^10.29.1 preact-render-to-string@^6.6.6 tailwindcss@^4.2.0 zod@^4.3.6
 ```
 
-Peer dependencies: `@takazudo/zfb ^2.16.0`, `@takazudo/zudo-doc ^5.22.0`,
-`preact ^10.29.1`. `@takazudo/zdtp` is an **optional** peer — only needed if
-the host wires up the dev-only design-token apply proxy
-(`@takazudo/zudo-sg/plugins/zdtp-apply-proxy`).
+The engine peers are `@takazudo/zfb ^2.17.0`, `@takazudo/zudo-doc ^5.24.0`,
+`@takazudo/zdtp ^0.8.0`, and `preact ^10.29.1`. `@takazudo/zdtp` is required:
+the injected `/tokens` route imports its dashboard at build time. The
+`@takazudo/zfb-md-wasm`, `@takazudo/zfb-runtime`, `diff`, `katex`, and `zod`
+entries are prerequisites inherited from zfb/zudo-doc; zudo-doc's published
+route dist imports `diff` and `katex` even when those features are disabled
+(see [zudolab/zudo-doc#4206](https://github.com/zudolab/zudo-doc/issues/4206)).
+`preact-render-to-string` and `tailwindcss` are host-specific dependencies used
+by the fixture's component and preview-style setup, respectively; add them
+when your host uses those same pieces. The command above reproduces the full
+fixture dependency set.
 
 ## Composing it into a host
 

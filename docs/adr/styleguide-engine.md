@@ -3,8 +3,8 @@
 Status: **Accepted** (epic #648, decision sub-task #650, 2026-09-13).
 Locks the contract every Wave 2+ sub-issue implements. Model: zudo-doc's
 package-owned route seam (`$HOME/repos/myoss/zudo-doc/packages/zudo-doc/docs/adr/route-injection-seam.md`).
-Toolchain the decisions were verified against: `@takazudo/zfb` **2.16.0**,
-`@takazudo/zudo-doc` 5.24.0, pnpm 11.5.2, Node 24.
+Current toolchain and peer floors (#696): `@takazudo/zfb` **2.17.0**,
+`@takazudo/zudo-doc` 5.24.0, `@takazudo/zdtp` 0.8.0, pnpm 11.5.2, Node 24.
 
 ## Context
 
@@ -14,7 +14,7 @@ zudo-sg's catalog (`src/features/styleguide/**`, `src/styleguide/data/**`,
 (zzmod is 70 commits behind). The epic turns it into an installable engine
 package built the way `@takazudo/zudo-doc` is built. Before the move, a
 throwaway spike (`__inbox/engine-seam-spike/`, gitignored, not committed)
-proved the seam end-to-end against zfb 2.16.0 and surfaced three facts that
+proved the seam end-to-end against zfb 2.16 and surfaced three facts that
 change the plan the epic was written with. They are recorded first because
 the decisions below depend on them.
 
@@ -297,6 +297,28 @@ Stable only. `v*.*.*` tags publish `@takazudo/zudo-sg` to npm `latest`
 prerelease handling, no dist-tag cleanup. Version source of truth is
 `packages/styleguide/package.json`; the first release is one `/l-make-release`
 run from `main` after the epic merges.
+
+### 13. Required peers and inherited host prerequisites
+
+**Amendment (2026-09-15, #696 / #671):** reverse the original optional-peer
+treatment of `@takazudo/zdtp`. It is now a required peer at `^0.8.0`: the
+always-injected `/tokens` route value-imports `@takazudo/zdtp/dashboard`
+through `token-dashboard/create-token-dashboards.tsx`, so a host cannot build
+the engine without it. Gating that route behind another configuration option
+is outside this release's scope. The apply proxy and lazy panel helpers keep
+their import-failure guards as defensive handling; those guards do not make
+the package optional.
+
+The other engine peers are `@takazudo/zfb ^2.17.0`,
+`@takazudo/zudo-doc ^5.24.0`, and `preact ^10.29.1`. These floors match the
+versions used by the workspace and foreign-install fixture.
+
+`diff` and `katex` belong to zudo-doc's dependency graph: its published
+`dist/doc-history/index.js` and `dist/math-block/index.js` import them. With
+`packageOwnedRoutes`, the bundler resolves those specifiers even when the
+corresponding features are disabled. They remain inherited host prerequisites,
+not engine peers. `packages/styleguide/README.md` classifies the complete
+fixture dependency set and links the upstream packaging report.
 
 ## Spike report — proof items (a)–(g)
 

@@ -7,9 +7,9 @@ type PrehydrateScript = HTMLScriptElement & {
 type ZdtpModule = typeof import("@takazudo/zdtp");
 
 /**
- * Loads the OPTIONAL `@takazudo/zdtp` peer. Resolves `null` (with one console
- * warning) instead of rejecting when the peer is not installed, so an owner
- * console helper never surfaces an unhandled rejection.
+ * Loads the required `@takazudo/zdtp` peer lazily. A failed import resolves
+ * `null` with a console warning so owner console helpers never surface an
+ * unhandled rejection.
  */
 export async function loadZdtp(
   importer: () => Promise<ZdtpModule> = () => import("@takazudo/zdtp"),
