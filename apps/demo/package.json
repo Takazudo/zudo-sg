@@ -23,9 +23,11 @@
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.2.0",
+    "@testing-library/preact": "^3.2.4",
     "@types/node": "^22.0.0",
     "tailwindcss": "^4.2.0",
-    "typescript": "^5.9.0"
+    "typescript": "^5.9.0",
+    "vitest": "^4.1.9"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
