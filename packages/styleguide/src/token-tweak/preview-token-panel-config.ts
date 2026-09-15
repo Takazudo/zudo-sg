@@ -24,8 +24,8 @@
  * `@takazudo/zudo-sg/plugins/zdtp-apply-proxy` plugin's virtual module and are
  * `undefined` outside `zfb dev`.
  *
- * zdtp is an OPTIONAL peer: this module imports its types only, so it stays
- * loadable (and the panel simply never mounts) when zdtp is not installed.
+ * zdtp is a required peer; this factory imports its types only so creating
+ * the configuration does not eagerly load the panel runtime.
  */
 
 import type { PanelConfig, TabConfig } from "@takazudo/zdtp";

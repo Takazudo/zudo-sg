@@ -18,9 +18,9 @@
 //     emits `undefined` for both so no apply wiring (not even the routing
 //     map's file paths) enters the shipped bundle.
 //
-// OPTIONAL PEER: `@takazudo/zdtp` is reached only through the rejection-handled
-// dynamic `import()` in `loadZdtpServer`. Without it the virtual module still
-// loads (apply fields `undefined`) and the endpoint answers 503.
+// `@takazudo/zdtp` is a required peer. This plugin retains rejection handling
+// for failed server imports: apply fields become `undefined` and the endpoint
+// answers 503, though the engine's /tokens route still requires the package.
 //
 // Routing (host `routingFile`, zdtp README §3.2 shape): prefix matching is
 // `--{key}-` startsWith, longest-key-first; zdtp rewrites the first top-level
@@ -122,7 +122,7 @@ export function resolveZdtpApplyProxyOptions(
 
 let warnedMissingZdtp = false;
 
-/** Loads the optional zdtp server entry; resolves `null` (warning once) when it is not installed. */
+/** Loads the zdtp server entry; resolves `null` (warning once) if its import fails. */
 export async function loadZdtpServer(
   logger?: Pick<ZfbPluginLogger, "warn">,
   importer: ZdtpServerImporter = () => import("@takazudo/zdtp/server"),
@@ -180,7 +180,7 @@ export interface DevMiddlewareHandlerOptions {
 
 /**
  * Build the devMiddleware handler for the apply endpoint. zdtp is loaded on the
- * first real POST, so a host without the optional peer still boots `zfb dev`.
+ * first real POST; a failed import disables this endpoint without rejecting.
  */
 export function createDevMiddlewareHandler({
   rootDir,

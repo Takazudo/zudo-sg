@@ -16,7 +16,13 @@ The engine is a zfb plugin package built for **Preact + zfb hosts only**. It dep
 
 ## Install steps
 
-1. **Add the package.** Install `@takazudo/zudo-sg` alongside the `@takazudo/zfb`/`@takazudo/zudo-doc` versions the host already pins.
+1. **Add the package.** Install `@takazudo/zudo-sg` alongside the engine's
+   required peers: `@takazudo/zfb ^2.17.0`, `@takazudo/zudo-doc ^5.24.0`,
+   `@takazudo/zdtp ^0.8.0`, and `preact ^10.29.1`. zudo-doc also requires its
+   inherited host prerequisites (`@takazudo/zfb-md-wasm`,
+   `@takazudo/zfb-runtime`, `diff`, `katex`, and `zod`); see the package
+   README's [copy-paste install line](https://github.com/Takazudo/zudo-sg/tree/main/packages/styleguide#installation)
+   for the complete fixture-equivalent command.
 
 2. **Write `zudo-sg.config.mjs`** at the project root — plain data, loaded by both the CLI and the build config. At minimum it needs:
    - `componentsRoots`: one entry per directory of `*.stories.tsx` files to catalog (`{ dir, importBase }`).
