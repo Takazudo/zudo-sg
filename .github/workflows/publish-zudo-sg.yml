@@ -96,10 +96,10 @@ jobs:
       - name: Check pack (verify published artifact)
         run: bash scripts/check-pack.sh
 
-      # NPM_TOKEN MUST be an Automation-type token: scoped publish
-      # (@takazudo/*) requires 2FA, and only an Automation (or 2FA-bypassing
-      # granular) token can publish unattended in CI. A standard user token
-      # fails with an OTP/EOTP error (see packages/styleguide/RELEASE.md).
+      # NPM_TOKEN must be a granular access token with publish rights for
+      # @takazudo and Bypass 2FA enabled. After the first publish, configure
+      # Trusted Publishing (OIDC) for this workflow; id-token/provenance alone
+      # do not establish npm-side trust (see packages/styleguide/RELEASE.md).
       - name: Publish package
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

@@ -11,6 +11,19 @@ const PREVIEW_STATE_KEY = "sg-preview-tweak-state-v4";
 const DOC_STATE_KEY = "sg-doc-tweak-state-v4";
 const COLOR_SENTINEL = "oklch(0.42 0.18 210)";
 const DOC_COLOR_SENTINEL = "#123456";
+const PANEL_INSTANCES = {
+  preview: {
+    toggleEvent: "toggle-preview-token-panel",
+    prehydrateScriptId: "zdtp-preview-prehydrate",
+    storagePrefix: "sg-preview-tweak",
+  },
+  doc: {
+    toggleEvent: "toggle-sg-doc-tweak",
+    prehydrateScriptId: "zdtp-doc-prehydrate",
+    storagePrefix: "sg-doc-tweak",
+  },
+} as const;
+type PanelInstance = keyof typeof PANEL_INSTANCES;
 
 async function expectStandaloneTokensLayout(page: Page): Promise<void> {
   const sidebar = page.locator("#desktop-sidebar");
@@ -109,17 +122,26 @@ async function rulerWidth(dashboardRoot: Locator): Promise<number> {
     .evaluate((node) => node.getBoundingClientRect().width);
 }
 
-async function openPanel(page: Page, eventName: string): Promise<Locator> {
+function panelShell(page: Page, instance: PanelInstance): Locator {
+  return page.locator(`#${PANEL_INSTANCES[instance].storagePrefix}-root .tokenpanel-shell`);
+}
+
+async function openPanel(page: Page, instance: PanelInstance): Promise<Locator> {
+  const { toggleEvent, prehydrateScriptId } = PANEL_INSTANCES[instance];
+  const hydratedBootstrap = page.locator(
+    `#${prehydrateScriptId}[data-bound="1"]:not([data-pending])`,
+  );
+  await expect(hydratedBootstrap).toBeAttached({ timeout: 10_000 });
+
   await page.evaluate((name) => {
     window.dispatchEvent(new CustomEvent(name));
-  }, eventName);
-  const panel = page.locator(".tokenpanel-shell").first();
+  }, toggleEvent);
+  const panel = panelShell(page, instance);
   await expect(panel).toBeVisible({ timeout: 10_000 });
   return panel;
 }
 
 async function setPanelValue(
-  page: Page,
   panel: Locator,
   tabName: string,
   label: string,
@@ -134,7 +156,7 @@ async function setPanelValue(
   await expect(input).toBeVisible({ timeout: 3_000 });
   await input.fill(value);
   await input.dispatchEvent("input");
-  await page.waitForTimeout(150);
+  await expect(input).toHaveValue(value);
 }
 
 async function setDocColorLiteral(
@@ -151,11 +173,19 @@ async function setDocColorLiteral(
   await input.dispatchEvent("input");
 }
 
-async function closePanel(page: Page, panel: Locator): Promise<void> {
+async function closePanel(page: Page, instance: PanelInstance): Promise<void> {
+  const panel = panelShell(page, instance);
   const close = panel.getByRole("button", { name: "Close panel", exact: true });
   await expect(close).toBeVisible({ timeout: 3_000 });
   await close.click();
   await expect(panel).not.toBeVisible({ timeout: 3_000 });
+  // zdtp persists visibility in an effect after removing the shell from the DOM.
+  await expect
+    .poll(() => page.evaluate((prefix) => ({
+      open: localStorage.getItem(`${prefix}-open`),
+      visible: localStorage.getItem(`${prefix}:visible`),
+    }), PANEL_INSTANCES[instance].storagePrefix))
+    .toEqual({ open: null, visible: "0" });
 }
 
 async function readPersistedState(
@@ -355,25 +385,25 @@ test("dashboard defaults stay isolated from saved preview and doc-chrome panel s
     await page.locator("html").evaluate((root) => (root as HTMLElement).style.getPropertyValue("--color-bg")),
   ).toBe("");
 
-  const previewPanel = await openPanel(page, "toggle-preview-token-panel");
+  const previewPanel = await openPanel(page, "preview");
   await setPanelValue(
-    page,
     previewPanel,
     "Color",
     "--color-accent value",
     COLOR_SENTINEL,
   );
-  expect(await computedBackground(accentSample)).toBe(declaredAccent);
 
-  const previewState = await readPersistedState(page, PREVIEW_STATE_KEY);
-  expect(previewState).toMatchObject({
-    tabs: {
-      "ui-color": {
-        accent: { "ui-color-accent": COLOR_SENTINEL },
+  await expect
+    .poll(() => readPersistedState(page, PREVIEW_STATE_KEY))
+    .toMatchObject({
+      tabs: {
+        "ui-color": {
+          accent: { "ui-color-accent": COLOR_SENTINEL },
+        },
       },
-    },
-  });
-  await closePanel(page, previewPanel);
+    });
+  expect(await computedBackground(accentSample)).toBe(declaredAccent);
+  await closePanel(page, "preview");
 
   await page.reload();
   await expect(light).toBeAttached();
@@ -384,7 +414,7 @@ test("dashboard defaults stay isolated from saved preview and doc-chrome panel s
       ),
     ),
   ).toBe(declaredAccent);
-  const reloadedPreviewPanel = await openPanel(page, "toggle-preview-token-panel");
+  const reloadedPreviewPanel = await openPanel(page, "preview");
   const reloadedPreviewColorTab = reloadedPreviewPanel.getByRole("tab", {
     name: /^Color(?: \d+ changed tokens?)?$/,
   });
@@ -393,24 +423,25 @@ test("dashboard defaults stay isolated from saved preview and doc-chrome panel s
   await expect(reloadedPreviewPanel.getByLabel("--color-accent value")).toHaveValue(
     COLOR_SENTINEL,
   );
-  await closePanel(page, reloadedPreviewPanel);
+  await closePanel(page, "preview");
 
   await page.reload();
-  const docPanel = await openPanel(page, "toggle-sg-doc-tweak");
-  await setPanelValue(page, docPanel, "Spacing", "--spacing-hsp-md value", "2.25");
-  const docState = await readPersistedState(page, DOC_STATE_KEY);
-  expect(docState).toMatchObject({ spacing: { "hsp-md": "2.25rem" } });
-  await closePanel(page, docPanel);
+  const docPanel = await openPanel(page, "doc");
+  await setPanelValue(docPanel, "Spacing", "--spacing-hsp-md value", "2.25");
+  await expect
+    .poll(() => readPersistedState(page, DOC_STATE_KEY))
+    .toMatchObject({ spacing: { "hsp-md": "2.25rem" } });
+  await closePanel(page, "doc");
 
   await page.reload();
-  const reloadedDocPanel = await openPanel(page, "toggle-sg-doc-tweak");
+  const reloadedDocPanel = await openPanel(page, "doc");
   const reloadedDocSpacingTab = reloadedDocPanel.getByRole("tab", {
     name: /^Spacing(?: \d+ changed tokens?)?$/,
   });
   await reloadedDocSpacingTab.dispatchEvent("click");
   await expect(reloadedDocSpacingTab).toHaveAttribute("aria-selected", "true");
   await expect(reloadedDocPanel.getByLabel("--spacing-hsp-md value")).toHaveValue("2.25");
-  await closePanel(page, reloadedDocPanel);
+  await closePanel(page, "doc");
 
   const postDocDashboard = dashboard(page, "light");
   expect(
@@ -452,12 +483,12 @@ test("doc-chrome Color overrides are scheme-scoped while Spacing stays shared", 
       .poll(() => previousShell.evaluate((element) => element.isConnected))
       .toBe(false);
 
-    const nextPanel = page.locator(".tokenpanel-shell").first();
+    const nextPanel = panelShell(page, "doc");
     await expect(nextPanel).toBeVisible({ timeout: 10_000 });
     return nextPanel;
   }
 
-  let panel = await openPanel(page, "toggle-sg-doc-tweak");
+  let panel = await openPanel(page, "doc");
   await setDocColorLiteral(panel, "--zd-bg", DOC_COLOR_SENTINEL);
   let lightPersistedLiteral: unknown;
   await expect
@@ -494,7 +525,7 @@ test("doc-chrome Color overrides are scheme-scoped while Spacing stays shared", 
       .getByLabel("Hex color value"),
   ).toHaveValue(DOC_COLOR_SENTINEL);
 
-  await setPanelValue(page, panel, "Spacing", "--spacing-hsp-md value", "2.25");
+  await setPanelValue(panel, "Spacing", "--spacing-hsp-md value", "2.25");
   await expect
     .poll(async () => {
       const state = await readPersistedState(page, DOC_STATE_KEY);
@@ -505,7 +536,7 @@ test("doc-chrome Color overrides are scheme-scoped while Spacing stays shared", 
   panel = await toggleThemeAndReacquirePanel(panel, "dark");
   await panel.getByRole("tab", { name: /^Spacing(?: \d+ changed tokens?)?$/ }).click();
   await expect(panel.getByLabel("--spacing-hsp-md value")).toHaveValue("2.25");
-  await closePanel(page, panel);
+  await closePanel(page, "doc");
   await page.evaluate(() => localStorage.clear());
 });
 
@@ -517,10 +548,10 @@ test("token reference keeps preview editing without legacy listing or copy contr
   await expect(page.getByRole("group", { name: "Copy format" })).toHaveCount(0);
 
   await page.getByRole("button", { name: "Preview tokens →", exact: true }).click();
-  const panel = page.locator(".tokenpanel-shell").first();
+  const panel = panelShell(page, "preview");
   await expect(panel).toBeVisible();
   await expect(panel.getByRole("tab", { name: "Color", exact: true })).toBeVisible();
-  await closePanel(page, panel);
+  await closePanel(page, "preview");
 });
 
 test("the tokens mobile drawer opens at the root menu", async ({ page }) => {

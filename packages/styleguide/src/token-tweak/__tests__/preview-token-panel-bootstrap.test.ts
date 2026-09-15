@@ -3,7 +3,7 @@
 // suite for its doc-chrome panel in src/lib/__tests__/token-panel-lazy-gate.test.ts):
 // hydration enters zudo-doc's bootstrap once without importing zdtp, drains
 // the SSR pre-hydration toggle on its own channel, keeps owner console helpers
-// lazy, and degrades quietly when the optional zdtp peer is missing.
+// lazy, and handles a failed zdtp import without an unhandled rejection.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { assertValidPanelConfig } from "@takazudo/zdtp/testing";
 
@@ -141,7 +141,7 @@ describe("PreviewTokenPanelBootstrap island", () => {
   });
 });
 
-describe("optional @takazudo/zdtp peer (owner console helpers)", () => {
+describe("@takazudo/zdtp import failure guards (owner console helpers)", () => {
   it("resolves instead of rejecting and warns when zdtp cannot be imported", async () => {
     const { installOwnerConsoleHelpers, loadZdtp } = await import("../token-panel-native-bootstrap.js");
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});

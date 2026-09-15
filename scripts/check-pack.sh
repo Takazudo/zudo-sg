@@ -3,14 +3,15 @@ set -euo pipefail
 
 # Real-artifact gate for @takazudo/zudo-sg (#668, docs/adr/styleguide-engine.md
 # decisions 11-12). Packs the engine tarball and proves it is the artifact a
-# real consumer would install, WITHOUT ever touching the npm registry:
+# real consumer would install, without publishing to the npm registry:
 #
 #   1. asserts the tarball's file listing matches the `files` whitelist and
 #      leaks none of the host-only paths (doc/, pages/, src/content, apps/,
-#      packages/demo-ui, fixtures/);
+#      packages/demo-ui, fixtures/), and includes LICENSE;
 #   2. asserts every literal (non-wildcard) `exports` target resolves inside
 #      the tarball;
-#   3. installs the tarball into a scratch project exactly like an external
+#   3. runs the README pnpm add command with strict peers in an empty project,
+#      then installs the tarball into a second scratch project exactly like an external
 #      consumer would (`npm install <tarball>`);
 #   4. imports the exports subpaths that are safe to import under plain
 #      Node — @takazudo/zfb type-only imports erase at build time, so
@@ -49,7 +50,8 @@ echo "==> Checking tarball file listing against the files whitelist"
 LISTING_FILE="$WORK_DIR/listing.txt"
 tar -tzf "$TARBALL" | sed 's|^package/||' >"$LISTING_FILE"
 
-ALLOWED_TOP_LEVEL="dist bin routes-src virtual-modules.d.ts styles.css CHANGELOG.md README.md package.json"
+# Package managers always include a package-root LICENSE, even outside files[].
+ALLOWED_TOP_LEVEL="dist bin routes-src virtual-modules.d.ts styles.css CHANGELOG.md README.md LICENSE package.json"
 FORBIDDEN_PREFIXES="doc/ pages/ src/content apps/ packages/demo-ui fixtures/"
 
 while IFS= read -r rel; do
@@ -78,6 +80,13 @@ done <"$LISTING_FILE"
 ENTRY_COUNT="$(wc -l <"$LISTING_FILE" | tr -d ' ')"
 echo "    -> OK, $ENTRY_COUNT entries, no forbidden paths"
 
+echo "==> Checking the package license is packed"
+if ! grep -Fxq 'LICENSE' "$LISTING_FILE"; then
+  echo "check-pack: tarball is missing the package-root LICENSE" >&2
+  exit 1
+fi
+echo "    -> LICENSE present"
+
 echo "==> Checking every literal exports target is packed"
 node --input-type=module -e "
 import { readFileSync } from 'node:fs';
@@ -105,7 +114,10 @@ if (errors.length > 0) {
 console.log(\`    -> OK, every literal exports target resolves (\${Object.keys(pkg.exports ?? {}).length} exports entries checked)\`);
 "
 
-echo "==> Installing the tarball into a scratch project (like a real consumer)"
+echo "==> Verifying the README install command and inherited prerequisites (strict peers)"
+node "$ROOT_DIR/scripts/verify-styleguide-install.mjs" --readme-install-only --tarball "$TARBALL"
+
+echo "==> Installing the tarball into a scratch project (isolated Node import smoke)"
 SCRATCH_DIR="$WORK_DIR/scratch"
 mkdir -p "$SCRATCH_DIR"
 cat >"$SCRATCH_DIR/package.json" <<'EOF'

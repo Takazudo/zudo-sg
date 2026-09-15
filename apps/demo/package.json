@@ -14,8 +14,8 @@
     "typecheck": "zfb check"
   },
   "dependencies": {
-    "@takazudo/zfb": "2.16.0",
-    "@takazudo/zfb-runtime": "2.16.0",
+    "@takazudo/zfb": "2.17.0",
+    "@takazudo/zfb-runtime": "2.17.0",
     "@zudo-sg/demo-ui": "workspace:*",
     "preact": "^10.29.1",
     "preact-render-to-string": "^6.6.6",
@@ -23,9 +23,11 @@
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.2.0",
+    "@testing-library/preact": "^3.2.4",
     "@types/node": "^22.0.0",
     "tailwindcss": "^4.2.0",
-    "typescript": "^5.9.0"
+    "typescript": "^5.9.0",
+    "vitest": "^4.1.9"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

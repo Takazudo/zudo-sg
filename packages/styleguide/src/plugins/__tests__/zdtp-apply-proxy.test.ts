@@ -429,7 +429,7 @@ describe(`setup() — ${VIRTUAL_MODULE_ID} dev/build gating`, () => {
   });
 });
 
-describe("optional @takazudo/zdtp peer", () => {
+describe("@takazudo/zdtp server import failure guards", () => {
   beforeEach(() => __resetZdtpWarningForTests());
 
   it("loadZdtpServer resolves null and warns once when the import rejects", async () => {
