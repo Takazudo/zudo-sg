@@ -392,18 +392,38 @@ preview faithful. (4) The engine's own `node_modules` must not carry a second
 - #664: no host route stub is required for hydration; keep `pages/index.tsx`
   importing `_body-end-islands.tsx` and add the islands seed shim above.
 
-## Upstream notes (not blocking; for `/dev-upstream-report` when convenient)
+## Upstream notes (verified against zfb 2.17.0 / zudo-doc 5.24.0)
 
-- zfb: the hidden-dir staging allowlist is hardcoded to `.zudo-doc/routes-src`
-  (`KNOWN_FIRST_PARTY_STAGING_DIRS`); a config knob or a generic
-  "injected-route entrypoint directories are staged" rule would let other
-  packages stage. Not needed now (the gap is closed), but the allowlist
-  comment itself says it is transitional.
-- zfb: the island scanner ignores plugin virtual modules; a plugin-provided
-  `virtual:` re-export cannot make a host island scanner-reachable. Documented
-  here as a contract limitation (same as zudo-doc's `chromeBindingsModule`).
-- zfb: `zfb dev` (`dev.rs` `rebundle_islands`) passes no package-route
-  entrypoints to the island scanner while `zfb build` does — injected-route
-  islands hydrate in build but not in dev unless a host `pages/` file reaches
-  them. The most impactful of the three; worth an upstream issue so the
-  `@takazudo/zudo-sg/islands` seed can eventually be dropped.
+The six findings from #673 were re-checked against the current release source
+and reported to their owning public upstream tracker:
+
+1. **zfb dev does not seed package-route islands.** `rebundle_islands` scans
+   the host `pages/` root only, so an island reachable only through an
+   injected package route hydrates in build but not dev. The host therefore
+   keeps the `@takazudo/zudo-sg/islands` seed shim. Tracked in
+   [Takazudo/zudo-front-builder#3003](https://github.com/Takazudo/zudo-front-builder/issues/3003).
+2. **zfb's hidden-directory staging allowlist is still hardcoded.**
+   `KNOWN_FIRST_PARTY_STAGING_DIRS` admits only `.zudo-doc/routes-src`, so a
+   different package-generated hidden staging root has no declaration path.
+   Tracked in
+   [Takazudo/zudo-front-builder#3004](https://github.com/Takazudo/zudo-front-builder/issues/3004).
+3. **zfb's island scanner still skips plugin virtual modules.** A `virtual:`
+   re-export can be resolved by the bundler but is not scanner-reachable, so
+   its `"use client"` component can have an SSR marker without a manifest
+   entry. Tracked in
+   [Takazudo/zudo-front-builder#3005](https://github.com/Takazudo/zudo-front-builder/issues/3005).
+4. **zfb appends a second cache policy on plugin responses.**
+   `dispatch_plugin` appends `Cache-Control: no-store` after plugin headers,
+   producing duplicate `Cache-Control` fields when a plugin supplies one.
+   Tracked in
+   [Takazudo/zudo-front-builder#3006](https://github.com/Takazudo/zudo-front-builder/issues/3006).
+5. **zudo-doc's `HeaderWithDefaults` has no sidebar-nodes override.** It
+   always derives the mobile-drawer tree, so a route needing a custom tree
+   must bind a replacement host `Header`. Tracked in
+   [zudolab/zudo-doc#4212](https://github.com/zudolab/zudo-doc/issues/4212).
+6. **zudo-doc still stages `routes-src` for published package routes.** The
+   underlying node_modules virtual-module gap was fixed by zfb 2.16's direct
+   virtual-module alias path, but zudo-doc 5.24.0 still copies the route tree
+   into `.zudo-doc/routes-src`; removing or version-gating that compatibility
+   copy is tracked in
+   [zudolab/zudo-doc#4213](https://github.com/zudolab/zudo-doc/issues/4213).
