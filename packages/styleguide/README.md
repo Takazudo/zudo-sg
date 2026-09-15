@@ -91,7 +91,8 @@ Full option shape, virtual modules, and every locked constant:
 ## Release scheme
 
 Stable only. `v*.*.*` tags publish to the npm `latest` dist-tag — there is no
-`next` prerelease channel for this package. See `RELEASE.md` for the runbook.
+`next` prerelease channel for this package. See the
+[release runbook](https://github.com/Takazudo/zudo-sg/blob/main/packages/styleguide/RELEASE.md).
 
 ## License
 

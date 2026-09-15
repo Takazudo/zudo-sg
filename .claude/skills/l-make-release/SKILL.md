@@ -7,17 +7,18 @@ description: >-
   create the GitHub Release. STABLE-ONLY: this package has no `next`/prerelease
   channel at all — every release is a clean X.Y.Z on npm `latest`. Pre-1.0
   version judgement is Scheme B (breaking commit -> minor bump, everything else
-  -> patch), not standard SemVer. The single human gate is the Step 3
-  version-bump proposal; confirming it authorizes the whole flow through
+  -> patch), not standard SemVer. The first release normally finalizes the
+  seeded 0.1.0 without incrementing it. The single human gate is the Step 2
+  release proposal; confirming it authorizes the whole flow through
   publish. Triggers on "bump version", "cut a release", "release zudo-sg",
   "make a release".
 user-invocable: true
 argument-description: >-
   Optional: major, minor, patch — force a direct bump at that level (Scheme B
   override). No argument — commit-judged bump against the last v* tag (breaking
-  commit -> minor, else -> patch). No v* tag exists yet -> commits since the
-  package's own first commit are analyzed (see Step 1). Or: cancel — abort a
-  not-yet-published release.
+  commit -> minor, else -> patch). No v* tag exists yet -> cold-start first
+  release, normally 0.1.0, with the full proposal gate (see Steps 1–2).
+  Or: cancel — abort a not-yet-published release.
 ---
 
 # /l-make-release
@@ -56,11 +57,10 @@ mutate anything before the user explicitly confirms. Steps 1–2 are read-only
 Step 3.
 
 There is **one gate**: the Step 2 proposal. Confirming it authorizes the whole
-flow — bump, push, CI, tag, publish, and GitHub Release. Do not add a second
-"push the tag now?" prompt. The only things that can halt the flow after
-confirmation are a **build/test/pack failure** (Step 5, before anything is
-pushed) or a **publish-workflow failure** (Step 9, after the tag is pushed) —
-see [Failure Recovery](#failure-recovery).
+flow — version + changelog, push, CI, tag, publish, and GitHub Release. Do not
+add a second "push the tag now?" prompt. A **build/test/pack failure** (Step 4),
+**CI failure** (Step 6), or **publish-workflow failure** (Step 8) must be
+resolved before advancing — see [Failure Recovery](#failure-recovery).
 
 **Cancel mode.** `/l-make-release cancel` (or "cancel/abort the release") does
 NOT bump anything — it jumps straight to
@@ -83,17 +83,18 @@ release.
 
 The publish workflow triggers on a pushed `v*.*.*` tag — NOT on a GitHub
 Release. The skill creates the GitHub Release **after** the publish run
-succeeds, so a failed publish leaves no orphaned Release. The irreversible
-step is the **tag push**; confirming the Step 2 proposal is what authorizes
-it.
+succeeds, or after recovery verifies that the exact version reached npm
+despite a failed run. The irreversible step is the **tag push**; confirming
+the Step 2 proposal is what authorizes it.
 
 ## Boundaries
 
 - The skill never runs `npm publish` / `pnpm publish` directly — that is
   `publish-zudo-sg.yml`'s job, triggered by the tag push.
 - npm cannot re-publish a version. If the publish workflow fails **after** the
-  tag is pushed (Step 9), the fix is to cut a **new** version, not retry the
-  same one — see [Failure Recovery](#failure-recovery).
+  tag is pushed (Step 8), check the registry before deciding whether the
+  unchanged run can be retried — see [Failure Recovery](#failure-recovery).
+  Never move a pushed release tag to another commit.
 - This skill never mutates the root `package.json`, `apps/demo`, `doc/`, or
   `packages/demo-ui` — the styleguide engine is the only release surface here.
 
@@ -116,38 +117,76 @@ Verify ALL of the following. If any check fails, stop with a clear message.
    commonly `Production Deploy`, `main-deploy.yml`). If anything is still
    `in_progress` or non-success, stop and report it rather than releasing
    against unverified `main`.
+6. Confirm the publish credentials with the operator at **npmjs.com**: the
+   `NPM_TOKEN` repo secret must be a current **granular access token**, with
+   **Read and write (publish and stage)** access covering `@takazudo` (and
+   creation of `@takazudo/zudo-sg` for the first publish), and **Bypass 2FA**
+   enabled. GitHub/CI cannot reveal a stored secret's value or token type;
+   seeing its name in `gh secret list` is not proof of these settings. Check
+   expiry and package publishing permissions too. Once the package exists,
+   a configured **Trusted Publisher** may provide OIDC authentication
+   instead; `id-token: write` and `--provenance` alone do not configure it.
+   See `packages/styleguide/RELEASE.md` for the current token guidance and
+   the post-first-publish migration.
 
-### Resume detection (run before requiring a clean tree)
+### Select first release, normal bump, or resume candidate
 
 A previous run may have committed the version bump without pushing the tag
-(e.g. CI on the bump was still running when the prior run ended). Detect this
-before assuming a cold start:
+(e.g. CI on the bump was still running when the prior run ended). **Check for
+any `v*` tag before treating a missing current-version tag as a resume.** The
+seeded `0.1.0` was introduced with the package; that commit is not a release.
+Every path requires a clean tree: if `git status --porcelain` is non-empty,
+stop and ask the user to commit, stash, or discard before re-running.
 
 ```bash
-git fetch --tags origin
 CUR=$(node -p "require('./packages/styleguide/package.json').version")
-git tag -l "v$CUR"   # empty output = no tag yet for the current version
+BASE_TAG=$(git tag -l 'v*' --sort=-v:refname | head -1)
+if [ -z "$BASE_TAG" ]; then
+  RELEASE_MODE=first
+elif git show-ref --verify --quiet "refs/tags/v$CUR"; then
+  RELEASE_MODE=bump
+else
+  RELEASE_MODE=resume-candidate
+fi
 ```
 
-- **If `v$CUR` does NOT exist**: the current version is un-tagged. Check the
-  working tree first:
-  - **Dirty** (`git status --porcelain` non-empty) -> **STOP**. Ask the user
-    to commit, stash, or discard before re-running; do NOT resume or bump
-    over a dirty tree.
-  - **Clean** -> this is a RESUME. Find the commit that introduced the current
-    version (do NOT assume it is `HEAD`):
+- **`first` — no `v*` tag exists at all**: always go to **Step 2**, even if a
+  previous attempt prepared a release commit. Analyze the package history,
+  propose the first version, and wait for the normal confirmation. Never
+  offer to tag the package-introduction commit or skip the changelog, quality
+  gate, or release commit. Non-release tags such as `_attachments` do not
+  change this decision.
+- **`bump` — `v$CUR` exists**: proceed to Step 2 for a normal bump. If this is
+  recovery from a failed publish, use [Failure Recovery](#failure-recovery)
+  first; a tag alone does not prove the version reached npm.
+- **`resume-candidate` — at least one `v*` tag exists, but `v$CUR` is absent**:
+  identify the commit that introduced the current version (not necessarily
+  `HEAD`):
 
-    ```bash
-    BUMP_SHA=$(git log -1 --format=%H -S"\"version\": \"$CUR\"" -- packages/styleguide/package.json)
-    ```
+  ```bash
+  BUMP_SHA=$(git log -1 --format=%H -S"\"version\": \"$CUR\"" -- packages/styleguide/package.json)
+  git show --stat "$BUMP_SHA"
+  git show "$BUMP_SHA:packages/styleguide/package.json"
+  git show "$BUMP_SHA:doc/src/content/docs/changelog/zudo-sg/$CUR.mdx"
+  git show "$BUMP_SHA:packages/styleguide/CHANGELOG.md"
+  ```
 
-    Offer to RESUME from `$BUMP_SHA` — this skips Steps 2–4 (bump / changelog /
-    commit) and continues from **Step 6** (CI wait) onward, tagging `$BUMP_SHA`.
-    If `$BUMP_SHA` is not `HEAD`, later commits landed on top — surface that and
-    let the user choose: tag `$BUMP_SHA` as-is, or abort and cut a fresh bump
-    that includes the newer commits.
-- **If `v$CUR` already exists**: the current version is released. Proceed with
-  a normal cold-start bump (Steps 2–4). Require a clean working tree here too.
+  Resume only if the commit is identifiable as this skill's completed
+  preparation: subject `chore(release): @takazudo/zudo-sg v<current>`, the
+  matching manifest version, a dated changelog page with no `unreleased`
+  placeholder, and the generated CHANGELOG entry. If any evidence is missing,
+  take Step 2's proposal path instead. Also check the exact version with
+  `npm view "@takazudo/zudo-sg@$CUR" version --registry=https://registry.npmjs.org/`;
+  a published version or an inconclusive query goes to Failure Recovery,
+  never a new tag push.
+
+  Present a resume proposal naming the version and `$BUMP_SHA` and require
+  confirmation unless that exact resume is already authorized in this
+  session. Re-run **Step 4** on that tree, ensure the selected commit is on
+  `origin/main`, then continue at **Step 6**, tagging only the verified SHA.
+  If `$BUMP_SHA` is not `HEAD`, surface the later commits and let the user
+  choose the original release tree or a fresh proposal including them. Do
+  not validate `HEAD` and then tag a different, unverified tree.
 
 ## Step 2: Determine the next version and propose — THE GATE
 
@@ -171,6 +210,19 @@ git tag -l 'v*' --sort=-v:refname | head -1
   This finds the first commit that ever added
   `packages/styleguide/package.json` — i.e. "all of history since the engine
   was born" — with no dependency on knowing which PR merged the epic.
+  Include that introduction commit itself in the first-release analysis
+  (`git show "$BASE_SHA"`); `BASE_SHA..HEAD` otherwise omits it.
+
+  Verify that the registry agrees this is a first release:
+
+  ```bash
+  npm view @takazudo/zudo-sg versions --json --registry=https://registry.npmjs.org/
+  ```
+
+  A confirmed package-not-found `E404` is expected. If versions already
+  exist, stop and reconcile the missing tag history using Failure Recovery;
+  do not publish a new "first" version. Authentication, network, or registry
+  errors are inconclusive, not proof of absence.
 
 ### Analyze commits since the base
 
@@ -204,7 +256,20 @@ commit, and exclude it from both the level judgement and the changelog draft).
 Every argument sets **which component bumps**; there is no channel argument at
 all — everything lands on `latest`.
 
-**No argument** — judge the level from the categorization above:
+**First release (`RELEASE_MODE=first`)** — normally propose **`0.1.0`**, the
+seeded unreleased entry, even though `package.json` already says `0.1.0`.
+Finalizing that version is a release; do not manufacture `0.1.1` just because
+the initial manifest already has a version. Still analyze all the engine
+history and show the proposal gate. A Scheme B breaking-change judgement may
+propose `0.2.0`, but state the concrete reason in the proposal. An explicit
+`major` / `minor` / `patch` argument overrides this default as below.
+
+If a prior attempt already prepared another version with no `v*` tags, stay
+on this cold-start path, explain whether that unpublished version is being
+retained or increased, and obtain fresh confirmation. Never silently lower
+it back to `0.1.0` or skip Steps 2–5.
+
+**Later releases, no argument** — judge the level from the categorization above:
 
 - any **Breaking Change** -> **minor** bump (`0.Y.Z` -> `0.(Y+1).0`) — the
   major stays at `0`, per Scheme B; a breaking `0.x` change does NOT jump to
@@ -232,13 +297,22 @@ prerelease channel to opt into.
 ### Validation
 
 The computed version must be strictly greater than the current version
-(`packages/styleguide/package.json`'s `version`). If not, stop with an error
-showing both versions.
+(`packages/styleguide/package.json`'s `version`) **except on the cold-start
+first-release path**, where retaining the unpublished current version is
+allowed. A lower version is never allowed. Show an error with both versions
+if validation fails.
+
+Before proposing any version, check it with
+`npm view "@takazudo/zudo-sg@<proposed>" version --registry=https://registry.npmjs.org/`.
+Only a confirmed not-found response permits publishing it. If it resolves,
+the version is already live: use Failure Recovery and do not re-publish or
+move a tag. If the query fails for any other reason, stop until its result
+can be established.
 
 ### Present the proposal
 
 ```
-Proposed bump: @takazudo/zudo-sg <current> -> <new> (<breaking|feature|fix|patch>, Scheme B)
+Proposed release: @takazudo/zudo-sg <current> -> <new> (<first release|breaking|feature|fix|patch>, Scheme B)
 
 Breaking Changes:
 - description (hash)
@@ -257,20 +331,30 @@ Only show sections with entries. **Wait for explicit user confirmation before
 proceeding to Step 3.** Confirming here authorizes the full flow through
 `pnpm publish` and the GitHub Release.
 
+For the default bootstrap, say `Proposed first release: @takazudo/zudo-sg
+0.1.0 (retain seeded version; finalize the unreleased changelog)`. An unchanged
+version number does not waive this gate.
+
 ## Step 3: Bump + changelog
 
 ### 3a. Bump the version
 
 Update `version` in `packages/styleguide/package.json` to the confirmed new
-version (no `v` prefix). The root `package.json` is NOT touched.
+version (no `v` prefix). For the default first release, retain `0.1.0` and
+continue with the changelog and checks. The root `package.json` is NOT touched.
 
 ### 3b. Write the English changelog page
 
 Create `doc/src/content/docs/changelog/zudo-sg/<version>.mdx`. On the **very
-first real release**, this is the seeded `doc/src/content/docs/changelog/zudo-sg/0.1.0.mdx`
-placeholder — finalize it in place rather than creating a second file (its
-`Released: unreleased` placeholder line and the sentence "Finalized by
-`/l-make-release` when the first version actually ships" both get replaced).
+first real release**, finalize the seeded
+`doc/src/content/docs/changelog/zudo-sg/0.1.0.mdx` placeholder in place (its
+`Released: unreleased` line and the sentence "Finalized by `/l-make-release`
+when the first version actually ships" both get replaced). If the confirmed
+first version is different, rename that seed to `<version>.mdx`, update its
+title and description, and retain `sidebar_position: 1`; do not leave a
+fictional unreleased `0.1.0` entry behind. Stage both sides of the rename in
+Step 5. On a restarted first attempt, edit the prepared page for that version
+instead of duplicating it.
 
 Frontmatter (match the existing file's shape):
 
@@ -298,8 +382,8 @@ Released: <YYYY-MM-DD>
 - `sidebar_position`: standard ascending order (root `CLAUDE.md`: "Sidebar
   order is driven by `sidebar_position`") — read every existing file under
   `doc/src/content/docs/changelog/zudo-sg/` and use one past the current
-  highest value (the seeded `0.1.0.mdx` starts at `1`, so the first real
-  second release is `2`, and so on). Note this is independent of
+  highest value for a new release page (the first release keeps the seed's
+  `1`, the second release is `2`, and so on). Note this is independent of
   `packages/styleguide/CHANGELOG.md`'s own ordering — that file is generated
   by sorting the `title` fields as semver, newest first, regardless of
   `sidebar_position` (`doc/src/content/docs/changelog/zudo-sg/*.mdx` ->
@@ -406,14 +490,19 @@ fi
 gh run watch "$PUBLISH_RUN" --exit-status
 ```
 
-If it fails, surface the failing logs (`gh run view "$PUBLISH_RUN" --log-failed`)
-and **stop** — do NOT create the GitHub Release. See
-[Failure Recovery](#failure-recovery).
+If it fails, first run the exact-version registry check in
+[Failure Recovery](#failure-recovery). The job may have failed after npm
+accepted the version. Continue to Step 9 only after publication is confirmed;
+otherwise inspect the logs and follow the applicable recovery path.
 
 ## Step 9: Create the GitHub Release
 
-The publish succeeded. Extract the changelog body (everything after the
-frontmatter) as release notes:
+The publish succeeded, or Failure Recovery confirmed the exact version is
+live. Keep the existing release tag; if it is missing or disagrees with the
+published commit, stop and reconcile that history rather than re-tagging.
+Check `gh release view "v<version>"` first and reuse an existing Release.
+Otherwise extract the changelog body (everything after the frontmatter) as
+release notes:
 
 ```bash
 awk 'f; /^---$/{c++; if(c==2) f=1}' doc/src/content/docs/changelog/zudo-sg/<version>.mdx > /tmp/zudo-sg-release-notes.md
@@ -434,7 +523,15 @@ npm dist-tag ls @takazudo/zudo-sg
 check for staleness — this package never publishes one. Print a final report
 (published version, npm package URL
 `https://www.npmjs.com/package/@takazudo/zudo-sg`, the publish workflow run
-URL, the GitHub Release URL), then **STOP**.
+URL, the GitHub Release URL).
+
+After the **first** successful publish, recommend configuring **Trusted
+Publishing (OIDC)** for `Takazudo/zudo-sg` and `publish-zudo-sg.yml` in the
+package's npm settings, allowing direct publishing for this workflow. It
+already has `id-token: write` and `--provenance`; the npm-side trust still has
+to be configured and verified before retiring `NPM_TOKEN`. Follow the
+migration notes in `packages/styleguide/RELEASE.md`. This is a recommendation,
+not an automatic account-setting change. Then **STOP**.
 
 ## Cancelling a release
 
@@ -462,12 +559,30 @@ Use this for `/l-make-release cancel` or a mid-release problem. The tag push
 ### The tag HAS been pushed (Step 7 done)
 
 Treat the version as live. Do NOT delete the remote tag and do NOT attempt to
-re-publish that version. If the publish failed, recover by cutting a **new**
-version — see [Failure Recovery](#failure-recovery). If it succeeded and needs
-retracting, that's a manual `npm unpublish` / `npm deprecate` decision for the
-user, outside this skill.
+re-publish a live version. If the publish failed, check the registry and
+follow [Failure Recovery](#failure-recovery). If it succeeded and needs
+retracting, that's a manual `npm unpublish` / `npm deprecate` decision for
+the user, outside this skill.
 
 ## Failure Recovery
+
+**First, for any failure after tagging, check whether npm accepted the version:**
+
+```bash
+npm view "@takazudo/zudo-sg@<version>" version --registry=https://registry.npmjs.org/
+```
+
+- **Resolves to `<version>`** — the version is live, even if the workflow is
+  red. Never re-tag, delete its tag, re-publish, or re-run its publish job.
+  Keep the published commit and continue at **Step 9** to finish or reuse the
+  GitHub Release, then verify/report in Step 10. A missing or mismatched tag
+  requires reconciliation before creating the Release.
+- **Confirmed not found (`E404`, including no matching version)** — inspect
+  `gh run view "$PUBLISH_RUN" --log-failed` and use the unpublished recovery
+  paths below. Repeat the registry check immediately before any retry.
+- **Authentication/network/registry error or ambiguous output** — publication
+  status is unknown. Stop and recheck when the registry is reachable; never
+  infer "unpublished" from a failed command or a failed Actions job.
 
 - **Build/test/pack failure (Step 4)** — stop and report. Do not commit. Fix
   and re-run. Nothing reached the remote.
@@ -476,26 +591,20 @@ user, outside this skill.
 - **Wrong version proposed** — caught at the Step 2 gate. If already committed
   but the tag was NOT pushed, use [Cancelling a release](#cancelling-a-release)
   to revert and re-run.
-- **Publish workflow fails after the tag was pushed (Step 8)** — the tag
-  exists on the remote but the npm publish did not complete. Inspect
-  `gh run view "$PUBLISH_RUN" --log-failed`.
-  - **Transient** (registry hiccup, runner eviction) — re-run the same
-    workflow: `gh run rerun "$PUBLISH_RUN"`. The version was never published,
-    so a clean re-run can still succeed under the same tag.
-  - **Needs a code fix** — the tag must move to a new commit; npm will not
-    accept the same version twice:
-
-    ```bash
-    git push origin :refs/tags/v<version>
-    git tag -d v<version>
-    ```
-
-    Fix the code, then re-run `/l-make-release` — resume detection picks the
-    un-tagged bump back up.
-- **OTP / `EOTP` / 2FA error in the publish step** — `NPM_TOKEN` is not an
-  Automation-type token. Regenerate it as Automation at npmjs.com, update the
-  repo secret (`gh secret set NPM_TOKEN`), then recover per the "code change"
-  path above.
+- **Publish workflow fails and the version is confirmed absent (Step 8)**:
+  - **Transient** (registry hiccup, runner eviction) — retry the unchanged
+    workflow at the same tag: `gh run rerun "$PUBLISH_RUN"`, then return to
+    Step 8. Retry only while the version is still confirmed absent.
+  - **Needs a code fix** — leave the pushed tag on its original commit. Fix
+    the code on `main`, then re-run `/l-make-release` for a **new version**
+    through the proposal gate. Never delete/recreate a release tag to point
+    it at different content.
+  - **OTP / `EOTP` / 2FA or token-permission error** — check the granular
+    token's expiry, publish rights covering `@takazudo`, and **Bypass 2FA**
+    setting at npmjs.com (or the configured Trusted Publisher). Correct the
+    credential and update `NPM_TOKEN` if needed; this alone does not need a
+    code change or a moved tag. Recheck npm, then retry the unchanged run
+    only if the version remains absent.
 
 See `packages/styleguide/RELEASE.md` for the same recovery paths without the
 skill's step numbering — useful when recovering by hand.
