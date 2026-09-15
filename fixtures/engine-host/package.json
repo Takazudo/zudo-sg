@@ -7,7 +7,9 @@
   "scripts": {
     "dev": "zfb dev",
     "build": "zfb build",
-    "gen-registry": "zudo-sg gen-registry"
+    "check": "tsc --noEmit -p tsconfig.json",
+    "gen-registry": "zudo-sg gen-registry",
+    "gen-token-manifest": "zudo-sg gen-token-manifest"
   },
   "dependencies": {
     "@takazudo/zdtp": "0.8.0",
@@ -22,5 +24,9 @@
     "preact-render-to-string": "^6.6.6",
     "tailwindcss": "^4.2.0",
     "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.9.0"
   }
 }
