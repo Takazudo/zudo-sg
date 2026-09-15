@@ -22,12 +22,47 @@ triggers `.github/workflows/publish-zudo-sg.yml`.
 `packages/styleguide/package.json`'s `version` field. The root `package.json`
 stays `private` and is never bumped by a release.
 
-## Token type
+## First release
 
-`NPM_TOKEN` (repo secret) **must be an Automation-type token**. Scoped publish
-(`@takazudo/*`) requires 2FA, and only an Automation (or a granular,
-2FA-bypassing) token can publish unattended in CI — a standard user token
-fails the publish step with an OTP/EOTP error.
+With no `v*` tags, `/l-make-release` always takes the cold-start proposal
+path. A clean tree and an untagged `0.1.0` do not mean a release is ready to
+resume: that version was seeded when the package was created. Confirm npm
+has no published versions, analyze the engine's history, and normally
+propose **`0.1.0`**, finalizing the unreleased changelog entry without an
+automatic `0.1.1` bump. A Scheme B breaking-change judgement or an explicit
+bump argument can propose a higher version, with the reason stated.
+
+The first release still requires the normal proposal confirmation, finalized
+changelog, quality checks, and a new release commit. Tag that verified
+release commit, never the old package-introduction commit. A restarted first
+attempt with no `v*` tags also returns to the proposal gate.
+
+## Publish credentials
+
+The first publish uses the `NPM_TOKEN` repo secret: a **granular access
+token** with **Read and write (publish and stage)** permissions covering the
+`@takazudo` scope, including creation of `@takazudo/zudo-sg`, and **Bypass
+2FA** enabled. Check its expiry and the account's publish rights at
+npmjs.com. The stored GitHub secret cannot be read back to verify its type;
+the operator must confirm these settings before releasing. npm removed
+legacy/classic tokens in late 2025. See
+[npm access tokens](https://docs.npmjs.com/about-access-tokens/) and
+[creating granular tokens](https://docs.npmjs.com/creating-and-viewing-access-tokens/).
+
+Once the package exists on npm, prefer **Trusted Publishing (OIDC)**. In its
+npm settings, configure a GitHub Actions trusted publisher for owner
+`Takazudo`, repository `zudo-sg`, workflow filename `publish-zudo-sg.yml`,
+with direct publishing allowed. The workflow already uses GitHub-hosted
+runners, `id-token: write`, and `--provenance`; these do not establish the
+npm-side trust by themselves. Verify OIDC publishing with the workflow's
+package-manager version before removing `NPM_TOKEN` and its environment
+wiring, then revoke the unused token. See
+[npm Trusted Publishing](https://docs.npmjs.com/trusted-publishers/).
+
+This token-based bootstrap is current as of September 2026. npm has
+announced the removal of direct publishing with bypass-2FA tokens in January
+2027; complete the OIDC migration before then (see the access-token docs
+above).
 
 ## What the publish workflow does
 
@@ -40,10 +75,10 @@ pattern):
 3. `pnpm verify:styleguide-install` — the foreign-install proof (#665):
    packs, installs into `fixtures/engine-host` outside the workspace, builds
    under a non-root `base`, boots `zfb dev` once
-4. `bash scripts/check-pack.sh` — packs again, asserts the tarball matches the
-   `files` whitelist and every `exports` target resolves, installs the
-   tarball into a scratch project, imports the Node-importable subpaths, runs
-   `zudo-sg --help`
+4. `bash scripts/check-pack.sh` — packs again, asserts the tarball contains
+   `LICENSE`, matches the `files` whitelist, and every `exports` target
+   resolves, installs the tarball into a scratch project, imports the
+   Node-importable subpaths, runs `zudo-sg --help`
 5. `pnpm --filter @takazudo/zudo-sg publish --tag latest --access public
    --no-git-checks --provenance`
 
@@ -52,25 +87,37 @@ The version is validated against `^v\d+\.\d+\.\d+$` before anything runs — no
 
 ## If the publish job fails after tagging
 
-npm never allows re-publishing the same version. Recovery:
-
-1. Inspect the failed run's logs (`gh run view <run-id> --log-failed`).
-2. **Transient failure** (registry hiccup, runner eviction) — re-run the same
-   workflow run: `gh run rerun <run-id>`. The version was never actually
-   published, so a clean re-run can still succeed under the same tag.
-3. **Needs a code fix** — the tag must move to a new commit; npm will not
-   accept the same version twice:
+1. **First, check the exact version on npm**, even if Actions says the job
+   failed:
 
    ```sh
-   git push origin :refs/tags/v<version>   # delete the remote tag
-   git tag -d v<version>                    # delete it locally
+   npm view "@takazudo/zudo-sg@<version>" version --registry=https://registry.npmjs.org/
    ```
 
-   Fix the code, then re-run `/l-make-release` — its resume detection picks
-   the un-tagged version bump back up (or cuts a fresh one).
-4. **OTP / `EOTP` / 2FA error in the publish step** — `NPM_TOKEN` is not an
-   Automation-type token. Regenerate it as Automation at npmjs.com, update the
-   repo secret (`gh secret set NPM_TOKEN`), then retry via step 2 or 3.
+   If it resolves to `<version>`, the version is **live**. Do not re-tag,
+   delete its tag, re-publish, or re-run the publish job. Continue with the
+   skill's **Step 9: Create the GitHub Release** (reuse an existing Release),
+   then verify/report. Keep the published tag and commit; a missing or
+   mismatched tag must be reconciled before creating the Release.
+
+   Proceed below only for a confirmed not-found result (`E404`, including
+   no matching version). An authentication, network, or registry error is
+   inconclusive: stop and recheck when its status can be established.
+2. Inspect the failed run's logs (`gh run view <run-id> --log-failed`).
+3. **Transient failure** (registry hiccup, runner eviction) — repeat step 1
+   immediately before retrying. If the version is still absent, re-run the
+   unchanged workflow at the same tag: `gh run rerun <run-id>`. Watch it and
+   repeat this recovery check if it fails again.
+4. **Needs a code fix** — leave the pushed tag at its original commit. Fix
+   the code on `main`, then re-run `/l-make-release` for a **new version**
+   through the proposal gate. Never delete/recreate a release tag to point
+   it at different content.
+5. **OTP / `EOTP` / 2FA or token-permission error** — check the granular
+   token's expiry, publish rights covering `@takazudo`, and **Bypass 2FA**
+   setting at npmjs.com (or the configured Trusted Publisher). Correct the
+   credential and update `NPM_TOKEN` if needed, then repeat step 1 before
+   retrying the unchanged run. A credential-only fix does not need a new
+   commit or a moved tag.
 
 ## Manual verification (no publish)
 
