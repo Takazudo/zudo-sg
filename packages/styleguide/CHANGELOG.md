@@ -4,12 +4,10 @@ All notable changes to `@takazudo/zudo-sg` are documented in this file.
 
 The format is based on Keep a Changelog, and release notes are generated from the changelog MDX pages.
 
-## [0.1.0]
-
-Released: unreleased
+## [0.1.0] - 2026-09-15
 
 Initial release of `@takazudo/zudo-sg`, the installable styleguide engine
-package. Finalized by `/l-make-release` when the first version actually ships.
+package.
 
 ### Features
 
@@ -33,3 +31,5 @@ package. Finalized by `/l-make-release` when the first version actually ships.
 - Token dashboards and the preview design-token panel, driven by a
   `gen-token-manifest`-produced manifest.
 - Framework scope: Preact/zfb hosts only for this release.
+- Release toolchain: `@takazudo/zfb` 2.17.0 with `@takazudo/zudo-doc` 5.24.0.
+  The injected `/tokens` route makes `@takazudo/zdtp ^0.8.0` a required peer.
