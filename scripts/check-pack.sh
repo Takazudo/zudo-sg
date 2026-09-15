@@ -10,7 +10,8 @@ set -euo pipefail
 #      packages/demo-ui, fixtures/), and includes LICENSE;
 #   2. asserts every literal (non-wildcard) `exports` target resolves inside
 #      the tarball;
-#   3. installs the tarball into a scratch project exactly like an external
+#   3. runs the README pnpm add command with strict peers in an empty project,
+#      then installs the tarball into a second scratch project exactly like an external
 #      consumer would (`npm install <tarball>`);
 #   4. imports the exports subpaths that are safe to import under plain
 #      Node — @takazudo/zfb type-only imports erase at build time, so
@@ -113,7 +114,10 @@ if (errors.length > 0) {
 console.log(\`    -> OK, every literal exports target resolves (\${Object.keys(pkg.exports ?? {}).length} exports entries checked)\`);
 "
 
-echo "==> Installing the tarball into a scratch project (like a real consumer)"
+echo "==> Verifying the README install command and inherited prerequisites (strict peers)"
+node "$ROOT_DIR/scripts/verify-styleguide-install.mjs" --readme-install-only --tarball "$TARBALL"
+
+echo "==> Installing the tarball into a scratch project (isolated Node import smoke)"
 SCRATCH_DIR="$WORK_DIR/scratch"
 mkdir -p "$SCRATCH_DIR"
 cat >"$SCRATCH_DIR/package.json" <<'EOF'

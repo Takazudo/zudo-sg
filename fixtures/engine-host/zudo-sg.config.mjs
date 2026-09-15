@@ -9,7 +9,7 @@
 // subpath (the actual origin of `StoryModule`) since there is no separate
 // provider package to attribute stories to.
 
-/** @type {import("@takazudo/zudo-sg/cli").ZudoSgConfig} */
+/** @satisfies {import("@takazudo/zudo-sg/config").ZudoSgComposeOptions} */
 export default {
   componentsRoots: [{ dir: "ui", importBase: "../../ui" }],
   registryOut: "./src/styleguide/sg-registry.ts",
@@ -17,4 +17,8 @@ export default {
   uiPackageName: "@takazudo/zudo-sg/stories",
   barrelIndex: null,
   previewStyles: "./src/styles/preview-entry.css",
+  tokens: {
+    cssFiles: ["./src/styles/ui-tokens.css", "./src/styles/ui-tokens.css"],
+    manifestOut: "./src/styleguide/token-manifest.ts",
+  },
 };
