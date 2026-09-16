@@ -16,7 +16,7 @@
     "check": "pnpm run typecheck && pnpm run test"
   },
   "dependencies": {
-    "@takazudo/zfb-md-wasm": "2.17.0",
+    "@takazudo/zfb-md-wasm": "2.18.0",
     "@takazudo/zudo-sg": "workspace:*",
     "dompurify": "^3.4.11"
   },
