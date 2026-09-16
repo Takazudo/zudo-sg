@@ -177,7 +177,8 @@ describe("no-stub build: engine routes own /components, /components/[slug], /com
 
   it("renders the catalog with every registry story and links each detail page that renders its title", () => {
     const registrySource = readFileSync(join(REPO_ROOT, "src/styleguide/sg-registry.ts"), "utf8");
-    const storyCount = new Set(registrySource.match(/"\.\/ui\/src\/[^"]+\.stories\.tsx"/g) ?? []).size;
+    const storyKeys = [...registrySource.matchAll(/"(\.\/[^"\n]+\.stories\.tsx)"\s*:/g)].map((match) => match[1]);
+    const storyCount = new Set(storyKeys).size;
     expect(storyCount).toBeGreaterThan(10);
 
     const index = read("dist/components/index.html");
