@@ -88,7 +88,8 @@ export default defineConfig({
   // AFTER the zudo-doc preset's. The engine owns `/components`,
   // `/components/[slug]`, `/components/preview` and `/tokens`; a host `pages/`
   // file with one of those URL shapes would silently shadow the injected route.
-  // Their islands reach `zfb dev` through `pages/lib/_zudo-sg-islands.ts`.
+  // zfb ≥ 2.18.0 seeds dev islands from these injected routes; the
+  // `pages/lib/_zudo-sg-islands.ts` shim is a kept-for-API no-op (ADR finding 4).
   ...withZudoSg(
     {
       collections: preset.collections,
