@@ -20,32 +20,27 @@
 // preBuild hook so the package can render Created / Updated / Author. The host
 // plugin serializes it for the renderer, keeping node:fs out of the page graph.
 //
-// We also override Header, for the @takazudo/zudo-sg catalog routes only. The
-// engine passes the registry-built component tree as `sidebarNodesOverride`
-// (plus `currentSlug`) on its sidebar routes so the mobile drawer shows the
-// component tree; zudo-doc's package header has no such input. Those calls go
-// to the host `HeaderWithDefaults` (what the pre-engine host catalog pages
-// rendered). Every other caller — the zudo-doc doc/404 routes and the engine's
-// root-menu /tokens page — gets the package default header built from the same
-// route context, so their output is unchanged by this binding.
+// There is deliberately NO Header binding. The engine used to need one: it
+// passes the registry-built component tree for its catalog routes' mobile
+// drawer, and zudo-doc's header had no input for that, so this module bound a
+// host header just to receive it. zudo-doc 5.25.0 (zudolab/zudo-doc#4212, filed
+// from this repo) added the `sidebarNodes` prop, and the engine passes it
+// directly — so every route now renders the package default header.
 //
 // Island registration (ADR "route-injection-seam.md", §Host-callables channel):
 // client islands reached ONLY through this virtual re-export are NOT guaranteed
 // to register on injected routes. That is fine here — the SAME island chains
-// (`_body-end-islands.tsx`, and `_header-with-defaults.tsx`'s SidebarToggle /
-// ThemeToggle) are statically imported by the retained host pages
+// (`_body-end-islands.tsx`, and the `SidebarToggle` / `ThemeToggle` modules the
+// package header renders, which `_header-with-defaults.tsx` imports from the
+// same subpaths) are statically imported by the retained host pages
 // (pages/index.tsx, pages/docs/versions.tsx), so their constructors are
 // registered globally and the injected routes' SSR markers hydrate against
 // those registry entries. If those pages ever stop importing these chains, add
 // a static registration path.
 
-import type { ChromeContext, ChromeHostBindings } from "@takazudo/zudo-doc/factory-context";
-import { createHeaderWithDefaults } from "@takazudo/zudo-doc/header-with-defaults";
-import { createRouteContext, type RouteContextPayload } from "@takazudo/zudo-doc/route-context";
-import { routeContext } from "virtual:zudo-doc-route-context";
+import type { ChromeHostBindings } from "@takazudo/zudo-doc/factory-context";
 import { settings } from "@/config/settings";
 import { BodyEndIslands } from "./_body-end-islands";
-import { HeaderWithDefaults, type HeaderWithDefaultsProps } from "./_header-with-defaults";
 import { docHistoryMeta } from "virtual:zudo-sg-doc-history-meta";
 
 // The package chrome calls the BodyEndIslands slot as a bare component; bind the
@@ -55,25 +50,7 @@ import { docHistoryMeta } from "virtual:zudo-sg-doc-history-meta";
 const BodyEndIslandsBound: ChromeHostBindings["BodyEndIslands"] = (props) =>
   BodyEndIslands({ ...props, basePath: settings.base ?? "/" });
 
-type PackageHeader = ReturnType<typeof createHeaderWithDefaults>;
-let packageHeader: PackageHeader | undefined;
-
-const HeaderBound: ChromeHostBindings["Header"] = (props) => {
-  if (props.sidebarNodesOverride) return HeaderWithDefaults(props as HeaderWithDefaultsProps);
-  // Built lazily with createChrome's context composition. The doc routes' extra
-  // DesignTokenPanelBootstrap binding only feeds a header gate that
-  // `designTokenPanel: false` (zfb.config.ts) already closes, so doc-route HTML
-  // stays identical to the unbound package header (diffed in #664).
-  packageHeader ??= createHeaderWithDefaults({
-    ...createRouteContext(routeContext as unknown as RouteContextPayload),
-    components: {},
-    hostBindings: chromeBindings,
-  } as ChromeContext);
-  return packageHeader(props as Parameters<PackageHeader>[0]);
-};
-
 export const chromeBindings: ChromeHostBindings = {
-  Header: HeaderBound,
   BodyEndIslands: BodyEndIslandsBound,
   docHistoryMeta,
 };
