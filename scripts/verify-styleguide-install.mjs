@@ -9,10 +9,16 @@
 // generates the fixture's registry/token manifest, type-checks the consumer,
 // builds both the empty and configured /tokens modes, and asserts the
 // four injected routes + the standalone preview stylesheet exist under the
-// fixture's non-root `base` ("/styleguide/"). Then boots `zfb dev` once and
-// asserts the dev-hydration seed (ADR finding 4) puts `ConfiguredPreviewApp`
-// into `/styleguide/assets/islands.js` — dev scans host `pages/` only, so
-// without `pages/lib/_zudo-sg-islands.ts` this would 404 / omit the marker.
+// fixture's non-root `base` ("/styleguide/"). Then strips the islands seed
+// (`pages/lib/_zudo-sg-islands.ts` + its import) from the temp copy and boots
+// `zfb dev` once, asserting `ConfiguredPreviewApp` (reached through the
+// injected route entrypoint) AND the fixture's `Counter` island (reached only
+// through `virtual:zudo-sg-registry`) both register in
+// `/styleguide/assets/islands.js`, and that the dev CSS content globs seeded
+// from the injected routes reach `/styleguide/assets/styles.css` — the
+// regression guard for zfb 2.18.0's dev-scanner and CSS-glob seeding (ADR
+// finding 4 amendment). The build phases above run on the as-shipped fixture
+// (seed present), so they still prove the seed is a harmless no-op.
 //
 // Model: scripts/__tests__/zudo-sg-no-stub-build.slow.test.ts (build +
 // dev boot, free-port + process-group kill).
@@ -51,6 +57,30 @@ function run(command, commandArgs, cwd) {
         return;
       }
       reject(new Error(`${command} ${commandArgs.join(" ")} failed (${signal ? `signal ${signal}` : `exit code ${code}`})`));
+    });
+  });
+}
+
+/** Like `run`, but also accumulates the streamed output for post-hoc log assertions. */
+function runStreamed(command, commandArgs, cwd) {
+  return new Promise((resolvePromise, reject) => {
+    let output = "";
+    const child = spawn(command, commandArgs, { cwd, env: process.env });
+    child.stdout?.on("data", (chunk) => {
+      output += String(chunk);
+      process.stdout.write(chunk);
+    });
+    child.stderr?.on("data", (chunk) => {
+      output += String(chunk);
+      process.stderr.write(chunk);
+    });
+    child.on("error", (error) => reject(new Error(`${command} could not start: ${error.message}`)));
+    child.on("close", (code, signal) => {
+      if (code === 0) {
+        resolvePromise(output);
+        return;
+      }
+      reject(new Error(`${command} ${commandArgs.join(" ")} failed (${signal ? `signal ${signal}` : `exit code ${code}`}):\n${output}`));
     });
   });
 }
@@ -333,15 +363,19 @@ async function main() {
     }
 
     console.log("zfb build (/tokens dashboard mode)");
-    await run("corepack", ["pnpm", "exec", "zfb", "build"], hostDir);
+    const buildLog = await runStreamed("corepack", ["pnpm", "exec", "zfb", "build"], hostDir);
+    assert(!/has no matching registry entry/u.test(buildLog), "zfb build logged an unregistered island marker");
 
     const catalogIndex = await read(hostDir, "dist/components/index.html");
-    assert(catalogIndex.includes("Button") && catalogIndex.includes("Card"), "catalog index is missing a registered story title");
+    assert(
+      catalogIndex.includes("Button") && catalogIndex.includes("Card") && catalogIndex.includes("Counter"),
+      "catalog index is missing a registered story title",
+    );
 
     const slugDirs = (await readdir(path.join(hostDir, "dist/components"), { withFileTypes: true }))
       .filter((e) => e.isDirectory() && e.name !== "preview")
       .map((e) => e.name);
-    assert(slugDirs.length === 2, `expected 2 component detail routes, found ${slugDirs.length} (${slugDirs.join(", ")})`);
+    assert(slugDirs.length === 3, `expected 3 component detail routes, found ${slugDirs.length} (${slugDirs.join(", ")})`);
     for (const slug of slugDirs) {
       const detailPath = `dist/components/${slug}/index.html`;
       assert(existsSync(path.join(hostDir, detailPath)), `missing ${detailPath}`);
@@ -374,7 +408,24 @@ async function main() {
     await assertTokensRoute(hostDir, false);
     assert(existsSync(path.join(hostDir, "dist/_zudo-sg/preview.css")), "missing dist/_zudo-sg/preview.css (base-unnested, ADR decision 4)");
 
-    console.log("zfb dev (dev-hydration seed, ADR finding 4)");
+    const buildIslandsManifestFiles = (await readdir(path.join(hostDir, "dist/assets"))).filter((f) => /^islands-.*\.js$/.test(f));
+    assert(buildIslandsManifestFiles.length > 0, "no dist/assets/islands-*.js manifest found");
+    const buildIslandsBundle = (
+      await Promise.all(buildIslandsManifestFiles.map((f) => read(hostDir, `dist/assets/${f}`)))
+    ).join("\n");
+    assert(buildIslandsBundle.includes("Counter"), "dist/assets/islands-*.js does not contain Counter (half b, build side)");
+
+    console.log("Stripping the islands seed from the temp copy (ADR finding 4 amendment regression guard)");
+    await rm(path.join(hostDir, "pages/lib/_zudo-sg-islands.ts"), { force: true });
+    const seedImportLine = 'import "./lib/_zudo-sg-islands";';
+    const indexSource = await read(hostDir, "pages/index.tsx");
+    assert(indexSource.includes(seedImportLine), `expected \`${seedImportLine}\` in pages/index.tsx — shim wiring moved`);
+    await writeFile(
+      path.join(hostDir, "pages/index.tsx"),
+      indexSource.split("\n").filter((line) => line.trim() !== seedImportLine).join("\n"),
+    );
+
+    console.log("zfb dev (seedless: injected routes + virtual registry islands, dev CSS globs — ADR finding 4 amendment)");
     const port = await freePort();
     let log = "";
     devServer = spawn("corepack", ["pnpm", "exec", "zfb", "dev", "--port", String(port)], {
@@ -390,6 +441,22 @@ async function main() {
     const islandsRes = await waitForOk(`${origin}/styleguide/assets/islands.js`, 300_000, devServer, () => log);
     const islandsBundle = await islandsRes.text();
     assert(islandsBundle.includes("ConfiguredPreviewApp"), "/styleguide/assets/islands.js does not contain ConfiguredPreviewApp");
+    // Half (b): Counter is reached only through `virtual:zudo-sg-registry` —
+    // the fixture host's pages/ imports nothing else, which is the isolation.
+    assert(
+      /__zfb_register\([^)]*"Counter",\s*"[^"]*\/ui\/counter\/counter\.tsx"\)/u.test(islandsBundle),
+      "/styleguide/assets/islands.js does not register Counter from ui/counter/counter.tsx (half b, virtual registry)",
+    );
+    assert(!/has no matching registry entry/u.test(log), "zfb dev logged an unregistered island marker");
+    assert(!/no "use client" islands found/u.test(log), 'zfb dev logged no "use client" islands found');
+
+    // A utility class used only by the injected components-index.tsx /
+    // tokens.tsx headers (`max-w-[56rem]`): the fixture host has no `@source`
+    // covering the engine, so it reaches the dev stylesheet only through the
+    // injected-route content globs zfb 2.18.0 seeds (absent on 2.17.0).
+    const cssRes = await waitForOk(`${origin}/styleguide/assets/styles.css`, 300_000, devServer, () => log);
+    const cssBody = await cssRes.text();
+    assert(cssBody.includes(".max-w-\\[56rem\\]"), "/styleguide/assets/styles.css is missing .max-w-\\[56rem\\] (dev CSS content-glob seeding, ADR finding 4 amendment)");
 
     console.log("OK — packed @takazudo/zudo-sg installs and builds outside the workspace, under base \"/styleguide/\".");
   } finally {

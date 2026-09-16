@@ -5,7 +5,7 @@ Documentation site built with [zudo-doc](https://github.com/zudolab/zudo-doc) �
 ## Tech Stack
 
 - **zfb** — documentation build framework. The `@takazudo/zfb*` family is pinned to the stable
-  `2.17.0` release alongside zudo-doc 5.24.0.
+  `2.18.0` release alongside zudo-doc 5.25.0.
 - **MDX** — content format
 - **Tailwind CSS v4** — via `@tailwindcss/vite`
 - **Preact** — for interactive islands only (with compat mode for React API)
@@ -50,8 +50,10 @@ The styleguide catalog is dogfooded from the `@takazudo/zudo-sg` engine
 `zfb.config.ts` via `withZudoSg(preset, zudo-sg.config.mjs)`. Do not add
 `pages/components/*` or `pages/tokens.tsx` — a host page at an engine URL
 silently shadows the injected route. `pages/index.tsx` must keep importing
-`pages/lib/_zudo-sg-islands.ts` (`zfb dev` scans only host `pages/` for islands)
-and `pages/lib/_body-end-islands.tsx`.
+`pages/lib/_body-end-islands.tsx`; it also imports
+`pages/lib/_zudo-sg-islands.ts`, kept for `@takazudo/zudo-sg/islands` API
+stability (a no-op since zfb 2.18.0 seeds dev islands from injected routes —
+ADR finding 4 amendment).
 
 The tree above covers only the root host's own `src/`. `packages/demo-ui`'s
 component tree and `apps/demo`'s content/route tree are separate workspace

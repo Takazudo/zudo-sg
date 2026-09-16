@@ -34,13 +34,27 @@ import { HeaderWithDefaults } from "./lib/_header-with-defaults";
 import { HeadWithDefaults } from "./lib/_head-with-defaults";
 import { composeMetaTitle } from "./lib/_compose-meta-title";
 import { BodyEndIslands } from "./lib/_body-end-islands";
-// Dev-hydration seed (docs/adr/styleguide-engine.md finding 4): `zfb dev`
-// scans host pages/ only, so the injected catalog routes' islands must be
-// statically reachable from here. The `_body-end-islands` import above is the
-// same contract for the doc-chrome panels on package-owned routes.
+// Islands seed shim kept for `@takazudo/zudo-sg/islands` API stability — a
+// no-op since zfb 2.18.0 (ADR finding 4 amendment). `_body-end-islands`
+// above is the real contract for the doc-chrome panels.
 import "./lib/_zudo-sg-islands";
 
 export const frontmatter = { title: "Home" };
+
+// zudo-doc 5.25.0's sitewide link rule has a documented carve-out for two rows:
+// the home hero and the footer copyright keep a static underline while still
+// sitting at `text-fg` (see the package's own footer, which sets
+// `[&_a]:underline [&_a:hover]:text-accent [&_a:focus-visible]:text-accent`).
+// The hero anchors below are host markup the package chrome cannot reach, so the
+// carve-out is mirrored by hand — the `doc/` site renders the package's own hero
+// and keeps the underline, and the two sites must not disagree on the same row.
+const heroLink =
+  "text-fg underline hover:text-accent focus-visible:text-accent";
+
+// The "See all tags" link is NOT part of that carve-out: 5.25.0 restyled it to
+// match the secondary link row, i.e. ordinary chrome — no static underline.
+const chromeLink =
+  "text-fg hover:text-accent hover:underline focus-visible:text-accent focus-visible:underline";
 
 export default function IndexPage(): JSX.Element {
   const locale = defaultLocale;
@@ -136,7 +150,7 @@ export default function IndexPage(): JSX.Element {
             <div class="zd-home-links flex flex-wrap items-center justify-center lg:justify-start gap-hsp-md text-small">
               {overview && (
                 <>
-                  <a href={overview} class="text-fg underline hover:text-accent">
+                  <a href={overview} class={heroLink}>
                     {ctaNav.label}
                   </a>
                   <span class="text-muted">/</span>
@@ -146,7 +160,7 @@ export default function IndexPage(): JSX.Element {
                 <>
                   <a
                     href={settings.githubUrl as string}
-                    class="inline-flex items-center gap-[0.3em] text-fg underline hover:text-accent"
+                    class={`inline-flex items-center gap-[0.3em] ${heroLink}`}
                     target="_blank"
                     rel="noopener noreferrer"
                   >
@@ -165,7 +179,7 @@ export default function IndexPage(): JSX.Element {
                   The deploy was missing this trailing item, leaving a dangling "/" separator. */}
               <a
                 href="https://x.com/Takazudo"
-                class="text-fg underline hover:text-accent"
+                class={heroLink}
                 target="_blank"
                 rel="noopener noreferrer"
               >
@@ -205,7 +219,7 @@ export default function IndexPage(): JSX.Element {
           <h2 class="text-heading font-bold mb-vsp-md">
             {t("doc.allTags", locale)}
           </h2>
-          <a href={withBase("/docs/tags")} class="text-accent underline hover:text-accent-hover">
+          <a href={withBase("/docs/tags")} class={chromeLink}>
             {t("doc.allTags", locale)}
           </a>
         </section>

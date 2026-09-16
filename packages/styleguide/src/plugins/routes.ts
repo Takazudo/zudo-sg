@@ -21,10 +21,10 @@
 //      package's own realpath.
 //
 // NO STAGING (ADR spike findings 1–2): zfb 2.16 resolves virtual modules from
-// entrypoints whose realpath is under `node_modules/.pnpm/…`, and a `.zudo-sg/`
-// stage dir can never reach zfb's shadow tree (only `.zudo-doc/routes-src` is
-// allowlisted). Entrypoints must be `.tsx` SOURCE: zfb extracts `paths()` by
-// AST and rejects compiled `.js`.
+// entrypoints whose realpath is under `node_modules/.pnpm/…` directly, so a
+// `.zudo-sg/` stage dir is never needed here — zudo-doc 5.25 retired its own
+// `.zudo-doc/routes-src` staging step for the same reason. Entrypoints must
+// be `.tsx` SOURCE: zfb extracts `paths()` by AST and rejects compiled `.js`.
 
 import { existsSync, realpathSync } from "node:fs";
 import { createRequire } from "node:module";

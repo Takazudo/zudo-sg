@@ -52,15 +52,16 @@ type ChromeProps = Pick<
 export function chromeProps({ pageTitle, path, extraHead, activeSlug, hideSidebar = false }: ChromeSlotOptions): ChromeProps {
   const { HeadWithDefaults, HeaderWithDefaults, FooterWithDefaults, BodyEndIslands } = chrome;
   const head = <HeadWithDefaults title={pageTitle} />;
-  // `sidebarNodesOverride` is not part of zudo-doc's HeaderWithDefaultsProps:
-  // createChrome forwards every prop to the host's `Header` chrome binding when
-  // one is bound (a host header that feeds its mobile drawer from it), while
-  // the package default header ignores it and its drawer shows the root menu.
-  const headerProps = {
+  // `sidebarNodes` (zudo-doc >= 5.25.0, zudolab/zudo-doc#4212) hands the
+  // registry-built tree straight to the mobile drawer, so the engine routes get
+  // the component tree without the host having to bind a replacement `Header`.
+  // The array form is passed to `SidebarToggle` verbatim — no default build, no
+  // version-href remapping — which is what these non-docs routes need.
+  const headerProps: Parameters<typeof HeaderWithDefaults>[0] = {
     lang: locale,
     currentPath: withBase(path),
-    ...(hideSidebar ? {} : { sidebarNodesOverride: navNodes, currentSlug: activeSlug }),
-  } as Parameters<typeof HeaderWithDefaults>[0];
+    ...(hideSidebar ? {} : { sidebarNodes: navNodes, currentSlug: activeSlug }),
+  };
   return {
     title: composeMetaTitle(pageTitle),
     lang: locale,

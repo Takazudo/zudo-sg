@@ -1,14 +1,14 @@
-// @takazudo/zudo-sg/islands — dev-hydration seed (ADR
-// docs/adr/styleguide-engine.md finding 4, decision 7).
+// @takazudo/zudo-sg/islands — side-effect module that statically imports
+// every engine island (ADR docs/adr/styleguide-engine.md finding 4,
+// decision 7).
 //
-// `zfb dev` seeds its island scanner from the host `pages/` root ONLY — it
-// never walks injected package routes — so an engine island reachable only
-// through `routes-src/*.tsx` hydrates in `zfb build` but not in `zfb dev`.
-// Hosts import this side-effect module once from a `pages/` file
+// Required on zfb < 2.18.0, where `zfb dev` seeded its island scanner from
+// the host `pages/` root only; since 2.18.0 dev seeds the injected route
+// entrypoints and resolves plugin virtual modules, so on the engine's peer
+// floor this is a harmless no-op kept for API stability (ADR finding 4
+// amendment). Hosts may still import it once from a `pages/` file
 // (`pages/lib/_zudo-sg-islands.ts` = `import "@takazudo/zudo-sg/islands";`,
-// imported by `pages/index.tsx`), which puts every engine island into the
-// site-wide island manifest. Harmless in `zfb build`: the same module reached
-// through two graphs is deduped by path.
+// imported by `pages/index.tsx`).
 //
 // Keep the list in sync with the `"use client"` components the route
 // entrypoints mount. The `../routes-src/` escape is deliberate: the configured

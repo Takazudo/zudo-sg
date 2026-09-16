@@ -9,8 +9,9 @@
 // wrapper takes NO props and imports the registry in-bundle (through
 // `_registry.ts` → `virtual:zudo-sg-registry`), which puts every story closure
 // into the islands chunk. `components-preview.tsx` imports it statically so
-// `zfb build` registers it; `@takazudo/zudo-sg/islands` imports it too so
-// `zfb dev` (which scans host `pages/` only) registers it (ADR finding 4).
+// `zfb build` registers it; `@takazudo/zudo-sg/islands` imports it too (the
+// kept-for-API seed; zfb ≥ 2.18.0 registers it from the route entrypoint in
+// dev as well — ADR finding 4 amendment).
 //
 // The design-token bridge receiver is installed here, not inside PreviewApp,
 // so the engine's preview component stays free of the token-tweak feature.
