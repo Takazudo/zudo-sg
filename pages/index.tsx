@@ -41,9 +41,18 @@ import "./lib/_zudo-sg-islands";
 
 export const frontmatter = { title: "Home" };
 
-// Mirrors zudo-doc 5.25.0's sitewide link rule for non-prose links: no static
-// underline, accent + underline on hover and focus. Hand-rolled here because
-// these anchors are host markup the package chrome cannot reach.
+// zudo-doc 5.25.0's sitewide link rule has a documented carve-out for two rows:
+// the home hero and the footer copyright keep a static underline while still
+// sitting at `text-fg` (see the package's own footer, which sets
+// `[&_a]:underline [&_a:hover]:text-accent [&_a:focus-visible]:text-accent`).
+// The hero anchors below are host markup the package chrome cannot reach, so the
+// carve-out is mirrored by hand — the `doc/` site renders the package's own hero
+// and keeps the underline, and the two sites must not disagree on the same row.
+const heroLink =
+  "text-fg underline hover:text-accent focus-visible:text-accent";
+
+// The "See all tags" link is NOT part of that carve-out: 5.25.0 restyled it to
+// match the secondary link row, i.e. ordinary chrome — no static underline.
 const chromeLink =
   "text-fg hover:text-accent hover:underline focus-visible:text-accent focus-visible:underline";
 
@@ -141,7 +150,7 @@ export default function IndexPage(): JSX.Element {
             <div class="zd-home-links flex flex-wrap items-center justify-center lg:justify-start gap-hsp-md text-small">
               {overview && (
                 <>
-                  <a href={overview} class={chromeLink}>
+                  <a href={overview} class={heroLink}>
                     {ctaNav.label}
                   </a>
                   <span class="text-muted">/</span>
@@ -151,7 +160,7 @@ export default function IndexPage(): JSX.Element {
                 <>
                   <a
                     href={settings.githubUrl as string}
-                    class={`inline-flex items-center gap-[0.3em] ${chromeLink}`}
+                    class={`inline-flex items-center gap-[0.3em] ${heroLink}`}
                     target="_blank"
                     rel="noopener noreferrer"
                   >
@@ -170,7 +179,7 @@ export default function IndexPage(): JSX.Element {
                   The deploy was missing this trailing item, leaving a dangling "/" separator. */}
               <a
                 href="https://x.com/Takazudo"
-                class={chromeLink}
+                class={heroLink}
                 target="_blank"
                 rel="noopener noreferrer"
               >
