@@ -1,0 +1,24 @@
+---
+title: 0.1.1
+description: Native sidebar integration and updated zfb and zudo-doc requirements.
+sidebar_position: 2
+pagination_next: null
+---
+
+Released: 2026-09-17
+
+Updates the styleguide engine to use zudo-doc's native sidebar integration
+and zfb's package-route island discovery.
+
+### Changed
+
+- Raised the `@takazudo/zfb` peer floor to `^2.18.0` and the
+  `@takazudo/zudo-doc` peer floor to `^5.25.0` (matching exact
+  `devDependencies` pins). This is forced, not elective: zudo-doc 5.25.0
+  raised its own `@takazudo/zfb` peer floor to `^2.18.0`, so the engine's
+  floor must follow to keep resolving against it.
+- Pass the component navigation tree through zudo-doc's native `sidebarNodes`
+  header prop, removing the need for a host-bound Header workaround.
+- Document that zfb 2.18.0 discovers engine islands from injected routes during
+  development. The `@takazudo/zudo-sg/islands` entry point remains available
+  for API compatibility, but hosts no longer need it as a dev-hydration seed.

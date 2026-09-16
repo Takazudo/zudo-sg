@@ -4,7 +4,10 @@ All notable changes to `@takazudo/zudo-sg` are documented in this file.
 
 The format is based on Keep a Changelog, and release notes are generated from the changelog MDX pages.
 
-## [Unreleased]
+## [0.1.1] - 2026-09-17
+
+Updates the styleguide engine to use zudo-doc's native sidebar integration
+and zfb's package-route island discovery.
 
 ### Changed
 
@@ -13,6 +16,11 @@ The format is based on Keep a Changelog, and release notes are generated from th
   `devDependencies` pins). This is forced, not elective: zudo-doc 5.25.0
   raised its own `@takazudo/zfb` peer floor to `^2.18.0`, so the engine's
   floor must follow to keep resolving against it.
+- Pass the component navigation tree through zudo-doc's native `sidebarNodes`
+  header prop, removing the need for a host-bound Header workaround.
+- Document that zfb 2.18.0 discovers engine islands from injected routes during
+  development. The `@takazudo/zudo-sg/islands` entry point remains available
+  for API compatibility, but hosts no longer need it as a dev-hydration seed.
 
 ## [0.1.0] - 2026-09-15
 
