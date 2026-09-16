@@ -44,6 +44,22 @@ const preset = zudoDocPreset({
   colorSchemes,
 });
 
+// zudo-doc 5.24.1 overloaded the flag above (#719): besides "do package-owned
+// routes mount the panel", a falsy preset-facing `designTokenPanel` now also
+// makes the preset inject `@takazudo/zudo-doc/plugins/zdtp-loader`, which
+// registers a virtual module replacing the real
+// `@takazudo/zudo-doc/zdtp-loader` specifier with `throw new Error("@takazudo/
+// zdtp is not bundled: …")`. That specifier is what BOTH of this host's own
+// panels lazy-import (src/lib/design-token-panel-bootstrap.ts and the engine's
+// preview panel, via @takazudo/zudo-doc/design-token-panel-bootstrap), so the
+// stub ships the documented `designTokenPanel` feature as a throwing chunk.
+// This host needs the two concerns answered differently — package routes: no
+// panel; zdtp loader: real — and upstream offers no separate switch
+// (zudolab/zudo-doc), so drop just that plugin and keep the narrow override.
+const presetPlugins = preset.plugins.filter(
+  ({ name }) => name !== "@takazudo/zudo-doc/plugins/zdtp-loader",
+);
+
 export default defineConfig({
   framework: "preact",
   // Pin the dev/preview port — zfb defaults to 3000, but the generated
@@ -94,7 +110,7 @@ export default defineConfig({
     {
       collections: preset.collections,
       plugins: [
-        ...preset.plugins,
+        ...presetPlugins,
         // Run after the preset's doc-history preBuild so the embedded renderer
         // receives freshly generated metadata without importing node:fs.
         {
