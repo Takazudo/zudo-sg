@@ -39,7 +39,6 @@
 
 import type { VNode, JSX } from "preact";
 import { Island } from "@takazudo/zfb";
-import type { NavNode } from "@/utils/docs";
 import { Header } from "@takazudo/zudo-doc/header";
 import {
   LanguageSwitcher,
@@ -99,14 +98,6 @@ export interface HeaderWithDefaultsProps {
    * versions pages) no mobile sidebar toggle is included in the header.
    */
   navSection?: string;
-  /**
-   * Explicit nav tree for the mobile SidebarToggle, bypassing the docs-section
-   * `buildSidebarNodes()` lookup. Used by the non-docs styleguide `/components`
-   * section, whose tree comes from the component registry (not the docs
-   * collection) — so the mobile drawer shows the component tree, not just the
-   * top-level header menu. When omitted, the docs-section nodes are used.
-   */
-  sidebarNodesOverride?: NavNode[];
 }
 
 /**
@@ -128,7 +119,6 @@ export function HeaderWithDefaults(
     currentVersion,
     currentSlug,
     navSection,
-    sidebarNodesOverride,
   } = props;
   // Route params arrive as `string`; cast to Locale since keys of settings.locales
   // are always valid locale codes. The prop accepts `Locale | string` so callers
@@ -153,10 +143,7 @@ export function HeaderWithDefaults(
 
   const themeDefaultMode = getThemeDefaultMode();
 
-  // The styleguide /components section supplies its own registry-built tree via
-  // sidebarNodesOverride; docs sections fall back to the collection-driven nodes.
-  const sidebarNodes =
-    sidebarNodesOverride ?? buildSidebarNodes(lang, navSection, currentVersion);
+  const sidebarNodes = buildSidebarNodes(lang, navSection, currentVersion);
 
   // Wrap SidebarToggle (hamburger button + slide-in aside + SidebarTree) in
   // Island so the SSG output carries the full tree HTML AND the
