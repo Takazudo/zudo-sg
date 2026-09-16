@@ -42,6 +42,12 @@ import "./lib/_zudo-sg-islands";
 
 export const frontmatter = { title: "Home" };
 
+// Mirrors zudo-doc 5.25.0's sitewide link rule for non-prose links: no static
+// underline, accent + underline on hover and focus. Hand-rolled here because
+// these anchors are host markup the package chrome cannot reach.
+const chromeLink =
+  "text-fg hover:text-accent hover:underline focus-visible:text-accent focus-visible:underline";
+
 export default function IndexPage(): JSX.Element {
   const locale = defaultLocale;
 
@@ -136,7 +142,7 @@ export default function IndexPage(): JSX.Element {
             <div class="zd-home-links flex flex-wrap items-center justify-center lg:justify-start gap-hsp-md text-small">
               {overview && (
                 <>
-                  <a href={overview} class="text-fg underline hover:text-accent">
+                  <a href={overview} class={chromeLink}>
                     {ctaNav.label}
                   </a>
                   <span class="text-muted">/</span>
@@ -146,7 +152,7 @@ export default function IndexPage(): JSX.Element {
                 <>
                   <a
                     href={settings.githubUrl as string}
-                    class="inline-flex items-center gap-[0.3em] text-fg underline hover:text-accent"
+                    class={`inline-flex items-center gap-[0.3em] ${chromeLink}`}
                     target="_blank"
                     rel="noopener noreferrer"
                   >
@@ -165,7 +171,7 @@ export default function IndexPage(): JSX.Element {
                   The deploy was missing this trailing item, leaving a dangling "/" separator. */}
               <a
                 href="https://x.com/Takazudo"
-                class="text-fg underline hover:text-accent"
+                class={chromeLink}
                 target="_blank"
                 rel="noopener noreferrer"
               >
@@ -205,7 +211,7 @@ export default function IndexPage(): JSX.Element {
           <h2 class="text-heading font-bold mb-vsp-md">
             {t("doc.allTags", locale)}
           </h2>
-          <a href={withBase("/docs/tags")} class="text-accent underline hover:text-accent-hover">
+          <a href={withBase("/docs/tags")} class={chromeLink}>
             {t("doc.allTags", locale)}
           </a>
         </section>
