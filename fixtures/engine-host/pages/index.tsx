@@ -3,7 +3,8 @@
 // Host-owned root page (ADR decision 7: `/` stays host-owned — it is the
 // host's static-import root for site-wide islands).
 import type { JSX } from "preact";
-// Dev-hydration seed — see pages/lib/_zudo-sg-islands.ts.
+// Islands seed — optional since zfb 2.18.0, kept so the fixture exercises
+// the public subpath (ADR finding 4 amendment). See pages/lib/_zudo-sg-islands.ts.
 import "./lib/_zudo-sg-islands";
 
 export const frontmatter = { title: "Engine host fixture" };

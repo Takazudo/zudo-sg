@@ -22,7 +22,7 @@ The root host is built with zfb, zudo-doc, MDX, Tailwind CSS v4, and Preact. It 
 
 ## The styleguide engine (`packages/styleguide`)
 
-`packages/styleguide` is `@takazudo/zudo-sg`, an installable zfb/zudo-doc plugin package built the same way `@takazudo/zudo-doc` itself is built: a tsup `dist/` build, route entrypoints shipped as `.tsx` source under `routes-src/` (zfb extracts a route's `paths()` export by AST, so a compiled `.js` route does not work), and a `zudo-sg` CLI (`bin/zudo-sg.js`). It owns the story registry/scaffold/token-manifest CLI commands, the catalog/detail/preview/tokens routes, the preview iframe app, the code panel, the preview token panel, and the token dashboards — everything that used to be hand-copied host application code. The full seam contract (virtual modules, staging, the host-path option channel, the dev-hydration seed) is recorded in `docs/adr/styleguide-engine.md` at the repository root.
+`packages/styleguide` is `@takazudo/zudo-sg`, an installable zfb/zudo-doc plugin package built the same way `@takazudo/zudo-doc` itself is built: a tsup `dist/` build, route entrypoints shipped as `.tsx` source under `routes-src/` (zfb extracts a route's `paths()` export by AST, so a compiled `.js` route does not work), and a `zudo-sg` CLI (`bin/zudo-sg.js`). It owns the story registry/scaffold/token-manifest CLI commands, the catalog/detail/preview/tokens routes, the preview iframe app, the code panel, the preview token panel, and the token dashboards — everything that used to be hand-copied host application code. The full seam contract (virtual modules, staging, the host-path option channel, the now-optional islands seed) is recorded in `docs/adr/styleguide-engine.md` at the repository root.
 
 ## Root styleguide host
 
@@ -35,7 +35,7 @@ The root host is deployed as `zudo-sg` at `https://zudo-sg.takazudomodular.com/`
 - `zudo-sg.config.mjs`: the host-level config the `zudo-sg` CLI and the `withZudoSg()` plugin composition both read (components roots, category order, token CSS files, the preview stylesheet entry).
 - `src/styles/global.css`: root design tokens and Tailwind configuration.
 
-Use server-rendered JSX by default in this host. Add Preact islands only when a feature needs client-side behavior, reached through a static import chain from a host `pages/` file — `zfb dev` only scans host `pages/` for islands, so `pages/index.tsx` keeps a small `pages/lib/_zudo-sg-islands.ts` shim (`import "@takazudo/zudo-sg/islands";`) to keep the engine's own islands hydrating in dev.
+Use server-rendered JSX by default in this host. Add Preact islands only when a feature needs client-side behavior, reached through a static import chain from a host `pages/` file — `pages/index.tsx` also keeps a small `pages/lib/_zudo-sg-islands.ts` shim (`import "@takazudo/zudo-sg/islands";`); since zfb 2.18.0 the dev server seeds its island scanner from the injected routes itself, so the shim is a no-op kept for the subpath's API stability.
 
 ## Shared UI package
 

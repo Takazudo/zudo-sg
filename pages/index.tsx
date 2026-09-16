@@ -34,10 +34,9 @@ import { HeaderWithDefaults } from "./lib/_header-with-defaults";
 import { HeadWithDefaults } from "./lib/_head-with-defaults";
 import { composeMetaTitle } from "./lib/_compose-meta-title";
 import { BodyEndIslands } from "./lib/_body-end-islands";
-// Dev-hydration seed (docs/adr/styleguide-engine.md finding 4): `zfb dev`
-// scans host pages/ only, so the injected catalog routes' islands must be
-// statically reachable from here. The `_body-end-islands` import above is the
-// same contract for the doc-chrome panels on package-owned routes.
+// Islands seed shim kept for `@takazudo/zudo-sg/islands` API stability — a
+// no-op since zfb 2.18.0 (ADR finding 4 amendment). `_body-end-islands`
+// above is the real contract for the doc-chrome panels.
 import "./lib/_zudo-sg-islands";
 
 export const frontmatter = { title: "Home" };

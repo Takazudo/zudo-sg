@@ -10,15 +10,19 @@
 //      registry's stories; the preview island is registered STRUCTURALLY
 //      (SSR marker + islands manifest entry). zfb silently drops colliding
 //      injected routes, so the build log's shadowing lines are asserted too.
-//   2. `zfb dev` — `/assets/islands.js` carries `ConfiguredPreviewApp`. zfb dev
-//      scans host `pages/` only (ADR finding 4); without the seed the preview
-//      island is missing from the dev bundle and never hydrates.
+//   2. Strip the seed from the temp copy (delete the shim file, remove its
+//      import from `pages/index.tsx`), then `zfb dev` — `/assets/islands.js`
+//      still carries `ConfiguredPreviewApp` even though nothing statically
+//      imports it. Before zfb 2.18.0, `zfb dev` scanned host `pages/` only
+//      (ADR finding 4) and this would have 404ed; since 2.18.0 the dev
+//      scanner is seeded from the injected routes, so the assertion now
+//      proves the amendment rather than the seed.
 //
 // Run: `pnpm test:slow` (needs the engine package built: `pnpm build:styleguide`).
 // Model: zudo-doc's src/__tests__/route-injection-build.slow.test.ts.
 
 import { execSync, spawn, type ChildProcess } from "node:child_process";
-import { cpSync, existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, symlinkSync } from "node:fs";
+import { cpSync, existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -72,6 +76,28 @@ function zfbEnv(): NodeJS.ProcessEnv {
 
 function read(rel: string): string {
   return readFileSync(join(hostDir, rel), "utf8");
+}
+
+/**
+ * Strips the ADR decision-7 islands seed from the temp copy — deletes the
+ * shim file and its import from `pages/index.tsx` — so the dev boot below
+ * proves zfb 2.18.0's dev-scanner seeding (finding 4 amendment) rather than
+ * the seed. Asserts the import line was actually present so this fails loudly
+ * if the shim wiring moves.
+ */
+function stripIslandsSeed(): void {
+  rmSync(join(hostDir, "pages/lib/_zudo-sg-islands.ts"), { force: true });
+  const indexPath = join(hostDir, "pages/index.tsx");
+  const importLine = 'import "./lib/_zudo-sg-islands";';
+  const indexSource = readFileSync(indexPath, "utf8");
+  if (!indexSource.includes(importLine)) {
+    throw new Error(`expected \`${importLine}\` in pages/index.tsx — shim wiring moved`);
+  }
+  const stripped = indexSource
+    .split("\n")
+    .filter((line) => line.trim() !== importLine)
+    .join("\n");
+  writeFileSync(indexPath, stripped);
 }
 
 function freePort(): Promise<number> {
@@ -143,6 +169,10 @@ describe("no-stub build: engine routes own /components, /components/[slug], /com
     }
     expect(buildLog).not.toContain("is shadowed by a user pages/ route");
     expect(buildLog).not.toMatch(NO_REGISTRY_ENTRY);
+    // The seed reaches ConfiguredPreviewApp through pages/index.tsx AND the
+    // package route injects it too; both graphs dedupe by path (ADR finding
+    // 4 / decision 10's dev-hydration-seed row).
+    expect(buildLog).not.toMatch(/island marker name collision/);
   });
 
   it("renders the catalog with every registry story and links each detail page that renders its title", () => {
@@ -197,7 +227,11 @@ describe("no-stub build: engine routes own /components, /components/[slug], /com
   });
 });
 
-describe("no-stub dev: the islands seed puts the engine islands into zfb dev's bundle", () => {
+describe("no-stub dev: zfb dev registers the engine islands from the injected routes without the host seed (ADR finding 4 amendment)", () => {
+  beforeAll(() => {
+    stripIslandsSeed();
+  });
+
   it("serves /assets/islands.js containing ConfiguredPreviewApp", async () => {
     const port = await freePort();
     let log = "";
@@ -221,6 +255,9 @@ describe("no-stub dev: the islands seed puts the engine islands into zfb dev's b
 
       const bundle = await (await fetch(`${origin}/assets/islands.js`)).text();
       for (const name of ENGINE_ISLANDS) expect(bundle).toContain(name);
+      // Proves the entry comes from the package route source (the injected
+      // route entrypoint), not from a host-side import — the seed is gone.
+      expect(bundle).toMatch(/__zfb_register\([^)]*"ConfiguredPreviewApp",\s*"[^"]*\/routes-src\/_preview-app\.tsx"\)/);
       expect(log).not.toMatch(/island marker name collision/);
       expect(log).not.toMatch(NO_REGISTRY_ENTRY);
     } finally {

@@ -80,10 +80,12 @@ export default defineConfig(
 
 `withZudoSg` merges the engine's plugins and collections after the zudo-doc
 preset's own. The engine requires `packageOwnedRoutes: true` on the host (its
-routes import zudo-doc's route-context virtual modules) and — because `zfb
-dev` only scans a host's own `pages/` tree for `"use client"` islands — a host
-`pages/` file that statically imports `@takazudo/zudo-sg/islands` once (see
-the ADR's "Island rule" for why).
+routes import zudo-doc's route-context virtual modules). On the engine's zfb
+peer floor (≥ 2.18.0) nothing else is needed: `zfb dev` seeds its island
+scanner from the injected routes. `@takazudo/zudo-sg/islands` remains
+exported as a side-effect module that statically imports every engine
+island — importing it once from a host `pages/` file is optional and
+harmless (it was required on zfb < 2.18.0).
 
 Full option shape, virtual modules, and every locked constant:
 `docs/adr/styleguide-engine.md` in this repository.

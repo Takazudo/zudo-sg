@@ -55,7 +55,7 @@ The engine is a zfb plugin package built for **Preact + zfb hosts only**. It dep
 
 6. **Add `@source` for the component package**, in whatever Tailwind entry the host already maintains for its own utilities, so the host's own bundle keeps scanning the component sources it needs classes generated from — this is unrelated to the engine's preview stylesheet, which does its own independent scan.
 
-7. **Seed the dev islands.** Add a host `pages/` file that imports `@takazudo/zudo-sg/islands` (a one-line side-effect import is enough) and make sure it's reached from a page the host already statically imports — `pages/index.tsx`, typically. Without this, the catalog's interactive previews hydrate in a production build but not under the dev server. See [The engine package](./engine-package) for why.
+7. **(Optional) Import the islands seed.** `@takazudo/zudo-sg/islands` is a one-line side-effect import that pulls every engine island into the host's island graph. On zfb ≥ 2.18.0 (the engine's peer floor) it is not needed — the dev server seeds its scanner from the injected routes — and it is harmless if present; it exists for hosts that adopted the engine on zfb 2.17.0. See [The engine package](./engine-package).
 
 ## Scope: Preact/zfb only, for now
 
