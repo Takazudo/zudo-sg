@@ -55,7 +55,11 @@ const preset = zudoDocPreset({
 // stub ships the documented `designTokenPanel` feature as a throwing chunk.
 // This host needs the two concerns answered differently — package routes: no
 // panel; zdtp loader: real — and upstream offers no separate switch
-// (zudolab/zudo-doc), so drop just that plugin and keep the narrow override.
+// (zudolab/zudo-doc#4261), so drop just that plugin and keep the narrow
+// override. This matches on an upstream-internal plugin name: if that name
+// changes, the filter silently stops matching and the stub returns — the
+// exact plugin list asserted in src/config/__tests__/root-zfb-config.test.ts
+// is what catches that.
 const presetPlugins = preset.plugins.filter(
   ({ name }) => name !== "@takazudo/zudo-doc/plugins/zdtp-loader",
 );
