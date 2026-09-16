@@ -4,6 +4,16 @@ All notable changes to `@takazudo/zudo-sg` are documented in this file.
 
 The format is based on Keep a Changelog, and release notes are generated from the changelog MDX pages.
 
+## [Unreleased]
+
+### Changed
+
+- Raised the `@takazudo/zfb` peer floor to `^2.18.0` and the
+  `@takazudo/zudo-doc` peer floor to `^5.25.0` (matching exact
+  `devDependencies` pins). This is forced, not elective: zudo-doc 5.25.0
+  raised its own `@takazudo/zfb` peer floor to `^2.18.0`, so the engine's
+  floor must follow to keep resolving against it.
+
 ## [0.1.0] - 2026-09-15
 
 Initial release of `@takazudo/zudo-sg`, the installable styleguide engine
