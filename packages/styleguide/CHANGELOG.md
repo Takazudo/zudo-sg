@@ -4,6 +4,28 @@ All notable changes to `@takazudo/zudo-sg` are documented in this file.
 
 The format is based on Keep a Changelog, and release notes are generated from the changelog MDX pages.
 
+## [0.1.2] - 2026-09-19
+
+A toolchain-only release. The engine is built and verified against
+`@takazudo/zfb` 2.19.0, but its published requirements are unchanged, so
+upgrading from 0.1.1 needs no action from adopters.
+
+### Other Changes
+
+- Moved the development toolchain to the `@takazudo/zfb` 2.19.0 family
+  (`zfb`, `zfb-runtime`, `zfb-md-wasm`). The release adds an opt-in build
+  debugging flag and an internal dependency bump; it changes no API the engine
+  consumes.
+- **The `@takazudo/zfb` peer floor stays `^2.18.0`.** It was raised to
+  `^2.18.0` only because `@takazudo/zudo-doc` 5.25.0's own floor forced it, and
+  that floor has not moved. Raising it again for a release the engine does not
+  depend on would bind adopters to a newer zfb for no benefit, so hosts on zfb
+  2.18.x remain supported.
+- Verified by the foreign-install check, which installs the package outside the
+  workspace under strict peer resolution with no peer auto-install, and by the
+  seedless dev-server regression guard for injected-route island and CSS
+  discovery, both run against zfb 2.19.0.
+
 ## [0.1.1] - 2026-09-17
 
 Updates the styleguide engine to use zudo-doc's native sidebar integration
