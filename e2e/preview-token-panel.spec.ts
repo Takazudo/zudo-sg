@@ -390,8 +390,8 @@ test("package-owned docs do not mount the package token-panel bootstrap", async 
   await page.goto("/docs/overview");
   await expect(page.locator("h1")).toBeVisible();
   await expect(page.locator([
-    '[data-zfb-island="DesignTokenPanelBootstrap"]',
-    '[data-zfb-island-skip-ssr="DesignTokenPanelBootstrap"]',
+    '[data-zfb-island$="DesignTokenPanelBootstrap"]',
+    '[data-zfb-island-skip-ssr$="DesignTokenPanelBootstrap"]',
   ].join(","))).toHaveCount(0);
 });
 
