@@ -110,6 +110,10 @@ Do NOT use h1 (`#`) in doc content — the page title from frontmatter is render
   `docs/adr/styleguide-engine.md`; `fixtures/engine-host` +
   `scripts/verify-styleguide-install.mjs` prove the same install works for a
   foreign project (packed tarball, non-root `base`, outside the workspace).
+  `packages/create-zudo-sg/templates/default` is a generated copy of that
+  fixture; keep it in sync with `pnpm sync:create-template` and enforce the
+  invariant with `pnpm check:create-template` rather than editing the template
+  by hand.
 - **`@zudo-sg/demo-ui` is this repo's showcase library, not a shipped
   provider.** It is a components-only package with co-located stories under
   `packages/demo-ui` — the recommended structure for a project's own
@@ -143,6 +147,8 @@ This is a pnpm workspace monorepo:
   library: ~70 components under `src/<category>/<component>/`, grouped into 9
   category directories (`cards/ chrome/ content/ forms/ landing/ media/ news/
   search/ shared/`)
+- **`packages/create-zudo-sg`** (`create-zudo-sg`) — pnpm-only initializer that
+  scaffolds a private Preact + zfb host from the verified engine-host template.
 - **`apps/demo`** (`@zudo-sg/demo`) — multi-page corporate demo site
   (Tailwind v4, no SSR): a ~70-entry content collection under `content/`
   drives nav/footer/breadcrumbs from frontmatter, plus cross-site search

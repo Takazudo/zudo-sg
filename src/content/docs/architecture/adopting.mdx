@@ -10,9 +10,36 @@ sidebar_position: 4
   This repository's own `ADOPTING.md` predates the engine package and describes the older, manual-copy path (copying source files like `src/features/styleguide/*` directly). Once a project can depend on `@takazudo/zudo-sg` as a package, this page supersedes that checklist.
 </Note>
 
+## Quick start
+
+For a new host, the initializer provides the shortest path to a working
+Preact + zfb styleguide:
+
+```sh
+pnpm create zudo-sg@latest my-styleguide
+cd my-styleguide
+pnpm install
+pnpm gen-registry
+pnpm gen-token-manifest
+pnpm dev
+```
+
+The initializer is available from its first npm release; nothing is published
+by this epic. It creates the same package composition described below, with a
+small local `ui/` story corpus and token CSS ready to replace.
+
+For an existing host, keep using the manual dependency, configuration, and
+composition steps that follow.
+
 ## Prerequisites
 
 The engine is a zfb plugin package built for **Preact + zfb hosts only**. It depends on a `@takazudo/zudo-doc`-based host already having its own package-owned routes turned on (`packageOwnedRoutes: true`) — the engine's own route entrypoints call zudo-doc's chrome factories and reuse zudo-doc's virtual modules to render. A React host is an explicit non-goal for this release; see the note on scope at the end of this page.
+
+The host must keep `@takazudo/zdtp`, `diff`, and `katex`: zdtp is imported by
+the injected `/tokens` dashboard, while diff and katex are inherited
+zudo-doc route dependencies. Keep `tokens: { cssFiles, manifestOut }` in
+`zudo-sg.config.mjs`; the initializer's configuration typing treats that block
+as required, and the generated token manifest depends on it.
 
 ## Install steps
 
