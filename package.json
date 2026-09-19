@@ -10,7 +10,7 @@
     "build:styleguide": "node scripts/ensure-styleguide-build.mjs --force",
     "ensure:styleguide-build": "node scripts/ensure-styleguide-build.mjs",
     "preview": "node scripts/ensure-styleguide-build.mjs && zfb preview",
-    "check": "pnpm --filter @takazudo/zudo-sg check && zfb check && pnpm --filter @zudo-sg/demo-ui typecheck && pnpm --filter @zudo-sg/demo typecheck",
+    "check": "pnpm --filter @takazudo/zudo-sg check && pnpm --filter create-zudo-sg check && zfb check && pnpm --filter @zudo-sg/demo-ui typecheck && pnpm --filter @zudo-sg/demo typecheck",
     "check:html": "html-validate \"dist/**/*.html\"",
     "check:links": "node scripts/check-links.mjs",
     "check:links:demo": "node scripts/check-links.mjs --dist=apps/demo/dist",

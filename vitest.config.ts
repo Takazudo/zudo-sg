@@ -47,6 +47,8 @@ export default defineConfig({
       "plugins/__tests__/**/*.test.ts",
       // @takazudo/zudo-sg engine package tests (also run by its own `test`).
       "packages/styleguide/src/**/__tests__/**/*.test.{ts,tsx}",
+      // create-zudo-sg initializer tests (also run by its own `test`).
+      "packages/create-zudo-sg/src/**/__tests__/**/*.test.ts",
       // @zudo-sg/demo-ui component DOM tests (Testing Library + happy-dom).
       "packages/demo-ui/src/**/__tests__/**/*.test.{ts,tsx}",
       // @zudo-sg/demo lib/config unit tests.
