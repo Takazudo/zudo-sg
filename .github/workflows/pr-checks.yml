@@ -83,6 +83,9 @@ jobs:
       - name: Check sg-registry codegen
         run: pnpm check:sg-registry
 
+      - name: Check create-zudo-sg template
+        run: pnpm check:create-template
+
       - name: Check token manifest codegen
         run: pnpm check:token-manifest
 

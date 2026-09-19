@@ -1,0 +1,4 @@
+node_modules
+dist
+.zfb-build
+pnpm-lock.yaml
