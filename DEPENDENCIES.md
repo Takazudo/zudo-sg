@@ -1,4 +1,39 @@
-# Dependency audit: two packages removed, runtime contracts preserved
+# Dependency audit register
+
+## Removed on 2026-09-20: three obsolete root declarations and 117 packages
+
+The root declarations for `mermaid`, `minisearch`, and
+`remark-cjk-friendly` were removed after the integration checks deferred by
+the 2026-09-15 audit. All three were scaffold-era declarations with no current
+package import, peer contract, config-string resolution, script/CI use, or
+consumer on cached remote branches.
+
+| Removed declaration | Evidence and effect |
+| --- | --- |
+| `mermaid` | zudo-doc 5.25.0 renders diagrams through its own pinned `https://esm.sh/mermaid@11.15.0` dynamic import and explicitly has no package dependency. The unused local Mermaid 12 declaration removed 109 lockfile package records; it did not change the browser renderer or remove that separate CDN supply-chain surface. |
+| `minisearch` | The current search widget explicitly uses its built-in fetch, substring matching, weighting, and ranking code. Neither first-party code nor zudo-doc imports MiniSearch. Removing the leaf declaration removed one package record. |
+| `remark-cjk-friendly` | zudo-doc forwards `cjkFriendly` to zfb 2.19.0, whose native Markdown pipeline owns the CJK emphasis and autolink-boundary plugins. No JavaScript remark plugin is loaded. Removing the obsolete declaration removed seven package records while preserving `cjkFriendly: true`. |
+
+Three independent adversarial checks covered hidden consumption, behavioral
+fidelity, and value versus churn. All upheld every removal. No replacement
+code was added.
+
+Before the removals, `pnpm dedupe` also collapsed five stale compatible
+resolutions. That normalization moved `dompurify` 3.4.11 to 3.4.15 and unified
+older `tsx`, `postcss`, and `tinyexec` resolutions already permitted by their
+manifest ranges. It reduced the lockfile package section from 683 to 678
+entries. The three declaration removals then reduced it from 678 to 554: 117
+records are attributable to their dependency closures, while the remaining
+seven-record net reduction comes from lockfile normalization and shared graph
+changes. The full change is 129 fewer package records than the untouched base.
+
+Verification passed with a frozen install, the full workspace check, root,
+doc, and demo production builds, the 135-file / 1,152-test root unit suite, and
+the packed foreign-host installation proof. Emitted root HTML still contains
+the generated search client and the pinned Mermaid runtime import; root builds
+still emit 89 pages.
+
+## Audited on 2026-09-15: two packages removed, runtime contracts preserved
 
 Audited on 2026-09-15 for [#700](https://github.com/Takazudo/zudo-sg/issues/700),
 against post-#696 commit `ca7ea11da65b83281f212d2d22e45f4ec4f4dca2`.
