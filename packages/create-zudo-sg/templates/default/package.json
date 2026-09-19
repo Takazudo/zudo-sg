@@ -1,0 +1,32 @@
+{
+  "name": "__PROJECT_NAME__",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.5.2",
+  "scripts": {
+    "dev": "zfb dev",
+    "build": "zfb build",
+    "check": "tsc --noEmit -p tsconfig.json",
+    "gen-registry": "zudo-sg gen-registry",
+    "gen-token-manifest": "zudo-sg gen-token-manifest"
+  },
+  "dependencies": {
+    "@takazudo/zdtp": "0.8.0",
+    "@takazudo/zfb": "2.19.0",
+    "@takazudo/zfb-md-wasm": "2.19.0",
+    "@takazudo/zfb-runtime": "2.19.0",
+    "@takazudo/zudo-doc": "5.26.0",
+    "@takazudo/zudo-sg": "^0.1.2",
+    "diff": "^8.0.4",
+    "katex": "^0.16.38",
+    "preact": "^10.29.1",
+    "preact-render-to-string": "^6.6.6",
+    "tailwindcss": "^4.2.0",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.9.0"
+  }
+}

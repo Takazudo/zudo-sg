@@ -10,12 +10,19 @@ zudo-sg is a style-guide framework built on [zudo-doc](https://github.com/Takazu
 
 This documentation site is contributor-facing: it explains how this repository's workspace is arranged, how component stories become catalog pages, how design tokens are managed, how the engine package is built and composed, and which checks keep the system stable. It is deployed separately from the public styleguide (`https://zudo-sg-doc.takazudomodular.com/` versus `https://zudo-sg.takazudomodular.com/`), with no navigation between the two sites and no shared build — they are two independent products, not one product shown from two angles.
 
+New projects can start with the pnpm-only `create-zudo-sg` initializer; it
+creates a small host that uses the published `@takazudo/zudo-sg` engine. The
+[Installation](./installation.mdx) page shows that quick path, while the
+root site's [Adopting the engine](https://zudo-sg.takazudomodular.com/docs/architecture/adopting)
+page keeps the complete manual setup for existing hosts.
+
 ## The workspace outputs
 
-The monorepo produces four main artifacts:
+The monorepo produces five main artifacts:
 
 - Root styleguide host: the zudo-doc based catalog deployed at `https://zudo-sg.takazudomodular.com/`, dogfooding the engine package below.
 - `packages/styleguide` (`@takazudo/zudo-sg`): the installable styleguide engine — story registry/scaffold/token-manifest CLI, catalog/detail/preview/tokens routes, preview app, code panel, and token dashboards.
+- `packages/create-zudo-sg` (`create-zudo-sg`): the pnpm-only initializer that scaffolds a private host around the engine.
 - `packages/demo-ui`: the shared Preact component library and design-token source of truth, consumed directly from source.
 - `apps/demo`: a static demo site deployed at `https://zudo-sg-demo-site.takazudomodular.com/`.
 

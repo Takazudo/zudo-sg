@@ -1,37 +1,58 @@
 ---
 description: >-
-  Release @takazudo/zudo-sg end-to-end — bump packages/styleguide/package.json,
-  write an English changelog page, regenerate packages/styleguide/CHANGELOG.md,
-  run the local quality gate, commit + push to main, wait for CI, push the v*
-  tag (which triggers the npm publish workflow), watch it to success, then
-  create the GitHub Release. STABLE-ONLY: this package has no `next`/prerelease
-  channel at all — every release is a clean X.Y.Z on npm `latest`. Pre-1.0
-  version judgement is Scheme B (breaking commit -> minor bump, everything else
-  -> patch), not standard SemVer. The first release normally finalizes the
-  seeded 0.1.0 without incrementing it. The single human gate is the Step 2
-  release proposal; confirming it authorizes the whole flow through
-  publish. Triggers on "bump version", "cut a release", "release zudo-sg",
-  "make a release".
+  Release @takazudo/zudo-sg or create-zudo-sg end-to-end. The default engine
+  path bumps packages/styleguide/package.json, writes an English changelog
+  page, regenerates packages/styleguide/CHANGELOG.md, runs the local quality
+  gate, commits + pushes to main, waits for CI, pushes the v* tag (which
+  triggers the engine npm publish workflow), watches it to success, then
+  creates the GitHub Release. An explicit create-zudo-sg/initializer request
+  selects the initializer path in the "Releasing create-zudo-sg" section.
+  Both packages are STABLE-ONLY: every release is a clean X.Y.Z on npm
+  `latest`. The single human gate is the release proposal; confirming it
+  authorizes the whole flow through publish. Triggers on "bump version", "cut
+  a release", "release zudo-sg", "release create-zudo-sg", "release the
+  initializer", and "make a release".
 user-invocable: true
 argument-description: >-
   Optional: major, minor, patch — force a direct bump at that level (Scheme B
-  override). No argument — commit-judged bump against the last v* tag (breaking
-  commit -> minor, else -> patch). No v* tag exists yet -> cold-start first
-  release, normally 0.1.0, with the full proposal gate (see Steps 1–2).
-  Or: cancel — abort a not-yet-published release.
+  override). No argument — commit-judged bump against the last tag in the
+  selected package's namespace (breaking commit -> minor, else -> patch). No
+  tag exists yet for that package -> cold-start first release, normally 0.1.0,
+  with the full proposal gate (see Steps 1–2).
+  An explicit `create-zudo-sg` or `initializer` request selects that package's
+  release path; otherwise the styleguide engine is selected. Or: cancel — abort
+  a not-yet-published release.
 ---
 
 # /l-make-release
 
 End-to-end release orchestrator for `@takazudo/zudo-sg`, the styleguide engine
-package at `packages/styleguide`. It bumps the version, writes an English
-changelog page, regenerates `packages/styleguide/CHANGELOG.md`, runs the local
-quality gate, commits + pushes to `main`, waits for CI, then **pushes the
-`v<version>` tag** — which triggers `.github/workflows/publish-zudo-sg.yml`
-(build + verify + `pnpm publish`) — watches that run to success, and creates
-the GitHub Release. **One invocation takes the release all the way to npm.**
+package at `packages/styleguide`, or (when explicitly requested) the
+`create-zudo-sg` initializer at `packages/create-zudo-sg`. The engine path
+bumps the version, writes an English changelog page, regenerates
+`packages/styleguide/CHANGELOG.md`, runs the local quality gate, commits +
+pushes to `main`, waits for CI, then **pushes the `v<version>` tag** — which
+triggers `.github/workflows/publish-zudo-sg.yml` (build + verify + `pnpm
+publish`) — watches that run to success, and creates the GitHub Release. The
+initializer path is documented in [Releasing create-zudo-sg](#releasing-create-zudo-sg).
+**One invocation takes the selected release all the way to npm.**
 
-## What this package is
+## Selecting the package
+
+The package is selected before Step 1 and the choice applies to the entire
+invocation:
+
+- An explicit `create-zudo-sg` or `initializer` request selects
+  `packages/create-zudo-sg` and its `create-zudo-sg-vX.Y.Z` tag workflow.
+- A generic release request, or a request naming `@takazudo/zudo-sg`, selects
+  the styleguide engine and follows the existing `vX.Y.Z` flow below.
+- If a request names both packages, stop at the proposal and ask which one to
+  release; never mix their version sources, changelogs, tags, or workflows.
+
+The selected package's version is the only version this skill bumps. The root
+`package.json` is never a release version source.
+
+## What the engine package is
 
 - **Single npm package**: `@takazudo/zudo-sg`, at `packages/styleguide/`.
   **Version source of truth is `packages/styleguide/package.json`**'s
@@ -89,14 +110,16 @@ the Step 2 proposal is what authorizes it.
 
 ## Boundaries
 
-- The skill never runs `npm publish` / `pnpm publish` directly — that is
-  `publish-zudo-sg.yml`'s job, triggered by the tag push.
+- The skill never runs `npm publish` / `pnpm publish` directly — the selected
+  package's publish workflow does that after the tag push.
 - npm cannot re-publish a version. If the publish workflow fails **after** the
   tag is pushed (Step 8), check the registry before deciding whether the
   unchanged run can be retried — see [Failure Recovery](#failure-recovery).
   Never move a pushed release tag to another commit.
-- This skill never mutates the root `package.json`, `apps/demo`, `doc/`, or
-  `packages/demo-ui` — the styleguide engine is the only release surface here.
+- The engine path never mutates the root `package.json`, `apps/demo`, `doc/`,
+  or `packages/demo-ui`; the explicitly selected initializer path additionally
+  mutates only `packages/create-zudo-sg/package.json`, its changelog, and its
+  release-generated artifacts.
 
 ## Step 1: Preconditions
 
@@ -343,6 +366,20 @@ Update `version` in `packages/styleguide/package.json` to the confirmed new
 version (no `v` prefix). For the default first release, retain `0.1.0` and
 continue with the changelog and checks. The root `package.json` is NOT touched.
 
+After changing the engine version, regenerate the committed initializer
+template and keep that generated change in the same release commit:
+
+```bash
+pnpm sync:create-template
+pnpm check:create-template
+```
+
+The sync writes the template dependency as the caret range `^<engine version>`.
+That is a range, not an exact pin: a later compatible engine patch may resolve
+from npm without another initializer release. Do not hand-edit it to remove
+the caret. If the sync changes more than the expected generated template
+files, stop and inspect the diff before continuing.
+
 ### 3b. Write the English changelog page
 
 Create `doc/src/content/docs/changelog/zudo-sg/<version>.mdx`. On the **very
@@ -437,7 +474,8 @@ bash scripts/check-pack.sh
 ```bash
 git add packages/styleguide/package.json \
   packages/styleguide/CHANGELOG.md \
-  doc/src/content/docs/changelog/zudo-sg/<version>.mdx
+  doc/src/content/docs/changelog/zudo-sg/<version>.mdx \
+  packages/create-zudo-sg/templates/default
 git commit -m "chore(release): @takazudo/zudo-sg v<version>"
 git push origin main
 BUMP_SHA=$(git rev-parse HEAD)
@@ -533,10 +571,106 @@ to be configured and verified before retiring `NPM_TOKEN`. Follow the
 migration notes in `packages/styleguide/RELEASE.md`. This is a recommendation,
 not an automatic account-setting change. Then **STOP**.
 
+## Releasing create-zudo-sg
+
+Use this path only when the request explicitly names `create-zudo-sg` or the
+initializer. It is independent of the engine's `v*.*.*` release stream:
+
+- The version source of truth is `packages/create-zudo-sg/package.json`.
+  Bump that package only; do not bump the root manifest or
+  `packages/styleguide/package.json`.
+- The release changelog is `packages/create-zudo-sg/CHANGELOG.md`. Add the
+  confirmed version's entry there before the release commit. On the first
+  release, the seeded `0.1.0` may be retained and finalized rather than
+  automatically becoming `0.1.1`; still use the proposal gate and create the
+  changelog entry.
+- This package is stable-only. Use a clean `X.Y.Z` and the exact tag
+  `create-zudo-sg-vX.Y.Z`; there is no prerelease or `next` channel. The
+  proposal considers initializer tags (`create-zudo-sg-v*`), not engine tags
+  (`v*`).
+
+For Steps 1–2, apply the same clean-tree, registry, Scheme B, and explicit
+confirmation rules as the engine path, but substitute the initializer's
+package and tag namespace throughout. Judge the release against commits that
+touch `packages/create-zudo-sg/**`, the template sync/gate, or its publish
+workflow. If no `create-zudo-sg-v*` tag exists, this is the initializer's first
+release: normally propose the seeded `0.1.0` and finalize its changelog entry;
+do not use an existing engine `v*` tag as the initializer's base. For a later
+release, use the latest `create-zudo-sg-v*` tag and the same breaking-change
+minor / otherwise patch judgement unless the user explicitly chooses a bump.
+
+The template's engine dependency must remain the caret range `^X.Y.Z`, not an
+exact pin. A create-zudo-sg release does not replace that range with the
+initializer's version. Before committing, run the package check and both
+initializer gates:
+
+```bash
+pnpm --filter create-zudo-sg check
+pnpm check:create-template
+pnpm verify:create-zudo-sg --published-engine
+```
+
+`check:create-template` proves the committed template matches the fixture and
+that its shipped engine dependency is the intended caret range. The
+`--published-engine` verifier packs the initializer, scaffolds an unmodified
+template, installs that range from the npm registry, and builds the foreign
+host. Do not replace it with the normal verifier's local engine tarball for a
+release gate; if the registry cannot resolve the published engine, stop and
+resolve that release dependency first.
+
+After the proposal is confirmed and the local gates pass, commit the package
+manifest and changelog, push `main`, and wait for CI on that commit. Push only
+the verified commit as the package tag:
+
+```bash
+git tag "create-zudo-sg-v<version>" "$BUMP_SHA"
+git push origin "create-zudo-sg-v<version>"
+```
+
+That tag triggers `.github/workflows/publish-create-zudo-sg.yml`. Watch the
+run by workflow and the tagged commit, then wait for success before creating
+or reusing the matching GitHub Release:
+
+```bash
+gh run list --workflow publish-create-zudo-sg.yml --limit 15 \
+  --json databaseId,headSha
+gh run watch <publish-run-id> --exit-status
+```
+
+The workflow is deliberately guarded: a manual dispatch must target an exact
+`create-zudo-sg-vX.Y.Z` tag, and it validates that tag against
+`packages/create-zudo-sg/package.json` before spending time on the build. If a
+publish run fails after the tag is pushed, check the exact version first:
+
+```bash
+npm view "create-zudo-sg@<version>" version --registry=https://registry.npmjs.org/
+```
+
+If npm returns that version, treat it as published: never re-tag, delete the
+tag, or re-run the publish job. If npm confirms the version is absent and the
+failure is transient or credential-only, correct the cause and retry the
+unchanged tag through the guarded manual dispatch:
+
+```bash
+gh workflow run publish-create-zudo-sg.yml --ref "create-zudo-sg-v<version>"
+```
+
+The workflow's dispatch guard must reject branch refs; do not bypass it. A
+code fix requires a new initializer version through the proposal gate, never
+moving an existing release tag. Registry/network errors that do not establish
+absence are inconclusive, so stop and recheck rather than retrying blindly.
+
+After the first successful `create-zudo-sg` publish, perform the one-time
+follow-up from #739: remove the documentation note that the initializer is
+“available from the first release.” Keep that docs chore separate from this
+release workflow and do not repeat it on later releases.
+
 ## Cancelling a release
 
 Use this for `/l-make-release cancel` or a mid-release problem. The tag push
-(Step 7) is the irreversible boundary.
+(Step 7) is the irreversible boundary. For an initializer release, substitute
+the `create-zudo-sg-v<version>` tag and initializer package/changelog files in
+the cancellation steps below; never cancel it by touching an engine `v*` tag.
 
 ### The tag has NOT been pushed yet (before Step 7)
 
