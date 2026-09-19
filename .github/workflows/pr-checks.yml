@@ -10,6 +10,8 @@
 #   unit                 — pnpm test:unit (vitest)
 #   styleguide-install   — pnpm verify:styleguide-install (#665 foreign-install
 #                          proof: packed tarball, fixtures/engine-host, non-root base)
+#   create-zudo-sg       — pnpm verify:create-zudo-sg (#737 packed initializer
+#                          scaffold, local engine install, build + dev proof)
 #   build                — pnpm build (zfb build → dist/)
 #   build-demo           — pnpm --filter @zudo-sg/demo build (apps/demo), then
 #                          pnpm check:links:demo against apps/demo/dist
@@ -145,6 +147,27 @@ jobs:
 
       - name: Verify foreign install
         run: pnpm verify:styleguide-install
+
+  # ---------------------------------------------------------------------------
+  # Job: create-zudo-sg initializer foreign-install proof (#737)
+  # Packs the initializer and engine, executes the packed initializer outside
+  # this workspace, then installs and builds the generated base-"/" host.
+  # The verifier deliberately overrides the template's registry engine range
+  # with the locally packed engine because main may be ahead of npm.
+  # ---------------------------------------------------------------------------
+  create-zudo-sg:
+    name: create-zudo-sg Scaffold Proof
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v5
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: Verify packed initializer
+        run: pnpm verify:create-zudo-sg
 
   # ---------------------------------------------------------------------------
   # Job: Build
