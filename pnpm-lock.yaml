@@ -127,11 +127,11 @@ importers:
         specifier: workspace:*
         version: link:../../packages/demo-ui
       preact:
-        specifier: ^10.29.1
-        version: 10.29.2
+        specifier: ^10.29.8
+        version: 10.29.8(preact-render-to-string@6.7.0)
       preact-render-to-string:
         specifier: ^6.6.6
-        version: 6.7.0(preact@10.29.2)
+        version: 6.7.0(preact@10.29.8)
       zod:
         specifier: ^4.0.0
         version: 4.4.3
@@ -141,7 +141,7 @@ importers:
         version: 4.3.1(vite@8.0.16(@types/node@22.19.21)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)(yaml@2.9.0))
       '@testing-library/preact':
         specifier: ^3.2.4
-        version: 3.2.4(preact@10.29.2)
+        version: 3.2.4(preact@10.29.8)
       '@types/node':
         specifier: ^22.0.0
         version: 22.19.21
@@ -2841,6 +2841,14 @@ packages:
   preact@10.29.2:
     resolution: {integrity: sha512-7tNmwg/7mzzAoB/8kSg6Hl37JraAZw3Z3A0JSY7VXlZwo82Xn0G7wKbNNs2qoF4ZEEsQGTwDAroNdqKs1ofJxQ==}
 
+  preact@10.29.8:
+    resolution: {integrity: sha512-ej2aVZ+vZ8WO7tvlQWRM9N63A0KzF9q4mWJfDUHgYaIofWY9hu74QdnQrjoPMmZi2/nZ5gN0bJCQF49xQqx09Q==}
+    peerDependencies:
+      preact-render-to-string: '>=5'
+    peerDependenciesMeta:
+      preact-render-to-string:
+        optional: true
+
   pretty-format@27.5.1:
     resolution: {integrity: sha512-Qb1gy5OrP5+zDf2Bvnzdl3jsTf1qXVMazbvCoKhtKqVs4/YK4ozX4gKQJJVyNe+cajNPn0KoC0MC3FUmaHWEmQ==}
     engines: {node: ^10.13.0 || ^12.13.0 || ^14.15.0 || >=15.0.0}
@@ -4184,6 +4192,11 @@ snapshots:
     dependencies:
       '@testing-library/dom': 8.20.1
       preact: 10.29.2
+
+  '@testing-library/preact@3.2.4(preact@10.29.8)':
+    dependencies:
+      '@testing-library/dom': 8.20.1
+      preact: 10.29.8(preact-render-to-string@6.7.0)
 
   '@tybys/wasm-util@0.10.2':
     dependencies:
@@ -5783,7 +5796,15 @@ snapshots:
     dependencies:
       preact: 10.29.2
 
+  preact-render-to-string@6.7.0(preact@10.29.8):
+    dependencies:
+      preact: 10.29.8(preact-render-to-string@6.7.0)
+
   preact@10.29.2: {}
+
+  preact@10.29.8(preact-render-to-string@6.7.0):
+    optionalDependencies:
+      preact-render-to-string: 6.7.0(preact@10.29.8)
 
   pretty-format@27.5.1:
     dependencies:
