@@ -13,7 +13,7 @@ export default defineConfig(
   withZudoSg(
     zudoDoc({
       siteName: "Styleguide Starter",
-      base: "/styleguide/",
+      base: "/",
       port: 4397,
       // No mermaid diagrams anywhere in this starter's one seed doc; turned
       // off rather than leaving the default on to keep the dependency set
