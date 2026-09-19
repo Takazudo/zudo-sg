@@ -4,7 +4,7 @@ All notable changes to `create-zudo-sg` are documented in this file.
 
 The format is based on Keep a Changelog.
 
-## [0.1.0] - Unreleased
+## [0.1.0] - 2026-09-20
 
 Initial release of the pnpm-only `create-zudo-sg` initializer.
 
