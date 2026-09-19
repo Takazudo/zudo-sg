@@ -5,7 +5,7 @@ Locks the contract every Wave 2+ sub-issue implements. Model: zudo-doc's
 package-owned route seam (`$HOME/repos/myoss/zudo-doc/packages/zudo-doc/docs/adr/route-injection-seam.md`).
 Current toolchain and peer floors (#696, raised to `^2.18.0` / `^5.25.0` by
 #710 — forced by zudo-doc 5.25.0's own `@takazudo/zfb` peer floor raise, not
-elective): `@takazudo/zfb` **2.18.0**, `@takazudo/zudo-doc` 5.25.0,
+elective): `@takazudo/zfb` **2.19.0**, `@takazudo/zudo-doc` 5.25.0,
 `@takazudo/zdtp` 0.8.0, pnpm 11.5.2, Node 24.
 
 ## Context
