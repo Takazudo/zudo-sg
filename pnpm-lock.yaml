@@ -186,6 +186,18 @@ importers:
         specifier: ^5.9.0
         version: 5.9.3
 
+  packages/create-zudo-sg:
+    devDependencies:
+      '@types/node':
+        specifier: ^22.0.0
+        version: 22.19.21
+      typescript:
+        specifier: ^5.9.0
+        version: 5.9.3
+      vitest:
+        specifier: ^4.1.9
+        version: 4.1.9(@types/node@22.19.21)(happy-dom@16.8.1)(jsdom@29.1.1)(msw@2.15.0(@types/node@22.19.21)(typescript@5.9.3))(vite@8.0.16(@types/node@22.19.21)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.13)(yaml@2.9.0))
+
   packages/demo-ui:
     dependencies:
       '@takazudo/zfb-md-wasm':
