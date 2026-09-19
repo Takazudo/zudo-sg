@@ -262,6 +262,11 @@ async function getHostRootVar(page: Page, cssVar: string): Promise<string> {
 test("preview panel: overrides reach iframe :root; host <html> is unchanged", async ({
   page,
 }) => {
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  page.on("console", (message) => {
+    if (message.type() === "error") errors.push(message.text());
+  });
   await gotoFirstDetailPage(page);
   const frame = await waitForFirstPreviewFrame(page);
 
@@ -270,6 +275,8 @@ test("preview panel: overrides reach iframe :root; host <html> is unchanged", as
 
   // Open the preview panel via the toggle event (verifies event channel wiring).
   await openPreviewPanel(page);
+  await expect(page.locator(".tokenpanel-shell")).toHaveCount(1);
+  await expect(page.locator("#sg-preview-tweak-root .tokenpanel-shell")).toBeVisible();
 
   // Apply overrides via the bridge postMessage API.
   // This tests that the iframe's bridge receiver (installIframeReceiver) is
@@ -304,6 +311,7 @@ test("preview panel: overrides reach iframe :root; host <html> is unchanged", as
   // …and specifically never picked up the iframe sentinel values.
   expect(await getHostRootVar(page, "--color-accent")).not.toBe(brandOverride);
   expect(await getHostRootVar(page, "--radius-md")).not.toBe(radiusOverride);
+  expect(errors).toEqual([]);
 });
 
 // ---------------------------------------------------------------------------
@@ -313,6 +321,11 @@ test("preview panel: overrides reach iframe :root; host <html> is unchanged", as
 test("doc Tokens panel: dispatching toggle-sg-doc-tweak opens the real (non-empty) panel and does not change preview iframe", async ({
   page,
 }) => {
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  page.on("console", (message) => {
+    if (message.type() === "error") errors.push(message.text());
+  });
   await gotoFirstDetailPage(page);
   const frame = await waitForFirstPreviewFrame(page);
 
@@ -333,6 +346,8 @@ test("doc Tokens panel: dispatching toggle-sg-doc-tweak opens the real (non-empt
   await expect(docPanel).toBeVisible({
     timeout: 10_000,
   });
+  await expect(page.locator(".tokenpanel-shell")).toHaveCount(1);
+  await expect(page.locator("#sg-doc-tweak-root .tokenpanel-shell")).toBeVisible();
 
   // REGRESSION GUARD (#85): the doc-chrome panel must open with a NON-EMPTY
   // body — i.e. its real tabs are present. The original defect mounted the
@@ -368,6 +383,16 @@ test("doc Tokens panel: dispatching toggle-sg-doc-tweak opens the real (non-empt
 
   // Iframe's --color-accent must still be the sentinel after doc panel Reset.
   expect(await getIframeRootVar(frame, "--color-accent")).toBe(BRAND_SENTINEL);
+  expect(errors).toEqual([]);
+});
+
+test("package-owned docs do not mount the package token-panel bootstrap", async ({ page }) => {
+  await page.goto("/docs/overview");
+  await expect(page.locator("h1")).toBeVisible();
+  await expect(page.locator([
+    '[data-zfb-island="DesignTokenPanelBootstrap"]',
+    '[data-zfb-island-skip-ssr="DesignTokenPanelBootstrap"]',
+  ].join(","))).toHaveCount(0);
 });
 
 // ---------------------------------------------------------------------------
