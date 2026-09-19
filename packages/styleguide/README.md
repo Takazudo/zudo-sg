@@ -51,10 +51,9 @@ pnpm gen-token-manifest
 pnpm dev
 ```
 
-The initializer is available from its first npm release; nothing is published
-by this epic. It copies a private starter with three example Preact components,
-stories, token CSS, a preview entry, and the zfb/zudo-doc composition already
-wired. The CLI prints the same next steps after scaffolding.
+It copies a private starter with three example Preact components, stories,
+token CSS, a preview entry, and the zfb/zudo-doc composition already wired.
+The CLI prints the same next steps after scaffolding.
 
 ## Installation
 

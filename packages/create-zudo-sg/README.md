@@ -16,9 +16,6 @@ pnpm gen-token-manifest
 pnpm dev
 ```
 
-The initializer is available from its first npm release; nothing is published
-by this epic.
-
 The command defaults to no dependency installation and prints the five
 commands after it creates the project. Pass `--install` when the initializer
 should run `pnpm install` for you. The generated `package.json` pins the
