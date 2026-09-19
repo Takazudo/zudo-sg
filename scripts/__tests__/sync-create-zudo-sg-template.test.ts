@@ -107,7 +107,9 @@ describe("sync-create-zudo-sg-template.mjs", () => {
     expect(JSON.parse(readFileSync(join(target, "package.json"), "utf8"))).toMatchObject({
       name: "__PROJECT_NAME__",
       version: "0.1.0",
-      dependencies: { "@takazudo/zudo-sg": "^0.1.2" },
+      dependencies: {
+        "@takazudo/zudo-sg": `^${JSON.parse(readFileSync(STYLEGUIDE_PACKAGE_PATH, "utf8")).version}`,
+      },
     });
     expect(readFileSync(join(target, "_gitignore"), "utf8")).not.toContain(
       ".tarball",
