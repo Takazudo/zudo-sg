@@ -24,6 +24,7 @@
     "sync:create-template": "node scripts/sync-create-zudo-sg-template.mjs",
     "check:create-template": "node scripts/sync-create-zudo-sg-template.mjs --check",
     "verify:styleguide-install": "node scripts/ensure-styleguide-build.mjs && node scripts/verify-styleguide-install.mjs",
+    "verify:create-zudo-sg": "node scripts/verify-create-zudo-sg.mjs",
     "new:component": "node scripts/ensure-styleguide-build.mjs && zudo-sg new-component",
     "gen:token-manifest": "node scripts/ensure-styleguide-build.mjs && zudo-sg gen-token-manifest",
     "check:token-manifest": "node scripts/ensure-styleguide-build.mjs && zudo-sg gen-token-manifest --check",
