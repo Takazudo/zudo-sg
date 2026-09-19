@@ -38,6 +38,24 @@ Preact + zfb hosts only. React 19 hosts are an explicit non-goal for this
 release (see the ADR's "Framework scope" decision for the seam that would
 enable them later).
 
+## Quick start with the initializer
+
+For a new host, use the pnpm initializer:
+
+```sh
+pnpm create zudo-sg@latest my-styleguide
+cd my-styleguide
+pnpm install
+pnpm gen-registry
+pnpm gen-token-manifest
+pnpm dev
+```
+
+The initializer is available from its first npm release; nothing is published
+by this epic. It copies a private starter with three example Preact components,
+stories, token CSS, a preview entry, and the zfb/zudo-doc composition already
+wired. The CLI prints the same next steps after scaffolding.
+
 ## Installation
 
 ```sh
@@ -55,6 +73,12 @@ route dist imports `diff` and `katex` even when those features are disabled
 by the fixture's component and preview-style setup, respectively; add them
 when your host uses those same pieces. The command above reproduces the full
 fixture dependency set.
+
+Keep the `tokens` block in `zudo-sg.config.mjs`: the initializer's config
+typing treats it as required, and `gen-token-manifest` needs its two CSS paths
+and `manifestOut` to populate the `/tokens` dashboards. Manual adopters should
+also retain `@takazudo/zdtp`, `diff`, and `katex`; they are required host
+dependencies, not optional extras.
 
 ## Composing it into a host
 

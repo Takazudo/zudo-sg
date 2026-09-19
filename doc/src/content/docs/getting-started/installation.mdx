@@ -4,13 +4,34 @@ sidebar_position: 2
 description: Clone the repository, install dependencies, and run the styleguide, docs, and demo workspaces.
 ---
 
+## Start a new styleguide
+
+Use the initializer when you want a new project rather than a checkout of
+this repository:
+
+```sh
+pnpm create zudo-sg@latest my-styleguide
+cd my-styleguide
+pnpm install
+pnpm gen-registry
+pnpm gen-token-manifest
+pnpm dev
+```
+
+The initializer is available from its first npm release; nothing is published
+by this epic. The command prints these next steps and creates a private Preact +
+zfb host with example stories, token CSS, and the engine configuration.
+
+For an existing host, use the manual installation and composition guide in
+the root site's [Adopting the engine](https://zudo-sg.takazudomodular.com/docs/architecture/adopting).
+
 ## Requirements
 
 - Node.js 22.12.0 or later.
 - pnpm 11.5.2, matching the workspace `packageManager` field.
 - Git access to the repository.
 
-## Clone and install
+## Clone and install manually
 
 Clone the existing zudo-sg repository and install the workspace dependencies from the root:
 
