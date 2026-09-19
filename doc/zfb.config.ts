@@ -5,6 +5,7 @@ export default defineConfig(
   zudoDoc({
     port: 4323,
     siteName: "zudo-sg Docs",
+    siteTreeNavSecondary: ["changelog", "claude", "claude-md", "claude-skills"],
     siteUrl: "https://zudo-sg-doc.takazudomodular.com",
     // Explicit since zudo-doc 5.17.0 gated /sitemap.xml on this setting; before that
     // the route was emitted unconditionally and this deployed site shipped one.
