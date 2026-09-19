@@ -4,6 +4,26 @@ All notable changes to `@takazudo/zudo-sg` are documented in this file.
 
 The format is based on Keep a Changelog, and release notes are generated from the changelog MDX pages.
 
+## [0.2.0] - 2026-09-20
+
+A requirements release. The engine's code is unchanged, but its published peer
+floors move up, so a host on an older toolchain must upgrade its peers before
+installing this version. That is why it is a minor bump rather than a patch.
+
+### Breaking Changes
+
+- **Raised peer floors.** `@takazudo/zfb` is now `^2.19.0` (was `^2.18.0`),
+  `@takazudo/zudo-doc` is now `^5.26.0` (was `^5.25.0`), and `preact` is now
+  `^10.29.8` (was `^10.29.1`). The zfb floor follows `@takazudo/zudo-doc`
+  5.26.0's own requirement. Upgrade these three in the host before moving to
+  0.2.0; hosts that stay on the older peers should remain on 0.1.x.
+
+### Other Changes
+
+- Bumped the `postcss` dependency to `^8.5.28`.
+- The README now documents upstream provenance, the current peer requirements,
+  and scaffolding a new host with the `create-zudo-sg` initializer.
+
 ## [0.1.2] - 2026-09-19
 
 A toolchain-only release. The engine is built and verified against
