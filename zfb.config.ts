@@ -30,12 +30,13 @@ const directiveVocabulary = {
 // preset-only override. It prevents package-owned routes from also mounting
 // zudo-doc's panel while the host keeps its two project-specific instances.
 //
-// Hoisted to a `const` (not inlined) so TypeScript infers its type
-// structurally instead of checking it as a fresh object literal against
-// `PresetSettings` — which doesn't declare `designTokenPanel` at all (it's
-// read off the wider runtime settings shape, not this narrower preset-facing
-// type), so an inline literal here would fail excess-property checking.
-const presetSettings = { ...settings, designTokenPanel: false };
+// zudo-doc 5.26 separates loader bundling from package-panel mounting, so
+// both host panels can use the real loader (zudolab/zudo-doc#4261).
+const presetSettings = {
+  ...settings,
+  designTokenPanel: false,
+  bundleZdtp: true,
+};
 const preset = zudoDocPreset({
   settings: presetSettings,
   buildDocsSchema,
@@ -43,26 +44,6 @@ const preset = zudoDocPreset({
   translations,
   colorSchemes,
 });
-
-// zudo-doc 5.24.1 overloaded the flag above (#719): besides "do package-owned
-// routes mount the panel", a falsy preset-facing `designTokenPanel` now also
-// makes the preset inject `@takazudo/zudo-doc/plugins/zdtp-loader`, which
-// registers a virtual module replacing the real
-// `@takazudo/zudo-doc/zdtp-loader` specifier with `throw new Error("@takazudo/
-// zdtp is not bundled: …")`. That specifier is what BOTH of this host's own
-// panels lazy-import (src/lib/design-token-panel-bootstrap.ts and the engine's
-// preview panel, via @takazudo/zudo-doc/design-token-panel-bootstrap), so the
-// stub ships the documented `designTokenPanel` feature as a throwing chunk.
-// This host needs the two concerns answered differently — package routes: no
-// panel; zdtp loader: real — and upstream offers no separate switch
-// (zudolab/zudo-doc#4261), so drop just that plugin and keep the narrow
-// override. This matches on an upstream-internal plugin name: if that name
-// changes, the filter silently stops matching and the stub returns — the
-// exact plugin list asserted in src/config/__tests__/root-zfb-config.test.ts
-// is what catches that.
-const presetPlugins = preset.plugins.filter(
-  ({ name }) => name !== "@takazudo/zudo-doc/plugins/zdtp-loader",
-);
 
 export default defineConfig({
   framework: "preact",
@@ -114,7 +95,7 @@ export default defineConfig({
     {
       collections: preset.collections,
       plugins: [
-        ...presetPlugins,
+        ...preset.plugins,
         // Run after the preset's doc-history preBuild so the embedded renderer
         // receives freshly generated metadata without importing node:fs.
         {

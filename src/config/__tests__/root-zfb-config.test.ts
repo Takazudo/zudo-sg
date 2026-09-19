@@ -22,15 +22,7 @@ describe("root zfb integration contract", () => {
       "@takazudo/zudo-doc/plugins/theme-packs",
       "@takazudo/zudo-doc/plugins/llms-txt",
       "@takazudo/zudo-doc/plugins/img-src-check",
-      // NOT "@takazudo/zudo-doc/plugins/zdtp-loader" (#719): the preset injects
-      // it whenever the *preset-facing* designTokenPanel is off — which it is
-      // here, since zfb.config.ts's `presetSettings` forces it false to keep
-      // package-owned routes from mounting a second panel (see test below,
-      // "passes the complete host settings..."). That plugin shadows the panel
-      // bootstrap's lazy `@takazudo/zudo-doc/zdtp-loader` import with a
-      // throwing stub, which would break this host's OWN two panels, so
-      // zfb.config.ts filters it back out. Keep this list exact — it is what
-      // catches the preset silently adding or dropping a plugin again.
+      // bundleZdtp keeps the throwing zdtp-loader stub out of the host build.
       "./pages/lib/_doc-history-meta.mjs",
       "@takazudo/zudo-sg/plugins/routes",
       "@takazudo/zudo-sg/plugins/preview-css",
@@ -62,8 +54,13 @@ describe("root zfb integration contract", () => {
     );
     const routeSettings = routes?.options?.settings;
 
-    expect(routeSettings).toEqual({ ...settings, designTokenPanel: false });
+    expect(routeSettings).toEqual({
+      ...settings,
+      designTokenPanel: false,
+      bundleZdtp: true,
+    });
     expect(settings).toMatchObject({
+      designTokenPanel: true,
       logo: "auto",
       entryDocSlug: "overview",
       tocToggle: true,
