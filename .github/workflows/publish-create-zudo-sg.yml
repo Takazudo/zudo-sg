@@ -1,0 +1,95 @@
+# Publish create-zudo-sg to npm.
+#
+# Triggered by a pushed `create-zudo-sg-v*.*.*` tag. This initializer has its
+# own tag namespace and concurrency group so it cannot cross-fire with the
+# styleguide engine's `v*.*.*` publish workflow.
+#
+# The publish is gated by the foreign scaffold proof in
+# `scripts/verify-create-zudo-sg.mjs`. Its `--published-engine` mode leaves the
+# template's registry dependency untouched, proving that the shipped caret
+# range resolves to the published @takazudo/zudo-sg package.
+
+name: Publish create-zudo-sg to npm
+
+on:
+  push:
+    tags:
+      - "create-zudo-sg-v*.*.*"
+  workflow_dispatch:
+
+# Only one publish of this package should run at a time.
+concurrency:
+  group: publish-create-zudo-sg
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    name: Build, verify, and publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      # workflow_dispatch allows a manual retry, but --no-git-checks below
+      # would otherwise publish from any ref. Require the exact initializer
+      # release tag before checkout/install/build work starts.
+      - name: Guard workflow_dispatch to create-zudo-sg-v*.*.* tag refs
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          if [ "$GITHUB_REF_TYPE" != "tag" ] || ! echo "$GITHUB_REF_NAME" | grep -Eq '^create-zudo-sg-v[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::workflow_dispatch must be run from a create-zudo-sg-v*.*.* tag ref, not '$GITHUB_REF'"
+            exit 1
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v5
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # The tag and package version must both be stable X.Y.Z values, and the
+      # exact tag must identify the package version being published.
+      - name: Guard stable-only version
+        run: |
+          VERSION=$(node -p "require('./packages/create-zudo-sg/package.json').version")
+          if ! echo "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::packages/create-zudo-sg/package.json version '$VERSION' is not a stable X.Y.Z"
+            exit 1
+          fi
+          if [ "$GITHUB_REF_NAME" != "create-zudo-sg-v$VERSION" ]; then
+            echo "::error::tag '$GITHUB_REF_NAME' does not match packages/create-zudo-sg/package.json version 'create-zudo-sg-v$VERSION'"
+            exit 1
+          fi
+          echo "Publishing create-zudo-sg@$VERSION to dist-tag latest"
+
+      - name: Build + typecheck + test create-zudo-sg
+        run: pnpm --filter create-zudo-sg check
+
+      - name: Check create-zudo-sg template
+        run: pnpm check:create-template
+
+      # This is intentionally after the template check and before publish:
+      # it scaffolds from the packed initializer, installs the template's
+      # unchanged ^X.Y.Z engine range from npm, and builds the foreign host.
+      - name: Verify scaffold with published engine
+        run: pnpm verify:create-zudo-sg --published-engine
+
+      # NPM_TOKEN must have publish rights for create-zudo-sg. After the first
+      # publish, Trusted Publishing (OIDC) can replace the token; provenance
+      # is enabled here for either setup.
+      - name: Publish package
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: pnpm publish --filter create-zudo-sg --tag latest --access public --no-git-checks --provenance
