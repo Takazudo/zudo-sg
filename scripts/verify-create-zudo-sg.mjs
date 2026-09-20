@@ -245,6 +245,55 @@ async function assertScaffoldShape(projectDir, packedTemplateDir) {
   console.log(`OK — packed initializer scaffolded ${actual.length} files with .gitignore and no unresolved token.`);
 }
 
+async function gitCheckIgnore(projectDir, relativePath) {
+  return new Promise((resolvePromise, reject) => {
+    const child = spawn(
+      "git",
+      ["check-ignore", "--no-index", "--quiet", "--", relativePath],
+      { cwd: projectDir },
+    );
+    child.on("error", (error) => reject(new Error(`git check-ignore could not start: ${error.message}`)));
+    child.on("close", (code, signal) => {
+      if (code === 0) {
+        resolvePromise(true);
+        return;
+      }
+      if (code === 1) {
+        resolvePromise(false);
+        return;
+      }
+      reject(new Error(`git check-ignore ${relativePath} failed (${signal ? `signal ${signal}` : `exit code ${code}`})`));
+    });
+  });
+}
+
+async function assertScaffoldGitignore(projectDir) {
+  await run("git", ["init", "--quiet"], projectDir);
+  const ignoredPaths = [
+    ".zfb/graph.bin",
+    ".zfb-esbuild-entry-x.tsx",
+    ".zfb-islands-tsconfig-x.json",
+    ".zfb-virtual-x.mjs",
+  ];
+  await mkdir(path.join(projectDir, ".zfb"), { recursive: true });
+  await writeFile(path.join(projectDir, ".zfb/graph.bin"), "artifact\n");
+  for (const relativePath of ignoredPaths.slice(1)) {
+    await writeFile(path.join(projectDir, relativePath), "artifact\n");
+  }
+
+  assert(
+    !(await gitCheckIgnore(projectDir, "pnpm-lock.yaml")),
+    "scaffold .gitignore unexpectedly ignores pnpm-lock.yaml",
+  );
+  for (const relativePath of ignoredPaths) {
+    assert(
+      await gitCheckIgnore(projectDir, relativePath),
+      `scaffold .gitignore does not ignore ${relativePath}`,
+    );
+  }
+  console.log("OK — scaffold .gitignore tracks pnpm-lock.yaml and ignores zfb artifacts.");
+}
+
 async function assertForeignPackage(hostDir) {
   const installed = await realpath(path.join(hostDir, "node_modules/@takazudo/zudo-sg"));
   const modules = `${await realpath(path.join(hostDir, "node_modules"))}${path.sep}`;
@@ -393,6 +442,7 @@ async function main() {
       scratch,
     );
     await assertScaffoldShape(hostDir, path.join(packedInitializer, "templates/default"));
+    await assertScaffoldGitignore(hostDir);
 
     if (publishedEngine) {
       console.log("--published-engine: installing the template's shipped @takazudo/zudo-sg range.");

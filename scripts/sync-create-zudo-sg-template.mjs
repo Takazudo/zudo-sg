@@ -42,9 +42,15 @@ const SKIPPED_NAMES = new Set([
   "node_modules",
   "dist",
   ".zfb-build",
+  ".zfb",
   ".tarball",
   "pnpm-lock.yaml",
 ]);
+const SKIPPED_FILE_PATTERNS = [
+  /^\.zfb-esbuild-entry-.*\.tsx$/u,
+  /^\.zfb-islands-tsconfig-.*\.json$/u,
+  /^\.zfb-virtual-.*\.mjs$/u,
+];
 
 /** @typedef {Map<string, Buffer>} TemplateTree */
 
@@ -90,7 +96,12 @@ async function collectFiles(
 ) {
   const entries = await readdir(directory, { withFileTypes: true });
   for (const entry of entries) {
-    if (SKIPPED_NAMES.has(entry.name)) continue;
+    if (
+      SKIPPED_NAMES.has(entry.name) ||
+      SKIPPED_FILE_PATTERNS.some((pattern) => pattern.test(entry.name))
+    ) {
+      continue;
+    }
 
     const sourcePath = join(directory, entry.name);
     const relativePath = relativeDirectory
@@ -159,7 +170,7 @@ function transformFile(relativePath, source, styleguideVersion) {
     const next = source
       .toString("utf8")
       .split(/\r?\n/)
-      .filter((line) => line.trim() !== ".tarball")
+      .filter((line) => ![".tarball", "pnpm-lock.yaml"].includes(line.trim()))
       .join("\n");
     return Buffer.from(next);
   }

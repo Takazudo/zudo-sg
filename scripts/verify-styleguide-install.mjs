@@ -35,6 +35,19 @@ const root = fileURLToPath(new URL("../", import.meta.url));
 const fixtureRoot = path.join(root, "fixtures/engine-host");
 const packageDirRelative = "packages/styleguide";
 const tarballName = "zudo-sg-engine.tgz";
+const skippedFixtureEntries = new Set([
+  "node_modules",
+  "dist",
+  ".zfb-build",
+  ".zfb",
+  ".tarball",
+  "pnpm-lock.yaml",
+]);
+const skippedFixtureFilePatterns = [
+  /^\.zfb-esbuild-entry-.*\.tsx$/u,
+  /^\.zfb-islands-tsconfig-.*\.json$/u,
+  /^\.zfb-virtual-.*\.mjs$/u,
+];
 const keep = process.argv.includes("--keep") || Boolean(process.env.ZUDO_SG_VERIFY_KEEP);
 const readmeInstallOnly = process.argv.includes("--readme-install-only");
 
@@ -276,7 +289,10 @@ async function copyFixture(destination) {
       const relative = path.relative(fixtureRoot, source);
       if (relative === "") return true;
       const segments = relative.split(path.sep);
-      return !["node_modules", "dist", ".zfb-build", ".tarball", "pnpm-lock.yaml"].includes(segments[0]);
+      return (
+        !segments.some((segment) => skippedFixtureEntries.has(segment)) &&
+        !skippedFixtureFilePatterns.some((pattern) => pattern.test(segments.at(-1)))
+      );
     },
   });
 }

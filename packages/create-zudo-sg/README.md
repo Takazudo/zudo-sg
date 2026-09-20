@@ -20,6 +20,8 @@ The command defaults to no dependency installation and prints the five
 commands after it creates the project. Pass `--install` when the initializer
 should run `pnpm install` for you. The generated `package.json` pins the
 package manager to pnpm, and this release has no npm, yarn, or `--pm` mode.
+Commit the generated `pnpm-lock.yaml` so the host's dependency resolution is
+reproducible.
 
 ## Usage
 
