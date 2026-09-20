@@ -56,8 +56,9 @@ contains:
   shim for the host page.
 - Three small Preact examples under `ui/`: Button, Card, and Counter, with
   co-located stories and a Button MDX document.
-- `src/styleguide/sg-registry.ts`, an empty generated seed. Run
-  `pnpm gen-registry` after changing stories.
+- `src/styleguide/sg-registry.ts`, generated from the three example stories.
+  Run `pnpm gen-registry` after changing stories; the CLI also bootstraps a
+  missing or whitespace-only output.
 - `src/content/docs/getting-started.mdx`, a seed page for the generated host's
   documentation route.
 - `src/styles/global.css`, the automatically discovered host stylesheet, plus
