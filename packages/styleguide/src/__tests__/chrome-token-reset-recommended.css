@@ -1,0 +1,9 @@
+/* Recommended host order: zudo-doc first, host tokens second, engine last. */
+@import "@takazudo/zudo-doc/theme.css";
+
+@theme {
+  --color-border: #123456;
+  --color-surface-2: #abcdef;
+}
+
+@import "../../styles.css";
