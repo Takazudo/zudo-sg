@@ -271,6 +271,13 @@ export interface UiTokenManifest {
   sizeTokens: BuiltToken[];
 }
 
+export interface TokenManifestProvenance {
+  /** Project-root-relative path configured for spacing/font/size tokens. */
+  tokensCssPath: string;
+  /** Project-root-relative path configured for palette/semantic color tokens. */
+  colorsCssPath: string;
+}
+
 /**
  * Parse `tokensCss` (the components root's main tokens file) and
  * `colorsCss` (its colors file) and build the full manifest data — the same
@@ -295,6 +302,10 @@ export function buildUiTokenManifest({ tokensCss, colorsCss }: { tokensCss: stri
 
 function jsStringLiteral(value: string): string {
   return JSON.stringify(value);
+}
+
+function normalizeProvenancePath(path: string): string {
+  return path.replace(/\\/g, "/").replace(/^\.\//, "");
 }
 
 function renderTokenDefObject(token: BuiltToken, indent: number): string {
@@ -327,7 +338,16 @@ function renderPaletteEntry(entry: PaletteEntry): string {
 }
 
 /** Render the full generated manifest `.ts` source. */
-export function renderUiTokenManifestFile(manifest: UiTokenManifest): string {
+export function renderUiTokenManifestFile(
+  manifest: UiTokenManifest,
+  provenance: TokenManifestProvenance,
+): string {
+  const tokensCssPath = normalizeProvenancePath(provenance.tokensCssPath);
+  const colorsCssPath = normalizeProvenancePath(provenance.colorsCssPath);
+  const sourceOfTruth =
+    tokensCssPath === colorsCssPath
+      ? `\`${tokensCssPath}\``
+      : `\`${tokensCssPath}\` and \`${colorsCssPath}\``;
   const paletteLines = manifest.paletteColors.map(renderPaletteEntry).join("\n");
   const colorLines = manifest.colorTokens.map((t) => renderTokenDefObject(t, 2)).join("\n");
   const spacingLines = manifest.spacingTokens.map((t) => renderTokenDefObject(t, 2)).join("\n");
@@ -335,13 +355,13 @@ export function renderUiTokenManifestFile(manifest: UiTokenManifest): string {
   const sizeLines = manifest.sizeTokens.map((t) => renderTokenDefObject(t, 2)).join("\n");
 
   return `/**
- * Design-token manifest for @zudo-sg/demo-ui target-website tokens.
+ * Design-token manifest for configured UI tokens.
  *
- * GENERATED — do not hand-edit. Run \`pnpm gen:token-manifest\` after changing
- * packages/demo-ui/styles/tokens.css or packages/demo-ui/styles/colors.css, then commit
- * the regenerated output. \`pnpm check:token-manifest\` fails on drift.
+ * GENERATED — do not hand-edit. Run \`zudo-sg gen-token-manifest\` after changing
+ * either configured source file, then commit the regenerated output.
+ * \`zudo-sg gen-token-manifest --check\` fails on drift.
  *
- * Source of truth: packages/demo-ui/styles/tokens.css and packages/demo-ui/styles/colors.css,
+ * Source of truth: ${sourceOfTruth},
  * parsed by the \`zudo-sg gen-token-manifest\` CLI command
  * (@takazudo/zudo-sg's src/cli/token-manifest/ui-token-manifest.ts). Only
  * \`default\` values are derived from the CSS; \`group\`/\`step\`/\`unit\`/
@@ -359,7 +379,7 @@ const FONT_WEIGHT_OPTIONS = [
 ] as const;
 
 /**
- * Tier-1 raw palette colors from \`packages/demo-ui/styles/colors.css\` (the \`:root\`
+ * Tier-1 raw palette colors from \`${colorsCssPath}\` (the \`:root\`
  * \`--palette-{group}-{step-or-role}\` block). This is the raw material beneath the
  * semantic \`--color-*\` tokens in UI_COLOR_TOKENS below — same three-tier
  * model the doc-chrome panel exposes via \`--palette-*\` ramps and \`--zd-*\`
@@ -377,7 +397,7 @@ const FONT_WEIGHT_OPTIONS = [
 export interface UiPaletteColor {
   /** Palette key without the \`--palette-\` prefix, e.g. "neutral-2". */
   name: string;
-  /** Raw oklch value, from colors.css. */
+  /** Raw oklch value, from \`${colorsCssPath}\`. */
   value: string;
 }
 
@@ -386,7 +406,7 @@ ${paletteLines}
 ];
 
 /**
- * Color tokens from \`packages/demo-ui/styles/colors.css\`.
+ * Color tokens from \`${colorsCssPath}\`.
  *
  * All values use light-dark() for dual-scheme support. Defaults here are
  * the full CSS declarations including both light and dark sides.
@@ -400,7 +420,7 @@ ${colorLines}
 ];
 
 /**
- * Spacing tokens from \`packages/demo-ui/styles/tokens.css\`.
+ * Spacing tokens from \`${tokensCssPath}\`.
  *
  * Coverage: ${manifest.spacingTokens.length} tokens total.
  */
@@ -409,7 +429,7 @@ ${spacingLines}
 ];
 
 /**
- * Font tokens from \`packages/demo-ui/styles/tokens.css\`.
+ * Font tokens from \`${tokensCssPath}\`.
  *
  * Coverage: ${manifest.fontTokens.length} tokens total.
  */
@@ -418,7 +438,7 @@ ${fontLines}
 ];
 
 /**
- * Size tokens from \`packages/demo-ui/styles/tokens.css\`.
+ * Size tokens from \`${tokensCssPath}\`.
  *
  * Coverage: ${manifest.sizeTokens.length} tokens total.
  * \`--radius-full\` carries a pill toggle (sentinel 9999px).
