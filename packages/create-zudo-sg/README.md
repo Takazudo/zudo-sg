@@ -50,6 +50,7 @@ The template is a minimal host, not a copy of this repository's full site. It
 contains:
 
 - `zfb.config.ts` composing `zudoDoc()` and `withZudoSg()` with a root base.
+- `zfb.config.ts` uses an inline `favicon: "auto"`; replace it with a path or `FaviconConfig` when adding real icons under `public/`.
 - `zudo-sg.config.mjs` with a local `ui/` components root, registry output,
   preview stylesheet, category order, and token-manifest inputs.
 - `pages/index.tsx` and an optional `pages/lib/_zudo-sg-islands.ts` import

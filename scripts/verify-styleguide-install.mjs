@@ -28,15 +28,25 @@
 import { spawn } from "node:child_process";
 import { createServer } from "node:net";
 import { cp, mkdir, mkdtemp, readFile, readdir, realpath, rm, writeFile } from "node:fs/promises";
-import { existsSync } from "node:fs";
+import { existsSync, statSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
 const fixtureRoot = path.join(root, "fixtures/engine-host");
+const fixtureBase = "/styleguide/";
 const packageDirRelative = "packages/styleguide";
 const tarballName = "zudo-sg-engine.tgz";
+const faviconAssetNames = ["/favicon.ico", "/favicon.svg", "/favicon-32x32.png", "/favicon-16x16.png"];
+const assetLinkRels = new Set([
+  "icon",
+  "stylesheet",
+  "preload",
+  "modulepreload",
+  "manifest",
+  "apple-touch-icon",
+]);
 const skippedFixtureEntries = new Set([
   "node_modules",
   "dist",
@@ -303,6 +313,105 @@ function read(hostDir, rel) {
   return readFile(path.join(hostDir, rel), "utf8");
 }
 
+async function collectHtmlFiles(directory) {
+  const files = [];
+  for (const entry of await readdir(directory, { withFileTypes: true })) {
+    const entryPath = path.join(directory, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...(await collectHtmlFiles(entryPath)));
+    } else if (entry.isFile() && entry.name.endsWith(".html")) {
+      files.push(entryPath);
+    }
+  }
+  return files.sort();
+}
+
+function relTokens(element) {
+  return new Set((element.getAttribute("rel") ?? "").split(/\s+/u).filter(Boolean).map((token) => token.toLowerCase()));
+}
+
+function pageUrlPath(distDir, htmlPath, base) {
+  const relative = path.relative(distDir, htmlPath).split(path.sep).join("/");
+  return `${base}${relative}`;
+}
+
+function resolveLocalAsset(rawUrl, pagePath, distDir, base) {
+  const trimmed = rawUrl.trim();
+  if (
+    trimmed === "" ||
+    trimmed.startsWith("//") ||
+    /^(?:data:|https?:|[a-z][a-z\d+.-]*:)/iu.test(trimmed)
+  ) {
+    return null;
+  }
+
+  let parsed;
+  try {
+    parsed = new URL(trimmed, `https://fixture.invalid${pagePath}`);
+  } catch {
+    return null;
+  }
+  const pathname = decodeURIComponent(parsed.pathname);
+  const relative = pathname.startsWith(base) ? pathname.slice(base.length) : pathname.replace(/^\/+/u, "");
+  const distRoot = path.resolve(distDir);
+  const target = path.resolve(distRoot, relative);
+  assert(
+    target === distRoot || target.startsWith(`${distRoot}${path.sep}`),
+    `head asset URL escapes the build output: ${rawUrl}`,
+  );
+  return target;
+}
+
+function usesZudoDocHead(document) {
+  if (document.documentElement.hasAttribute("data-sg-preview-doc")) return false;
+  return [...document.head.querySelectorAll("style")].some((style) => style.textContent?.includes("--zd-") ?? false);
+}
+
+/** Check every built page's local head assets and zudo-doc favicon contract. */
+export async function assertHeadAssets(hostDir) {
+  const distDir = path.join(hostDir, "dist");
+  const htmlFiles = await collectHtmlFiles(distDir);
+  assert(htmlFiles.length > 0, "fixture build emitted no HTML pages");
+  const { JSDOM } = await import("jsdom");
+
+  for (const htmlPath of htmlFiles) {
+    const relativePage = path.relative(distDir, htmlPath).split(path.sep).join("/");
+    const html = await readFile(htmlPath, "utf8");
+    for (const forbidden of faviconAssetNames) {
+      assert(!html.includes(forbidden), `${relativePage} still references the default favicon asset ${forbidden}`);
+    }
+
+    const dom = new JSDOM(html);
+    const document = dom.window.document;
+    const pagePath = pageUrlPath(distDir, htmlPath, fixtureBase);
+    const references = [];
+    for (const link of document.head.querySelectorAll("link")) {
+      if ([...relTokens(link)].some((token) => assetLinkRels.has(token))) {
+        const href = link.getAttribute("href");
+        if (href !== null) references.push(href);
+      }
+    }
+    for (const script of document.head.querySelectorAll("script[src]")) {
+      const src = script.getAttribute("src");
+      if (src !== null) references.push(src);
+    }
+    for (const rawUrl of references) {
+      const target = resolveLocalAsset(rawUrl, pagePath, distDir, fixtureBase);
+      if (target === null) continue;
+      assert(existsSync(target) && statSync(target).isFile(), `${relativePage} references missing head asset ${rawUrl}`);
+    }
+
+    if (usesZudoDocHead(document)) {
+      const icons = [...document.head.querySelectorAll("link")].filter((link) => relTokens(link).has("icon"));
+      assert(icons.length === 1, `${relativePage} has ${icons.length} zudo-doc favicon links; expected exactly one`);
+      const href = icons[0].getAttribute("href") ?? "";
+      assert(href.startsWith("data:image/svg+xml"), `${relativePage} zudo-doc favicon is not an inline data:image/svg+xml URL`);
+    }
+    dom.window.close();
+  }
+  console.log(`OK — every fixture HTML page has existing local head assets (${htmlFiles.length} pages checked).`);
+}
+
 async function assertTokensRoute(hostDir, empty) {
   // Parse rendered elements, not CSS/JS strings; zfb may minify attribute quotes.
   const { JSDOM } = await import("jsdom");
@@ -403,6 +512,7 @@ async function main() {
     console.log("zfb build (/tokens empty-state mode)");
     await run("corepack", ["pnpm", "exec", "zfb", "build"], hostDir);
     await assertTokensRoute(hostDir, true);
+    await assertHeadAssets(hostDir);
     await writeFile(path.join(hostDir, "zudo-sg.config.mjs"), configSource);
     await rm(path.join(hostDir, "zudo-sg.with-tokens.config.mjs"));
     for (const output of ["dist", ".zfb-build"]) {
@@ -468,6 +578,7 @@ async function main() {
     assert(existsSync(path.join(hostDir, "dist/tokens/index.html")), "missing dist/tokens/index.html");
     await assertTokensRoute(hostDir, false);
     assert(existsSync(path.join(hostDir, "dist/_zudo-sg/preview.css")), "missing dist/_zudo-sg/preview.css (base-unnested, ADR decision 4)");
+    await assertHeadAssets(hostDir);
 
     await assertProductionCss(hostDir);
 
