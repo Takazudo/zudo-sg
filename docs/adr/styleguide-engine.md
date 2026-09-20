@@ -299,7 +299,7 @@ disables this minimal-host default.
 | Dev-hydration seed | `@takazudo/zudo-sg/islands` → `./dist/islands.js` (side-effect imports of every engine island + `../routes-src/_preview-app.tsx`); host shim `pages/lib/_zudo-sg-islands.ts` = `import "@takazudo/zudo-sg/islands";`, imported by `pages/index.tsx`. Kept for API stability; a no-op on zfb ≥ 2.18.0 (finding 4 amendment) — the same module reached through two graphs is deduped by path, so it is harmless in dev and build |
 | Registry shim | `routes-src/_registry.ts` builds `createRegistry(storyModules, { categoryOrder, storyExportOrder })` once; every entrypoint and the preview wrapper import it |
 | Stylesheet exports | `@takazudo/zudo-sg/styles.css` → `./styles.css` (hand-authored catalog chrome CSS, package root); `@takazudo/zudo-sg/safelist.css` → `./dist/safelist.css` (generated `@source inline(...)`) |
-| Consumer CSS order | zfb discovers `styles/global.css`, falling back to `src/styles/global.css`. Declare `@layer zd-preflight, zd-flow;` → `tailwindcss/preflight` in `layer(zd-preflight)` → unlayered `tailwindcss/utilities` → zudo-doc `theme.css` (unless the host supplies its full token contract) → consumer token/component CSS → zudo-doc `safelist.css` → `content.css` → `features.css` → `page-loading.css` → `@takazudo/zdtp/dashboard/styles.css` → unlayered `@takazudo/zudo-sg/styles.css` → `@takazudo/zudo-sg/safelist.css` → host `@source` globs (project-root-relative in zfb's global entry) → optional project `@theme {}` overrides. Preflight is the only element reset; `theme.css` resets color tokens only (`theme-no-reset.css` omits that token reset). Utilities must outrank `zd-flow`; engine CSS stays unlayered to compete with utilities; dashboard CSS follows content CSS to win ties with prose. |
+| Consumer CSS order | zfb discovers `styles/global.css`, falling back to `src/styles/global.css`. Declare `@layer zd-preflight, zd-flow;` → `tailwindcss/preflight` in `layer(zd-preflight)` → unlayered `tailwindcss/utilities` → zudo-doc `theme.css` (unless the host supplies its full token contract) → consumer token/component CSS → zudo-doc `safelist.css` → `content.css` → `features.css` → `page-loading.css` → `@takazudo/zdtp/dashboard/styles.css` → unlayered `@takazudo/zudo-sg/styles.css` → `@takazudo/zudo-sg/safelist.css` → host `@source` globs (project-root-relative in zfb's global entry) → optional project `@theme {}` overrides. Preflight is the only element reset; `theme.css` resets color tokens only (`theme-no-reset.css` omits that token reset). **Engine chrome colors no longer depend on this import order**: raw `--sg-*` defaults survive the reset, and an unlayered host `:root` override wins before or after the engine stylesheet (decision 14). The host's own `@theme` colors still need to follow the framework reset. Utilities must outrank `zd-flow`; engine CSS stays unlayered to compete with utilities; dashboard CSS follows content CSS to win ties with prose. |
 | Host-path contract | option value = project-root-relative path string (absolute accepted); `resolve(ctx.projectRoot, value)`; must be an existing FILE; normalized to a forward-slash absolute path; the virtual module re-exports that absolute path verbatim (zfb remaps it into the shadow); missing/empty/directory → throw at `setup()`: `[zudo-sg] option "<name>" = "<value>" resolved to <abs> (relative to projectRoot <root>), which is not a file`; absent-and-required → `[zudo-sg] option "<name>" is required (project-root-relative path, e.g. "<example>")`. Shared module `packages/styleguide/src/host-paths.ts` (`resolveHostModule(projectRoot, optionName, value, { required, example })`, `withBaseUrl(base, path)`) |
 | `zudo-sg.config.mjs` | `{ componentsRoots: [{ dir, importBase }], registryOut: "./src/styleguide/sg-registry.ts", categoryOrder, uiPackageName?: "@zudo-sg/demo-ui", barrelIndex, tokens: { cssFiles, manifestOut }, previewStyles: "./src/styles/preview-entry.css", previewCssUrl?, routes?, catalog? }`; `uiPackageName` is optional and only names the package used in generated usage snippets and catalog labels; the routes plugin's `registryModule` is `registryOut` |
 | CLI | `bin: { "zudo-sg": "./bin/zudo-sg.js" }`; commands `gen-registry [--check]`, `new-component <name> --category <c> [--nested] [--skip-barrel]`, `gen-token-manifest [--check]` |
@@ -356,6 +356,113 @@ keep resolving against it.
 corresponding features are disabled. They remain inherited host prerequisites,
 not engine peers. `packages/styleguide/README.md` classifies the complete
 fixture dependency set and links the upstream packaging report.
+
+### 14. Engine chrome color namespace
+
+**Accepted (2026-09-21, #797 / #798).** Chrome consumes its own raw
+`--sg-<role>` custom properties, declared outside `@theme` at the top of
+`packages/styleguide/styles.css`. zudo-doc's `theme.css` resets
+`--color-*: initial`: an earlier embedder `@theme` color disappears even
+when its name is namespaced or its block is `static`. Borrowing the host's
+bare roles also lets component palettes silently recolor engine controls.
+
+Compile probes with `@tailwindcss/node` / Tailwind **4.3.1** established:
+
+| Shape | Engine CSS after the framework reset | Engine CSS before the framework reset |
+|---|---|---|
+| `@theme static { --color-sg-border: … }` + `border-sg-border` | Token and utility emitted | Token wiped; utility emits nothing |
+| Plain `--sg-border` + `var(--sg-border)` in CSS | Works | Works |
+| Plain `--sg-border` + `border-[color:var(--sg-border)]` | Works | Works |
+
+There is **no engine `@theme` color tier**. The eleven public roles are
+`--sg-bg`, `--sg-fg`, `--sg-surface`, `--sg-surface-2`, `--sg-border`,
+`--sg-border-strong`, `--sg-muted`, `--sg-accent`, `--sg-on-accent`,
+`--sg-focus`, and `--sg-success`. This prefix matches the engine's existing
+`--sg-header-h` and zudo-doc's raw `--zd-*` tier. `--color-sg-*` is forbidden
+because the reset wipes it; `--sg-color-*` is a disconnected third spelling
+and is also forbidden.
+
+The defaults live in one **`:where(:root)`** block. Its zero specificity
+allows an unlayered host `:root { --sg-border: … }` to override a role
+whether imported before or after engine CSS, without `!important`. Two
+ordinary `:root` blocks would still depend on source order: the namespace
+avoids the Tailwind reset, while `:where()` provides the override contract.
+Cascade layers still apply; a host override placed in a layer loses to
+these unlayered defaults. Keep the host's overrides unlayered too.
+
+`bg`, `fg`, `surface`, `muted`, `accent`, and `success` map directly to the
+matching scheme-aware `--zd-*` properties. Every raw-tier reference has a
+last-resort literal color; fallback `light-dark()` pairs keep a missing
+upstream role usable in either scheme. The other five roles derive from
+zudo-doc's raw colors through `color-mix(in oklch, …)`, never through the
+host's `--color-*` aliases:
+
+| Derived role | Light scheme | Dark scheme |
+|---|---|---|
+| `surface-2` | 10% `--zd-fg` + 90% `--zd-surface` | 29% foreground + 71% surface |
+| `border` | 14% `--zd-fg` + 86% `--zd-bg` | 38% foreground + 62% background |
+| `border-strong` | 31.5% `--zd-fg` + 68.5% `--zd-bg` | 66.7% foreground + 33.3% background |
+| `on-accent` | 99% `--zd-bg` + 1% `--zd-fg` | 94% background + 6% foreground |
+| `focus` | 95% `--zd-accent` + 5% `--zd-fg` | Same mix with the dark raw values |
+
+The host owns `color-scheme`, as it does for zudo-doc. With the root host's
+warm `.965` / `.185` background/foreground endpoints, the border lightness
+is `.8558` / `.4814`, and the strong border is `.7193` / `.7053`: close to
+its existing `.855` / `.480` and `.720` / `.705` ladders. The raised surface
+is `.887` / `.4112`, close to the old component palette's `.885` / `.410`.
+These ratios retain the hierarchy while following a host's zudo-doc palette.
+Overriding one `--sg-*` role changes that role only; derived defaults read
+`--zd-*` directly, so a full chrome theme should override all relevant roles.
+
+CSS consumes `var(--sg-<role>)`. TSX uses bracket arbitrary values, with a
+`color:` type hint for ambiguous utility prefixes:
+
+| Old utility | Chrome utility |
+|---|---|
+| `bg-X` | `bg-[var(--sg-X)]` |
+| `border-X` | `border-[color:var(--sg-X)]` |
+| `outline-X` | `outline-[color:var(--sg-X)]` |
+| `ring-X` | `ring-[color:var(--sg-X)]` |
+| `text-X` | `text-[color:var(--sg-X)]` |
+
+Retain variants such as `hover:` and `focus-visible:`. Never use the paren
+shorthand, e.g. `border-(--sg-border)`: the package's
+`scripts/gen-safelist.mjs` masks balanced `[...]` regions, then rejects
+parentheses outside them. The shorthand is silently dropped from
+`dist/safelist.css`. Bracket candidates survive `extractTokens()` and compile
+through `@source inline(...)` even when a later theme resets colors.
+
+**Host content is exempt.** `packages/styleguide/src/cli/scaffold/**`
+generates host components; `src/cli/token-manifest/**` (under the same
+package) reads their tokens. The `/tokens` dashboard displays host values,
+and the preview canvas `<body class="bg-bg">` in
+`src/routes/components-preview.tsx` must follow the host background. They
+keep host tokens, as do root `src/`, `pages/`, and `apps/demo` UI. The
+thumbnail's scoped `--color-*` declarations restore the previewed component
+palette and remain separate from the surrounding chrome. Dashboard
+light/dark inventory backgrounds retain their `--zdtp-dashboard-*` values.
+
+Hosts that previously themed chrome via bare `--color-border` or other
+component roles must move those overrides to `--sg-*`. This is a breaking
+theming-hook change, planned as a minor engine release with a migration note.
+
+**Non-color follow-up audit (zudo-doc 5.26.2, fixture host).** This decision
+does not migrate geometry, typography, or elevation. The fixture imports
+zudo-doc `theme.css` followed by its own
+`fixtures/engine-host/src/styles/ui-tokens.css`; a focused Tailwind compile
+emits the utility candidates listed below.
+
+| Chrome dependency | Definition used by the fixture | Follow-up |
+|---|---|---|
+| `rounded-sm`, `rounded-md` / `--radius-sm`, `--radius-md` | Fixture `ui-tokens.css`: `0.25rem`, `0.5rem` | zudo-doc does not define these two sizes; controls and tiles currently require host tokens. |
+| `rounded-full` / `--radius-full` | Both zudo-doc `theme.css` and fixture `ui-tokens.css`: `9999px` | Already supplied upstream; the fixture repeats the same value. |
+| `text-xs`, `text-sm` | Fixture `ui-tokens.css`: `0.75rem`, `0.875rem`, with `1.5` line height | zudo-doc uses semantic sizes instead; code-panel labels, search status, and the demo link rely on these host sizes. |
+| `text-heading` | zudo-doc `theme.css`: `--text-heading: var(--text-scale-xl)`, backed by `:root { --text-scale-xl: 3rem }` | Both the semantic alias and its raw scale value are supplied upstream; no fixture token is needed. |
+| `--shadow-card` (selected `.sg-seg-btn`) | Fixture `ui-tokens.css`: `0 1px 2px #0000001a` | The engine has no chrome `shadow-*` utility call sites; this direct CSS reference still depends on the host. zudo-doc supplies `--shadow-lg`, while fixture `--shadow-raised` / `--shadow-overlay` are not used by engine chrome. |
+
+Keep these remaining host prerequisites explicit in a later non-color token
+decision; the color namespace alone does not make every chrome token
+self-contained.
 
 ## Spike report — proof items (a)–(g)
 

@@ -1,0 +1,6 @@
+/* A plain, unlayered :root override wins when following the engine too. */
+@import "@takazudo/zudo-doc/theme.css";
+@import "../../styles.css";
+:root {
+  --sg-border: red;
+}

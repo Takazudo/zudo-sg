@@ -157,6 +157,36 @@ your own token stylesheet as needed:
 @source "src/content/**/*.{mdx,md}";
 ```
 
+### Three token worlds and the engine override hook
+
+The host contains three independent color-token worlds:
+
+- zudo-doc's `--zd-*` roles style the documentation shell and doc chrome.
+- zudo-sg's raw `--sg-*` roles style the catalog engine chrome.
+- The host component library owns its own `@theme` color tokens, usually the
+  `--color-*` semantic roles used by previews.
+
+The engine's eleven public chrome roles are `--sg-bg`, `--sg-fg`, `--sg-surface`,
+`--sg-surface-2`, `--sg-border`, `--sg-border-strong`, `--sg-muted`, `--sg-accent`,
+`--sg-on-accent`, `--sg-focus`, and `--sg-success`. They are plain properties in a
+zero-specificity `:where(:root)` block, not an engine `@theme` color tier. zudo-doc's
+`theme.css` resets `--color-*`, so these raw properties survive regardless of whether
+the engine stylesheet is imported before or after that reset.
+
+Override engine chrome from the host with an ordinary, unlayered root rule:
+
+```css
+:root {
+  --sg-border: oklch(0.72 0.02 65);
+}
+```
+
+The zero-specificity defaults make this hook order-independent. Keep it unlayered when
+using cascade layers. If the host used bare `--color-border` to theme engine chrome,
+migrate that declaration to `--sg-border` (and use the matching `--sg-*` role for each
+other chrome color). Bare `--color-border` remains a valid host component token, but it
+no longer controls zudo-sg chrome.
+
 The zudo-doc theme supplies framework defaults, including the breakpoints
 needed by responsive sidebar utilities. Its color-token reset precedes your
 tokens so they survive. Use `theme-no-reset.css` instead to preserve
@@ -164,6 +194,13 @@ consumer-only color tokens imported earlier; tokens defined by both
 stylesheets still follow source order. Do not import both variants or add
 another preflight/full `tailwindcss` import. A host that already defines the
 full zudo-doc token contract can keep its own theme.
+
+Those zudo-doc namespace and import-order rules still apply to the host's own `@theme`
+colors: place
+`@takazudo/zudo-doc/theme.css` before the host component token stylesheet, or use
+`@takazudo/zudo-doc/theme-no-reset.css` when preserving consumer-only tokens declared
+earlier is intentional. The order-proof `--sg-*` hook does not remove this requirement
+for host-owned `--color-*` tokens.
 
 Keep utilities and engine styles unlayered. The `zd-flow` layer must beat
 preflight's margin reset while allowing utility margins to win, and catalog
