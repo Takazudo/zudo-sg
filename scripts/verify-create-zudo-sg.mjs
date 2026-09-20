@@ -11,6 +11,7 @@
 // gate.
 
 import { spawn } from "node:child_process";
+import { JSDOM } from "jsdom";
 import { createServer } from "node:net";
 import {
   cp,
@@ -419,6 +420,7 @@ async function assertGeneratedTokenManifest(hostDir) {
 async function assertBuildRoutes(hostDir) {
   const distDir = path.join(hostDir, "dist");
   const routeFiles = [
+    "index.html",
     "components/index.html",
     "components/preview/index.html",
     "tokens/index.html",
@@ -427,6 +429,28 @@ async function assertBuildRoutes(hostDir) {
   for (const relative of routeFiles) {
     assert(existsSync(path.join(distDir, relative)), `missing built route or asset under base "/": dist/${relative}`);
   }
+
+  const homepage = new JSDOM(await readFile(path.join(distDir, "index.html"), "utf8")).window.document;
+  const shell = homepage.querySelector("main");
+  assert(shell?.classList.contains("px-hsp-lg") && shell.classList.contains("gap-vsp-lg"),
+    "starter homepage lacks its spaced, token-based main layout");
+  const heading = shell.querySelector("h1[data-host-index]");
+  assert(heading?.classList.contains("text-2xl") && heading.classList.contains("font-bold"),
+    "starter homepage heading would lose its presentation to preflight");
+  for (const href of ["/components", "/tokens"]) {
+    const link = shell.querySelector(`nav a[href="${href}"]`);
+    assert(link?.classList.contains("text-accent") && link.classList.contains("underline"),
+      `starter homepage lacks a visibly styled ${href} link`);
+  }
+  const stylesheetPaths = [...homepage.querySelectorAll('link[rel="stylesheet"]')]
+    .map((link) => link.getAttribute("href"))
+    .filter((href) => href?.startsWith("/") && !href.startsWith("//"));
+  const css = (await Promise.all(stylesheetPaths.map((href) => readFile(path.join(distDir, href), "utf8")))).join("\n");
+  for (const selector of [".text-2xl", ".font-bold", ".px-hsp-lg", ".gap-vsp-lg", ".text-accent", ".underline"]) {
+    assert(css.includes(`${selector}{`) || css.includes(`${selector} {`),
+      `starter homepage stylesheet is missing ${selector}; check the pages @source directive`);
+  }
+  console.log("OK — starter homepage includes a styled shell, heading, navigation, and emitted utilities.");
 
   const componentEntries = await readdir(path.join(distDir, "components"), { withFileTypes: true });
   const slugs = componentEntries
