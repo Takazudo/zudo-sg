@@ -1,0 +1,10 @@
+/* The original failing host order: its component @theme is reached before
+ * zudo-doc's tight color reset, so the reset deliberately erases these two
+ * bare host tokens. */
+@theme {
+  --color-border: #123456;
+  --color-surface-2: #abcdef;
+}
+
+@import "@takazudo/zudo-doc/theme.css";
+@import "../../styles.css";
