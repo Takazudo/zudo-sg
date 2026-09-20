@@ -108,7 +108,11 @@ export default defineConfig(
 ```
 
 `withZudoSg` merges the engine's plugins and collections after the zudo-doc
-preset's own. The engine requires `packageOwnedRoutes: true` on the host (its
+preset's own. When the zudo-doc preset has an empty `headerNav`, it also adds
+the engine-owned Components and Design Tokens links and the standard search
+control. Any non-empty host navigation stays authoritative; set
+`chromeDefaults: false` in the second argument to keep an intentionally empty
+header. The engine requires `packageOwnedRoutes: true` on the host (its
 routes import zudo-doc's route-context virtual modules). On the engine's zfb
 peer floor (≥ 2.18.0) nothing else is needed: `zfb dev` seeds its island
 scanner from the injected routes. `@takazudo/zudo-sg/islands` remains
