@@ -1,6 +1,15 @@
 /* Self-contained input for the packed gen-token-manifest CLI. The current
- * generator requires this complete vocabulary; none comes from demo-ui or
- * the workspace. The Button/Card still use only the original five tokens. */
+ * generator requires this complete host vocabulary; none comes from demo-ui
+ * or the workspace. The engine chrome owns raw --sg-* tokens and no longer
+ * depends on these bare --color-* values. Keep the vocabulary for host
+ * components and the manifest; override chrome separately in global.css, e.g.:
+ *
+ * :root {
+ *   --sg-border: #94a3b8;
+ *   --sg-accent: #7c3aed;
+ * }
+ *
+ * The Button/Card still use only the original five tokens. */
 :root {
   --palette-neutral-0: #ffffff;
   --palette-neutral-1: #e2e8f0;
