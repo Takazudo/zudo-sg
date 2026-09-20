@@ -81,6 +81,8 @@ describe("runGenRegistry — old one-level layout (backward compatibility)", () 
     expect(result.entryCount).toBe(2);
 
     const registry = readRegistry();
+    expect(registry).toContain('import type { StoryModule } from "@takazudo/zudo-sg/stories";');
+    expect(registry).not.toContain('import type { StoryModule } from "@zudo-sg/demo-ui";');
     expect(registry).toContain('import * as badge from "@zudo-sg/demo-ui/src/badge/badge.stories.tsx";');
     expect(registry).toContain('"./demo-ui/src/badge/badge.stories.tsx": badge as unknown as StoryModule,');
     expect(registry).toContain('"./demo-ui/src/badge/badge.stories.tsx": ["Playground", "Soft"],');

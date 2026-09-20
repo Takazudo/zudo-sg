@@ -66,7 +66,7 @@ export function runGenRegistry(
   const registrySrc = readFileSync(registryPath, "utf8");
   const nextRegistry = replaceBlock(
     registrySrc,
-    buildRegistryBlock(allEntries, config.uiPackageName),
+    buildRegistryBlock(allEntries),
     registryPath,
   );
 

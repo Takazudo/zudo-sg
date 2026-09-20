@@ -5,16 +5,15 @@
 // root's `ui/`) rather than a package name: this starter has no installed UI
 // provider package, only its own `ui/` corpus, so the generated registry's
 // `import * as … from "../../ui/<slug>.stories.tsx"` resolves as a plain
-// relative import. `uiPackageName` points at the engine's own `stories`
-// subpath (the actual origin of `StoryModule`) since there is no separate
-// provider package to attribute stories to.
+// relative import. This host has no separate provider package, so it omits
+// `uiPackageName`; generated usage snippets use each component's own relative
+// module path instead.
 
 /** @satisfies {import("@takazudo/zudo-sg/config").ZudoSgComposeOptions} */
 export default {
   componentsRoots: [{ dir: "ui", importBase: "../../ui" }],
   registryOut: "./src/styleguide/sg-registry.ts",
   categoryOrder: ["Actions", "Layout"],
-  uiPackageName: "@takazudo/zudo-sg/stories",
   barrelIndex: null,
   previewStyles: "./src/styles/preview-entry.css",
   tokens: {
