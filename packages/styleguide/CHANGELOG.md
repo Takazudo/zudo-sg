@@ -4,6 +4,19 @@ All notable changes to `@takazudo/zudo-sg` are documented in this file.
 
 The format is based on Keep a Changelog, and release notes are generated from the changelog MDX pages.
 
+## [0.2.2] - 2026-09-20
+
+Minimal hosts now expose the engine's routes in their header without requiring
+additional navigation configuration.
+
+### Bug Fixes
+
+- `withZudoSg` fills an empty host header with Components and Design Tokens
+  links and a search control. Existing non-empty navigation remains unchanged,
+  and `chromeDefaults: false` preserves an intentionally empty header.
+- Default engine links honor custom route paths and deployment bases while
+  remaining global on translated and versioned documentation pages.
+
 ## [0.2.1] - 2026-09-20
 
 This release removes host-specific assumptions from generated registries and
