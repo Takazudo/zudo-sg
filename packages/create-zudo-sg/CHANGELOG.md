@@ -4,6 +4,27 @@ All notable changes to `create-zudo-sg` are documented in this file.
 
 The format is based on Keep a Changelog.
 
+## [0.1.3] - 2026-09-21
+
+Stops fresh starters from requesting favicons they never shipped, and moves
+them onto the engine's new chrome token namespace.
+
+### Fixed
+
+- Set the starter's favicon to the self-contained inline icon instead of
+  advertising four `/favicon*` files the template does not create, which made a
+  clean build log four missing-asset errors on first load.
+- Verify after every packed build that each local head asset a generated page
+  links to actually exists, so a reintroduced missing icon or stylesheet fails
+  the release gate rather than the adopter's browser console.
+
+### Changed
+
+- Update the starter engine range to `@takazudo/zudo-sg ^0.3.0`, which reads its
+  chrome colors from the `--sg-*` namespace. The starter's own stylesheet now
+  sets those roles explicitly, so the catalog chrome renders correctly whatever
+  order a project imports its component theme in.
+
 ## [0.1.2] - 2026-09-20
 
 Gives fresh starter projects a styled homepage and usable default navigation.
