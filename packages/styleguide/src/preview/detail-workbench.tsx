@@ -59,18 +59,22 @@ const LAYOUT_OPTIONS: LayoutOption[] = [
 // Full class literals (never composed from fragments at runtime) so Tailwind
 // v4's source scanner emits every utility used here.
 const TRACK_CLASS =
-  "flex flex-wrap items-center gap-hsp-2xs rounded-md border border-border bg-surface-2 p-hsp-2xs";
+  "flex flex-wrap items-center gap-hsp-2xs rounded-md border border-[color:var(--sg-border)] bg-[var(--sg-surface-2)] p-hsp-2xs";
 const SEGMENT_BASE_CLASS =
   "rounded-sm border px-hsp-sm py-vsp-3xs text-caption leading-normal transition-colors cursor-pointer ";
 // Selection is carried by the border ladder + a raised surface, not by a
 // filled accent: three segmented groups plus the code panel's own variant tabs
 // would blow the one-filled-accent-per-viewport budget on a single page.
-const SEGMENT_ON_CLASS = "border-border-strong bg-surface text-fg";
-const SEGMENT_OFF_CLASS = "border-transparent text-muted hover:text-fg";
+const SEGMENT_ON_CLASS =
+  "border-[color:var(--sg-border-strong)] bg-[var(--sg-surface)] text-[color:var(--sg-fg)]";
+const SEGMENT_OFF_CLASS =
+  "border-transparent text-[color:var(--sg-muted)] hover:text-[color:var(--sg-fg)]";
 const PILL_BASE_CLASS =
   "inline-flex items-center gap-hsp-2xs rounded-md border px-hsp-sm py-vsp-3xs text-caption leading-normal transition-colors cursor-pointer ";
-const PILL_ON_CLASS = "border-border-strong bg-surface-2 text-fg";
-const PILL_OFF_CLASS = "border-border bg-surface text-muted hover:text-fg";
+const PILL_ON_CLASS =
+  "border-[color:var(--sg-border-strong)] bg-[var(--sg-surface-2)] text-[color:var(--sg-fg)]";
+const PILL_OFF_CLASS =
+  "border-[color:var(--sg-border)] bg-[var(--sg-surface)] text-[color:var(--sg-muted)] hover:text-[color:var(--sg-fg)]";
 
 // `items-start` keeps every stage at its natural height: a variant with a
 // controls panel must not stretch its neighbour's preview area into dead space.
