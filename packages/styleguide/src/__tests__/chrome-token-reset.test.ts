@@ -30,7 +30,9 @@ const ORDER_FIXTURES = [
 
 function declarations(css: string, property: string): string[] {
   const values: string[] = [];
-  parse(css).walkDecls(property, (declaration) => values.push(declaration.value));
+  parse(css).walkDecls(property, (declaration) => {
+    values.push(declaration.value);
+  });
   return values;
 }
 
@@ -38,7 +40,9 @@ function ruleDeclarations(css: string, selector: string, property: string): stri
   const values: string[] = [];
   parse(css).walkRules((rule) => {
     if (rule.selector !== selector) return;
-    rule.walkDecls(property, (declaration) => values.push(declaration.value));
+    rule.walkDecls(property, (declaration) => {
+      values.push(declaration.value);
+    });
   });
   return values;
 }
