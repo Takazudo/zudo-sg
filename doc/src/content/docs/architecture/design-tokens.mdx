@@ -4,14 +4,20 @@ sidebar_position: 3
 description: The doc-chrome and UI token systems, the three-tier color strategy, and how token panel edits flow back to CSS.
 ---
 
-## Two token worlds
+## Three token worlds
 
-zudo-sg has two related token systems:
+zudo-sg hosts three independent color-token systems:
 
-- Doc chrome tokens control the root styleguide and zudo-doc shell: navigation, docs pages, code blocks, sidebars, and styleguide chrome.
-- UI package tokens control target-site components exported by `@zudo-sg/demo-ui`.
+- zudo-doc's `--zd-*` tokens control the documentation shell: navigation, docs pages,
+  code blocks, sidebars, and the doc-chrome panel.
+- zudo-sg's raw `--sg-*` tokens control the installable engine's catalog chrome,
+  code panel, workbench, and token controls.
+- The host component library owns its own `@theme` color tokens, commonly semantic
+  `--color-*` roles, for target-site components and preview iframes.
 
-Keep those worlds separate. A styleguide chrome color scheme is not automatically the same as the target website palette, even though both can be edited from zdtp-powered panels.
+Keep those worlds separate. A styleguide chrome color scheme is not automatically the
+same as the target website palette, even though both can be edited from zdtp-powered
+panels.
 
 ## UI package token contract
 
@@ -53,6 +59,35 @@ Palette variables live in plain `:root`, not Tailwind `@theme`, so Tailwind does
 The zudo-doc 3.x chrome uses a ramp-native model for its own color schemes. It exposes palette ramps and semantic `--zd-*` roles through the root design-token panel. That model is for the documentation and styleguide shell, not for target-site UI components.
 
 The preview token panel is a second panel instance for `@zudo-sg/demo-ui`. It has separate storage keys, event names, and an apply sink that writes preview values into registered styleguide iframes instead of the host document root.
+
+## Engine chrome is order-proof, but host colors are not
+
+The engine's chrome roles are plain custom properties: `--sg-bg`, `--sg-fg`,
+`--sg-surface`, `--sg-surface-2`, `--sg-border`, `--sg-border-strong`, `--sg-muted`,
+`--sg-accent`, `--sg-on-accent`, `--sg-focus`, and `--sg-success`. The package declares
+their defaults under zero-specificity `:where(:root)`, outside an engine `@theme` color
+tier. zudo-doc's `theme.css` resets `--color-*`, but it cannot erase `--sg-*`, and an
+unlayered host override wins before or after the engine stylesheet:
+
+```css
+:root {
+  --sg-border: oklch(0.72 0.02 65);
+}
+```
+
+This is the supported engine-chrome hook. If a host previously set bare
+`--color-border` to recolor engine chrome, replace it with `--sg-border` (and map other
+chrome roles to their matching `--sg-*` names). Bare `--color-border` remains a host
+component-library token.
+
+The host's own `@theme` color tokens still follow zudo-doc's namespace contract. The
+published `@takazudo/zudo-doc/theme.css` includes a `--color-*: initial` reset, so a
+host `@theme` block imported before it can lose its `--color-*` entries. Import
+`theme.css` before the host component token stylesheet, or use
+`@takazudo/zudo-doc/theme-no-reset.css` when preserving consumer-only tokens declared
+earlier is intentional. The latter omits the reset; shared names still follow normal
+source order. This import-order caveat applies to host component tokens, not the
+order-proof `--sg-*` hook.
 
 ## Shared build-safe tabs (`src/config/ui-token-tabs.ts`)
 

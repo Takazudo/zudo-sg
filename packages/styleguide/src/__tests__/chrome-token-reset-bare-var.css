@@ -1,0 +1,10 @@
+/* Negative proof: the reset removes the host declaration, but cannot rewrite
+ * an engine rule that still references the erased bare variable. */
+@theme {
+  --color-border: #123456;
+}
+@import "@takazudo/zudo-doc/theme.css";
+
+#legacy-code-panel {
+  border-left: 1px solid var(--color-border);
+}

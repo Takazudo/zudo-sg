@@ -53,7 +53,7 @@ export default function TokensRoute(): JSX.Element {
       <div>
         <header class="mb-vsp-lg max-w-[56rem]">
           <h1 class="text-heading font-bold mb-vsp-2xs">Design tokens</h1>
-          <p class="mt-vsp-xs mb-vsp-sm text-muted">
+          <p class="mt-vsp-xs mb-vsp-sm text-[color:var(--sg-muted)]">
             Declared defaults{ctx.uiPackageName ? <> for <code>{ctx.uiPackageName}</code></> : null}, shown as
             light, dark, and shared token references. Open Preview tokens to edit the component previews; these
             reference dashboards stay unchanged.
@@ -65,7 +65,7 @@ export default function TokensRoute(): JSX.Element {
               chromeStyle: buildDashboardChromeStyle(),
             })
           : (
-            <p class="text-muted" data-zudo-sg-tokens-empty>
+            <p class="text-[color:var(--sg-muted)]" data-zudo-sg-tokens-empty>
               No design-token manifest is configured. Add <code>tokens</code> to <code>zudo-sg.config.mjs</code> and
               run <code>zudo-sg gen-token-manifest</code> to render the dashboards here.
             </p>

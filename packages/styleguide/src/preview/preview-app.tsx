@@ -139,7 +139,7 @@ function PreviewApp({ registry }: PreviewAppProps): JSX.Element {
 
   if (!entry || !variantEntry) {
     return (
-      <div class="p-hsp-md text-muted text-small">
+      <div class="p-hsp-md text-[color:var(--sg-muted)] text-small">
         Unknown preview: slug=<code>{slug}</code> variant=<code>{variant}</code>
       </div>
     );

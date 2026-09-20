@@ -1,0 +1,9 @@
+/* The engine is loaded before the framework's --color-* reset. */
+@import "../../styles.css";
+
+@theme {
+  --color-border: #123456;
+  --color-surface-2: #abcdef;
+}
+
+@import "@takazudo/zudo-doc/theme.css";
