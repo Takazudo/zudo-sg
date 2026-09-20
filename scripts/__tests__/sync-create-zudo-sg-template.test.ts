@@ -25,6 +25,9 @@ const STYLEGUIDE_PACKAGE_PATH = join(
   "styleguide",
   "package.json",
 );
+const STYLEGUIDE_VERSION = JSON.parse(
+  readFileSync(STYLEGUIDE_PACKAGE_PATH, "utf8"),
+).version;
 const ZFB_PACKAGE_PATH = join(
   PROJECT_ROOT,
   "node_modules",
@@ -130,7 +133,7 @@ describe("sync-create-zudo-sg-template.mjs", () => {
       name: "__PROJECT_NAME__",
       version: "0.1.0",
       dependencies: {
-        "@takazudo/zudo-sg": `^${JSON.parse(readFileSync(STYLEGUIDE_PACKAGE_PATH, "utf8")).version}`,
+        "@takazudo/zudo-sg": `^${STYLEGUIDE_VERSION}`,
       },
     });
     expect(readFileSync(join(target, "_gitignore"), "utf8")).not.toContain(
@@ -156,7 +159,7 @@ describe("sync-create-zudo-sg-template.mjs", () => {
       "@takazudo/zfb-win32-x64-msvc@2.20.0",
       "@takazudo/zfb@2.20.0",
       "@takazudo/zudo-doc@5.26.2",
-      "@takazudo/zudo-sg@0.2.0",
+      `@takazudo/zudo-sg@${STYLEGUIDE_VERSION}`,
     ]);
     expect(readFileSync(join(target, "pages/index.tsx"), "utf8")).toContain(
       'href="/components"',

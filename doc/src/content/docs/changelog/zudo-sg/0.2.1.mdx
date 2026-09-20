@@ -1,0 +1,27 @@
+---
+title: 0.2.1
+description: Makes generated host artifacts portable and easier to bootstrap.
+sidebar_position: 5
+pagination_next: null
+---
+
+Released: 2026-09-20
+
+This release removes host-specific assumptions from generated registries and
+token manifests, while making first-time registry generation self-starting.
+
+### Bug Fixes
+
+- Generated registries now import the engine-owned `StoryModule` type instead
+  of depending on the repository's demo UI package.
+- Token manifests preserve each CSS input's configured import specifier, so
+  generated output remains valid when a host uses relative or package paths.
+- `gen-registry` now creates a missing or whitespace-only output file and its
+  parent directories. Existing non-empty files without generated markers are
+  still protected from overwrite.
+
+### Other Changes
+
+- Raised the engine peer floors to `@takazudo/zfb ^2.20.0` and
+  `@takazudo/zudo-doc ^5.26.2`.
+- Expanded foreign-host and initializer verification around generated output.

@@ -4,6 +4,27 @@ All notable changes to `@takazudo/zudo-sg` are documented in this file.
 
 The format is based on Keep a Changelog, and release notes are generated from the changelog MDX pages.
 
+## [0.2.1] - 2026-09-20
+
+This release removes host-specific assumptions from generated registries and
+token manifests, while making first-time registry generation self-starting.
+
+### Bug Fixes
+
+- Generated registries now import the engine-owned `StoryModule` type instead
+  of depending on the repository's demo UI package.
+- Token manifests preserve each CSS input's configured import specifier, so
+  generated output remains valid when a host uses relative or package paths.
+- `gen-registry` now creates a missing or whitespace-only output file and its
+  parent directories. Existing non-empty files without generated markers are
+  still protected from overwrite.
+
+### Other Changes
+
+- Raised the engine peer floors to `@takazudo/zfb ^2.20.0` and
+  `@takazudo/zudo-doc ^5.26.2`.
+- Expanded foreign-host and initializer verification around generated output.
+
 ## [0.2.0] - 2026-09-20
 
 A requirements release. The engine's code is unchanged, but its published peer
