@@ -15,6 +15,8 @@ export default defineConfig(
       siteName: "Styleguide Starter",
       base: "/",
       port: 4397,
+      // The starter ships no public/ icons; replace "auto" with a path or FaviconConfig once real icons exist.
+      favicon: "auto",
       // No mermaid diagrams anywhere in this starter's one seed doc; turned
       // off rather than leaving the default on to keep the dependency set
       // minimal (see package.json).
