@@ -32,6 +32,14 @@ const packageManager = ["corepack", "pnpm"];
 const keep = process.argv.includes("--keep") || Boolean(process.env.ZUDO_SG_VERIFY_KEEP);
 const publishedEngine = process.argv.includes("--published-engine");
 const knownArgs = new Set(["--keep", "--published-engine"]);
+const RELEASE_AGE_DEPENDENCY_NAMES = [
+  "@takazudo/zfb",
+  "@takazudo/zfb-runtime",
+  "@takazudo/zfb-md-wasm",
+  "@takazudo/zudo-doc",
+  "@takazudo/zdtp",
+];
+const EXACT_SEMVER = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-(?:(?:0|[1-9]\d*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*)(?:\.(?:0|[1-9]\d*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*))*))?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/u;
 
 for (const argument of process.argv.slice(2)) {
   if (!knownArgs.has(argument)) {
@@ -45,6 +53,10 @@ function fail(message) {
 
 function assert(condition, message) {
   if (!condition) fail(message);
+}
+
+function compareStrings(a, b) {
+  return a < b ? -1 : a > b ? 1 : 0;
 }
 
 /** Run a command while streaming its output, preserving the useful failure log. */
@@ -245,6 +257,63 @@ async function assertScaffoldShape(projectDir, packedTemplateDir) {
   console.log(`OK — packed initializer scaffolded ${actual.length} files with .gitignore and no unresolved token.`);
 }
 
+async function assertScaffoldReleaseAgeExcludes(projectDir) {
+  const workspacePath = path.join(projectDir, "pnpm-workspace.yaml");
+  const workspace = await readFile(workspacePath, "utf8");
+  const lines = workspace.split(/\r?\n/u);
+  const keyIndex = lines.findIndex((line) => /^minimumReleaseAgeExclude:\s*$/u.test(line));
+  assert(keyIndex !== -1, "scaffold workspace is missing minimumReleaseAgeExclude");
+
+  const actual = [];
+  for (let index = keyIndex + 1; index < lines.length; index += 1) {
+    const line = lines[index];
+    if (line.trim() === "") continue;
+    if (!/^[ \t]/u.test(line)) break;
+    if (line.trimStart().startsWith("#")) continue;
+    const match = line.match(/^\s*-\s*["']([^"']+)["']\s*$/u);
+    assert(match, `scaffold release-age entry is malformed: ${line}`);
+    actual.push(match[1]);
+  }
+
+  for (const entry of actual) {
+    const match = entry.match(/^(@takazudo\/[a-z0-9][a-z0-9._-]*)@(.+)$/u);
+    assert(
+      match !== null && EXACT_SEMVER.test(match[2]),
+      `scaffold release-age entry is not an exact @takazudo semver: ${entry}`,
+    );
+  }
+
+  const fixturePackage = JSON.parse(
+    await readFile(path.join(root, "fixtures", "engine-host", "package.json"), "utf8"),
+  );
+  const styleguidePackage = JSON.parse(
+    await readFile(path.join(root, "packages", "styleguide", "package.json"), "utf8"),
+  );
+  const zfbPackage = JSON.parse(
+    await readFile(path.join(root, "node_modules", "@takazudo", "zfb", "package.json"), "utf8"),
+  );
+  const expected = [
+    ...RELEASE_AGE_DEPENDENCY_NAMES.map(
+      (name) => `${name}@${fixturePackage.dependencies?.[name]}`,
+    ),
+    `@takazudo/zudo-sg@${styleguidePackage.version}`,
+    ...Object.entries(zfbPackage.optionalDependencies ?? {}).map(
+      ([name, version]) => `${name}@${version}`,
+    ),
+  ].sort(compareStrings);
+
+  assert(new Set(actual).size === actual.length, "scaffold release-age entries contain duplicates");
+  assert(
+    actual.every((entry, index) => index === 0 || compareStrings(actual[index - 1], entry) <= 0),
+    "scaffold release-age entries are not sorted",
+  );
+  assert(
+    JSON.stringify(actual) === JSON.stringify(expected),
+    `scaffold release-age entries differ from the shipped pins:\nexpected: ${expected.join(", ")}\nactual: ${actual.join(", ")}`,
+  );
+  console.log(`OK — scaffold release-age exemptions contain ${actual.length} exact shipped pins.`);
+}
+
 async function gitCheckIgnore(projectDir, relativePath) {
   return new Promise((resolvePromise, reject) => {
     const child = spawn(
@@ -442,6 +511,7 @@ async function main() {
       scratch,
     );
     await assertScaffoldShape(hostDir, path.join(packedInitializer, "templates/default"));
+    await assertScaffoldReleaseAgeExcludes(hostDir);
     await assertScaffoldGitignore(hostDir);
 
     if (publishedEngine) {
