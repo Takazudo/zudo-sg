@@ -27,7 +27,7 @@
 // (`./demo-ui/src/<name>/<name>.stories.tsx`) matching the pattern the root registry
 // uses, so the registry.ts logic is a direct port without key-shape changes.
 
-// GENERATED:SG_REGISTRY_BEGIN — do not hand-edit; run `pnpm gen:sg-registry`.
+// GENERATED:SG_REGISTRY_BEGIN — do not hand-edit; run `zudo-sg gen-registry`.
 import type { StoryModule } from "@takazudo/zudo-sg/stories";
 
 import * as cardsCallout from "@zudo-sg/demo-ui/src/cards/callout/callout.stories.tsx";

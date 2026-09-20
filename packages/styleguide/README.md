@@ -55,6 +55,12 @@ It copies a private starter with three example Preact components, stories,
 token CSS, a preview entry, and the zfb/zudo-doc composition already wired.
 The CLI prints the same next steps after scaffolding.
 
+`gen-registry` bootstraps a missing or whitespace-only `registryOut` and its
+parent directories, so a new host does not need to create a marker-only seed
+file by hand. A non-empty registry without generated markers is rejected to
+protect hand-authored content. `gen-registry --check` reports missing or empty
+output as drift and never writes it.
+
 ## Installation
 
 ```sh
