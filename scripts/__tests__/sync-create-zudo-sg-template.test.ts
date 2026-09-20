@@ -147,15 +147,15 @@ describe("sync-create-zudo-sg-template.mjs", () => {
     );
     expect(readReleaseAgeExcludes(target)).toEqual([
       "@takazudo/zdtp@0.8.0",
-      "@takazudo/zfb-darwin-arm64@2.19.0",
-      "@takazudo/zfb-darwin-x64@2.19.0",
-      "@takazudo/zfb-linux-arm64-gnu@2.19.0",
-      "@takazudo/zfb-linux-x64-gnu@2.19.0",
-      "@takazudo/zfb-md-wasm@2.19.0",
-      "@takazudo/zfb-runtime@2.19.0",
-      "@takazudo/zfb-win32-x64-msvc@2.19.0",
-      "@takazudo/zfb@2.19.0",
-      "@takazudo/zudo-doc@5.26.0",
+      "@takazudo/zfb-darwin-arm64@2.20.0",
+      "@takazudo/zfb-darwin-x64@2.20.0",
+      "@takazudo/zfb-linux-arm64-gnu@2.20.0",
+      "@takazudo/zfb-linux-x64-gnu@2.20.0",
+      "@takazudo/zfb-md-wasm@2.20.0",
+      "@takazudo/zfb-runtime@2.20.0",
+      "@takazudo/zfb-win32-x64-msvc@2.20.0",
+      "@takazudo/zfb@2.20.0",
+      "@takazudo/zudo-doc@5.26.2",
       "@takazudo/zudo-sg@0.2.0",
     ]);
     expect(readFileSync(join(target, "pages/index.tsx"), "utf8")).toContain(
@@ -287,7 +287,7 @@ describe("sync-create-zudo-sg-template.mjs", () => {
       zfbPackagePath: injectedMetadataPath,
     });
     expect(files.get("pnpm-workspace.yaml")?.toString()).toContain(
-      "@takazudo/zfb@2.19.0",
+      "@takazudo/zfb@2.20.0",
     );
   });
 

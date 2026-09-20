@@ -3,9 +3,9 @@
 Status: **Accepted** (epic #648, decision sub-task #650, 2026-09-13).
 Locks the contract every Wave 2+ sub-issue implements. Model: zudo-doc's
 package-owned route seam (`$HOME/repos/myoss/zudo-doc/packages/zudo-doc/docs/adr/route-injection-seam.md`).
-Current toolchain pins: `@takazudo/zfb` **2.19.0**, `@takazudo/zudo-doc`
-5.26.0, `@takazudo/zdtp` 0.8.0, pnpm 11.5.2, Node 24. The engine's peer
-floors are `^2.19.0` / `^5.26.0`, aligned with zudo-doc 5.26.0's own
+Current toolchain pins: `@takazudo/zfb` **2.20.0**, `@takazudo/zudo-doc`
+5.26.2, `@takazudo/zdtp` 0.8.0, pnpm 11.5.2, Node 24. The engine's peer
+floors are `^2.20.0` / `^5.26.2`, aligned with zudo-doc 5.26.2's own
 `@takazudo/zfb` peer floor (#731).
 
 ## Context
@@ -329,10 +329,10 @@ is outside this release's scope. The apply proxy and lazy panel helpers keep
 their import-failure guards as defensive handling; those guards do not make
 the package optional.
 
-The other engine peers are `@takazudo/zfb ^2.19.0`,
-`@takazudo/zudo-doc ^5.26.0`, and `preact ^10.29.8`. These are floors, not
+The other engine peers are `@takazudo/zfb ^2.20.0`,
+`@takazudo/zudo-doc ^5.26.2`, and `preact ^10.29.8`. These are floors, not
 pins: the workspace and the foreign-install fixture install `@takazudo/zfb`
-2.19.0 against the `^2.19.0` floor. A floor is raised only when an upstream
+2.20.0 against the `^2.20.0` floor. A floor is raised only when an upstream
 peer forces it.
 
 **Amendment (2026-09-20, #731):** zudo-doc 5.26.0 requires the zfb 2.19.0

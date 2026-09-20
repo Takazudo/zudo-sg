@@ -64,10 +64,10 @@ output as drift and never writes it.
 ## Installation
 
 ```sh
-pnpm add @takazudo/zudo-sg@latest @takazudo/zfb@^2.19.0 @takazudo/zfb-md-wasm@^2.19.0 @takazudo/zfb-runtime@^2.19.0 @takazudo/zudo-doc@^5.26.0 @takazudo/zdtp@^0.8.0 diff@^8.0.4 katex@^0.16.38 preact@^10.29.8 preact-render-to-string@^6.6.6 tailwindcss@^4.2.0 zod@^4.3.6
+pnpm add @takazudo/zudo-sg@latest @takazudo/zfb@^2.20.0 @takazudo/zfb-md-wasm@^2.20.0 @takazudo/zfb-runtime@^2.20.0 @takazudo/zudo-doc@^5.26.2 @takazudo/zdtp@^0.8.0 diff@^8.0.4 katex@^0.16.38 preact@^10.29.8 preact-render-to-string@^6.6.6 tailwindcss@^4.2.0 zod@^4.3.6
 ```
 
-The engine peers are `@takazudo/zfb ^2.19.0`, `@takazudo/zudo-doc ^5.26.0`,
+The engine peers are `@takazudo/zfb ^2.20.0`, `@takazudo/zudo-doc ^5.26.2`,
 `@takazudo/zdtp ^0.8.0`, and `preact ^10.29.8`. `@takazudo/zdtp` is required:
 the injected `/tokens` route imports its dashboard at build time. The
 `@takazudo/zfb-md-wasm`, `@takazudo/zfb-runtime`, `diff`, `katex`, and `zod`
