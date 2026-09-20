@@ -4,6 +4,21 @@ All notable changes to `create-zudo-sg` are documented in this file.
 
 The format is based on Keep a Changelog.
 
+## [0.1.2] - 2026-09-20
+
+Gives fresh starter projects a styled homepage and usable default navigation.
+
+### Fixed
+
+- Style the host-owned homepage with token-based typography, spacing, and
+  clearly visible links to Components and Design Tokens after Tailwind preflight.
+- Verify the packed starter's homepage markup and generated utility CSS.
+
+### Changed
+
+- Update the starter engine range to `@takazudo/zudo-sg ^0.2.2`, which supplies
+  default header navigation and search controls for minimally configured hosts.
+
 ## [0.1.1] - 2026-09-20
 
 Hardens fresh starter projects and aligns them with `@takazudo/zudo-sg 0.2.1`.
