@@ -373,6 +373,7 @@ export async function assertHeadAssets(hostDir) {
   const htmlFiles = await collectHtmlFiles(distDir);
   assert(htmlFiles.length > 0, "fixture build emitted no HTML pages");
   const { JSDOM } = await import("jsdom");
+  let zudoDocHeadPages = 0;
 
   for (const htmlPath of htmlFiles) {
     const relativePage = path.relative(distDir, htmlPath).split(path.sep).join("/");
@@ -402,6 +403,7 @@ export async function assertHeadAssets(hostDir) {
     }
 
     if (usesZudoDocHead(document)) {
+      zudoDocHeadPages += 1;
       const icons = [...document.head.querySelectorAll("link")].filter((link) => relTokens(link).has("icon"));
       assert(icons.length === 1, `${relativePage} has ${icons.length} zudo-doc favicon links; expected exactly one`);
       const href = icons[0].getAttribute("href") ?? "";
@@ -409,7 +411,10 @@ export async function assertHeadAssets(hostDir) {
     }
     dom.window.close();
   }
-  console.log(`OK — every fixture HTML page has existing local head assets (${htmlFiles.length} pages checked).`);
+  assert(zudoDocHeadPages > 0, "fixture build has no pages recognized as using the zudo-doc head");
+  console.log(
+    `OK — every fixture HTML page has existing local head assets (${htmlFiles.length} pages checked; ${zudoDocHeadPages} zudo-doc heads).`,
+  );
 }
 
 async function assertTokensRoute(hostDir, empty) {
