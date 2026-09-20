@@ -32,6 +32,14 @@ const packageManager = ["corepack", "pnpm"];
 const keep = process.argv.includes("--keep") || Boolean(process.env.ZUDO_SG_VERIFY_KEEP);
 const publishedEngine = process.argv.includes("--published-engine");
 const knownArgs = new Set(["--keep", "--published-engine"]);
+const RELEASE_AGE_DEPENDENCY_NAMES = [
+  "@takazudo/zfb",
+  "@takazudo/zfb-runtime",
+  "@takazudo/zfb-md-wasm",
+  "@takazudo/zudo-doc",
+  "@takazudo/zdtp",
+];
+const EXACT_SEMVER = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-(?:(?:0|[1-9]\d*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*)(?:\.(?:0|[1-9]\d*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*))*))?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/u;
 
 for (const argument of process.argv.slice(2)) {
   if (!knownArgs.has(argument)) {
@@ -45,6 +53,10 @@ function fail(message) {
 
 function assert(condition, message) {
   if (!condition) fail(message);
+}
+
+function compareStrings(a, b) {
+  return a < b ? -1 : a > b ? 1 : 0;
 }
 
 /** Run a command while streaming its output, preserving the useful failure log. */
@@ -245,10 +257,127 @@ async function assertScaffoldShape(projectDir, packedTemplateDir) {
   console.log(`OK — packed initializer scaffolded ${actual.length} files with .gitignore and no unresolved token.`);
 }
 
+async function assertScaffoldReleaseAgeExcludes(projectDir) {
+  const workspacePath = path.join(projectDir, "pnpm-workspace.yaml");
+  const workspace = await readFile(workspacePath, "utf8");
+  const lines = workspace.split(/\r?\n/u);
+  const keyIndex = lines.findIndex((line) => /^minimumReleaseAgeExclude:\s*$/u.test(line));
+  assert(keyIndex !== -1, "scaffold workspace is missing minimumReleaseAgeExclude");
+
+  const actual = [];
+  for (let index = keyIndex + 1; index < lines.length; index += 1) {
+    const line = lines[index];
+    if (line.trim() === "") continue;
+    if (!/^[ \t]/u.test(line)) break;
+    if (line.trimStart().startsWith("#")) continue;
+    const match = line.match(/^\s*-\s*["']([^"']+)["']\s*$/u);
+    assert(match, `scaffold release-age entry is malformed: ${line}`);
+    actual.push(match[1]);
+  }
+
+  for (const entry of actual) {
+    const match = entry.match(/^(@takazudo\/[a-z0-9][a-z0-9._-]*)@(.+)$/u);
+    assert(
+      match !== null && EXACT_SEMVER.test(match[2]),
+      `scaffold release-age entry is not an exact @takazudo semver: ${entry}`,
+    );
+  }
+
+  const fixturePackage = JSON.parse(
+    await readFile(path.join(root, "fixtures", "engine-host", "package.json"), "utf8"),
+  );
+  const styleguidePackage = JSON.parse(
+    await readFile(path.join(root, "packages", "styleguide", "package.json"), "utf8"),
+  );
+  const zfbPackage = JSON.parse(
+    await readFile(path.join(root, "node_modules", "@takazudo", "zfb", "package.json"), "utf8"),
+  );
+  const expected = [
+    ...RELEASE_AGE_DEPENDENCY_NAMES.map(
+      (name) => `${name}@${fixturePackage.dependencies?.[name]}`,
+    ),
+    `@takazudo/zudo-sg@${styleguidePackage.version}`,
+    ...Object.entries(zfbPackage.optionalDependencies ?? {}).map(
+      ([name, version]) => `${name}@${version}`,
+    ),
+  ].sort(compareStrings);
+
+  assert(new Set(actual).size === actual.length, "scaffold release-age entries contain duplicates");
+  assert(
+    actual.every((entry, index) => index === 0 || compareStrings(actual[index - 1], entry) <= 0),
+    "scaffold release-age entries are not sorted",
+  );
+  assert(
+    JSON.stringify(actual) === JSON.stringify(expected),
+    `scaffold release-age entries differ from the shipped pins:\nexpected: ${expected.join(", ")}\nactual: ${actual.join(", ")}`,
+  );
+  console.log(`OK — scaffold release-age exemptions contain ${actual.length} exact shipped pins.`);
+}
+
+async function gitCheckIgnore(projectDir, relativePath) {
+  return new Promise((resolvePromise, reject) => {
+    const child = spawn(
+      "git",
+      ["check-ignore", "--no-index", "--quiet", "--", relativePath],
+      { cwd: projectDir },
+    );
+    child.on("error", (error) => reject(new Error(`git check-ignore could not start: ${error.message}`)));
+    child.on("close", (code, signal) => {
+      if (code === 0) {
+        resolvePromise(true);
+        return;
+      }
+      if (code === 1) {
+        resolvePromise(false);
+        return;
+      }
+      reject(new Error(`git check-ignore ${relativePath} failed (${signal ? `signal ${signal}` : `exit code ${code}`})`));
+    });
+  });
+}
+
+async function assertScaffoldGitignore(projectDir) {
+  await run("git", ["init", "--quiet"], projectDir);
+  const ignoredPaths = [
+    ".zfb/graph.bin",
+    ".zfb-esbuild-entry-x.tsx",
+    ".zfb-islands-tsconfig-x.json",
+    ".zfb-virtual-x.mjs",
+  ];
+  await mkdir(path.join(projectDir, ".zfb"), { recursive: true });
+  await writeFile(path.join(projectDir, ".zfb/graph.bin"), "artifact\n");
+  for (const relativePath of ignoredPaths.slice(1)) {
+    await writeFile(path.join(projectDir, relativePath), "artifact\n");
+  }
+
+  assert(
+    !(await gitCheckIgnore(projectDir, "pnpm-lock.yaml")),
+    "scaffold .gitignore unexpectedly ignores pnpm-lock.yaml",
+  );
+  for (const relativePath of ignoredPaths) {
+    assert(
+      await gitCheckIgnore(projectDir, relativePath),
+      `scaffold .gitignore does not ignore ${relativePath}`,
+    );
+  }
+  console.log("OK — scaffold .gitignore tracks pnpm-lock.yaml and ignores zfb artifacts.");
+}
+
 async function assertForeignPackage(hostDir) {
   const installed = await realpath(path.join(hostDir, "node_modules/@takazudo/zudo-sg"));
   const modules = `${await realpath(path.join(hostDir, "node_modules"))}${path.sep}`;
   assert(installed.startsWith(modules), `installed engine resolves outside the scratch node_modules: ${installed}`);
+}
+
+async function copyWithoutNodeModules(sourceDir, targetDir) {
+  const nodeModulesDir = path.join(sourceDir, "node_modules");
+  assert(!existsSync(targetDir), `frozen-install destination already exists: ${targetDir}`);
+  await cp(sourceDir, targetDir, {
+    recursive: true,
+    filter(sourcePath) {
+      return sourcePath !== nodeModulesDir && !sourcePath.startsWith(`${nodeModulesDir}${path.sep}`);
+    },
+  });
 }
 
 async function installLocalEngine(hostDir, engineTarball) {
@@ -373,6 +502,7 @@ async function main() {
   const extraction = await mkdtemp(path.join(os.tmpdir(), "create-zudo-sg-extract-"));
   const scratch = await mkdtemp(path.join(os.tmpdir(), "create-zudo-sg-host-"));
   let hostDir;
+  let frozenHostDir;
 
   try {
     console.log("Building create-zudo-sg and @takazudo/zudo-sg.");
@@ -393,6 +523,8 @@ async function main() {
       scratch,
     );
     await assertScaffoldShape(hostDir, path.join(packedInitializer, "templates/default"));
+    await assertScaffoldReleaseAgeExcludes(hostDir);
+    await assertScaffoldGitignore(hostDir);
 
     if (publishedEngine) {
       console.log("--published-engine: installing the template's shipped @takazudo/zudo-sg range.");
@@ -403,6 +535,20 @@ async function main() {
     console.log("pnpm install (the initializer's printed next step)");
     await run(packageManager[0], [...packageManager.slice(1), "install"], hostDir);
     await assertForeignPackage(hostDir);
+
+    frozenHostDir = path.join(scratch, "create-zudo-sg-frozen");
+    console.log(`Copying the installed host without node_modules to ${frozenHostDir}.`);
+    await copyWithoutNodeModules(hostDir, frozenHostDir);
+    assert(existsSync(path.join(frozenHostDir, "pnpm-lock.yaml")), "first install did not create pnpm-lock.yaml");
+    assert(!existsSync(path.join(frozenHostDir, "node_modules")), "frozen-install copy unexpectedly includes node_modules");
+    console.log("pnpm install --frozen-lockfile (generated-lockfile proof)");
+    await run(
+      packageManager[0],
+      [...packageManager.slice(1), "install", "--frozen-lockfile"],
+      frozenHostDir,
+    );
+    await assertForeignPackage(frozenHostDir);
+    console.log("OK — generated host lockfile installs from a clean copy with --frozen-lockfile.");
 
     console.log("pnpm gen-registry (the initializer's printed next step)");
     await run(packageManager[0], [...packageManager.slice(1), "gen-registry"], hostDir);
@@ -430,7 +576,9 @@ async function main() {
     console.log(`OK — packed create-zudo-sg generated and booted a foreign host${publishedEngine ? " with the published engine range" : " with the local engine tarball"}.`);
   } finally {
     if (keep) {
-      console.log(`--keep: left artifacts at ${artifacts}, extraction at ${extraction}, and host at ${hostDir ?? scratch}.`);
+      console.log(
+        `--keep: left artifacts at ${artifacts}, extraction at ${extraction}, host at ${hostDir ?? scratch}, and frozen host at ${frozenHostDir ?? "(not created)"}.`,
+      );
     } else {
       await rm(artifacts, { recursive: true, force: true });
       await rm(extraction, { recursive: true, force: true });

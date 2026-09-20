@@ -124,6 +124,54 @@ import the component from its own relative module. The generated registry's
 Full option shape, virtual modules, and every locked constant:
 `docs/adr/styleguide-engine.md` in this repository.
 
+### Host styles
+
+Add `src/styles/global.css` to the host; zfb discovers it automatically
+(`styles/global.css` takes precedence if both exist). The initializer ships
+this entry already. Use this import order, replacing `ui-tokens.css` with
+your own token stylesheet as needed:
+
+```css
+@layer zd-preflight, zd-flow;
+/* One element reset: theme.css resets color tokens, not elements. */
+@import "tailwindcss/preflight" layer(zd-preflight);
+@import "tailwindcss/utilities";
+@import "@takazudo/zudo-doc/theme.css";
+@import "./ui-tokens.css";
+/* Add your component package stylesheet here. */
+@import "@takazudo/zudo-doc/safelist.css";
+@import "@takazudo/zudo-doc/content.css";
+@import "@takazudo/zudo-doc/features.css";
+@import "@takazudo/zudo-doc/page-loading.css";
+@import "@takazudo/zdtp/dashboard/styles.css";
+@import "@takazudo/zudo-sg/styles.css";
+@import "@takazudo/zudo-sg/safelist.css";
+
+/* zfb global-entry paths are project-root-relative; add your UI package here. */
+@source "pages/**/*.{tsx,ts,jsx,js}";
+@source "ui/**/*.{tsx,ts,jsx,js,mdx,md}";
+@source "src/content/**/*.{mdx,md}";
+```
+
+The zudo-doc theme supplies framework defaults, including the breakpoints
+needed by responsive sidebar utilities. Its color-token reset precedes your
+tokens so they survive. Use `theme-no-reset.css` instead to preserve
+consumer-only color tokens imported earlier; tokens defined by both
+stylesheets still follow source order. Do not import both variants or add
+another preflight/full `tailwindcss` import. A host that already defines the
+full zudo-doc token contract can keep its own theme.
+
+Keep utilities and engine styles unlayered. The `zd-flow` layer must beat
+preflight's margin reset while allowing utility margins to win, and catalog
+chrome overrides must compete with utilities. The zdtp dashboard stylesheet
+belongs after zudo-doc content CSS so dashboard rules win ties with prose.
+Safelists cover package chrome; your `@source` globs cover consumer code.
+
+Add the component package's CSS and source scan to your `previewStyles` entry
+as well; that standalone entry compiles separately and resolves `@source`
+paths relative to its stylesheet. Dashboard and catalog CSS stay in the
+host entry.
+
 ## Release scheme
 
 Stable only. `v*.*.*` tags publish to the npm `latest` dist-tag — there is no
