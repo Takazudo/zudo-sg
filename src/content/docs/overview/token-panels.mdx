@@ -31,6 +31,32 @@ Use this panel when you want to adjust or export the documentation site's design
   Changes in this panel affect only the docs chrome — they do not reach the component previews in the iframes.
 </Note>
 
+## Engine chrome uses a separate override hook
+
+The panel edits zudo-doc's `--zd-*` tokens. The styleguide engine's catalog chrome has its
+own raw `--sg-*` roles, including `--sg-border`, `--sg-surface`, and `--sg-accent`; those
+roles are intentionally not part of the panel's saved state. To retheme that chrome,
+add an unlayered host override such as:
+
+```css
+:root {
+  --sg-border: oklch(0.72 0.02 65);
+}
+```
+
+The engine declares its defaults under `:where(:root)`, so this override wins before or
+after `@takazudo/zudo-sg/styles.css`. It is independent of the component library's own
+`@theme` color tokens. If an older host used bare `--color-border` as the engine-chrome
+hook, replace it with `--sg-border`; bare `--color-border` now belongs to the host's own
+component-token world.
+
+The host component token world still follows zudo-doc's namespace contract. Importing a
+host `@theme` color block before `@takazudo/zudo-doc/theme.css` can fail silently because
+that stylesheet applies `--color-*: initial`. Import the zudo-doc theme before the host
+tokens, or choose `@takazudo/zudo-doc/theme-no-reset.css` when consumer-only colors must
+remain declared earlier. This import-order caveat affects host tokens, not the raw
+`--sg-*` override hook.
+
 ## Saved override scoping
 
 Doc-chrome **Color** overrides are stored per scheme identity — **Default Light** and **Default Dark** — in the `color` slice of the `sg-doc-tweak-state-v4` envelope. Editing one mode therefore never replaces the other mode's saved mapping. **Palette**, **Spacing**, **Font**, and **Size** overrides are shared across modes within the active theme pack; non-default theme packs use the `sg-doc-tweak--<pack>` storage prefix.

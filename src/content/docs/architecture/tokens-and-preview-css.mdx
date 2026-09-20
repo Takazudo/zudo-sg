@@ -6,15 +6,67 @@ sidebar_position: 5
 
 Every component preview in the catalog is rendered against its own, separately compiled stylesheet — not the documentation site's own CSS bundle. This page explains why that separation exists and how it's kept intact.
 
-## The problem: one shared bundle, two unrelated token sets
+## The problem: three token worlds meet at one host
 
-A styleguide host typically has its own design tokens for its own chrome (colors, spacing, and type scale for the docs site itself) *and* needs to render live previews of a component library that has its own, unrelated design tokens. If both were compiled into one Tailwind bundle, both token sets would collide: a `--color-accent` meant for the previewed component library and a `--color-accent` meant for the host's own chrome would fight for the same custom property, and whichever CSS rule won by specificity would silently corrupt the other.
+A styleguide host has three separate color-token worlds:
+
+| World | Owns | Where it applies |
+|---|---|---|
+| zudo-doc | `--zd-*` raw and semantic roles | The documentation shell and its doc chrome |
+| zudo-sg | `--sg-*` raw engine-chrome roles | Catalog chrome, code panels, workbench controls, and token controls |
+| The host's component library | Its own `@theme` color tokens, commonly `--color-*` | The components rendered in preview documents |
+
+Keep those worlds separate. A host component token such as `--color-accent` must not be
+the engine's source of truth, and a doc-chrome edit must not recolor a component preview.
+The standalone preview compile below provides the isolation for the component library;
+the engine's raw namespace provides the isolation for catalog chrome.
 
 ## The fix: a standalone compile, one URL
 
 The engine compiles the host-supplied preview stylesheet entry (`previewStyles` in `zudo-sg.config.mjs`) independently, using Tailwind's compiler directly rather than going through the host's own build pipeline. The result is served — and, at build time, written — under one dedicated URL, `/_zudo-sg/preview.css` by default (configurable via `previewCssUrl`), placed at the site root rather than nested under any per-route path, mirroring how the framework's own static assets are linked.
 
 Because zfb injects that one global stylesheet link into every route with no per-route opt-out, the compiler doesn't just compile the preview CSS in isolation — it also rewrites every top-level `:root { … }` and `:root, :host { … }` block in the compiled output to `:root[data-sg-preview-doc] { … }` (and `:root[data-sg-preview-doc], :host { … }`). The previewed document's own `<html>` element carries that `data-sg-preview-doc` attribute, so the previewed tokens win on specificity over the host's colliding custom properties without needing the host bundle to be touched at all.
+
+## Engine chrome has an order-proof override hook
+
+The engine's chrome colors are the eleven plain custom properties `--sg-bg`, `--sg-fg`,
+`--sg-surface`, `--sg-surface-2`, `--sg-border`, `--sg-border-strong`, `--sg-muted`,
+`--sg-accent`, `--sg-on-accent`, `--sg-focus`, and `--sg-success`. The defaults are
+declared in a zero-specificity `:where(:root)` block at the top of
+`@takazudo/zudo-sg/styles.css`, outside Tailwind's `@theme` color tier. zudo-doc's
+`theme.css` resets `--color-*`, but it does not reset these raw `--sg-*` properties, so
+the engine chrome works whether its stylesheet is imported before or after the reset.
+
+Hosts can retheme the engine with an ordinary, unlayered root override:
+
+```css
+:root {
+  --sg-border: oklch(0.72 0.02 65);
+  --sg-surface-2: oklch(0.94 0.01 65);
+}
+```
+
+Because the engine defaults have zero specificity, this hook wins whether the override
+appears before or after `@takazudo/zudo-sg/styles.css`. Keep the override unlayered when
+using cascade layers; an earlier layer intentionally loses to unlayered engine CSS. The
+hook is independent of the host component library's own `@theme` tokens.
+
+If a host previously themed engine chrome by setting bare `--color-border`, migrate that
+override to `--sg-border` (and migrate any other chrome role to its matching `--sg-*`
+role). Bare `--color-border` remains available for the host's own component library, but
+it is no longer an engine-chrome hook.
+
+## Import order still matters for host component tokens
+
+The order-proof engine namespace does not change zudo-doc's namespace contract for
+embedders. The published `@takazudo/zudo-doc/theme.css` documents that zudo-doc owns its reserved
+color names and applies `--color-*: initial`; an earlier host `@theme` block can
+therefore have its `--color-*` entries erased. Import `theme.css` before the host's own
+component token stylesheet, then import the component styles and source scans. If an
+existing host must keep consumer-only color tokens declared before zudo-doc's theme,
+use `@takazudo/zudo-doc/theme-no-reset.css` instead. That variant omits the reset, but
+tokens declared by both stylesheets still follow normal source order. This caveat is for
+the host's component library only — it does not apply to the `--sg-*` engine override.
 
 ## Dev and build both serve it
 
