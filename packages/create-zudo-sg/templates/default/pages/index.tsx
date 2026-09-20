@@ -12,11 +12,28 @@ export default function IndexPage(): JSX.Element {
     <html lang="en">
       <head>
         <meta charSet="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
         <title>Styleguide starter</title>
       </head>
-      <body>
-        <h1 data-host-index>Styleguide starter</h1>
-        <a href="/components">Components</a>
+      <body class="min-h-screen bg-bg font-sans text-base leading-normal text-fg">
+        <main class="mx-auto flex max-w-[48rem] flex-col gap-vsp-lg px-hsp-lg py-vsp-2xl">
+          <h1 data-host-index class="text-2xl font-bold leading-tight">Styleguide starter</h1>
+          <p class="text-muted">Explore your components, their stories, and the design tokens that bring them together.</p>
+          <nav aria-label="Styleguide" class="flex flex-wrap gap-hsp-md">
+            <a
+              href="/components"
+              class="inline-flex px-hsp-sm py-vsp-sm font-semibold text-accent underline hover:text-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+            >
+              Components
+            </a>
+            <a
+              href="/tokens"
+              class="inline-flex px-hsp-sm py-vsp-sm font-semibold text-accent underline hover:text-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+            >
+              Design Tokens
+            </a>
+          </nav>
+        </main>
       </body>
     </html>
   );
