@@ -12,8 +12,9 @@ description: >-
   explicit `engine` or `create-zudo-sg`/`initializer` request restricts the
   run to that one package.
   Both packages are STABLE-ONLY: every release is a clean X.Y.Z on npm
-  `latest`. The single human gate is the release proposal; confirming it
-  authorizes the whole flow through publish of every package it lists.
+  `latest`. The default path is fully autonomous: invoking the skill
+  authorizes the whole flow through publish of every package it selects.
+  Pass `--confirm` to opt into an interactive proposal checkpoint.
   Triggers on "bump version", "cut a release", "release zudo-sg", "release
   create-zudo-sg", "release the initializer", and "make a release".
 user-invocable: true
@@ -22,12 +23,12 @@ argument-description: >-
   override). No argument — commit-judged bump against the last tag in the
   selected package's namespace (breaking commit -> minor, else -> patch). No
   tag exists yet for that package -> cold-start first release, normally 0.1.0,
-  with the full proposal gate (see Steps 1–2).
+  with the full proposal analysis (see Steps 1–2).
   In a combined run the level argument applies to the engine; the initializer
   is always commit-judged there. `engine` restricts the run to the styleguide
   engine; `create-zudo-sg` or `initializer` restricts it to the initializer
-  (a level argument then applies to that package). Or: cancel — abort a
-  not-yet-published release.
+  (a level argument then applies to that package). `--confirm` waits at the
+  proposal before any mutation. Or: cancel — abort a not-yet-published release.
 ---
 
 # /l-make-release
@@ -41,7 +42,7 @@ pushes to `main`, waits for CI, then **pushes the `v<version>` tag** — which
 triggers `.github/workflows/publish-zudo-sg.yml` (build + verify + `pnpm
 publish`) — watches that run to success, and creates the GitHub Release. The
 initializer path is documented in [Releasing create-zudo-sg](#releasing-create-zudo-sg).
-**One invocation takes every package in the confirmed proposal all the way to
+**One invocation takes every package in the selected proposal all the way to
 npm.**
 
 ## Selecting the packages
@@ -102,19 +103,21 @@ for it. The root `package.json` is never a release version source.
   stays at `0` through the whole `0.x` line), everything else bumps **patch**.
   There is no `feat: -> minor` rule here.
 
-## Invocation & confirmation
+## Invocation & autonomy
 
 This skill is **model-invocable**: a rough natural-language request like "bump
-version", "cut a release", or "release zudo-sg" may trigger it. It must never
-mutate anything before the user explicitly confirms. Steps 1–2 are read-only
-(preconditions, version computation + change analysis); the first mutation is
-Step 3.
+version", "cut a release", or "release zudo-sg" may trigger it. By default,
+the invocation itself authorizes the full end-to-end flow — version and
+changelog changes, pushes, tags, npm publication, and GitHub Releases — for
+every package selected by Steps 1–2. Print the proposal for visibility, then
+continue without asking "go?", "publish?", or an equivalent confirmation.
 
-There is **one gate**: the Step 2 proposal. Confirming it authorizes the whole
-flow — version + changelog, push, CI, tag, publish, and GitHub Release — for
-**every package the proposal lists**. Do not add a second "push the tag now?"
-prompt, and do not re-ask before starting the initializer half of a combined
-run. A **build/test/pack failure** (Step 4),
+`--confirm` is the opt-in interactive mode. When present, Steps 1–2 remain
+read-only, print the combined proposal, and wait for explicit confirmation
+before Step 3. Once confirmed, the rest of the flow is autonomous; do not ask
+again before tags, publishing, or the initializer half.
+
+A **build/test/pack failure** (Step 4),
 **CI failure** (Step 6), or **publish-workflow failure** (Step 8) must be
 resolved before advancing — see [Failure Recovery](#failure-recovery).
 
@@ -126,7 +129,7 @@ release.
 ## How publishing works (read before changing anything)
 
 ```
-/l-make-release  ->  confirm bump (Step 2)  ->  bump + changelog + commit + push main  ->  CI green
+/l-make-release  ->  analyze + print proposal  ->  bump + changelog + commit + push main  ->  CI green
                                                                                             │
                                                     skill pushes:  git push origin v<version>
                                                                                             │
@@ -140,8 +143,9 @@ release.
 The publish workflow triggers on a pushed `v*.*.*` tag — NOT on a GitHub
 Release. The skill creates the GitHub Release **after** the publish run
 succeeds, or after recovery verifies that the exact version reached npm
-despite a failed run. The irreversible step is the **tag push**; confirming
-the Step 2 proposal is what authorizes it.
+despite a failed run. The irreversible step is the **tag push**; invoking the
+skill without `--confirm`, or confirming its proposal with `--confirm`, is what
+authorizes it.
 
 ## Boundaries
 
@@ -174,17 +178,10 @@ Verify ALL of the following. If any check fails, stop with a clear message.
    commonly `Production Deploy`, `main-deploy.yml`). If anything is still
    `in_progress` or non-success, stop and report it rather than releasing
    against unverified `main`.
-6. Confirm the publish credentials with the operator at **npmjs.com**: the
-   `NPM_TOKEN` repo secret must be a current **granular access token**, with
-   **Read and write (publish and stage)** access covering `@takazudo` (and
-   creation of `@takazudo/zudo-sg` for the first publish), and **Bypass 2FA**
-   enabled. GitHub/CI cannot reveal a stored secret's value or token type;
-   seeing its name in `gh secret list` is not proof of these settings. Check
-   expiry and package publishing permissions too. Once the package exists,
-   a configured **Trusted Publisher** may provide OIDC authentication
-   instead; `id-token: write` and `--provenance` alone do not configure it.
-   See `packages/styleguide/RELEASE.md` for the current token guidance and
-   the post-first-publish migration.
+6. Do not pause for an unverifiable credential confirmation. The publish
+   workflow owns npm authentication through its configured Trusted Publisher
+   or repository secret. If authentication fails, follow Failure Recovery;
+   do not pre-emptively ask the operator to inspect npm account settings.
 
 ### Select first release, normal bump, or resume candidate
 
@@ -209,7 +206,8 @@ fi
 
 - **`first` — no `v*` tag exists at all**: always go to **Step 2**, even if a
   previous attempt prepared a release commit. Analyze the package history,
-  propose the first version, and wait for the normal confirmation. Never
+  propose the first version, and follow the normal autonomous/`--confirm`
+  behavior. Never
   offer to tag the package-introduction commit or skip the changelog, quality
   gate, or release commit. Non-release tags such as `_attachments` do not
   change this decision.
@@ -237,9 +235,9 @@ fi
   a published version or an inconclusive query goes to Failure Recovery,
   never a new tag push.
 
-  Present a resume proposal naming the version and `$BUMP_SHA` and require
-  confirmation unless that exact resume is already authorized in this
-  session. Re-run **Step 4** on that tree, ensure the selected commit is on
+  Present a resume proposal naming the version and `$BUMP_SHA`. In default
+  mode continue automatically; with `--confirm`, wait unless that exact resume
+  is already authorized in this session. Re-run **Step 4** on that tree, ensure the selected commit is on
   `origin/main`, then continue at **Step 6**, tagging only the verified SHA.
   If `$BUMP_SHA` is not `HEAD`, surface the later commits and let the user
   choose the original release tree or a fresh proposal including them. Do
@@ -317,13 +315,13 @@ all — everything lands on `latest`.
 seeded unreleased entry, even though `package.json` already says `0.1.0`.
 Finalizing that version is a release; do not manufacture `0.1.1` just because
 the initial manifest already has a version. Still analyze all the engine
-history and show the proposal gate. A Scheme B breaking-change judgement may
+history and show the proposal. A Scheme B breaking-change judgement may
 propose `0.2.0`, but state the concrete reason in the proposal. An explicit
 `major` / `minor` / `patch` argument overrides this default as below.
 
 If a prior attempt already prepared another version with no `v*` tags, stay
 on this cold-start path, explain whether that unpublished version is being
-retained or increased, and obtain fresh confirmation. Never silently lower
+retained or increased. With `--confirm`, obtain fresh confirmation. Never silently lower
 it back to `0.1.0` or skip Steps 2–5.
 
 **Later releases, no argument** — judge the level from the categorization above:
@@ -337,7 +335,8 @@ it back to `0.1.0` or skip Steps 2–5.
   `docs:`/`chore:`/`refactor:`/`ci:`/`test:`/etc. (no `feat:`, `fix:`, or
   breaking commit at all), the "else -> patch" rule still applies, but flag it
   explicitly at the proposal: "No feat:/fix:/breaking commits found since
-  `<base>` — proposing a patch bump. Confirm this is intended."
+  `<base>` — proceeding with the Scheme B patch bump." With `--confirm`, ask
+  the user to confirm that patch.
 
 **`major` / `minor` / `patch` argument** — force that exact bump on the
 current version's triple, ignoring the commit judgement:
@@ -392,19 +391,20 @@ engine first, then create-zudo-sg against the published engine.` If one
 package has nothing to ship, state that in one line instead of its block. Run
 the registry not-found check for each proposed version.
 
-Only show sections with entries. **Wait for explicit user confirmation before
-proceeding to Step 3.** Confirming here authorizes the full flow through
-`pnpm publish` and the GitHub Release.
+Only show sections with entries. In default mode the proposal is for
+visibility: proceed directly to Step 3. With `--confirm`, wait for explicit
+user confirmation; that confirmation authorizes the full flow through npm
+publication and the GitHub Releases.
 
 For the default bootstrap, say `Proposed first release: @takazudo/zudo-sg
 0.1.0 (retain seeded version; finalize the unreleased changelog)`. An unchanged
-version number does not waive this gate.
+version number does not skip the proposal analysis.
 
 ## Step 3: Bump + changelog
 
 ### 3a. Bump the version
 
-Update `version` in `packages/styleguide/package.json` to the confirmed new
+Update `version` in `packages/styleguide/package.json` to the selected new
 version (no `v` prefix). For the default first release, retain `0.1.0` and
 continue with the changelog and checks. The root `package.json` is NOT touched.
 
@@ -547,7 +547,7 @@ git push origin "v<version>"
 ```
 
 This fires `.github/workflows/publish-zudo-sg.yml`. Do NOT ask "push the tag
-now?" — the Step 2 confirmation already authorized this.
+now?" — the invocation already authorized this (or `--confirm` already did).
 
 ## Step 8: Watch the publish workflow
 
@@ -613,9 +613,9 @@ to be configured and verified before retiring `NPM_TOKEN`. Follow the
 migration notes in `packages/styleguide/RELEASE.md`. This is a recommendation,
 not an automatic account-setting change.
 
-If the confirmed proposal also lists the initializer, continue straight into
+If the selected proposal also lists the initializer, continue straight into
 [Releasing create-zudo-sg](#releasing-create-zudo-sg) without a new prompt —
-starting from its local gates, since its proposal was already confirmed —
+starting from its local gates, since its release was already authorized —
 and fold both packages into one final report. Otherwise **STOP**.
 
 ## Releasing create-zudo-sg
@@ -628,17 +628,17 @@ initializer. It is independent of the engine's `v*.*.*` release stream:
   Bump that package only; do not bump the root manifest or
   `packages/styleguide/package.json`.
 - The release changelog is `packages/create-zudo-sg/CHANGELOG.md`. Add the
-  confirmed version's entry there before the release commit. On the first
+  selected version's entry there before the release commit. On the first
   release, the seeded `0.1.0` may be retained and finalized rather than
-  automatically becoming `0.1.1`; still use the proposal gate and create the
+  automatically becoming `0.1.1`; still print the proposal and create the
   changelog entry.
 - This package is stable-only. Use a clean `X.Y.Z` and the exact tag
   `create-zudo-sg-vX.Y.Z`; there is no prerelease or `next` channel. The
   proposal considers initializer tags (`create-zudo-sg-v*`), not engine tags
   (`v*`).
 
-For Steps 1–2, apply the same clean-tree, registry, Scheme B, and explicit
-confirmation rules as the engine path, but substitute the initializer's
+For Steps 1–2, apply the same clean-tree, registry, Scheme B, and autonomous
+default/`--confirm` rules as the engine path, but substitute the initializer's
 package and tag namespace throughout. Judge the release against commits that
 touch `packages/create-zudo-sg/**`, the template sync/gate, or its publish
 workflow. If no `create-zudo-sg-v*` tag exists, this is the initializer's first
@@ -666,7 +666,8 @@ host. Do not replace it with the normal verifier's local engine tarball for a
 release gate; if the registry cannot resolve the published engine, stop and
 resolve that release dependency first.
 
-After the proposal is confirmed and the local gates pass, commit the package
+After the proposal is printed (and confirmed only when `--confirm` is active)
+and the local gates pass, commit the package
 manifest and changelog, push `main`, and wait for CI on that commit. Push only
 the verified commit as the package tag:
 
@@ -704,7 +705,7 @@ gh workflow run publish-create-zudo-sg.yml --ref "create-zudo-sg-v<version>"
 ```
 
 The workflow's dispatch guard must reject branch refs; do not bypass it. A
-code fix requires a new initializer version through the proposal gate, never
+code fix requires a new initializer version through the proposal process, never
 moving an existing release tag. Registry/network errors that do not establish
 absence are inconclusive, so stop and recheck rather than retrying blindly.
 
@@ -779,7 +780,7 @@ npm view "@takazudo/zudo-sg@<version>" version --registry=https://registry.npmjs
     Step 8. Retry only while the version is still confirmed absent.
   - **Needs a code fix** — leave the pushed tag on its original commit. Fix
     the code on `main`, then re-run `/l-make-release` for a **new version**
-    through the proposal gate. Never delete/recreate a release tag to point
+    through the proposal process. Never delete/recreate a release tag to point
     it at different content.
   - **OTP / `EOTP` / 2FA or token-permission error** — check the granular
     token's expiry, publish rights covering `@takazudo`, and **Bypass 2FA**
