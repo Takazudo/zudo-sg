@@ -34,8 +34,8 @@ export function createTokenDashboards(
   return (
     <section class="mb-vsp-xl flex flex-col gap-vsp-lg" style={options.chromeStyle}>
       <div class="max-w-[56rem]">
-        <h2 class="mb-vsp-2xs text-xl font-semibold text-fg">Declared defaults</h2>
-        <p class="text-muted">
+        <h2 class="mb-vsp-2xs text-xl font-semibold text-[color:var(--sg-fg)]">Declared defaults</h2>
+        <p class="text-[color:var(--sg-muted)]">
           These are the declared defaults of the design-token manifest,
           shown as light, dark, and shared token references. The light and
           dark frames show only tokens whose declared value differs by mode

@@ -49,6 +49,7 @@ export default function ComponentsPreviewRoute(): JSX.Element {
         <link rel="stylesheet" href={withBase(ctx.previewCssUrl)} data-sg-preview-css />
         <script dangerouslySetInnerHTML={{ __html: LIVERELOAD_STUB }} />
       </head>
+      {/* The preview canvas follows host preview tokens, not engine chrome tokens. */}
       <body class="bg-bg">{app}</body>
     </html>
   );
