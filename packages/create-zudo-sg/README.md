@@ -101,6 +101,32 @@ host defines consumer-only color tokens before zudo-doc's theme, replace
 omits the color-token reset; tokens defined by both stylesheets still follow
 source order.
 
+### Three token worlds and engine overrides
+
+The generated host has three color-token worlds: zudo-doc's `--zd-*` roles for the
+documentation shell, zudo-sg's raw `--sg-*` roles for catalog chrome, and the host
+component library's own `@theme` color tokens (usually `--color-*`) for previewed
+components. Keep the engine and component-library roles separate.
+
+The engine defaults are plain `--sg-*` properties under `:where(:root)`, so zudo-doc's
+`theme.css` `--color-*` reset cannot erase them. Retheme engine chrome with an ordinary,
+unlayered override in any import position:
+
+```css
+:root {
+  --sg-border: oklch(0.72 0.02 65);
+}
+```
+
+If the host previously used bare `--color-border` to style engine chrome, migrate that
+declaration to `--sg-border` (and migrate each other chrome role to its corresponding
+`--sg-*` role). `--color-border` can still style the host's own components. The
+order-proof engine hook does not change the import-order contract for those host-owned
+`@theme` colors: import `theme.css` before them, or deliberately use
+`theme-no-reset.css` when their earlier declaration must be preserved. This is the
+zudo-doc namespace contract for host-owned color tokens; the engine's raw `--sg-*`
+namespace is separate.
+
 The preview document uses `src/styles/preview-entry.css` independently. Add
 your component package's styles and source scan there too when previews need
 them; its `@source` paths are relative to that stylesheet. Keep dashboard and
