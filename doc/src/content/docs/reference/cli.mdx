@@ -31,6 +31,12 @@ zudo-sg gen-registry --check  # fail if the registry on disk is stale (no write)
 
 In this repo: `pnpm gen:sg-registry` / `pnpm check:sg-registry`.
 
+When writing, `gen-registry` bootstraps a missing or whitespace-only
+`registryOut` (and creates its parent directories), so a host does not need to
+commit a marker-only seed file first. A non-empty registry still needs both
+generated markers; otherwise the command stops without writing. `--check`
+reports a missing or empty registry as drift and never creates it.
+
 ## `new-component`
 
 Scaffolds a component, its story file, and a starter test, then runs

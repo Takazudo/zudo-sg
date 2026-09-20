@@ -58,7 +58,10 @@ codegen time and writes an explicit-import registry file
 (`zudo-sg.config.mjs`'s `registryOut`). Run it after adding, renaming, or
 removing a story file, and commit the regenerated file; `zudo-sg gen-registry
 --check` (wired into CI) fails the build on drift. Never hand-edit the
-generated file.
+--check` (wired into CI) fails the build on drift. A new host does not need to
+commit a marker-only seed first: write mode bootstraps a missing or
+whitespace-only output, while non-empty output still requires the generated
+markers. Never hand-edit the generated file.
 
 ## Module shape
 

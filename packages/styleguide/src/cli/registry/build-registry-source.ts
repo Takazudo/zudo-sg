@@ -23,7 +23,7 @@ export interface RegistryEntry extends DiscoveredStory {
  */
 export function buildRegistryBlock(entries: RegistryEntry[]): string {
   const lines: string[] = [];
-  lines.push(`// ${BEGIN_MARKER} — do not hand-edit; run \`pnpm gen:sg-registry\`.`);
+  lines.push(`// ${BEGIN_MARKER} — do not hand-edit; run \`zudo-sg gen-registry\`.`);
   lines.push(`import type { StoryModule } from "@takazudo/zudo-sg/stories";`);
   lines.push(``);
   for (const e of entries) {
@@ -71,7 +71,7 @@ export function buildStoryModulesBlock(
   relativeImportPrefix: string,
 ): string {
   const lines: string[] = [];
-  lines.push(`// ${BEGIN_MARKER} — do not hand-edit; run \`pnpm gen:sg-registry\`.`);
+  lines.push(`// ${BEGIN_MARKER} — do not hand-edit; run \`zudo-sg gen-registry\`.`);
   for (const e of entries) {
     lines.push(`import * as ${e.importName} from "${relativeImportPrefix}/${e.relDirStem}.stories";`);
   }

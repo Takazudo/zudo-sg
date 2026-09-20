@@ -7,7 +7,7 @@
 // never a silent overwrite. Calls `runGenRegistry` directly against a temp
 // sandbox instead of spawning the old standalone script.
 
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -63,6 +63,14 @@ function writeStory(relDir: string, stem: string, exportNames: string[] = ["Play
 
 function readRegistry() {
   return readFileSync(join(sandbox, "src", "styleguide", "sg-registry.ts"), "utf-8");
+}
+
+function registryPath() {
+  return join(sandbox, "src", "styleguide", "sg-registry.ts");
+}
+
+function storyModulesPath() {
+  return join(sandbox, "packages", "demo-ui", "src", "stories", "__tests__", "story-modules.ts");
 }
 
 function readStoryModules() {
@@ -198,5 +206,94 @@ describe("runGenRegistry — check mode with nested entries", () => {
     writeStory("layout/badge-icon", "badge-icon");
 
     expect(() => runGenRegistry(sandbox, baseConfig(), { check: true })).toThrow(SgRegistryDriftError);
+  });
+});
+
+describe("runGenRegistry — registry bootstrap", () => {
+  it("creates a missing registry", () => {
+    rmSync(registryPath());
+    writeStory("badge", "badge");
+
+    const result = runGenRegistry(sandbox, baseConfig());
+
+    expect(result.changed).toEqual([registryPath(), storyModulesPath()]);
+    expect(readRegistry()).toContain("// GENERATED:SG_REGISTRY_BEGIN — do not hand-edit; run `zudo-sg gen-registry`.");
+    expect(runGenRegistry(sandbox, baseConfig()).changed).toEqual([]);
+    expect(() => runGenRegistry(sandbox, baseConfig(), { check: true })).not.toThrow();
+  });
+
+  it("creates missing registry parent directories", () => {
+    rmSync(join(sandbox, "src", "styleguide"), { recursive: true, force: true });
+    writeStory("badge", "badge");
+
+    runGenRegistry(sandbox, baseConfig());
+
+    expect(existsSync(registryPath())).toBe(true);
+    expect(readRegistry()).toContain('"./demo-ui/src/badge/badge.stories.tsx"');
+  });
+
+  it("replaces a whitespace-only registry as a whole file", () => {
+    writeFileSync(registryPath(), " \n\t");
+    writeStory("badge", "badge");
+
+    runGenRegistry(sandbox, baseConfig());
+
+    const registry = readRegistry();
+    expect(registry).toContain('"./demo-ui/src/badge/badge.stories.tsx"');
+    expect(registry).not.toMatch(/^\s+\/\//);
+  });
+
+  it("rejects non-empty registry content without markers without writing", () => {
+    const handAuthored = "export const handAuthored = true;\n";
+    writeFileSync(registryPath(), handAuthored);
+    writeStory("badge", "badge");
+    const storyModulesBefore = readFileSync(storyModulesPath(), "utf8");
+
+    expect(() => runGenRegistry(sandbox, baseConfig())).toThrow(/Could not find GENERATED:SG_REGISTRY_BEGIN/);
+    expect(readRegistry()).toBe(handAuthored);
+    expect(readFileSync(storyModulesPath(), "utf8")).toBe(storyModulesBefore);
+  });
+
+  it("propagates non-ENOENT registry read errors", () => {
+    rmSync(registryPath());
+    mkdirSync(registryPath());
+    writeStory("badge", "badge");
+
+    expect(() => runGenRegistry(sandbox, baseConfig())).toThrow(/EISDIR|directory/);
+  });
+
+  it("reports a missing registry as drift in check mode without writing", () => {
+    rmSync(registryPath());
+    writeStory("badge", "badge");
+
+    expect(() => runGenRegistry(sandbox, baseConfig(), { check: true })).toThrow(SgRegistryDriftError);
+    try {
+      runGenRegistry(sandbox, baseConfig(), { check: true });
+    } catch (error) {
+      expect(error).toBeInstanceOf(SgRegistryDriftError);
+      expect((error as SgRegistryDriftError).driftedPaths).toEqual([registryPath(), storyModulesPath()]);
+      expect((error as Error).message).toContain("Run `zudo-sg gen-registry`");
+    }
+    expect(existsSync(registryPath())).toBe(false);
+    expect(readFileSync(storyModulesPath(), "utf8")).toBe(STORY_MODULES_SEED);
+  });
+
+  it("reports a whitespace-only registry as drift in check mode without writing", () => {
+    const whitespace = " \n\t";
+    writeFileSync(registryPath(), whitespace);
+    writeStory("badge", "badge");
+
+    expect(() => runGenRegistry(sandbox, baseConfig(), { check: true })).toThrow(SgRegistryDriftError);
+    expect(readRegistry()).toBe(whitespace);
+    expect(readFileSync(storyModulesPath(), "utf8")).toBe(STORY_MODULES_SEED);
+  });
+
+  it("validates secondary files before creating a missing registry", () => {
+    rmSync(registryPath());
+    writeFileSync(storyModulesPath(), "export const handAuthored = true;\n");
+    writeStory("badge", "badge");
+
+    expect(() => runGenRegistry(sandbox, baseConfig())).toThrow(/Could not find GENERATED:SG_REGISTRY_BEGIN/);
+    expect(existsSync(registryPath())).toBe(false);
   });
 });

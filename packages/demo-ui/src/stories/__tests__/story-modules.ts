@@ -12,7 +12,7 @@ import type { StoryModule } from "../types";
 // registry. The block below is codegen'd by the `zudo-sg gen-registry` CLI
 // command from the `*.stories.tsx` files on disk — never hand-edit it; run
 // `pnpm gen:sg-registry` and commit the result.
-// GENERATED:SG_REGISTRY_BEGIN — do not hand-edit; run `pnpm gen:sg-registry`.
+// GENERATED:SG_REGISTRY_BEGIN — do not hand-edit; run `zudo-sg gen-registry`.
 import * as cardsCallout from "../../cards/callout/callout.stories";
 import * as cardsCardGrid from "../../cards/card-grid/card-grid.stories";
 import * as cardsCard from "../../cards/card/card.stories";
