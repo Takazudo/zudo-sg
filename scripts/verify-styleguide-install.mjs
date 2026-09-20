@@ -333,11 +333,20 @@ async function main() {
     await run("corepack", ["pnpm", "install"], hostDir);
     await assertForeignPackage(hostDir);
 
-    console.log("zudo-sg gen-registry");
+    console.log("Removing the fixture registry before zudo-sg gen-registry (bootstrap proof)");
+    await rm(path.join(hostDir, "src/styleguide/sg-registry.ts"), { force: true });
+    assert(!existsSync(path.join(hostDir, "src/styleguide/sg-registry.ts")), "failed to remove fixture registry before bootstrap");
+    console.log("zudo-sg gen-registry (missing-output bootstrap)");
     await run("corepack", ["pnpm", "exec", "zudo-sg", "gen-registry"], hostDir);
+    assert(existsSync(path.join(hostDir, "src/styleguide/sg-registry.ts")), "gen-registry did not recreate the missing fixture registry");
 
     console.log("zudo-sg gen-token-manifest (fixture CSS -> packed CLI -> consumer manifest)");
     await run("corepack", ["pnpm", "exec", "zudo-sg", "gen-token-manifest"], hostDir);
+    const tokenManifest = await read(hostDir, "src/styleguide/token-manifest.ts");
+    const tokenManifestHeader = tokenManifest.match(/^\/\*\*[\s\S]*?\*\//u)?.[0] ?? "";
+    assert(tokenManifestHeader.includes("src/styles/ui-tokens.css"), "generated token manifest header lacks the fixture CSS path");
+    assert(!tokenManifestHeader.includes("demo-ui"), "generated token manifest header contains demo-ui provenance");
+    assert(!tokenManifestHeader.includes("pnpm gen:"), "generated token manifest header contains the old pnpm gen command");
     await run("corepack", ["pnpm", "exec", "zudo-sg", "gen-token-manifest", "--check"], hostDir);
 
     console.log("Type-checking the consumer against packed declarations: tsc --noEmit -p tsconfig.json");
