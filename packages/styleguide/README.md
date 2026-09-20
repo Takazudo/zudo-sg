@@ -94,7 +94,7 @@ export default defineConfig(
     {
       componentsRoots: [{ dir: "./src/components", importBase: "@/components" }],
       registryOut: "./src/styleguide/sg-registry.ts",
-      uiPackageName: "@your-scope/ui",
+      uiPackageName: "@your-scope/ui", // optional: usage snippets and catalog labels
       previewStyles: "./src/styles/preview-entry.css",
     },
   ),
@@ -109,6 +109,11 @@ scanner from the injected routes. `@takazudo/zudo-sg/islands` remains
 exported as a side-effect module that statically imports every engine
 island — importing it once from a host `pages/` file is optional and
 harmless (it was required on zfb < 2.18.0).
+
+`uiPackageName` is optional. When set, it names the package used in generated
+usage snippets and catalog labels; when omitted, scaffolded usage snippets
+import the component from its own relative module. The generated registry's
+`StoryModule` type always comes from `@takazudo/zudo-sg/stories`.
 
 Full option shape, virtual modules, and every locked constant:
 `docs/adr/styleguide-engine.md` in this repository.

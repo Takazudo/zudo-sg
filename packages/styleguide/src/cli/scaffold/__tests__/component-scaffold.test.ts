@@ -218,6 +218,15 @@ describe("storiesTemplate", () => {
     expect(src).toContain(`import type { StoryMeta, Story } from "../../stories/types";`);
     expect(src).not.toContain('from "../stories/types"');
   });
+
+  it("uses the component's own relative module in usage when no package is configured", () => {
+    const src = storiesTemplate({
+      pascalName: "DemoWidget",
+      kebabName: "demo-widget",
+      category: "Layout",
+    });
+    expect(src).toContain('import { DemoWidget } from "./demo-widget";');
+  });
 });
 
 describe("testTemplate", () => {

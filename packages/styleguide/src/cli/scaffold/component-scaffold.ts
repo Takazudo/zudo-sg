@@ -112,7 +112,7 @@ export interface StoriesTemplateArgs {
   pascalName: string;
   kebabName: string;
   category: string;
-  uiPackageName: string;
+  uiPackageName?: string;
   nested?: boolean;
 }
 
@@ -127,6 +127,7 @@ export function storiesTemplate({
   uiPackageName,
   nested = false,
 }: StoriesTemplateArgs): string {
+  const usageImport = uiPackageName ?? `./${kebabName}`;
   const lines = [
     `import type { StoryMeta, Story } from "${nested ? "../../stories/types" : "../stories/types"}";`,
     `import { ${pascalName}, type ${pascalName}Props } from "./${kebabName}";`,
@@ -135,7 +136,7 @@ export function storiesTemplate({
     `  title: "${pascalName}", // TODO: human-friendly display name, if different`,
     `  category: "${category}",`,
     `  description: "TODO: one-sentence description of ${pascalName}.",`,
-    `  usage: \`import { ${pascalName} } from "${uiPackageName}";`,
+    `  usage: \`import { ${pascalName} } from "${usageImport}";`,
     ``,
     `<${pascalName}>Content</${pascalName}>\`,`,
     `};`,

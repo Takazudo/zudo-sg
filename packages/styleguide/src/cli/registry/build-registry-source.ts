@@ -21,10 +21,10 @@ export interface RegistryEntry extends DiscoveredStory {
  * `StoryModule` import, one `import * as <name>` per story, and the
  * `storyModules` + `storyExportOrder` maps.
  */
-export function buildRegistryBlock(entries: RegistryEntry[], uiPackageName: string): string {
+export function buildRegistryBlock(entries: RegistryEntry[]): string {
   const lines: string[] = [];
   lines.push(`// ${BEGIN_MARKER} — do not hand-edit; run \`pnpm gen:sg-registry\`.`);
-  lines.push(`import type { StoryModule } from "${uiPackageName}";`);
+  lines.push(`import type { StoryModule } from "@takazudo/zudo-sg/stories";`);
   lines.push(``);
   for (const e of entries) {
     lines.push(`import * as ${e.importName} from "${e.importSpecifier}";`);
