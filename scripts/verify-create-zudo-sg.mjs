@@ -369,6 +369,17 @@ async function assertForeignPackage(hostDir) {
   assert(installed.startsWith(modules), `installed engine resolves outside the scratch node_modules: ${installed}`);
 }
 
+async function copyWithoutNodeModules(sourceDir, targetDir) {
+  const nodeModulesDir = path.join(sourceDir, "node_modules");
+  assert(!existsSync(targetDir), `frozen-install destination already exists: ${targetDir}`);
+  await cp(sourceDir, targetDir, {
+    recursive: true,
+    filter(sourcePath) {
+      return sourcePath !== nodeModulesDir && !sourcePath.startsWith(`${nodeModulesDir}${path.sep}`);
+    },
+  });
+}
+
 async function installLocalEngine(hostDir, engineTarball) {
   const tarballDir = path.join(hostDir, ".tarball");
   await mkdir(tarballDir, { recursive: true });
@@ -491,6 +502,7 @@ async function main() {
   const extraction = await mkdtemp(path.join(os.tmpdir(), "create-zudo-sg-extract-"));
   const scratch = await mkdtemp(path.join(os.tmpdir(), "create-zudo-sg-host-"));
   let hostDir;
+  let frozenHostDir;
 
   try {
     console.log("Building create-zudo-sg and @takazudo/zudo-sg.");
@@ -524,6 +536,20 @@ async function main() {
     await run(packageManager[0], [...packageManager.slice(1), "install"], hostDir);
     await assertForeignPackage(hostDir);
 
+    frozenHostDir = path.join(scratch, "create-zudo-sg-frozen");
+    console.log(`Copying the installed host without node_modules to ${frozenHostDir}.`);
+    await copyWithoutNodeModules(hostDir, frozenHostDir);
+    assert(existsSync(path.join(frozenHostDir, "pnpm-lock.yaml")), "first install did not create pnpm-lock.yaml");
+    assert(!existsSync(path.join(frozenHostDir, "node_modules")), "frozen-install copy unexpectedly includes node_modules");
+    console.log("pnpm install --frozen-lockfile (generated-lockfile proof)");
+    await run(
+      packageManager[0],
+      [...packageManager.slice(1), "install", "--frozen-lockfile"],
+      frozenHostDir,
+    );
+    await assertForeignPackage(frozenHostDir);
+    console.log("OK — generated host lockfile installs from a clean copy with --frozen-lockfile.");
+
     console.log("pnpm gen-registry (the initializer's printed next step)");
     await run(packageManager[0], [...packageManager.slice(1), "gen-registry"], hostDir);
     await assertGeneratedRegistry(hostDir);
@@ -550,7 +576,9 @@ async function main() {
     console.log(`OK — packed create-zudo-sg generated and booted a foreign host${publishedEngine ? " with the published engine range" : " with the local engine tarball"}.`);
   } finally {
     if (keep) {
-      console.log(`--keep: left artifacts at ${artifacts}, extraction at ${extraction}, and host at ${hostDir ?? scratch}.`);
+      console.log(
+        `--keep: left artifacts at ${artifacts}, extraction at ${extraction}, host at ${hostDir ?? scratch}, and frozen host at ${frozenHostDir ?? "(not created)"}.`,
+      );
     } else {
       await rm(artifacts, { recursive: true, force: true });
       await rm(extraction, { recursive: true, force: true });
