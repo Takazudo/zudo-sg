@@ -46,7 +46,7 @@ function makeSandbox(): string {
   cpSync(FIXTURE_PATH, join(sandbox, "fixtures", "engine-host"), {
     recursive: true,
     filter: (source) =>
-      !/(?:^|[/\\])(?:node_modules|dist|\.zfb-build|\.tarball)(?:[/\\]|$)/.test(
+      !/(?:^|[/\\])(?:node_modules|dist|\.zfb-build|\.zfb|\.tarball)(?:[/\\]|$)/.test(
         source,
       ) && !/(?:^|[/\\])pnpm-lock\.yaml$/.test(source),
   });
@@ -114,6 +114,12 @@ describe("sync-create-zudo-sg-template.mjs", () => {
     expect(readFileSync(join(target, "_gitignore"), "utf8")).not.toContain(
       ".tarball",
     );
+    const generatedGitignore = readFileSync(join(target, "_gitignore"), "utf8");
+    expect(generatedGitignore).not.toContain("pnpm-lock.yaml");
+    expect(generatedGitignore).toContain(".zfb/");
+    expect(generatedGitignore).toContain(".zfb-esbuild-entry-*.tsx");
+    expect(generatedGitignore).toContain(".zfb-islands-tsconfig-*.json");
+    expect(generatedGitignore).toContain(".zfb-virtual-*.mjs");
     expect(readFileSync(join(target, "zfb.config.ts"), "utf8")).toContain(
       'base: "/"',
     );
@@ -183,12 +189,28 @@ describe("sync-create-zudo-sg-template.mjs", () => {
       join(sandbox, "fixtures", "engine-host", ".tarball", "engine.tgz"),
       "stale\n",
     );
+    mkdirSync(join(sandbox, "fixtures", "engine-host", ".zfb"), { recursive: true });
+    writeFileSync(
+      join(sandbox, "fixtures", "engine-host", ".zfb", "graph.bin"),
+      "stale\n",
+    );
+    for (const file of [
+      ".zfb-esbuild-entry-x.tsx",
+      ".zfb-islands-tsconfig-x.json",
+      ".zfb-virtual-x.mjs",
+    ]) {
+      writeFileSync(join(sandbox, "fixtures", "engine-host", file), "stale\n");
+    }
     writeFileSync(join(sandbox, "fixtures", "engine-host", "pnpm-lock.yaml"), "lockfile\n");
 
     expect(run(sandbox).status).toBe(0);
     const files = readOutputFiles(outputDir(sandbox));
     expect(files).not.toContain("dist/stale.js");
     expect(files).not.toContain(".tarball/engine.tgz");
+    expect(files).not.toContain(".zfb/graph.bin");
+    expect(files).not.toContain(".zfb-esbuild-entry-x.tsx");
+    expect(files).not.toContain(".zfb-islands-tsconfig-x.json");
+    expect(files).not.toContain(".zfb-virtual-x.mjs");
     expect(files).not.toContain("pnpm-lock.yaml");
   });
 });

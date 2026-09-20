@@ -1,5 +1,9 @@
 node_modules
 dist
 .zfb-build
+.zfb/
+.zfb-esbuild-entry-*.tsx
+.zfb-islands-tsconfig-*.json
+.zfb-virtual-*.mjs
 .tarball
 pnpm-lock.yaml
