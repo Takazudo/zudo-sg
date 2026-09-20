@@ -6,18 +6,14 @@
  * package-root `files` entry and exported as `@takazudo/zudo-sg/styles.css`
  * (a host imports the package specifier, never this relative path).
  *
- * CONSUMER IMPORT ORDER (locked by the ADR, decision 10 "Consumer CSS
- * order"): a host imports, in this order —
- *   1. @takazudo/zudo-doc/features.css
- *   2. @takazudo/zudo-sg/styles.css      (this file)
- *   3. @takazudo/zudo-sg/safelist.css    (generated `@source inline(...)`
- *                                         from `dist/**\/*.js`, covers the
- *                                         Tailwind utility classes this file
- *                                         and the package's `.tsx` sources
- *                                         reference — e.g. `bg-accent`,
- *                                         `px-hsp-md` — for hosts that fall
- *                                         back to explicit @source scanning)
- *   4. the host's own project `@theme {}` block
+ * CONSUMER CSS (ADR decisions 10 and 14): keep this stylesheet unlayered
+ * alongside Tailwind utilities, after zudo-doc's feature styles. Also import
+ * @takazudo/zudo-sg/safelist.css (generated `@source inline(...)` from
+ * `dist/**\/*.js`) for the engine's utility classes, e.g.
+ * `bg-[var(--sg-accent)]`, `px-hsp-md`.
+ * Chrome colors use raw --sg-* defaults and do not depend on the order of
+ * zudo-doc/theme.css or the host's color tokens. The host's OWN @theme color
+ * tokens still need to follow zudo-doc's color reset.
  * The host keeps its OWN `@source` directives for its own component package
  * (e.g. `@source "../../packages/demo-ui/src/**"`) — the engine's safelist only
  * covers the engine package's compiled output, never consumer code.
@@ -32,6 +28,39 @@
  * kept in the same relative order so the cascade is unchanged from before the
  * move.
  * ========================================================================== */
+
+/* #797: plain properties survive the framework color reset; zero specificity
+ * lets an unlayered host :root override win in either import order. */
+:where(:root) {
+  --sg-bg: var(--zd-bg, light-dark(oklch(.965 .004 65), oklch(.185 .005 65)));
+  --sg-fg: var(--zd-fg, light-dark(oklch(.185 .005 65), oklch(.965 .004 65)));
+  --sg-surface: var(--zd-surface, light-dark(oklch(.965 .004 65), oklch(.185 .005 65)));
+  --sg-surface-2: light-dark(
+    color-mix(in oklch, var(--zd-fg, oklch(.185 .005 65)) 10%, var(--zd-surface, oklch(.965 .004 65))),
+    color-mix(in oklch, var(--zd-fg, oklch(.965 .004 65)) 29%, var(--zd-surface, oklch(.185 .005 65)))
+  );
+  /* Ratios retain the root host's .855/.480 and .720/.705 border ladder. */
+  --sg-border: light-dark(
+    color-mix(in oklch, var(--zd-fg, oklch(.185 .005 65)) 14%, var(--zd-bg, oklch(.965 .004 65))),
+    color-mix(in oklch, var(--zd-fg, oklch(.965 .004 65)) 38%, var(--zd-bg, oklch(.185 .005 65)))
+  );
+  --sg-border-strong: light-dark(
+    color-mix(in oklch, var(--zd-fg, oklch(.185 .005 65)) 31.5%, var(--zd-bg, oklch(.965 .004 65))),
+    color-mix(in oklch, var(--zd-fg, oklch(.965 .004 65)) 66.7%, var(--zd-bg, oklch(.185 .005 65)))
+  );
+  --sg-muted: var(--zd-muted, light-dark(oklch(.480 .008 65), oklch(.705 .008 65)));
+  --sg-accent: var(--zd-accent, light-dark(oklch(.470 .120 56), oklch(.700 .158 62)));
+  --sg-on-accent: light-dark(
+    color-mix(in oklch, var(--zd-bg, oklch(.965 .004 65)) 99%, var(--zd-fg, oklch(.185 .005 65))),
+    color-mix(in oklch, var(--zd-bg, oklch(.185 .005 65)) 94%, var(--zd-fg, oklch(.965 .004 65)))
+  );
+  --sg-focus: color-mix(
+    in oklch,
+    var(--zd-accent, light-dark(oklch(.470 .120 56), oklch(.700 .158 62))) 95%,
+    var(--zd-fg, light-dark(oklch(.185 .005 65), oklch(.965 .004 65)))
+  );
+  --sg-success: var(--zd-success, light-dark(oklch(.470 .140 145), oklch(.680 .145 145)));
+}
 
 :root {
   /* Header height — referenced by the native header and the code panel's sticky
@@ -57,8 +86,8 @@
  * render (the element carries no native border utility) — a 1px border-ladder
  * divider + hsp-lg left padding + vsp-md block margin match the reference's
  * right code-area frame (issue #60). Below the side-by-side breakpoint this
- * swaps for a top divider (see the max-width:1279px block). --color-border,
- * not --color-muted (a TEXT token), keeps structural dividers separate from
+ * swaps for a top divider (see the max-width:1279px block). --sg-border,
+ * not --sg-muted (a TEXT token), keeps structural dividers separate from
  * text roles. */
 #sg-code-panel {
   position: relative;
@@ -67,7 +96,7 @@
   align-self: stretch;
   margin-block: var(--spacing-vsp-md);
   padding-left: var(--spacing-hsp-lg);
-  border-left: 1px solid var(--color-border);
+  border-left: 1px solid var(--sg-border);
 }
 
 /* Side-by-side only from 1280px (#541, raised from 1024): between the two the
@@ -102,10 +131,10 @@
   background: transparent;
 }
 #sg-code-panel [data-sg-code-panel-resizer]:hover {
-  background: color-mix(in oklch, var(--color-border-strong) 50%, transparent);
+  background: color-mix(in oklch, var(--sg-border-strong) 50%, transparent);
 }
 #sg-code-panel [data-sg-code-panel-resizer][data-sg-dragging] {
-  background: color-mix(in oklch, var(--color-accent) 30%, transparent);
+  background: color-mix(in oklch, var(--sg-accent) 30%, transparent);
 }
 
 /* Visibility toggle for the code panel. */
@@ -133,7 +162,7 @@
     min-height: 24rem;
     margin-block-start: 0; /* cancel base margin-block so the border-top divider sits flush */
     border-left: 0;
-    border-top: 1px solid var(--color-border);
+    border-top: 1px solid var(--sg-border);
     /* CodePanel keeps its own p-hsp-md breathing room; subtract that inner
      * inset so the visible SOURCE content aligns with <main>'s 24px edge. */
     padding-inline: calc(var(--spacing-hsp-xl) - var(--spacing-hsp-md));
@@ -157,10 +186,10 @@
   align-items: center;
   gap: var(--spacing-hsp-2xs);
   padding: var(--spacing-vsp-3xs) var(--spacing-hsp-xs);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--sg-border);
   border-radius: var(--radius-sm);
-  background: var(--color-surface);
-  color: var(--color-muted);
+  background: var(--sg-surface);
+  color: var(--sg-muted);
   font-size: var(--text-micro);
   line-height: 1;
   cursor: pointer;
@@ -171,17 +200,17 @@
 }
 @media (hover: hover) {
   .sg-copy-btn:hover {
-    color: var(--color-fg);
-    border-color: var(--color-border);
+    color: var(--sg-fg);
+    border-color: var(--sg-border);
   }
 }
 .sg-copy-btn:focus-visible {
-  outline: 2px solid var(--color-focus);
+  outline: 2px solid var(--sg-focus);
   outline-offset: 2px;
 }
 .sg-copy-btn[data-copied] {
-  color: var(--color-success);
-  border-color: var(--color-success);
+  color: var(--sg-success);
+  border-color: var(--sg-success);
 }
 
 /* --- Landing search + tag filter ------------------------------------------ */
@@ -204,25 +233,25 @@
   align-items: center;
   gap: var(--spacing-hsp-sm);
   padding: var(--spacing-vsp-xs) var(--spacing-hsp-md);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--sg-border);
   border-radius: var(--radius-lg);
-  background: var(--color-surface);
+  background: var(--sg-surface);
   transition: border-color 0.15s ease;
 }
 .sg-search-field:focus-within {
-  border-color: var(--color-accent);
+  border-color: var(--sg-accent);
 }
 .sg-search-input {
   flex: 1;
   min-width: 0;
   border: 0;
   background: transparent;
-  color: var(--color-fg);
+  color: var(--sg-fg);
   font-size: var(--text-small);
   outline: none;
 }
 .sg-search-input::placeholder {
-  color: var(--color-muted);
+  color: var(--sg-muted);
 }
 .sg-search-input::-webkit-search-cancel-button {
   appearance: none;
@@ -235,14 +264,14 @@
   height: var(--spacing-icon-md);
   border: 0;
   border-radius: var(--radius-full);
-  background: var(--color-surface-2);
-  color: var(--color-muted);
+  background: var(--sg-surface-2);
+  color: var(--sg-muted);
   font-size: var(--text-small);
   line-height: 1;
   cursor: pointer;
 }
 .sg-search-clear:hover {
-  color: var(--color-fg);
+  color: var(--sg-fg);
 }
 
 /* --- Chips (category filter + token copy-mode) ---------------------------- */
@@ -253,10 +282,10 @@
 }
 .sg-chip {
   padding: var(--spacing-vsp-3xs) var(--spacing-hsp-md);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--sg-border);
   border-radius: var(--radius-full);
-  background: var(--color-surface);
-  color: var(--color-muted);
+  background: var(--sg-surface);
+  color: var(--sg-muted);
   font-size: var(--text-caption);
   cursor: pointer;
   transition:
@@ -266,18 +295,18 @@
 }
 @media (hover: hover) {
   .sg-chip:hover {
-    border-color: var(--color-border);
-    color: var(--color-fg);
+    border-color: var(--sg-border);
+    color: var(--sg-fg);
   }
 }
 .sg-chip:focus-visible {
-  outline: 2px solid var(--color-focus);
+  outline: 2px solid var(--sg-focus);
   outline-offset: 2px;
 }
 .sg-chip[aria-pressed="true"] {
-  background: var(--color-accent);
-  border-color: var(--color-accent);
-  color: var(--color-on-accent);
+  background: var(--sg-accent);
+  border-color: var(--sg-accent);
+  color: var(--sg-on-accent);
 }
 
 /* --- Detail-page workbench toolbar ---------------------------------------- */
@@ -291,10 +320,10 @@
   gap: var(--spacing-hsp-md);
   margin-bottom: var(--spacing-vsp-md);
   padding: var(--spacing-vsp-2xs) var(--spacing-hsp-md);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--sg-border);
   border-radius: var(--radius-lg);
   /* Opaque — the stages scroll underneath it when it is pinned below. */
-  background: var(--color-surface);
+  background: var(--sg-surface);
 }
 
 /* Pinned only in the side-by-side desktop layout, where the strip is one or two
@@ -406,20 +435,20 @@
   flex-direction: column;
   min-width: 0;
   overflow: hidden;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--sg-border);
   border-radius: var(--radius-md);
-  background: var(--color-surface);
+  background: var(--sg-surface);
   transition: border-color 0.15s ease;
 }
 /* Resting hover is neutral (accent budget): the border ladder steps up rather
  * than spending accent on a pointer state. */
 @media (hover: hover) {
   .sg-tile:has(> [data-sg-card]:hover) {
-    border-color: var(--color-border-strong);
+    border-color: var(--sg-border-strong);
   }
 }
 .sg-tile:has(> [data-sg-card]:focus-visible) {
-  border-color: var(--color-border-strong);
+  border-color: var(--sg-border-strong);
 }
 
 /* --- Thumbnail slot ------------------------------------------------------- */
@@ -428,8 +457,8 @@
   position: relative;
   aspect-ratio: 16 / 10;
   overflow: hidden;
-  border-bottom: 1px solid var(--color-border);
-  background: var(--color-bg);
+  border-bottom: 1px solid var(--sg-border);
+  background: var(--sg-bg);
   /* Decorative: the tile's anchor is the only interactive element. `inert` on
    * the element itself removes the rendered component from the tab order and
    * the accessibility tree; this is the pointer half of the same guarantee. */
@@ -474,7 +503,7 @@
   inset-inline: 0;
   bottom: 0;
   height: var(--spacing-vsp-md);
-  background: linear-gradient(to top, var(--color-bg), transparent);
+  background: linear-gradient(to top, var(--sg-bg), transparent);
 }
 
 .sg-thumb-inner {
@@ -504,7 +533,7 @@
   align-items: center;
   justify-content: center;
   padding: var(--spacing-hsp-lg);
-  color: var(--color-muted);
+  color: var(--sg-muted);
   font-size: var(--text-caption);
   text-align: center;
   text-wrap: balance;
@@ -523,11 +552,11 @@
   text-decoration: none;
 }
 .sg-tile-meta:focus-visible {
-  outline: 2px solid var(--color-focus);
+  outline: 2px solid var(--sg-focus);
   outline-offset: calc(-2 * var(--spacing-px));
 }
 .sg-tile-title {
-  color: var(--color-fg);
+  color: var(--sg-fg);
   font-size: var(--text-caption);
   font-weight: 600;
 }
@@ -542,13 +571,13 @@
   overflow: hidden;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
-  color: var(--color-muted);
+  color: var(--sg-muted);
   font-size: var(--text-caption);
   line-height: var(--leading-snug);
 }
 .sg-tile-count {
   margin-top: auto;
-  color: var(--color-muted);
+  color: var(--sg-muted);
   /* True metadata (a count) — the one role --text-micro is for. */
   font-size: var(--text-micro);
 }
@@ -559,9 +588,9 @@
   display: inline-flex;
   gap: var(--spacing-hsp-2xs);
   padding: var(--spacing-hsp-2xs);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--sg-border);
   border-radius: var(--radius-md);
-  background: var(--color-surface);
+  background: var(--sg-surface);
 }
 .sg-seg-btn {
   position: relative;
@@ -569,7 +598,7 @@
   border: 0;
   border-radius: var(--radius-sm);
   background: transparent;
-  color: var(--color-muted);
+  color: var(--sg-muted);
   font-size: var(--text-caption);
   cursor: pointer;
   transition:
@@ -578,11 +607,11 @@
 }
 @media (hover: hover) {
   .sg-seg-btn:hover {
-    color: var(--color-fg);
+    color: var(--sg-fg);
   }
 }
 .sg-seg-btn:focus-visible {
-  outline: 2px solid var(--color-focus);
+  outline: 2px solid var(--sg-focus);
   outline-offset: 2px;
 }
 /* Selected = NEUTRAL raised fill. The house accent budget is one filled-accent
@@ -590,9 +619,9 @@
  * category chip, so selection here is carried by the raised surface plus the
  * accent UNDERLINE marker below — never an accent background. */
 .sg-seg-btn[aria-pressed="true"] {
-  background: var(--color-surface-2);
+  background: var(--sg-surface-2);
   box-shadow: var(--shadow-card);
-  color: var(--color-fg);
+  color: var(--sg-fg);
 }
 .sg-seg-btn[aria-pressed="true"]::after {
   content: "";
@@ -601,7 +630,7 @@
   bottom: var(--spacing-hsp-2xs);
   height: calc(2 * var(--spacing-px));
   border-radius: var(--radius-full);
-  background: var(--color-accent);
+  background: var(--sg-accent);
 }
 
 @media (prefers-reduced-motion: reduce) {
