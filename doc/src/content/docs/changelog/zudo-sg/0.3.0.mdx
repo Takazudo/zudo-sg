@@ -1,0 +1,45 @@
+---
+title: 0.3.0
+description: Binds the engine chrome to its own order-proof --sg-* color namespace.
+sidebar_position: 7
+pagination_next: null
+---
+
+Released: 2026-09-21
+
+The catalog chrome no longer borrows a host's bare `--color-*` tokens. It now
+reads its own `--sg-*` namespace, so the code panel, workbench toolbar, and
+segmented controls render correctly no matter where a host imports its
+component theme relative to `@takazudo/zudo-doc/theme.css`.
+
+### Breaking Changes
+
+- Chrome colors are read from `--sg-*`, not from bare `--color-*` theme keys.
+  A host that recolored the chrome by defining `--color-border`,
+  `--color-surface-2`, `--color-focus`, `--color-border-strong`, or
+  `--color-on-accent` must now override the matching `--sg-*` custom property
+  instead — for example `:root { --sg-border: oklch(0.86 0.006 65); }`. Hosts
+  that never themed the chrome need no change.
+
+### Features
+
+- The engine declares eleven raw-tier chrome roles — `--sg-bg`, `--sg-fg`,
+  `--sg-surface`, `--sg-surface-2`, `--sg-border`, `--sg-border-strong`,
+  `--sg-muted`, `--sg-accent`, `--sg-on-accent`, `--sg-focus`, and
+  `--sg-success` — each derived from zudo-doc's scheme-aware `--zd-*` tier with
+  a literal fallback. They are declared at zero specificity, so a host's plain
+  `:root` override wins in any import order.
+- A new `check:chrome-tokens` lint fails the build when engine chrome code
+  reintroduces a bare color utility, and the package safelist check now asserts
+  that real candidates were extracted rather than passing on an empty set.
+
+### Bug Fixes
+
+- The chrome no longer half-renders when a host imports its own component color
+  tokens before `@takazudo/zudo-doc/theme.css`. That file's `--color-*: initial`
+  wipes every `--color-*` theme key declared before it, which previously erased
+  the borders and surfaces the chrome depended on with no build-time or runtime
+  signal.
+- The code panel divider, workbench toolbar and toggle fills, and the tile-size
+  segmented control keep a visible border and a filled surface in both light and
+  dark schemes.
