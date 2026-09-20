@@ -73,6 +73,12 @@ export default defineConfig({
       use: { baseURL: smokeServer.origin },
     },
     {
+      // #806 — --sg-* chrome token namespace browser acceptance (dark/light).
+      name: "chrome-token-namespace",
+      testMatch: "chrome-token-namespace.spec.ts",
+      use: { baseURL: smokeServer.origin },
+    },
+    {
       name: "demo-smoke",
       // Both demo specs serve from the same built demo dist (DEMO_SMOKE_PORT):
       // the render smoke checks, the SPA-transition regression suite, and the
