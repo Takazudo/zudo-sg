@@ -37,6 +37,22 @@ export const STYLEGUIDE_PACKAGE_PATH = join(
   "styleguide",
   "package.json",
 );
+export const ZFB_PACKAGE_PATH = join(
+  ROOT_DIR,
+  "node_modules",
+  "@takazudo",
+  "zfb",
+  "package.json",
+);
+
+const RELEASE_AGE_DEPENDENCY_NAMES = [
+  "@takazudo/zfb",
+  "@takazudo/zfb-runtime",
+  "@takazudo/zfb-md-wasm",
+  "@takazudo/zudo-doc",
+  "@takazudo/zdtp",
+];
+const EXACT_SEMVER = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-(?:(?:0|[1-9]\d*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*)(?:\.(?:0|[1-9]\d*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*))*))?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/u;
 
 const SKIPPED_NAMES = new Set([
   "node_modules",
@@ -57,29 +73,124 @@ const SKIPPED_FILE_PATTERNS = [
 /**
  * Read a fixture tree and apply the starter-only transforms in memory.
  *
- * @param {{sourceDir?: string, styleguidePackagePath?: string}} [options]
+ * @param {{sourceDir?: string, styleguidePackagePath?: string, zfbPackagePath?: string}} [options]
  * @returns {Promise<TemplateTree>}
  */
 export async function buildTemplate({
   sourceDir = SOURCE_DIR,
   styleguidePackagePath = STYLEGUIDE_PACKAGE_PATH,
+  zfbPackagePath = ZFB_PACKAGE_PATH,
 } = {}) {
   const styleguidePackage = JSON.parse(
     await readFile(styleguidePackagePath, "utf8"),
   );
-  if (
-    typeof styleguidePackage.version !== "string" ||
-    styleguidePackage.version.length === 0
-  ) {
-    throw new Error(
-      `Expected a non-empty version in ${relative(ROOT_DIR, styleguidePackagePath)}`,
-    );
-  }
+  const styleguideVersion = exactVersion(
+    styleguidePackage.version,
+    `version in ${relative(ROOT_DIR, styleguidePackagePath)}`,
+  );
+  const releaseAgeExcludes = await buildReleaseAgeExcludes(
+    sourceDir,
+    styleguideVersion,
+    zfbPackagePath,
+  );
 
   /** @type {TemplateTree} */
   const files = new Map();
-  await collectFiles(files, sourceDir, "", styleguidePackage.version);
+  await collectFiles(files, sourceDir, "", styleguideVersion, releaseAgeExcludes);
   return new Map([...files.entries()].sort(([a], [b]) => a.localeCompare(b)));
+}
+
+/**
+ * Derive the starter's release-age exemptions from the versions it ships.
+ * Keeping this based on package metadata makes the generated workspace follow
+ * dependency updates without requiring a second hand-maintained version list.
+ *
+ * @param {string} sourceDir
+ * @param {string} styleguideVersion
+ * @param {string} zfbPackagePath
+ * @returns {Promise<string[]>}
+ */
+async function buildReleaseAgeExcludes(sourceDir, styleguideVersion, zfbPackagePath) {
+  const fixturePackagePath = join(sourceDir, "package.json");
+  const fixturePackage = JSON.parse(await readFile(fixturePackagePath, "utf8"));
+  const dependencies = fixturePackage.dependencies;
+  if (
+    !dependencies ||
+    typeof dependencies !== "object" ||
+    Array.isArray(dependencies)
+  ) {
+    throw new Error(`${fixturePackagePath} has no dependencies object`);
+  }
+
+  const versions = new Map();
+  for (const name of RELEASE_AGE_DEPENDENCY_NAMES) {
+    versions.set(
+      name,
+      exactVersion(
+        dependencies[name],
+        `${name} dependency in ${fixturePackagePath}`,
+      ),
+    );
+  }
+
+  const zfbPackage = JSON.parse(await readFile(zfbPackagePath, "utf8"));
+  const zfbVersion = versions.get("@takazudo/zfb");
+  const metadataVersion = exactVersion(
+    zfbPackage.version,
+    `version in ${zfbPackagePath}`,
+  );
+  if (metadataVersion !== zfbVersion) {
+    throw new Error(
+      `@takazudo/zfb metadata version ${metadataVersion} does not match the fixture pin ${zfbVersion}`,
+    );
+  }
+
+  const optionalDependencies = zfbPackage.optionalDependencies;
+  if (
+    !optionalDependencies ||
+    typeof optionalDependencies !== "object" ||
+    Array.isArray(optionalDependencies) ||
+    Object.keys(optionalDependencies).length === 0
+  ) {
+    throw new Error(
+      `Expected @takazudo/zfb metadata at ${zfbPackagePath} to include optionalDependencies`,
+    );
+  }
+
+  const entries = [
+    ...RELEASE_AGE_DEPENDENCY_NAMES.map((name) => `${name}@${versions.get(name)}`),
+    `@takazudo/zudo-sg@${styleguideVersion}`,
+  ];
+  for (const [name, version] of Object.entries(optionalDependencies)) {
+    const optionalVersion = exactVersion(
+      version,
+      `${name} optional dependency in ${zfbPackagePath}`,
+    );
+    if (optionalVersion !== zfbVersion) {
+      throw new Error(
+        `${name} optional dependency version ${optionalVersion} does not match the @takazudo/zfb pin ${zfbVersion}`,
+      );
+    }
+    entries.push(`${name}@${optionalVersion}`);
+  }
+
+  return entries.sort(compareStrings);
+}
+
+function compareStrings(a, b) {
+  return a < b ? -1 : a > b ? 1 : 0;
+}
+
+/**
+ * @param {unknown} version
+ * @param {string} description
+ * @returns {string}
+ */
+function exactVersion(version, description) {
+  if (typeof version !== "string" || !EXACT_SEMVER.test(version)) {
+    throw new Error(`Expected an exact semver for ${description}; received ${String(version)}`);
+  }
+  return version;
 }
 
 /**
@@ -87,12 +198,14 @@ export async function buildTemplate({
  * @param {string} directory
  * @param {string} relativeDirectory
  * @param {string} styleguideVersion
+ * @param {string[]} releaseAgeExcludes
  */
 async function collectFiles(
   files,
   directory,
   relativeDirectory,
   styleguideVersion,
+  releaseAgeExcludes,
 ) {
   const entries = await readdir(directory, { withFileTypes: true });
   for (const entry of entries) {
@@ -109,7 +222,13 @@ async function collectFiles(
       : entry.name;
 
     if (entry.isDirectory()) {
-      await collectFiles(files, sourcePath, relativePath, styleguideVersion);
+      await collectFiles(
+        files,
+        sourcePath,
+        relativePath,
+        styleguideVersion,
+        releaseAgeExcludes,
+      );
       continue;
     }
     if (!entry.isFile()) {
@@ -120,7 +239,7 @@ async function collectFiles(
     const source = await readFile(sourcePath);
     files.set(
       targetPath,
-      transformFile(relativePath, source, styleguideVersion),
+      transformFile(relativePath, source, styleguideVersion, releaseAgeExcludes),
     );
   }
 }
@@ -129,9 +248,10 @@ async function collectFiles(
  * @param {string} relativePath
  * @param {Buffer} source
  * @param {string} styleguideVersion
+ * @param {string[]} releaseAgeExcludes
  * @returns {Buffer}
  */
-function transformFile(relativePath, source, styleguideVersion) {
+function transformFile(relativePath, source, styleguideVersion, releaseAgeExcludes) {
   if (relativePath === "package.json") {
     const packageJson = JSON.parse(source.toString("utf8"));
     packageJson.name = "__PROJECT_NAME__";
@@ -175,7 +295,43 @@ function transformFile(relativePath, source, styleguideVersion) {
     return Buffer.from(next);
   }
 
+  if (relativePath === "pnpm-workspace.yaml") {
+    return transformWorkspace(source, releaseAgeExcludes);
+  }
+
   return source;
+}
+
+/**
+ * @param {Buffer} source
+ * @param {string[]} releaseAgeExcludes
+ * @returns {Buffer}
+ */
+function transformWorkspace(source, releaseAgeExcludes) {
+  const text = source.toString("utf8");
+  const lineEnding = text.includes("\r\n") ? "\r\n" : "\n";
+  const lines = text.split(/\r?\n/u);
+  const keyIndex = lines.findIndex((line) => /^minimumReleaseAgeExclude:\s*$/u.test(line));
+  if (keyIndex === -1) {
+    throw new Error(
+      "fixtures/engine-host/pnpm-workspace.yaml is missing minimumReleaseAgeExclude",
+    );
+  }
+
+  let endIndex = keyIndex + 1;
+  while (
+    endIndex < lines.length &&
+    /^[ \t]/u.test(lines[endIndex])
+  ) {
+    endIndex += 1;
+  }
+
+  const replacement = [
+    "minimumReleaseAgeExclude:",
+    ...releaseAgeExcludes.map((entry) => `  - "${entry}"`),
+  ];
+  lines.splice(keyIndex, endIndex - keyIndex, ...replacement);
+  return Buffer.from(lines.join(lineEnding));
 }
 
 /**
@@ -268,15 +424,20 @@ function isMissingPathError(error) {
 }
 
 /**
- * @param {{check?: boolean, sourceDir?: string, targetDir?: string, styleguidePackagePath?: string}} [options]
+ * @param {{check?: boolean, sourceDir?: string, targetDir?: string, styleguidePackagePath?: string, zfbPackagePath?: string}} [options]
  */
 export async function syncTemplate({
   check = false,
   sourceDir = SOURCE_DIR,
   targetDir = TARGET_DIR,
   styleguidePackagePath = STYLEGUIDE_PACKAGE_PATH,
+  zfbPackagePath = ZFB_PACKAGE_PATH,
 } = {}) {
-  const expected = await buildTemplate({ sourceDir, styleguidePackagePath });
+  const expected = await buildTemplate({
+    sourceDir,
+    styleguidePackagePath,
+    zfbPackagePath,
+  });
   const current = await readTemplateTree(targetDir);
   const driftedPaths = diffTemplateTrees(expected, current);
 

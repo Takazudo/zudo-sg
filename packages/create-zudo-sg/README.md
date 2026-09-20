@@ -104,6 +104,15 @@ your component package's styles and source scan there too when previews need
 them; its `@source` paths are relative to that stylesheet. Keep dashboard and
 catalog chrome imports in the host's global entry.
 
+## Release-age exemptions
+
+The generated `pnpm-workspace.yaml` exempts only the exact versions shipped by
+this starter: zfb, its runtime and wasm packages, zudo-doc, zdtp, the engine,
+and zfb's platform binaries. Later dependency upgrades are not covered by
+these entries and follow the consumer's normal `minimumReleaseAge` policy.
+The platform binaries have their own entries because the package resolver
+checks each optional package independently.
+
 ## Host requirements and caveats
 
 The starter targets Preact + zfb hosts. Keep these dependencies in a host
