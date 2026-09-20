@@ -23,7 +23,7 @@ export class TokenManifestDriftError extends Error {
   constructor(manifestOut: string) {
     super(
       `Token manifest drift detected: ${manifestOut} is out of date.\n` +
-        "Run `pnpm gen:token-manifest` and commit the result.",
+        "Run `zudo-sg gen-token-manifest` and commit the result.",
     );
     this.name = "TokenManifestDriftError";
   }
@@ -50,7 +50,7 @@ export function runGenTokenManifest(
   const tokensCss = readFileSync(resolve(projectRoot, tokensCssPath), "utf8");
   const colorsCss = readFileSync(resolve(projectRoot, colorsCssPath), "utf8");
   const manifest = buildUiTokenManifest({ tokensCss, colorsCss });
-  const next = renderUiTokenManifestFile(manifest);
+  const next = renderUiTokenManifestFile(manifest, { tokensCssPath, colorsCssPath });
 
   const tokenCount =
     manifest.paletteColors.length +

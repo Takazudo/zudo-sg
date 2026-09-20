@@ -124,7 +124,7 @@ describe("sync-create-zudo-sg-template.mjs", () => {
       'from "./ui/button/button"',
     );
     expect(readFileSync(join(target, "src/styleguide/sg-registry.ts"), "utf8")).toContain(
-      "export const storyModules: Record<string, StoryModule> = {};",
+      '"./ui/button/button.stories.tsx": button as unknown as StoryModule,',
     );
     const generatedText = readOutputText(target);
     for (const forbidden of [

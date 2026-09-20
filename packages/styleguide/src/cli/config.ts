@@ -35,8 +35,8 @@ export interface ZudoSgConfig {
    * `computeCategoryOrder`).
    */
   categoryOrder: string[];
-  /** npm package name components/stories are imported from in generated usage snippets. */
-  uiPackageName: string;
+  /** npm package name components are imported from in generated usage snippets and catalog labels. */
+  uiPackageName?: string;
   /**
    * Project-root-relative path to the barrel file `new-component` inserts an
    * export into, or `null` for a project with no barrel-file convention.
