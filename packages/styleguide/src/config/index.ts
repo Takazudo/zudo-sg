@@ -103,9 +103,14 @@ function withStyleguideChromeDefaults(plugin: unknown, routes: SgRoutes): unknow
       settings: {
         ...settings,
         headerNav: [
-          { label: "Components", path: routes.componentsIndex, categoryMatch: "components" },
-          { label: "Design Tokens", path: routes.tokens },
+          { label: "Components", path: routes.componentsIndex, categoryMatch: "components", versioned: false },
+          { label: "Design Tokens", path: routes.tokens, versioned: false },
         ],
+        // Engine navigation targets global routes, including from translated docs.
+        defaultLocaleOnlyPrefixes: [...new Set([
+          ...(Array.isArray(settings.defaultLocaleOnlyPrefixes) ? settings.defaultLocaleOnlyPrefixes : []),
+          ...[routes.componentsIndex, routes.tokens].map((path) => `${path.replace(/\/+$/, "")}/`),
+        ])],
         headerRightItems: hasSearch
           ? headerRightItems
           : [...headerRightItems, { type: "component", component: "search" }],

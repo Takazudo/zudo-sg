@@ -2,6 +2,8 @@ import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import { DEFAULT_SETTINGS } from "@takazudo/zudo-doc/config";
+import { makeUrlHelpers } from "@takazudo/zudo-doc/url-helpers";
 import {
   PREVIEW_CSS_PLUGIN_NAME,
   ROUTES_PLUGIN_NAME,
@@ -156,8 +158,8 @@ describe("withZudoSg()", () => {
     const routesPlugin = merged.plugins[0] as (typeof minimalPreset.plugins)[number];
 
     expect(routesPlugin.options.settings.headerNav).toEqual([
-      { label: "Components", path: "/library", categoryMatch: "components" },
-      { label: "Design Tokens", path: "/design-tokens" },
+      { label: "Components", path: "/library", categoryMatch: "components", versioned: false },
+      { label: "Design Tokens", path: "/design-tokens", versioned: false },
     ]);
     expect(routesPlugin.options.settings.headerRightItems).toEqual([
       { type: "component", component: "theme-toggle" },
@@ -165,6 +167,24 @@ describe("withZudoSg()", () => {
     ]);
     expect(minimalPreset.plugins[0]?.options.settings.headerNav).toEqual([]);
     expect(minimalPreset.plugins[0]?.options.settings.headerRightItems).toHaveLength(1);
+  });
+
+  it("keeps default engine links global on localized and versioned pages", () => {
+    const settings = { ...DEFAULT_SETTINGS, base: "/styleguide/", defaultLocaleOnlyPrefixes: ["/host-only/"] };
+    const composed = withZudoSg({
+      plugins: [{ name: "@takazudo/zudo-doc/plugins/routes", options: { settings } }],
+    }, { ...OPTIONS, routes: { componentsIndex: "/library", tokens: "/design-tokens" } });
+    const merged = (composed.plugins[0] as { options: { settings: typeof settings } }).options.settings;
+    const urls = makeUrlHelpers(merged, {
+      defaultLocale: "en", locales: ["en", "ja"], getLocaleLabel: (locale) => locale,
+    });
+    for (const item of merged.headerNav) {
+      expect(urls.navHref(item.path, "ja", "v1", item.versioned)).toBe(`/styleguide${item.path}`);
+      expect(urls.navHref(item.path, "ja", undefined, item.versioned)).toBe(`/styleguide${item.path}`);
+    }
+    expect(urls.navHref("/host-only/page", "ja", undefined)).toBe("/styleguide/host-only/page");
+    expect(urls.navHref("/library-not-engine", "ja", undefined)).toBe("/styleguide/ja/library-not-engine");
+    expect(settings.defaultLocaleOnlyPrefixes).toEqual(["/host-only/"]);
   });
 
   it("preserves host-owned chrome when the host supplies navigation", () => {
