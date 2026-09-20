@@ -414,6 +414,20 @@ async function main() {
     assert(!/has no matching registry entry/u.test(buildLog), "zfb build logged an unregistered island marker");
 
     const catalogIndex = await read(hostDir, "dist/components/index.html");
+    for (const [href, label] of [
+      ["/styleguide/components", "Components"],
+      ["/styleguide/tokens", "Design Tokens"],
+    ]) {
+      assert(
+        (catalogIndex.includes(`href="${href}"`) || catalogIndex.includes(`href=${href}`)) &&
+          catalogIndex.includes(`>${label}<`),
+        `dist/components/index.html lacks the minimal-host ${label} header navigation`,
+      );
+    }
+    assert(
+      catalogIndex.includes("data-open-search"),
+      "dist/components/index.html lacks the minimal-host search control",
+    );
     assert(
       catalogIndex.includes("Button") && catalogIndex.includes("Card") && catalogIndex.includes("Counter"),
       "catalog index is missing a registered story title",

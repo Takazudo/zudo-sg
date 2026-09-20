@@ -280,6 +280,10 @@ AFTER the zudo-doc preset's). The routes plugin fails at `setup()` when no
 `@takazudo/zudo-doc/plugins/routes` descriptor is present in
 `ctx.config.plugins` (its routes import `virtual:zudo-doc-route-context` /
 `virtual:zudo-doc-chrome-bindings`; hosts need `packageOwnedRoutes: true`).
+When that descriptor has an empty `settings.headerNav`, `withZudoSg` supplies
+links to the resolved Components and Design Tokens routes and adds the search
+control. A non-empty host nav is left untouched; `chromeDefaults: false`
+disables this minimal-host default.
 
 ### 10. Cross-sub-task constants (Waves 5–6 branch on these)
 

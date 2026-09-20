@@ -13,11 +13,12 @@ import {
   componentDocsRoots,
 } from "../registry/component-docs.js";
 import { DEFAULT_PREVIEW_CSS_URL } from "../sg-context.js";
-import type { SgRoutes } from "../sg-routes.js";
+import { resolveSgRoutes, type SgRoutes } from "../sg-routes.js";
 
 export const ROUTES_PLUGIN_NAME = "@takazudo/zudo-sg/plugins/routes";
 export const PREVIEW_CSS_PLUGIN_NAME = "@takazudo/zudo-sg/plugins/preview-css";
 export const ZDTP_APPLY_PROXY_PLUGIN_NAME = "@takazudo/zudo-sg/plugins/zdtp-apply-proxy";
+const ZUDO_DOC_ROUTES_PLUGIN_NAME = "@takazudo/zudo-doc/plugins/routes";
 
 /** Collection name of `componentsRoots[0]`; later roots append their index. */
 export const COMPONENT_DOCS_COLLECTION_BASE = COMPONENT_DOCS_COLLECTION;
@@ -47,6 +48,12 @@ export interface ZudoSgComposeOptions {
   previewCssUrl?: string;
   routes?: Partial<SgRoutes>;
   catalog?: { title?: string; intro?: string };
+  /**
+   * Populate an otherwise empty zudo-doc header with links to the engine-owned
+   * Components and Design Tokens routes, plus search. Defaults to true.
+   * Existing host navigation remains authoritative and is never replaced.
+   */
+  chromeDefaults?: boolean;
   /** `tokens.manifestOut` feeds the `/tokens` route's dashboards (routes plugin `tokensManifestModule`). */
   tokens?: { manifestOut?: string; cssFiles?: readonly string[] };
   /**
@@ -67,6 +74,44 @@ export interface ZudoSgFragment {
 
 function definedOnly(record: Record<string, unknown>): Record<string, unknown> {
   return Object.fromEntries(Object.entries(record).filter(([, value]) => value !== undefined));
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function withStyleguideChromeDefaults(plugin: unknown, routes: SgRoutes): unknown {
+  if (!isRecord(plugin) || plugin.name !== ZUDO_DOC_ROUTES_PLUGIN_NAME) return plugin;
+
+  const options = isRecord(plugin.options) ? plugin.options : {};
+  const settings = isRecord(options.settings) ? options.settings : {};
+  const headerNav = Array.isArray(settings.headerNav) ? settings.headerNav : [];
+
+  // A non-empty host nav is deliberate project configuration. Only promote
+  // engine routes when zudo-doc supplied its minimal empty navigation.
+  if (headerNav.length > 0) return plugin;
+
+  const headerRightItems = Array.isArray(settings.headerRightItems) ? settings.headerRightItems : [];
+  const hasSearch = headerRightItems.some(
+    (item) => isRecord(item) && item.type === "component" && item.component === "search",
+  );
+
+  return {
+    ...plugin,
+    options: {
+      ...options,
+      settings: {
+        ...settings,
+        headerNav: [
+          { label: "Components", path: routes.componentsIndex, categoryMatch: "components" },
+          { label: "Design Tokens", path: routes.tokens },
+        ],
+        headerRightItems: hasSearch
+          ? headerRightItems
+          : [...headerRightItems, { type: "component", component: "search" }],
+      },
+    },
+  };
 }
 
 /** Returns the engine's zfb plugin descriptors and content collections. */
@@ -127,9 +172,14 @@ export function withZudoSg<
   collections: Array<NonNullable<P["collections"]>[number] | ZudoSgCollection>;
 } {
   const sg = zudoSg(options);
+  const presetPlugins = [...(presetFragment.plugins ?? [])];
+  const pluginsWithChrome =
+    options.chromeDefaults === false
+      ? presetPlugins
+      : presetPlugins.map((plugin) => withStyleguideChromeDefaults(plugin, resolveSgRoutes(options.routes)));
   return {
     ...presetFragment,
-    plugins: [...(presetFragment.plugins ?? []), ...sg.plugins],
+    plugins: [...pluginsWithChrome, ...sg.plugins],
     collections: [...(presetFragment.collections ?? []), ...sg.collections],
   };
 }

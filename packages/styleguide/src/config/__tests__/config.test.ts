@@ -131,6 +131,67 @@ describe("withZudoSg()", () => {
     // The preset fragment itself is not mutated.
     expect(preset.plugins).toHaveLength(2);
   });
+
+  it("gives a minimal host navigation for the engine-owned routes and search", () => {
+    const minimalPreset = {
+      plugins: [
+        {
+          name: "@takazudo/zudo-doc/plugins/routes",
+          options: {
+            settings: {
+              siteName: "Minimal host",
+              headerNav: [],
+              headerRightItems: [{ type: "component", component: "theme-toggle" }],
+            },
+          },
+        },
+      ],
+      collections: [],
+    };
+
+    const merged = withZudoSg(minimalPreset, {
+      ...OPTIONS,
+      routes: { componentsIndex: "/library", tokens: "/design-tokens" },
+    });
+    const routesPlugin = merged.plugins[0] as (typeof minimalPreset.plugins)[number];
+
+    expect(routesPlugin.options.settings.headerNav).toEqual([
+      { label: "Components", path: "/library", categoryMatch: "components" },
+      { label: "Design Tokens", path: "/design-tokens" },
+    ]);
+    expect(routesPlugin.options.settings.headerRightItems).toEqual([
+      { type: "component", component: "theme-toggle" },
+      { type: "component", component: "search" },
+    ]);
+    expect(minimalPreset.plugins[0]?.options.settings.headerNav).toEqual([]);
+    expect(minimalPreset.plugins[0]?.options.settings.headerRightItems).toHaveLength(1);
+  });
+
+  it("preserves host-owned chrome when the host supplies navigation", () => {
+    const hostNav = [{ label: "Architecture", path: "/architecture", categoryMatch: "architecture" }];
+    const hostRightItems = [{ type: "component", component: "theme-toggle" }];
+    const configuredPreset = {
+      plugins: [
+        {
+          name: "@takazudo/zudo-doc/plugins/routes",
+          options: { settings: { headerNav: hostNav, headerRightItems: hostRightItems } },
+        },
+      ],
+      collections: [],
+    };
+
+    const merged = withZudoSg(configuredPreset, OPTIONS);
+    const routesPlugin = merged.plugins[0] as (typeof configuredPreset.plugins)[number];
+
+    expect(routesPlugin).toBe(configuredPreset.plugins[0]);
+    expect(routesPlugin.options.settings.headerNav).toBe(hostNav);
+    expect(routesPlugin.options.settings.headerRightItems).toBe(hostRightItems);
+  });
+
+  it("allows a minimal host to opt out of styleguide chrome defaults", () => {
+    const merged = withZudoSg(preset, { ...OPTIONS, chromeDefaults: false });
+    expect(merged.plugins[0]).toBe(preset.plugins[0]);
+  });
 });
 
 describe("config module purity", () => {
