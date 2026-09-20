@@ -57,7 +57,7 @@ export default function ComponentsSlugRoute(props: SlugProps & { params: { slug:
   if (!entry) {
     return (
       <StyleguideLayout {...chrome} activeSlug={slug} codePanel={null}>
-        <p class="text-muted">Story not found: {slug}</p>
+        <p class="text-[color:var(--sg-muted)]">Story not found: {slug}</p>
       </StyleguideLayout>
     );
   }
@@ -111,19 +111,19 @@ export default function ComponentsSlugRoute(props: SlugProps & { params: { slug:
     <StyleguideLayout {...chrome} activeSlug={slug} codePanel={codePanel} contentWide>
       <div>
         <header class="mb-vsp-lg max-w-[56rem]">
-          <h1 class="text-2xl font-bold text-fg">{entry.meta.title}</h1>
-          <p class="mt-vsp-xs text-muted">{entry.meta.description}</p>
-          <span class="mt-vsp-xs inline-block rounded-full border border-border px-hsp-sm py-vsp-3xs text-caption leading-normal text-muted">
+          <h1 class="text-2xl font-bold text-[color:var(--sg-fg)]">{entry.meta.title}</h1>
+          <p class="mt-vsp-xs text-[color:var(--sg-muted)]">{entry.meta.description}</p>
+          <span class="mt-vsp-xs inline-block rounded-full border border-[color:var(--sg-border)] px-hsp-sm py-vsp-3xs text-caption leading-normal text-[color:var(--sg-muted)]">
             {entry.meta.category}
           </span>
         </header>
 
         {entry.meta.previewRoute && (
-          <section class="mb-vsp-xl max-w-[56rem] rounded-md border border-border bg-surface-2 p-hsp-md">
-            <h2 class="mb-vsp-2xs text-small font-semibold uppercase tracking-wide text-muted">Live demo</h2>
+          <section class="mb-vsp-xl max-w-[56rem] rounded-md border border-[color:var(--sg-border)] bg-[var(--sg-surface-2)] p-hsp-md">
+            <h2 class="mb-vsp-2xs text-small font-semibold uppercase tracking-wide text-[color:var(--sg-muted)]">Live demo</h2>
             <a
               href={withBase(entry.meta.previewRoute)}
-              class="text-sm font-medium text-accent underline underline-offset-2"
+              class="text-sm font-medium text-[color:var(--sg-accent)] underline underline-offset-2"
             >
               Open live demo →
             </a>
@@ -133,7 +133,7 @@ export default function ComponentsSlugRoute(props: SlugProps & { params: { slug:
         {workbench}
 
         {doc && (
-          <section class="mt-vsp-xl border-t border-border pt-vsp-xl">
+          <section class="mt-vsp-xl border-t border-[color:var(--sg-border)] pt-vsp-xl">
             <div class="zd-content max-w-[56rem]">
               <doc.Content components={componentDocMdxComponents} />
             </div>

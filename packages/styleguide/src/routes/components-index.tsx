@@ -43,7 +43,7 @@ export default function ComponentsIndexRoute(): JSX.Element {
     >
       <header class="mb-vsp-lg max-w-[56rem]">
         <h1 class="text-heading font-bold mb-vsp-2xs">{ctx.catalog.title}</h1>
-        <p class="text-muted text-small" data-sg-catalog-intro>
+        <p class="text-[color:var(--sg-muted)] text-small" data-sg-catalog-intro>
           {ctx.catalog.intro ?? (
             <>
               {total} components{ctx.uiPackageName ? <> from <code>{ctx.uiPackageName}</code></> : null},
@@ -86,7 +86,7 @@ export default function ComponentsIndexRoute(): JSX.Element {
             </div>
           </section>
         ))}
-        <p class="text-muted text-small" data-sg-empty hidden>
+        <p class="text-[color:var(--sg-muted)] text-small" data-sg-empty hidden>
           No components match your search.
         </p>
       </div>

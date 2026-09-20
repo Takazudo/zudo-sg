@@ -289,7 +289,7 @@ test.describe("tile-size control", () => {
     const background = await selected.evaluate(
       (el) => getComputedStyle(el).backgroundColor,
     );
-    const accent = await resolveColor(page, "--color-accent");
+    const accent = await resolveColor(page, "--sg-accent");
     expect(background).not.toBe(accent);
     expect(background).not.toBe("rgba(0, 0, 0, 0)");
 
