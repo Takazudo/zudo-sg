@@ -20,6 +20,8 @@ The command defaults to no dependency installation and prints the five
 commands after it creates the project. Pass `--install` when the initializer
 should run `pnpm install` for you. The generated `package.json` pins the
 package manager to pnpm, and this release has no npm, yarn, or `--pm` mode.
+Commit the generated `pnpm-lock.yaml` so the host's dependency resolution is
+reproducible.
 
 ## Usage
 
@@ -54,13 +56,14 @@ contains:
   shim for the host page.
 - Three small Preact examples under `ui/`: Button, Card, and Counter, with
   co-located stories and a Button MDX document.
-- `src/styleguide/sg-registry.ts`, an empty generated seed. Run
-  `pnpm gen-registry` after changing stories.
+- `src/styleguide/sg-registry.ts`, generated from the three example stories.
+  Run `pnpm gen-registry` after changing stories; the CLI also bootstraps a
+  missing or whitespace-only output.
 - `src/content/docs/getting-started.mdx`, a seed page for the generated host's
   documentation route.
-- `src/styles/preview-entry.css` and `src/styles/ui-tokens.css`, which provide
-  the standalone preview stylesheet and the token source used by
-  `pnpm gen-token-manifest`.
+- `src/styles/global.css`, the automatically discovered host stylesheet, plus
+  `src/styles/preview-entry.css` for standalone previews and
+  `src/styles/ui-tokens.css`, the token source used by `pnpm gen-token-manifest`.
 - `tsconfig.json` and `pnpm-workspace.yaml`, a workspace policy suitable for a
   fresh host.
 
@@ -68,6 +71,48 @@ The initializer replaces the package-name placeholder in the template and
 renames the package-safe `_gitignore` to `.gitignore`. The token manifest is
 generated after installation; it is intentionally not checked into the
 template seed.
+
+## Styles
+
+zfb discovers `src/styles/global.css` automatically; no page import or config
+entry is needed. Keep its imports in this order:
+
+1. Declare `@layer zd-preflight, zd-flow`, then import
+   `tailwindcss/preflight` in `layer(zd-preflight)` and unlayered
+   `tailwindcss/utilities`.
+2. Import `@takazudo/zudo-doc/theme.css`, then `./ui-tokens.css` and any
+   component package stylesheet. The theme supplies the framework tokens and
+   resets the color-token namespace; preflight is the only element reset.
+3. Import zudo-doc's `safelist.css`, `content.css`, `features.css`, and
+   `page-loading.css`, in that order.
+4. Import `@takazudo/zdtp/dashboard/styles.css` after content styles so the
+   `/tokens` dashboard wins ties with prose rules, then
+   `@takazudo/zudo-sg/styles.css` and `@takazudo/zudo-sg/safelist.css`.
+5. Keep the `@source` globs for `pages/`, `ui/`, and `src/content/`; add your
+   component package's source glob alongside them. zfb resolves these
+   global-entry paths from the project root.
+
+Keep the engine styles and Tailwind utilities unlayered: utility margins must
+outrank `zd-flow`, while engine chrome overrides must compete with utilities.
+Do not add the full `tailwindcss` import or a second preflight. If an existing
+host defines consumer-only color tokens before zudo-doc's theme, replace
+`theme.css` with `theme-no-reset.css` to preserve them. That variant only
+omits the color-token reset; tokens defined by both stylesheets still follow
+source order.
+
+The preview document uses `src/styles/preview-entry.css` independently. Add
+your component package's styles and source scan there too when previews need
+them; its `@source` paths are relative to that stylesheet. Keep dashboard and
+catalog chrome imports in the host's global entry.
+
+## Release-age exemptions
+
+The generated `pnpm-workspace.yaml` exempts only the exact versions shipped by
+this starter: zfb, its runtime and wasm packages, zudo-doc, zdtp, the engine,
+and zfb's platform binaries. Later dependency upgrades are not covered by
+these entries and follow the consumer's normal `minimumReleaseAge` policy.
+The platform binaries have their own entries because the package resolver
+checks each optional package independently.
 
 ## Host requirements and caveats
 

@@ -23,6 +23,13 @@ The catalog does not discover stories with `import.meta.glob` at runtime. zfb do
 - `src/styleguide/sg-registry.ts` for the root styleguide catalog.
 - `packages/demo-ui/src/stories/__tests__/story-modules.ts` for story contract and drift tests.
 
+The first write does not require a hand-created seed: a missing or
+whitespace-only `registryOut` is bootstrapped as the complete generated file,
+including its parent directories. A non-empty file without the generated
+markers is rejected so hand-authored content is never overwritten. The
+`--check` form reports a missing or empty registry as drift without creating
+or modifying anything.
+
 After adding, renaming, or deleting a story file, run:
 
 ```sh

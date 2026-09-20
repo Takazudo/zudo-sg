@@ -1,11 +1,11 @@
 /**
- * Design-token manifest for @zudo-sg/demo-ui target-website tokens.
+ * Design-token manifest for configured UI tokens.
  *
- * GENERATED — do not hand-edit. Run `pnpm gen:token-manifest` after changing
- * packages/demo-ui/styles/tokens.css or packages/demo-ui/styles/colors.css, then commit
- * the regenerated output. `pnpm check:token-manifest` fails on drift.
+ * GENERATED — do not hand-edit. Run `zudo-sg gen-token-manifest` after changing
+ * either configured source file, then commit the regenerated output.
+ * `zudo-sg gen-token-manifest --check` fails on drift.
  *
- * Source of truth: packages/demo-ui/styles/tokens.css and packages/demo-ui/styles/colors.css,
+ * Source of truth: `packages/demo-ui/styles/tokens.css` and `packages/demo-ui/styles/colors.css`,
  * parsed by the `zudo-sg gen-token-manifest` CLI command
  * (@takazudo/zudo-sg's src/cli/token-manifest/ui-token-manifest.ts). Only
  * `default` values are derived from the CSS; `group`/`step`/`unit`/
@@ -41,7 +41,7 @@ const FONT_WEIGHT_OPTIONS = [
 export interface UiPaletteColor {
   /** Palette key without the `--palette-` prefix, e.g. "neutral-2". */
   name: string;
-  /** Raw oklch value, from colors.css. */
+  /** Raw oklch value, from `packages/demo-ui/styles/colors.css`. */
   value: string;
 }
 

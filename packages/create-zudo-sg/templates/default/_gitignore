@@ -1,4 +1,7 @@
 node_modules
 dist
 .zfb-build
-pnpm-lock.yaml
+.zfb/
+.zfb-esbuild-entry-*.tsx
+.zfb-islands-tsconfig-*.json
+.zfb-virtual-*.mjs

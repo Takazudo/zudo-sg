@@ -1,0 +1,28 @@
+/* zfb discovers this entry automatically. Flow spacing beats preflight;
+ * unlayered utilities can still override the zd-flow layer. */
+@layer zd-preflight, zd-flow;
+/* The only element reset is preflight; theme.css below resets color tokens only. */
+@import "tailwindcss/preflight" layer(zd-preflight);
+@import "tailwindcss/utilities";
+
+/* Framework defaults first, then the starter's own token values. */
+@import "@takazudo/zudo-doc/theme.css";
+@import "./ui-tokens.css";
+/* Add your component package's stylesheet here, after the theme's color reset. */
+
+@import "@takazudo/zudo-doc/safelist.css";
+@import "@takazudo/zudo-doc/content.css";
+@import "@takazudo/zudo-doc/features.css";
+@import "@takazudo/zudo-doc/page-loading.css";
+
+/* Dashboard rules follow content CSS so they win ties with prose styling. */
+@import "@takazudo/zdtp/dashboard/styles.css";
+/* Keep engine styles unlayered alongside utilities so chrome overrides work. */
+@import "@takazudo/zudo-sg/styles.css";
+@import "@takazudo/zudo-sg/safelist.css";
+
+/* zfb resolves these global-entry globs from the project root.
+ * Add your component package's @source here; package chrome uses the safelists. */
+@source "pages/**/*.{tsx,ts,jsx,js}";
+@source "ui/**/*.{tsx,ts,jsx,js,mdx,md}";
+@source "src/content/**/*.{mdx,md}";

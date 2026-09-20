@@ -203,10 +203,43 @@ describe("renderUiTokenManifestFile", () => {
     const committed = readFileSync(resolve(REPO_ROOT, "src/config/ui-design-tokens-manifest.ts"), "utf8");
 
     const manifest = buildUiTokenManifest({ tokensCss, colorsCss });
-    const rendered = renderUiTokenManifestFile(manifest);
 
-    // Same assertion `pnpm check:token-manifest` makes — kept here too so
+    // Same assertion `zudo-sg gen-token-manifest --check` makes — kept here too so
     // `pnpm test:unit` (which CI runs before build) catches drift as well.
-    expect(rendered).toBe(committed);
+    expect(
+      renderUiTokenManifestFile(manifest, {
+        tokensCssPath: "packages/demo-ui/styles/tokens.css",
+        colorsCssPath: "packages/demo-ui/styles/colors.css",
+      }),
+    ).toBe(committed);
+  });
+
+  it("uses a single normalized path when both configured inputs are the same file", () => {
+    const tokensCss = readFileSync(resolve(REPO_ROOT, "packages/demo-ui/styles/tokens.css"), "utf8");
+    const colorsCss = readFileSync(resolve(REPO_ROOT, "packages/demo-ui/styles/colors.css"), "utf8");
+    const manifest = buildUiTokenManifest({ tokensCss, colorsCss });
+    const rendered = renderUiTokenManifestFile(manifest, {
+      tokensCssPath: "./src/styles/ui-tokens.css",
+      colorsCssPath: "./src/styles/ui-tokens.css",
+    });
+
+    expect(rendered).toContain("Source of truth: `src/styles/ui-tokens.css`");
+    expect(rendered).not.toContain("src/styles/ui-tokens.css` and `src/styles/ui-tokens.css");
+    expect(rendered).not.toMatch(/demo-ui|pnpm gen:|pnpm check:/);
+  });
+
+  it("uses both normalized configured paths for separate foreign inputs", () => {
+    const tokensCss = readFileSync(resolve(REPO_ROOT, "packages/demo-ui/styles/tokens.css"), "utf8");
+    const colorsCss = readFileSync(resolve(REPO_ROOT, "packages/demo-ui/styles/colors.css"), "utf8");
+    const manifest = buildUiTokenManifest({ tokensCss, colorsCss });
+    const rendered = renderUiTokenManifestFile(manifest, {
+      tokensCssPath: "./node_modules/@example/ui/styles/tokens.css",
+      colorsCssPath: "./node_modules/@example/ui/styles/colors.css",
+    });
+
+    expect(rendered).toContain("node_modules/@example/ui/styles/tokens.css");
+    expect(rendered).toContain("node_modules/@example/ui/styles/colors.css");
+    expect(rendered).not.toContain("./node_modules/@example/ui/styles/");
+    expect(rendered).not.toMatch(/demo-ui|pnpm gen:|pnpm check:/);
   });
 });

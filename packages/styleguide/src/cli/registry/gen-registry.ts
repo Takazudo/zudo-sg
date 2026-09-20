@@ -5,7 +5,7 @@
 // contract-test fixture the same way the host's former
 // `scripts/gen-sg-registry.mjs` did.
 
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, relative, resolve } from "node:path";
 import type { ZudoSgComponentsRoot, ZudoSgConfig } from "../config.js";
 import {
@@ -63,12 +63,19 @@ export function runGenRegistry(
   assertUniqueImportNames(allEntries);
 
   const registryPath = resolve(projectRoot, config.registryOut);
-  const registrySrc = readFileSync(registryPath, "utf8");
-  const nextRegistry = replaceBlock(
-    registrySrc,
-    buildRegistryBlock(allEntries, config.uiPackageName),
-    registryPath,
-  );
+  let registrySrc = "";
+  let bootstrapRegistry = false;
+  try {
+    registrySrc = readFileSync(registryPath, "utf8");
+    bootstrapRegistry = registrySrc.trim().length === 0;
+  } catch (error) {
+    if (!isErrorCode(error, "ENOENT")) throw error;
+    bootstrapRegistry = true;
+  }
+  const registryBlock = buildRegistryBlock(allEntries);
+  const nextRegistry = bootstrapRegistry
+    ? registryBlock
+    : replaceBlock(registrySrc, registryBlock, registryPath);
 
   const targets: Array<{ path: string; before: string; after: string }> = [
     { path: registryPath, before: registrySrc, after: nextRegistry },
@@ -97,13 +104,22 @@ export function runGenRegistry(
     return { entryCount: allEntries.length, changed: [] };
   }
 
-  for (const t of changed) writeFileSync(t.path, t.after);
+  for (const t of changed) {
+    if (t.path === registryPath && bootstrapRegistry) {
+      mkdirSync(dirname(t.path), { recursive: true });
+    }
+    writeFileSync(t.path, t.after);
+  }
   return { entryCount: allEntries.length, changed: changed.map((t) => t.path) };
+}
+
+function isErrorCode(error: unknown, code: string): boolean {
+  return typeof error === "object" && error !== null && "code" in error && error.code === code;
 }
 
 export class SgRegistryDriftError extends Error {
   constructor(public readonly driftedPaths: string[]) {
-    super(`sg-registry codegen drift detected:\n${driftedPaths.map((p) => `  - ${p}`).join("\n")}\nRun \`pnpm gen:sg-registry\` and commit the result.`);
+    super(`sg-registry codegen drift detected:\n${driftedPaths.map((p) => `  - ${p}`).join("\n")}\nRun \`zudo-sg gen-registry\` and commit the result.`);
     this.name = "SgRegistryDriftError";
   }
 }

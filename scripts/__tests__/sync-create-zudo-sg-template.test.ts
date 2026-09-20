@@ -13,6 +13,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
+import { buildTemplate } from "../sync-create-zudo-sg-template.mjs";
 
 const TEST_DIR = dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = resolve(TEST_DIR, "../..");
@@ -22,6 +23,13 @@ const STYLEGUIDE_PACKAGE_PATH = join(
   PROJECT_ROOT,
   "packages",
   "styleguide",
+  "package.json",
+);
+const ZFB_PACKAGE_PATH = join(
+  PROJECT_ROOT,
+  "node_modules",
+  "@takazudo",
+  "zfb",
   "package.json",
 );
 const temporaryDirectories: string[] = [];
@@ -46,13 +54,20 @@ function makeSandbox(): string {
   cpSync(FIXTURE_PATH, join(sandbox, "fixtures", "engine-host"), {
     recursive: true,
     filter: (source) =>
-      !/(?:^|[/\\])(?:node_modules|dist|\.zfb-build|\.tarball)(?:[/\\]|$)/.test(
+      !/(?:^|[/\\])(?:node_modules|dist|\.zfb-build|\.zfb|\.tarball)(?:[/\\]|$)/.test(
         source,
       ) && !/(?:^|[/\\])pnpm-lock\.yaml$/.test(source),
   });
   cpSync(
     STYLEGUIDE_PACKAGE_PATH,
     join(sandbox, "packages", "styleguide", "package.json"),
+  );
+  mkdirSync(join(sandbox, "node_modules", "@takazudo", "zfb"), {
+    recursive: true,
+  });
+  cpSync(
+    ZFB_PACKAGE_PATH,
+    join(sandbox, "node_modules", "@takazudo", "zfb", "package.json"),
   );
   return sandbox;
 }
@@ -91,6 +106,13 @@ function readOutputText(directory: string): string {
     .join("\n");
 }
 
+function readReleaseAgeExcludes(directory: string): string[] {
+  return readFileSync(join(directory, "pnpm-workspace.yaml"), "utf8")
+    .split(/\r?\n/u)
+    .filter((line) => /^\s+-\s+"[^"\n]+"$/u.test(line))
+    .map((line) => line.replace(/^\s+-\s+"|"$/gu, ""));
+}
+
 describe("sync-create-zudo-sg-template.mjs", () => {
   it("generates a clean starter tree and is idempotent", () => {
     const sandbox = makeSandbox();
@@ -114,9 +136,28 @@ describe("sync-create-zudo-sg-template.mjs", () => {
     expect(readFileSync(join(target, "_gitignore"), "utf8")).not.toContain(
       ".tarball",
     );
+    const generatedGitignore = readFileSync(join(target, "_gitignore"), "utf8");
+    expect(generatedGitignore).not.toContain("pnpm-lock.yaml");
+    expect(generatedGitignore).toContain(".zfb/");
+    expect(generatedGitignore).toContain(".zfb-esbuild-entry-*.tsx");
+    expect(generatedGitignore).toContain(".zfb-islands-tsconfig-*.json");
+    expect(generatedGitignore).toContain(".zfb-virtual-*.mjs");
     expect(readFileSync(join(target, "zfb.config.ts"), "utf8")).toContain(
       'base: "/"',
     );
+    expect(readReleaseAgeExcludes(target)).toEqual([
+      "@takazudo/zdtp@0.8.0",
+      "@takazudo/zfb-darwin-arm64@2.19.0",
+      "@takazudo/zfb-darwin-x64@2.19.0",
+      "@takazudo/zfb-linux-arm64-gnu@2.19.0",
+      "@takazudo/zfb-linux-x64-gnu@2.19.0",
+      "@takazudo/zfb-md-wasm@2.19.0",
+      "@takazudo/zfb-runtime@2.19.0",
+      "@takazudo/zfb-win32-x64-msvc@2.19.0",
+      "@takazudo/zfb@2.19.0",
+      "@takazudo/zudo-doc@5.26.0",
+      "@takazudo/zudo-sg@0.2.0",
+    ]);
     expect(readFileSync(join(target, "pages/index.tsx"), "utf8")).toContain(
       'href="/components"',
     );
@@ -124,7 +165,7 @@ describe("sync-create-zudo-sg-template.mjs", () => {
       'from "./ui/button/button"',
     );
     expect(readFileSync(join(target, "src/styleguide/sg-registry.ts"), "utf8")).toContain(
-      "export const storyModules: Record<string, StoryModule> = {};",
+      '"./ui/button/button.stories.tsx": button as unknown as StoryModule,',
     );
     const generatedText = readOutputText(target);
     for (const forbidden of [
@@ -183,12 +224,119 @@ describe("sync-create-zudo-sg-template.mjs", () => {
       join(sandbox, "fixtures", "engine-host", ".tarball", "engine.tgz"),
       "stale\n",
     );
+    mkdirSync(join(sandbox, "fixtures", "engine-host", ".zfb"), { recursive: true });
+    writeFileSync(
+      join(sandbox, "fixtures", "engine-host", ".zfb", "graph.bin"),
+      "stale\n",
+    );
+    for (const file of [
+      ".zfb-esbuild-entry-x.tsx",
+      ".zfb-islands-tsconfig-x.json",
+      ".zfb-virtual-x.mjs",
+    ]) {
+      writeFileSync(join(sandbox, "fixtures", "engine-host", file), "stale\n");
+    }
     writeFileSync(join(sandbox, "fixtures", "engine-host", "pnpm-lock.yaml"), "lockfile\n");
 
     expect(run(sandbox).status).toBe(0);
     const files = readOutputFiles(outputDir(sandbox));
     expect(files).not.toContain("dist/stale.js");
     expect(files).not.toContain(".tarball/engine.tgz");
+    expect(files).not.toContain(".zfb/graph.bin");
+    expect(files).not.toContain(".zfb-esbuild-entry-x.tsx");
+    expect(files).not.toContain(".zfb-islands-tsconfig-x.json");
+    expect(files).not.toContain(".zfb-virtual-x.mjs");
     expect(files).not.toContain("pnpm-lock.yaml");
+  });
+
+  it("fails when a pinned release-age version is not exact", () => {
+    const sandbox = makeSandbox();
+    const fixturePackagePath = join(
+      sandbox,
+      "fixtures",
+      "engine-host",
+      "package.json",
+    );
+    const fixturePackage = JSON.parse(readFileSync(fixturePackagePath, "utf8"));
+    fixturePackage.dependencies["@takazudo/zfb"] = "^2.19.0";
+    writeFileSync(fixturePackagePath, `${JSON.stringify(fixturePackage, null, 2)}\n`);
+
+    const result = run(sandbox);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("Expected an exact semver");
+  });
+
+  it("accepts an injected zfb metadata path without a sandbox node_modules", async () => {
+    const sandbox = makeSandbox();
+    const injectedMetadataPath = join(sandbox, "metadata", "zfb-package.json");
+    mkdirSync(join(sandbox, "metadata"), { recursive: true });
+    cpSync(
+      join(sandbox, "node_modules", "@takazudo", "zfb", "package.json"),
+      injectedMetadataPath,
+    );
+    rmSync(join(sandbox, "node_modules"), { recursive: true, force: true });
+
+    const files = await buildTemplate({
+      sourceDir: join(sandbox, "fixtures", "engine-host"),
+      styleguidePackagePath: join(
+        sandbox,
+        "packages",
+        "styleguide",
+        "package.json",
+      ),
+      zfbPackagePath: injectedMetadataPath,
+    });
+    expect(files.get("pnpm-workspace.yaml")?.toString()).toContain(
+      "@takazudo/zfb@2.19.0",
+    );
+  });
+
+  it("fails when zfb metadata is missing", () => {
+    const sandbox = makeSandbox();
+    rmSync(join(sandbox, "node_modules", "@takazudo", "zfb", "package.json"));
+
+    const result = run(sandbox);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("ENOENT");
+  });
+
+  it("fails when zfb metadata does not match the fixture pin", () => {
+    const sandbox = makeSandbox();
+    const zfbPackagePath = join(
+      sandbox,
+      "node_modules",
+      "@takazudo",
+      "zfb",
+      "package.json",
+    );
+    const zfbPackage = JSON.parse(readFileSync(zfbPackagePath, "utf8"));
+    zfbPackage.version = "2.18.0";
+    writeFileSync(zfbPackagePath, `${JSON.stringify(zfbPackage, null, 2)}\n`);
+
+    const result = run(sandbox);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain(
+      "metadata version 2.18.0 does not match the fixture pin",
+    );
+  });
+
+  it("fails when an optional zfb package is not pinned to zfb", () => {
+    const sandbox = makeSandbox();
+    const zfbPackagePath = join(
+      sandbox,
+      "node_modules",
+      "@takazudo",
+      "zfb",
+      "package.json",
+    );
+    const zfbPackage = JSON.parse(readFileSync(zfbPackagePath, "utf8"));
+    zfbPackage.optionalDependencies["@takazudo/zfb-linux-x64-gnu"] = "2.18.0";
+    writeFileSync(zfbPackagePath, `${JSON.stringify(zfbPackage, null, 2)}\n`);
+
+    const result = run(sandbox);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain(
+      "optional dependency version 2.18.0 does not match",
+    );
   });
 });
