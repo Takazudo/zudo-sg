@@ -9,9 +9,11 @@
 // generates the fixture's registry/token manifest, type-checks the consumer,
 // builds both the empty and configured /tokens modes, and asserts the
 // four injected routes + the standalone preview stylesheet exist under the
-// fixture's non-root `base` ("/styleguide/"). Then strips the islands seed
-// (`pages/lib/_zudo-sg-islands.ts` + its import) from the temp copy and boots
-// `zfb dev` once, asserting `ConfiguredPreviewApp` (reached through the
+// fixture's non-root `base` ("/styleguide/") and the production host CSS
+// contains the catalog and responsive sidebar selectors. Then strips the
+// islands seed (`pages/lib/_zudo-sg-islands.ts` + its import) and engine CSS
+// safelist from the temp copy and boots `zfb dev` once, asserting
+// `ConfiguredPreviewApp` (reached through the
 // injected route entrypoint) AND the fixture's `Counter` island (reached only
 // through `virtual:zudo-sg-registry`) both register in
 // `/styleguide/assets/islands.js`, and that the dev CSS content globs seeded
@@ -310,6 +312,26 @@ async function assertTokensRoute(hostDir, empty) {
   console.log('OK — /tokens renders #ui-defaults-shared.zdtp-dashboard .zdtp-dashboard__token[data-css-var="--spacing-hsp-md"] with value 1rem.');
 }
 
+export async function assertProductionCss(hostDir) {
+  // Inspect the host bundle, not the standalone iframe preview stylesheet:
+  // the catalog grid and responsive sidebar must be styled on host routes.
+  const buildCssFiles = (await readdir(path.join(hostDir, "dist/assets"))).filter((f) => /^styles-.*\.css$/.test(f));
+  assert(buildCssFiles.length > 0, "no dist/assets/styles-*.css host stylesheet found");
+  const buildCss = (
+    await Promise.all(buildCssFiles.map((f) => read(hostDir, `dist/assets/${f}`)))
+  ).join("\n");
+  const { default: postcss } = await import("postcss");
+  const selectors = new Set();
+  postcss.parse(buildCss).walkRules((rule) => {
+    for (const selector of rule.selectors) selectors.add(selector);
+  });
+  // Match whole selectors: .lg\:flex-1 must not stand in for .lg\:flex.
+  for (const selector of [".sg-grid", ".sticky", ".lg\\:hidden", ".lg\\:flex"]) {
+    assert(selectors.has(selector), `dist/assets/styles-*.css is missing ${selector}`);
+  }
+  console.log("OK — production host CSS contains the catalog grid, sticky sidebar, and responsive visibility selectors.");
+}
+
 async function main() {
   const artifacts = await mkdtemp(path.join(os.tmpdir(), "zudo-sg-engine-pack-"));
   const hostDir = await mkdtemp(path.join(os.tmpdir(), "zudo-sg-engine-host-"));
@@ -417,6 +439,8 @@ async function main() {
     await assertTokensRoute(hostDir, false);
     assert(existsSync(path.join(hostDir, "dist/_zudo-sg/preview.css")), "missing dist/_zudo-sg/preview.css (base-unnested, ADR decision 4)");
 
+    await assertProductionCss(hostDir);
+
     const buildIslandsManifestFiles = (await readdir(path.join(hostDir, "dist/assets"))).filter((f) => /^islands-.*\.js$/.test(f));
     assert(buildIslandsManifestFiles.length > 0, "no dist/assets/islands-*.js manifest found");
     const buildIslandsBundle = (
@@ -433,6 +457,13 @@ async function main() {
       path.join(hostDir, "pages/index.tsx"),
       indexSource.split("\n").filter((line) => line.trim() !== seedImportLine).join("\n"),
     );
+
+    // Production above uses the shipped safelist. Remove only its import in
+    // this scratch dev run so it cannot mask broken injected-route CSS scans.
+    const globalCssSource = await read(hostDir, "src/styles/global.css");
+    const engineSafelistImport = '@import "@takazudo/zudo-sg/safelist.css";';
+    assert(globalCssSource.includes(engineSafelistImport), "expected engine safelist import in src/styles/global.css");
+    await writeFile(path.join(hostDir, "src/styles/global.css"), globalCssSource.replace(engineSafelistImport, ""));
 
     console.log("zfb dev (seedless: injected routes + virtual registry islands, dev CSS globs — ADR finding 4 amendment)");
     const port = await freePort();
@@ -460,8 +491,8 @@ async function main() {
     assert(!/no "use client" islands found/u.test(log), 'zfb dev logged no "use client" islands found');
 
     // A utility class used only by the injected components-index.tsx /
-    // tokens.tsx headers (`max-w-[56rem]`): the fixture host has no `@source`
-    // covering the engine, so it reaches the dev stylesheet only through the
+    // tokens.tsx headers (`max-w-[56rem]`): the scratch host has no engine
+    // safelist or `@source`, so it reaches the dev stylesheet only through the
     // injected-route content globs zfb 2.18.0 seeds (absent on 2.17.0).
     const cssRes = await waitForOk(`${origin}/styleguide/assets/styles.css`, 300_000, devServer, () => log);
     const cssBody = await cssRes.text();
