@@ -25,16 +25,13 @@ const directiveVocabulary = {
 // routes render with the host's real UI strings and `--zd-*` palette instead of
 // the neutral fallback. The preset warns at build time if either is missing.
 //
-// `designTokenPanel: false` here (NOT `settings.designTokenPanel`, which stays
-// `true` for the host's own header icon / BodyEndIslands wiring) is a narrow
-// preset-only override. It prevents package-owned routes from also mounting
-// zudo-doc's panel while the host keeps its two project-specific instances.
-//
-// zudo-doc 5.26 separates loader bundling from package-panel mounting, so
-// both host panels can use the real loader (zudolab/zudo-doc#4261).
+// `bundleZdtp: true` with `designTokenPanel` off (it is `false` in
+// settings.ts) is load-bearing, not redundant: bundling otherwise follows
+// `bundleZdtp ?? designTokenPanel`, so the zdtp-loader would resolve to the
+// throwing stub and the engine's PREVIEW token panel — the one panel this
+// site still mounts — would reject at runtime (zudolab/zudo-doc#4261).
 const presetSettings = {
   ...settings,
-  designTokenPanel: false,
   bundleZdtp: true,
 };
 const preset = zudoDocPreset({

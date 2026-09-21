@@ -8,19 +8,12 @@ import {
 
 const TOKENS_PATH = withBase("/tokens");
 const PREVIEW_STATE_KEY = "sg-preview-tweak-state-v4";
-const DOC_STATE_KEY = "sg-doc-tweak-state-v4";
 const COLOR_SENTINEL = "oklch(0.42 0.18 210)";
-const DOC_COLOR_SENTINEL = "#123456";
 const PANEL_INSTANCES = {
   preview: {
     toggleEvent: "toggle-preview-token-panel",
     prehydrateScriptId: "zdtp-preview-prehydrate",
     storagePrefix: "sg-preview-tweak",
-  },
-  doc: {
-    toggleEvent: "toggle-sg-doc-tweak",
-    prehydrateScriptId: "zdtp-doc-prehydrate",
-    storagePrefix: "sg-doc-tweak",
   },
 } as const;
 type PanelInstance = keyof typeof PANEL_INSTANCES;
@@ -157,20 +150,6 @@ async function setPanelValue(
   await input.fill(value);
   await input.dispatchEvent("input");
   await expect(input).toHaveValue(value);
-}
-
-async function setDocColorLiteral(
-  panel: Locator,
-  cssVar: string,
-  value: string,
-): Promise<void> {
-  await panel.getByRole("tab", { name: "Color", exact: true }).click();
-  await panel.getByLabel(`${cssVar} tier reference`).selectOption({ label: "Literal…" });
-  await panel.getByRole("button", { name: `${cssVar}: ${cssVar}` }).click();
-  const input = panel.getByRole("dialog", { name: `${cssVar} color picker` })
-    .getByLabel("Hex color value");
-  await input.fill(value);
-  await input.dispatchEvent("input");
 }
 
 async function closePanel(page: Page, instance: PanelInstance): Promise<void> {
@@ -357,7 +336,7 @@ test("JS-off 360px keeps the dashboards in bounds and exposes a keyboard-scrolla
   }
 });
 
-test("dashboard defaults stay isolated from saved preview and doc-chrome panel state", async ({
+test("dashboard defaults stay isolated from saved preview panel state", async ({
   page,
 }) => {
   await page.goto(TOKENS_PATH);
@@ -425,118 +404,16 @@ test("dashboard defaults stay isolated from saved preview and doc-chrome panel s
   );
   await closePanel(page, "preview");
 
-  await page.reload();
-  const docPanel = await openPanel(page, "doc");
-  await setPanelValue(docPanel, "Spacing", "--spacing-hsp-md value", "2.25");
-  await expect
-    .poll(() => readPersistedState(page, DOC_STATE_KEY))
-    .toMatchObject({ spacing: { "hsp-md": "2.25rem" } });
-  await closePanel(page, "doc");
-
-  await page.reload();
-  const reloadedDocPanel = await openPanel(page, "doc");
-  const reloadedDocSpacingTab = reloadedDocPanel.getByRole("tab", {
-    name: /^Spacing(?: \d+ changed tokens?)?$/,
-  });
-  await reloadedDocSpacingTab.dispatchEvent("click");
-  await expect(reloadedDocSpacingTab).toHaveAttribute("aria-selected", "true");
-  await expect(reloadedDocPanel.getByLabel("--spacing-hsp-md value")).toHaveValue("2.25");
-  await closePanel(page, "doc");
-
-  const postDocDashboard = dashboard(page, "light");
+  const postPreviewDashboard = dashboard(page, "light");
   expect(
     await computedBackground(
-      tokenRow(postDocDashboard, "--color-accent").locator(
+      tokenRow(postPreviewDashboard, "--color-accent").locator(
         ".zdtp-dashboard__sample--color",
       ),
     ),
   ).toBe(declaredAccent);
   expect(await rulerWidth(sharedDashboard(page))).toBe(12);
 
-  await page.evaluate(() => localStorage.clear());
-});
-
-test("doc-chrome Color overrides are scheme-scoped while Spacing stays shared", async ({
-  page,
-}) => {
-  await page.addInitScript(() => localStorage.clear());
-  await page.goto(TOKENS_PATH);
-
-  const html = page.locator("html");
-  const themeToggle = page.locator('button[aria-label^="Switch to "]:visible').first();
-  await expect(themeToggle).toBeVisible();
-  if ((await html.getAttribute("data-theme")) !== "light") {
-    await themeToggle.click();
-    await expect(html).toHaveAttribute("data-theme", "light");
-  }
-
-  async function toggleThemeAndReacquirePanel(
-    panel: Locator,
-    mode: "light" | "dark",
-  ): Promise<Locator> {
-    const previousShell = await panel.elementHandle();
-    if (!previousShell) throw new Error("Expected the token panel shell to be mounted");
-
-    await themeToggle.click();
-    await expect(html).toHaveAttribute("data-theme", mode);
-    await expect
-      .poll(() => previousShell.evaluate((element) => element.isConnected))
-      .toBe(false);
-
-    const nextPanel = panelShell(page, "doc");
-    await expect(nextPanel).toBeVisible({ timeout: 10_000 });
-    return nextPanel;
-  }
-
-  let panel = await openPanel(page, "doc");
-  await setDocColorLiteral(panel, "--zd-bg", DOC_COLOR_SENTINEL);
-  let lightPersistedLiteral: unknown;
-  await expect
-    .poll(async () => {
-      const state = await readPersistedState(page, DOC_STATE_KEY);
-      const color = state.color as Record<string, unknown> | undefined;
-      const light = color?.["Default Light"] as {
-        semanticMappings?: Record<string, { literal?: unknown }>;
-      } | undefined;
-      lightPersistedLiteral = light?.semanticMappings?.bg?.literal;
-      return typeof lightPersistedLiteral === "string" &&
-        lightPersistedLiteral !== "oklch(.965 .004 65)";
-    })
-    .toBe(true);
-  expect(typeof lightPersistedLiteral).toBe("string");
-
-  panel = await toggleThemeAndReacquirePanel(panel, "dark");
-  await panel.getByRole("tab", { name: /^Color(?: \d+ changed tokens?)?$/ }).click();
-  await expect(panel.getByLabel("--zd-bg tier reference")).not.toHaveValue("__literal__");
-  await expect
-    .poll(async () => {
-      const state = await readPersistedState(page, DOC_STATE_KEY);
-      const color = state.color as Record<string, unknown> | undefined;
-      return Object.keys(color ?? {}).sort();
-    })
-    .toEqual(["Default Light"]);
-
-  panel = await toggleThemeAndReacquirePanel(panel, "light");
-  await panel.getByRole("tab", { name: /^Color(?: \d+ changed tokens?)?$/ }).click();
-  await expect(panel.getByLabel("--zd-bg tier reference")).toHaveValue("__literal__");
-  await panel.getByRole("button", { name: "--zd-bg: --zd-bg" }).click();
-  await expect(
-    panel.getByRole("dialog", { name: "--zd-bg color picker" })
-      .getByLabel("Hex color value"),
-  ).toHaveValue(DOC_COLOR_SENTINEL);
-
-  await setPanelValue(panel, "Spacing", "--spacing-hsp-md value", "2.25");
-  await expect
-    .poll(async () => {
-      const state = await readPersistedState(page, DOC_STATE_KEY);
-      return (state.spacing as Record<string, unknown> | undefined)?.["hsp-md"];
-    })
-    .toBe("2.25rem");
-
-  panel = await toggleThemeAndReacquirePanel(panel, "dark");
-  await panel.getByRole("tab", { name: /^Spacing(?: \d+ changed tokens?)?$/ }).click();
-  await expect(panel.getByLabel("--spacing-hsp-md value")).toHaveValue("2.25");
-  await closePanel(page, "doc");
   await page.evaluate(() => localStorage.clear());
 });
 

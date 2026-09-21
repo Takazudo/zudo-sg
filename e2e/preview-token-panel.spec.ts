@@ -7,7 +7,7 @@ import { expect, test, type Page, type FrameLocator } from "@playwright/test";
 //   Programmatic for iframe bridge verification: postMessage to the iframe
 //   directly (mirrors what sendApplyCssVars does internally). Tests that the
 //   iframe's bridge receiver is installed and working. Used for Test 1 (iframe
-//   receiver + host isolation) and Test 2 (doc panel isolation).
+//   receiver + host isolation) and Test 2 (doc-chrome panel removal).
 //
 //   UI clicks for panel-level operations: open panel (dispatch
 //   "toggle-preview-token-panel"), set a token value via the Size tab input,
@@ -26,7 +26,9 @@ import { expect, test, type Page, type FrameLocator } from "@playwright/test";
 //
 //   window.sgPreview: the project wrapper preserves the owner-autoload helpers
 //   through lazy dynamic imports. Panel opening still uses the instance's
-//   explicit CustomEvent channel, which also proves dual-panel isolation.
+//   explicit CustomEvent channel — kept explicit (rather than the reserved
+//   "toggle-design-token-panel") now that the doc-chrome panel is gone, because
+//   it is the engine's own contract, not a dual-instance workaround.
 //
 // All five assertion groups required by issue #80 (H6) are present.
 // ---------------------------------------------------------------------------
@@ -315,10 +317,10 @@ test("preview panel: overrides reach iframe :root; host <html> is unchanged", as
 });
 
 // ---------------------------------------------------------------------------
-// Test 2: doc "Tokens" panel does NOT change the preview iframe
+// Test 2: the doc-chrome token panel is GONE — only the preview panel remains
 // ---------------------------------------------------------------------------
 
-test("doc Tokens panel: dispatching toggle-sg-doc-tweak opens the real (non-empty) panel and does not change preview iframe", async ({
+test("no doc-chrome token panel: the legacy toggle channel mounts nothing", async ({
   page,
 }) => {
   const errors: string[] = [];
@@ -329,60 +331,23 @@ test("doc Tokens panel: dispatching toggle-sg-doc-tweak opens the real (non-empt
   await gotoFirstDetailPage(page);
   const frame = await waitForFirstPreviewFrame(page);
 
-  // Capture the iframe's baseline --color-accent value.
   const beforeBrand = await getIframeRootVar(frame, "--color-accent");
 
-  // Open the DOC token panel via its explicit toggle channel.
-  // The doc panel has NO applySink — it writes to the host :root only.
-  //
-  // CRITICAL: the channel is "toggle-sg-doc-tweak", NOT the reserved
-  // "toggle-design-token-panel". This site mounts two zdtp instances, so the
-  // doc panel must stay on its explicit event and not accidentally fall back
-  // to the reserved default (Takazudo/zudo-sg#84/#85).
+  // The header trigger and its prehydration capture script are both gone.
+  await expect(page.locator("#sg-doc-tweak-trigger")).toHaveCount(0);
+  await expect(page.locator("#zdtp-doc-prehydrate")).toHaveCount(0);
+
+  // Dispatching the retired channel must be inert: no panel mounts, and the
+  // preview panel (which listens on its own channel) does not open either.
   await page.evaluate(() => {
     window.dispatchEvent(new CustomEvent("toggle-sg-doc-tweak"));
   });
-  const docPanel = page.locator(".tokenpanel-shell").first();
-  await expect(docPanel).toBeVisible({
-    timeout: 10_000,
-  });
-  await expect(page.locator(".tokenpanel-shell")).toHaveCount(1);
-  await expect(page.locator("#sg-doc-tweak-root .tokenpanel-shell")).toBeVisible();
+  await page.waitForTimeout(500);
+  await expect(page.locator("#sg-doc-tweak-root")).toHaveCount(0);
+  await expect(page.locator(".tokenpanel-shell")).toHaveCount(0);
 
-  // REGRESSION GUARD (#85): the doc-chrome panel must open with a NON-EMPTY
-  // body — i.e. its real tabs are present. The original defect mounted the
-  // framework's empty-tabs default instead, so the shell had no tab controls.
-  // Assert all four doc-panel tabs (Color / Font / Spacing / Size) render,
-  // panel-scoped so an unrelated SSR token-row label can't satisfy the match.
-  await expect(
-    docPanel.getByRole("tab", { name: "Color", exact: true }),
-  ).toBeVisible();
-  await expect(
-    docPanel.getByRole("tab", { name: "Font", exact: true }),
-  ).toBeVisible();
-  await expect(
-    docPanel.getByRole("tab", { name: "Spacing", exact: true }),
-  ).toBeVisible();
-  await expect(
-    docPanel.getByRole("tab", { name: "Size", exact: true }),
-  ).toBeVisible();
-
-  // Opening the doc panel must not have changed --color-accent on the iframe.
+  // …and nothing about the iframe changed.
   expect(await getIframeRootVar(frame, "--color-accent")).toBe(beforeBrand);
-
-  // Apply a sentinel value to the iframe via direct postMessage.
-  await applyVarsToFirstIframe(page, [["--color-accent", BRAND_SENTINEL]]);
-  expect(await getIframeRootVar(frame, "--color-accent")).toBe(BRAND_SENTINEL);
-
-  // Click Reset on the doc panel — this resets the doc panel's host :root vars
-  // but must NOT clear the preview iframe's --color-accent.
-  // The doc panel's Reset calls clearAppliedStyles (no sink), which only removes
-  // inline styles from the host document.documentElement — not from iframes.
-  await clickPanelAction(page, "Reset");
-  await page.waitForTimeout(200);
-
-  // Iframe's --color-accent must still be the sentinel after doc panel Reset.
-  expect(await getIframeRootVar(frame, "--color-accent")).toBe(BRAND_SENTINEL);
   expect(errors).toEqual([]);
 });
 
@@ -396,7 +361,7 @@ test("package-owned docs do not mount the package token-panel bootstrap", async 
 });
 
 // ---------------------------------------------------------------------------
-// Test 3: Reset clears only preview overrides; host chrome / doc panel untouched
+// Test 3: Reset clears only preview overrides; host chrome untouched
 // ---------------------------------------------------------------------------
 
 test("preview panel: Reset clears preview overrides; host chrome state is untouched", async ({
@@ -405,7 +370,7 @@ test("preview panel: Reset clears preview overrides; host chrome state is untouc
   await gotoFirstDetailPage(page);
   const frame = await waitForFirstPreviewFrame(page);
 
-  // Write a doc-chrome inline override to the host :root so we can verify it
+  // Write a host-chrome inline override to the host :root so we can verify it
   // survives the preview panel Reset.
   await page.evaluate(() => {
     document.documentElement.style.setProperty("--zd-bg", "#aabbcc");
