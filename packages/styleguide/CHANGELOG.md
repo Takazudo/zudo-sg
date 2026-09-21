@@ -4,6 +4,28 @@ All notable changes to `@takazudo/zudo-sg` are documented in this file.
 
 The format is based on Keep a Changelog, and release notes are generated from the changelog MDX pages.
 
+## [0.3.1] - 2026-09-21
+
+The preview token panel is now reachable from the doc header, not just from the
+workbench button and the `/tokens` dashboard. The engine injects that trigger
+itself, so adopting hosts get it without wiring anything.
+
+### Features
+
+- `withZudoSg()` appends a preview-token-panel trigger to the doc header's right
+  side, revealed only on engine routes. Gated by the new `headerTokenTrigger`
+  option, which defaults to `true`.
+- Export `HEADER_TOKEN_TRIGGER_ITEM` so a host that renders its own zudo-doc
+  header can list the trigger alongside its own items.
+- Emit a `data-sg-engine-route` marker from `bodyEnd` on every chrome-rendered
+  engine route, and on the preview iframe document's own `html` tag, so client
+  code can detect "this page can use the preview token panel" after each
+  navigation.
+- `ZdtpApplyProxyOptions` now accepts `tabsModule` on its own: `routingFile` and
+  `writeRoot` became optional together, so a host can wire the panel's tabs
+  without opting into the dev-only Apply endpoint. Supplying exactly one of the
+  pair still fails at both the type level and at runtime.
+
 ## [0.3.0] - 2026-09-21
 
 The catalog chrome no longer borrows a host's bare `--color-*` tokens. It now
