@@ -9,27 +9,34 @@ The styleguide ships one live design-token panel: the **preview panel**, which e
 
 <Note>
   This site used to mount a second, doc-chrome panel behind a **Design Tokens** icon in the
-  header. It was host-only wiring that `create-zudo-sg` never scaffolds, so it has been
-  removed. The preview panel below is still host-mounted too — a scaffolded project gets the
-  read-only [`/tokens`](/tokens) dashboards out of the box and opts into the preview panel by
-  adding `bundleZdtp: true` plus the `PreviewTokenPanelBootstrap` island (see
-  `pages/lib/_body-end-islands.tsx` here).
+  header. It was host-only wiring that `create-zudo-sg` never scaffolds, so it was removed —
+  and the header icon returned as an engine feature instead of bespoke host code.
+  `withZudoSg()`'s `headerTokenTrigger` option (default `true`) injects a header button that
+  opens the very same preview panel documented below; the header control and the workbench
+  **Preview tokens** button are two doors into one panel. The button ships hidden and an
+  inline script reveals it only on the engine's own routes (`/components`,
+  `/components/<slug>`, `/tokens`); it stays hidden on a regular docs page and on a host page
+  such as `/` that isn't an engine route. A scaffolded project now gets a working panel out
+  of the box too — see the
+  [`create-zudo-sg` README](https://github.com/Takazudo/zudo-sg/tree/main/packages/create-zudo-sg#readme).
 </Note>
 
 ## Quick orientation
 
 | | Preview panel |
 |---|---|
-| **Trigger** | **Preview tokens** button (stacked-frames glyph) in a component detail page's workbench toolbar (`/components/<slug>`); also a "Preview tokens →" button above the dashboards on `/tokens` |
+| **Trigger** | The header's tokens icon (sliders glyph), shown on the engine's routes; also a **Preview tokens** button (stacked-frames glyph) in a component detail page's workbench toolbar (`/components/<slug>`); also a "Preview tokens →" button above the dashboards on `/tokens` |
 | **What it edits** | The `@zudo-sg/demo-ui` component tokens inside preview iframes |
 | **Where applied** | Preview iframes only |
 | **localStorage prefix** | `sg-preview-tweak` |
 | **Console namespace** | `window.sgPreview` |
 | **Toggle event** | `toggle-preview-token-panel` |
 
-The control is not in the header: it lives beside the previews it acts on, as a button in
-the component detail page's own toolbar, alongside the standing button on the `/tokens`
-page. A regular docs page shows no token control at all.
+All three triggers dispatch the same `toggle-preview-token-panel` event and open the same
+panel. The header icon is hidden outside the engine's own routes (`/components`,
+`/components/<slug>`, `/tokens`); a regular docs page, and a host page such as `/` that
+isn't an engine route, show no header control — the workbench and `/tokens` buttons remain
+page-local either way.
 
 ## Preview panel (Preview tokens)
 

@@ -467,6 +467,82 @@ Keep these remaining host prerequisites explicit in a later non-color token
 decision; the color namespace alone does not make every chrome token
 self-contained.
 
+### 15. Header token trigger
+
+**Accepted (2026-09-21, epic #813).** The header icon for the preview token
+panel, removed alongside the doc-chrome panel in #811, comes back as an
+engine feature rather than host code: `withZudoSg()` takes a
+`headerTokenTrigger?: boolean` option (default `true`) and appends an
+`{ type: "html" }` item to the zudo-doc routes plugin's
+`settings.headerRightItems`.
+
+**Why this runs as its own pass, after `chromeDefaults`.**
+`withStyleguideChromeDefaults` (decision 9) early-returns on a non-empty host
+`headerNav`, and the whole map is skipped when `chromeDefaults === false` —
+both are deliberate, so an adopter's own navigation is never overwritten.
+Routing the trigger through that same function would inherit both
+early-returns, which would skip it on exactly this project (a 4-entry
+`headerNav`) and on any host that opts out of chrome defaults. The trigger
+runs unconditionally in a second, later pass instead — later so it trails the
+`search` item the chrome-defaults pass may itself have appended.
+
+**Three vehicles were on the table; two are rejected:**
+
+- **`chromeBindings.headerRightComponents`** — the supported channel for a
+  custom header-right `component:`, wired through a host's own
+  `settings.chromeBindingsModule`. Rejected: it is host-owned. The engine
+  cannot register a renderer into it without either clobbering whatever the
+  host already registered there, or requiring every adopter to hand-wire the
+  file before the trigger would ever appear — the opposite of "restores the
+  icon for free."
+- **The built-in `{ type: "trigger", trigger: "design-token-panel" }`** —
+  zudo-doc ships this trigger type out of the box. Rejected: it is gated on
+  `flags.designTokenPanel`, the exact flag #811 turned off, so using it would
+  mean re-enabling that flag; and it fires the doc-chrome
+  `toggle-design-token-panel` channel, which is wired to the (removed)
+  doc-chrome panel, not the preview panel this trigger needs to open.
+- **`{ type: "html" }`** — accepted. It needs no host registry entry, carries
+  its own inline visibility script (see decision 10 / the route-marker
+  entry), and dispatches the preview panel's own `toggle-preview-token-panel`
+  event directly from its `onclick`.
+
+For accuracy: an *unknown* header-right `component:` name — the shape used by
+the rejected first vehicle if it were half-wired — does not silently render
+nothing. `Header.renderRightItem` throws
+(`[zudo-doc] Unknown header-right component "<name>" at
+Header.headerRightItems[<index>].component. Register a callable renderer as
+chromeBindings.headerRightComponents[...] …`) whenever a `component:` item
+has no matching dispatch entry. The chosen `{ type: "html" }` vehicle has no
+such registry lookup and cannot hit this failure mode.
+
+**Identifiers**, deliberately distinct from the retired doc-chrome ones so
+#811's regression guard (which asserts the retired ids are gone) keeps its
+meaning: button `id="sg-preview-tokens-trigger"` (retired:
+`sg-doc-tweak-trigger`) dispatching `toggle-preview-token-panel` (retired:
+`toggle-sg-doc-tweak`). `design-token-trigger` is zudo-doc's own built-in
+trigger id and is never reused here.
+
+**Visibility** is an engine-route marker, not an iframe subscription (an
+iframe count is the wrong signal — `/tokens` has none, `/components` renders
+previews inline). The button ships `hidden` in the same HTML blob as its
+inline sync script; `chromeProps()` (`src/routes/_chrome.tsx`) emits a
+`<div hidden data-sg-engine-route>` marker into its `bodyEnd` slot — not the
+header, which carries `data-zfb-transition-persist` and the client router
+lifts whole across a navigation, so a marker there would go stale. The script
+re-syncs `btn.hidden` from `document.querySelector("[data-sg-engine-route]")`
+immediately, again on `DOMContentLoaded` (a hard load can run the immediate
+sync before the header is parsed), and on every
+`AFTER_NAVIGATE_EVENT`. The trigger does not reach this showcase's `/`:
+`zfb.config.ts` spreads `./src/config/settings.ts`'s `settings` object into
+the zudo-doc routes-plugin descriptor before `withZudoSg` appends the
+trigger to that copy's `headerRightItems`, so the append lands on the
+plugin's own settings, not on the original `settings` module object. `/`'s
+header (`pages/index.tsx` → `_header-with-defaults.tsx`) imports and reads
+that original `settings` module directly, so it never sees the appended
+item — and `/` is not an engine route anyway, so the button would be hidden
+there even if it could reach it. Accepted as identical user-visible
+behaviour, not a gap.
+
 ## Spike report — proof items (a)–(g)
 
 Spike layout: `__inbox/engine-seam-spike/engine/` (minimal

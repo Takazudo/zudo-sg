@@ -60,7 +60,7 @@ export const settings = {
     wide: true,
     introMarkdown: `zudo-sg is a zudo-doc-based styleguide host and the provider of the @zudo-sg/demo-ui component library.
 
-Two live design-token panels let you tune the doc chrome and component previews side by side.
+A live design-token panel, reachable from the header's tokens icon, lets you tune the component previews.
 
 The same library drives a multi-page demo site, so the components can be explored in both a styleguide and a complete product experience.
 
