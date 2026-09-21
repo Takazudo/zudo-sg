@@ -119,9 +119,11 @@ The same library drives a multi-page demo site, so the components can be explore
   // Off by default and deliberately: the doc-chrome token panel was a
   // host-only extra this site mounted for itself, which `create-zudo-sg`
   // never scaffolds. Keeping it here made the dogfooding host advertise a
-  // feature adopters do not get. The PREVIEW token panel (engine-provided,
-  // wired via `zdtpApplyProxy` in zfb.config.ts) and the `/tokens` dashboard
-  // are unaffected — both are part of what the engine ships.
+  // feature adopters do not get. The PREVIEW token panel (engine-provided;
+  // mounted by pages/lib/_body-end-islands.tsx via
+  // `@takazudo/zudo-sg/token-tweak/preview-token-panel-bootstrap`, and kept
+  // loadable by `bundleZdtp: true` in zfb.config.ts) and the `/tokens`
+  // dashboard are unaffected.
   designTokenPanel: false as boolean,
   tocMinDepth: 2 as number,
   tocMaxDepth: 4 as number,

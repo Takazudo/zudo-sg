@@ -190,10 +190,10 @@ for how the two worlds relate.
 - **designTokenPanel** — OFF. The doc-chrome token panel (the "zdtp" header
   button) was removed: it was host-only wiring `create-zudo-sg` never
   scaffolds, so keeping it made this dogfooding host advertise a feature
-  adopters do not get. The engine's PREVIEW token panel (`zdtpApplyProxy` in
-  `zfb.config.ts`) and the `/tokens` dashboard are unaffected, and
-  `bundleZdtp: true` stays so the preview panel still gets the real zdtp
-  loader
+  adopters do not get. The engine's PREVIEW token panel (mounted by
+  `pages/lib/_body-end-islands.tsx`) and the `/tokens` dashboard are
+  unaffected, and `bundleZdtp: true` stays in `zfb.config.ts` so the preview
+  panel still gets the real zdtp loader instead of the throwing stub
 - **dynamicPageTransition** — SPA client-router page swaps with View Transitions and page-loading overlay
 - **sidebarResizer** — Draggable sidebar width
 - **sidebarToggle** — Show/hide desktop sidebar

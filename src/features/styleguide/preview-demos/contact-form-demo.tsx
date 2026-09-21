@@ -36,9 +36,9 @@
 // contact.tsx and would get pulled into that pass's bundle even though this
 // component never touches MSW during SSR, crashing the build with
 // `ReferenceError: MessageEvent is not defined`. A dynamic import deferred
-// to a browser-only effect (mirrors the zdtp STOPGAP lazy-load in
-// src/components/design-token-panel-bootstrap.tsx) keeps msw's module body
-// out of that pass entirely — ContactFormDemo itself stays a static top-level
+// to a browser-only effect (mirrors the zdtp lazy-load in
+// packages/styleguide/src/token-tweak/preview-token-panel-bootstrap.tsx)
+// keeps msw's module body out of that pass entirely — ContactFormDemo itself stays a static top-level
 // export so zfb's island scanner still finds and binds the real component
 // (see pages/lib/_body-end-islands.tsx's orphan-component note).
 import type { JSX } from "preact";
