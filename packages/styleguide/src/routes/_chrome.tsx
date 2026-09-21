@@ -75,7 +75,19 @@ export function chromeProps({ pageTitle, path, extraHead, activeSlug, hideSideba
     ),
     header: <HeaderWithDefaults {...headerProps} />,
     footer: <FooterWithDefaults lang={locale} />,
-    bodyEnd: <BodyEndIslands basePath={ctx.base} />,
+    // Marker for the header trigger's visibility script (sibling issue #814):
+    // `document.querySelector("[data-sg-engine-route]")` after every
+    // navigation. It sits in bodyEnd, not the header, because the header
+    // carries `data-zfb-transition-persist` — the client router lifts it
+    // whole across a swap, so a marker there would go stale after navigating
+    // to a docs page. bodyEnd has no persist key, so it is discarded and
+    // freshly re-rendered per route like the rest of the body.
+    bodyEnd: (
+      <>
+        <BodyEndIslands basePath={ctx.base} />
+        <div hidden data-sg-engine-route />
+      </>
+    ),
     navNodes,
     sidebarToggle: Boolean(settings.sidebarToggle),
     enableClientRouter: Boolean(settings.dynamicPageTransition),

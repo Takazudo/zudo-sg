@@ -49,12 +49,18 @@ overwrite an existing project.
 The template is a minimal host, not a copy of this repository's full site. It
 contains:
 
-- `zfb.config.ts` composing `zudoDoc()` and `withZudoSg()` with a root base.
+- `zfb.config.ts` composing `zudoDoc()` and `withZudoSg()` with a root base,
+  `bundleZdtp: true`, and `chromeBindingsModule: "./pages/lib/_chrome-bindings.tsx"`.
 - `zfb.config.ts` uses an inline `favicon: "auto"`; replace it with a path or `FaviconConfig` when adding real icons under `public/`.
 - `zudo-sg.config.mjs` with a local `ui/` components root, registry output,
-  preview stylesheet, category order, and token-manifest inputs.
-- `pages/index.tsx` and an optional `pages/lib/_zudo-sg-islands.ts` import
-  shim for the host page.
+  preview stylesheet, category order, token-manifest inputs, and a tabs-only
+  `zdtpApplyProxy: { tabsModule }` (see "The preview token panel, out of the
+  box" below).
+- `pages/index.tsx`, `pages/lib/_body-end-islands.tsx`, and
+  `pages/lib/_chrome-bindings.tsx`, plus an optional
+  `pages/lib/_zudo-sg-islands.ts` import shim, for the host page and for
+  mounting the preview token panel on the injected `/components/*` and
+  `/tokens` routes.
 - Three small Preact examples under `ui/`: Button, Card, and Counter, with
   co-located stories and a Button MDX document.
 - `src/styleguide/sg-registry.ts`, generated from the three example stories.
@@ -72,6 +78,37 @@ The initializer replaces the package-name placeholder in the template and
 renames the package-safe `_gitignore` to `.gitignore`. The token manifest is
 generated after installation; it is intentionally not checked into the
 template seed.
+
+## The preview token panel, out of the box
+
+`withZudoSg()` injects a header button (the tokens icon, hidden outside the
+catalog routes) that opens the engine's preview token panel — the same panel
+a component detail page's workbench toolbar and the `/tokens` dashboards
+open. This is on by default (`headerTokenTrigger: true`); the scaffold does
+not need to wire it.
+
+What the scaffold does still wire, so the button opens a *working* panel
+instead of an inert one:
+
+- `zudo-sg.config.mjs`'s `zdtpApplyProxy: { tabsModule: "./src/config/preview-token-panel-tabs.ts" }`
+  gives the panel its manifest-derived tabs. Without a `tabsModule` the panel
+  has nothing to render.
+- `pages/lib/_chrome-bindings.tsx`, wired via `chromeBindingsModule`, mounts
+  `pages/lib/_body-end-islands.tsx` (which bootstraps the panel) on the
+  injected `/components/*` and `/tokens` routes too, not just the host-owned
+  `/`.
+
+This ships **tabs without the Apply write sandbox** — `zdtpApplyProxy` also
+accepts `routingFile` and `writeRoot`, together, as an opt-in next step: they
+let the panel's **Apply** button persist a tweak directly into your project's
+CSS source under a running `pnpm dev`, instead of round-tripping through
+`localStorage`/JSON export only. `routingFile` and `writeRoot` are optional
+together (a tabs-only config, as shipped, omits both); supplying one without
+the other is invalid. A fresh scaffold has no sensible default `writeRoot`,
+which is why this step is left for you to add once your CSS source layout is
+settled — see the root project's
+[Design Token Panel guide](https://github.com/Takazudo/zudo-sg/blob/main/src/content/docs/overview/token-panels.mdx)
+for the wiring shape.
 
 ## Styles
 
@@ -146,7 +183,10 @@ checks each optional package independently.
 The starter targets Preact + zfb hosts. Keep these dependencies in a host
 that adopts the engine:
 
-- `@takazudo/zdtp` is required by the injected `/tokens` route at build time.
+- `@takazudo/zdtp` is required by the injected `/tokens` route at build time,
+  and by the header trigger's preview token panel at runtime — `bundleZdtp: true`
+  in the generated `zfb.config.ts` keeps that panel on the real zdtp loader
+  instead of zudo-doc's throwing stub (zudolab/zudo-doc#4261). Do not drop it.
 - `diff` and `katex` are required by the published zudo-doc route dist that
   the host loads, even when the corresponding optional features are disabled.
 

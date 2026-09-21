@@ -1,30 +1,15 @@
 ---
 title: Design Tokens
 sidebar_position: 3
-description: The doc-chrome and UI token systems, the three-tier color strategy, and how token panel edits flow back to CSS.
+description: The three token worlds, the shared UI token pipeline, and the one live design-token panel — its header trigger, workbench button, and the /tokens dashboards.
 ---
-
-<Warning title="The doc-chrome token panel has been removed">
-  The host's doc-chrome token panel (the header **Design Tokens** icon, the
-  `toggle-sg-doc-tweak` channel, the `sg-doc-tweak` storage prefix) and its source files —
-  `src/config/design-token-panel-config.ts`, `src/config/design-tokens-manifest.ts`,
-  `src/lib/token-panel-native-bootstrap.ts`, `src/lib/design-token-panel-bootstrap.ts`,
-  `src/components/design-token-panel-bootstrap.tsx`,
-  `src/config/__tests__/panel-config-isolation.test.ts`,
-  `src/lib/__tests__/token-panel-lazy-gate.test.ts` — no longer exist, and neither do
-  `scripts/gen-root-token-manifest.mjs` / `pnpm check:root-token-manifest`. Every
-  doc-chrome-panel passage below is a historical record of how that panel worked; only the
-  preview-panel and `/tokens` dashboard material still describes live code. The preview
-  panel's config now lives in the engine, at
-  `packages/styleguide/src/token-tweak/preview-token-panel-config.ts`.
-</Warning>
 
 ## Three token worlds
 
 zudo-sg hosts three independent color-token systems:
 
 - zudo-doc's `--zd-*` tokens control the documentation shell: navigation, docs pages,
-  code blocks, sidebars, and the doc-chrome panel.
+  code blocks, sidebars, and (where a host enables it) zudo-doc's own design-token panel.
 - zudo-sg's raw `--sg-*` tokens control the installable engine's catalog chrome,
   code panel, workbench, and token controls.
 - The host component library owns its own `@theme` color tokens, commonly semantic
@@ -69,15 +54,17 @@ Semantic (Tier 2) roles built from these groups: `bg`, `surface`, `surface-2`, `
 Palette variables live in plain `:root`, not Tailwind `@theme`, so Tailwind does not generate `bg-palette-*` or `text-palette-*` utilities. Components must bind to semantic `--color-*` roles instead.
 :::
 
-## Doc chrome color model
+## Doc chrome vs. engine chrome color models
 
-The zudo-doc 3.x chrome uses a ramp-native model for its own color schemes. It exposes palette ramps and semantic `--zd-*` roles through the root design-token panel. That model is for the documentation and styleguide shell, not for target-site UI components.
+zudo-doc 3.x ships a ramp-native model for its own `--zd-*` chrome color schemes, editable
+through zudo-doc's built-in design-token panel (the `designTokenPanel` feature flag). This
+project keeps that flag off: the panel was host-only wiring that `create-zudo-sg` never
+scaffolds, so a component-catalog dogfooding host advertising it would mislead adopters.
+Nothing in `--zd-*` is reachable from a panel here — only the [preview token
+panel](#the-preview-token-panel) below is live, and it edits component tokens, not chrome
+tokens.
 
-The preview token panel is a second panel instance for `@zudo-sg/demo-ui`. It has separate storage keys, event names, and an apply sink that writes preview values into registered styleguide iframes instead of the host document root.
-
-## Engine chrome is order-proof, but host colors are not
-
-The engine's chrome roles are plain custom properties: `--sg-bg`, `--sg-fg`,
+The engine's own chrome roles are plain custom properties: `--sg-bg`, `--sg-fg`,
 `--sg-surface`, `--sg-surface-2`, `--sg-border`, `--sg-border-strong`, `--sg-muted`,
 `--sg-accent`, `--sg-on-accent`, `--sg-focus`, and `--sg-success`. The package declares
 their defaults under zero-specificity `:where(:root)`, outside an engine `@theme` color
@@ -106,11 +93,11 @@ order-proof `--sg-*` hook.
 
 ## Shared build-safe tabs (`src/config/ui-token-tabs.ts`)
 
-`src/config/ui-token-tabs.ts` shapes the generated UI token manifest into `uiTokenTabs` and `dashboardPreviewOverrides` for the host's own preview token panel (`src/config/preview-token-panel-tabs.ts`, `src/config/preview-token-panel-config.ts` — the dev-only zdtp panel that writes into registered styleguide iframes). The static `/tokens` dashboard route itself is now injected by the `@takazudo/zudo-sg` engine rather than by this host file: the engine ships its own build-safe tab-shaping module (`packages/styleguide/src/token-dashboard/ui-token-tabs.ts`), fed by the manifest through the routes plugin's `virtual:zudo-sg-tokens` module (source: `zudo-sg.config.mjs`'s `tokens.manifestOut`, the same generated `ui-design-tokens-manifest.ts` the host module also reads). The two copies stay equivalent because both derive their shaping logic from the same generated manifest and the same `zudo-sg.config.mjs` token configuration — see `docs/adr/styleguide-engine.md` for the composition contract.
+`src/config/ui-token-tabs.ts` shapes the generated UI token manifest (`src/config/ui-design-tokens-manifest.ts`) into `uiTokenTabs` and `dashboardPreviewOverrides`. `src/config/preview-token-panel-tabs.ts` re-exports `uiTokenTabs` as the `tabsModule` fed to `@takazudo/zudo-sg/plugins/zdtp-apply-proxy` (`zfb.config.ts`'s `zdtpApplyProxy` option), which the [preview token panel](#the-preview-token-panel) reads at build time through its `virtual:zudo-sg-preview-token-panel` module. The static `/tokens` dashboard route is injected by the `@takazudo/zudo-sg` engine rather than by a host file: the engine ships its own build-safe tab-shaping module (`packages/styleguide/src/token-dashboard/ui-token-tabs.ts`), fed by the same manifest through the routes plugin's `virtual:zudo-sg-tokens` module (source: `zudo-sg.config.mjs`'s `tokens.manifestOut`). The two copies stay equivalent because both derive their shaping logic from the same generated manifest and the same `zudo-sg.config.mjs` token configuration — see `docs/adr/styleguide-engine.md` for the composition contract.
 
 Keep the host module importable by plain Node during a build. Its runtime dependency is the generated `ui-design-tokens-manifest.ts`; zdtp and dashboard imports are type-only, and the module contains data-shaping code without browser globals, a dev-server module, or panel setup.
 
-`src/config/__tests__/ui-token-tabs.test.ts` enforces this boundary by checking the runtime import allowlist and importing the module with Node's native type stripping. It also checks the manifest mapping, the per-line palette order, and the dashboard override coverage.
+`src/config/__tests__/ui-token-tabs.test.ts` enforces this boundary by checking the runtime import allowlist and importing the module with Node's native type stripping. It also checks the manifest mapping, the per-line palette order, the dashboard override coverage, and — via `@takazudo/zdtp/testing`'s `assertValidPanelConfig` — that the panel config these tabs feed is structurally valid.
 
 ## Static token dashboard
 
@@ -128,176 +115,134 @@ The section supplies zdtp's four public light/dark background and foreground inp
 
 Dashboard styling is delivered through the host CSS pipeline with `@import "@takazudo/zdtp/dashboard/styles.css"` in `src/styles/global.css`. This is separate from the panel's self-injected stylesheet. Loading the dashboard stylesheet through a per-page public asset would require a copy step for development and production and would introduce base-URL handling, so the public-asset alternative was rejected.
 
-The page uses zdtp dashboards as its only token listing. The former host-cascade rows and copy controls have been removed; a small `PreviewTokensButton` island above the dashboards opens the existing preview panel. The root manifest still supplies the doc-chrome panel and remains separate from the UI dashboard inventory.
+The page uses zdtp dashboards as its only token listing. A `PreviewTokensButton` island above the dashboards opens the preview token panel described below.
 
 `dashboardPreviewOverrides` is passed through the dashboard's `previewOverrides` prop to make the static samples explicit. The `light-dark()` semantic color rows receive color samples even though their panel editor entries are text declarations, and shadow declarations receive shadow samples. `previewBase: "--text-base"` supplies the shared font-size base for the line-height tiers. The API accepts a tier-level base, so it cannot select a different base for every `font-size-lh` row; this is the deliberate compromise for those per-size leading samples.
 
 See the upstream [TokenDashboard reference](https://zdtp.zudolab.dev/docs/reference/token-dashboard/) and [static token dashboard recipe](https://zdtp.zudolab.dev/docs/recipes/static-token-dashboard/) for the component and static-rendering contracts.
 
-## Panel tier previews
+## The preview token panel
 
-Both panel configs (`src/config/design-token-panel-config.ts` for the doc-chrome panel,
-`src/config/preview-token-panel-config.ts` for the preview panel) use `TierConfig.preview`, a
-zdtp 0.4.15+ opt-in. Omitting it renders a tier as a flat row of numeric/text controls; setting it
-renders a specimen next to each row. This project historically never opted in — the panel simply
-rendered flat rows where upstream renders type-size samples, spacing bars, and radius/duration
-glyphs — until this token panel previews epic (`Takazudo/zudo-sg#575`).
+The styleguide ships one live design-token panel: the **preview panel**, defined by
+`createPreviewTokenPanelConfig()` (`packages/styleguide/src/token-tweak/preview-token-panel-config.ts`,
+in the engine, not the host). It edits the `@zudo-sg/demo-ui` component tokens —
+`--color-*`, `--spacing-*`, `--font-*`, `--radius-*`, `--shadow-*` — and pushes changes
+into the catalog's preview iframes via `applySink`, never into the host document's own
+`:root`.
 
-| Tab | Tier | Doc-chrome panel `preview` | Preview panel `preview` | Why |
-| --- | --- | --- | --- | --- |
-| Font | font-size | `'size'` | `'size'` | Instance-value specimens; see the browser re-check below |
-| Font | line-height | `'line-height'` (`previewBase: '--text-body'`) | `'line-height'` (`previewBase: '--text-base'`) | Explicit font-size base |
-| Font | font-weight | `'weight'` | `'weight'` | Styles specimens from this panel's first weight item |
-| Font | font-family | `'family'` | `'family'` | Styles specimens from this panel's first family item |
-| Font | font-size-lh (preview panel only) | — | `'line-height'` (`previewBase: '--text-base'`) | Tier-level base is a compromise for per-size leading rows |
-| Spacing | hsp / vsp / icon (doc), hsp / vsp (preview) | `'bar'` | `'bar'` | Both write a resolved length, not a `var()` reference — see below |
-| Spacing | layout (doc only) | none | — | Mixes `0`, `1px`, and a `clamp()` readonly row; no preview kind fits a mixed tier like that |
-| Size | radius | `'radius'` | `'radius'` | Resolved-value glyph, same reasoning as `bar` |
-| Size | transition (doc only) | `'duration'` | — | Requires a `ms`/`s` unit on every item |
-| Size | shadow (preview only) | — | none | Free-text tier; no preview kind matches text values |
-| Color / Palette | all tiers | none | none | These tiers render their own swatch/curve editors instead of a preview glyph |
+Identity: `storagePrefix` `"sg-preview-tweak"`, `consoleNamespace` `"sgPreview"` (so
+`window.sgPreview.*` targets it), `toggleEvent` `"toggle-preview-token-panel"`, and
+`autoRememberOnOpen: false` — opening the panel never arms owner-mode autoload by itself;
+that still requires the explicit `window.sgPreview.enableAutoload()` opt-in.
 
-A tier with `preview: 'line-height'` **may** also set `previewBase` — it names the font-size CSS
-variable the line-height specimen paragraph is rendered at (`--text-body` for doc chrome,
-`--text-base` for preview tokens). It is optional:
-with no `previewBase`, zdtp falls back to whichever item of the tab's `'size'` preview tier is
-closest to 16px, and to a flat 16px if the tab has no `'size'` tier at all. It is worth setting
-anyway — the fallback silently re-picks a different base whenever the font-size tier changes.
-`previewBase` is only read for `'line-height'`, and zdtp's validator rejects it on any other
-`preview` kind.
+### Three ways to open it
 
-`'family'` and `'weight'` tiers do not render a preview row of their own. Per
-`PORTABLE-CONTRACT.md` §3.2, the *first item* in each of those tiers instead supplies the
-font-family / font-weight that styles every `'size'` and `'line-height'` specimen sample
-rendered elsewhere in the same `font` tab — there is no separate family/weight specimen to look
-at.
+The same panel instance opens from three places, all dispatching the same
+`toggle-preview-token-panel` event:
 
-The font-specimen toolbar and its **Render on page** control need the reserved `font` tab id
-*plus* at least one `'size'` or `'line-height'` preview tier inside that tab — there is no
-separate flag that turns the toolbar on. Both panels now provide those tiers, so both offer
-the specimen toolbar and **Render on page** control.
+- **Header trigger** — a sliders-glyph button (`id="sg-preview-tokens-trigger"`,
+  `aria-label="Open component tokens panel"`, `title="Component tokens"`) that
+  `withZudoSg()` appends to the zudo-doc header's right-hand items, behind a
+  `headerTokenTrigger?: boolean` option (default `true`). It ships `hidden` in the
+  static HTML; an inline script reveals it only on the engine's four routes
+  (`/components`, `/components/[slug]`, `/components/preview`, `/tokens`), synced
+  from a `data-sg-engine-route` marker that `routes/_chrome.tsx` emits in the
+  `bodyEnd` slot of every engine-chrome page, re-checked on load and after every
+  client-router navigation. A regular docs page never shows the button. Unlike
+  the chrome-defaults `headerNav`/`headerRightItems` promotion (which only fires
+  for a host with an empty `headerNav`), this trigger is unconditional — a host
+  with its own navigation, like this showcase, still gets it.
+- **Workbench "Preview tokens" button** — the stacked-frames-glyph button in a
+  component detail page's toolbar (`/components/<slug>`).
+- **`/tokens` dashboard button** — the `PreviewTokensButton` island above the
+  static dashboards.
 
-## The `{ kind: 'number' }` tier-item opt-in
+These identifiers are deliberately distinct from the retired doc-chrome trigger
+(`id="sg-doc-tweak-trigger"`, event `toggle-sg-doc-tweak`) so any regression guard
+built against the old names keeps its meaning.
 
-`preview: 'line-height'` requires every item in that tier to have `type.kind === 'number'`. That
-rule lives in zdtp's `assertValidPanelConfig`, which this project never reaches at runtime (see
-"`configurePanel()` does not validate" below) — the repo's own tests are what enforce it. The
-unitless line-height tokens
-(`--leading-*`, `--text-*--line-height`) would otherwise map to `{ kind: 'length', unit: '' }`
-through the normal `toTierItem` path, so both panel configs add a local `numberKind` option to
-`toTierItem`/`tierFromGroup` that emits `{ kind: 'number', step, unit }` instead, used only for
-the line-height groups.
+### Tier preview kinds
 
-This opt-in lives in the panel configs themselves, not in the generated manifests
-(`design-tokens-manifest.ts`, `ui-design-tokens-manifest.ts`), for two reasons: `TokenControl`
-(the upstream zdtp type the manifests' `TokenDef.control` values must map onto) has no `'number'`
-member, so a manifest-level change has nowhere to encode it; and the manifests are `--check`-gated
-codegen (`pnpm check:token-manifest`) regenerated straight from the CSS source, so a hand-added
-field would be silently reverted at the next regen.
+Setting a tier's `preview` renders a specimen next to its rows (type-size samples,
+spacing bars, radius glyphs) instead of a flat row of numeric/text controls:
 
-The change needed no state migration. Every persisted panel state stores typography values as
-`item-id -> string` and records no `kind` — the `length`-vs-`number` distinction only changes how
-the panel *edits* a value in the UI, not how it is read from or written to `localStorage`. The
-`panel-config-isolation.test.ts` `state-continuity` block seeds v2/v3/v4 legacy envelopes directly
-and asserts `loadPersistedState` round-trips fractional line-height values unchanged, with no
-`legacyIdRenameMap` involved.
+| Tab | Tier | `preview` | Why |
+| --- | --- | --- | --- |
+| Font | font-size | `'size'` | Instance-value specimens |
+| Font | font-size-lh | `'line-height'` (`previewBase: '--text-base'`) | Per-size leading rows; tier-level base is a compromise |
+| Font | font-weight | `'weight'` | Styled from this tab's first `font-family` item |
+| Font | line-height | `'line-height'` (`previewBase: '--text-base'`) | Explicit font-size base |
+| Font | font-family | `'family'` | Styles specimens from this tab's first family item |
+| Spacing | hsp / vsp | `'bar'` | Both write a resolved length, not a `var()` reference |
+| Size | radius | `'radius'` | Resolved-value glyph, same reasoning as `bar` |
+| Size | shadow | none | Free-text tier; no preview kind matches text values |
+| Palette / Color | all tiers | none | These tiers render their own swatch/curve editors instead |
 
-For the persisted-state boundary behind these tests, see the styleguide's [Token Panels guide](https://zudo-sg.takazudomodular.com/docs/overview/token-panels/): doc-chrome **Color** state is keyed by `Default Light` / `Default Dark` scheme identity inside `sg-doc-tweak-state-v4`, while **Palette**, **Spacing**, **Font**, and **Size** remain shared within a theme pack and preview-panel colors stay unkeyed by design.
+`'family'` and `'weight'` tiers supply no specimen of their own — per zdtp's
+`PORTABLE-CONTRACT.md` §3.2, the *first item* in each instead styles every `'size'` and
+`'line-height'` specimen sample rendered elsewhere in the same `font` tab.
 
-## Preview panel font specimens use instance values
+The font-specimen toolbar and its **Render on page** control turn on together whenever a
+tab has the reserved id `font` plus at least one `'size'` or `'line-height'` preview tier
+— there is no separate flag for it.
 
-The preview panel's five font tiers now enable previews. This retires the workaround from
-[Takazudo/zudo-sg#577](https://github.com/Takazudo/zudo-sg/issues/577): zdtp 0.5.1 rendered
-font specimens through `var(--token, <panel value>)` in the host document. Because the preview
-panel writes through `applySink` to iframes, the host's existing variables overrode its own
-specimen values. All five tiers were temporarily left bare in commit `3730128`.
+### The `{ kind: 'number' }` opt-in for line-height tiers
 
-zdtp 0.6.0's [commit `7d18952`](https://github.com/Takazudo/zudo-design-token-panel/commit/7d18952)
-changed specimen fonts to use instance values, addressing
-[Takazudo/zudo-design-token-panel#850](https://github.com/Takazudo/zudo-design-token-panel/issues/850).
-The browser re-check on 0.6.1 under `pnpm dev` measured the preview panel's `--text-2xl`
-specimen at **40px** before editing its value from `2.5rem` to `5rem`, and **80px** afterward.
-The doc-chrome panel then changed `--text-micro` to `3rem`, `--font-weight-normal` to `900`,
-and `--font-sans` to `monospace`; the host computed variables reflected those edits while the
-preview specimen remained **80px**, **weight 400**, with the same UI sans family.
+`preview: 'line-height'` requires every item in that tier to have `type.kind === 'number'`,
+a rule enforced by zdtp's `assertValidPanelConfig` (see the tests named above). The
+unitless line-height tokens (`--leading-*`, `--text-*--line-height`) would otherwise map to
+`{ kind: 'length', unit: '' }` through the normal shaping path, so `ui-token-tabs.ts` adds
+a local `numberKind` option that emits `{ kind: 'number', step, unit }` instead, used only
+for the line-height groups. This lives in the tab-shaping code, not in the generated
+manifest: the manifest's `TokenDef.control` values map onto zdtp's upstream `TokenControl`
+type, which has no `'number'` member, and the manifest is `--check`-gated codegen
+(`pnpm check:token-manifest`) regenerated straight from CSS source, so a hand-added field
+there would be silently reverted at the next regen.
 
-The preview panel therefore enables `'size'`, `'weight'`, `'family'`, and both `'line-height'`
-tiers again. Both line-height tiers use `previewBase: '--text-base'`: the tier-level API
-cannot choose a separate font-size base for each `font-size-lh` row, so that shared base is a
-compromise for the per-size leading tokens. Storage identities and iframe sink routing are
-unchanged.
+### Apply — persist a tweak to CSS source
 
-## `configurePanel()` does not validate — the tests are the real guard
+The panel's Apply button POSTs the current tweak diff to a dev-only endpoint that
+rewrites the value directly into the project's CSS source, so the change survives a hard
+reload and shows up as an ordinary `git diff`. It only works under `pnpm dev` (`zfb dev`).
 
-Since zdtp 0.6.0, `assertValidPanelConfig` is publicly exported from both
-`@takazudo/zdtp` and `@takazudo/zdtp/testing`. `configurePanel()` still does not call it.
-Both panels bootstrap through a direct `zdtp.configurePanel(getConfig())` call
-(`src/lib/token-panel-native-bootstrap.ts`), bypassing the Astro host-adapter's
-inline-JSON-config validation boundary.
+The `@takazudo/zudo-sg/plugins/zdtp-apply-proxy` engine plugin registers a same-origin
+`devMiddleware` handler at `/__zdtp/apply` (no separate process, no port, no CORS), backed
+by `@takazudo/zdtp/server`'s `createApplyHandler`. This project's `zfb.config.ts` wires it
+with `routingFile: "./zdtp-panel-routing.json"` and `writeRoot: "./packages/demo-ui/styles"`
+— a prefix → file routing map covering `palette`, `color`, `spacing`, `text`, `font`,
+`leading`, `radius`, and `shadow`, all resolving into `packages/demo-ui/styles/{tokens,colors}.css`.
+A CSS var whose prefix isn't in that map still fails the request with "Unsupported cssVar
+prefix" (400) — none of the tokens the panel currently exposes fall into that category. The
+routing map and the endpoint path both resolve to `undefined` outside `zfb dev`, so a
+production build never sees them.
 
-`panel-config-isolation.test.ts` now calls the real `assertValidPanelConfig` from the
-unmocked testing entry for **both** configs. This replaces the hand-written preview-kind,
-`previewBase`, and duration-unit rule copies with the upstream validator, including its
-reserved-palette checks. The separate `configurePanel` test remains a construction smoke
-test. Storage identity and legacy state-continuity tests also remain.
-
-The preview palette has eight tiers in first-seen order: `palette-neutral`,
-`palette-accent`, `palette-state`, `palette-line-vacuum`, `palette-line-process`,
-`palette-line-laser`, `palette-line-meeting`, and `palette-line-beauty`. The five line
-tiers each contain four items. Named palette items must share the prefix derived from
-the first item's last hyphen; separating business lines meets that rule and gives each
-line hue its own OKLCH curve. All 36 item ids and CSS variables are unchanged, and the
-reserved `palette` tab still omits `colorExtras`.
-
-The public-validator request was tracked in
-[Takazudo/zudo-design-token-panel#851](https://github.com/Takazudo/zudo-design-token-panel/issues/851).
-
-## Other deliberate opt-outs
-
-- **`layout` (doc-chrome Spacing) and `shadow` (preview Size) tiers carry no `preview`.** `layout`
-  mixes a `0`, a `1px`, and a `clamp()` readonly row — no preview kind renders something
-  meaningful across all three at once. `shadow` is a free-text tier; no preview kind matches text
-  values.
-- **`domTweaker` is not enabled** on either panel. It would add a Tailwind-in-browser runtime and
-  a second Alt+click owner-mode entry point to a panel that is reachable by any site visitor, with
-  no dev-only gate protecting it here.
-- **The doc-chrome panel config has no `applyEndpoint`/`applyRouting`.** Only the preview panel
-  config wires those fields (from `virtual:zdtp-apply-config`). `zdtp-panel-routing.json`
-  deliberately routes writes only to `packages/demo-ui/styles/*.css` — letting a slider rewrite the
-  site's own chrome CSS is a separate, riskier change that was not requested.
-- **`dock` is left at its zdtp default** (`{ reflow: 'body-margin' }`) on both configs — no
-  observed problem motivated overriding it.
-
-## `autoRememberOnOpen: false`
-
-Both panel configs set `autoRememberOnOpen: false`. Scope this narrowly: it stops the panel-open
-call sites from writing the `${storagePrefix}:autoload` flag with `'auto'` provenance the first
-time a visitor opens a panel — the specific footgun zdtp's README calls out for a public site with
-a visible panel-open button, where opening the panel once would otherwise permanently arm
-owner-mode autoload (and its bundle cost) for that visitor.
-
-It does **not**:
-
-- clear an `'auto'`-provenance autoload flag a visitor's browser already has stored from before
-  this change;
-- prevent the lazy panel-bundle loader from firing on any of its other gate signals — saved
-  panel visibility, persisted token overrides, an explicit `'1'`-provenance flag from
-  `enableAutoload()`, or the element-path inspector;
-- affect the explicit developer opt-in path at all: `window.sgDoc.enableAutoload()` and
-  `window.sgPreview.enableAutoload()` still work exactly as before.
-
-"The panel never auto-loads now" overstates what this flag does — it only removes the *implicit*,
-one-click path to permanent autoload for a first-time visitor.
-
-## Apply-to-source pipeline
-
-The zdtp panels can preview token changes in the browser. During local development, the apply pipeline can persist supported edits back to CSS source through the zdtp apply proxy wiring.
-
-For UI package tokens, the generated manifest comes from `packages/demo-ui/styles/tokens.css` and `packages/demo-ui/styles/colors.css`. If those CSS files change, regenerate the manifest and commit the result:
+If the source CSS files change, regenerate the manifest and commit the result:
 
 ```sh
 pnpm gen:token-manifest
 pnpm check:token-manifest
 ```
 
-The detailed panel operating manual belongs on the styleguide site. This page is the architecture map: CSS files are the source of truth, manifests keep panels in sync, and checks catch drift.
+For the day-to-day operating guide (what each panel action does, retheming engine chrome,
+declared-defaults on `/tokens`), see the styleguide's [Design Token Panel
+guide](https://zudo-sg.takazudomodular.com/docs/overview/token-panels/).
+
+### Scaffold parity
+
+A project scaffolded with `create-zudo-sg` gets a working panel out of the box:
+`bundleZdtp: true` (bundling follows `bundleZdtp ?? designTokenPanel`, so a scaffold
+without it would stub the zdtp loader and the panel would reject at runtime), a
+`tabsModule` (`zdtpApplyProxy: { tabsModule }`, tabs-only — `routingFile` and `writeRoot`
+are optional together, so a fresh scaffold gets a non-inert panel without also getting a
+dev-only Apply write sandbox it has no sensible default path for), and a
+`chromeBindingsModule` so the panel's bootstrap island mounts on the engine's injected
+routes and not just the host's own `/`. Wiring the Apply sandbox into a scaffold is a
+deliberate opt-in next step, left to the adopting project.
+
+## Architecture map, not the operating manual
+
+This page is the architecture map: CSS files are the source of truth, the generated
+manifest keeps the panel and the `/tokens` dashboards in sync, and `pnpm check:token-manifest`
+catches drift between them. For how to actually use the panel day to day, see the
+styleguide site's [Design Token Panel guide](https://zudo-sg.takazudomodular.com/docs/overview/token-panels/)
+linked above.

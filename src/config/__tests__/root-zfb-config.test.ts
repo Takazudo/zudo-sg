@@ -49,16 +49,25 @@ describe("root zfb integration contract", () => {
     expect(config.markdown?.features?.imageDimensions).toEqual({});
   });
 
-  it("passes the complete host settings through the route descriptor", () => {
+  it("passes the complete host settings through the route descriptor, header token trigger included", () => {
     const routes = config.plugins?.find(
       ({ name }) => name === "@takazudo/zudo-doc/plugins/routes",
     );
-    const routeSettings = routes?.options?.settings;
+    const routeSettings = routes?.options?.settings as
+      | { headerRightItems?: unknown[] }
+      | undefined;
 
-    expect(routeSettings).toEqual({
-      ...settings,
-      bundleZdtp: true,
-    });
+    // The trigger (#813/#816) is listed in src/config/settings.ts itself, so
+    // `pages/index.tsx`'s own header carries it too — see the comment there.
+    // withZudoSg() therefore finds it already installed and appends nothing,
+    // and the route descriptor is the host settings byte-for-byte again.
+    expect(routeSettings).toEqual({ ...settings, bundleZdtp: true });
+
+    const triggers = (settings.headerRightItems as Array<{ type: string; html?: string }>).filter(
+      (item) => item.type === "html" && item.html?.includes("sg-preview-tokens-trigger"),
+    );
+    expect(triggers).toHaveLength(1);
+
     expect(settings).toMatchObject({
       // The doc-chrome token panel is gone; only the engine's preview panel
       // and the /tokens dashboard remain, so the preset must NOT mount

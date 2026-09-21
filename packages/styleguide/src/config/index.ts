@@ -7,6 +7,7 @@
 // Host paths are validated later, inside each plugin's `setup()` (fail-fast,
 // like zudo-doc's preset: a missing host module throws there, not here).
 
+import { AFTER_NAVIGATE_EVENT } from "@takazudo/zudo-doc/transitions";
 import {
   COMPONENT_DOCS_COLLECTION,
   componentDocsCollectionName,
@@ -60,9 +61,20 @@ export interface ZudoSgComposeOptions {
    * `@takazudo/zudo-sg/plugins/zdtp-apply-proxy` options
    * (`{ routingFile, writeRoot, tabsModule? }`). Omitted → the plugin is still
    * listed (the engine's preview token panel island imports its virtual
-   * module) but runs disabled: no tabs, no Apply endpoint.
+   * module) but runs disabled: no tabs, no Apply endpoint. `routingFile` and
+   * `writeRoot` are optional TOGETHER — `{ tabsModule }` alone is valid (tabs
+   * without the dev-only Apply write sandbox); exactly one of the two is not.
    */
-  zdtpApplyProxy?: { routingFile: string; writeRoot: string; tabsModule?: string };
+  zdtpApplyProxy?:
+    | { routingFile: string; writeRoot: string; tabsModule?: string }
+    | { routingFile?: undefined; writeRoot?: undefined; tabsModule?: string };
+  /**
+   * Append the engine's header trigger for the preview token panel to the
+   * zudo-doc routes plugin's `headerRightItems`. Defaults to true. Unlike
+   * `chromeDefaults` this is unconditional: a host with its own `headerNav`
+   * still gets the trigger.
+   */
+  headerTokenTrigger?: boolean;
   /** Extra keys of `zudo-sg.config.mjs` (e.g. `barrelIndex`) are CLI-only and ignored here. */
   [key: string]: unknown;
 }
@@ -114,6 +126,105 @@ function withStyleguideChromeDefaults(plugin: unknown, routes: SgRoutes): unknow
         headerRightItems: hasSearch
           ? headerRightItems
           : [...headerRightItems, { type: "component", component: "search" }],
+      },
+    },
+  };
+}
+
+const HEADER_TOKEN_TRIGGER_ID = "sg-preview-tokens-trigger";
+/** Deliberately distinct from the retired doc-chrome channel `toggle-sg-doc-tweak`. */
+const PREVIEW_TOKEN_PANEL_EVENT = "toggle-preview-token-panel";
+/** Emitted by the engine's route chrome on the four catalog routes. */
+const ENGINE_ROUTE_ATTR = "data-sg-engine-route";
+const TRIGGER_INSTALLED_FLAG = "__sgPreviewTokensTriggerInstalled";
+
+const SLIDERS_GLYPH =
+  '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" ' +
+  'fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" ' +
+  'stroke-linejoin="round" aria-hidden="true">' +
+  '<line x1="4" y1="6" x2="20" y2="6"></line>' +
+  '<line x1="4" y1="12" x2="20" y2="12"></line>' +
+  '<line x1="4" y1="18" x2="20" y2="18"></line>' +
+  '<circle cx="9" cy="6" r="2.4" fill="currentColor" stroke="none"></circle>' +
+  '<circle cx="15" cy="12" r="2.4" fill="currentColor" stroke="none"></circle>' +
+  '<circle cx="8" cy="18" r="2.4" fill="currentColor" stroke="none"></circle>' +
+  "</svg>";
+
+// The button ships `hidden`; the inline script reveals it only on engine
+// routes. An inline <script> cannot import, so the after-navigate event name
+// is interpolated from the package constant at config-build time rather than
+// hardcoded.
+const HEADER_TOKEN_TRIGGER_HTML =
+  `<button id="${HEADER_TOKEN_TRIGGER_ID}" type="button" hidden ` +
+  'class="flex items-center justify-center text-muted transition-colors hover:text-fg cursor-pointer" ' +
+  'aria-label="Open component tokens panel" title="Component tokens" ' +
+  `onclick="window.dispatchEvent(new CustomEvent('${PREVIEW_TOKEN_PANEL_EVENT}'))">` +
+  SLIDERS_GLYPH +
+  "</button>" +
+  "<script>(function(){" +
+  `if(window.${TRIGGER_INSTALLED_FLAG})return;` +
+  `window.${TRIGGER_INSTALLED_FLAG}=true;` +
+  "function sync(){" +
+  `var btn=document.getElementById(${JSON.stringify(HEADER_TOKEN_TRIGGER_ID)});` +
+  "if(!btn)return;" +
+  `btn.hidden=!document.querySelector(${JSON.stringify(`[${ENGINE_ROUTE_ATTR}]`)});` +
+  "}" +
+  "sync();" +
+  // The header is parsed before the marker element, so on a hard load the
+  // immediate sync() can run too early; re-run once the document is complete.
+  'if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",sync);' +
+  `document.addEventListener(${JSON.stringify(AFTER_NAVIGATE_EVENT)},sync);` +
+  "})();</script>";
+
+/**
+ * The header-right item `withZudoSg()` appends to the zudo-doc routes plugin.
+ *
+ * Exported because a host that renders its OWN `<header>` (a host-owned
+ * `pages/index.tsx` calling `HeaderWithDefaults` with `settings.headerRightItems`)
+ * must add this item to those settings itself. zfb's client router PERSISTS the
+ * `<header>` node across a swap — the live header replaces the incoming one — so
+ * a session that starts on a trigger-less host page keeps that header for every
+ * subsequent SPA navigation, and the trigger never appears on the engine routes.
+ * `withZudoSg()` detects an item already carrying the button id and does not
+ * append a second one.
+ */
+export const HEADER_TOKEN_TRIGGER_ITEM: { type: "html"; html: string } = {
+  type: "html",
+  html: HEADER_TOKEN_TRIGGER_HTML,
+};
+
+/**
+ * Appends the preview-token-panel trigger to the zudo-doc header. Unconditional
+ * by design: `withStyleguideChromeDefaults` early-returns on a non-empty host
+ * `headerNav`, which would hand the trigger to bare scaffolds and withhold it
+ * from exactly the configured hosts that need it.
+ */
+function withHeaderTokenTrigger(plugin: unknown): unknown {
+  if (!isRecord(plugin) || plugin.name !== ZUDO_DOC_ROUTES_PLUGIN_NAME) return plugin;
+
+  const options = isRecord(plugin.options) ? plugin.options : {};
+  const settings = isRecord(options.settings) ? options.settings : {};
+  const headerRightItems = Array.isArray(settings.headerRightItems) ? settings.headerRightItems : [];
+
+  // An `html` header-right item carries no id field, so a second pass over an
+  // already-composed fragment can only be detected by substring-matching the
+  // button id inside the markup. Do NOT "fix" this to an `item.id` comparison.
+  const alreadyInstalled = headerRightItems.some(
+    (item) =>
+      isRecord(item) &&
+      item.type === "html" &&
+      typeof item.html === "string" &&
+      item.html.includes(HEADER_TOKEN_TRIGGER_ID),
+  );
+  if (alreadyInstalled) return plugin;
+
+  return {
+    ...plugin,
+    options: {
+      ...options,
+      settings: {
+        ...settings,
+        headerRightItems: [...headerRightItems, HEADER_TOKEN_TRIGGER_ITEM],
       },
     },
   };
@@ -182,9 +293,13 @@ export function withZudoSg<
     options.chromeDefaults === false
       ? presetPlugins
       : presetPlugins.map((plugin) => withStyleguideChromeDefaults(plugin, resolveSgRoutes(options.routes)));
+  // Runs AFTER the chrome pass so the trigger trails the `search` item that
+  // pass may have appended.
+  const pluginsWithTrigger =
+    options.headerTokenTrigger === false ? pluginsWithChrome : pluginsWithChrome.map(withHeaderTokenTrigger);
   return {
     ...presetFragment,
-    plugins: [...pluginsWithChrome, ...sg.plugins],
+    plugins: [...pluginsWithTrigger, ...sg.plugins],
     collections: [...(presetFragment.collections ?? []), ...sg.collections],
   };
 }

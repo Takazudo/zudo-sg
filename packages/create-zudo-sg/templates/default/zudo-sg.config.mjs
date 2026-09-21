@@ -20,4 +20,11 @@ export default {
     cssFiles: ["./src/styles/ui-tokens.css", "./src/styles/ui-tokens.css"],
     manifestOut: "./src/styleguide/token-manifest.ts",
   },
+  // Tabs-only shape (routingFile/writeRoot omitted): the header trigger's
+  // preview token panel gets the manifest-derived tabs, but no dev-only Apply
+  // write sandbox — a fresh scaffold has no sensible default path for one.
+  // Wiring the Apply sandbox is an opt-in next step (#818).
+  zdtpApplyProxy: {
+    tabsModule: "./src/config/preview-token-panel-tabs.ts",
+  },
 };

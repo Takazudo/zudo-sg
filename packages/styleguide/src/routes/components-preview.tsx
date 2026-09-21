@@ -40,7 +40,10 @@ export default function ComponentsPreviewRoute(): JSX.Element {
   }) as unknown as VNode;
 
   return (
-    <html lang="en" data-sg-preview-doc>
+    // Chrome-free document (no header, no client router), so the persisted-vs-
+    // swapped distinction in ./_chrome.tsx doesn't apply here — the marker is
+    // still emitted for route-family completeness (issue #815 AC).
+    <html lang="en" data-sg-preview-doc data-sg-engine-route>
       <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
