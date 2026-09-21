@@ -59,6 +59,14 @@ It runs formatting checks for MDX, token lint, codegen drift checks, typecheck, 
 
 Use the full gate before pushing broad changes. For documentation-only changes, the required focused checks are usually the docs build, docs check, link check against `doc/dist`, and `git diff --check`.
 
+### Heavy steps are queued machine-wide
+
+The five expensive steps — unit tests, root build, demo build, doc build, and the Playwright smoke — go through a `heavy` helper in `scripts/run-b4push.sh` that delegates to a machine-wide queue (`~/.claude/scripts/heavy-guard.sh` or the `~/.codex` twin, overridable with `HEAVY_GUARD`). When several agent sessions share one machine, two overlapping heavy lanes exhaust memory and the suites go red for reasons unrelated to the code; the queue serializes them and gates on free memory instead.
+
+The lookup is fail-open: on CI and on any machine without the guard installed, the step runs directly and nothing changes. Exit codes pass through unchanged, so the gate's pass/fail collection is unaffected. Each wrapped step adds one `heavy-guard: verdict=PASS|FAIL|ENV_SUSPECT` line on stderr; exit 75 means the queue timed out and the step never ran.
+
+Read the verdict before reading the failure. `ENV_SUSPECT` means the step failed while the machine was starved — rerun it once, and if it is still red with no assertion, type, or lint error in the output, defer that step to CI rather than calling it passed. `FAIL` is a real failure. Never tune the suite itself (timeouts, worker counts) to fit one machine.
+
 ## Engine foreign-install gate
 
 `pnpm verify:styleguide-install` proves the `@takazudo/zudo-sg` engine installs the same way a project outside this workspace would install it — not only through the workspace link the root host uses day to day:

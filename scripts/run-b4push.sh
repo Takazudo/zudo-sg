@@ -63,6 +63,23 @@ skip() { echo "⏭  $1 (skipped)"; }
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
+# Machine-wide queue for heavy steps, shared by every agent session on this
+# machine (the owner's ~/.claude or ~/.codex copy of heavy-guard.sh). Several
+# sessions running their own heavy lane at once starve memory and turn suites
+# red for non-code reasons; the guard serializes them and gates on available
+# memory. Absent on CI and on other people's machines → the step runs directly,
+# so nothing changes for them. Nested calls are no-ops, and the exit code is
+# passed through, so the pass/fail collection below is unaffected. Exit 75
+# means the queue timed out and the step never ran. See
+# https://github.com/Takazudo/zudo-test-wisdom/issues/396
+heavy() {
+  local g="${HEAVY_GUARD:-}"
+  [ -n "$g" ] || for c in "$HOME/.claude/scripts/heavy-guard.sh" "$HOME/.codex/scripts/heavy-guard.sh"; do
+    [ -x "$c" ] && { g="$c"; break; }
+  done
+  if [ -n "$g" ] && [ -z "${CI:-}" ]; then "$g" -- "$@"; else "$@"; fi
+}
+
 # ── Step 1: Format check (mdx) ────────────────────────
 # Verify MDX/markdown files are formatted. The lefthook pre-commit hook
 # auto-formats on commit; this step catches drifts from direct edits.
@@ -111,7 +128,7 @@ fi
 
 # ── Step 5: Unit tests ────────────────────────────────
 step
-if (cd "$ROOT_DIR" && pnpm test:unit); then
+if (cd "$ROOT_DIR" && heavy pnpm test:unit); then
   pass "Unit tests passed"
 else
   fail "Unit tests"
@@ -119,7 +136,7 @@ fi
 
 # ── Step 6: Build ─────────────────────────────────────
 step
-if (cd "$ROOT_DIR" && pnpm build); then
+if (cd "$ROOT_DIR" && heavy pnpm build); then
   pass "Build passed"
 else
   fail "Build"
@@ -129,7 +146,7 @@ fi
 # apps/demo/dist is needed by check:links:demo (step 8) and by the demo-smoke
 # Playwright project (step 10's webServer).
 step
-if (cd "$ROOT_DIR" && pnpm --filter @zudo-sg/demo build); then
+if (cd "$ROOT_DIR" && heavy pnpm --filter @zudo-sg/demo build); then
   pass "Build demo passed"
 else
   fail "Build demo"
@@ -164,7 +181,7 @@ step
 if [[ "${B4PUSH_SKIP_E2E:-}" == "1" ]]; then
   skip "Playwright smoke (B4PUSH_SKIP_E2E=1)"
 else
-  if (cd "$ROOT_DIR" && pnpm test:e2e); then
+  if (cd "$ROOT_DIR" && heavy pnpm test:e2e); then
     pass "Playwright smoke passed"
   else
     fail "Playwright smoke e2e"
@@ -180,7 +197,7 @@ step
 if [[ "${B4PUSH_SKIP_DOC:-}" == "1" ]]; then
   skip "Doc site build + link check (B4PUSH_SKIP_DOC=1)"
 else
-  if (cd "$ROOT_DIR" && pnpm build:doc && pnpm check:links:doc); then
+  if (cd "$ROOT_DIR" && heavy pnpm build:doc && pnpm check:links:doc); then
     pass "Doc site build + link check passed"
   else
     fail "Doc site build + link check"

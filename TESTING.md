@@ -69,6 +69,19 @@ Steps in `scripts/run-b4push.sh`:
 11. Playwright smoke e2e — `pnpm test:e2e` (`smoke`, `preview-token-panel`, and `demo-smoke`)
 12. Manual interactive smoke (operator-driven)
 
+The five expensive steps — unit tests, root build, demo build, documentation
+build, and the Playwright smoke — are wrapped in the script's `heavy` helper,
+which routes them through the machine-wide heavy queue (`~/.claude/scripts/heavy-guard.sh` or
+the `~/.codex` twin; override with `HEAVY_GUARD`) so that overlapping agent
+sessions on one machine cannot starve each other of memory. The lookup is
+fail-open — on CI and on machines without the guard the step runs directly — and
+exit codes pass through, so pass/fail collection is unchanged. Each wrapped step
+prints one `heavy-guard: verdict=PASS|FAIL|ENV_SUSPECT` line on stderr; exit 75
+means the queue timed out and the step never ran. `ENV_SUSPECT` → rerun once;
+still red with no assertion / type / lint error → defer that step to CI and
+report it as deferred, never as passed. Do not tune a suite's timeouts or worker
+counts to fit one machine.
+
 ### T1 — CI gate (authoritative)
 
 The `pr-checks.yml` workflow runs on every PR targeting `main` or `base/**` and is
