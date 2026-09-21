@@ -7,7 +7,6 @@
 // Host paths are validated later, inside each plugin's `setup()` (fail-fast,
 // like zudo-doc's preset: a missing host module throws there, not here).
 
-import { AFTER_NAVIGATE_EVENT } from "@takazudo/zudo-doc/transitions";
 import {
   COMPONENT_DOCS_COLLECTION,
   componentDocsCollectionName,
@@ -20,6 +19,13 @@ export const ROUTES_PLUGIN_NAME = "@takazudo/zudo-sg/plugins/routes";
 export const PREVIEW_CSS_PLUGIN_NAME = "@takazudo/zudo-sg/plugins/preview-css";
 export const ZDTP_APPLY_PROXY_PLUGIN_NAME = "@takazudo/zudo-sg/plugins/zdtp-apply-proxy";
 const ZUDO_DOC_ROUTES_PLUGIN_NAME = "@takazudo/zudo-doc/plugins/routes";
+
+// Inlined copy of zudo-doc's `AFTER_NAVIGATE_EVENT` (@takazudo/zudo-doc/transitions).
+// This module must stay importable without the peer installed — `check-pack.sh`
+// imports every `exports` subpath from a scratch project holding only the tarball —
+// so the value is duplicated here and pinned to the peer's export by
+// `__tests__/config.test.ts`.
+const AFTER_NAVIGATE_EVENT = "zfb:after-swap";
 
 /** Collection name of `componentsRoots[0]`; later roots append their index. */
 export const COMPONENT_DOCS_COLLECTION_BASE = COMPONENT_DOCS_COLLECTION;
