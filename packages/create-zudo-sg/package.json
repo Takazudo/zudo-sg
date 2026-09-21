@@ -1,6 +1,6 @@
 {
   "name": "create-zudo-sg",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Create a new zudo-sg styleguide project",
   "license": "MIT",
   "author": "Takeshi Takatsudo",

@@ -4,6 +4,29 @@ All notable changes to `create-zudo-sg` are documented in this file.
 
 The format is based on Keep a Changelog.
 
+## [0.1.4] - 2026-09-21
+
+Gives a fresh starter a working preview token panel, not just the button that
+opens one.
+
+### Added
+
+- Scaffold the wiring the preview token panel needs: a `_body-end-islands.tsx`
+  that mounts `PreviewTokenPanelBootstrap` on the injected `/components/*` and
+  `/tokens` routes, a `_chrome-bindings.tsx`, a generated
+  `src/styleguide/token-manifest.ts`, and a `src/config/preview-token-panel-tabs.ts`
+  the panel reads its tabs from.
+- Turn on `bundleZdtp` and a tabs-only `zdtpApplyProxy` in the starter's
+  `zfb.config.ts`, so the panel gets the real zdtp loader instead of the
+  throwing stub without opting into the dev-only Apply endpoint.
+
+### Changed
+
+- Update the starter engine range to `@takazudo/zudo-sg ^0.3.1`, whose header
+  token trigger opens the panel the scaffold now wires.
+- Document the new scaffold contents and the `routingFile` + `writeRoot` opt-in
+  for the panel's Apply step in the README.
+
 ## [0.1.3] - 2026-09-21
 
 Stops fresh starters from requesting favicons they never shipped, and moves
