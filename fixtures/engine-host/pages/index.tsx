@@ -4,6 +4,11 @@
 import type { JSX } from "preact";
 // Optional islands seed; see pages/lib/_zudo-sg-islands.ts.
 import "./lib/_zudo-sg-islands";
+// Statically imported (not just reached through `chromeBindingsModule`'s
+// virtual re-export) so zfb's island scanner is guaranteed to discover
+// PreviewTokenPanelBootstrap and register it under its SSR marker — mirrors
+// the sibling zudo-doc showcase's pages/index.tsx import of the same chain.
+import { BodyEndIslands } from "./lib/_body-end-islands";
 
 export const frontmatter = { title: "Styleguide starter" };
 
@@ -34,6 +39,7 @@ export default function IndexPage(): JSX.Element {
             </a>
           </nav>
         </main>
+        <BodyEndIslands />
       </body>
     </html>
   );

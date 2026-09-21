@@ -22,6 +22,16 @@ export default defineConfig(
       // minimal (see package.json).
       mermaid: false,
       strictContentBridge: true,
+      // Bundling follows `bundleZdtp ?? designTokenPanel`; this starter never
+      // sets `designTokenPanel`, so without this the zdtp loader resolves to
+      // zudo-doc's throwing stub and the engine's PREVIEW token panel (opened
+      // from the header trigger `withZudoSg` injects) rejects at runtime
+      // (zudolab/zudo-doc#4261).
+      bundleZdtp: true,
+      // Mounts the preview token panel bootstrap on every package-owned
+      // route (/components/*, /tokens), not just this starter's host-owned
+      // `/`. See pages/lib/_chrome-bindings.tsx.
+      chromeBindingsModule: "./pages/lib/_chrome-bindings.tsx",
     }),
     zudoSgConfig,
   ),
