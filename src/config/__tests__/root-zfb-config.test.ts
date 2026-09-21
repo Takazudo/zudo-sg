@@ -49,16 +49,33 @@ describe("root zfb integration contract", () => {
     expect(config.markdown?.features?.imageDimensions).toEqual({});
   });
 
-  it("passes the complete host settings through the route descriptor", () => {
+  it("passes the complete host settings through the route descriptor, plus the header token trigger", () => {
     const routes = config.plugins?.find(
       ({ name }) => name === "@takazudo/zudo-doc/plugins/routes",
     );
-    const routeSettings = routes?.options?.settings;
+    const routeSettings = routes?.options?.settings as
+      | { headerRightItems?: unknown[] }
+      | undefined;
 
-    expect(routeSettings).toEqual({
-      ...settings,
-      bundleZdtp: true,
-    });
+    // withZudoSg()'s headerTokenTrigger option (#813/#816, default true) is
+    // unconditional, so it appends one `{ type: "html" }` header-right item
+    // carrying the "sg-preview-tokens-trigger" button to this exact settings
+    // object — the field this test otherwise asserts is passed through
+    // byte-for-byte. Assert everything else is unchanged, then assert the
+    // one appended entry separately.
+    const { headerRightItems: routeHeaderRightItems, ...routeRest } =
+      routeSettings ?? {};
+    const { headerRightItems: baseHeaderRightItems, ...baseRest } = settings;
+
+    expect(routeRest).toEqual({ ...baseRest, bundleZdtp: true });
+    expect(routeHeaderRightItems?.slice(0, -1)).toEqual(baseHeaderRightItems);
+
+    const trigger = routeHeaderRightItems?.at(-1) as
+      | { type?: string; html?: string }
+      | undefined;
+    expect(trigger?.type).toBe("html");
+    expect(trigger?.html).toContain("sg-preview-tokens-trigger");
+
     expect(settings).toMatchObject({
       // The doc-chrome token panel is gone; only the engine's preview panel
       // and the /tokens dashboard remain, so the preset must NOT mount

@@ -1,4 +1,4 @@
-import { expect, test, type Page, type FrameLocator } from "@playwright/test";
+import { expect, test, type Page, type FrameLocator, type Locator } from "@playwright/test";
 
 // ---------------------------------------------------------------------------
 // H6 integration spec — Preview Token Panel (sg-preview-design-tokens/v1)
@@ -620,4 +620,153 @@ test("preview panel: Reset clears overrides from all visible preview iframes", a
     );
     expect(secondRadius).not.toBe("20rem");
   }
+});
+
+// ---------------------------------------------------------------------------
+// Header token trigger (#816) — the withZudoSg()-injected header-right button
+// that opens this same preview token panel from anywhere on the four engine
+// routes. See packages/styleguide/src/config/index.ts (withHeaderTokenTrigger)
+// and packages/styleguide/src/routes/_chrome.tsx (the data-sg-engine-route
+// marker its inline sync() script looks for).
+// ---------------------------------------------------------------------------
+
+const HEADER_TRIGGER = "#sg-preview-tokens-trigger";
+
+/**
+ * Click a link and wait for the client-router swap to finish. The header is
+ * `data-zfb-transition-persist`, so a plain click + locator assertion can
+ * race the swap's DOM mutation; waiting for `zfb:after-swap` (the event the
+ * trigger's own inline sync() script also listens for) matches production
+ * timing. Mirrors the identically-named helper in detail-workbench.spec.ts /
+ * preview-fidelity.spec.ts (not shared — each e2e spec file is self-contained).
+ *
+ * Takes a Locator, not a selector string: several call sites need a scoped
+ * locator (e.g. `.first()` on a selector matching many elements), and
+ * re-resolving from a bare selector at click time would violate Playwright's
+ * strict mode on those pages.
+ */
+async function clickAndWaitForSwap(page: Page, target: Locator): Promise<void> {
+  const swapped = page.evaluate(() => {
+    return new Promise<void>((resolve, reject) => {
+      const timeout = window.setTimeout(
+        () => reject(new Error("Timed out waiting for zfb:after-swap")),
+        10_000,
+      );
+      document.addEventListener(
+        "zfb:after-swap",
+        () => {
+          window.clearTimeout(timeout);
+          resolve();
+        },
+        { once: true },
+      );
+    });
+  });
+  await target.click();
+  await swapped;
+}
+
+test("header trigger: visible on a component detail page; opens the same preview panel", async ({
+  page,
+}) => {
+  await gotoFirstDetailPage(page);
+  const frame = await waitForFirstPreviewFrame(page);
+
+  const trigger = page.locator(HEADER_TRIGGER);
+  await expect(trigger).toBeVisible();
+
+  await expect(page.locator(".tokenpanel-shell")).not.toBeAttached();
+  await trigger.click();
+  await expect(page.locator(".tokenpanel-shell").first()).toBeVisible({
+    timeout: 10_000,
+  });
+
+  // Same isolation contract as Test 1: an edit through the header-opened
+  // panel reaches the preview iframe's :root, never the host <html>.
+  const hostBrandBefore = await getHostRootVar(page, "--color-accent");
+  await applyVarsToFirstIframe(page, [["--color-accent", BRAND_SENTINEL]]);
+  await expect.poll(() => getIframeRootVar(frame, "--color-accent")).toBe(
+    BRAND_SENTINEL,
+  );
+  expect(await getHostRootVar(page, "--color-accent")).toBe(hostBrandBefore);
+});
+
+test("header trigger: visible on /tokens and /components — the two iframe-less engine routes", async ({
+  page,
+}) => {
+  // Regression guard for F6 (issue #813): /tokens has zero preview iframes
+  // and /components renders every component inline server-side, so an
+  // iframe-presence-based visibility predicate would wrongly hide the
+  // trigger on exactly the two pages that already offer the panel.
+  await page.goto("/tokens");
+  await expect(page.locator('iframe[src*="/components/preview"]')).toHaveCount(0);
+  await expect(page.locator(HEADER_TRIGGER)).toBeVisible();
+
+  await page.goto("/components");
+  await expect(page.locator(HEADER_TRIGGER)).toBeVisible();
+});
+
+test("header trigger: present but hidden on /docs/overview", async ({ page }) => {
+  await page.goto("/docs/overview");
+  const trigger = page.locator(HEADER_TRIGGER);
+  await expect(trigger).toBeAttached();
+  await expect(trigger).toBeHidden();
+});
+
+// The issue asks for the same "present but hidden" assertion on `/`, but
+// pages/index.tsx renders its own header via HeaderWithDefaults, which reads
+// settings.headerRightItems straight from src/config/settings.ts — a
+// different array than the one withHeaderTokenTrigger() appends to (the
+// zudo-doc routes-plugin's own settings, which only feeds the
+// package-injected routes: /docs/*, /components*, /tokens, /404). Confirmed
+// against the built output: dist/index.html has zero occurrences of
+// "sg-preview-tokens-trigger", while dist/docs/overview/index.html has it
+// twice (button + inline script). So on `/` the trigger is absent from the
+// DOM entirely, not present-and-hidden — this test asserts the real
+// behaviour instead of forcing the issue's literal wording.
+test("header trigger: absent from / — its header does not receive the injected headerRightItems", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await expect(page.locator(HEADER_TRIGGER)).toHaveCount(0);
+});
+
+test("header trigger: SPA navigation toggles visibility in both directions", async ({
+  page,
+}) => {
+  await page.goto("/docs/overview");
+  const trigger = page.locator(HEADER_TRIGGER);
+  await expect(trigger).toBeHidden();
+
+  // docs/overview -> components (catalog) -> a component detail page, both
+  // hops via the client router (not page.goto) so the trigger's
+  // AFTER_NAVIGATE_EVENT listener — not just its DOMContentLoaded path — is
+  // what reveals it. The header carries data-zfb-transition-persist, so this
+  // also proves the sync() re-run survives the persisted-node navigation.
+  await clickAndWaitForSwap(
+    page,
+    page.locator('[data-header-nav] a[data-nav-category="components"]'),
+  );
+  await expect(trigger).toBeVisible();
+
+  const firstCard = page.locator("[data-sg-card]").first();
+  await expect(firstCard).toBeAttached();
+  const detailHref = await firstCard.getAttribute("href");
+  expect(detailHref).toBeTruthy();
+  await clickAndWaitForSwap(page, firstCard);
+  // trailingSlash normalizes the client-router URL, so match with or without one.
+  await expect(page).toHaveURL(
+    new RegExp(detailHref!.replace(/\//g, "\\/") + "\\/?$"),
+  );
+  await expect(trigger).toBeVisible();
+
+  // …and the reverse hop: component page -> /docs/overview hides it again.
+  // This is the direction a naive implementation strands, since the header
+  // node itself is reused (persisted) rather than re-created.
+  await clickAndWaitForSwap(
+    page,
+    page.locator('[data-header-nav] a[data-nav-category="overview"]'),
+  );
+  await expect(page).toHaveURL(/\/docs\/overview\/?$/);
+  await expect(trigger).toBeHidden();
 });
