@@ -532,16 +532,23 @@ lifts whole across a navigation, so a marker there would go stale. The script
 re-syncs `btn.hidden` from `document.querySelector("[data-sg-engine-route]")`
 immediately, again on `DOMContentLoaded` (a hard load can run the immediate
 sync before the header is parsed), and on every
-`AFTER_NAVIGATE_EVENT`. The trigger does not reach this showcase's `/`:
-`zfb.config.ts` spreads `./src/config/settings.ts`'s `settings` object into
-the zudo-doc routes-plugin descriptor before `withZudoSg` appends the
-trigger to that copy's `headerRightItems`, so the append lands on the
-plugin's own settings, not on the original `settings` module object. `/`'s
-header (`pages/index.tsx` → `_header-with-defaults.tsx`) imports and reads
-that original `settings` module directly, so it never sees the appended
-item — and `/` is not an engine route anyway, so the button would be hidden
-there even if it could reach it. Accepted as identical user-visible
-behaviour, not a gap.
+`AFTER_NAVIGATE_EVENT`.
+
+**A host-owned header must list the item itself.** `withZudoSg()`'s append
+lands on the zudo-doc routes-plugin descriptor's own copy of `settings`, so a
+host page that renders its own header — here `pages/index.tsx` →
+`_header-with-defaults.tsx`, which reads the original
+`./src/config/settings.ts` module — never sees it. That is not cosmetic:
+zfb's client router PERSISTS the `<header>` node across a swap (it lifts the
+live header into the incoming body and discards the incoming one), so the
+header the session first loaded serves every later navigation. A session
+entering at `/` therefore carried a trigger-less header into `/components`
+and `/tokens` for its whole lifetime, and the button was absent rather than
+hidden. The engine exports `HEADER_TOKEN_TRIGGER_ITEM` for this; this
+showcase lists it in `settings.headerRightItems`, and `withHeaderTokenTrigger`
+detects the already-installed button id and skips its own append, so exactly
+one button is emitted per page. Adopters whose `/` renders a zudo-doc header
+must do the same.
 
 ## Spike report — proof items (a)–(g)
 

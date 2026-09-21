@@ -27,6 +27,7 @@ import type {
   MetaTagsConfig,
   Settings,
 } from "./settings-types";
+import { HEADER_TOKEN_TRIGGER_ITEM } from "@takazudo/zudo-sg/config";
 
 export const settings = {
   colorScheme: "Default Dark",
@@ -172,6 +173,15 @@ The same library drives a multi-page demo site, so the components can be explore
     { type: "component", component: "theme-toggle" },
     { type: "component", component: "search" },
     { type: "component", component: "language-switcher" },
+    // The engine's preview-token-panel trigger. It must be listed HERE, not
+    // left to `withZudoSg()`'s own append: that append only reaches the
+    // package-injected routes, while `pages/index.tsx` renders its own header
+    // from this array. Because zfb's client router persists the <header> node
+    // across a swap (the live header replaces the incoming one), a session
+    // that starts on `/` would otherwise carry a trigger-less header into
+    // /components and /tokens for the rest of the session. `withZudoSg()`
+    // detects this entry and skips its own append, so the button stays single.
+    HEADER_TOKEN_TRIGGER_ITEM,
   ] satisfies HeaderRightItem[] as HeaderRightItem[],
 } satisfies Settings;
 

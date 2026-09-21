@@ -49,7 +49,7 @@ describe("root zfb integration contract", () => {
     expect(config.markdown?.features?.imageDimensions).toEqual({});
   });
 
-  it("passes the complete host settings through the route descriptor, plus the header token trigger", () => {
+  it("passes the complete host settings through the route descriptor, header token trigger included", () => {
     const routes = config.plugins?.find(
       ({ name }) => name === "@takazudo/zudo-doc/plugins/routes",
     );
@@ -57,24 +57,16 @@ describe("root zfb integration contract", () => {
       | { headerRightItems?: unknown[] }
       | undefined;
 
-    // withZudoSg()'s headerTokenTrigger option (#813/#816, default true) is
-    // unconditional, so it appends one `{ type: "html" }` header-right item
-    // carrying the "sg-preview-tokens-trigger" button to this exact settings
-    // object — the field this test otherwise asserts is passed through
-    // byte-for-byte. Assert everything else is unchanged, then assert the
-    // one appended entry separately.
-    const { headerRightItems: routeHeaderRightItems, ...routeRest } =
-      routeSettings ?? {};
-    const { headerRightItems: baseHeaderRightItems, ...baseRest } = settings;
+    // The trigger (#813/#816) is listed in src/config/settings.ts itself, so
+    // `pages/index.tsx`'s own header carries it too — see the comment there.
+    // withZudoSg() therefore finds it already installed and appends nothing,
+    // and the route descriptor is the host settings byte-for-byte again.
+    expect(routeSettings).toEqual({ ...settings, bundleZdtp: true });
 
-    expect(routeRest).toEqual({ ...baseRest, bundleZdtp: true });
-    expect(routeHeaderRightItems?.slice(0, -1)).toEqual(baseHeaderRightItems);
-
-    const trigger = routeHeaderRightItems?.at(-1) as
-      | { type?: string; html?: string }
-      | undefined;
-    expect(trigger?.type).toBe("html");
-    expect(trigger?.html).toContain("sg-preview-tokens-trigger");
+    const triggers = (settings.headerRightItems as Array<{ type: string; html?: string }>).filter(
+      (item) => item.type === "html" && item.html?.includes("sg-preview-tokens-trigger"),
+    );
+    expect(triggers).toHaveLength(1);
 
     expect(settings).toMatchObject({
       // The doc-chrome token panel is gone; only the engine's preview panel

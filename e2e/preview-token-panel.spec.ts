@@ -713,22 +713,37 @@ test("header trigger: present but hidden on /docs/overview", async ({ page }) =>
   await expect(trigger).toBeHidden();
 });
 
-// The issue asks for the same "present but hidden" assertion on `/`, but
-// pages/index.tsx renders its own header via HeaderWithDefaults, which reads
-// settings.headerRightItems straight from src/config/settings.ts — a
-// different array than the one withHeaderTokenTrigger() appends to (the
-// zudo-doc routes-plugin's own settings, which only feeds the
-// package-injected routes: /docs/*, /components*, /tokens, /404). Confirmed
-// against the built output: dist/index.html has zero occurrences of
-// "sg-preview-tokens-trigger", while dist/docs/overview/index.html has it
-// twice (button + inline script). So on `/` the trigger is absent from the
-// DOM entirely, not present-and-hidden — this test asserts the real
-// behaviour instead of forcing the issue's literal wording.
-test("header trigger: absent from / — its header does not receive the injected headerRightItems", async ({
+// `/` renders its own header via HeaderWithDefaults, reading
+// settings.headerRightItems straight from src/config/settings.ts rather than
+// the zudo-doc routes-plugin settings withHeaderTokenTrigger() appends to. The
+// trigger is listed in that host array explicitly (see the comment there),
+// because the client router PERSISTS the <header> node across a swap: without
+// it, a session entering at `/` would carry a trigger-less header into
+// /components and /tokens forever. So `/` must be present-and-hidden, not
+// absent.
+test("header trigger: present but hidden on / — the host-owned header carries it too", async ({
   page,
 }) => {
   await page.goto("/");
-  await expect(page.locator(HEADER_TRIGGER)).toHaveCount(0);
+  const trigger = page.locator(HEADER_TRIGGER);
+  await expect(trigger).toHaveCount(1);
+  await expect(trigger).toBeHidden();
+});
+
+test("header trigger: survives SPA navigation that STARTS on / (persisted header)", async ({
+  page,
+}) => {
+  // Regression guard: zfb's client router lifts the live <header> into the
+  // incoming body and discards the incoming header, so whichever header the
+  // session first loaded is the one that serves every later swap.
+  await page.goto("/");
+  await expect(page.locator(HEADER_TRIGGER)).toBeHidden();
+
+  await clickAndWaitForSwap(
+    page,
+    page.locator('[data-header-nav] a[data-nav-category="components"]').first(),
+  );
+  await expect(page.locator(HEADER_TRIGGER)).toBeVisible();
 });
 
 test("header trigger: SPA navigation toggles visibility in both directions", async ({

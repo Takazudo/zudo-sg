@@ -177,6 +177,23 @@ const HEADER_TOKEN_TRIGGER_HTML =
   "})();</script>";
 
 /**
+ * The header-right item `withZudoSg()` appends to the zudo-doc routes plugin.
+ *
+ * Exported because a host that renders its OWN `<header>` (a host-owned
+ * `pages/index.tsx` calling `HeaderWithDefaults` with `settings.headerRightItems`)
+ * must add this item to those settings itself. zfb's client router PERSISTS the
+ * `<header>` node across a swap — the live header replaces the incoming one — so
+ * a session that starts on a trigger-less host page keeps that header for every
+ * subsequent SPA navigation, and the trigger never appears on the engine routes.
+ * `withZudoSg()` detects an item already carrying the button id and does not
+ * append a second one.
+ */
+export const HEADER_TOKEN_TRIGGER_ITEM: { type: "html"; html: string } = {
+  type: "html",
+  html: HEADER_TOKEN_TRIGGER_HTML,
+};
+
+/**
  * Appends the preview-token-panel trigger to the zudo-doc header. Unconditional
  * by design: `withStyleguideChromeDefaults` early-returns on a non-empty host
  * `headerNav`, which would hand the trigger to bare scaffolds and withhold it
@@ -207,7 +224,7 @@ function withHeaderTokenTrigger(plugin: unknown): unknown {
       ...options,
       settings: {
         ...settings,
-        headerRightItems: [...headerRightItems, { type: "html", html: HEADER_TOKEN_TRIGGER_HTML }],
+        headerRightItems: [...headerRightItems, HEADER_TOKEN_TRIGGER_ITEM],
       },
     },
   };
