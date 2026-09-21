@@ -108,6 +108,17 @@ describe("zudoSg()", () => {
     expect(zudoSg(rest).plugins[2]).toEqual({ name: ZDTP_APPLY_PROXY_PLUGIN_NAME, options: {} });
   });
 
+  it("accepts a tabs-only zdtpApplyProxy — routingFile/writeRoot omitted together (#815)", () => {
+    const tabsOnlyOptions: ZudoSgComposeOptions = {
+      ...OPTIONS,
+      zdtpApplyProxy: { tabsModule: "./src/config/preview-token-panel-tabs.ts" },
+    };
+    expect(zudoSg(tabsOnlyOptions).plugins[2]).toEqual({
+      name: ZDTP_APPLY_PROXY_PLUGIN_NAME,
+      options: { tabsModule: "./src/config/preview-token-panel-tabs.ts" },
+    });
+  });
+
   it("registers one componentDocs collection per components root", () => {
     expect(zudoSg(OPTIONS).collections).toEqual([
       { name: "componentDocs", path: "packages/demo-ui/src", include: ["**/*.mdx"] },

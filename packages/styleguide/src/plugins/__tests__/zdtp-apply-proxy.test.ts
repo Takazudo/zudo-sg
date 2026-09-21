@@ -23,6 +23,7 @@ import zdtpApplyProxyPlugin, {
   loadZdtpServer,
   resolveZdtpApplyProxyOptions,
   toFetchRequest,
+  type ZdtpApplyProxyOptions,
 } from "../zdtp-apply-proxy.js";
 
 // Real repo root (packages/styleguide/src/plugins/__tests__ → five levels up).
@@ -365,6 +366,20 @@ describe("resolveZdtpApplyProxyOptions", () => {
     expect(resolveZdtpApplyProxyOptions(REPO_ROOT, {})).toEqual({ enabled: false, tabsModule: undefined });
   });
 
+  it("resolves { tabsModule } alone to disabled with tabsModule preserved — the tabs-only option (#815)", () => {
+    // Type-level proof that `ZdtpApplyProxyOptions` accepts `{ tabsModule }`
+    // without `routingFile`/`writeRoot` (`pnpm check` fails to compile this
+    // file otherwise); the assignment below is the AC's other half —
+    // resolution behaves the same as the untyped `{}` case above, plus tabs.
+    const tabsOnly: ZdtpApplyProxyOptions = {
+      tabsModule: "./src/config/preview-token-panel-tabs.ts",
+    };
+    expect(resolveZdtpApplyProxyOptions(REPO_ROOT, tabsOnly)).toEqual({
+      enabled: false,
+      tabsModule: `${REPO_ROOT}/src/config/preview-token-panel-tabs.ts`,
+    });
+  });
+
   it("requires routingFile and writeRoot", () => {
     expect(() => resolveZdtpApplyProxyOptions(REPO_ROOT, { writeRoot: "./packages/demo-ui/styles" })).toThrow(
       '[zudo-sg] option "routingFile" is required',
@@ -381,6 +396,22 @@ describe("resolveZdtpApplyProxyOptions", () => {
     expect(() =>
       resolveZdtpApplyProxyOptions(REPO_ROOT, { ...ROOT_OPTIONS, writeRoot: `./${ROUTING_FILE}` }),
     ).toThrow("which is not a directory");
+  });
+
+  it("type-checks routingFile/writeRoot as optional TOGETHER, not independently (#815)", () => {
+    // `pnpm check` (tsc), not vitest, is what proves these — vitest's oxc
+    // transformer strips types without checking them. Kept as assignments
+    // (never called) so `@ts-expect-error` pins the exact rejected shapes.
+    const bothGiven: ZdtpApplyProxyOptions = ROOT_OPTIONS;
+    const neitherGiven: ZdtpApplyProxyOptions = { tabsModule: "./tabs.ts" };
+    // @ts-expect-error routingFile without writeRoot must not type-check
+    const routingFileOnly: ZdtpApplyProxyOptions = { routingFile: `./${ROUTING_FILE}` };
+    // @ts-expect-error writeRoot without routingFile must not type-check
+    const writeRootOnly: ZdtpApplyProxyOptions = { writeRoot: "./packages/demo-ui/styles" };
+    void bothGiven;
+    void neitherGiven;
+    void routingFileOnly;
+    void writeRootOnly;
   });
 });
 

@@ -61,9 +61,13 @@ export interface ZudoSgComposeOptions {
    * `@takazudo/zudo-sg/plugins/zdtp-apply-proxy` options
    * (`{ routingFile, writeRoot, tabsModule? }`). Omitted → the plugin is still
    * listed (the engine's preview token panel island imports its virtual
-   * module) but runs disabled: no tabs, no Apply endpoint.
+   * module) but runs disabled: no tabs, no Apply endpoint. `routingFile` and
+   * `writeRoot` are optional TOGETHER — `{ tabsModule }` alone is valid (tabs
+   * without the dev-only Apply write sandbox); exactly one of the two is not.
    */
-  zdtpApplyProxy?: { routingFile: string; writeRoot: string; tabsModule?: string };
+  zdtpApplyProxy?:
+    | { routingFile: string; writeRoot: string; tabsModule?: string }
+    | { routingFile?: undefined; writeRoot?: undefined; tabsModule?: string };
   /**
    * Append the engine's header trigger for the preview token panel to the
    * zudo-doc routes plugin's `headerRightItems`. Defaults to true. Unlike
