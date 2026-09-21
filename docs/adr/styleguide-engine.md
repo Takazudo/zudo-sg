@@ -236,7 +236,7 @@ the island scanner either through the injected route entrypoints (zfb ≥
 static import from a host `pages/` file. The host keeps one shim,
 `pages/lib/_zudo-sg-islands.ts`, containing exactly
 `import "@takazudo/zudo-sg/islands";`, imported by `pages/index.tsx` (which
-already reaches the doc-chrome panels through `_body-end-islands.tsx`) —
+already reaches the preview token panel through `_body-end-islands.tsx`) —
 retained for `@takazudo/zudo-sg/islands` API stability; it is a no-op on the
 engine's zfb peer floor. `@takazudo/zudo-sg/islands` (`src/islands.ts` →
 `dist/islands.js`) is a
@@ -341,8 +341,11 @@ peer forces it.
 
 **Amendment (2026-09-20, #731):** zudo-doc 5.26.0 requires the zfb 2.19.0
 family, so the engine floors now follow at `^2.19.0` / `^5.26.0`. The host
-uses `bundleZdtp: true` with preset-facing `designTokenPanel: false` to keep
-its two custom panels working without filtering an internal preset plugin.
+uses `bundleZdtp: true` with `designTokenPanel: false` to keep its preview
+token panel working without filtering an internal preset plugin. (It carried
+two custom panels until the doc-chrome one was removed; `bundleZdtp` is now
+load-bearing on its own, since bundling otherwise follows `designTokenPanel`
+and would stub the loader the preview panel needs.)
 
 **Amendment (2026-09-16, #710):** raised the `@takazudo/zfb` floor from
 `^2.17.0` to `^2.18.0` and the `@takazudo/zudo-doc` floor from `^5.24.0` to
