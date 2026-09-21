@@ -30,6 +30,16 @@ export default defineConfig({
         __dirname,
         "packages/styleguide/src/token-tweak/__tests__/stubs/virtual-preview-token-panel.ts",
       ),
+      // zudo-doc-only virtual modules, sole importer packages/styleguide/src/routes/_chrome.tsx —
+      // same reason: plain Vite has no resolver for a "virtual:" specifier.
+      "virtual:zudo-doc-route-context": resolve(
+        __dirname,
+        "packages/styleguide/src/routes/__tests__/stubs/virtual-doc-route-context.ts",
+      ),
+      "virtual:zudo-doc-chrome-bindings": resolve(
+        __dirname,
+        "packages/styleguide/src/routes/__tests__/stubs/virtual-doc-chrome-bindings.ts",
+      ),
       // React → Preact compat aliases (mirrors production zfb/vite build).
       // Most-specific keys first so `react/jsx-runtime` is not swallowed by `react`.
       "react/jsx-runtime": "preact/jsx-runtime",

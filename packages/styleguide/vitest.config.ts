@@ -14,6 +14,16 @@ export default defineConfig({
         import.meta.dirname,
         "src/token-tweak/__tests__/stubs/virtual-preview-token-panel.ts",
       ),
+      // zudo-doc-only virtual modules, sole importer `src/routes/_chrome.tsx`;
+      // the root vitest.config.ts carries the same aliases.
+      "virtual:zudo-doc-route-context": resolve(
+        import.meta.dirname,
+        "src/routes/__tests__/stubs/virtual-doc-route-context.ts",
+      ),
+      "virtual:zudo-doc-chrome-bindings": resolve(
+        import.meta.dirname,
+        "src/routes/__tests__/stubs/virtual-doc-chrome-bindings.ts",
+      ),
     },
   },
   oxc: {

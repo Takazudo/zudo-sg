@@ -54,14 +54,25 @@ export const VIRTUAL_MODULE_ID = "virtual:zudo-sg-preview-token-panel";
 /** Same-origin path the preview panel POSTs its apply diff to. */
 export const APPLY_PATH = "/__zdtp/apply";
 
-export interface ZdtpApplyProxyOptions {
-  /** Project-root-relative routing JSON (e.g. `./zdtp-panel-routing.json`). */
-  routingFile: string;
-  /** Project-root-relative write sandbox directory (e.g. `./packages/demo-ui/styles`). */
-  writeRoot: string;
-  /** Project-root-relative module exporting `tabs` (the manifest-derived zdtp tab set). */
-  tabsModule?: string;
-}
+// `routingFile` and `writeRoot` are optional TOGETHER — either both (the Apply
+// endpoint is enabled) or neither (`{ tabsModule }` alone resolves to
+// `{ enabled: false, tabsModule }`, per `ResolvedZdtpApplyProxyOptions` below).
+// Exactly one of the two still fails validation in `resolveZdtpApplyProxyOptions`.
+export type ZdtpApplyProxyOptions =
+  | {
+      /** Project-root-relative routing JSON (e.g. `./zdtp-panel-routing.json`). */
+      routingFile: string;
+      /** Project-root-relative write sandbox directory (e.g. `./packages/demo-ui/styles`). */
+      writeRoot: string;
+      /** Project-root-relative module exporting `tabs` (the manifest-derived zdtp tab set). */
+      tabsModule?: string;
+    }
+  | {
+      routingFile?: undefined;
+      writeRoot?: undefined;
+      /** Project-root-relative module exporting `tabs` (the manifest-derived zdtp tab set). */
+      tabsModule?: string;
+    };
 
 export type ResolvedZdtpApplyProxyOptions =
   | { enabled: true; routingFile: string; writeRoot: string; tabsModule: string | undefined }
