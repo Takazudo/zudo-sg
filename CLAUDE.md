@@ -193,7 +193,12 @@ for how the two worlds relate.
   adopters do not get. The engine's PREVIEW token panel (mounted by
   `pages/lib/_body-end-islands.tsx`) and the `/tokens` dashboard are
   unaffected, and `bundleZdtp: true` stays in `zfb.config.ts` so the preview
-  panel still gets the real zdtp loader instead of the throwing stub
+  panel still gets the real zdtp loader instead of the throwing stub. The
+  header icon itself came back as an engine feature: `withZudoSg()`'s
+  `headerTokenTrigger` option (default `true`) injects a header button,
+  hidden outside the engine's own routes, that opens the same preview panel
+  as the workbench "Preview tokens" button — see
+  `src/content/docs/overview/token-panels.mdx`.
 - **dynamicPageTransition** — SPA client-router page swaps with View Transitions and page-loading overlay
 - **sidebarResizer** — Draggable sidebar width
 - **sidebarToggle** — Show/hide desktop sidebar
