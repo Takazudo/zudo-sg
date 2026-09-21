@@ -55,12 +55,25 @@ const SOURCE_ALLOWLIST = [
   { name: "tests", matches: (path) => path.includes("/__tests__/") },
 ];
 
-const PREVIEW_CANVAS_ALLOWLIST = {
-  path: "src/routes/components-preview.tsx",
-  token: "bg-bg",
-  // The preview canvas follows the host page background; it is not engine chrome.
-  reason: "preview canvas intentionally follows the host background",
-};
+// Per-file, per-token bare-utility exceptions. Each one is a deliberate
+// host-token boundary, not a silenced violation.
+const BARE_UTILITY_ALLOWLIST = [
+  {
+    path: "src/routes/components-preview.tsx",
+    tokens: ["bg-bg"],
+    // The preview canvas follows the host page background; it is not engine chrome.
+    reason: "preview canvas intentionally follows the host background",
+  },
+  {
+    path: "src/config/index.ts",
+    tokens: ["text-muted", "hover:text-fg"],
+    // The header token trigger renders inside zudo-doc's site header, beside
+    // the package's own header buttons, so it must follow the DOC chrome's
+    // theme rather than the engine's private --sg-* namespace (which styles
+    // the catalog/preview chrome only).
+    reason: "header-right item styled by zudo-doc's header theme",
+  },
+];
 
 const SOURCE_EXT_RE = /\.(?:ts|tsx)$/;
 
@@ -207,8 +220,7 @@ function isAllowlisted(path, category, token) {
   if (SOURCE_ALLOWLIST.some((entry) => entry.matches(path))) return true;
   return (
     category === "bare utility" &&
-    path === PREVIEW_CANVAS_ALLOWLIST.path &&
-    token === PREVIEW_CANVAS_ALLOWLIST.token
+    BARE_UTILITY_ALLOWLIST.some((entry) => entry.path === path && entry.tokens.includes(token))
   );
 }
 

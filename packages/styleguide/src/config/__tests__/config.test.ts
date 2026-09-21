@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { DEFAULT_SETTINGS } from "@takazudo/zudo-doc/config";
 import { makeUrlHelpers } from "@takazudo/zudo-doc/url-helpers";
+import { AFTER_NAVIGATE_EVENT } from "@takazudo/zudo-doc/transitions";
 import {
   PREVIEW_CSS_PLUGIN_NAME,
   ROUTES_PLUGIN_NAME,
@@ -14,6 +15,19 @@ import {
 } from "../index.js";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
+
+const TRIGGER_ID = "sg-preview-tokens-trigger";
+
+function headerRightItemsOf(plugin: unknown): Array<Record<string, unknown>> {
+  return (plugin as { options: { settings: { headerRightItems?: Array<Record<string, unknown>> } } })
+    .options.settings.headerRightItems ?? [];
+}
+
+function triggerItemsOf(plugin: unknown): Array<Record<string, unknown>> {
+  return headerRightItemsOf(plugin).filter(
+    (item) => item.type === "html" && typeof item.html === "string" && item.html.includes(TRIGGER_ID),
+  );
+}
 
 const OPTIONS: ZudoSgComposeOptions = {
   componentsRoots: [
@@ -164,6 +178,7 @@ describe("withZudoSg()", () => {
     expect(routesPlugin.options.settings.headerRightItems).toEqual([
       { type: "component", component: "theme-toggle" },
       { type: "component", component: "search" },
+      { type: "html", html: expect.stringContaining(TRIGGER_ID) },
     ]);
     expect(minimalPreset.plugins[0]?.options.settings.headerNav).toEqual([]);
     expect(minimalPreset.plugins[0]?.options.settings.headerRightItems).toHaveLength(1);
@@ -203,14 +218,153 @@ describe("withZudoSg()", () => {
     const merged = withZudoSg(configuredPreset, OPTIONS);
     const routesPlugin = merged.plugins[0] as (typeof configuredPreset.plugins)[number];
 
-    expect(routesPlugin).toBe(configuredPreset.plugins[0]);
     expect(routesPlugin.options.settings.headerNav).toBe(hostNav);
-    expect(routesPlugin.options.settings.headerRightItems).toBe(hostRightItems);
+    // Only the trigger is appended; the host's own right-hand items are kept.
+    expect(routesPlugin.options.settings.headerRightItems).toEqual([
+      { type: "component", component: "theme-toggle" },
+      { type: "html", html: expect.stringContaining(TRIGGER_ID) },
+    ]);
+    expect(configuredPreset.plugins[0]?.options.settings.headerRightItems).toBe(hostRightItems);
+    expect(hostRightItems).toHaveLength(1);
   });
 
   it("allows a minimal host to opt out of styleguide chrome defaults", () => {
     const merged = withZudoSg(preset, { ...OPTIONS, chromeDefaults: false });
-    expect(merged.plugins[0]).toBe(preset.plugins[0]);
+    const settings = (merged.plugins[0] as { options: { settings: Record<string, unknown> } }).options.settings;
+    expect(settings).not.toHaveProperty("headerNav");
+    // The trigger pass is independent of chromeDefaults.
+    expect(triggerItemsOf(merged.plugins[0])).toHaveLength(1);
+    expect(preset.plugins[0]?.options?.settings).toEqual({});
+  });
+});
+
+describe("withZudoSg() header token trigger", () => {
+  const configuredHost = () => ({
+    plugins: [
+      {
+        name: "@takazudo/zudo-doc/plugins/routes",
+        options: {
+          settings: {
+            headerNav: [
+              { label: "Docs", path: "/docs", categoryMatch: "docs" },
+              { label: "Architecture", path: "/architecture", categoryMatch: "architecture" },
+              { label: "Components", path: "/components", categoryMatch: "components" },
+              { label: "Design Tokens", path: "/tokens" },
+            ],
+            headerRightItems: [{ type: "component", component: "theme-toggle" }],
+          },
+        },
+      },
+    ],
+    collections: [],
+  });
+
+  // The regression guard for the `withStyleguideChromeDefaults` early-return:
+  // a host with its own headerNav must still receive the trigger.
+  it("injects the trigger even when the host supplies a populated headerNav", () => {
+    const merged = withZudoSg(configuredHost(), OPTIONS);
+    expect(triggerItemsOf(merged.plugins[0])).toHaveLength(1);
+  });
+
+  it("lands after the search item chromeDefaults appends for a bare scaffold", () => {
+    const bare = {
+      plugins: [
+        { name: "@takazudo/zudo-doc/plugins/routes", options: { settings: { headerNav: [], headerRightItems: [] } } },
+      ],
+      collections: [],
+    };
+    const items = headerRightItemsOf(withZudoSg(bare, OPTIONS).plugins[0]);
+    expect(items).toEqual([
+      { type: "component", component: "search" },
+      { type: "html", html: expect.stringContaining(TRIGGER_ID) },
+    ]);
+  });
+
+  it("still injects the trigger when chromeDefaults is off", () => {
+    const merged = withZudoSg(configuredHost(), { ...OPTIONS, chromeDefaults: false });
+    expect(triggerItemsOf(merged.plugins[0])).toHaveLength(1);
+  });
+
+  it("injects nothing when headerTokenTrigger is false", () => {
+    const merged = withZudoSg(configuredHost(), { ...OPTIONS, headerTokenTrigger: false });
+    expect(triggerItemsOf(merged.plugins[0])).toHaveLength(0);
+    expect(headerRightItemsOf(merged.plugins[0])).toEqual([{ type: "component", component: "theme-toggle" }]);
+  });
+
+  it("is idempotent across a second withZudoSg() pass over the same fragment", () => {
+    const once = withZudoSg(configuredHost(), OPTIONS);
+    const twice = withZudoSg(once, OPTIONS);
+    expect(triggerItemsOf(twice.plugins[0])).toHaveLength(1);
+    expect(twice.plugins[0]).toBe(once.plugins[0]);
+  });
+
+  it("ships hidden markup plus an idempotent inline sync script", () => {
+    const html = triggerItemsOf(withZudoSg(configuredHost(), OPTIONS).plugins[0])[0]?.html as string;
+
+    expect(html).toContain(`<button id="${TRIGGER_ID}" type="button" hidden `);
+    expect(html).toContain(
+      'class="flex items-center justify-center text-muted transition-colors hover:text-fg cursor-pointer"',
+    );
+    expect(html).toContain('aria-label="Open component tokens panel"');
+    expect(html).toContain('title="Component tokens"');
+    expect(html).toContain("onclick=\"window.dispatchEvent(new CustomEvent('toggle-preview-token-panel'))\"");
+    expect(html).toContain('<circle cx="9" cy="6" r="2.4" fill="currentColor" stroke="none"></circle>');
+
+    expect(html).toContain("window.__sgPreviewTokensTriggerInstalled");
+    expect(html).toContain('document.querySelector("[data-sg-engine-route]")');
+    expect(html).toContain(`document.addEventListener(${JSON.stringify(AFTER_NAVIGATE_EVENT)},sync)`);
+    expect(html).toContain("sync();");
+    expect(html).toContain('if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",sync);');
+  });
+
+  it("the inline script reveals the button only while the engine-route marker is present", async () => {
+    const { Window } = await import("happy-dom");
+    const html = triggerItemsOf(withZudoSg(configuredHost(), OPTIONS).plugins[0])[0]?.html as string;
+    const script = html.slice(html.indexOf("<script>") + "<script>".length, html.lastIndexOf("</script>"));
+
+    const win = new Window();
+    const doc = win.document;
+    doc.body.innerHTML = html.slice(0, html.indexOf("<script>"));
+    const btn = doc.getElementById(TRIGGER_ID) as unknown as HTMLButtonElement;
+
+    const run = new Function("window", "document", "CustomEvent", script);
+    run(win, doc, win.CustomEvent);
+
+    expect(btn.hidden).toBe(true);
+    expect((win as unknown as Record<string, unknown>).__sgPreviewTokensTriggerInstalled).toBe(true);
+
+    const marker = doc.createElement("div");
+    marker.setAttribute("data-sg-engine-route", "");
+    doc.body.appendChild(marker);
+    doc.dispatchEvent(new win.CustomEvent(AFTER_NAVIGATE_EVENT));
+    expect(btn.hidden).toBe(false);
+
+    marker.remove();
+    doc.dispatchEvent(new win.CustomEvent(AFTER_NAVIGATE_EVENT));
+    expect(btn.hidden).toBe(true);
+  });
+
+  it("installs exactly one after-navigate listener when the blob runs twice", async () => {
+    const { Window } = await import("happy-dom");
+    const html = triggerItemsOf(withZudoSg(configuredHost(), OPTIONS).plugins[0])[0]?.html as string;
+    const script = html.slice(html.indexOf("<script>") + "<script>".length, html.lastIndexOf("</script>"));
+
+    const win = new Window();
+    const doc = win.document;
+    doc.body.innerHTML = html.slice(0, html.indexOf("<script>"));
+
+    let added = 0;
+    const originalAdd = doc.addEventListener.bind(doc);
+    doc.addEventListener = ((type: string, ...rest: unknown[]) => {
+      if (type === AFTER_NAVIGATE_EVENT) added += 1;
+      return (originalAdd as (...args: unknown[]) => unknown)(type, ...rest);
+    }) as typeof doc.addEventListener;
+
+    const run = new Function("window", "document", "CustomEvent", script);
+    run(win, doc, win.CustomEvent);
+    run(win, doc, win.CustomEvent);
+
+    expect(added).toBe(1);
   });
 });
 
