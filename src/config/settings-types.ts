@@ -1,6 +1,4 @@
-// Re-export shared settings types from zudo-doc. The local trigger item stays
-// project-owned because this site uses the custom `toggle-sg-doc-tweak` channel
-// for its doc-chrome panel button.
+// Re-export shared settings types from zudo-doc.
 export type {
   TagGovernanceMode,
   TagVocabularyEntry,
@@ -28,10 +26,3 @@ export type {
   SiteHeadConfig,
   Settings,
 } from "@takazudo/zudo-doc/settings";
-
-export type HeaderRightTriggerName = "design-token-panel" | "ai-chat";
-
-export interface HeaderRightTriggerItem {
-  type: "trigger";
-  trigger: HeaderRightTriggerName;
-}

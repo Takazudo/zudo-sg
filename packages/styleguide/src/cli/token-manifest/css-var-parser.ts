@@ -8,9 +8,9 @@
 //
 // Ported from the host's former `scripts/lib/css-var-parser.mjs`; a
 // byte-equivalent copy also stays there for the host's own
-// `scripts/gen-root-token-manifest.mjs` / `scripts/ui-contrast-pairs.ts`,
-// which are out of this package's scope (they parse the ROOT host's own
-// `src/styles/global.css`, not a components-root token file).
+// `scripts/ui-contrast-pairs.ts`, which is out of this package's scope (it
+// parses the ROOT host's own `src/styles/global.css`, not a components-root
+// token file).
 //
 // Deliberately dumb: it does not care which rule/at-rule a declaration lives
 // under (`@theme`, plain `:root`, `:root[data-theme="..."]`, ...). Callers

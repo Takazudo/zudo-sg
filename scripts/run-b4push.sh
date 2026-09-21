@@ -88,14 +88,11 @@ fi
 # via the `zudo-sg gen-registry` CLI driven by zudo-sg.config.mjs — categories
 # are open strings, not a generated marker block; see
 # packages/demo-ui/src/stories/categories.ts), the UI token manifest (from
-# packages/demo-ui/styles/{tokens,colors}.css, via `zudo-sg gen-token-manifest`),
-# and the ROOT host's own token manifest (from src/styles/global.css + the two
-# shared @zudo-sg/demo-ui files it @imports, resolved cross-file — see
-# scripts/gen-root-token-manifest.mjs).
+# packages/demo-ui/styles/{tokens,colors}.css, via `zudo-sg gen-token-manifest`).
 # Catches a hand-edited generated block or a forgotten `pnpm gen:*` re-run
 # before it reaches CI.
 step
-if (cd "$ROOT_DIR" && pnpm run check:z-index && pnpm run check:sg-registry && pnpm run check:token-manifest && pnpm run check:root-token-manifest); then
+if (cd "$ROOT_DIR" && pnpm run check:z-index && pnpm run check:sg-registry && pnpm run check:token-manifest); then
   pass "Codegen drift check passed"
 else
   fail "Codegen drift check"

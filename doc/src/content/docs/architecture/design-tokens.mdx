@@ -4,6 +4,21 @@ sidebar_position: 3
 description: The doc-chrome and UI token systems, the three-tier color strategy, and how token panel edits flow back to CSS.
 ---
 
+<Warning title="The doc-chrome token panel has been removed">
+  The host's doc-chrome token panel (the header **Design Tokens** icon, the
+  `toggle-sg-doc-tweak` channel, the `sg-doc-tweak` storage prefix) and its source files —
+  `src/config/design-token-panel-config.ts`, `src/config/design-tokens-manifest.ts`,
+  `src/lib/token-panel-native-bootstrap.ts`, `src/lib/design-token-panel-bootstrap.ts`,
+  `src/components/design-token-panel-bootstrap.tsx`,
+  `src/config/__tests__/panel-config-isolation.test.ts`,
+  `src/lib/__tests__/token-panel-lazy-gate.test.ts` — no longer exist, and neither do
+  `scripts/gen-root-token-manifest.mjs` / `pnpm check:root-token-manifest`. Every
+  doc-chrome-panel passage below is a historical record of how that panel worked; only the
+  preview-panel and `/tokens` dashboard material still describes live code. The preview
+  panel's config now lives in the engine, at
+  `packages/styleguide/src/token-tweak/preview-token-panel-config.ts`.
+</Warning>
+
 ## Three token worlds
 
 zudo-sg hosts three independent color-token systems:

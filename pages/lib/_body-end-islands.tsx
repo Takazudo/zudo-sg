@@ -46,7 +46,6 @@ import { ImageEnlarge, ImageEnlargeSsrFallback } from "@takazudo/zudo-doc/image-
 import { MermaidEnlarge, MermaidEnlargeSsrFallback } from "@takazudo/zudo-doc/mermaid-enlarge";
 
 import ClientRouterBootstrap from "@/components/client-router-bootstrap";
-import DesignTokenPanelBootstrap from "@/components/design-token-panel-bootstrap";
 import PreviewTokenPanelBootstrap from "@takazudo/zudo-sg/token-tweak/preview-token-panel-bootstrap";
 
 // Set explicit `displayName` on each host-defined island so zfb's
@@ -56,13 +55,6 @@ import PreviewTokenPanelBootstrap from "@takazudo/zudo-sg/token-tweak/preview-to
 // for the same source-level identifier (zfb PR #150). esbuild preserves
 // function names by default, but the explicit assignment is a
 // belt-and-braces guard for production minification regressions.
-// "DocTokenPanelBootstrap", not "DesignTokenPanelBootstrap" — that marker
-// name is claimed by the package's own scanner-visible island
-// (@takazudo/zudo-doc/design-token-panel-bootstrap, 4.x); reusing it produces
-// an island marker-name collision (zfb keeps only one island per marker) that
-// would hand hydration to the package's heavy, eager island instead of this
-// lazy-load gate. See src/components/design-token-panel-bootstrap.tsx.
-(DesignTokenPanelBootstrap as { displayName?: string }).displayName = "DocTokenPanelBootstrap";
 (PreviewTokenPanelBootstrap as { displayName?: string }).displayName = "PreviewTokenPanelBootstrap";
 (ClientRouterBootstrap as { displayName?: string }).displayName =
   "ClientRouterBootstrap";
@@ -246,17 +238,6 @@ export function BodyEndIslands({
       {/* Capture only the parity of pre-hydration clicks. State is scoped to
           this script element rather than a shared window queue; the native 5.2
           bootstrap drains it after registering both shared and custom channels. */}
-      <script
-        id="zdtp-doc-prehydrate"
-        dangerouslySetInnerHTML={{ __html: prehydrationPanelToggleScript("toggle-sg-doc-tweak") }}
-      />
-      {Island({
-        when: "load",
-        children: <DesignTokenPanelBootstrap />,
-      }) as unknown as VNode}
-
-      {/* A distinct script-local queue preserves preview-panel isolation while
-          the shared channel can still activate both native instances. */}
       <script
         id="zdtp-preview-prehydrate"
         dangerouslySetInnerHTML={{ __html: prehydrationPanelToggleScript("toggle-preview-token-panel") }}

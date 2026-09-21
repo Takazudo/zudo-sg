@@ -10,10 +10,9 @@
 //
 // We override BodyEndIslands. The package default explicitly excludes
 // the host token-panel bootstraps (it ships only the settings-derived package
-// islands), but this project mounts TWO custom zdtp panels — the doc-chrome
-// panel (`toggle-sg-doc-tweak`, opened by the header Design Tokens icon) and the
-// preview panel (`toggle-preview-token-panel`) — plus image/mermaid enlarge and
-// the sidebar-resizer init. All of that lives in `_body-end-islands.tsx`, so we
+// islands), but this project mounts the engine's preview zdtp panel
+// (`toggle-preview-token-panel`) plus image/mermaid enlarge and the
+// sidebar-resizer init. All of that lives in `_body-end-islands.tsx`, so we
 // thread it verbatim here to preserve doc-page behaviour.
 //
 // docHistoryMeta supplies the slug-keyed metadata written by the doc-history

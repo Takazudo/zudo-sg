@@ -22,7 +22,8 @@ describe("root zfb integration contract", () => {
       "@takazudo/zudo-doc/plugins/theme-packs",
       "@takazudo/zudo-doc/plugins/llms-txt",
       "@takazudo/zudo-doc/plugins/img-src-check",
-      // bundleZdtp keeps the throwing zdtp-loader stub out of the host build.
+      // bundleZdtp keeps the throwing zdtp-loader stub out of the host build
+      // even though designTokenPanel is off (the preview panel needs the loader).
       "./pages/lib/_doc-history-meta.mjs",
       "@takazudo/zudo-sg/plugins/routes",
       "@takazudo/zudo-sg/plugins/preview-css",
@@ -56,11 +57,14 @@ describe("root zfb integration contract", () => {
 
     expect(routeSettings).toEqual({
       ...settings,
-      designTokenPanel: false,
       bundleZdtp: true,
     });
     expect(settings).toMatchObject({
-      designTokenPanel: true,
+      // The doc-chrome token panel is gone; only the engine's preview panel
+      // and the /tokens dashboard remain, so the preset must NOT mount
+      // zudo-doc's own panel — while `bundleZdtp` above keeps the real
+      // zdtp loader in the build for the preview panel.
+      designTokenPanel: false,
       logo: "auto",
       entryDocSlug: "overview",
       tocToggle: true,

@@ -106,9 +106,9 @@ The same library drives a multi-page demo site, so the components can be explore
   packageOwnedRoutes: true as boolean,
   dynamicPageTransition: true as boolean,
   // Host-callables channel for the injected routes: a module exporting
-  // `chromeBindings: ChromeHostBindings`. Binds BodyEndIslands (the two zdtp
-  // token panels + image/mermaid enlarge) and docHistoryMeta (Created / Updated /
-  // Author); every other slot keeps its package default. Lives under pages/lib/
+  // `chromeBindings: ChromeHostBindings`. Binds BodyEndIslands (the preview
+  // zdtp token panel + image/mermaid enlarge) and docHistoryMeta (Created /
+  // Updated / Author); every other slot keeps its package default. Lives under pages/lib/
   // so it can import the host BodyEndIslands island chain without dragging
   // pages/* into the src tsc program. See pages/lib/_chrome-bindings.tsx.
   chromeBindingsModule: "./pages/lib/_chrome-bindings.tsx" as string,
@@ -116,7 +116,15 @@ The same library drives a multi-page demo site, so the components can be explore
   aiChatDemoMode: false as boolean,
   aiChatAllowedOrigins: [] as string[],
   aiChatGlobalDailyLimit: false as number | false,
-  designTokenPanel: true as boolean,
+  // Off by default and deliberately: the doc-chrome token panel was a
+  // host-only extra this site mounted for itself, which `create-zudo-sg`
+  // never scaffolds. Keeping it here made the dogfooding host advertise a
+  // feature adopters do not get. The PREVIEW token panel (engine-provided;
+  // mounted by pages/lib/_body-end-islands.tsx via
+  // `@takazudo/zudo-sg/token-tweak/preview-token-panel-bootstrap`, and kept
+  // loadable by `bundleZdtp: true` in zfb.config.ts) and the `/tokens`
+  // dashboard are unaffected.
+  designTokenPanel: false as boolean,
   tocMinDepth: 2 as number,
   tocMaxDepth: 4 as number,
   sidebarResizer: true as boolean,
@@ -157,41 +165,13 @@ The same library drives a multi-page demo site, so the components can be explore
     { label: "Components", path: "/components", categoryMatch: "components" },
     { label: "Design Tokens", path: "/tokens" },
   ] satisfies HeaderNavItem[] as HeaderNavItem[],
-  // NOTE: the framework's native `{ type: "trigger", trigger: "design-token-panel" }`
-  // is intentionally NOT listed here. This site mounts two zdtp instances, so a
-  // project-rendered Design Tokens icon (the `type: "html"` item below)
-  // dispatches "toggle-sg-doc-tweak" — the doc-chrome panel's explicit toggle
-  // channel (see design-token-panel-config.ts). The DesignTokenPanelBootstrap
-  // island (body-end) listens for it. See Takazudo/zudo-sg#84/#85.
-  //
-  // #113: the icon MOVED here from `pages/lib/_header-with-defaults.tsx` so it
-  // renders on the package-owned doc routes too — settings.headerRightItems is
-  // serialized into the route-context, and the package Header renders `html`
-  // items verbatim (filterHeaderRightItems passes them through unconditionally).
-  // Keep it LAST so it trails theme-toggle/search, matching the prior push order.
+  // #113: headerRightItems is serialized into the route-context so these
+  // render on the package-owned doc routes too, not just host pages.
   headerRightItems: [
     { type: "component", component: "github-link" },
     { type: "component", component: "theme-toggle" },
     { type: "component", component: "search" },
     { type: "component", component: "language-switcher" },
-    {
-      type: "html",
-      html:
-        '<button id="sg-doc-tweak-trigger" type="button" ' +
-        'class="flex items-center justify-center text-muted transition-colors hover:text-fg cursor-pointer" ' +
-        'aria-label="Open design tokens panel" title="Design tokens" ' +
-        "onclick=\"window.dispatchEvent(new CustomEvent('toggle-sg-doc-tweak'))\">" +
-        '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" ' +
-        'fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" ' +
-        'stroke-linejoin="round" aria-hidden="true">' +
-        '<line x1="4" y1="6" x2="20" y2="6"></line>' +
-        '<line x1="4" y1="12" x2="20" y2="12"></line>' +
-        '<line x1="4" y1="18" x2="20" y2="18"></line>' +
-        '<circle cx="9" cy="6" r="2.4" fill="currentColor" stroke="none"></circle>' +
-        '<circle cx="15" cy="12" r="2.4" fill="currentColor" stroke="none"></circle>' +
-        '<circle cx="8" cy="18" r="2.4" fill="currentColor" stroke="none"></circle>' +
-        "</svg></button>",
-    },
   ] satisfies HeaderRightItem[] as HeaderRightItem[],
 } satisfies Settings;
 

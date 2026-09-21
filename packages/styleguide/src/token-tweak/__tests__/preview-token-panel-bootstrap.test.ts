@@ -1,6 +1,5 @@
 // @vitest-environment happy-dom
-// The preview panel's native lazy-bootstrap contract (the host keeps the same
-// suite for its doc-chrome panel in src/lib/__tests__/token-panel-lazy-gate.test.ts):
+// The preview panel's native lazy-bootstrap contract:
 // hydration enters zudo-doc's bootstrap once without importing zdtp, drains
 // the SSR pre-hydration toggle on its own channel, keeps owner console helpers
 // lazy, and handles a failed zdtp import without an unhandled rejection.
