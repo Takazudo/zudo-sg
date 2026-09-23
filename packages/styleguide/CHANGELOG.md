@@ -4,6 +4,14 @@ All notable changes to `@takazudo/zudo-sg` are documented in this file.
 
 The format is based on Keep a Changelog, and release notes are generated from the changelog MDX pages.
 
+## [0.3.3] - 2026-09-23
+
+### Bug Fixes
+
+- Preserve a host's semantic colors in inline component thumbnails. The engine
+  no longer replaces them with demo-specific palette variables, so hosts with
+  their own palette names need no local stylesheet override.
+
 ## [0.3.2] - 2026-09-23
 
 ### Features
