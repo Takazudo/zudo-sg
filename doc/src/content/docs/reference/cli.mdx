@@ -54,7 +54,10 @@ zudo-sg new-component <name> --category <Category> [--nested] [--skip-barrel]
 | `--skip-barrel` | Skip inserting an export into `barrelIndex` — use to place the export by hand, or to work around a same-name collision across two categories. |
 
 Scaffolds into `componentsRoots[0]` — the first entry is the scaffold target
-when a host declares more than one. In this repo: `pnpm new:component`.
+when a host declares more than one. Generated stories import `StoryMeta` and
+`Story` from `@takazudo/zudo-sg/stories`; generated components compose their
+classes locally and do not require a host-specific `cx` helper. In this repo:
+`pnpm new:component`.
 
 ## `gen-token-manifest`
 

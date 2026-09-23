@@ -27,7 +27,7 @@ export function buildRegistryBlock(entries: RegistryEntry[]): string {
   lines.push(`import type { StoryModule } from "@takazudo/zudo-sg/stories";`);
   lines.push(``);
   for (const e of entries) {
-    lines.push(`import * as ${e.importName} from "${e.importSpecifier}";`);
+    lines.push(`import * as ${e.importName} from ${JSON.stringify(e.importSpecifier)};`);
   }
   lines.push(``);
   lines.push(`/**`);
@@ -37,7 +37,7 @@ export function buildRegistryBlock(entries: RegistryEntry[]): string {
   lines.push(` */`);
   lines.push(`export const storyModules: Record<string, StoryModule> = {`);
   for (const e of entries) {
-    lines.push(`  "${e.mapKey}": ${e.importName} as unknown as StoryModule,`);
+    lines.push(`  ${JSON.stringify(e.mapKey)}: ${e.importName} as unknown as StoryModule,`);
   }
   lines.push(`};`);
   lines.push(``);
@@ -54,7 +54,7 @@ export function buildRegistryBlock(entries: RegistryEntry[]): string {
   lines.push(`export const storyExportOrder: Record<string, string[]> = {`);
   for (const e of entries) {
     const arr = e.exportOrder.map((n) => JSON.stringify(n)).join(", ");
-    lines.push(`  "${e.mapKey}": [${arr}],`);
+    lines.push(`  ${JSON.stringify(e.mapKey)}: [${arr}],`);
   }
   lines.push(`};`);
   lines.push(`// ${END_MARKER}`);
@@ -73,12 +73,12 @@ export function buildStoryModulesBlock(
   const lines: string[] = [];
   lines.push(`// ${BEGIN_MARKER} — do not hand-edit; run \`zudo-sg gen-registry\`.`);
   for (const e of entries) {
-    lines.push(`import * as ${e.importName} from "${relativeImportPrefix}/${e.relDirStem}.stories";`);
+    lines.push(`import * as ${e.importName} from ${JSON.stringify(`${relativeImportPrefix}/${e.relDirStem}.stories`)};`);
   }
   lines.push(``);
   lines.push(`export const STORY_MODULES: Record<string, StoryModule> = {`);
   for (const e of entries) {
-    lines.push(`  "${e.relDirStem}.stories.tsx": ${e.importName} as unknown as StoryModule,`);
+    lines.push(`  ${JSON.stringify(`${e.relDirStem}.stories.tsx`)}: ${e.importName} as unknown as StoryModule,`);
   }
   lines.push(`};`);
   lines.push(`// ${END_MARKER}`);

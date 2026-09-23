@@ -55,6 +55,10 @@ It copies a private starter with three example Preact components, stories,
 token CSS, a preview entry, and the zfb/zudo-doc composition already wired.
 The CLI prints the same next steps after scaffolding.
 
+`new-component` emits stories that import their `StoryMeta` and `Story` types
+from `@takazudo/zudo-sg/stories`. Generated components compose their classes
+locally, so a host does not need to add a demo-specific `cx` helper.
+
 `gen-registry` bootstraps a missing or whitespace-only `registryOut` and its
 parent directories, so a new host does not need to create a marker-only seed
 file by hand. A non-empty registry without generated markers is rejected to

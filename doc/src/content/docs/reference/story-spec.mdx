@@ -16,9 +16,10 @@ The canonical types are `@takazudo/zudo-sg/stories`
 `StoryMeta`, `Story<P>`, `StoryControl<P>`, `StoryModule`, `defineStory`.
 
 A host's own component package (this repo's `@zudo-sg/demo-ui`) re-exports the
-same types from `packages/demo-ui/src/stories/types.ts`, kept as its own
-module because the engine's `new-component` scaffold generates relative
-`../stories/types` imports.
+same types from `packages/demo-ui/src/stories/types.ts` for its local
+convenience. The `new-component` scaffold imports the contract directly from
+`@takazudo/zudo-sg/stories`, so generated stories work without a host-local
+type re-export.
 
 ## File location & discovery
 
