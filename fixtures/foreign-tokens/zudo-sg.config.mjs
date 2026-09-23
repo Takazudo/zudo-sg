@@ -1,7 +1,7 @@
 import base from "./zudo-sg.default.config.mjs";
 
 /** @satisfies {import("@takazudo/zudo-sg/config").ZudoSgComposeOptions} */
-export default {
+const config = {
   ...base,
   tokens: {
     cssFiles: ["./src/styles/ui-tokens.css", "./src/styles/ui-tokens.css"],
@@ -22,3 +22,5 @@ export default {
     },
   },
 };
+
+export default config;
