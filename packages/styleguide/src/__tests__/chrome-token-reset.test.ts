@@ -67,21 +67,17 @@ function hasUtilityDeclaration(
   return found;
 }
 
-/**
- * Keep the bare-var guard scoped to engine chrome. The package stylesheet also
- * contains an intentional `.sg-thumb[data-sg-preview-scope]` host-palette
- * block, and imported zudo-doc rules legitimately consume bare --color-* vars.
- */
+/** Keep the bare-var guard scoped to engine chrome; imported zudo-doc rules
+ * legitimately consume bare --color-* vars. */
 function engineChromeRules(css: string): string {
   const chunks: string[] = [];
   parse(css).walkRules((rule) => {
     const selector = rule.selector;
-    const previewPalette = selector.includes(".sg-thumb[data-sg-preview-scope]");
-    const hasEngineSelector = selector.includes("#sg-") || (selector.includes(".sg-") && !previewPalette);
+    const hasEngineSelector = selector.includes("#sg-") || selector.includes(".sg-");
     const hasEngineToken = rule.nodes?.some(
       (node) => node.type === "decl" && node.prop.startsWith("--sg-"),
     );
-    if (!previewPalette && (hasEngineSelector || hasEngineToken)) {
+    if (hasEngineSelector || hasEngineToken) {
       chunks.push(rule.toString());
     }
   });

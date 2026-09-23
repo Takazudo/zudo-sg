@@ -4,8 +4,8 @@
 // Catalogue gallery contracts (#540, moved into the engine package by #653).
 //
 // The framing model is split across TypeScript (which viewport width a
-// category gets, how the snapshot is scoped) and CSS (the scale, the fit rule,
-// the palette restore), so this file checks BOTH halves and the seam between
+// category gets, how the snapshot is scoped) and CSS (the scale and fit rule),
+// so this file checks BOTH halves and the seam between
 // them.
 //
 // This package must not reach into a host's real story registry (`@/…` is a
@@ -122,17 +122,10 @@ describe("thumbnail geometry", () => {
 });
 
 describe("palette scope", () => {
-  it("scopes the restore with a selector that beats a plain :root rule", () => {
-    // Class + attribute = (0,2,0), which beats `:root` (0,1,0) regardless of
-    // @import order — the same trick a host's own preview-document scope uses.
-    expect(galleryCss).toContain(".sg-thumb[data-sg-preview-scope] {");
-    const block = galleryCss.slice(galleryCss.indexOf(".sg-thumb[data-sg-preview-scope] {"));
-    const tokens = block
-      .slice(block.indexOf("{") + 1, block.indexOf("}"))
-      .split(";")
-      .map((line) => line.replace(/\/\*[\s\S]*?\*\//g, "").trim())
-      .filter((line) => line.startsWith("--color-"));
-    expect(tokens.length).toBeGreaterThan(0);
+  it("leaves host semantic colors to the host", () => {
+    expect(galleryCss).not.toContain(".sg-thumb[data-sg-preview-scope] {");
+    expect(galleryCss).not.toContain("--palette-neutral-");
+    expect(galleryCss).not.toContain("--palette-accent-");
   });
 });
 

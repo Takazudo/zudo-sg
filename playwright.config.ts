@@ -51,6 +51,11 @@ export default defineConfig({
       use: { baseURL: smokeServer.origin },
     },
     {
+      name: "foreign-thumbnail-colors",
+      testMatch: "foreign-thumbnail-colors.spec.ts",
+      use: { baseURL: smokeServer.origin },
+    },
+    {
       name: "tokens-dashboard",
       testMatch: "tokens-dashboard.spec.ts",
       use: { baseURL: smokeServer.origin },
