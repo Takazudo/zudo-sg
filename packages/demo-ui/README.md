@@ -26,8 +26,9 @@ The canonical story types (`StoryMeta`, `Story<P>`, `StoryControl<P>`,
 engine (`packages/styleguide`, exported as `@takazudo/zudo-sg/stories`).
 `src/stories/types.ts` in this package re-exports them from
 `@takazudo/zudo-sg/stories` (a real `workspace:*` dependency) rather than
-duplicating the type body — kept as its own module because the engine's
-`new-component` scaffold generates relative `../stories/types` imports. See
+duplicating the type body. Existing hand-authored stories use this local
+re-export; the engine's `new-component` scaffold imports the public
+`@takazudo/zudo-sg/stories` contract directly. See
 `docs/adr/styleguide-engine.md` decision 3 for the full rationale.
 
 ## Consuming from source
