@@ -15,7 +15,8 @@ import {
   type RegistryEntry,
 } from "./build-registry-source.js";
 import { deriveMapKeyPrefix } from "../../registry/component-docs.js";
-import { assertUniqueImportNames, discoverStories } from "./discover-stories.js";
+import { discoverStories } from "./discover-stories.js";
+import { allocateImportNames } from "./allocate-import-names.js";
 
 const STORY_MODULES_RELATIVE_PATH = "stories/__tests__/story-modules.ts";
 
@@ -58,9 +59,8 @@ export function runGenRegistry(
     root,
     entries: buildEntriesForRoot(projectRoot, root),
   }));
-  const allEntries = perRootEntries.flatMap((r) => r.entries).sort((a, b) => a.mapKey.localeCompare(b.mapKey));
-  // discoverStories only checks within one root; all roots share one import scope.
-  assertUniqueImportNames(allEntries);
+  const allEntries = allocateImportNames(perRootEntries.flatMap((r) => r.entries));
+  const allocatedByKey = new Map(allEntries.map((entry) => [entry.mapKey, entry]));
 
   const registryPath = resolve(projectRoot, config.registryOut);
   let registrySrc = "";
@@ -89,7 +89,7 @@ export function runGenRegistry(
     const before = readFileSync(storyModulesPath, "utf8");
     const after = replaceBlock(
       before,
-      buildStoryModulesBlock(entries, relativeImportPrefix),
+      buildStoryModulesBlock(entries.map((entry) => allocatedByKey.get(entry.mapKey)!), relativeImportPrefix),
       storyModulesPath,
     );
     targets.push({ path: storyModulesPath, before, after });
