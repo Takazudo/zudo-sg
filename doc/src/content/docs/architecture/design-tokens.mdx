@@ -246,3 +246,15 @@ manifest keeps the panel and the `/tokens` dashboards in sync, and `pnpm check:t
 catches drift between them. For how to actually use the panel day to day, see the
 styleguide site's [Design Token Panel guide](https://zudo-sg.takazudomodular.com/docs/overview/token-panels/)
 linked above.
+
+## Host-owned token groups
+
+The engine accepts an optional `tokens.spec` in `zudo-sg.config.mjs`. It replaces
+its historical token selection with ordered `palette`, `color`, `spacing`,
+`font`, and `size` groups, so a component library can expose its own CSS
+variables without demo naming. Every token points to a literal declaration in
+the configured CSS files. Group labels and order drive both the preview panel
+and the `/tokens` dashboard; palette entries retain their exact CSS variable
+names. The engine README has a runnable configuration example and the supported
+preview/kind combinations. Existing manifests without `UI_TOKEN_GROUPS` still
+use the historical layout.

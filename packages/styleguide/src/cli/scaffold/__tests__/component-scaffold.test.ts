@@ -7,6 +7,9 @@
 // declares its own equivalents.
 
 import { describe, expect, it, vi } from "vitest";
+import { render } from "preact-render-to-string";
+import { jsx as jsxRuntime } from "preact/jsx-runtime";
+import * as ts from "typescript";
 import {
   assertUnusedName,
   assertValidCategory,
@@ -173,6 +176,26 @@ describe("assertUnusedName", () => {
 });
 
 describe("componentTemplate", () => {
+  function compileGeneratedComponent(): (props: Record<string, unknown>) => unknown {
+    const { outputText } = ts.transpileModule(
+      componentTemplate({ pascalName: "DemoWidget", kebabName: "demo-widget" }),
+      {
+        compilerOptions: {
+          module: ts.ModuleKind.ESNext,
+          jsx: ts.JsxEmit.ReactJSX,
+          jsxImportSource: "preact",
+        },
+      },
+    );
+    const executable = outputText
+      .replace('import { jsx as _jsx } from "preact/jsx-runtime";', "const _jsx = jsxRuntime;")
+      .replace("export function DemoWidget(", "function DemoWidget(");
+    expect(executable).not.toBe(outputText);
+    return new Function("jsxRuntime", `${executable}\nreturn DemoWidget;`)(jsxRuntime) as (
+      props: Record<string, unknown>,
+    ) => unknown;
+  }
+
   it("emits a typed-props skeleton with the house pattern", () => {
     const src = componentTemplate({ pascalName: "DemoWidget", kebabName: "demo-widget" });
     expect(src).toContain(`export type DemoWidgetVariant = "primary" | "secondary";`);
@@ -181,13 +204,27 @@ describe("componentTemplate", () => {
     expect(src).toContain("const variants: Record<DemoWidgetVariant, string> = {");
     expect(src).toContain("focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus");
     expect(src).toContain("export function DemoWidget(");
-    expect(src).toContain(`import { cx } from "../lib/cx";`);
+    expect(src).toContain(`  const className = [base, variants[variant], cls].filter(Boolean).join(" ");`);
+    expect(src).toContain(`<div class={className}>{children}</div>`);
+    expect(src).not.toContain("lib/cx");
   });
 
-  it("uses a one-deeper relative lib/cx import when nested (category-dir scaffold)", () => {
+  it("keeps the generated component self-contained when nested", () => {
     const src = componentTemplate({ pascalName: "DemoWidget", kebabName: "demo-widget", nested: true });
-    expect(src).toContain(`import { cx } from "../../lib/cx";`);
-    expect(src).not.toContain(`from "../lib/cx"`);
+    expect(src).toContain(`  const className = [base, variants[variant], cls].filter(Boolean).join(" ");`);
+    expect(src).not.toContain("lib/cx");
+  });
+
+  it("renders the selected variant and caller class through its local composition", () => {
+    const DemoWidget = compileGeneratedComponent();
+    const html = render(
+      DemoWidget({ variant: "secondary", class: "custom-class", children: "Content" }) as never,
+    );
+
+    expect(html).toContain(
+      'class="inline-flex items-center gap-hsp-xs rounded-md outline-none transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus bg-surface text-fg border border-border custom-class"',
+    );
+    expect(html).toContain(">Content</div>");
   });
 });
 
@@ -204,10 +241,11 @@ describe("storiesTemplate", () => {
     expect(src).toContain(`import { DemoWidget } from "${UI_PACKAGE_NAME}";`);
     expect(src).toContain("export const Playground: Story<DemoWidgetProps> = {");
     expect(src).toContain('prop: "variant"');
-    expect(src).toContain(`from "../stories/types"`);
+    expect(src).toContain(`import type { StoryMeta, Story } from "@takazudo/zudo-sg/stories";`);
+    expect(src).not.toContain("../stories/types");
   });
 
-  it("uses a one-deeper relative stories/types import when nested (category-dir scaffold)", () => {
+  it("uses the public story contract when nested (category-dir scaffold)", () => {
     const src = storiesTemplate({
       pascalName: "DemoWidget",
       kebabName: "demo-widget",
@@ -215,8 +253,8 @@ describe("storiesTemplate", () => {
       uiPackageName: UI_PACKAGE_NAME,
       nested: true,
     });
-    expect(src).toContain(`import type { StoryMeta, Story } from "../../stories/types";`);
-    expect(src).not.toContain('from "../stories/types"');
+    expect(src).toContain(`import type { StoryMeta, Story } from "@takazudo/zudo-sg/stories";`);
+    expect(src).not.toContain("stories/types");
   });
 
   it("uses the component's own relative module in usage when no package is configured", () => {

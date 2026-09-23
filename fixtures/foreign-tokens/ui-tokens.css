@@ -1,0 +1,12 @@
+@theme {
+  --brand-100: oklch(0.94 0.08 45);
+  --brand-500: oklch(0.56 0.18 45);
+  --signal-calm: oklch(0.7 0.12 205);
+  --status-alert: oklch(0.58 0.2 25);
+  --surface-canvas: light-dark(var(--brand-100), var(--brand-500));
+  --space-inline: 1rem;
+  --type-body: 1.125rem;
+  --type-leading: 1.5;
+  --type-weight: 550;
+  --corner-card: 0.75rem;
+}

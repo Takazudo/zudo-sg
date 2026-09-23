@@ -31,6 +31,9 @@ export function createTokenDashboards(
   options: CreateTokenDashboardsOptions = {},
 ): JSX.Element {
   const dashboardPreviewOverrides = buildDashboardPreviewOverrides(manifest);
+  const previewText = manifest.groups
+    ? "Design tokens give an interface a shared rhythm across pages and themes. Compare the declared values, scale, color, and shape in these samples."
+    : UI_DASHBOARD_PREVIEW_TEXT;
   return (
     <section class="mb-vsp-xl flex flex-col gap-vsp-lg" style={options.chromeStyle}>
       <div class="max-w-[56rem]">
@@ -53,7 +56,7 @@ export function createTokenDashboards(
         title="UI tokens — mode-dependent defaults (light)"
         tabs={tabs}
         previewOverrides={dashboardPreviewOverrides}
-        previewText={UI_DASHBOARD_PREVIEW_TEXT}
+        previewText={previewText}
       />
       <TokenDashboard
         id="ui-defaults-dark"
@@ -63,7 +66,7 @@ export function createTokenDashboards(
         title="UI tokens — mode-dependent defaults (dark)"
         tabs={tabs}
         previewOverrides={dashboardPreviewOverrides}
-        previewText={UI_DASHBOARD_PREVIEW_TEXT}
+        previewText={previewText}
       />
       <TokenDashboard
         id="ui-defaults-shared"
@@ -72,7 +75,7 @@ export function createTokenDashboards(
         title="UI tokens — shared defaults (mode-independent)"
         tabs={tabs}
         previewOverrides={dashboardPreviewOverrides}
-        previewText={UI_DASHBOARD_PREVIEW_TEXT}
+        previewText={previewText}
       />
     </section>
   );

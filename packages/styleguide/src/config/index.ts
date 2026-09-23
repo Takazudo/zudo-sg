@@ -14,6 +14,8 @@ import {
 } from "../registry/component-docs.js";
 import { DEFAULT_PREVIEW_CSS_URL } from "../sg-context.js";
 import { resolveSgRoutes, type SgRoutes } from "../sg-routes.js";
+import type { HostTokensSpec } from "../token-spec.js";
+export type { HostTokensSpec, HostTokenGroupSpec, HostTokenSpec, TokenPreview, TokenControl, GeneratedTokenGroups, GeneratedTokenGroup } from "../token-spec.js";
 
 export const ROUTES_PLUGIN_NAME = "@takazudo/zudo-sg/plugins/routes";
 export const PREVIEW_CSS_PLUGIN_NAME = "@takazudo/zudo-sg/plugins/preview-css";
@@ -62,7 +64,7 @@ export interface ZudoSgComposeOptions {
    */
   chromeDefaults?: boolean;
   /** `tokens.manifestOut` feeds the `/tokens` route's dashboards (routes plugin `tokensManifestModule`). */
-  tokens?: { manifestOut?: string; cssFiles?: readonly string[] };
+  tokens?: { manifestOut?: string; cssFiles?: readonly string[]; spec?: HostTokensSpec };
   /**
    * `@takazudo/zudo-sg/plugins/zdtp-apply-proxy` options
    * (`{ routingFile, writeRoot, tabsModule? }`). Omitted → the plugin is still

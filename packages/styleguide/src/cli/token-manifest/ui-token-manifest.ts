@@ -1,21 +1,15 @@
-// Project-specific layer on top of css-var-parser.ts: knows which
-// `--custom-properties` from a components root's token CSS files belong in
-// the generated design-tokens manifest, and how to render that file.
+// Token vocabulary and rendering on top of css-var-parser.ts. An optional
+// host tokens.spec supplies the vocabulary; the bundled tables remain the
+// byte-for-byte compatible default when no spec is configured.
 //
-// Split rationale: `id`, `label`, and `default` are fully derivable from the
-// CSS (the var name + its parsed value) — deriving them keeps the manifest
-// impossible to typo out of sync with its own cssVar. `group`/`step`/`unit`/
-// `control`/`options`/`pill` are presentation metadata with no CSS
-// equivalent (CSS has no notion of "render this as a select" or "step by
-// 0.025") — those live in the SPECS tables below and are the one thing a
-// human edits when a genuinely new token needs to appear in the panel.
+// CSS remains the source of default values. Host specs can override derived
+// ids/labels and supply presentation metadata absent from CSS.
 //
-// Ported from the host's former `scripts/lib/ui-token-manifest.mjs`. The
-// SPECS tables are specific to `@zudo-sg/demo-ui`'s own token vocabulary (this is
-// a mechanical port behind `zudo-sg.config.mjs`, not a generalization of the
-// token schema itself — see docs/adr/styleguide-engine.md, issue #655).
+// The tables below were ported from the host's former
+// `scripts/lib/ui-token-manifest.mjs`; they describe the bundled demo only.
 
 import { parseCssCustomProperties } from "./css-var-parser.js";
+import type { GeneratedTokenGroups, HostTokenSpec, HostTokensSpec, TokenCategory, TokenControl, TokenPreview } from "../../token-spec.js";
 
 // ---------------------------------------------------------------------------
 // id / label derivation — same rule for every token, see comments inline.
@@ -80,11 +74,21 @@ export interface BuiltToken {
   options?: string[];
   pill?: { value: string; customDefault: string };
   note?: string;
+  units?: string[];
+  readonly?: boolean;
+  valueKind?: "number";
 }
 
 export interface PaletteEntry {
   name: string;
   value: string;
+  /** Present for host specs, where names need not start with `--palette-`. */
+  cssVar?: string;
+  id?: string;
+  label?: string;
+  group?: string;
+  readonly?: boolean;
+  note?: string;
 }
 
 /**
@@ -269,6 +273,137 @@ export interface UiTokenManifest {
   spacingTokens: BuiltToken[];
   fontTokens: BuiltToken[];
   sizeTokens: BuiltToken[];
+  /** Present only for a supplied host spec. */
+  groups?: GeneratedTokenGroups;
+}
+
+const CATEGORIES: TokenCategory[] = ["palette", "color", "spacing", "font", "size"];
+const PREVIEWS: TokenPreview[] = ["size", "line-height", "family", "weight", "bar", "radius", "duration"];
+const CONTROLS: TokenControl[] = ["slider", "text", "select"];
+// Accept numeric-leading and non-ASCII host names while excluding CSS syntax.
+const CSS_VAR_RE = /^--[A-Za-z0-9_\u{80}-\u{10FFFF}][A-Za-z0-9_\u{80}-\u{10FFFF}-]*$/u;
+const ID_RE = /^[A-Za-z][A-Za-z0-9_-]*$/;
+
+function specError(path: string, detail: string): never {
+  throw new Error(`[zudo-sg] tokens.spec${path ? `.${path}` : ""}: ${detail}`);
+}
+
+function record(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function nonempty(value: unknown, path: string): string {
+  if (typeof value !== "string" || !value.trim()) specError(path, "expected a non-empty string");
+  return value;
+}
+
+function optionalString(value: unknown, path: string): void {
+  if (value !== undefined && typeof value !== "string") specError(path, "expected a string");
+}
+
+function validateToken(token: unknown, path: string, category: TokenCategory): asserts token is HostTokenSpec {
+  if (!record(token)) specError(path, "expected a token object");
+  const fields = ["cssVar", "id", "label", "control", "valueKind", "step", "unit", "units", "options", "readonly", "pill", "note"];
+  for (const key of Object.keys(token)) if (!fields.includes(key)) specError(`${path}.${key}`, "unknown token field");
+  const cssVar = nonempty(token.cssVar, `${path}.cssVar`);
+  if (!CSS_VAR_RE.test(cssVar)) specError(`${path}.cssVar`, `invalid CSS custom property ${JSON.stringify(cssVar)}`);
+  if (token.id !== undefined && !ID_RE.test(nonempty(token.id, `${path}.id`))) specError(`${path}.id`, "expected an id starting with a letter, followed by letters, numbers, '_' or '-'");
+  if (token.label !== undefined) nonempty(token.label, `${path}.label`);
+  if (token.control !== undefined && !CONTROLS.includes(token.control as TokenControl)) specError(`${path}.control`, `unsupported control ${JSON.stringify(token.control)}`);
+  if (token.valueKind !== undefined && token.valueKind !== "number") specError(`${path}.valueKind`, "only 'number' is supported");
+  if (token.valueKind === "number" && (token.control === "text" || token.control === "select" || (token.unit !== undefined && (typeof token.unit !== "string" || !["", "ms", "s"].includes(token.unit))))) specError(`${path}.valueKind`, "number requires a slider token with no unit or a duration unit (ms/s)");
+  if (category === "color" && token.valueKind === "number" && token.control !== "slider") specError(`${path}.valueKind`, "color tokens default to text; set control: 'slider' for a number row");
+  if (category === "palette" && token.control !== undefined) specError(`${path}.control`, "palette colors use the color editor; omit control");
+  if (category === "palette" && ["step", "unit", "units", "options", "pill", "valueKind"].some((key) => token[key] !== undefined)) specError(path, "palette colors accept only cssVar, id, label, readonly and note");
+  if (token.step !== undefined && (typeof token.step !== "number" || !Number.isFinite(token.step) || token.step <= 0)) specError(`${path}.step`, "expected a positive finite number");
+  for (const key of ["unit", "note"] as const) optionalString(token[key], `${path}.${key}`);
+  if (token.readonly !== undefined && typeof token.readonly !== "boolean") specError(`${path}.readonly`, "expected a boolean");
+  if (token.options !== undefined) {
+    if (!Array.isArray(token.options) || token.options.length === 0 || token.options.some((o) => typeof o !== "string" || !o.trim()) || new Set(token.options).size !== token.options.length) specError(`${path}.options`, "expected unique, non-empty string options");
+    if (token.control !== "select") specError(`${path}.options`, "options require control: 'select'");
+  }
+  if (token.control === "select" && token.options === undefined) specError(`${path}.options`, "select requires options");
+  if (token.units !== undefined) {
+    if (!Array.isArray(token.units) || token.units.length === 0 || token.units.some((u) => typeof u !== "string") || new Set(token.units).size !== token.units.length) specError(`${path}.units`, "expected unique string units");
+    if (token.control !== "slider" && token.control !== undefined) specError(`${path}.units`, "units require a slider control");
+    if (token.valueKind === "number") specError(`${path}.units`, "number rows cannot have units");
+    if (token.unit === undefined) specError(`${path}.unit`, "unit is required when units are listed");
+    if (token.unit !== undefined && !token.units.includes(token.unit)) specError(`${path}.unit`, "unit must appear in units");
+  }
+  if (token.pill !== undefined) {
+    if (token.control === "text" || token.control === "select" || category === "color" && token.control !== "slider") specError(`${path}.pill`, "pill requires a slider control");
+    if (!record(token.pill)) specError(`${path}.pill`, "expected { value, customDefault }");
+    nonempty(token.pill.value, `${path}.pill.value`);
+    nonempty(token.pill.customDefault, `${path}.pill.customDefault`);
+  }
+}
+
+function buildHostManifest(spec: HostTokensSpec, tokenVars: Map<string, string>, colorVars: Map<string, string>): UiTokenManifest {
+  if (!record(spec)) specError("", "expected an object of category group arrays");
+  for (const key of Object.keys(spec)) if (!CATEGORIES.includes(key as TokenCategory)) specError(key, "unknown category");
+  const groups: GeneratedTokenGroups = { palette: [], color: [], spacing: [], font: [], size: [] };
+  const result: UiTokenManifest = { paletteColors: [], colorTokens: [], spacingTokens: [], fontTokens: [], sizeTokens: [], groups };
+  const usedIds = new Map<string, string>();
+  const usedVars = new Map<string, string>();
+  for (const category of CATEGORIES) {
+    const entries = spec[category] === undefined ? [] : spec[category];
+    if (!Array.isArray(entries)) specError(category, "expected an ordered array of groups");
+    const groupIds = new Set<string>();
+    entries.forEach((group, groupIndex) => {
+      const path = `${category}[${groupIndex}]`;
+      if (!record(group)) specError(path, "expected a group object");
+      for (const key of Object.keys(group)) if (!["id", "label", "tokens", "preview", "previewBase"].includes(key)) specError(`${path}.${key}`, "unknown group field");
+      const groupId = nonempty(group.id, `${path}.id`);
+      if (!ID_RE.test(groupId)) specError(`${path}.id`, "invalid group id");
+      if (groupIds.has(groupId)) specError(`${path}.id`, `duplicate group id ${JSON.stringify(groupId)}`);
+      groupIds.add(groupId);
+      const label = nonempty(group.label, `${path}.label`);
+      if (!Array.isArray(group.tokens)) specError(`${path}.tokens`, "expected an ordered array of tokens");
+      if (group.preview !== undefined && !PREVIEWS.includes(group.preview as TokenPreview)) specError(`${path}.preview`, `unsupported preview ${JSON.stringify(group.preview)}`);
+      if (group.previewBase !== undefined) {
+        if (group.preview !== "line-height") specError(`${path}.previewBase`, "previewBase requires preview: 'line-height'");
+        if (typeof group.previewBase !== "string" || !CSS_VAR_RE.test(group.previewBase)) specError(`${path}.previewBase`, "expected a CSS custom property");
+        if (!tokenVars.has(group.previewBase) && !colorVars.has(group.previewBase)) specError(`${path}.previewBase`, `${group.previewBase} was not found in either configured CSS file`);
+      }
+      groups[category].push({ id: groupId, label, ...(group.preview ? { preview: group.preview } : {}), ...(group.previewBase ? { previewBase: group.previewBase } : {}) });
+      const kinds = new Set<string>();
+      group.tokens.forEach((rawToken, tokenIndex) => {
+        const tokenPath = `${path}.tokens[${tokenIndex}]`;
+        validateToken(rawToken, tokenPath, category);
+        const control = rawToken.control ?? (category === "color" ? "text" : "slider");
+        const kind = category === "palette" ? "color" : control === "select" ? "select" : control === "text" ? "text" : rawToken.valueKind === "number" || group.preview === "line-height" || (group.preview === "weight" && (rawToken.unit ?? "") === "") ? "number" : "length";
+        kinds.add(kind);
+        if (kinds.size > 1) specError(`${path}.tokens`, "a group must use one value kind for all rows");
+        const allowed: Record<TokenPreview, string[]> = { size: ["length"], "line-height": ["number"], family: ["text"], weight: ["select", "number"], bar: ["length"], radius: ["length"], duration: ["length", "number"] };
+        if (group.preview && !allowed[group.preview as TokenPreview].includes(kind)) specError(`${path}.preview`, `${group.preview} does not support ${kind} rows`);
+        if ((group.preview === "line-height" || group.preview === "weight") && kind === "number" && ((rawToken.unit ?? "") !== "" || rawToken.units !== undefined)) specError(`${path}.preview`, `${group.preview} requires unitless number tokens`);
+        if (group.preview === "duration" && !["ms", "s"].includes(rawToken.unit ?? "")) specError(`${path}.preview`, "duration requires ms or s units");
+        const cssVar = rawToken.cssVar;
+        const id = rawToken.id ?? idOf(cssVar);
+        const oldVar = usedVars.get(cssVar);
+        if (oldVar) specError(`${tokenPath}.cssVar`, `${cssVar} is already used by ${oldVar}`);
+        const oldId = usedIds.get(id);
+        if (oldId) specError(`${tokenPath}.id`, `${id} collides with ${oldId}; set a distinct id`);
+        usedIds.set(id, tokenPath);
+        usedVars.set(cssVar, tokenPath);
+        const sourceVars = category === "palette" || category === "color" ? colorVars : tokenVars;
+        if (!sourceVars.has(cssVar)) specError(`${tokenPath}.cssVar`, `${cssVar} was not found in the configured ${category === "palette" || category === "color" ? "colors" : "tokens"} CSS file`);
+        const value = sourceVars.get(cssVar)!;
+        if (category === "palette") {
+          result.paletteColors.push({ name: cssVar.slice(2), cssVar, id, label: rawToken.label ?? labelOf(cssVar), group: groupId, value, ...(rawToken.readonly ? { readonly: true } : {}), ...(rawToken.note ? { note: rawToken.note } : {}) });
+        } else {
+          const built: BuiltToken = { id, cssVar, label: rawToken.label ?? labelOf(cssVar), group: groupId, default: value,
+            step: rawToken.step ?? 1, unit: rawToken.unit ?? "", ...(rawToken.control || category === "color" ? { control } : {}),
+            ...(rawToken.units ? { units: rawToken.units } : {}), ...(rawToken.options ? { options: rawToken.options } : {}),
+            ...(rawToken.pill ? { pill: rawToken.pill } : {}), ...(rawToken.note ? { note: rawToken.note } : {}),
+            ...(kind === "number" ? { valueKind: "number" as const } : {}),
+            ...(rawToken.readonly ? { readonly: true } : {}) };
+          result[`${category}Tokens` as "colorTokens" | "spacingTokens" | "fontTokens" | "sizeTokens"].push(built);
+        }
+      });
+    });
+  }
+  return result;
 }
 
 export interface TokenManifestProvenance {
@@ -284,9 +419,10 @@ export interface TokenManifestProvenance {
  * shape as the arrays exported by the generated manifest, minus the TS
  * syntax.
  */
-export function buildUiTokenManifest({ tokensCss, colorsCss }: { tokensCss: string; colorsCss: string }): UiTokenManifest {
+export function buildUiTokenManifest({ tokensCss, colorsCss, spec }: { tokensCss: string; colorsCss: string; spec?: HostTokensSpec }): UiTokenManifest {
   const tokenVars = parseCssCustomProperties(tokensCss);
   const colorVars = parseCssCustomProperties(colorsCss);
+  if (spec !== undefined) return buildHostManifest(spec, tokenVars, colorVars);
   return {
     paletteColors: buildPaletteColors(colorVars),
     colorTokens: buildColorTokens(colorVars),
@@ -308,7 +444,7 @@ function normalizeProvenancePath(path: string): string {
   return path.replace(/\\/g, "/").replace(/^\.\//, "");
 }
 
-function renderTokenDefObject(token: BuiltToken, indent: number): string {
+function renderTokenDefObject(token: BuiltToken, indent: number, custom = false): string {
   const pad = " ".repeat(indent);
   const fields = [
     `id: ${jsStringLiteral(token.id)}`,
@@ -321,19 +457,24 @@ function renderTokenDefObject(token: BuiltToken, indent: number): string {
   ];
   if (token.control) fields.push(`control: ${jsStringLiteral(token.control)}`);
   if (token.options) {
-    fields.push(`options: FONT_WEIGHT_OPTIONS`);
+    fields.push(custom ? `options: ${JSON.stringify(token.options)}` : `options: FONT_WEIGHT_OPTIONS`);
   }
+  if (custom && token.units) fields.push(`units: ${JSON.stringify(token.units)}`);
+  if (custom && token.readonly) fields.push("readonly: true");
+  if (custom && token.valueKind) fields.push(`valueKind: ${jsStringLiteral(token.valueKind)}`);
+  if (custom && token.note) fields.push(`note: ${jsStringLiteral(token.note)}`);
   if (token.pill) {
     fields.push(
       `pill: { value: ${jsStringLiteral(token.pill.value)}, customDefault: ${jsStringLiteral(token.pill.customDefault)} }`,
     );
   }
   const body = fields.map((f) => `${pad}  ${f},`).join("\n");
-  const note = token.note ? `${pad}// ${token.note}\n` : "";
+  const note = !custom && token.note ? `${pad}// ${token.note}\n` : "";
   return `${note}${pad}{\n${body}\n${pad}},`;
 }
 
-function renderPaletteEntry(entry: PaletteEntry): string {
+function renderPaletteEntry(entry: PaletteEntry, custom = false): string {
+  if (custom) return `  ${JSON.stringify(entry)},`;
   return `  { name: ${jsStringLiteral(entry.name)}, value: ${jsStringLiteral(entry.value)} },`;
 }
 
@@ -348,13 +489,14 @@ export function renderUiTokenManifestFile(
     tokensCssPath === colorsCssPath
       ? `\`${tokensCssPath}\``
       : `\`${tokensCssPath}\` and \`${colorsCssPath}\``;
-  const paletteLines = manifest.paletteColors.map(renderPaletteEntry).join("\n");
-  const colorLines = manifest.colorTokens.map((t) => renderTokenDefObject(t, 2)).join("\n");
-  const spacingLines = manifest.spacingTokens.map((t) => renderTokenDefObject(t, 2)).join("\n");
-  const fontLines = manifest.fontTokens.map((t) => renderTokenDefObject(t, 2)).join("\n");
-  const sizeLines = manifest.sizeTokens.map((t) => renderTokenDefObject(t, 2)).join("\n");
+  const custom = manifest.groups !== undefined;
+  const paletteLines = manifest.paletteColors.map((entry) => renderPaletteEntry(entry, custom)).join("\n");
+  const colorLines = manifest.colorTokens.map((t) => renderTokenDefObject(t, 2, custom)).join("\n");
+  const spacingLines = manifest.spacingTokens.map((t) => renderTokenDefObject(t, 2, custom)).join("\n");
+  const fontLines = manifest.fontTokens.map((t) => renderTokenDefObject(t, 2, custom)).join("\n");
+  const sizeLines = manifest.sizeTokens.map((t) => renderTokenDefObject(t, 2, custom)).join("\n");
 
-  return `/**
+  const rendered = `/**
  * Design-token manifest for configured UI tokens.
  *
  * GENERATED — do not hand-edit. Run \`zudo-sg gen-token-manifest\` after changing
@@ -446,5 +588,54 @@ ${fontLines}
 export const UI_SIZE_TOKENS: readonly TokenDef[] = [
 ${sizeLines}
 ];
+`;
+  if (!custom) return rendered;
+  // Keep the legacy source byte-for-byte while custom specs get truthful prose.
+  return `/**
+ * Design-token manifest generated by \`zudo-sg gen-token-manifest\`.
+ * Run \`zudo-sg gen-token-manifest --check\` to detect drift.
+ * CSS declarations in ${sourceOfTruth} supply default values.
+ * Host \`tokens.spec\` supplies ordered groups and presentation metadata.
+ */
+import type { TokenDef } from "@takazudo/zdtp";
+import type { GeneratedTokenGroups } from "@takazudo/zudo-sg/config";
+
+/** Number rows are a portable tier-model extension of zdtp's TokenDef. */
+export type HostGeneratedToken = TokenDef & { valueKind?: "number"; note?: string };
+
+/** Palette entries preserve explicit host CSS names and group identity. */
+export interface UiPaletteColor {
+  name: string;
+  value: string;
+  cssVar: string;
+  id: string;
+  label: string;
+  group: string;
+  readonly?: boolean;
+  note?: string;
+}
+
+export const UI_PALETTE_COLORS: readonly UiPaletteColor[] = [
+${paletteLines}
+];
+
+export const UI_COLOR_TOKENS: readonly HostGeneratedToken[] = [
+${colorLines}
+];
+
+export const UI_SPACING_TOKENS: readonly HostGeneratedToken[] = [
+${spacingLines}
+];
+
+export const UI_FONT_TOKENS: readonly HostGeneratedToken[] = [
+${fontLines}
+];
+
+export const UI_SIZE_TOKENS: readonly HostGeneratedToken[] = [
+${sizeLines}
+];
+
+/** Ordered groups for all five categories; omitted categories are empty. */
+export const UI_TOKEN_GROUPS: GeneratedTokenGroups = ${JSON.stringify(manifest.groups, null, 2)};
 `;
 }
