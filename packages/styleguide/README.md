@@ -32,6 +32,64 @@ dogfoods the engine as its own styleguide host — see
 - Token dashboards and a preview design-token panel, driven by a
   `gen-token-manifest`-produced manifest.
 
+## Host-owned token vocabulary
+
+`tokens.spec` is optional. Without it, `gen-token-manifest` keeps the historical
+UI token vocabulary and the five legacy arrays. With it, the supplied spec
+**replaces** that vocabulary: omitted categories produce no rows. Each category
+(`palette`, `color`, `spacing`, `font`, `size`) is an ordered array of groups;
+each group has `id`, `label`, `tokens`, and optional `preview` / `previewBase`.
+Every token names a declared `cssVar`; optional `id`, `label`, `control`, `step`,
+`unit`, `units`, `options`, `readonly`, `pill`, `note`, and `valueKind: "number"`
+provide metadata. `note` stays in the generated module; zdtp has no per-row
+note field, so it is not displayed in the panel. The generated module still exports the five familiar
+arrays, plus `UI_TOKEN_GROUPS` for custom specs. The engine's injected `/tokens`
+route and preview panel consume the same groups. Existing five-array modules
+remain valid without metadata.
+
+```js
+// zudo-sg.config.mjs — CSS files must declare every listed variable.
+tokens: {
+  cssFiles: ["./src/styles/tokens.css", "./src/styles/colors.css"],
+  manifestOut: "./src/styleguide/token-manifest.ts",
+  spec: {
+    palette: [{ id: "brand", label: "Brand", tokens: [
+      { cssVar: "--brand-100" }, { cssVar: "--brand-500", readonly: true },
+    ] }],
+    color: [{ id: "surface", label: "Surfaces", tokens: [
+      { cssVar: "--surface-canvas", control: "text" },
+    ] }],
+    spacing: [{ id: "inset", label: "Inset", preview: "bar", tokens: [
+      { cssVar: "--space-inline", step: 0.125, unit: "rem", units: ["rem", "px"] },
+    ] }],
+    font: [{ id: "leading", label: "Leading", preview: "line-height",
+      previewBase: "--type-body", tokens: [
+        { cssVar: "--type-leading", valueKind: "number", step: 0.1 },
+      ] }],
+    size: [{ id: "corners", label: "Corners", preview: "radius", tokens: [
+      { cssVar: "--corner-card", step: 0.125, unit: "rem" },
+    ] }],
+  },
+},
+```
+
+The supported preview/kind pairs are `size`, `bar`, and `radius` with lengths;
+`line-height` with numbers; `family` with text; `weight` with select options or
+unitless numbers; and `duration` with `ms`/`s` lengths or numbers. `previewBase`
+requires `line-height` and an existing CSS variable. Omit preview for ordinary
+rows. Palette colors use their explicit CSS names, including sparse ramps and
+unrelated prefixes; custom groups use generic panel tabs. Values such as
+`light-dark()` and `var()` remain raw CSS expressions in the manifest.
+
+The parser reads literal custom-property declarations in the configured CSS
+files. It does not follow CSS imports or evaluate expressions. Conflicting
+repeat declarations, invalid or duplicate effective IDs/names, unsupported
+preview/control combinations, and missing references fail generation before
+writing output. Run `pnpm gen-token-manifest` after changing CSS or the spec,
+then `pnpm gen-token-manifest --check` in CI. The complete foreign configuration lives in `fixtures/foreign-tokens/`. The packed foreign-host
+proof is `node scripts/verify-styleguide-install.mjs` from
+this repository (a guarded heavy check).
+
 ## Framework scope
 
 Preact + zfb hosts only. React 19 hosts are an explicit non-goal for this

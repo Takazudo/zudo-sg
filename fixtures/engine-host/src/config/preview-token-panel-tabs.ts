@@ -6,20 +6,19 @@
 // preview-token-panel-bootstrap.tsx).
 import { buildUiTokenTabs } from "@takazudo/zudo-sg/token-dashboard";
 import type { UiDesignTokensManifest } from "@takazudo/zudo-sg/token-dashboard";
-import {
-  UI_PALETTE_COLORS,
-  UI_COLOR_TOKENS,
-  UI_SPACING_TOKENS,
-  UI_FONT_TOKENS,
-  UI_SIZE_TOKENS,
-} from "../styleguide/token-manifest.ts";
+import * as tokens from "../styleguide/token-manifest.ts";
+
+const tokenGroups = tokens as typeof tokens & {
+  UI_TOKEN_GROUPS?: UiDesignTokensManifest["groups"];
+};
 
 const uiDesignTokensManifest: UiDesignTokensManifest = {
-  paletteColors: UI_PALETTE_COLORS,
-  colorTokens: UI_COLOR_TOKENS,
-  spacingTokens: UI_SPACING_TOKENS,
-  fontTokens: UI_FONT_TOKENS,
-  sizeTokens: UI_SIZE_TOKENS,
+  paletteColors: tokens.UI_PALETTE_COLORS,
+  colorTokens: tokens.UI_COLOR_TOKENS,
+  spacingTokens: tokens.UI_SPACING_TOKENS,
+  fontTokens: tokens.UI_FONT_TOKENS,
+  sizeTokens: tokens.UI_SIZE_TOKENS,
+  groups: tokenGroups.UI_TOKEN_GROUPS,
 };
 
 export const tabs = buildUiTokenTabs(uiDesignTokensManifest);

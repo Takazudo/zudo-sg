@@ -49,7 +49,7 @@ export function runGenTokenManifest(
   const [tokensCssPath, colorsCssPath] = tokens.cssFiles;
   const tokensCss = readFileSync(resolve(projectRoot, tokensCssPath), "utf8");
   const colorsCss = readFileSync(resolve(projectRoot, colorsCssPath), "utf8");
-  const manifest = buildUiTokenManifest({ tokensCss, colorsCss });
+  const manifest = buildUiTokenManifest({ tokensCss, colorsCss, spec: tokens.spec });
   const next = renderUiTokenManifestFile(manifest, { tokensCssPath, colorsCssPath });
 
   const tokenCount =

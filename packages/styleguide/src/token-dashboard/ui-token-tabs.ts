@@ -13,6 +13,7 @@
 
 import type { TabConfig, TierConfig, TierItem, TokenDef } from "@takazudo/zdtp";
 import type { DashboardPreviewKind } from "@takazudo/zdtp/dashboard";
+import type { GeneratedTokenGroups, GeneratedTokenGroup, TokenCategory } from "../token-spec.js";
 
 /**
  * Tier-1 raw palette color — a plain name/value descriptor (NOT `TokenDef`)
@@ -24,6 +25,12 @@ export interface PaletteColor {
   name: string;
   /** Raw color value (e.g. an oklch() string). */
   value: string;
+  cssVar?: string;
+  id?: string;
+  label?: string;
+  group?: string;
+  readonly?: boolean;
+  note?: string;
 }
 
 /**
@@ -32,12 +39,15 @@ export interface PaletteColor {
  * module's export names are) before calling `buildUiTokenTabs` /
  * `buildDashboardPreviewOverrides` / `createTokenDashboards`.
  */
+type HostToken = TokenDef & { valueKind?: "number"; note?: string };
+
 export interface UiDesignTokensManifest {
   paletteColors: readonly PaletteColor[];
-  colorTokens: readonly TokenDef[];
-  spacingTokens: readonly TokenDef[];
-  fontTokens: readonly TokenDef[];
-  sizeTokens: readonly TokenDef[];
+  colorTokens: readonly HostToken[];
+  spacingTokens: readonly HostToken[];
+  fontTokens: readonly HostToken[];
+  sizeTokens: readonly HostToken[];
+  groups?: GeneratedTokenGroups;
 }
 
 // ---------------------------------------------------------------------------
@@ -59,19 +69,20 @@ interface ToTierItemOptions {
   numberKind?: boolean;
 }
 
-function toTierItem(t: TokenDef, opts?: ToTierItemOptions): TierItem {
+function toTierItem(t: HostToken, opts?: ToTierItemOptions): TierItem {
   let kind;
   if (t.control === "select") {
     kind = { kind: "select" as const, options: t.options ?? [] };
   } else if (t.control === "text") {
     kind = { kind: "text" as const };
-  } else if (opts?.numberKind) {
+  } else if (t.valueKind === "number" || opts?.numberKind) {
     kind = { kind: "number" as const, step: t.step, unit: t.unit };
   } else {
     kind = {
       kind: "length" as const,
       step: t.step,
       unit: t.unit,
+      ...(t.units ? { units: t.units } : {}),
     };
   }
   const item: TierItem = {
@@ -266,6 +277,43 @@ function buildSizeTab(sizeTokens: readonly TokenDef[]): TabConfig {
   };
 }
 
+/** Build portable generic tabs from host-owned ordered metadata. */
+function buildHostTabs(manifest: UiDesignTokensManifest, groups: GeneratedTokenGroups): TabConfig[] {
+  const categories: readonly TokenCategory[] = ["color", "palette", "spacing", "font", "size"];
+  const tokenSets = {
+    color: manifest.colorTokens,
+    spacing: manifest.spacingTokens,
+    font: manifest.fontTokens,
+    size: manifest.sizeTokens,
+  };
+  return categories.flatMap((category) => {
+    const definitions = groups[category];
+    if (!definitions?.length) return [];
+    const tiers = definitions.map((group: GeneratedTokenGroup): TierConfig => {
+      const items = category === "palette"
+        ? manifest.paletteColors.filter((color) => color.group === group.id).map((color): TierItem => ({
+            id: color.id ?? `palette-${color.name}`,
+            cssVar: color.cssVar ?? `--palette-${color.name}`,
+            label: color.label ?? `palette-${color.name}`,
+            default: color.value,
+            type: { kind: "color", ...(color.value.trim().startsWith("oklch(") ? { format: "oklch" as const } : {}) },
+            ...(color.readonly ? { readonly: true as const } : {}),
+          }))
+        : tokenSets[category].filter((token) => token.group === group.id).map((token) => toTierItem(token));
+      return {
+        id: group.id,
+        label: group.label,
+        items,
+        ...(group.preview ? { preview: group.preview } : {}),
+        ...(group.previewBase ? { previewBase: group.previewBase } : {}),
+      };
+    });
+    // Generic tab ids avoid zdtp's dedicated palette/color/spacing/font/size
+    // renderers, whose demo vocabulary and palette ramp contract are narrower.
+    return [{ id: `ui-${category}`, label: category[0]!.toUpperCase() + category.slice(1), tiers }];
+  });
+}
+
 /**
  * Shared tab data consumed by both a host's runtime preview panel and its
  * static dashboard. Callers should build this ONCE per manifest and reuse
@@ -273,6 +321,7 @@ function buildSizeTab(sizeTokens: readonly TokenDef[]): TabConfig {
  * ordering, defaults, and preview metadata cannot drift apart.
  */
 export function buildUiTokenTabs(manifest: UiDesignTokensManifest): TabConfig[] {
+  if (manifest.groups) return buildHostTabs(manifest, manifest.groups);
   return [
     buildColorTab(manifest.colorTokens),
     buildPaletteTab(manifest.paletteColors),
@@ -292,8 +341,10 @@ export function buildDashboardPreviewOverrides(
 ): Readonly<Record<string, DashboardPreviewKind>> {
   const overrides: Record<string, DashboardPreviewKind> = {};
   for (const token of manifest.colorTokens) overrides[token.cssVar] = "color";
-  for (const token of manifest.sizeTokens) {
-    if (token.group === "shadow") overrides[token.cssVar] = "shadow";
+  if (!manifest.groups) {
+    for (const token of manifest.sizeTokens) {
+      if (token.group === "shadow") overrides[token.cssVar] = "shadow";
+    }
   }
   return overrides;
 }

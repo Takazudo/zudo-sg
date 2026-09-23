@@ -5,6 +5,9 @@
 
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+import type { HostTokensSpec } from "../token-spec.js";
+
+export type { HostTokensSpec, HostTokenGroupSpec, HostTokenSpec, TokenPreview, TokenControl, GeneratedTokenGroups, GeneratedTokenGroup } from "../token-spec.js";
 
 /** One corpus of `*.stories.tsx` files the registry codegen discovers. */
 export interface ZudoSgComponentsRoot {
@@ -23,6 +26,8 @@ export interface ZudoSgTokensConfig {
   cssFiles: [string, string];
   /** Project-root-relative output path for the generated manifest. */
   manifestOut: string;
+  /** Ordered host token vocabulary; omitted retains the bundled demo vocabulary. */
+  spec?: HostTokensSpec;
 }
 
 export interface ZudoSgConfig {

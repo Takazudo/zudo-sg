@@ -283,11 +283,10 @@ export function buildRegistryModuleSource(registryModule: string): string {
 
 export function buildTokensModuleSource(tokensManifestModule: string | null): string {
   if (tokensManifestModule === null) return "export const tokensManifest = null;\n";
-  const names = Object.values(TOKENS_MANIFEST_EXPORTS);
-  const fields = Object.entries(TOKENS_MANIFEST_EXPORTS).map(([field, name]) => `${field}: ${name}`);
+  const fields = Object.entries(TOKENS_MANIFEST_EXPORTS).map(([field, name]) => `${field}: manifest.${name}`);
   return (
-    `import { ${names.join(", ")} } from ${JSON.stringify(toForwardSlash(tokensManifestModule))};\n` +
-    `export const tokensManifest = { ${fields.join(", ")} };\n`
+    `import * as manifest from ${JSON.stringify(toForwardSlash(tokensManifestModule))};\n` +
+    `export const tokensManifest = { ${fields.join(", ")}, groups: "UI_TOKEN_GROUPS" in manifest ? manifest.UI_TOKEN_GROUPS : undefined };\n`
   );
 }
 
