@@ -14,6 +14,7 @@ import { rgb as culoriRgb } from "culori";
 import { describe, expect, it } from "vitest";
 import { parseCssCustomProperties } from "../css-var-parser.js";
 import { buildFromSpecs, buildPaletteColors, buildUiTokenManifest, renderUiTokenManifestFile, SIZE_SPECS } from "../ui-token-manifest.js";
+import type { HostTokensSpec } from "../../../token-spec.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, "../../../../../..");
@@ -242,4 +243,65 @@ describe("renderUiTokenManifestFile", () => {
     expect(rendered).not.toContain("./node_modules/@example/ui/styles/");
     expect(rendered).not.toMatch(/demo-ui|pnpm gen:|pnpm check:/);
   });
+});
+
+describe("host-owned tokens.spec", () => {
+  const tokensCss = ":root { --gap-compact: calc(1rem / 2); --font-custom: 525; --line-custom: 1.4; }";
+  const colorsCss = ":root { --brand-100: #eef; --brand-500: #336699; --ink: var(--brand-500); }";
+  const spec: HostTokensSpec = {
+    palette: [{ id: "brand", label: "Brand", tokens: [
+      { cssVar: "--brand-100", label: "Pale" }, { cssVar: "--brand-500", readonly: true },
+    ] }],
+    color: [{ id: "roles", label: "Roles", tokens: [{ cssVar: "--ink", note: "Semantic role\nfrom host" }] }],
+    spacing: [{ id: "rhythm", label: "Rhythm", preview: "bar", tokens: [{ cssVar: "--gap-compact", step: 0.125, unit: "rem", units: ["rem", "px"] }] }],
+    font: [
+      { id: "weights", label: "Weights", preview: "weight", tokens: [{ cssVar: "--font-custom", control: "select", options: ["400", "525", "700"] }] },
+      { id: "leading", label: "Leading", preview: "line-height", previewBase: "--font-custom", tokens: [{ cssVar: "--line-custom" }] },
+    ],
+  };
+
+  it("retains host names, CSS expressions, groups, options and empty categories deterministically", () => {
+    const manifest = buildUiTokenManifest({ tokensCss, colorsCss, spec });
+    expect(manifest.paletteColors).toMatchObject([
+      { cssVar: "--brand-100", name: "brand-100", group: "brand", label: "Pale", value: "#eef" },
+      { cssVar: "--brand-500", group: "brand", readonly: true, value: "#336699" },
+    ]);
+    expect(manifest.colorTokens[0]).toMatchObject({ default: "var(--brand-500)", control: "text" });
+    expect(manifest.spacingTokens[0]).toMatchObject({ group: "rhythm", default: "calc(1rem / 2)", units: ["rem", "px"] });
+    expect(manifest.fontTokens[0]?.options).toEqual(["400", "525", "700"]);
+    expect(manifest.fontTokens[1]?.valueKind).toBe("number");
+    expect(manifest.sizeTokens).toEqual([]);
+    expect(manifest.groups?.size).toEqual([]);
+    const provenance = { tokensCssPath: "tokens.css", colorsCssPath: "colors.css" };
+    const rendered = renderUiTokenManifestFile(manifest, provenance);
+    expect(rendered).toContain('options: ["400","525","700"]');
+    expect(rendered).toContain('note: "Semantic role\\nfrom host"');
+    expect(rendered).toContain('cssVar":"--brand-100"');
+    expect(rendered).toContain("export const UI_TOKEN_GROUPS");
+    expect(renderUiTokenManifestFile(buildUiTokenManifest({ tokensCss, colorsCss, spec }), provenance)).toBe(rendered);
+  });
+
+  it("accepts numeric-leading and non-ASCII CSS custom properties", () => {
+    const manifest = buildUiTokenManifest({ tokensCss, colorsCss: ":root { --100: #fff; --brand-色: #333; }", spec: {
+      palette: [{ id: "custom", label: "Custom", tokens: [{ cssVar: "--100" }, { cssVar: "--brand-色" }] }],
+    } });
+    expect(manifest.paletteColors.map((color) => color.cssVar)).toEqual(["--100", "--brand-色"]);
+  });
+
+  it.each([
+    [{ spacing: null }, /expected an ordered array of groups/],
+    [{ palette: [{ id: "brand", label: "Brand", tokens: [{ cssVar: "--missing" }] }] }, /--missing/],
+    [{ palette: [{ id: "brand", label: "Brand", tokens: [{ cssVar: "--brand-100" }, { cssVar: "--brand-100" }] }] }, /already used/],
+    [{ palette: [{ id: "brand", label: "Brand", tokens: [{ cssVar: "--brand-100", id: "same" }] }], color: [{ id: "roles", label: "Roles", tokens: [{ cssVar: "--ink", id: "same" }] }] }, /collides/],
+    [{ palette: [{ id: "brand", label: "Brand", tokens: [] }, { id: "brand", label: "Again", tokens: [] }] }, /duplicate group/],
+    [{ spacing: [{ id: "bad", label: "Bad", tokens: [{ cssVar: "--gap-compact", step: 0 }] }] }, /positive finite/],
+    [{ font: [{ id: "bad", label: "Bad", tokens: [{ cssVar: "--font-custom", control: "select" }] }] }, /requires options/],
+    [{ font: [{ id: "bad", label: "Bad", preview: "line-height", tokens: [{ cssVar: "--font-custom", unit: "rem" }] }] }, /unitless number/],
+    [{ font: [{ id: "bad", label: "Bad", preview: "family", tokens: [{ cssVar: "--font-custom" }] }] }, /does not support length/],
+    [{ color: [{ id: "bad", label: "Bad", preview: "bar", tokens: [{ cssVar: "--ink" }] }] }, /does not support text/],
+    [{ palette: [{ id: "bad", label: "Bad", preview: "heatmap", tokens: [] }] }, /unsupported preview/],
+  ] as Array<[unknown, RegExp]>)
+    ("rejects malformed host spec %#", (bad, message) => {
+      expect(() => buildUiTokenManifest({ tokensCss, colorsCss, spec: bad as HostTokensSpec })).toThrow(message);
+    });
 });

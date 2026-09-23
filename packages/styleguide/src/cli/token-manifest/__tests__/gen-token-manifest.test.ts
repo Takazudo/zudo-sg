@@ -102,3 +102,39 @@ describe("gen-token-manifest provenance", () => {
     );
   });
 });
+
+describe("gen-token-manifest with a host spec", () => {
+  const cssFiles: [string, string] = ["tokens.css", "colors.css"];
+  const spec = {
+    palette: [{ id: "brand", label: "Brand", tokens: [{ cssVar: "--brand-100" }, { cssVar: "--brand-500" }] }],
+    color: [{ id: "roles", label: "Roles", tokens: [{ cssVar: "--ink" }] }],
+  };
+  const config: ZudoSgConfig = {
+    ...CONFIG_WITHOUT_TOKENS,
+    tokens: { cssFiles, manifestOut: "manifest.ts", spec },
+  };
+
+  beforeEach(() => {
+    writeFileSync(resolve(sandbox, cssFiles[0]), ":root { --space-small: 4px; }");
+    writeFileSync(resolve(sandbox, cssFiles[1]), ":root { --brand-100: #eef; --brand-500: #369; --ink: var(--brand-500); }");
+  });
+
+  it("writes an ordered foreign vocabulary and check mode only reads", () => {
+    expect(runGenTokenManifest(sandbox, config)).toMatchObject({ changed: true, tokenCount: 3 });
+    const first = readFileSync(resolve(sandbox, "manifest.ts"), "utf8");
+    expect(first.indexOf("--brand-100")).toBeLessThan(first.indexOf("--brand-500"));
+    expect(first).toContain("UI_TOKEN_GROUPS");
+    expect(runGenTokenManifest(sandbox, config, { check: true })).toMatchObject({ changed: false });
+    expect(readFileSync(resolve(sandbox, "manifest.ts"), "utf8")).toBe(first);
+    writeFileSync(resolve(sandbox, "manifest.ts"), "stale");
+    expect(() => runGenTokenManifest(sandbox, config, { check: true })).toThrow(/drift detected/);
+    expect(readFileSync(resolve(sandbox, "manifest.ts"), "utf8")).toBe("stale");
+  });
+
+  it("validates before writing and leaves an existing manifest intact", () => {
+    writeFileSync(resolve(sandbox, "manifest.ts"), "prior content");
+    const bad: ZudoSgConfig = { ...config, tokens: { ...config.tokens!, spec: { palette: [{ id: "brand", label: "Brand", tokens: [{ cssVar: "--absent" }] }] } } };
+    expect(() => runGenTokenManifest(sandbox, bad)).toThrow(/tokens\.spec\.palette\[0\]\.tokens\[0\]\.cssVar.*--absent/);
+    expect(readFileSync(resolve(sandbox, "manifest.ts"), "utf8")).toBe("prior content");
+  });
+});
