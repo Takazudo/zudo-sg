@@ -4,6 +4,29 @@ All notable changes to `@takazudo/zudo-sg` are documented in this file.
 
 The format is based on Keep a Changelog, and release notes are generated from the changelog MDX pages.
 
+## [0.3.2] - 2026-09-23
+
+### Features
+
+- Configure an ordered host-owned vocabulary with `tokens.spec` for palette,
+  semantic colors, spacing, fonts, and sizes. CSS supplies values, while the
+  spec controls groups, labels, controls, options, units, and previews.
+- Carry custom token metadata into the dashboard and preview panel, including
+  sparse palettes and unrelated CSS variable prefixes. Hosts that omit the
+  spec retain the existing default vocabulary and legacy manifest support.
+- Validate custom specs before writing generated files and document the
+  supported metadata and CSS parser constraints.
+
+### Bug Fixes
+
+- Generate components without a demo-local class-name helper dependency and
+  import story types from the public `@takazudo/zudo-sg/stories` entry point.
+  Flat and nested scaffolds now typecheck and build in a fresh starter.
+- Allocate deterministic, unique registry import bindings for sibling stories,
+  multiple roots, sanitized names, and names reserved by generated code.
+- Keep the starter's token adapter compatible with legacy five-array manifests
+  while accepting optional host-group metadata.
+
 ## [0.3.1] - 2026-09-21
 
 The preview token panel is now reachable from the doc header, not just from the
