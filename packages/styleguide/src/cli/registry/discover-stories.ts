@@ -8,10 +8,9 @@
 // walk: the old one-level `<name>/<name>.stories.tsx` layout and the new
 // category-nested `<category>/<name>/<name>.stories.tsx` layout (any depth).
 // Neither is preferred — this just globs `**/*.stories.tsx` and derives each
-// entry's identity from its full relative directory path, so old components
-// keep resolving to the exact same identifiers they always had (a 1-segment
-// relative dir round-trips unchanged) while new nested entries get distinct
-// identifiers even when two categories scaffold a same-named component.
+// entry's preferred import name from its relative directory path. The
+// combined registry allocates final names when those preferences collide;
+// noncolliding old components keep their existing identifiers.
 
 import { readFileSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
@@ -21,7 +20,7 @@ const STORIES_SUFFIX = ".stories.tsx";
 export interface DiscoveredStory {
   /** Path stem relative to the components root, e.g. "badge/badge" or "layout/badge-icon/badge-icon". */
   relDirStem: string;
-  /** `import * as <name>` identifier derived from the containing directory path. */
+  /** Preferred import binding; the combined registry allocates a unique final name. */
   importName: string;
   /** Named-export declaration order of the story file, in source order. */
   exportOrder: string[];
@@ -60,12 +59,11 @@ function camelCase(kebab: string): string {
 }
 
 /**
- * Derive the `import * as <name>` identifier from a story's containing
+ * Derive the preferred `import * as <name>` identifier from a story's containing
  * directory path (relative to the components root) — never from the file
  * stem alone. A 1-segment `relDir` (old flat layout) is byte-identical to
  * the previous `camelCase(stem)` derivation; a multi-segment `relDir`
- * (category-nested layout) folds the whole path into one identifier, so two
- * categories scaffolding a same-named component get distinct identifiers.
+ * (category-nested layout) folds the whole path into one identifier.
  */
 export function dirPathToImportName(relDir: string): string {
   return camelCase(relDir.split("/").join("-"));
@@ -79,26 +77,6 @@ export function dirPathToImportName(relDir: string): string {
  */
 export function scanExportOrder(body: string): string[] {
   return [...body.matchAll(/^export const (\w+)/gm)].map((m) => m[1] as string);
-}
-
-/**
- * Throws if two entries derive the same `importName` — a duplicate
- * `import * as X` is a syntax error; this surfaces it as a clear
- * discovery-time message naming the two colliding directories.
- */
-export function assertUniqueImportNames(entries: DiscoveredStory[]): void {
-  const seen = new Map<string, string>();
-  for (const entry of entries) {
-    const prior = seen.get(entry.importName);
-    if (prior !== undefined) {
-      throw new Error(
-        `gen-registry: "${prior}" and "${entry.relDirStem}" both derive the import ` +
-          `identifier "${entry.importName}" — rename one of the component directories ` +
-          `so their derived identifiers don't collide.`,
-      );
-    }
-    seen.set(entry.importName, entry.relDirStem);
-  }
 }
 
 /**
@@ -124,6 +102,5 @@ export function discoverStories(absRoot: string): DiscoveredStory[] {
     throw new Error(`No *${STORIES_SUFFIX} files found under ${absRoot}`);
   }
   entries.sort((a, b) => a.relDirStem.localeCompare(b.relDirStem));
-  assertUniqueImportNames(entries);
   return entries;
 }

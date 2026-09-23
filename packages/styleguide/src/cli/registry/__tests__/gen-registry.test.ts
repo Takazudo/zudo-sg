@@ -11,6 +11,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import * as ts from "typescript";
 import type { ZudoSgConfig } from "../../config.js";
 import { runGenRegistry, SgRegistryDriftError } from "../gen-registry.js";
 
@@ -78,6 +79,25 @@ function readStoryModules() {
     join(sandbox, "packages", "demo-ui", "src", "stories", "__tests__", "story-modules.ts"),
     "utf-8",
   );
+}
+
+function expectValidModule(source: string) {
+  const parsed = ts.createSourceFile("generated.ts", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+  const transpiled = ts.transpileModule(source, {
+    compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext },
+    reportDiagnostics: true,
+  });
+  expect(transpiled.diagnostics).toEqual([]);
+  const names = parsed.statements
+    .filter(ts.isImportDeclaration)
+    .map((statement) => statement.importClause?.namedBindings)
+    .filter((bindings): bindings is ts.NamespaceImport => !!bindings && ts.isNamespaceImport(bindings))
+    .map((binding) => binding.name.text);
+  expect(new Set(names).size).toBe(names.length);
+  expect(names).not.toContain("StoryModule");
+  expect(names).not.toContain("storyModules");
+  expect(names).not.toContain("storyExportOrder");
+  expect(names).not.toContain("STORY_MODULES");
 }
 
 describe("runGenRegistry — old one-level layout (backward compatibility)", () => {
@@ -178,14 +198,91 @@ describe("runGenRegistry — category-nested layout (#224)", () => {
     expect(registry).not.toContain("section-heading");
   });
 
-  it("throws a clear, no-write error when two distinct directories fold to the same identifier", () => {
+  it("allocates full-identity bindings when distinct directories fold to one name", () => {
     writeStory("foo-bar/baz", "baz");
     writeStory("foo/bar-baz", "bar-baz");
 
-    expect(() => runGenRegistry(sandbox, baseConfig())).toThrow(/both derive the import identifier/);
-    expect(() => runGenRegistry(sandbox, baseConfig())).toThrow(/fooBarBaz/);
+    expect(runGenRegistry(sandbox, baseConfig()).entryCount).toBe(2);
+    expectValidModule(readRegistry());
+    expectValidModule(readStoryModules());
+    expect(readRegistry()).toContain('"./demo-ui/src/foo-bar/baz/baz.stories.tsx"');
+    expect(readRegistry()).toContain('"./demo-ui/src/foo/bar-baz/bar-baz.stories.tsx"');
+  });
+});
 
-    // No-write guarantee: the seed content must be untouched.
+describe("runGenRegistry — import bindings (#823)", () => {
+  it("keeps sibling stories and both complete generated modules in sync", () => {
+    writeStory("controls", "button", ["Primary", "Secondary"]);
+    writeStory("controls", "input", ["Empty"]);
+    runGenRegistry(sandbox, baseConfig());
+
+    const registry = readRegistry();
+    const modules = readStoryModules();
+    expectValidModule(registry);
+    expectValidModule(modules);
+    for (const stem of ["button", "input"]) {
+      expect(registry).toContain(`"./demo-ui/src/controls/${stem}.stories.tsx"`);
+      expect(modules).toContain(`"controls/${stem}.stories.tsx"`);
+    }
+    expect(registry).toContain('"./demo-ui/src/controls/button.stories.tsx": ["Primary", "Secondary"]');
+    expect(() => runGenRegistry(sandbox, baseConfig(), { check: true })).not.toThrow();
+
+    writeStory("controls", "slider");
+    const before = [readRegistry(), readStoryModules()];
+    expect(() => runGenRegistry(sandbox, baseConfig(), { check: true })).toThrow(SgRegistryDriftError);
+    expect([readRegistry(), readStoryModules()]).toEqual(before);
+    expect(runGenRegistry(sandbox, baseConfig()).entryCount).toBe(3);
+    expectValidModule(readRegistry());
+    expectValidModule(readStoryModules());
+  });
+
+  it("uses root identity for identical relative paths and ignores root order", () => {
+    writeStory("button", "button");
+    const secondRoot = join(sandbox, "packages", "other-ui", "src");
+    mkdirSync(join(secondRoot, "button"), { recursive: true });
+    mkdirSync(join(secondRoot, "stories", "__tests__"), { recursive: true });
+    writeFileSync(join(secondRoot, "button", "button.stories.tsx"), STORY_BODY(["Other"]));
+    writeFileSync(join(secondRoot, "stories", "__tests__", "story-modules.ts"), STORY_MODULES_SEED);
+    const config = baseConfig();
+    config.componentsRoots.push({ dir: "packages/other-ui/src", importBase: "@other-ui/src" });
+
+    runGenRegistry(sandbox, config);
+    const registry = readRegistry();
+    const firstModules = readStoryModules();
+    const otherModules = readFileSync(join(secondRoot, "stories", "__tests__", "story-modules.ts"), "utf8");
+    expectValidModule(registry);
+    expectValidModule(firstModules);
+    expectValidModule(otherModules);
+    expect(registry).toContain('"./demo-ui/src/button/button.stories.tsx"');
+    expect(registry).toContain('"./other-ui/src/button/button.stories.tsx"');
+    config.componentsRoots.reverse();
+    expect(runGenRegistry(sandbox, config).changed).toEqual([]);
+  });
+
+  it("sanitizes invalid and reserved names while protecting legacy and generated bindings", () => {
+    writeStory("class", "class");
+    writeStory("storyModules", "storyModules");
+    writeStory("storyExportOrder", "storyExportOrder");
+    writeStory("StoryModule", "StoryModule");
+    writeStory("STORY_MODULES", "STORY_MODULES");
+    writeStory("9-patch", "9-patch");
+    writeStory("foo.bar", "foo.bar");
+    writeStory("demoUiSrcClassClass", "demoUiSrcClassClass");
+    runGenRegistry(sandbox, baseConfig());
+
+    const registry = readRegistry();
+    expectValidModule(registry);
+    expectValidModule(readStoryModules());
+    expect(registry).toContain('import * as demoUiSrcClassClass from "@zudo-sg/demo-ui/src/demoUiSrcClassClass/demoUiSrcClassClass.stories.tsx";');
+    expect(registry).toContain('import * as demoUiSrcClassClass_2 from "@zudo-sg/demo-ui/src/class/class.stories.tsx";');
+    expect(() => runGenRegistry(sandbox, baseConfig(), { check: true })).not.toThrow();
+  });
+
+  it("rejects duplicate public map keys without writing either target", () => {
+    writeStory("button", "button");
+    const config = baseConfig();
+    config.componentsRoots.push({ ...config.componentsRoots[0]! });
+    expect(() => runGenRegistry(sandbox, config)).toThrow(/duplicate story map key/);
     expect(readRegistry()).toBe(REGISTRY_SEED);
     expect(readStoryModules()).toBe(STORY_MODULES_SEED);
   });
