@@ -393,7 +393,6 @@
  * overflows is top-anchored (`safe` falls back to `start`) and clipped, never
  * cropped at both ends.
  *
- * PALETTE SCOPE — load-bearing, see the block on `.sg-thumb[data-sg-preview-scope]`.
  * ========================================================================== */
 
 :root {
@@ -463,35 +462,6 @@
    * the element itself removes the rendered component from the tab order and
    * the accessibility tree; this is the pointer half of the same guarantee. */
   pointer-events: none;
-}
-
-/* PALETTE SCOPE.
- *
- * A host `@theme` typically RE-ASSERTS the overlapping `--color-*` names to
- * its own doc-chrome roles at `:root` (0,1,0), so a component rendered on a
- * doc-chrome page would silently take the DOC palette instead of its own.
- * This selector is (0,2,0) — class + attribute — so it wins over `:root`
- * regardless of @import order, and is scoped to the thumbnail so the
- * surrounding catalogue chrome keeps the doc palette.
- *
- * The declarations below are the canonical Tier-2 provider values (see
- * packages/demo-ui/styles/colors.css) restored for exactly the names a host is
- * likely to re-assert. The ui-only names a host does NOT typically re-assert
- * (surface-2, rail-*, focus, on-accent, loading-scrim) already resolve to the
- * ui palette and need no restore here. */
-.sg-thumb[data-sg-preview-scope] {
-  --color-bg:           light-dark(var(--palette-neutral-0), var(--palette-neutral-3));
-  --color-surface:      light-dark(var(--palette-neutral-0), var(--palette-neutral-3));
-  --color-fg:           light-dark(var(--palette-neutral-3), var(--palette-neutral-0));
-  --color-muted:        light-dark(var(--palette-neutral-2), var(--palette-neutral-1));
-  --color-accent:       light-dark(var(--palette-accent-2), var(--palette-accent-1));
-  --color-accent-hover: light-dark(var(--palette-accent-3), var(--palette-accent-0));
-  /* Restore the provider border after a host's doc-ramp re-assertion. */
-  --color-border:      light-dark(var(--palette-neutral-1), var(--palette-neutral-2));
-  --color-success: light-dark(var(--palette-state-success), var(--palette-state-success-dark));
-  --color-danger:  light-dark(var(--palette-state-danger),  var(--palette-state-danger-dark));
-  --color-warning: light-dark(var(--palette-state-warning), var(--palette-state-warning-dark));
-  --color-info:    light-dark(var(--palette-state-info),    var(--palette-state-info-dark));
 }
 
 /* Bottom fade for a component taller than its slot. Painted in the slot's own

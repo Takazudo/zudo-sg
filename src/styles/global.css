@@ -310,6 +310,22 @@
   --radius-full: 9999px;        /* rounded-full */
 }
 
+/* Demo snapshots share a page whose theme reasserts these names for docs
+ * chrome. Restore demo-ui values only inside a thumbnail. */
+.sg-thumb[data-sg-preview-scope] {
+  --color-bg: light-dark(var(--palette-neutral-0), var(--palette-neutral-3));
+  --color-surface: light-dark(var(--palette-neutral-0), var(--palette-neutral-3));
+  --color-fg: light-dark(var(--palette-neutral-3), var(--palette-neutral-0));
+  --color-muted: light-dark(var(--palette-neutral-2), var(--palette-neutral-1));
+  --color-accent: light-dark(var(--palette-accent-2), var(--palette-accent-1));
+  --color-accent-hover: light-dark(var(--palette-accent-3), var(--palette-accent-0));
+  --color-border: light-dark(var(--palette-neutral-1), var(--palette-neutral-2));
+  --color-success: light-dark(var(--palette-state-success), var(--palette-state-success-dark));
+  --color-danger: light-dark(var(--palette-state-danger), var(--palette-state-danger-dark));
+  --color-warning: light-dark(var(--palette-state-warning), var(--palette-state-warning-dark));
+  --color-info: light-dark(var(--palette-state-info), var(--palette-state-info-dark));
+}
+
 /* ========================================
  * Z-index tiers — semantic, single-namespace scale.
  *
