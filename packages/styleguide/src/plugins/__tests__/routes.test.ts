@@ -252,8 +252,8 @@ describe("buildTokensModuleSource", () => {
 
   it("assembles the UiDesignTokensManifest from the generated manifest's named exports", () => {
     expect(buildTokensModuleSource("/host/src/config/m.ts")).toBe(
-      'import { UI_PALETTE_COLORS, UI_COLOR_TOKENS, UI_SPACING_TOKENS, UI_FONT_TOKENS, UI_SIZE_TOKENS } from "/host/src/config/m.ts";\n' +
-        "export const tokensManifest = { paletteColors: UI_PALETTE_COLORS, colorTokens: UI_COLOR_TOKENS, spacingTokens: UI_SPACING_TOKENS, fontTokens: UI_FONT_TOKENS, sizeTokens: UI_SIZE_TOKENS };\n",
+      'import * as manifest from "/host/src/config/m.ts";\n' +
+        'export const tokensManifest = { paletteColors: manifest.UI_PALETTE_COLORS, colorTokens: manifest.UI_COLOR_TOKENS, spacingTokens: manifest.UI_SPACING_TOKENS, fontTokens: manifest.UI_FONT_TOKENS, sizeTokens: manifest.UI_SIZE_TOKENS, groups: "UI_TOKEN_GROUPS" in manifest ? manifest.UI_TOKEN_GROUPS : undefined };\n',
     );
   });
 });

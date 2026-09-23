@@ -156,12 +156,30 @@ async function waitForOk(url, timeoutMs, child, log) {
 }
 
 function stopDevServer(child) {
-  if (!child || child.exitCode !== null || child.pid === undefined) return;
+  if (!child || child.exitCode !== null || child.signalCode !== null || child.pid === undefined) return;
   try {
     process.kill(-child.pid, "SIGTERM");
   } catch {
     child.kill("SIGTERM");
   }
+}
+
+async function stopDevServerAndWait(child) {
+  if (!child || child.exitCode !== null || child.signalCode !== null) return;
+  const closed = new Promise((resolve) => child.once("close", resolve));
+  stopDevServer(child);
+  const timeout = Symbol("timeout");
+  let timer;
+  const outcome = await Promise.race([closed, new Promise((resolve) => { timer = setTimeout(() => resolve(timeout), 10_000); })]);
+  clearTimeout(timer);
+  if (outcome !== timeout) return;
+  if (child.pid !== undefined) {
+    try { process.kill(-child.pid, "SIGKILL"); } catch { child.kill("SIGKILL"); }
+  }
+  let killTimer;
+  const killed = await Promise.race([closed.then(() => true), new Promise((resolve) => { killTimer = setTimeout(() => resolve(false), 10_000); })]);
+  clearTimeout(killTimer);
+  assert(killed, "zfb dev did not exit after SIGKILL before the foreign fixture build");
 }
 
 async function packEngine(destination) {
@@ -643,6 +661,36 @@ async function main() {
     const cssRes = await waitForOk(`${origin}/styleguide/assets/styles.css`, 300_000, devServer, () => log);
     const cssBody = await cssRes.text();
     assert(cssBody.includes(".max-w-\\[56rem\\]"), "/styleguide/assets/styles.css is missing .max-w-\\[56rem\\] (dev CSS content-glob seeding, ADR finding 4 amendment)");
+
+    {
+      await stopDevServerAndWait(devServer);
+      devServer = undefined;
+      const variantRoot = path.join(root, "fixtures/foreign-tokens");
+      await cp(path.join(fixtureRoot, "pages/lib/_zudo-sg-islands.ts"), path.join(hostDir, "pages/lib/_zudo-sg-islands.ts"));
+      await cp(path.join(fixtureRoot, "pages/index.tsx"), path.join(hostDir, "pages/index.tsx"));
+      await cp(path.join(fixtureRoot, "src/styles/global.css"), path.join(hostDir, "src/styles/global.css"));
+      await writeFile(path.join(hostDir, "zudo-sg.default.config.mjs"), configSource);
+      await cp(path.join(variantRoot, "zudo-sg.config.mjs"), path.join(hostDir, "zudo-sg.config.mjs"));
+      await cp(path.join(variantRoot, "ui-tokens.css"), path.join(hostDir, "src/styles/ui-tokens.css"));
+      await cp(path.join(variantRoot, "probe.mjs"), path.join(hostDir, "probe.mjs"));
+      for (const output of ["dist", ".zfb-build"]) await rm(path.join(hostDir, output), { recursive: true, force: true });
+      console.log("zudo-sg gen-token-manifest (foreign vocabulary)");
+      await run("corepack", ["pnpm", "exec", "zudo-sg", "gen-token-manifest"], hostDir);
+      await run("corepack", ["pnpm", "exec", "zudo-sg", "gen-token-manifest", "--check"], hostDir);
+      await run("corepack", ["pnpm", "exec", "tsc", "--noEmit", "-p", "tsconfig.json"], hostDir);
+      await run("node", ["probe.mjs"], hostDir);
+      await runStreamed("corepack", ["pnpm", "exec", "zfb", "build"], hostDir);
+      const { JSDOM } = await import("jsdom");
+      const dom = new JSDOM(await read(hostDir, "dist/tokens/index.html"));
+      const page = dom.window.document;
+      for (const name of ["--brand-100", "--brand-500", "--signal-calm", "--status-alert", "--space-inline", "--type-body", "--type-leading", "--type-weight", "--corner-card"]) {
+        assert(page.querySelector(`[data-css-var="${name}"]`), `foreign dashboard lost ${name}`);
+      }
+      assert(!page.querySelector('[data-css-var^="--palette-"]'), "foreign dashboard introduced demo palette variables");
+      assert(page.querySelector('[data-css-var="--surface-canvas"]'), "foreign dashboard lost light-dark color");
+      dom.window.close();
+      console.log("OK — packed foreign host typechecks and renders every category on /tokens.");
+    }
 
     console.log("OK — packed @takazudo/zudo-sg installs and builds outside the workspace, under base \"/styleguide/\".");
   } finally {
