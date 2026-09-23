@@ -71,13 +71,12 @@ export interface ComponentTemplateArgs {
 
 /**
  * `<componentsRoot>/<name>/<name>.tsx` — typed-props skeleton following the
- * house pattern. `nested` accounts for the extra directory level the
- * category-nested layout inserts (one more `../` to reach `lib/cx`).
+ * house pattern. `nested` is accepted for symmetry with the story template;
+ * the component source has no host-local imports to adjust by layout.
  */
-export function componentTemplate({ pascalName, nested = false }: ComponentTemplateArgs): string {
+export function componentTemplate({ pascalName }: ComponentTemplateArgs): string {
   const lines = [
     `import type { ComponentChildren } from "preact";`,
-    `import { cx } from "${nested ? "../../lib/cx" : "../lib/cx"}";`,
     ``,
     `export type ${pascalName}Variant = "primary" | "secondary";`,
     ``,
@@ -102,7 +101,8 @@ export function componentTemplate({ pascalName, nested = false }: ComponentTempl
     ` * TODO: describe ${pascalName} — what it renders and when to use it.`,
     ` */`,
     `export function ${pascalName}({ variant = "primary", class: cls, children }: ${pascalName}Props) {`,
-    `  return <div class={cx(base, variants[variant], cls)}>{children}</div>;`,
+    `  const className = [base, variants[variant], cls].filter(Boolean).join(" ");`,
+    `  return <div class={className}>{children}</div>;`,
     `}`,
   ];
   return lines.join("\n") + "\n";
@@ -125,11 +125,10 @@ export function storiesTemplate({
   kebabName,
   category,
   uiPackageName,
-  nested = false,
 }: StoriesTemplateArgs): string {
   const usageImport = uiPackageName ?? `./${kebabName}`;
   const lines = [
-    `import type { StoryMeta, Story } from "${nested ? "../../stories/types" : "../stories/types"}";`,
+    `import type { StoryMeta, Story } from "@takazudo/zudo-sg/stories";`,
     `import { ${pascalName}, type ${pascalName}Props } from "./${kebabName}";`,
     ``,
     `const meta: StoryMeta = {`,

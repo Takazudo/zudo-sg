@@ -4,9 +4,10 @@
 // This is deliberately an end-to-end check of the published package shapes:
 // build and pack both packages, execute the packed initializer in a temporary
 // directory outside this workspace, install the generated project, run the
-// commands printed by the initializer, and prove that the generated host can
-// build and boot zfb dev. The normal mode replaces the template's registry
-// engine range with a locally packed engine tarball because npm may lag main;
+// commands printed by the initializer, generate flat and nested components,
+// and prove that the generated host can build and boot zfb dev. The normal
+// mode replaces the template's engine range with a locally packed engine
+// tarball because npm may lag main;
 // --published-engine leaves that dependency exactly as shipped for the release
 // gate.
 
@@ -397,14 +398,75 @@ async function installLocalEngine(hostDir, engineTarball) {
   console.log(`Using locally packed @takazudo/zudo-sg instead of ${original}.`);
 }
 
-async function assertGeneratedRegistry(hostDir) {
+async function assertGeneratedRegistry(hostDir, expectedCount = 3) {
   const registryPath = path.join(hostDir, "src/styleguide/sg-registry.ts");
   const registry = await readFile(registryPath, "utf8");
   const keys = [...registry.matchAll(/^\s*["'](\.\/[^"'\n]+\.stories\.tsx)["']\s*:/gmu)].map((match) => match[1]);
   const uniqueKeys = new Set(keys);
-  assert(uniqueKeys.size === 3, `generated registry contains ${uniqueKeys.size} stories, expected 3 (${[...uniqueKeys].join(", ")})`);
+  assert(uniqueKeys.size === expectedCount, `generated registry contains ${uniqueKeys.size} stories, expected ${expectedCount} (${[...uniqueKeys].join(", ")})`);
   assert(!registry.includes("storyModules: Record<string, StoryModule> = {};"), "generated registry still contains the empty seed");
-  console.log(`OK — generated registry contains 3 stories (${[...uniqueKeys].join(", ")}).`);
+  console.log(`OK — generated registry contains ${expectedCount} stories (${[...uniqueKeys].join(", ")}).`);
+}
+
+const SCAFFOLD_PROOFS = [
+  { name: "proof-flat", category: "Actions", nested: false },
+  { name: "proof-nested", category: "Layout", nested: true },
+];
+
+async function assertNewComponentScaffolds(hostDir) {
+  const generatedFiles = [];
+  for (const proof of SCAFFOLD_PROOFS) {
+    const args = ["exec", "zudo-sg", "new-component", proof.name, "--category", proof.category];
+    if (proof.nested) args.push("--nested");
+    await run(packageManager[0], [...packageManager.slice(1), ...args], hostDir);
+
+    const componentDir = proof.nested
+      ? path.join("ui", proof.category.toLowerCase(), proof.name)
+      : path.join("ui", proof.name);
+    const componentPath = path.join(hostDir, componentDir, `${proof.name}.tsx`);
+    const storyPath = path.join(hostDir, componentDir, `${proof.name}.stories.tsx`);
+    const component = await readFile(componentPath, "utf8");
+    const story = await readFile(storyPath, "utf8");
+    const pascalName = proof.name
+      .split("-")
+      .map((segment) => segment[0].toUpperCase() + segment.slice(1))
+      .join("");
+
+    assert(component.includes("const className = [base, variants[variant], cls].filter(Boolean).join(\" \");"),
+      `${componentDir}/${proof.name}.tsx is missing its local class composition`);
+    assert(!component.includes("lib/cx"), `${componentDir}/${proof.name}.tsx imports a host-local cx helper`);
+    assert(story.includes('import type { StoryMeta, Story } from "@takazudo/zudo-sg/stories";'),
+      `${componentDir}/${proof.name}.stories.tsx does not import the public story contract`);
+    assert(story.includes(`import { ${pascalName}, type ${pascalName}Props } from "./${proof.name}";`),
+      `${componentDir}/${proof.name}.stories.tsx does not import its runtime component`);
+
+    generatedFiles.push(componentPath, storyPath);
+  }
+
+  // The default starter does not install a test runner. Typecheck the actual
+  // emitted component/story modules directly; zfb build below then exercises
+  // their runtime import path through the generated registry.
+  console.log("Typechecking the emitted flat and nested component/story modules.");
+  await run(packageManager[0], [
+    ...packageManager.slice(1),
+    "exec",
+    "tsc",
+    "--noEmit",
+    "--strict",
+    "--target",
+    "ESNext",
+    "--module",
+    "ESNext",
+    "--moduleResolution",
+    "Bundler",
+    "--jsx",
+    "react-jsx",
+    "--jsxImportSource",
+    "preact",
+    ...generatedFiles,
+  ], hostDir);
+  await assertGeneratedRegistry(hostDir, 5);
+  console.log("OK — flat and nested scaffold imports resolve in the initialized host.");
 }
 
 async function assertGeneratedTokenManifest(hostDir) {
@@ -457,7 +519,10 @@ async function assertBuildRoutes(hostDir) {
     .filter((entry) => entry.isDirectory() && entry.name !== "preview")
     .map((entry) => entry.name)
     .sort();
-  assert(slugs.length === 3, `expected 3 component detail routes, found ${slugs.length} (${slugs.join(", ")})`);
+  assert(slugs.length === 5, `expected 5 component detail routes after flat/nested scaffolding, found ${slugs.length} (${slugs.join(", ")})`);
+  for (const slug of ["proof-flat", "proof-nested"]) {
+    assert(slugs.includes(slug), `missing built route for scaffolded component ${slug}`);
+  }
   for (const slug of slugs) {
     assert(existsSync(path.join(distDir, "components", slug, "index.html")), `missing /components/${slug}`);
   }
@@ -468,7 +533,7 @@ async function assertBuildRoutes(hostDir) {
     "preview route does not link the base-/ standalone /_zudo-sg/preview.css",
   );
   assert(!preview.includes("/styleguide/"), 'preview route contains a stale /styleguide/ link under base "/"');
-  console.log(`OK — built /components, 3 component details, /components/preview, /tokens, and /_zudo-sg/preview.css.`);
+  console.log(`OK — built /components, 5 component details including both scaffolds, /components/preview, /tokens, and /_zudo-sg/preview.css.`);
 }
 
 async function assertInternalLinks(hostDir) {
@@ -584,6 +649,8 @@ async function main() {
 
     console.log("tsc --noEmit -p tsconfig.json");
     await run(packageManager[0], [...packageManager.slice(1), "exec", "tsc", "--noEmit", "-p", "tsconfig.json"], hostDir);
+
+    await assertNewComponentScaffolds(hostDir);
 
     console.log("zfb build");
     const buildLog = await runStreamed(
