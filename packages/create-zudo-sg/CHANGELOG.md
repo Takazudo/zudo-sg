@@ -4,6 +4,18 @@ All notable changes to `create-zudo-sg` are documented in this file.
 
 The format is based on Keep a Changelog.
 
+## [0.1.5] - 2026-09-23
+
+### Changed
+
+- Support optional host token-group metadata in the starter preview panel,
+  while retaining type compatibility with legacy five-array manifests.
+- Update the starter engine range to `@takazudo/zudo-sg ^0.3.2`, which supports
+  host-defined token vocabularies, portable component scaffolds, and unique
+  registry import bindings.
+- Verify flat and nested generated components in the packed starter proof,
+  including typechecking and built routes.
+
 ## [0.1.4] - 2026-09-21
 
 Gives a fresh starter a working preview token panel, not just the button that
