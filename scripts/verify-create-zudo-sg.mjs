@@ -519,7 +519,7 @@ async function assertBuildRoutes(hostDir) {
     .filter((entry) => entry.isDirectory() && entry.name !== "preview")
     .map((entry) => entry.name)
     .sort();
-  assert(slugs.length === 5, `expected 5 component detail routes after flat/nested scaffolding, found ${slugs.length} (${slugs.join(", ")})`);
+  assert(slugs.length === 8, `expected 8 component detail routes after flat/nested scaffolding, found ${slugs.length} (${slugs.join(", ")})`);
   for (const slug of ["proof-flat", "proof-nested"]) {
     assert(slugs.includes(slug), `missing built route for scaffolded component ${slug}`);
   }
@@ -533,7 +533,7 @@ async function assertBuildRoutes(hostDir) {
     "preview route does not link the base-/ standalone /_zudo-sg/preview.css",
   );
   assert(!preview.includes("/styleguide/"), 'preview route contains a stale /styleguide/ link under base "/"');
-  console.log(`OK — built /components, 5 component details including both scaffolds, /components/preview, /tokens, and /_zudo-sg/preview.css.`);
+  console.log(`OK — built /components, 8 component details including both scaffolds, /components/preview, /tokens, and /_zudo-sg/preview.css.`);
 }
 
 async function assertInternalLinks(hostDir) {
