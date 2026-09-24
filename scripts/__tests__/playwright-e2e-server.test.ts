@@ -11,6 +11,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   createStaticPreviewServer,
   decideStaticPreviewGuard,
+  resolveE2EHost,
   resolveE2EPort,
 } from "../lib/playwright-e2e-server.mjs";
 
@@ -80,6 +81,16 @@ describe("resolveE2EPort", () => {
       expect(() =>
         resolveE2EPort({ entry: "root", env: { CI: "1", ZUDO_SG_SMOKE_PORT: value } }),
       ).toThrow(/Invalid port/);
+    }
+  });
+});
+
+describe("resolveE2EHost", () => {
+  it("keeps localhost by default and accepts only explicit IPv4 loopback hosts", () => {
+    expect(resolveE2EHost({})).toBe("localhost");
+    expect(resolveE2EHost({ ZUDO_SG_E2E_HOST: "127.0.0.2" })).toBe("127.0.0.2");
+    for (const host of ["", "localhost", "0.0.0.0", "192.168.1.1", "127.0.0.2; echo unsafe"]) {
+      expect(() => resolveE2EHost({ ZUDO_SG_E2E_HOST: host })).toThrow(/IPv4 loopback/);
     }
   });
 });

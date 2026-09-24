@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import * as fs from "node:fs";
+import { isIP } from "node:net";
 import { isAbsolute, resolve } from "node:path";
 
 const MIN_PORT = 1;
@@ -17,6 +18,16 @@ export const E2E_SERVER_ENTRIES = Object.freeze({
   root: Object.freeze({ env: "ZUDO_SG_SMOKE_PORT", legacyPort: 4_700, offset: 0 }),
   demo: Object.freeze({ env: "ZUDO_SG_DEMO_SMOKE_PORT", legacyPort: 4_701, offset: 1 }),
 });
+
+/** Allow a different IPv4 loopback address when localhost's unbound port probe stalls. */
+export function resolveE2EHost(env = process.env) {
+  const host = env.ZUDO_SG_E2E_HOST;
+  if (host === undefined) return "localhost";
+  if (isIP(host) !== 4 || !host.startsWith("127.")) {
+    throw new Error("ZUDO_SG_E2E_HOST must be an IPv4 loopback address (127.0.0.0/8).");
+  }
+  return host;
+}
 
 const ENTRY_ALIASES = Object.freeze({});
 

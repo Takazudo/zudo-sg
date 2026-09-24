@@ -147,6 +147,36 @@ than serving a different checkout, and an explicit override can resolve it.
 An override wins in both local and CI environments. Override values must be decimal
 integers from 1 through 65,535; invalid values fail during config evaluation.
 
+#### WSL localhost startup stall
+
+On one WSL host (2026-09-24, issue #845), Playwright spent about 141 seconds
+after its initial `HTTP GET: http://localhost:<root-port>/` before launching
+the root preview command. Its web-server setup checks whether the URL already
+responds before starting `zfb preview`. The root server then reached HTTP 200
+in about 1.3 seconds, but the demo URL check stalled and the guarded run hit
+its 240-second cap without reaching a browser assertion. On that host, a request to an **unbound**
+`127.0.0.1:<port>` timed out, while unbound `127.0.0.2:<port>` and
+`[::1]:<port>` refused immediately. A bounded `zfb preview --host 127.0.0.2`
+probe served HTTP 200. With the override below, both preview servers started
+and the standard Playwright smoke project passed 10/10 tests in 6.6 seconds.
+The host had a `127.0.0.1 via 169.254.73.152 dev loopback0` route; the observation
+does not establish why that route was installed.
+
+If the same unbound-port behavior occurs, run the standard Playwright command
+with both preview servers bound to the alternate loopback address:
+
+```bash
+ZUDO_SG_E2E_HOST=127.0.0.2 pnpm test:e2e
+```
+
+`ZUDO_SG_E2E_HOST` accepts only an IPv4 address in `127.0.0.0/8`. It changes
+the URL checked by Playwright and the `zfb preview --host` binding together.
+With no override, both servers retain their existing `localhost` behavior.
+The usual checkout-specific ports, build preflight, and
+`reuseExistingServer: false` still apply. If the alternate address is also
+unreachable, inspect local loopback routing and firewall rules before
+attributing the delay to `zfb` startup.
+
 #### Build prerequisites and commands
 
 Install dependencies and build both static outputs before running Playwright:
