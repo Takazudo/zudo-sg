@@ -5,6 +5,7 @@ import {
   type Locator,
   type Page,
 } from "@playwright/test";
+import { setAppearanceTheme } from "./helpers/appearance";
 
 async function frameBackground(frame: FrameLocator): Promise<string> {
   return frame
@@ -172,16 +173,11 @@ test("the shared theme toolbar drives every frame, holds an explicit choice, and
   await expect.poll(() => frameColorScheme(firstFrame)).toBe(initialCatalogTheme);
   await expect.poll(() => frameColorScheme(secondFrame)).toBe(initialCatalogTheme);
 
-  const catalogToggle = page
-    .locator('button[aria-label^="Switch to "]:visible')
-    .first();
-  await expect(catalogToggle).toBeVisible();
-
-  // Toggling the site-wide theme resyncs EVERY Follow frame, not just one —
+  // Changing the site-wide theme resyncs EVERY Follow frame, not just one —
   // the per-frame protocol survived even though the control that drives it
   // moved to the page level.
-  await catalogToggle.click();
   const catalogAfterFirstToggle = initialCatalogTheme === "dark" ? "light" : "dark";
+  await setAppearanceTheme(page, catalogAfterFirstToggle);
   await expect
     .poll(() => frameColorScheme(firstFrame))
     .toBe(catalogAfterFirstToggle);
@@ -233,11 +229,11 @@ test("the shared theme toolbar drives every frame, holds an explicit choice, and
 
   // The explicit choice must hold even as the catalog changes underneath it —
   // this is the "held against catalog changes" contract the old per-frame Pin
-  // control used to prove. Two more real toggles land the catalog back on
-  // catalogAfterFirstToggle, which is NOT explicitTheme, so this is an
-  // unambiguous check that the frames did not quietly resume following.
-  await catalogToggle.click();
-  await catalogToggle.click();
+  // control used to prove. Move the catalog to the other theme and back to
+  // catalogAfterFirstToggle, which differs from explicitTheme, so the frames
+  // must remain pinned while the site theme changes underneath them.
+  await setAppearanceTheme(page, explicitTheme);
+  await setAppearanceTheme(page, catalogAfterFirstToggle);
   const catalogThemeNow = await page.locator("html").getAttribute("data-theme");
   expect(catalogThemeNow).not.toBe(explicitTheme);
   await expect.poll(() => frameColorScheme(firstFrame)).toBe(explicitTheme);

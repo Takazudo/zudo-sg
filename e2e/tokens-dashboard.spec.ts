@@ -1,5 +1,6 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { withBase } from "../src/utils/base";
+import { setAppearanceTheme } from "./helpers/appearance";
 import {
   UI_DASHBOARD_MODE_DEPENDENT_COUNT,
   UI_DASHBOARD_MODE_INDEPENDENT_COUNT,
@@ -564,13 +565,7 @@ test("site theme changes the host while each dashboard keeps its own chrome", as
   await expect(shared).toBeAttached();
 
   const html = page.locator("html");
-  const themeToggle = page.locator('button[aria-label^="Switch to "]:visible').first();
-  await expect(themeToggle).toBeVisible();
-  const currentTheme = await html.getAttribute("data-theme");
-  if (currentTheme !== "light") {
-    await themeToggle.click();
-    await expect(html).toHaveAttribute("data-theme", "light");
-  }
+  await setAppearanceTheme(page, "light");
 
   const hostLightBackground = await page.locator("body").evaluate(
     (body) => getComputedStyle(body).backgroundColor,
@@ -587,8 +582,7 @@ test("site theme changes the host while each dashboard keeps its own chrome", as
   await expect(dark).toHaveAttribute("data-chrome", "dark");
   await expect(shared).toHaveAttribute("data-chrome", "host");
 
-  await themeToggle.click();
-  await expect(html).toHaveAttribute("data-theme", "dark");
+  await setAppearanceTheme(page, "dark");
   await expect
     .poll(() =>
       html.evaluate((root) => getComputedStyle(root).colorScheme),
