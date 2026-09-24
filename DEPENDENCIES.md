@@ -110,6 +110,11 @@ handled by zfb 2.17's embedded Tailwind stylesheet resolver.
 | Workspace packages, `dompurify`, CodeMirror packages, `postcss`, `@tailwindcss/node`, `@tailwindcss/oxide` | KEEP: component/story imports, the live Markdown sanitizer, code-panel editor setup, CSS parsers, and preview stylesheet compilation all have direct consumers. Publishable-package runtime dependencies were not modified. |
 | Preact, TypeScript, Node types, Testing Library, Vitest, Playwright, `html-validate`, `lefthook`, `tsx` | KEEP: JSX/runtime imports, compiler configuration, test imports and setup, existing check/test commands, git hooks, and `contrast:audit` own these declarations. Each workspace retains the declarations needed by its own sources and scripts. |
 
+The 2026-09-24 Dependabot proposals to raise `@types/node` from 22 to 26
+were declined. The published packages declare Node 22 as their minimum runtime,
+and the Node 22 type range keeps that compatibility visible to TypeScript. The
+CI build uses Node 24; that alone does not raise the consumer runtime floor.
+
 ## Kept: remaining file warnings have explicit scope or consumers
 
 The audit-only Knip config supplies zfb pages, stories, CSS, and package build

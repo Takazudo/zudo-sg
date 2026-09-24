@@ -146,8 +146,8 @@
     "@codemirror/theme-one-dark": "^6.0.0",
     "@codemirror/view": "^6.0.0",
     "postcss": "^8.5.28",
-    "@tailwindcss/node": "^4.2.0",
-    "@tailwindcss/oxide": "^4.2.0"
+    "@tailwindcss/node": "^4.3.3",
+    "@tailwindcss/oxide": "^4.3.3"
   },
   "peerDependencies": {
     "@takazudo/zfb": "^2.20.2",
