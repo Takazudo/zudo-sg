@@ -60,7 +60,7 @@
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/preact": "^3.2.4",
     "@types/culori": "^4.0.1",
-    "@types/node": "^22.0.0",
+    "@types/node": "^26.6.2",
     "culori": "^4.0.2",
     "happy-dom": "^16.8.1",
     "html-validate": "^10.0.0",
