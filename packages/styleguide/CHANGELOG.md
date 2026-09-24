@@ -4,6 +4,25 @@ All notable changes to `@takazudo/zudo-sg` are documented in this file.
 
 The format is based on Keep a Changelog, and release notes are generated from the changelog MDX pages.
 
+## [0.3.5] - 2026-09-25
+
+This release makes the public preview trigger reliable during SPA navigation
+and keeps story detail routes distinct from the iframe preview endpoint.
+
+### Bug Fixes
+
+- Capture clicks on a visible preview-token header trigger before the load
+  island is ready, then replay the pending toggle exactly once.
+- Allocate distinct story slugs when a default or custom preview endpoint
+  occupies a component detail URL. Route options now stay consistent across
+  the catalog, detail pages, and host registry.
+
+### Verification
+
+- Exercise the packed engine in an independent host, including a deterministic
+  early-click browser check and rendered story identities for default and
+  custom preview routes.
+
 ## [0.3.4] - 2026-09-24
 
 This release aligns the engine's peer requirements with the tested zfb,

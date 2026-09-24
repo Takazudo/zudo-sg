@@ -1,0 +1,25 @@
+---
+title: 0.3.5
+description: Preserve early preview-panel clicks and prevent story route collisions.
+sidebar_position: 12
+pagination_next: null
+---
+
+Released: 2026-09-25
+
+This release makes the public preview trigger reliable during SPA navigation
+and keeps story detail routes distinct from the iframe preview endpoint.
+
+### Bug Fixes
+
+- Capture clicks on a visible preview-token header trigger before the load
+  island is ready, then replay the pending toggle exactly once.
+- Allocate distinct story slugs when a default or custom preview endpoint
+  occupies a component detail URL. Route options now stay consistent across
+  the catalog, detail pages, and host registry.
+
+### Verification
+
+- Exercise the packed engine in an independent host, including a deterministic
+  early-click browser check and rendered story identities for default and
+  custom preview routes.

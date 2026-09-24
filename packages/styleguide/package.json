@@ -1,6 +1,6 @@
 {
   "name": "@takazudo/zudo-sg",
-  "version": "0.3.4",
+  "version": "0.3.5",
   "type": "module",
   "description": "zudo-sg styleguide engine — story registry, catalog routes and preview machinery for zfb + zudo-doc hosts.",
   "license": "MIT",

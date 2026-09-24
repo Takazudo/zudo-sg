@@ -86,6 +86,9 @@ jobs:
       - name: Build + typecheck + test the package
         run: pnpm --filter @takazudo/zudo-sg check
 
+      - name: Install Chromium
+        run: pnpm exec playwright install chromium --with-deps
+
       - name: Verify foreign install (fixtures/engine-host)
         run: pnpm verify:styleguide-install
 
