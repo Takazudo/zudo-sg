@@ -6,12 +6,12 @@
 // minus the doc-site islands this starter has no use for (AI chat, mermaid,
 // doc-history, client-router bootstrap): this starter mounts only the
 // engine's preview zdtp token panel bootstrap (`toggle-preview-token-panel`),
-// which the header trigger `withZudoSg` injects opens.
+// which the header trigger `withZudoSg` injects opens on engine routes.
 //
 // pages/index.tsx imports this file directly (as well as reaching it through
 // `_chrome-bindings.tsx`'s `chromeBindingsModule` wiring), so zfb's island
 // scanner is guaranteed to walk page -> this helper -> the real
-// PreviewTokenPanelBootstrap component and register its constructor under the
+// engine-route bootstrap wrapper and register its constructor under the
 // SSR marker name. `chromeBindingsModule` then makes the injected
 // /components/* and /tokens routes render the same marker, so they hydrate
 // against that registered constructor too — not just this starter's
@@ -19,10 +19,8 @@
 
 import type { VNode, JSX } from "preact";
 import { Island } from "@takazudo/zfb";
-import PreviewTokenPanelBootstrap from "@takazudo/zudo-sg/token-tweak/preview-token-panel-bootstrap";
+import EngineRoutePreviewTokenPanelBootstrap from "./_engine-route-preview-token-panel-bootstrap";
 import { previewTokenPanelCaptureScript } from "@takazudo/zudo-sg/token-tweak";
-
-(PreviewTokenPanelBootstrap as { displayName?: string }).displayName = "PreviewTokenPanelBootstrap";
 
 /**
  * The body-end islands this starter mounts. Currently just the preview
@@ -37,7 +35,7 @@ export function BodyEndIslands(): JSX.Element {
       />
       {Island({
         when: "load",
-        children: <PreviewTokenPanelBootstrap />,
+        children: <EngineRoutePreviewTokenPanelBootstrap />,
       }) as unknown as VNode}
     </>
   );

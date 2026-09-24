@@ -170,13 +170,15 @@ async function proveEarlyClick(page, origin) {
   });
 
   await page.goto(`${origin}${BASE}docs/getting-started`, { waitUntil: "domcontentloaded" });
+  await page.waitForLoadState("load");
   const trigger = page.locator("#sg-preview-tokens-trigger");
   await trigger.waitFor({ state: "attached" });
   check(!(await trigger.isVisible()), "the preview trigger should be hidden on the host docs route");
   const persistentHeader = page.locator("header[data-zfb-transition-persist]");
   check(await persistentHeader.count() === 1, "host docs route does not render one persistent header");
+  await page.waitForFunction(() => Boolean(window.__sgPreviewTokenPanelCapture), null, { timeout: 15_000 });
   const initialCapture = await page.evaluate(() => window.__sgPreviewTokenPanelCapture ?? null);
-  check(initialCapture && initialCapture.ready === false, "host route did not install an unready public trigger capture");
+  check(initialCapture && initialCapture.ready === false, `host route did not install an unready public trigger capture: ${JSON.stringify(initialCapture)}`);
 
   // The engine trigger's own after-swap listener was installed by the inline
   // header markup before this probe. zfb reveals the button in that listener,
@@ -210,13 +212,20 @@ async function proveEarlyClick(page, origin) {
   check(proof.readyBeforeClick === false && proof.readyAfterClick === false, "bootstrap readiness was not delayed through the early click");
   check(proof.pendingBeforeClick === 0 && proof.pendingAfterClick === 1, "the capture did not observe exactly one click before listener readiness");
   await page.waitForFunction(() => window.__sgPreviewTokenPanelCapture?.ready === true, null, { timeout: 15_000 });
-  await assertPanelState(page, true);
+  try {
+    await assertPanelState(page, true);
+  } catch (error) {
+    const state = await page.evaluate(() => ({ capture: window.__sgPreviewTokenPanelCapture, proof: window.__packedEarlyClickProof }));
+    fail(`early-click panel did not open: ${JSON.stringify(state)}; browser errors: ${errors.join(" | ")}; ${error}`);
+  }
   check(await page.locator("#sg-preview-tokens-trigger").count() === 1, "SPA navigation duplicated the public trigger");
 
   await trigger.click();
   await assertPanelState(page, false);
+  console.log("OK — early-click panel closed on second click.");
   await trigger.click();
   await assertPanelState(page, true);
+  console.log("OK — early-click panel reopened on third click.");
 
   const returned = afterSwapPromise(page);
   await page.goBack();
@@ -224,11 +233,14 @@ async function proveEarlyClick(page, origin) {
   check(new URL(page.url()).pathname === `${BASE}docs/getting-started`, "browser back did not return to the host docs route");
   check(!(await trigger.isVisible()), "the persistent trigger stayed visible after returning to the host route");
 
+  await page.evaluate(() => localStorage.clear());
   await page.goto(`${origin}${BASE}components`, { waitUntil: "domcontentloaded" });
   await trigger.waitFor({ state: "visible", timeout: 15_000 });
+  await page.waitForFunction(() => window.__sgPreviewTokenPanelCapture?.ready === true, null, { timeout: 15_000 });
   await assertPanelState(page, false);
   await trigger.click();
   await assertPanelState(page, true);
+  console.log("OK — direct engine load opened the panel.");
   check(errors.length === 0, `browser errors during early-click flow: ${errors.join(" | ")}`);
   check(badResponses.length === 0, `failed browser requests during early-click flow: ${badResponses.join(" | ")}`);
 }

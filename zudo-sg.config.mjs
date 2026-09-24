@@ -6,8 +6,11 @@
 // via a bare `import()` (see packages/styleguide/src/cli/config.ts). Shape
 // locked by docs/adr/styleguide-engine.md decision 10.
 
+import { sgRouteOptions } from "./src/styleguide/sg-route-options.mjs";
+
 /** @type {import("@takazudo/zudo-sg/cli").ZudoSgConfig} */
 export default {
+  routes: sgRouteOptions,
   componentsRoots: [{ dir: "packages/demo-ui/src", importBase: "@zudo-sg/demo-ui/src" }],
   registryOut: "./src/styleguide/sg-registry.ts",
   // Mirrors packages/demo-ui/src/stories/categories.ts's STORY_CATEGORIES — a
