@@ -13,7 +13,6 @@ const COLOR_SENTINEL = "oklch(0.42 0.18 210)";
 const PANEL_INSTANCES = {
   preview: {
     toggleEvent: "toggle-preview-token-panel",
-    prehydrateScriptId: "zdtp-preview-prehydrate",
     storagePrefix: "sg-preview-tweak",
   },
 } as const;
@@ -121,11 +120,13 @@ function panelShell(page: Page, instance: PanelInstance): Locator {
 }
 
 async function openPanel(page: Page, instance: PanelInstance): Promise<Locator> {
-  const { toggleEvent, prehydrateScriptId } = PANEL_INSTANCES[instance];
-  const hydratedBootstrap = page.locator(
-    `#${prehydrateScriptId}[data-bound="1"]:not([data-pending])`,
+  const { toggleEvent } = PANEL_INSTANCES[instance];
+  await page.waitForFunction(
+    () => (window as Window & { __sgPreviewTokenPanelCapture?: { ready: boolean } })
+      .__sgPreviewTokenPanelCapture?.ready === true,
+    null,
+    { timeout: 10_000 },
   );
-  await expect(hydratedBootstrap).toBeAttached({ timeout: 10_000 });
 
   await page.evaluate((name) => {
     window.dispatchEvent(new CustomEvent(name));
