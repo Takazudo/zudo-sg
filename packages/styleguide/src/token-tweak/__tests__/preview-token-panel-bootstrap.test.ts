@@ -61,6 +61,9 @@ async function hydrate(): Promise<void> {
 }
 
 beforeEach(() => {
+  const capture = (window as unknown as { __sgPreviewTokenPanelCapture?: { listener: EventListener } }).__sgPreviewTokenPanelCapture;
+  if (capture) window.removeEventListener("toggle-preview-token-panel", capture.listener);
+  delete (window as unknown as { __sgPreviewTokenPanelCapture?: unknown }).__sgPreviewTokenPanelCapture;
   vi.resetModules();
   mocks.nativeBootstrap.mockReset();
   mocks.configurePanel.mockReset();
@@ -96,6 +99,9 @@ describe("PreviewTokenPanelBootstrap island", () => {
 
   it("renders nothing and bootstraps nothing when the host configured no tabsModule", async () => {
     mocks.tabs = undefined;
+    const { previewTokenPanelCaptureScript } = await import("../preview-token-panel-capture.js");
+    new Function("window", previewTokenPanelCaptureScript())(window);
+    window.dispatchEvent(new CustomEvent("toggle-preview-token-panel"));
     await hydrate();
     expect(mocks.nativeBootstrap).not.toHaveBeenCalled();
     expect((window as unknown as Record<string, unknown>).sgPreview).toBeUndefined();
@@ -119,6 +125,64 @@ describe("PreviewTokenPanelBootstrap island", () => {
     expect(script.__zdtpPrehydrateListener).toBeUndefined();
     window.removeEventListener("toggle-preview-token-panel", own);
     window.removeEventListener("toggle-sg-doc-tweak", other);
+  });
+
+  it.each([1, 2])("captures %i early public clicks and replays only odd parity", async (clicks) => {
+    const { previewTokenPanelCaptureScript } = await import("../preview-token-panel-capture.js");
+    new Function("window", previewTokenPanelCaptureScript())(window);
+    const panelToggle = vi.fn();
+    mocks.nativeBootstrap.mockImplementation(() => window.addEventListener("toggle-preview-token-panel", panelToggle));
+    for (let index = 0; index < clicks; index++) {
+      window.dispatchEvent(new CustomEvent("toggle-preview-token-panel"));
+    }
+
+    await hydrate();
+    expect(panelToggle).toHaveBeenCalledTimes(clicks % 2);
+    window.dispatchEvent(new CustomEvent("toggle-preview-token-panel"));
+    expect(panelToggle).toHaveBeenCalledTimes(clicks % 2 + 1);
+    await hydrate();
+    expect(panelToggle).toHaveBeenCalledTimes(clicks % 2 + 1);
+    window.removeEventListener("toggle-preview-token-panel", panelToggle);
+  });
+
+  it("drains a legacy capture alongside the public capture without replaying twice", async () => {
+    const { previewTokenPanelCaptureScript } = await import("../preview-token-panel-capture.js");
+    new Function("window", previewTokenPanelCaptureScript())(window);
+    const script = document.createElement("script") as PrehydrateScript;
+    script.id = "zdtp-preview-prehydrate";
+    script.dataset.pending = "0";
+    script.__zdtpPrehydrateListener = () => {
+      script.dataset.pending = String(Number(script.dataset.pending ?? "0") + 1);
+    };
+    window.addEventListener("toggle-preview-token-panel", script.__zdtpPrehydrateListener);
+    document.body.append(script);
+    const panelToggle = vi.fn();
+    mocks.nativeBootstrap.mockImplementation(() => window.addEventListener("toggle-preview-token-panel", panelToggle));
+    window.dispatchEvent(new CustomEvent("toggle-preview-token-panel"));
+
+    await hydrate();
+    expect(panelToggle).toHaveBeenCalledTimes(1);
+    expect(script.__zdtpPrehydrateListener).toBeUndefined();
+    expect(script.dataset.pending).toBeUndefined();
+    window.dispatchEvent(new CustomEvent("toggle-preview-token-panel"));
+    expect(script.dataset.pending).toBeUndefined();
+    window.removeEventListener("toggle-preview-token-panel", panelToggle);
+  });
+
+  it("keeps capture through script replacement and installs one listener", async () => {
+    const { previewTokenPanelCaptureScript } = await import("../preview-token-panel-capture.js");
+    const run = new Function("window", previewTokenPanelCaptureScript());
+    run(window);
+    const first = (window as unknown as { __sgPreviewTokenPanelCapture: { listener: EventListener } }).__sgPreviewTokenPanelCapture;
+    document.body.innerHTML = "<script></script>";
+    run(window);
+    expect((window as unknown as { __sgPreviewTokenPanelCapture: unknown }).__sgPreviewTokenPanelCapture).toBe(first);
+    const panelToggle = vi.fn();
+    mocks.nativeBootstrap.mockImplementation(() => window.addEventListener("toggle-preview-token-panel", panelToggle));
+    window.dispatchEvent(new CustomEvent("toggle-preview-token-panel"));
+    await hydrate();
+    expect(panelToggle).toHaveBeenCalledTimes(1);
+    window.removeEventListener("toggle-preview-token-panel", panelToggle);
   });
 
   it("keeps owner-autoload helpers lazy and instance-scoped", async () => {
