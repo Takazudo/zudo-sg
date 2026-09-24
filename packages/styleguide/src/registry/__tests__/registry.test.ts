@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import type { Story, StoryMeta, StoryModule } from "../../stories/types.js";
-import { computeCategoryOrder, createRegistry, OVERVIEW_SLUG, slugify, TOKENS_SLUG } from "../registry.js";
+import { computeCategoryOrder, createRegistry, OVERVIEW_SLUG, slugify, TOKENS_SLUG } from "../index.js";
+import { componentHref, DEFAULT_SG_ROUTES } from "../../sg-routes.js";
 
 function story(name: string): Story {
   return { name, render: () => null };
@@ -101,6 +102,39 @@ describe("createRegistry", () => {
     expect(OVERVIEW_SLUG).toBe("");
     expect(TOKENS_SLUG).toBe("tokens");
     expect(r.getAllSlugs()).toEqual(["tokens-2", "button", "button-2"]);
+  });
+
+  it("allocates every Preview story away from the default iframe endpoint", () => {
+    const r = createRegistry({
+      "./preview.stories.tsx": mod(meta("Preview", "A"), { Default: story("Default") }),
+      "./preview-2.stories.tsx": mod(meta("Preview 2", "A"), { Default: story("Default") }),
+      "./repeat.stories.tsx": mod(meta("Preview", "A"), { Default: story("Default") }),
+      "./button.stories.tsx": mod(meta("Button", "A"), { Default: story("Default") }),
+    });
+    expect(r.getAllSlugs()).toEqual(["preview-2", "preview-2-2", "preview-3", "button"]);
+    expect(r.getAllSlugs().map((slug) => componentHref(DEFAULT_SG_ROUTES, slug)))
+      .not.toContain(DEFAULT_SG_ROUTES.componentsPreview);
+  });
+
+  it("reserves custom preview paths only when they match the detail pattern", () => {
+    const stories = {
+      "./preview.stories.tsx": mod(meta("Preview", "A"), { Default: story("Default") }),
+      "./canvas.stories.tsx": mod(meta("Canvas", "A"), { Default: story("Default") }),
+    };
+    expect(createRegistry(stories, { routes: {
+      componentsSlug: "/ui/[slug]/detail/", componentsPreview: "/ui/canvas/detail",
+    } }).getAllSlugs()).toEqual(["preview", "canvas-2"]);
+    expect(createRegistry(stories, { routes: {
+      componentsSlug: "/ui/[slug]/detail", componentsPreview: "/ui-preview/canvas/detail",
+    } }).getAllSlugs()).toEqual(["preview", "canvas"]);
+    expect(createRegistry(stories, { routes: {
+      componentsSlug: "/ui/item-[slug]", componentsPreview: "/ui/item-preview/",
+    } }).getAllSlugs()).toEqual(["preview-2", "canvas"]);
+  });
+
+  it("rejects an ambiguous detail pattern before allocating stories", () => {
+    expect(() => createRegistry({}, { routes: { componentsSlug: "/ui/[slug]/[slug]" } }))
+      .toThrow(/exactly one "\[slug\]" placeholder/);
   });
 
   it("exposes lookups that survive destructuring", () => {

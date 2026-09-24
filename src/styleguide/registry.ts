@@ -4,6 +4,7 @@
 
 import { createRegistry } from "@takazudo/zudo-sg/registry";
 import { STORY_CATEGORIES } from "@zudo-sg/demo-ui";
+import zudoSgConfig from "../../zudo-sg.config.mjs";
 import { storyExportOrder, storyModules } from "./sg-registry";
 
 export { OVERVIEW_SLUG, TOKENS_SLUG } from "@takazudo/zudo-sg/registry";
@@ -12,6 +13,7 @@ export type { CategoryGroup, StoryEntry, VariantEntry } from "@takazudo/zudo-sg/
 export const registry = createRegistry(storyModules, {
   categoryOrder: STORY_CATEGORIES,
   storyExportOrder,
+  routes: zudoSgConfig.routes,
 });
 
 export const {

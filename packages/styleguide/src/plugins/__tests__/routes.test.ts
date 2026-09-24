@@ -21,8 +21,9 @@ import routesPlugin, {
   resolveRoutesPluginOptions,
 } from "../routes.js";
 import { toForwardSlash } from "../../host-paths.js";
+import { createRegistry } from "../../registry/index.js";
 import { DEFAULT_PREVIEW_CSS_URL } from "../../sg-context.js";
-import { DEFAULT_SG_ROUTES } from "../../sg-routes.js";
+import { componentHref, DEFAULT_SG_ROUTES } from "../../sg-routes.js";
 
 const PACKAGE_DIR = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
 const REGISTRY = "./src/styleguide/sg-registry.ts";
@@ -168,12 +169,30 @@ describe("resolveRoutesPluginOptions", () => {
     );
   });
 
+  it("keeps emitted detail paths distinct from the configured preview route", () => {
+    const { routes } = resolveRoutesPluginOptions(projectRoot, {
+      registryModule: REGISTRY,
+      routes: { componentsSlug: "/catalog/[slug]/detail/", componentsPreview: "/catalog/preview/detail" },
+    });
+    const registry = createRegistry({
+      "./preview.stories.tsx": {
+        default: { title: "Preview", category: "Examples", description: "", usage: "" },
+        Default: { name: "Default", render: () => null },
+      },
+    }, { routes });
+    expect(registry.getAllSlugs()).toEqual(["preview-2"]);
+    expect(componentHref(routes, registry.getAllSlugs()[0]!)).toBe("/catalog/preview-2/detail/");
+    expect(componentHref(routes, registry.getAllSlugs()[0]!).replace(/\/+$/, ""))
+      .not.toBe(routes.componentsPreview.replace(/\/+$/, ""));
+  });
+
   it.each([
     [{ routez: {} }, /unknown option "routez"/],
     [{ registryModule: 42 }, /option "registryModule" must be a string/],
     [{ routes: { catalog: "/x" } }, /option "routes.catalog" is not a known route/],
     [{ routes: { tokens: "tokens" } }, /option "routes.tokens" = "tokens" must be a root-absolute path/],
     [{ routes: { componentsSlug: "/components/:slug" } }, /must contain the "\[slug\]" segment/],
+    [{ routes: { componentsSlug: "/components/[slug]/[slug]" } }, /exactly one "\[slug\]" placeholder/],
     [{ routes: { tokens: "/components" } }, /"routes.componentsIndex" and "routes.tokens" both resolve to "\/components"/],
     [{ categoryOrder: "Actions" }, /option "categoryOrder" must be an array of strings/],
     [{ uiPackageName: "" }, /option "uiPackageName" must be a non-empty string/],
