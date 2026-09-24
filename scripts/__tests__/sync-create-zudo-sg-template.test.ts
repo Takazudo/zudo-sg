@@ -142,6 +142,7 @@ describe("sync-create-zudo-sg-template.mjs", () => {
     const generatedGitignore = readFileSync(join(target, "_gitignore"), "utf8");
     expect(generatedGitignore).not.toContain("pnpm-lock.yaml");
     expect(generatedGitignore).toContain(".zfb/");
+    expect(generatedGitignore).toContain(".zudo-doc/");
     expect(generatedGitignore).toContain(".zfb-esbuild-entry-*.tsx");
     expect(generatedGitignore).toContain(".zfb-islands-tsconfig-*.json");
     expect(generatedGitignore).toContain(".zfb-virtual-*.mjs");
@@ -149,16 +150,16 @@ describe("sync-create-zudo-sg-template.mjs", () => {
       'base: "/"',
     );
     expect(readReleaseAgeExcludes(target)).toEqual([
-      "@takazudo/zdtp@0.8.0",
-      "@takazudo/zfb-darwin-arm64@2.20.0",
-      "@takazudo/zfb-darwin-x64@2.20.0",
-      "@takazudo/zfb-linux-arm64-gnu@2.20.0",
-      "@takazudo/zfb-linux-x64-gnu@2.20.0",
-      "@takazudo/zfb-md-wasm@2.20.0",
-      "@takazudo/zfb-runtime@2.20.0",
-      "@takazudo/zfb-win32-x64-msvc@2.20.0",
-      "@takazudo/zfb@2.20.0",
-      "@takazudo/zudo-doc@5.26.2",
+      "@takazudo/zdtp@0.8.2",
+      "@takazudo/zfb-darwin-arm64@2.20.2",
+      "@takazudo/zfb-darwin-x64@2.20.2",
+      "@takazudo/zfb-linux-arm64-gnu@2.20.2",
+      "@takazudo/zfb-linux-x64-gnu@2.20.2",
+      "@takazudo/zfb-md-wasm@2.20.2",
+      "@takazudo/zfb-runtime@2.20.2",
+      "@takazudo/zfb-win32-x64-msvc@2.20.2",
+      "@takazudo/zfb@2.20.2",
+      "@takazudo/zudo-doc@5.27.0",
       `@takazudo/zudo-sg@${STYLEGUIDE_VERSION}`,
     ]);
     expect(readFileSync(join(target, "pages/index.tsx"), "utf8")).toContain(
@@ -290,7 +291,7 @@ describe("sync-create-zudo-sg-template.mjs", () => {
       zfbPackagePath: injectedMetadataPath,
     });
     expect(files.get("pnpm-workspace.yaml")?.toString()).toContain(
-      "@takazudo/zfb@2.20.0",
+      "@takazudo/zfb@2.20.2",
     );
   });
 
