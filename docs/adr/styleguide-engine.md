@@ -215,6 +215,15 @@ literal. A host `pages/` file with the same URL shape shadows the injected
 route silently (zfb precedence) — that is the documented escape hatch, not a
 bug.
 
+`createRegistry(storyModules, { routes })` must receive the same route overrides
+as `withZudoSg()` when a host creates its own registry facade. The injected
+routes pass their resolved `sgContext.routes` automatically. The registry
+reserves the story slug whose detail URL would equal `componentsPreview`
+(ignoring trailing slashes), so a default `Preview` story becomes `preview-2`.
+A preview path outside the detail pattern reserves no slug. The detail pattern
+must contain exactly one `[slug]` placeholder; the routes plugin rejects an
+ambiguous pattern before injecting routes.
+
 ### 7. What the host keeps
 
 `pages/index.tsx` (zfb can inject `/` since 2.16 but the root page stays
@@ -297,7 +306,7 @@ disables this minimal-host default.
 | Route entrypoints | link assets only (`<link href={withBase(sgContext.previewCssUrl)}>`), read data from the virtual modules, call zudo-doc factories (`createRouteContext`, `createChrome`) — never plugin helpers |
 | Preview island | `routes-src/_preview-app.tsx`: `"use client"`, default export `ConfiguredPreviewApp` (displayName equal), statically imported by `components-preview.tsx`, renders `<PreviewApp registry={registry}/>`; the registry travels as an in-bundle argument, NEVER as island props (`data-props` is JSON — render closures would be dropped) |
 | Dev-hydration seed | `@takazudo/zudo-sg/islands` → `./dist/islands.js` (side-effect imports of every engine island + `../routes-src/_preview-app.tsx`); host shim `pages/lib/_zudo-sg-islands.ts` = `import "@takazudo/zudo-sg/islands";`, imported by `pages/index.tsx`. Kept for API stability; a no-op on zfb ≥ 2.18.0 (finding 4 amendment) — the same module reached through two graphs is deduped by path, so it is harmless in dev and build |
-| Registry shim | `routes-src/_registry.ts` builds `createRegistry(storyModules, { categoryOrder, storyExportOrder })` once; every entrypoint and the preview wrapper import it |
+| Registry shim | `routes-src/_registry.ts` builds `createRegistry(storyModules, { categoryOrder, storyExportOrder, routes: ctx.routes })` once; every entrypoint and the preview wrapper import it |
 | Stylesheet exports | `@takazudo/zudo-sg/styles.css` → `./styles.css` (hand-authored catalog chrome CSS, package root); `@takazudo/zudo-sg/safelist.css` → `./dist/safelist.css` (generated `@source inline(...)`) |
 | Consumer CSS order | zfb discovers `styles/global.css`, falling back to `src/styles/global.css`. Declare `@layer zd-preflight, zd-flow;` → `tailwindcss/preflight` in `layer(zd-preflight)` → unlayered `tailwindcss/utilities` → zudo-doc `theme.css` (unless the host supplies its full token contract) → consumer token/component CSS → zudo-doc `safelist.css` → `content.css` → `features.css` → `page-loading.css` → `@takazudo/zdtp/dashboard/styles.css` → unlayered `@takazudo/zudo-sg/styles.css` → `@takazudo/zudo-sg/safelist.css` → host `@source` globs (project-root-relative in zfb's global entry) → optional project `@theme {}` overrides. Preflight is the only element reset; `theme.css` resets color tokens only (`theme-no-reset.css` omits that token reset). **Engine chrome colors no longer depend on this import order**: raw `--sg-*` defaults survive the reset, and an unlayered host `:root` override wins before or after the engine stylesheet (decision 14). The host's own `@theme` colors still need to follow the framework reset. Utilities must outrank `zd-flow`; engine CSS stays unlayered to compete with utilities; dashboard CSS follows content CSS to win ties with prose. |
 | Host-path contract | option value = project-root-relative path string (absolute accepted); `resolve(ctx.projectRoot, value)`; must be an existing FILE; normalized to a forward-slash absolute path; the virtual module re-exports that absolute path verbatim (zfb remaps it into the shadow); missing/empty/directory → throw at `setup()`: `[zudo-sg] option "<name>" = "<value>" resolved to <abs> (relative to projectRoot <root>), which is not a file`; absent-and-required → `[zudo-sg] option "<name>" is required (project-root-relative path, e.g. "<example>")`. Shared module `packages/styleguide/src/host-paths.ts` (`resolveHostModule(projectRoot, optionName, value, { required, example })`, `withBaseUrl(base, path)`) |

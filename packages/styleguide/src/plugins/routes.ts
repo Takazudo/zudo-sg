@@ -38,7 +38,7 @@ import {
   type SgCatalogText,
   type SgContext,
 } from "../sg-context.js";
-import { DEFAULT_SG_ROUTES, type SgRoutes } from "../sg-routes.js";
+import { DEFAULT_SG_ROUTES, previewCollisionSlug, type SgRoutes } from "../sg-routes.js";
 
 export const PLUGIN_NAME = "@takazudo/zudo-sg/plugins/routes";
 
@@ -161,6 +161,8 @@ function normalizeRoutes(value: unknown): SgRoutes {
   if (!routes.componentsSlug.includes("[slug]")) {
     fail(`option "routes.componentsSlug" = "${routes.componentsSlug}" must contain the "[slug]" segment`);
   }
+  // Validate the placeholder shape before route injection or paths() emission.
+  previewCollisionSlug(routes);
   const seen = new Map<string, keyof SgRoutes>();
   for (const key of ROUTE_KEYS) {
     const other = seen.get(routes[key]);

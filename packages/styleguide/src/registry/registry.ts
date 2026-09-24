@@ -7,6 +7,7 @@
 // preview app can build or import a registry freely.
 
 import type { Story, StoryMeta, StoryModule } from "../stories/types.js";
+import { previewCollisionSlug, type SgRoutes } from "../sg-routes.js";
 
 /**
  * Slugs reserved by the styleguide chrome — Overview (the components index
@@ -58,6 +59,8 @@ export interface CreateRegistryOptions {
   categoryOrder?: readonly string[];
   /** Codegen-emitted source order of each story file's exports, keyed like `storyModules`. */
   storyExportOrder?: Readonly<Record<string, readonly string[]>>;
+  /** The same route overrides passed to `withZudoSg()`; defaults are used when omitted. */
+  routes?: Partial<SgRoutes>;
 }
 
 export interface Registry {
@@ -114,9 +117,11 @@ export function computeCategoryOrder(
 function buildEntries(
   storyModules: Readonly<Record<string, StoryModule>>,
   storyExportOrder: Readonly<Record<string, readonly string[]>>,
+  previewSlug: string | null,
 ): StoryEntry[] {
   const entries: StoryEntry[] = [];
   const seenSlugs = new Set<string>(RESERVED_NAV_SLUGS);
+  if (previewSlug !== null) seenSlugs.add(previewSlug);
 
   for (const [path, mod] of Object.entries(storyModules)) {
     // A story file with no valid meta default export violates the contract;
@@ -165,7 +170,7 @@ export function createRegistry(
   options: CreateRegistryOptions = {},
 ): Registry {
   const categoryOrder = computeCategoryOrder(storyModules, options.categoryOrder);
-  const storyEntries = buildEntries(storyModules, options.storyExportOrder ?? {});
+  const storyEntries = buildEntries(storyModules, options.storyExportOrder ?? {}, previewCollisionSlug(options.routes));
   const entryBySlug = new Map(storyEntries.map((e) => [e.slug, e]));
 
   function getCategoryGroups(): CategoryGroup[] {
