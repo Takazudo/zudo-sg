@@ -4,6 +4,21 @@ All notable changes to `create-zudo-sg` are documented in this file.
 
 The format is based on Keep a Changelog.
 
+## [0.1.7] - 2026-09-25
+
+### Changed
+
+- Update the starter engine range to `@takazudo/zudo-sg ^0.3.5`.
+- Add Preview, Preview 2, and Canvas example stories to demonstrate distinct
+  detail and preview routes in the generated styleguide.
+- Enable SPA page transitions in the starter and mount the preview panel
+  bootstrap on engine routes while retaining early-click capture on host pages.
+
+### Fixed
+
+- Keep the public preview-token header trigger responsive to clicks before
+  its load island is ready, including navigation from a host page.
+
 ## [0.1.6] - 2026-09-24
 
 ### Changed
