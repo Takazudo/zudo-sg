@@ -17,7 +17,7 @@
     "@takazudo/zfb-md-wasm": "2.20.2",
     "@takazudo/zfb-runtime": "2.20.2",
     "@takazudo/zudo-doc": "5.27.0",
-    "@takazudo/zudo-sg": "^0.3.3",
+    "@takazudo/zudo-sg": "^0.3.4",
     "diff": "^8.0.4",
     "katex": "^0.16.38",
     "preact": "^10.29.1",
