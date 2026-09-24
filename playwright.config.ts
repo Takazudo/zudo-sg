@@ -1,24 +1,28 @@
 import { defineConfig } from "@playwright/test";
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { createStaticPreviewServer } from "./scripts/lib/playwright-e2e-server.mjs";
+import { createStaticPreviewServer, resolveE2EHost } from "./scripts/lib/playwright-e2e-server.mjs";
 
 const PROJECT_ROOT = dirname(fileURLToPath(import.meta.url));
+const e2eHost = resolveE2EHost();
+const hostFlag = e2eHost === "localhost" ? "" : ` --host ${e2eHost}`;
 const smokeServer = createStaticPreviewServer({
   entry: "root",
   projectRoot: PROJECT_ROOT,
+  host: e2eHost,
   distPath: "dist",
   buildCommand: "pnpm build",
-  command: "pnpm exec zfb preview --port {port}",
+  command: `pnpm exec zfb preview${hostFlag} --port {port}`,
   urlPath: "/",
   timeout: 60_000,
 });
 const demoSmokeServer = createStaticPreviewServer({
   entry: "demo",
   projectRoot: PROJECT_ROOT,
+  host: e2eHost,
   distPath: "apps/demo/dist",
   buildCommand: "pnpm --filter @zudo-sg/demo build",
-  command: "pnpm --filter @zudo-sg/demo exec zfb preview --port {port}",
+  command: `pnpm --filter @zudo-sg/demo exec zfb preview${hostFlag} --port {port}`,
   urlPath: "/",
   timeout: 60_000,
 });
