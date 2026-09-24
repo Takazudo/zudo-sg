@@ -12,7 +12,7 @@ import {
 import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import { buildTemplate } from "../sync-create-zudo-sg-template.mjs";
 
@@ -190,6 +190,16 @@ describe("sync-create-zudo-sg-template.mjs", () => {
     const check = run(sandbox, "--check");
     expect(check.status).toBe(0);
     expect(check.stdout).toContain("up to date");
+  });
+
+  it("can be imported from stdin without running the CLI", () => {
+    const result = spawnSync(process.execPath, ["--input-type=module", "-"], {
+      input: `import { buildTemplate } from ${JSON.stringify(pathToFileURL(SCRIPT_PATH).href)}; console.log(typeof buildTemplate);`,
+      encoding: "utf8",
+    });
+    expect(result.status).toBe(0);
+    expect(result.stdout.trim()).toBe("function");
+    expect(result.stderr).toBe("");
   });
 
   it("runs when invoked through a symlink", () => {

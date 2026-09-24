@@ -471,10 +471,16 @@ export async function main(argv = process.argv.slice(2)) {
   return syncTemplate({ check: argv.includes("--check") });
 }
 
-if (
-  process.argv[1] &&
-  realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)
-) {
+function isMain() {
+  if (!process.argv[1]) return false;
+  try {
+    return realpathSync(process.argv[1]) === fileURLToPath(import.meta.url);
+  } catch {
+    return false;
+  }
+}
+
+if (isMain()) {
   main().then(
     (status) => {
       process.exitCode = status;
