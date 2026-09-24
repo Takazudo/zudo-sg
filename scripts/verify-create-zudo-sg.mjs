@@ -398,7 +398,7 @@ async function installLocalEngine(hostDir, engineTarball) {
   console.log(`Using locally packed @takazudo/zudo-sg instead of ${original}.`);
 }
 
-async function assertGeneratedRegistry(hostDir, expectedCount = 3) {
+async function assertGeneratedRegistry(hostDir, expectedCount = 6) {
   const registryPath = path.join(hostDir, "src/styleguide/sg-registry.ts");
   const registry = await readFile(registryPath, "utf8");
   const keys = [...registry.matchAll(/^\s*["'](\.\/[^"'\n]+\.stories\.tsx)["']\s*:/gmu)].map((match) => match[1]);
@@ -465,7 +465,7 @@ async function assertNewComponentScaffolds(hostDir) {
     "preact",
     ...generatedFiles,
   ], hostDir);
-  await assertGeneratedRegistry(hostDir, 5);
+  await assertGeneratedRegistry(hostDir, 8);
   console.log("OK — flat and nested scaffold imports resolve in the initialized host.");
 }
 
