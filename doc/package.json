@@ -21,9 +21,9 @@
     "setup:doc-skill:both": "bash scripts/setup-doc-skill.sh --target both"
   },
   "dependencies": {
-    "@takazudo/zfb": "2.20.2",
-    "@takazudo/zfb-runtime": "2.20.2",
-    "@takazudo/zfb-md-wasm": "2.20.2",
+    "@takazudo/zfb": "2.20.3",
+    "@takazudo/zfb-runtime": "2.20.3",
+    "@takazudo/zfb-md-wasm": "2.20.3",
     "@takazudo/zudo-doc": "5.27.0",
     "zod": "^4.3.6",
     "preact": "^10.29.8",

@@ -11,6 +11,7 @@
 // `--check` never writes. It compares the generated tree with the committed
 // template and reports every missing, extra, or changed path.
 
+import { realpathSync } from "node:fs";
 import {
   mkdir,
   readFile,
@@ -472,7 +473,7 @@ export async function main(argv = process.argv.slice(2)) {
 
 if (
   process.argv[1] &&
-  resolve(process.argv[1]) === fileURLToPath(import.meta.url)
+  realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)
 ) {
   main().then(
     (status) => {

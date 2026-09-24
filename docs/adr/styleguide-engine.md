@@ -3,10 +3,10 @@
 Status: **Accepted** (epic #648, decision sub-task #650, 2026-09-13).
 Locks the contract every Wave 2+ sub-issue implements. Model: zudo-doc's
 package-owned route seam (`$HOME/repos/myoss/zudo-doc/packages/zudo-doc/docs/adr/route-injection-seam.md`).
-Current toolchain pins: `@takazudo/zfb` **2.20.2**, `@takazudo/zudo-doc`
+Current toolchain pins: `@takazudo/zfb` **2.20.3**, `@takazudo/zudo-doc`
 5.27.0, `@takazudo/zdtp` 0.8.2, pnpm 11.5.2, Node 24. The engine's peer
-floors are `^2.20.2` / `^5.27.0`, aligned with zudo-doc 5.27.0's own
-`@takazudo/zfb` peer floor (#848).
+floors are `^2.20.3` / `^5.27.0`, incorporating zfb's SSR identity fix
+(#863) and zudo-doc 5.27.0's required toolchain (#848).
 
 ## Context
 
@@ -362,6 +362,11 @@ adopts zdtp 0.8.2; its 0.8.1 mode-pair editing and override round-trip changes
 are additive, with no host migration required. The root, docs host, and foreign
 fixture ignore `.zudo-doc/` because zudo-doc now stages installed route sources
 there during builds.
+
+**Amendment (2026-09-25, #863):** the zfb floor advances to `^2.20.3`
+to require the staged-workspace SSR fix that preserves one physical Preact
+runtime for hooks and provider context. This correctness requirement extends
+the upstream-peer-only floor policy above. zudo-doc remains at `^5.27.0`.
 
 **Amendment (2026-09-16, #710):** raised the `@takazudo/zfb` floor from
 `^2.17.0` to `^2.18.0` and the `@takazudo/zudo-doc` floor from `^5.24.0` to
