@@ -12,4 +12,4 @@ minimumReleaseAgeExclude:
   - "@takazudo/zfb-win32-x64-msvc@2.20.3"
   - "@takazudo/zfb@2.20.3"
   - "@takazudo/zudo-doc@5.27.0"
-  - "@takazudo/zudo-sg@0.3.5"
+  - "@takazudo/zudo-sg@0.3.6"

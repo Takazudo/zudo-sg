@@ -4,6 +4,18 @@ All notable changes to `@takazudo/zudo-sg` are documented in this file.
 
 The format is based on Keep a Changelog, and release notes are generated from the changelog MDX pages.
 
+## [0.3.6] - 2026-09-25
+
+This release updates the supported zfb toolchain to 2.20.3 so staged
+workspace packages share one Preact runtime during server rendering.
+
+### Bug Fixes
+
+- Raise the zfb peer floor to `^2.20.3`, picking up the upstream fix for
+  hooks and provider context in package-owned routes.
+- Align the documented installation command and verified starter toolchain
+  with the updated zfb runtime and Markdown packages.
+
 ## [0.3.5] - 2026-09-25
 
 This release makes the public preview trigger reliable during SPA navigation
