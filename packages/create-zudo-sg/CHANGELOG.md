@@ -4,6 +4,19 @@ All notable changes to `create-zudo-sg` are documented in this file.
 
 The format is based on Keep a Changelog.
 
+## [0.1.6] - 2026-09-24
+
+### Changed
+
+- Update the starter's zfb, zudo-doc, and zdtp versions, and its engine range
+  to `@takazudo/zudo-sg ^0.3.4`.
+- Update the GitHub Actions dependencies used by the initializer publish
+  workflow.
+
+### Fixed
+
+- Ignore `.zudo-doc/` build output in newly scaffolded projects.
+
 ## [0.1.5] - 2026-09-23
 
 ### Changed
