@@ -3,6 +3,8 @@ node_modules
 dist
 .zfb
 .zfb-build
+# zudo-doc package-owned route sources copied here during builds.
+.zudo-doc/
 # @takazudo/zudo-sg build artifacts (tsup onSuccess): route entrypoint sources
 # mirrored from src/routes/ and the generated virtual-module declarations.
 packages/styleguide/routes-src/

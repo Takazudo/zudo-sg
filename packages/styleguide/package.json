@@ -150,15 +150,15 @@
     "@tailwindcss/oxide": "^4.2.0"
   },
   "peerDependencies": {
-    "@takazudo/zfb": "^2.20.0",
-    "@takazudo/zdtp": "^0.8.0",
-    "@takazudo/zudo-doc": "^5.26.2",
+    "@takazudo/zfb": "^2.20.2",
+    "@takazudo/zdtp": "^0.8.2",
+    "@takazudo/zudo-doc": "^5.27.0",
     "preact": "^10.29.8"
   },
   "devDependencies": {
-    "@takazudo/zdtp": "0.8.0",
-    "@takazudo/zfb": "2.20.0",
-    "@takazudo/zudo-doc": "5.26.2",
+    "@takazudo/zdtp": "0.8.2",
+    "@takazudo/zfb": "2.20.2",
+    "@takazudo/zudo-doc": "5.27.0",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/preact": "^3.2.4",
     "@types/culori": "^4.0.1",
