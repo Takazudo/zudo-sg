@@ -6,12 +6,13 @@ import {
   readFileSync,
   readdirSync,
   rmSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import { buildTemplate } from "../sync-create-zudo-sg-template.mjs";
 
@@ -151,14 +152,14 @@ describe("sync-create-zudo-sg-template.mjs", () => {
     );
     expect(readReleaseAgeExcludes(target)).toEqual([
       "@takazudo/zdtp@0.8.2",
-      "@takazudo/zfb-darwin-arm64@2.20.2",
-      "@takazudo/zfb-darwin-x64@2.20.2",
-      "@takazudo/zfb-linux-arm64-gnu@2.20.2",
-      "@takazudo/zfb-linux-x64-gnu@2.20.2",
-      "@takazudo/zfb-md-wasm@2.20.2",
-      "@takazudo/zfb-runtime@2.20.2",
-      "@takazudo/zfb-win32-x64-msvc@2.20.2",
-      "@takazudo/zfb@2.20.2",
+      "@takazudo/zfb-darwin-arm64@2.20.3",
+      "@takazudo/zfb-darwin-x64@2.20.3",
+      "@takazudo/zfb-linux-arm64-gnu@2.20.3",
+      "@takazudo/zfb-linux-x64-gnu@2.20.3",
+      "@takazudo/zfb-md-wasm@2.20.3",
+      "@takazudo/zfb-runtime@2.20.3",
+      "@takazudo/zfb-win32-x64-msvc@2.20.3",
+      "@takazudo/zfb@2.20.3",
       "@takazudo/zudo-doc@5.27.0",
       `@takazudo/zudo-sg@${STYLEGUIDE_VERSION}`,
     ]);
@@ -189,6 +190,29 @@ describe("sync-create-zudo-sg-template.mjs", () => {
     const check = run(sandbox, "--check");
     expect(check.status).toBe(0);
     expect(check.stdout).toContain("up to date");
+  });
+
+  it("can be imported from stdin without running the CLI", () => {
+    const result = spawnSync(process.execPath, ["--input-type=module", "-"], {
+      input: `import { buildTemplate } from ${JSON.stringify(pathToFileURL(SCRIPT_PATH).href)}; console.log(typeof buildTemplate);`,
+      encoding: "utf8",
+    });
+    expect(result.status).toBe(0);
+    expect(result.stdout.trim()).toBe("function");
+    expect(result.stderr).toBe("");
+  });
+
+  it("runs when invoked through a symlink", () => {
+    const sandbox = makeSandbox();
+    const entry = join(sandbox, "sync-template.mjs");
+    symlinkSync(join(sandbox, "scripts", "sync-create-zudo-sg-template.mjs"), entry);
+    const result = spawnSync(process.execPath, [entry], {
+      cwd: sandbox,
+      encoding: "utf8",
+    });
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("Wrote create-zudo-sg template");
+    expect(existsSync(join(outputDir(sandbox), "package.json"))).toBe(true);
   });
 
   it("reports drift without writing and refreshes it on the next sync", () => {
@@ -291,7 +315,7 @@ describe("sync-create-zudo-sg-template.mjs", () => {
       zfbPackagePath: injectedMetadataPath,
     });
     expect(files.get("pnpm-workspace.yaml")?.toString()).toContain(
-      "@takazudo/zfb@2.20.2",
+      "@takazudo/zfb@2.20.3",
     );
   });
 
