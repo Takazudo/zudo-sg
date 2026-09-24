@@ -1,4 +1,5 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
+import { setAppearanceTheme } from "./helpers/appearance";
 
 // Browser acceptance guard for the --sg-* chrome token namespace (#797/#806):
 // the engine chrome must render correctly in the browser on the root host,
@@ -17,13 +18,7 @@ function isTransparent(color: string): boolean {
 
 async function setScheme(page: Page, scheme: "light" | "dark"): Promise<void> {
   await page.goto("/components");
-  const html = page.locator("html");
-  const toggle = page.locator('button[aria-label^="Switch to "]:visible').first();
-  await expect(toggle).toBeVisible();
-  if ((await html.getAttribute("data-theme")) !== scheme) {
-    await toggle.click();
-  }
-  await expect(html).toHaveAttribute("data-theme", scheme);
+  await setAppearanceTheme(page, scheme);
 }
 
 async function backgroundColor(locator: Locator): Promise<string> {
