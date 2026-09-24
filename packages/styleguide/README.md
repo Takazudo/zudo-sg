@@ -88,7 +88,11 @@ preview/control combinations, and missing references fail generation before
 writing output. Run `pnpm gen-token-manifest` after changing CSS or the spec,
 then `pnpm gen-token-manifest --check` in CI. The complete foreign configuration lives in `fixtures/foreign-tokens/`. The packed foreign-host
 proof is `node scripts/verify-styleguide-install.mjs` from
-this repository (a guarded heavy check).
+this repository (a guarded heavy check). It installs the packed tarball with
+pinned peers outside the workspace, builds at `/styleguide/`, checks the
+default, custom-collision, and outside-namespace configurations, and runs
+browser checks for early preview-panel clicks plus the rendered identity
+inside detail-page iframes.
 
 ## Framework scope
 
@@ -186,6 +190,12 @@ harmless (it was required on zfb < 2.18.0).
 usage snippets and catalog labels; when omitted, scaffolded usage snippets
 import the component from its own relative module. The generated registry's
 `StoryModule` type always comes from `@takazudo/zudo-sg/stories`.
+
+If a host calls `createRegistry()` directly, pass the same `routes` overrides
+used by `withZudoSg()`. The default preview endpoint occupies the detail URL
+for the slug `preview`, so a story titled “Preview” gets `preview-2`. Custom
+preview endpoints within the detail route pattern are reserved the same way;
+endpoints outside that pattern do not change story slugs.
 
 Full option shape, virtual modules, and every locked constant:
 `docs/adr/styleguide-engine.md` in this repository.

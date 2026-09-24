@@ -1,0 +1,323 @@
+// Browser proof for the packed public consumer created by
+// scripts/verify-styleguide-install.mjs. The host lives outside this
+// workspace and has the real engine tarball installed in node_modules.
+
+import { createServer } from "node:http";
+import { readFile, stat } from "node:fs/promises";
+import path from "node:path";
+import { pathToFileURL } from "node:url";
+
+const BASE = "/styleguide/";
+export const PACKED_HOST_SCENARIOS = {
+  default: {
+    routes: {},
+    previewPath: "/components/preview",
+    stories: [
+      { slug: "preview-2", title: "Preview", identity: "packed-preview-default" },
+      { slug: "preview-2-2", title: "Preview 2", identity: "packed-preview-two-default" },
+      { slug: "canvas", title: "Canvas", identity: "packed-canvas-default" },
+    ],
+  },
+  "custom-collision": {
+    routes: { componentsPreview: "/components/canvas" },
+    previewPath: "/components/canvas",
+    stories: [
+      { slug: "preview", title: "Preview", identity: "packed-preview-default" },
+      { slug: "preview-2", title: "Preview 2", identity: "packed-preview-two-default" },
+      { slug: "canvas-2", title: "Canvas", identity: "packed-canvas-default" },
+    ],
+  },
+  "outside-namespace": {
+    routes: { componentsPreview: "/preview-frame" },
+    previewPath: "/preview-frame",
+    stories: [
+      { slug: "preview", title: "Preview", identity: "packed-preview-default" },
+      { slug: "preview-2", title: "Preview 2", identity: "packed-preview-two-default" },
+      { slug: "canvas", title: "Canvas", identity: "packed-canvas-default" },
+    ],
+  },
+};
+const SCENARIOS = PACKED_HOST_SCENARIOS;
+
+function fail(message) {
+  throw new Error(`[packed host browser proof] ${message}`);
+}
+
+function check(condition, message) {
+  if (!condition) fail(message);
+}
+
+const MIME_TYPES = new Map([
+  [".css", "text/css; charset=utf-8"],
+  [".html", "text/html; charset=utf-8"],
+  [".ico", "image/x-icon"],
+  [".js", "text/javascript; charset=utf-8"],
+  [".json", "application/json; charset=utf-8"],
+  [".mjs", "text/javascript; charset=utf-8"],
+  [".png", "image/png"],
+  [".svg", "image/svg+xml"],
+  [".wasm", "application/wasm"],
+  [".webp", "image/webp"],
+  [".woff", "font/woff"],
+  [".woff2", "font/woff2"],
+]);
+
+async function resolveBuiltFile(distDir, pathname) {
+  if (!pathname.startsWith(BASE)) return null;
+  const relativePath = decodeURIComponent(pathname.slice(BASE.length));
+  const resolvedDist = path.resolve(distDir);
+  let target = path.resolve(resolvedDist, relativePath || "index.html");
+  if (target !== resolvedDist && !target.startsWith(`${resolvedDist}${path.sep}`)) return null;
+
+  try {
+    const entry = await stat(target);
+    if (entry.isDirectory()) target = path.join(target, "index.html");
+    else if (!path.extname(target)) {
+      try {
+        const index = path.join(target, "index.html");
+        const indexStat = await stat(index);
+        if (indexStat.isFile()) target = index;
+      } catch {
+        // Let the caller return 404 for an unknown extensionless asset.
+      }
+    }
+  } catch {
+    if (!path.extname(target)) target = path.join(target, "index.html");
+  }
+
+  if (target !== resolvedDist && !target.startsWith(`${resolvedDist}${path.sep}`)) return null;
+  try {
+    const entry = await stat(target);
+    return entry.isFile() ? target : null;
+  } catch {
+    return null;
+  }
+}
+
+async function startBuiltHost(distDir) {
+  const server = createServer(async (request, response) => {
+    let pathname;
+    try {
+      pathname = new URL(request.url ?? "/", "http://packed-host.invalid").pathname;
+    } catch {
+      response.writeHead(400).end("bad URL");
+      return;
+    }
+    // Browsers may request an implicit favicon even though the fixture has
+    // none. zudo-doc's actual document favicon is an inline SVG data URL.
+    if (pathname === "/favicon.ico" || pathname === `${BASE}favicon.ico`) {
+      response.writeHead(204).end();
+      return;
+    }
+    const target = await resolveBuiltFile(distDir, pathname);
+    if (!target) {
+      response.writeHead(404).end(`not found: ${pathname}`);
+      return;
+    }
+    try {
+      const body = await readFile(target);
+      response.writeHead(200, {
+        "Cache-Control": "no-store",
+        "Content-Length": body.byteLength,
+        "Content-Type": MIME_TYPES.get(path.extname(target)) ?? "application/octet-stream",
+      });
+      response.end(body);
+    } catch {
+      response.writeHead(500).end("failed to read built asset");
+    }
+  });
+  await new Promise((resolve, reject) => {
+    server.once("error", reject);
+    server.listen(0, "127.0.0.1", resolve);
+  });
+  const address = server.address();
+  check(address && typeof address === "object", "static packed-host server has no TCP address");
+  return {
+    origin: `http://127.0.0.1:${address.port}`,
+    close: () => new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve())),
+  };
+}
+
+async function assertPanelState(page, visible) {
+  const panel = page.locator(".tokenpanel-shell");
+  if (visible) {
+    await panel.first().waitFor({ state: "visible", timeout: 15_000 });
+    check(await panel.count() === 1, `expected exactly one preview panel shell, found ${await panel.count()}`);
+  } else {
+    await panel.first().waitFor({ state: "hidden", timeout: 10_000 });
+  }
+}
+
+async function afterSwapPromise(page) {
+  return page.evaluate(() => new Promise((resolve, reject) => {
+    const timeout = window.setTimeout(() => reject(new Error("timed out waiting for zfb:after-swap")), 15_000);
+    document.addEventListener("zfb:after-swap", () => {
+      window.clearTimeout(timeout);
+      resolve();
+    }, { once: true });
+  }));
+}
+
+async function proveEarlyClick(page, origin) {
+  const errors = [];
+  const badResponses = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  page.on("console", (message) => {
+    if (message.type() === "error") errors.push(message.text());
+  });
+  page.on("response", (response) => {
+    if (response.status() >= 400) badResponses.push(`${response.status()} ${response.url()}`);
+  });
+
+  await page.goto(`${origin}${BASE}docs/getting-started`, { waitUntil: "domcontentloaded" });
+  await page.waitForLoadState("load");
+  const trigger = page.locator("#sg-preview-tokens-trigger");
+  await trigger.waitFor({ state: "attached" });
+  check(!(await trigger.isVisible()), "the preview trigger should be hidden on the host docs route");
+  const persistentHeader = page.locator("header[data-zfb-transition-persist]");
+  check(await persistentHeader.count() === 1, "host docs route does not render one persistent header");
+  await page.waitForFunction(() => Boolean(window.__sgPreviewTokenPanelCapture), null, { timeout: 15_000 });
+  const initialCapture = await page.evaluate(() => window.__sgPreviewTokenPanelCapture ?? null);
+  check(initialCapture && initialCapture.ready === false, `host route did not install an unready public trigger capture: ${JSON.stringify(initialCapture)}`);
+
+  // The engine trigger's own after-swap listener was installed by the inline
+  // header markup before this probe. zfb reveals the button in that listener,
+  // then its route lifecycle resumes island scanning after synchronous event
+  // dispatch returns. Clicking here holds that exact lifecycle gap open on the
+  // JS stack: no sleep, retry, or timing-dependent network stall is involved.
+  await page.evaluate(() => {
+    const proof = { visible: false, enabled: false, headerPersisted: false, readyBeforeClick: null, pendingBeforeClick: null, readyAfterClick: null, pendingAfterClick: null };
+    (window).__packedPersistentHeader = document.querySelector("header[data-zfb-transition-persist]");
+    (window).__packedEarlyClickProof = proof;
+    document.addEventListener("zfb:after-swap", () => {
+      const button = document.getElementById("sg-preview-tokens-trigger");
+      const capture = window.__sgPreviewTokenPanelCapture;
+      proof.visible = Boolean(button && !button.hidden);
+      proof.enabled = Boolean(button && !button.disabled);
+      proof.headerPersisted = Boolean(window.__packedPersistentHeader && window.__packedPersistentHeader.isConnected && window.__packedPersistentHeader === document.querySelector("header[data-zfb-transition-persist]"));
+      proof.readyBeforeClick = capture?.ready ?? null;
+      proof.pendingBeforeClick = capture?.pending ?? null;
+      if (proof.visible && proof.enabled && button) button.click();
+      proof.readyAfterClick = capture?.ready ?? null;
+      proof.pendingAfterClick = capture?.pending ?? null;
+    }, { once: true });
+  });
+
+  const swapped = afterSwapPromise(page);
+  await page.getByRole("link", { name: "Components", exact: true }).first().click();
+  await swapped;
+  const proof = await page.evaluate(() => window.__packedEarlyClickProof);
+  check(proof?.visible && proof?.enabled, "the after-swap probe did not click a visible, enabled public trigger");
+  check(proof.headerPersisted, "the host header was replaced during the SPA transition");
+  check(proof.readyBeforeClick === false && proof.readyAfterClick === false, "bootstrap readiness was not delayed through the early click");
+  check(proof.pendingBeforeClick === 0 && proof.pendingAfterClick === 1, "the capture did not observe exactly one click before listener readiness");
+  await page.waitForFunction(() => window.__sgPreviewTokenPanelCapture?.ready === true, null, { timeout: 15_000 });
+  try {
+    await assertPanelState(page, true);
+  } catch (error) {
+    const state = await page.evaluate(() => ({ capture: window.__sgPreviewTokenPanelCapture, proof: window.__packedEarlyClickProof }));
+    fail(`early-click panel did not open: ${JSON.stringify(state)}; browser errors: ${errors.join(" | ")}; ${error}`);
+  }
+  check(await page.locator("#sg-preview-tokens-trigger").count() === 1, "SPA navigation duplicated the public trigger");
+
+  await trigger.click();
+  await assertPanelState(page, false);
+  console.log("OK — early-click panel closed on second click.");
+  await trigger.click();
+  await assertPanelState(page, true);
+  console.log("OK — early-click panel reopened on third click.");
+
+  const returned = afterSwapPromise(page);
+  await page.goBack();
+  await returned;
+  check(new URL(page.url()).pathname === `${BASE}docs/getting-started`, "browser back did not return to the host docs route");
+  check(!(await trigger.isVisible()), "the persistent trigger stayed visible after returning to the host route");
+
+  await page.evaluate(() => localStorage.clear());
+  await page.goto(`${origin}${BASE}components`, { waitUntil: "domcontentloaded" });
+  await trigger.waitFor({ state: "visible", timeout: 15_000 });
+  await page.waitForFunction(() => window.__sgPreviewTokenPanelCapture?.ready === true, null, { timeout: 15_000 });
+  await assertPanelState(page, false);
+  await trigger.click();
+  await assertPanelState(page, true);
+  console.log("OK — direct engine load opened the panel.");
+  check(errors.length === 0, `browser errors during early-click flow: ${errors.join(" | ")}`);
+  check(badResponses.length === 0, `failed browser requests during early-click flow: ${badResponses.join(" | ")}`);
+}
+
+async function proveStoryRoutes(page, origin, scenario) {
+  const errors = [];
+  const badResponses = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  page.on("console", (message) => {
+    if (message.type() === "error") errors.push(message.text());
+  });
+  page.on("response", (response) => {
+    if (response.status() >= 400) badResponses.push(`${response.status()} ${response.url()}`);
+  });
+
+  for (const story of scenario.stories) {
+    const detailUrl = `${origin}${BASE}components/${story.slug}`;
+    await page.goto(detailUrl, { waitUntil: "domcontentloaded" });
+    const title = await page.locator("main h1").first().textContent();
+    check(title?.trim() === story.title, `${story.title} detail route rendered ${JSON.stringify(title)} at ${detailUrl}`);
+
+    const iframe = page.locator("main iframe").first();
+    await iframe.scrollIntoViewIfNeeded();
+    await iframe.waitFor({ state: "attached", timeout: 15_000 });
+    const src = await iframe.getAttribute("src");
+    check(src, `${story.title} detail page has no preview iframe URL`);
+    const parsed = new URL(src, origin);
+    check(parsed.pathname === `${BASE.replace(/\/$/u, "")}${scenario.previewPath}`, `${story.title} iframe points at ${parsed.pathname}, expected ${scenario.previewPath}`);
+    check(parsed.searchParams.get("slug") === story.slug, `${story.title} iframe does not select its own detail slug`);
+    check(parsed.searchParams.get("variant") === "Default", `${story.title} iframe does not select the Default story`);
+
+    const identity = page.frameLocator("main iframe").locator(`[data-packed-story-identity="${story.identity}"]`);
+    await identity.waitFor({ state: "visible", timeout: 15_000 });
+    check((await identity.textContent())?.includes("route probe"), `${story.title} iframe marker did not render its story body`);
+  }
+
+  check(errors.length === 0, `browser errors on ${scenario.name} routes: ${errors.join(" | ")}`);
+  check(badResponses.length === 0, `failed browser requests on ${scenario.name} routes: ${badResponses.join(" | ")}`);
+}
+
+async function main() {
+  const args = process.argv.slice(2);
+  const hostIndex = args.indexOf("--host");
+  const scenarioIndex = args.indexOf("--scenario");
+  check(hostIndex >= 0 && args[hostIndex + 1], "usage: node scripts/verify-styleguide-install-browser.mjs --host <packed-host-dir> --scenario <default|custom-collision|outside-namespace> [--early-click]");
+  check(scenarioIndex >= 0 && SCENARIOS[args[scenarioIndex + 1]], "a known --scenario is required");
+  const hostDir = path.resolve(args[hostIndex + 1]);
+  const scenarioName = args[scenarioIndex + 1];
+  const scenario = { ...SCENARIOS[scenarioName], name: scenarioName };
+  const withEarlyClick = args.includes("--early-click");
+  check(!withEarlyClick || scenarioName === "default", "--early-click is only defined for the default route scenario");
+
+  const distDir = path.join(hostDir, "dist");
+  const { chromium } = await import("@playwright/test");
+  const server = await startBuiltHost(distDir);
+  let browser;
+  try {
+    browser = await chromium.launch({ headless: true });
+    const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+    if (withEarlyClick) {
+      const page = await context.newPage();
+      await proveEarlyClick(page, server.origin);
+      await page.close();
+      console.log("OK — packed host captured a visible-trigger click before bootstrap readiness, replayed one toggle, and returned through SPA history.");
+    }
+    await proveStoryRoutes(await context.newPage(), server.origin, scenario);
+    console.log(`OK — packed host ${scenarioName} detail and preview iframes rendered the expected story identities.`);
+    await context.close();
+  } finally {
+    await browser?.close();
+    await server.close();
+  }
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
+  main().catch((error) => {
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exitCode = 1;
+  });
+}

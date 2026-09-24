@@ -322,6 +322,7 @@ describe("withZudoSg() header token trigger", () => {
     expect(html).toContain('<circle cx="9" cy="6" r="2.4" fill="currentColor" stroke="none"></circle>');
 
     expect(html).toContain("window.__sgPreviewTokensTriggerInstalled");
+    expect(html).toContain("window.__sgPreviewTokenPanelCapture");
     expect(html).toContain('document.querySelector("[data-sg-engine-route]")');
     expect(html).toContain(`document.addEventListener(${JSON.stringify(AFTER_NAVIGATE_EVENT)},sync)`);
     expect(html).toContain("sync();");
@@ -365,17 +366,25 @@ describe("withZudoSg() header token trigger", () => {
     doc.body.innerHTML = html.slice(0, html.indexOf("<script>"));
 
     let added = 0;
+    let captures = 0;
     const originalAdd = doc.addEventListener.bind(doc);
     doc.addEventListener = ((type: string, ...rest: unknown[]) => {
       if (type === AFTER_NAVIGATE_EVENT) added += 1;
       return (originalAdd as (...args: unknown[]) => unknown)(type, ...rest);
     }) as typeof doc.addEventListener;
 
+    const originalWindowAdd = win.addEventListener.bind(win);
+    win.addEventListener = ((type: string, ...rest: unknown[]) => {
+      if (type === "toggle-preview-token-panel") captures += 1;
+      return (originalWindowAdd as (...args: unknown[]) => unknown)(type, ...rest);
+    }) as typeof win.addEventListener;
+
     const run = new Function("window", "document", "CustomEvent", script);
     run(win, doc, win.CustomEvent);
     run(win, doc, win.CustomEvent);
 
     expect(added).toBe(1);
+    expect(captures).toBe(1);
   });
 });
 

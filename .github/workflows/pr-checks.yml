@@ -128,8 +128,8 @@ jobs:
   # ---------------------------------------------------------------------------
   # Job: Styleguide engine foreign-install proof (#665)
   # Packs @takazudo/zudo-sg, installs it into fixtures/engine-host outside this
-  # workspace, builds under a non-root base, and boots zfb dev once to prove
-  # the dev-hydration island seed (docs/adr/styleguide-engine.md finding 4).
+  # workspace, builds under a non-root base, runs packed-host browser proof,
+  # and boots zfb dev to prove the dev-hydration island seed.
   # ---------------------------------------------------------------------------
   styleguide-install:
     name: Styleguide Engine Foreign Install
@@ -141,6 +141,9 @@ jobs:
 
       - name: Setup
         uses: ./.github/actions/setup
+
+      - name: Install Chromium
+        run: pnpm exec playwright install chromium --with-deps
 
       - name: Verify foreign install
         run: pnpm verify:styleguide-install

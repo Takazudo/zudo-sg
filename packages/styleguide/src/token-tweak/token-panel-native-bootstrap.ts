@@ -30,7 +30,7 @@ export async function loadZdtp(
  * State lives on the script element, not in a window-global queue, so two
  * panel instances cannot overwrite each other's bootstrap channel.
  */
-export function drainPrehydrationToggle(scriptId: string, toggleEvent: string): void {
+export function drainPrehydrationToggle(scriptId: string, toggleEvent: string, replay = true): void {
   if (typeof document === "undefined" || typeof window === "undefined") return;
   const script = document.getElementById(scriptId) as PrehydrateScript | null;
   const listener = script?.__zdtpPrehydrateListener;
@@ -42,7 +42,7 @@ export function drainPrehydrationToggle(scriptId: string, toggleEvent: string): 
 
   const pending = Number(script.dataset.pending ?? "0");
   delete script.dataset.pending;
-  if (Number.isFinite(pending) && pending % 2 === 1) {
+  if (replay && Number.isFinite(pending) && pending % 2 === 1) {
     window.dispatchEvent(new CustomEvent(toggleEvent));
   }
 }

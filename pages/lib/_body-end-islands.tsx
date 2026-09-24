@@ -47,6 +47,7 @@ import { MermaidEnlarge, MermaidEnlargeSsrFallback } from "@takazudo/zudo-doc/me
 
 import ClientRouterBootstrap from "@/components/client-router-bootstrap";
 import PreviewTokenPanelBootstrap from "@takazudo/zudo-sg/token-tweak/preview-token-panel-bootstrap";
+import { previewTokenPanelCaptureScript } from "@takazudo/zudo-sg/token-tweak";
 
 // Set explicit `displayName` on each host-defined island so zfb's
 // `captureComponentName` produces a stable marker even after the SSR
@@ -97,23 +98,6 @@ const SIDEBAR_SCROLL_RESTORE_SCRIPT = `(${function sidebarScrollRestore(
     }, 50);
   });
 }.toString()})(${JSON.stringify(BEFORE_NAVIGATE_EVENT)},${JSON.stringify(AFTER_NAVIGATE_EVENT)});`;
-
-function prehydrationPanelToggleScript(toggleEvent: string): string {
-  return `(${function capturePanelToggle(channel: string) {
-    const script = document.currentScript as (HTMLScriptElement & {
-      __zdtpPrehydrateListener?: EventListener;
-    }) | null;
-    if (!script || script.dataset.bound === "1") return;
-    script.dataset.bound = "1";
-    script.dataset.pending = "0";
-    const listener = () => {
-      script.dataset.pending = String(Number(script.dataset.pending ?? "0") + 1);
-    };
-    script.__zdtpPrehydrateListener = listener;
-    window.addEventListener(channel, listener);
-    window.addEventListener("toggle-design-token-panel", listener);
-  }.toString()})(${JSON.stringify(toggleEvent)});`;
-}
 
 /** Props for {@link BodyEndIslands}. */
 export interface BodyEndIslandsProps {
@@ -235,12 +219,10 @@ export function BodyEndIslands({
       {imageEnlarge}
       {mermaidEnlarge}
 
-      {/* Capture only the parity of pre-hydration clicks. State is scoped to
-          this script element rather than a shared window queue; the native 5.2
-          bootstrap drains it after registering both shared and custom channels. */}
+      {/* Package-owned capture is also installed by the public header trigger.
+          This mount covers host-supplied triggers and runs before the island. */}
       <script
-        id="zdtp-preview-prehydrate"
-        dangerouslySetInnerHTML={{ __html: prehydrationPanelToggleScript("toggle-preview-token-panel") }}
+        dangerouslySetInnerHTML={{ __html: previewTokenPanelCaptureScript() }}
       />
       {Island({
         when: "load",

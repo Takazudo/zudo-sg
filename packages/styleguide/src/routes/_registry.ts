@@ -9,4 +9,5 @@ import { ctx } from "./_context.js";
 export const registry = createRegistry(storyModules, {
   categoryOrder: ctx.categoryOrder,
   storyExportOrder,
+  routes: ctx.routes,
 });

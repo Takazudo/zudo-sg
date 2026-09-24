@@ -22,6 +22,7 @@ export default defineConfig(
       // minimal (see package.json).
       mermaid: false,
       strictContentBridge: true,
+      dynamicPageTransition: true,
       // Bundling follows `bundleZdtp ?? designTokenPanel`; this starter never
       // sets `designTokenPanel`, so without this the zdtp loader resolves to
       // zudo-doc's throwing stub and the engine's PREVIEW token panel (opened

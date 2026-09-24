@@ -21,6 +21,11 @@
 // regression guard for zfb 2.18.0's dev-scanner and CSS-glob seeding (ADR
 // finding 4 amendment). The build phases above run on the as-shipped fixture
 // (seed present), so they still prove the seed is a harmless no-op.
+// Before that dev-only mutation, the browser verifier serves the configured
+// packed output and checks the post-swap early-click gap, panel toggles,
+// return/direct navigation, and actual rendered story identities in preview
+// iframes. It repeats clean builds for a custom in-namespace collision and an
+// outside-namespace preview route.
 //
 // Model: scripts/__tests__/zudo-sg-no-stub-build.slow.test.ts (build +
 // dev boot, free-port + process-group kill).
@@ -32,6 +37,7 @@ import { existsSync, statSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { PACKED_HOST_SCENARIOS } from "./verify-styleguide-install-browser.mjs";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
 const fixtureRoot = path.join(root, "fixtures/engine-host");
@@ -480,6 +486,60 @@ export async function assertProductionCss(hostDir) {
   console.log("OK — production host CSS contains the catalog grid, sticky sidebar, and responsive visibility selectors.");
 }
 
+/** Assert the actual files emitted by a route scenario, including each detail page's iframe target. */
+async function assertPackedStoryRoutes(hostDir, scenarioName) {
+  const scenario = PACKED_HOST_SCENARIOS[scenarioName];
+  assert(scenario, `unknown packed-host route scenario ${scenarioName}`);
+  const { JSDOM } = await import("jsdom");
+  const previewFile = `dist/${scenario.previewPath.replace(/^\/+|\/+$/gu, "")}/index.html`;
+  assert(existsSync(path.join(hostDir, previewFile)), `missing built preview endpoint ${previewFile}`);
+  const previewDom = new JSDOM(await read(hostDir, previewFile));
+  assert(previewDom.window.document.documentElement.hasAttribute("data-sg-preview-doc"), `${previewFile} is not the engine preview document`);
+  previewDom.window.close();
+
+  const basePrefix = fixtureBase.replace(/\/$/u, "");
+  for (const story of scenario.stories) {
+    const detailFile = `dist/components/${story.slug}/index.html`;
+    assert(existsSync(path.join(hostDir, detailFile)), `missing built ${story.title} detail route ${detailFile}`);
+    const dom = new JSDOM(await read(hostDir, detailFile));
+    const document = dom.window.document;
+    assert(document.querySelector("main h1")?.textContent?.trim() === story.title,
+      `${detailFile} does not render the ${story.title} story identity in its heading`);
+    const iframe = document.querySelector("main iframe");
+    assert(iframe, `${detailFile} does not emit its preview iframe`);
+    const iframeUrl = new URL(iframe.getAttribute("src") ?? "", "https://fixture.invalid");
+    assert(iframeUrl.pathname === `${basePrefix}${scenario.previewPath}`,
+      `${detailFile} iframe points to ${iframeUrl.pathname}, expected ${scenario.previewPath} under base ${fixtureBase}`);
+    assert(iframeUrl.searchParams.get("slug") === story.slug,
+      `${detailFile} iframe query selects ${iframeUrl.searchParams.get("slug")}, expected ${story.slug}`);
+    assert(iframeUrl.searchParams.get("variant") === "Default",
+      `${detailFile} iframe query does not select the Default story`);
+    assert(iframeUrl.pathname !== `${basePrefix}/components/${story.slug}`,
+      `${story.title} detail and iframe endpoints resolve to the same URL`);
+    dom.window.close();
+  }
+  console.log(`OK — ${scenarioName} build emits separate detail and preview routes for ${scenario.stories.map((story) => story.title).join(", ")}.`);
+}
+
+function addScenarioRoutes(configSource, scenarioName) {
+  const scenario = PACKED_HOST_SCENARIOS[scenarioName];
+  assert(scenario, `unknown packed-host route scenario ${scenarioName}`);
+  if (Object.keys(scenario.routes).length === 0) return configSource;
+  const exportStart = "export default {";
+  assert(configSource.includes(exportStart), "fixture config no longer has the expected default export insertion point");
+  return configSource.replace(exportStart, `${exportStart}\n  routes: ${JSON.stringify(scenario.routes)},`);
+}
+
+async function verifyPackedHostBrowser(hostDir, scenarioName, earlyClick = false) {
+  const args = [
+    path.join(root, "scripts/verify-styleguide-install-browser.mjs"),
+    "--host", hostDir,
+    "--scenario", scenarioName,
+  ];
+  if (earlyClick) args.push("--early-click");
+  await run("node", args, root);
+}
+
 async function main() {
   const artifacts = await mkdtemp(path.join(os.tmpdir(), "zudo-sg-engine-pack-"));
   const hostDir = await mkdtemp(path.join(os.tmpdir(), "zudo-sg-engine-host-"));
@@ -569,7 +629,11 @@ async function main() {
     const slugDirs = (await readdir(path.join(hostDir, "dist/components"), { withFileTypes: true }))
       .filter((e) => e.isDirectory() && e.name !== "preview")
       .map((e) => e.name);
-    assert(slugDirs.length === 3, `expected 3 component detail routes, found ${slugDirs.length} (${slugDirs.join(", ")})`);
+    const defaultProbeSlugs = PACKED_HOST_SCENARIOS.default.stories.map((story) => story.slug);
+    assert(slugDirs.length === 6, `expected 6 component detail routes, found ${slugDirs.length} (${slugDirs.join(", ")})`);
+    for (const slug of [...defaultProbeSlugs, "button", "card", "counter"]) {
+      assert(slugDirs.includes(slug), `missing expected component detail route ${slug} (${slugDirs.join(", ")})`);
+    }
     for (const slug of slugDirs) {
       const detailPath = `dist/components/${slug}/index.html`;
       assert(existsSync(path.join(hostDir, detailPath)), `missing ${detailPath}`);
@@ -597,6 +661,7 @@ async function main() {
       previewHtml.includes('href="/styleguide/_zudo-sg/preview.css"') || previewHtml.includes("href=/styleguide/_zudo-sg/preview.css"),
       "preview document does not link /styleguide/_zudo-sg/preview.css",
     );
+    await assertPackedStoryRoutes(hostDir, "default");
 
     assert(existsSync(path.join(hostDir, "dist/tokens/index.html")), "missing dist/tokens/index.html");
     await assertTokensRoute(hostDir, false);
@@ -611,6 +676,27 @@ async function main() {
       await Promise.all(buildIslandsManifestFiles.map((f) => read(hostDir, `dist/assets/${f}`)))
     ).join("\n");
     assert(buildIslandsBundle.includes("Counter"), "dist/assets/islands-*.js does not contain Counter (half b, build side)");
+
+    await verifyPackedHostBrowser(hostDir, "default", true);
+
+    // Repeat clean packed-consumer builds with a preview endpoint that
+    // collides with a story detail path, then one outside that namespace.
+    // The route probes above share the same installed tarball and pinned peers.
+    for (const scenarioName of ["custom-collision", "outside-namespace"]) {
+      await writeFile(path.join(hostDir, "zudo-sg.config.mjs"), addScenarioRoutes(configSource, scenarioName));
+      for (const output of ["dist", ".zfb-build"]) {
+        await rm(path.join(hostDir, output), { recursive: true, force: true });
+      }
+      console.log(`zfb build (packed route scenario: ${scenarioName})`);
+      const scenarioBuildLog = await runStreamed("corepack", ["pnpm", "exec", "zfb", "build"], hostDir);
+      assert(!/has no matching registry entry/u.test(scenarioBuildLog), `${scenarioName} build logged an unregistered island marker`);
+      await assertPackedStoryRoutes(hostDir, scenarioName);
+      await verifyPackedHostBrowser(hostDir, scenarioName);
+    }
+    await writeFile(path.join(hostDir, "zudo-sg.config.mjs"), configSource);
+    for (const output of ["dist", ".zfb-build"]) {
+      await rm(path.join(hostDir, output), { recursive: true, force: true });
+    }
 
     console.log("Stripping the islands seed from the temp copy (ADR finding 4 amendment regression guard)");
     await rm(path.join(hostDir, "pages/lib/_zudo-sg-islands.ts"), { force: true });

@@ -5,7 +5,10 @@
 // GENERATED:SG_REGISTRY_BEGIN — do not hand-edit; run `zudo-sg gen-registry`.
 import type { StoryModule } from "@takazudo/zudo-sg/stories";
 
+import * as aPreview from "../../ui/a-preview/preview.stories.tsx";
+import * as bPreviewTwo from "../../ui/b-preview-two/preview-two.stories.tsx";
 import * as button from "../../ui/button/button.stories.tsx";
+import * as canvas from "../../ui/canvas/canvas.stories.tsx";
 import * as card from "../../ui/card/card.stories.tsx";
 import * as counter from "../../ui/counter/counter.stories.tsx";
 
@@ -15,7 +18,10 @@ import * as counter from "../../ui/counter/counter.stories.tsx";
  * `{ default: meta, ...named Story exports }`.
  */
 export const storyModules: Record<string, StoryModule> = {
+  "./ui/a-preview/preview.stories.tsx": aPreview as unknown as StoryModule,
+  "./ui/b-preview-two/preview-two.stories.tsx": bPreviewTwo as unknown as StoryModule,
   "./ui/button/button.stories.tsx": button as unknown as StoryModule,
+  "./ui/canvas/canvas.stories.tsx": canvas as unknown as StoryModule,
   "./ui/card/card.stories.tsx": card as unknown as StoryModule,
   "./ui/counter/counter.stories.tsx": counter as unknown as StoryModule,
 };
@@ -31,7 +37,10 @@ export const storyModules: Record<string, StoryModule> = {
  * `isStory()`-filtered variants, never to gate membership.
  */
 export const storyExportOrder: Record<string, string[]> = {
+  "./ui/a-preview/preview.stories.tsx": ["Default"],
+  "./ui/b-preview-two/preview-two.stories.tsx": ["Default"],
   "./ui/button/button.stories.tsx": ["Primary", "Plain"],
+  "./ui/canvas/canvas.stories.tsx": ["Default"],
   "./ui/card/card.stories.tsx": ["Basic"],
   "./ui/counter/counter.stories.tsx": ["Basic"],
 };

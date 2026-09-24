@@ -398,7 +398,7 @@ async function installLocalEngine(hostDir, engineTarball) {
   console.log(`Using locally packed @takazudo/zudo-sg instead of ${original}.`);
 }
 
-async function assertGeneratedRegistry(hostDir, expectedCount = 3) {
+async function assertGeneratedRegistry(hostDir, expectedCount = 6) {
   const registryPath = path.join(hostDir, "src/styleguide/sg-registry.ts");
   const registry = await readFile(registryPath, "utf8");
   const keys = [...registry.matchAll(/^\s*["'](\.\/[^"'\n]+\.stories\.tsx)["']\s*:/gmu)].map((match) => match[1]);
@@ -465,7 +465,7 @@ async function assertNewComponentScaffolds(hostDir) {
     "preact",
     ...generatedFiles,
   ], hostDir);
-  await assertGeneratedRegistry(hostDir, 5);
+  await assertGeneratedRegistry(hostDir, 8);
   console.log("OK — flat and nested scaffold imports resolve in the initialized host.");
 }
 
@@ -519,7 +519,7 @@ async function assertBuildRoutes(hostDir) {
     .filter((entry) => entry.isDirectory() && entry.name !== "preview")
     .map((entry) => entry.name)
     .sort();
-  assert(slugs.length === 5, `expected 5 component detail routes after flat/nested scaffolding, found ${slugs.length} (${slugs.join(", ")})`);
+  assert(slugs.length === 8, `expected 8 component detail routes after flat/nested scaffolding, found ${slugs.length} (${slugs.join(", ")})`);
   for (const slug of ["proof-flat", "proof-nested"]) {
     assert(slugs.includes(slug), `missing built route for scaffolded component ${slug}`);
   }
@@ -533,7 +533,7 @@ async function assertBuildRoutes(hostDir) {
     "preview route does not link the base-/ standalone /_zudo-sg/preview.css",
   );
   assert(!preview.includes("/styleguide/"), 'preview route contains a stale /styleguide/ link under base "/"');
-  console.log(`OK — built /components, 5 component details including both scaffolds, /components/preview, /tokens, and /_zudo-sg/preview.css.`);
+  console.log(`OK — built /components, 8 component details including both scaffolds, /components/preview, /tokens, and /_zudo-sg/preview.css.`);
 }
 
 async function assertInternalLinks(hostDir) {
