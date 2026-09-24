@@ -88,7 +88,11 @@ preview/control combinations, and missing references fail generation before
 writing output. Run `pnpm gen-token-manifest` after changing CSS or the spec,
 then `pnpm gen-token-manifest --check` in CI. The complete foreign configuration lives in `fixtures/foreign-tokens/`. The packed foreign-host
 proof is `node scripts/verify-styleguide-install.mjs` from
-this repository (a guarded heavy check).
+this repository (a guarded heavy check). It installs the packed tarball with
+pinned peers outside the workspace, builds at `/styleguide/`, checks the
+default, custom-collision, and outside-namespace configurations, and runs
+browser checks for early preview-panel clicks plus the rendered identity
+inside detail-page iframes.
 
 ## Framework scope
 
