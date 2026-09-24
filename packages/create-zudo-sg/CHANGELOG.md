@@ -4,6 +4,19 @@ All notable changes to `create-zudo-sg` are documented in this file.
 
 The format is based on Keep a Changelog.
 
+## [0.1.8] - 2026-09-25
+
+### Changed
+
+- Update the starter's zfb, zfb-runtime, and zfb-md-wasm pins to 2.20.3,
+  including the exact release-age exclusions for their native packages.
+- Update the starter engine range to `@takazudo/zudo-sg ^0.3.6`.
+
+### Fixed
+
+- Make template regeneration work through symlinked paths, including macOS
+  temporary directories, while preserving import-only use from stdin.
+
 ## [0.1.7] - 2026-09-25
 
 ### Changed
