@@ -20,24 +20,9 @@
 import type { VNode, JSX } from "preact";
 import { Island } from "@takazudo/zfb";
 import PreviewTokenPanelBootstrap from "@takazudo/zudo-sg/token-tweak/preview-token-panel-bootstrap";
+import { previewTokenPanelCaptureScript } from "@takazudo/zudo-sg/token-tweak";
 
 (PreviewTokenPanelBootstrap as { displayName?: string }).displayName = "PreviewTokenPanelBootstrap";
-
-function prehydrationPanelToggleScript(toggleEvent: string): string {
-  return `(${function capturePanelToggle(channel: string) {
-    const script = document.currentScript as (HTMLScriptElement & {
-      __zdtpPrehydrateListener?: EventListener;
-    }) | null;
-    if (!script || script.dataset.bound === "1") return;
-    script.dataset.bound = "1";
-    script.dataset.pending = "0";
-    const listener = () => {
-      script.dataset.pending = String(Number(script.dataset.pending ?? "0") + 1);
-    };
-    script.__zdtpPrehydrateListener = listener;
-    window.addEventListener(channel, listener);
-  }.toString()})(${JSON.stringify(toggleEvent)});`;
-}
 
 /**
  * The body-end islands this starter mounts. Currently just the preview
@@ -48,8 +33,7 @@ export function BodyEndIslands(): JSX.Element {
     <>
       {/* Capture pre-hydration clicks; the bootstrap drains this once it loads. */}
       <script
-        id="zdtp-preview-prehydrate"
-        dangerouslySetInnerHTML={{ __html: prehydrationPanelToggleScript("toggle-preview-token-panel") }}
+        dangerouslySetInnerHTML={{ __html: previewTokenPanelCaptureScript() }}
       />
       {Island({
         when: "load",

@@ -152,6 +152,8 @@ The same panel instance opens from three places, all dispatching the same
   the chrome-defaults `headerNav`/`headerRightItems` promotion (which only fires
   for a host with an empty `headerNav`), this trigger is unconditional — a host
   with its own navigation, like this showcase, still gets it.
+  Its inline script captures clicks until the preview panel's load island
+  registers its listener, including across a host-to-engine SPA transition.
 - **Workbench "Preview tokens" button** — the stacked-frames-glyph button in a
   component detail page's toolbar (`/components/<slug>`).
 - **`/tokens` dashboard button** — the `PreviewTokensButton` island above the
@@ -160,6 +162,14 @@ The same panel instance opens from three places, all dispatching the same
 These identifiers are deliberately distinct from the retired doc-chrome trigger
 (`id="sg-doc-tweak-trigger"`, event `toggle-sg-doc-tweak`) so any regression guard
 built against the old names keeps its meaning.
+
+For a custom header trigger, render the package's
+`previewTokenPanelCaptureScript()` (`@takazudo/zudo-sg/token-tweak`) in a
+body-end `<script>` before `PreviewTokenPanelBootstrap` on host and engine
+routes. The helper can appear on each route without adding another listener.
+It replaces the older
+host-copied `zdtp-preview-prehydrate` script; existing hosts that still render
+that script remain compatible.
 
 ### Tier preview kinds
 

@@ -98,6 +98,14 @@ instead of an inert one:
   injected `/components/*` and `/tokens` routes too, not just the host-owned
   `/`.
 
+The public header trigger installs an early toggle capture before the load
+island is ready. A host with its own header trigger can render
+`previewTokenPanelCaptureScript()` from `@takazudo/zudo-sg/token-tweak` in a
+body-end `<script>` before `PreviewTokenPanelBootstrap` on both host and engine
+routes. The helper is safe to render on each route; the bootstrap drains the
+captured click parity once its listener is ready. The scaffold's
+`BodyEndIslands` shows this composition.
+
 This ships **tabs without the Apply write sandbox** — `zdtpApplyProxy` also
 accepts `routingFile` and `writeRoot`, together, as an opt-in next step: they
 let the panel's **Apply** button persist a tweak directly into your project's

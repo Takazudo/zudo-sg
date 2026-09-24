@@ -34,3 +34,4 @@ export type {
   PreviewTokenPanelManifest,
 } from "./preview-token-panel-config.js";
 export { drainPrehydrationToggle, installOwnerConsoleHelpers, loadZdtp } from "./token-panel-native-bootstrap.js";
+export { PREVIEW_TOKEN_PANEL_CAPTURE_SCRIPT, previewTokenPanelCaptureScript } from "./preview-token-panel-capture.js";

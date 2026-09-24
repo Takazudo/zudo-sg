@@ -15,6 +15,7 @@ import {
 import { DEFAULT_PREVIEW_CSS_URL } from "../sg-context.js";
 import { resolveSgRoutes, type SgRoutes } from "../sg-routes.js";
 import type { HostTokensSpec } from "../token-spec.js";
+import { PREVIEW_TOKEN_PANEL_CAPTURE_SCRIPT } from "../token-tweak/preview-token-panel-capture.js";
 export type { HostTokensSpec, HostTokenGroupSpec, HostTokenSpec, TokenPreview, TokenControl, GeneratedTokenGroups, GeneratedTokenGroup } from "../token-spec.js";
 
 export const ROUTES_PLUGIN_NAME = "@takazudo/zudo-sg/plugins/routes";
@@ -170,6 +171,7 @@ const HEADER_TOKEN_TRIGGER_HTML =
   SLIDERS_GLYPH +
   "</button>" +
   "<script>(function(){" +
+  PREVIEW_TOKEN_PANEL_CAPTURE_SCRIPT +
   `if(window.${TRIGGER_INSTALLED_FLAG})return;` +
   `window.${TRIGGER_INSTALLED_FLAG}=true;` +
   "function sync(){" +
