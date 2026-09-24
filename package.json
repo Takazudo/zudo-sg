@@ -65,7 +65,7 @@
     "happy-dom": "^16.8.1",
     "html-validate": "^10.0.0",
     "jsdom": "^29.1.1",
-    "lefthook": "^2.1.9",
+    "lefthook": "^2.1.14",
     "msw": "^2.15.0",
     "postcss": "^8.5.28",
     "tailwindcss": "^4.2.0",
