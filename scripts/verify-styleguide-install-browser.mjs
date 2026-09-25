@@ -198,6 +198,16 @@ async function afterSwapPromise(page) {
   }));
 }
 
+async function pageLoadPromise(page) {
+  return page.evaluate(() => new Promise((resolve, reject) => {
+    const timeout = window.setTimeout(() => reject(new Error("timed out waiting for zfb:page-load")), 15_000);
+    document.addEventListener("zfb:page-load", () => {
+      window.clearTimeout(timeout);
+      resolve();
+    }, { once: true });
+  }));
+}
+
 async function proveEarlyClick(page, origin) {
   const errors = [];
   const badResponses = [];
@@ -427,8 +437,10 @@ async function proveReadyHostBootstrap(page, origin, panelChunkPaths) {
       });
     }
     const forward = afterSwapPromise(page);
+    const loaded = pageLoadPromise(page);
     await page.goForward();
     await forward;
+    await loaded;
     if (turn === 0) {
       const configuredClick = await page.evaluate(() => window.__packedConfiguredSwapClick);
       const delivered = await page.evaluate(() => window.__packedReadyClickEvents);

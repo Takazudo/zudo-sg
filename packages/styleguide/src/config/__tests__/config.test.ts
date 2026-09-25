@@ -356,7 +356,7 @@ describe("withZudoSg() header token trigger", () => {
     expect(btn.hidden).toBe(true);
   });
 
-  it("installs one sync and one delivery listener when the blob runs twice", async () => {
+  it("installs one after-navigate sync listener when the blob runs twice", async () => {
     const { Window } = await import("happy-dom");
     const html = triggerItemsOf(withZudoSg(configuredHost(), OPTIONS).plugins[0])[0]?.html as string;
     const script = html.slice(html.indexOf("<script>") + "<script>".length, html.lastIndexOf("</script>"));
@@ -383,7 +383,7 @@ describe("withZudoSg() header token trigger", () => {
     run(win, doc, win.CustomEvent);
     run(win, doc, win.CustomEvent);
 
-    expect(added).toBe(2);
+    expect(added).toBe(1);
     expect(captures).toBe(1);
   });
 
@@ -411,6 +411,8 @@ describe("withZudoSg() header token trigger", () => {
     expect(delivered).toBe(1);
     doc.dispatchEvent(new win.Event("zfb:after-swap"));
     expect(delivered).toBe(1);
+    doc.dispatchEvent(new win.Event("zfb:page-load"));
+    expect(delivered).toBe(1);
     await Promise.resolve();
     expect(delivered).toBe(2);
 
@@ -420,6 +422,8 @@ describe("withZudoSg() header token trigger", () => {
       expect(delivered).toBe(2);
     }, { once: true });
     doc.dispatchEvent(new win.Event("zfb:after-swap"));
+    expect(delivered).toBe(2);
+    doc.dispatchEvent(new win.Event("zfb:page-load"));
     await Promise.resolve();
     expect(delivered).toBe(3);
 
