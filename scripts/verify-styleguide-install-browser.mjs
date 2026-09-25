@@ -161,6 +161,33 @@ async function assertPanelState(page, visible) {
   }
 }
 
+async function panelDiagnostics(page) {
+  return page.evaluate(() => {
+    const shells = [...document.querySelectorAll(".tokenpanel-shell")];
+    const bindings = window.__zudoDesignTokenPanelInstanceBindings;
+    const lifecycle = window.__zudoDesignTokenPanelLifecycle;
+    return {
+      route: location.pathname,
+      capture: window.__sgPreviewTokenPanelCapture && {
+        ready: window.__sgPreviewTokenPanelCapture.ready,
+        pending: window.__sgPreviewTokenPanelCapture.pending,
+      },
+      clickEvents: window.__packedReadyClickEvents,
+      shells: shells.map((shell) => ({
+        connected: shell.isConnected,
+        visibility: getComputedStyle(shell).visibility,
+        display: getComputedStyle(shell).display,
+        hidden: shell.hasAttribute("hidden"),
+      })),
+      previewStorage: Object.fromEntries(Object.keys(localStorage)
+        .filter((key) => key.startsWith("sg-preview-tweak"))
+        .map((key) => [key, localStorage.getItem(key)])),
+      bindingPrefixes: bindings instanceof Map ? [...bindings.keys()] : null,
+      lifecycleCleanups: Array.isArray(lifecycle?.cleanups) ? lifecycle.cleanups.length : null,
+    };
+  });
+}
+
 async function afterSwapPromise(page) {
   return page.evaluate(() => new Promise((resolve, reject) => {
     const timeout = window.setTimeout(() => reject(new Error("timed out waiting for zfb:after-swap")), 15_000);
@@ -394,8 +421,16 @@ async function proveReadyHostBootstrap(page, origin, panelChunkPaths) {
       const configuredClick = await page.evaluate(() => window.__packedConfiguredSwapClick);
       check(configuredClick?.visible && configuredClick.clickEvents === 1 && configuredClick.ready === true && configuredClick.pending === 0,
         `configured after-swap click missed the public preview channel: ${JSON.stringify(configuredClick)}`);
+      const afterSwapClick = await panelDiagnostics(page);
       await assertPanelState(page, false);
       await trigger.click();
+      const afterReopenClick = await panelDiagnostics(page);
+      try {
+        await assertPanelState(page, true);
+      } catch (error) {
+        fail(`configured SPA toggle sequence lost the panel: afterSwapClick=${JSON.stringify(afterSwapClick)}; afterReopenClick=${JSON.stringify(afterReopenClick)}; final=${JSON.stringify(await panelDiagnostics(page))}; ${error}`);
+      }
+      continue;
     }
     await assertPanelState(page, true);
     check(await trigger.count() === 1, "SPA navigation duplicated the preview trigger");
