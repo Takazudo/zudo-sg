@@ -246,6 +246,10 @@ async function proveEarlyClick(page, origin) {
 }
 
 async function proveReadyHostBootstrap(page, origin) {
+  const scriptRequests = [];
+  page.on("request", (request) => {
+    if (request.resourceType() === "script") scriptRequests.push(request.url());
+  });
   let releaseLoader;
   const loaderGate = new Promise((resolve) => { releaseLoader = resolve; });
   page.once("close", () => releaseLoader());
@@ -265,6 +269,8 @@ async function proveReadyHostBootstrap(page, origin) {
     window.__packedReadyHeader = document.querySelector("header[data-zfb-transition-persist]");
     window.__packedReadyProof = null;
     window.__packedBeforeSwapProof = null;
+    window.__packedReadyClickEvents = 0;
+    window.addEventListener("toggle-preview-token-panel", () => { window.__packedReadyClickEvents += 1; });
     document.addEventListener("zfb:before-swap", () => {
       const capture = window.__sgPreviewTokenPanelCapture;
       window.__packedBeforeSwapProof = { ready: capture?.ready, pending: capture?.pending };
@@ -274,24 +280,56 @@ async function proveReadyHostBootstrap(page, origin) {
       const capture = window.__sgPreviewTokenPanelCapture;
       window.__packedReadyProof = {
         persisted: window.__packedReadyHeader === document.querySelector("header[data-zfb-transition-persist]"),
-        visible: Boolean(button && !button.hidden && !button.disabled),
+        visibleAtSwap: Boolean(button && !button.hidden && !button.disabled),
         before: { ready: capture?.ready, pending: capture?.pending },
       };
-      if (button && !button.hidden && !button.disabled) button.click();
-      window.__packedReadyProof.after = { ready: capture?.ready, pending: capture?.pending };
+      const clickWhenVisible = () => {
+        if (!button || button.hidden || button.disabled) return false;
+        button.click();
+        window.__packedReadyProof.after = { ready: capture?.ready, pending: capture?.pending };
+        return true;
+      };
+      if (clickWhenVisible() || !button) return;
+      const observer = new MutationObserver(() => {
+        if (clickWhenVisible()) observer.disconnect();
+      });
+      observer.observe(button, { attributes: true, attributeFilter: ["hidden", "disabled"] });
     }, { once: true });
   });
-  const loaderRequest = page.waitForRequest(/\/assets\/[^/]*zdtp-loader[^/]*\.js(?:\?.*)?$/u);
+  const loaderRequest = page.waitForRequest(/\/assets\/[^/]*zdtp-loader[^/]*\.js(?:\?.*)?$/u, { timeout: 10_000 })
+    .catch((error) => error);
   const swapped = afterSwapPromise(page);
   await page.getByRole("link", { name: "Components", exact: true }).first().click();
   await swapped;
-  await loaderRequest;
+  try {
+    await page.waitForFunction(() => window.__packedReadyProof?.after !== undefined, null, { timeout: 10_000 });
+  } catch (error) {
+    const state = await page.evaluate(() => ({
+      beforeSwap: window.__packedBeforeSwapProof,
+      afterSwap: window.__packedReadyProof,
+      clickEvents: window.__packedReadyClickEvents,
+      trigger: (() => {
+        const button = document.getElementById("sg-preview-tokens-trigger");
+        return button ? { hidden: button.hidden, disabled: button.disabled, connected: button.isConnected } : null;
+      })(),
+    }));
+    fail(`the persisted trigger never produced a ready click: ${JSON.stringify(state)}; scriptRequests=${JSON.stringify(scriptRequests)}; ${error}`);
+  }
   const proof = await page.evaluate(() => window.__packedReadyProof);
   const beforeSwap = await page.evaluate(() => window.__packedBeforeSwapProof);
   check(beforeSwap?.ready === true && beforeSwap.pending === 0, `host bootstrap was not ready before the body swap: ${JSON.stringify(beforeSwap)}`);
-  check(proof?.persisted && proof.visible, `ready host probe missed its persisted visible trigger: ${JSON.stringify(proof)}`);
+  check(proof?.persisted, `ready host probe lost its persisted trigger: ${JSON.stringify(proof)}`);
   check(proof.before.ready === true && proof.after.ready === true, `capture was not ready across the click: ${JSON.stringify(proof)}`);
   check(proof.before.pending === 0 && proof.after.pending === 0, `a ready click entered the early queue: ${JSON.stringify(proof)}`);
+  const clickEvents = await page.evaluate(() => window.__packedReadyClickEvents);
+  check(clickEvents === 1, `expected one public toggle event, got ${clickEvents}: ${JSON.stringify(proof)}`);
+  const loaderResult = await loaderRequest;
+  if (loaderResult instanceof Error) {
+    const resources = await page.evaluate(() => performance.getEntriesByType("resource")
+      .filter((entry) => entry.name.endsWith(".js"))
+      .map((entry) => entry.name));
+    fail(`lazy loader request was not observed after a ready click: proof=${JSON.stringify(proof)}; clickEvents=${clickEvents}; scriptRequests=${JSON.stringify(scriptRequests)}; resources=${JSON.stringify(resources)}; ${loaderResult}`);
+  }
   check(heldLoader, "the real lazy zdtp loader was not held after the ready click");
   await assertPanelState(page, false);
   releaseLoader();
