@@ -164,6 +164,7 @@ async function assertPanelState(page, visible) {
 async function panelDiagnostics(page) {
   return page.evaluate(() => {
     const shells = [...document.querySelectorAll(".tokenpanel-shell")];
+    const roots = [...document.querySelectorAll('[id$="-root"]')];
     const bindings = window.__zudoDesignTokenPanelInstanceBindings;
     const lifecycle = window.__zudoDesignTokenPanelLifecycle;
     return {
@@ -179,6 +180,9 @@ async function panelDiagnostics(page) {
         display: getComputedStyle(shell).display,
         hidden: shell.hasAttribute("hidden"),
       })),
+      roots: roots.map((root) => ({ id: root.id, connected: root.isConnected, children: root.childElementCount, htmlStart: root.innerHTML.slice(0, 120) })),
+      bodyConnected: document.body?.isConnected,
+      readyState: document.readyState,
       previewStorage: Object.fromEntries(Object.keys(localStorage)
         .filter((key) => key.startsWith("sg-preview-tweak"))
         .map((key) => [key, localStorage.getItem(key)])),
@@ -297,6 +301,11 @@ async function proveEarlyClick(page, origin) {
 
 async function proveReadyHostBootstrap(page, origin, panelChunkPaths) {
   const scriptRequests = [];
+  const browserErrors = [];
+  page.on("pageerror", (error) => browserErrors.push(error.message));
+  page.on("console", (message) => {
+    if (message.type() === "error") browserErrors.push(message.text());
+  });
   page.on("request", (request) => {
     if (request.resourceType() === "script") scriptRequests.push(request.url());
   });
@@ -331,6 +340,29 @@ async function proveReadyHostBootstrap(page, origin, panelChunkPaths) {
     window.__packedBeforeSwapProof = null;
     window.__packedReadyClickEvents = 0;
     window.__packedConfiguredSwapArmed = false;
+    window.__packedPanelLifecycleSnapshots = [];
+    const snapshot = (stage) => {
+      window.__packedPanelLifecycleSnapshots.push({
+        stage,
+        root: Boolean(document.getElementById("sg-preview-tweak-root")),
+        shell: Boolean(document.querySelector(".tokenpanel-shell")),
+        open: localStorage.getItem("sg-preview-tweak-open"),
+      });
+    };
+    document.addEventListener("zfb:before-swap", () => {
+      if (window.__packedConfiguredSwapArmed) snapshot("before-swap");
+    });
+    document.addEventListener("zfb:after-swap", () => {
+      if (window.__packedConfiguredSwapArmed) snapshot("after-swap-early");
+    });
+    document.addEventListener("zfb:page-load", () => {
+      snapshot("page-load");
+      queueMicrotask(() => snapshot("page-load-microtask"));
+    });
+    const observer = new MutationObserver(() => {
+      if (window.__packedPanelLifecycleSnapshots.length < 60) snapshot("dom-mutation");
+    });
+    observer.observe(document, { childList: true, subtree: true });
     window.addEventListener("toggle-preview-token-panel", () => { window.__packedReadyClickEvents += 1; });
     // Install before the first lazy zdtp activation. When armed later, this
     // listener runs before zdtp's onPageLoad remount during after-swap.
@@ -433,6 +465,7 @@ async function proveReadyHostBootstrap(page, origin, panelChunkPaths) {
       await page.evaluate(() => {
         window.__packedConfiguredSwapClick = null;
         window.__packedConfiguredAfterDispatch = null;
+        window.__packedPanelLifecycleSnapshots = [];
         window.__packedConfiguredSwapArmed = true;
       });
     }
@@ -448,17 +481,18 @@ async function proveReadyHostBootstrap(page, origin, panelChunkPaths) {
         `configured after-swap click missed the public preview channel: ${JSON.stringify(configuredClick)}`);
       const afterSwapClick = await panelDiagnostics(page);
       const afterDispatch = await page.evaluate(() => window.__packedConfiguredAfterDispatch);
+      const lifecycleSnapshots = await page.evaluate(() => window.__packedPanelLifecycleSnapshots);
       try {
         await assertPanelState(page, false);
       } catch (error) {
-        fail(`configured pre-remount click did not close the panel: event=${JSON.stringify(configuredClick)}; afterDispatch=${JSON.stringify(afterDispatch)}; afterSwapClick=${JSON.stringify(afterSwapClick)}; final=${JSON.stringify(await panelDiagnostics(page))}; ${error}`);
+        fail(`configured pre-remount click did not close the panel: event=${JSON.stringify(configuredClick)}; afterDispatch=${JSON.stringify(afterDispatch)}; afterSwapClick=${JSON.stringify(afterSwapClick)}; lifecycle=${JSON.stringify(lifecycleSnapshots)}; browserErrors=${JSON.stringify(browserErrors)}; final=${JSON.stringify(await panelDiagnostics(page))}; ${error}`);
       }
       await trigger.click();
       const afterReopenClick = await panelDiagnostics(page);
       try {
         await assertPanelState(page, true);
       } catch (error) {
-        fail(`configured SPA toggle sequence lost the panel: event=${JSON.stringify(configuredClick)}; afterDispatch=${JSON.stringify(afterDispatch)}; afterSwapClick=${JSON.stringify(afterSwapClick)}; afterReopenClick=${JSON.stringify(afterReopenClick)}; final=${JSON.stringify(await panelDiagnostics(page))}; ${error}`);
+        fail(`configured SPA toggle sequence lost the panel: event=${JSON.stringify(configuredClick)}; afterDispatch=${JSON.stringify(afterDispatch)}; afterSwapClick=${JSON.stringify(afterSwapClick)}; afterReopenClick=${JSON.stringify(afterReopenClick)}; lifecycle=${JSON.stringify(lifecycleSnapshots)}; browserErrors=${JSON.stringify(browserErrors)}; final=${JSON.stringify(await panelDiagnostics(page))}; ${error}`);
       }
       continue;
     }
