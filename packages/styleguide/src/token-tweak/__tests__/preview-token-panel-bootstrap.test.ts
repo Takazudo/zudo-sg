@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
   configurePanel: vi.fn(),
   enableAutoload: vi.fn(),
   disableAutoload: vi.fn(),
+  setLifecycleAdapter: vi.fn(),
   tabs: undefined as unknown,
 }));
 
@@ -21,6 +22,7 @@ vi.mock("@takazudo/zdtp", () => ({
   configurePanel: mocks.configurePanel,
   enableAutoload: mocks.enableAutoload,
   disableAutoload: mocks.disableAutoload,
+  setLifecycleAdapter: mocks.setLifecycleAdapter,
 }));
 vi.mock("virtual:zudo-sg-preview-token-panel", () => ({
   get tabs() {
@@ -61,6 +63,9 @@ async function hydrate(): Promise<void> {
 }
 
 beforeEach(() => {
+  const lifecycle = (window as unknown as { __sgPreviewPanelLifecycle?: { observer: MutationObserver } }).__sgPreviewPanelLifecycle;
+  lifecycle?.observer.disconnect();
+  delete (window as unknown as { __sgPreviewPanelLifecycle?: unknown }).__sgPreviewPanelLifecycle;
   const capture = (window as unknown as { __sgPreviewTokenPanelCapture?: { listener: EventListener } }).__sgPreviewTokenPanelCapture;
   if (capture) window.removeEventListener("toggle-preview-token-panel", capture.listener);
   delete (window as unknown as { __sgPreviewTokenPanelCapture?: unknown }).__sgPreviewTokenPanelCapture;
@@ -69,6 +74,7 @@ beforeEach(() => {
   mocks.configurePanel.mockReset();
   mocks.enableAutoload.mockReset();
   mocks.disableAutoload.mockReset();
+  mocks.setLifecycleAdapter.mockReset();
   mocks.tabs = TABS;
   document.body.replaceChildren();
   delete (window as unknown as Record<string, unknown>).sgPreview;
@@ -95,6 +101,37 @@ describe("PreviewTokenPanelBootstrap island", () => {
     expect(builder()).toBe(config);
     expect(() => assertValidPanelConfig(config as never)).not.toThrow();
     expect(mocks.configurePanel).not.toHaveBeenCalled();
+    expect(mocks.setLifecycleAdapter).not.toHaveBeenCalled();
+  });
+
+  it("binds the loaded panel lifecycle after zfb mounts new islands", async () => {
+    await hydrate();
+    expect(mocks.setLifecycleAdapter).not.toHaveBeenCalled();
+
+    const root = document.createElement("div");
+    root.id = "sg-preview-tweak-root";
+    const shell = document.createElement("div");
+    shell.className = "tokenpanel-shell";
+    root.append(shell);
+    document.body.append(root);
+    await vi.waitFor(() => expect(mocks.setLifecycleAdapter).toHaveBeenCalledTimes(1));
+
+    const adapter = mocks.setLifecycleAdapter.mock.calls[0]?.[0] as {
+      onBeforeSwap(callback: () => void): () => void;
+      onPageLoad(callback: () => void): () => void;
+    };
+    const before = vi.fn();
+    const loaded = vi.fn();
+    const stopBefore = adapter.onBeforeSwap(before);
+    const stopLoaded = adapter.onPageLoad(loaded);
+    document.dispatchEvent(new Event("zfb:before-swap"));
+    document.dispatchEvent(new Event("zfb:after-swap"));
+    expect(before).toHaveBeenCalledTimes(1);
+    expect(loaded).not.toHaveBeenCalled();
+    document.dispatchEvent(new Event("zfb:page-load"));
+    expect(loaded).toHaveBeenCalledTimes(1);
+    stopBefore();
+    stopLoaded();
   });
 
   it("renders nothing and bootstraps nothing when the host configured no tabsModule", async () => {
