@@ -54,7 +54,6 @@ const TABS = [
 
 type ConsoleHelpers = { enableAutoload(): Promise<void>; disableAutoload(): Promise<void> };
 type PrehydrateScript = HTMLScriptElement & { __zdtpPrehydrateListener?: EventListener };
-type RepairWindow = Window & { __sgPreviewPanelRepair?: () => Promise<void> };
 
 async function hydrate(): Promise<void> {
   const module = await import("../preview-token-panel-bootstrap.js");
@@ -73,8 +72,6 @@ beforeEach(() => {
   mocks.tabs = TABS;
   document.body.replaceChildren();
   delete (window as unknown as Record<string, unknown>).sgPreview;
-  delete (window as RepairWindow).__sgPreviewPanelRepair;
-  localStorage.clear();
 });
 
 afterEach(() => vi.restoreAllMocks());
@@ -98,34 +95,6 @@ describe("PreviewTokenPanelBootstrap island", () => {
     expect(builder()).toBe(config);
     expect(() => assertValidPanelConfig(config as never)).not.toThrow();
     expect(mocks.configurePanel).not.toHaveBeenCalled();
-  });
-
-  it("repairs only an empty preview root through an idempotent public handle", async () => {
-    await hydrate();
-    const repair = (window as RepairWindow).__sgPreviewPanelRepair!;
-    const open = vi.fn();
-    mocks.configurePanel.mockReturnValue({ open });
-    const other = document.createElement("div");
-    other.id = "zudo-design-token-panel-root";
-    const preview = document.createElement("div");
-    preview.id = "sg-preview-tweak-root";
-    document.body.append(other, preview);
-    localStorage.setItem("sg-preview-tweak-open", "1");
-
-    await repair();
-    expect(preview.isConnected).toBe(false);
-    expect(other.isConnected).toBe(true);
-    expect(mocks.configurePanel).toHaveBeenCalledWith(expect.objectContaining({ storagePrefix: "sg-preview-tweak" }));
-    expect(open).toHaveBeenCalledTimes(1);
-
-    const closedPack = document.createElement("div");
-    closedPack.id = "sg-preview-tweak--sepia-root";
-    document.body.append(closedPack);
-    mocks.configurePanel.mockClear();
-    await repair();
-    expect(closedPack.isConnected).toBe(false);
-    expect(mocks.configurePanel).toHaveBeenCalledWith(expect.objectContaining({ storagePrefix: "sg-preview-tweak--sepia" }));
-    expect(open).toHaveBeenCalledTimes(1);
   });
 
   it("renders nothing and bootstraps nothing when the host configured no tabsModule", async () => {

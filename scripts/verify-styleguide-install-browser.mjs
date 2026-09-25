@@ -476,8 +476,6 @@ async function proveReadyHostBootstrap(page, origin, panelChunkPaths) {
     await loaded;
     if (turn === 0) {
       const configuredClick = await page.evaluate(() => window.__packedConfiguredSwapClick);
-      await page.waitForFunction((before) => window.__packedReadyClickEvents === before + 1,
-        configuredClick?.clickEventsBefore, { timeout: 15_000 });
       const delivered = await page.evaluate(() => window.__packedReadyClickEvents);
       check(configuredClick?.visible && delivered - configuredClick.clickEventsBefore === 1 && configuredClick.ready === true && configuredClick.pending === 0,
         `configured after-swap click missed the public preview channel: ${JSON.stringify(configuredClick)}`);
