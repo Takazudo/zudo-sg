@@ -318,7 +318,7 @@ describe("withZudoSg() header token trigger", () => {
     );
     expect(html).toContain('aria-label="Open component tokens panel"');
     expect(html).toContain('title="Component tokens"');
-    expect(html).toContain("onclick=\"window.dispatchEvent(new CustomEvent('toggle-preview-token-panel'))\"");
+    expect(html).toContain('onclick="window.__sgPreviewTokenPanelToggleFromHeader()"');
     expect(html).toContain('<circle cx="9" cy="6" r="2.4" fill="currentColor" stroke="none"></circle>');
 
     expect(html).toContain("window.__sgPreviewTokensTriggerInstalled");
@@ -356,7 +356,7 @@ describe("withZudoSg() header token trigger", () => {
     expect(btn.hidden).toBe(true);
   });
 
-  it("installs exactly one after-navigate listener when the blob runs twice", async () => {
+  it("installs one sync and one delivery listener when the blob runs twice", async () => {
     const { Window } = await import("happy-dom");
     const html = triggerItemsOf(withZudoSg(configuredHost(), OPTIONS).plugins[0])[0]?.html as string;
     const script = html.slice(html.indexOf("<script>") + "<script>".length, html.lastIndexOf("</script>"));
@@ -383,8 +383,64 @@ describe("withZudoSg() header token trigger", () => {
     run(win, doc, win.CustomEvent);
     run(win, doc, win.CustomEvent);
 
-    expect(added).toBe(1);
+    expect(added).toBe(2);
     expect(captures).toBe(1);
+  });
+
+  it("delivers header toggles after SPA remount while keeping direct and early clicks", async () => {
+    const { Window } = await import("happy-dom");
+    const html = triggerItemsOf(withZudoSg(configuredHost(), OPTIONS).plugins[0])[0]?.html as string;
+    const script = html.slice(html.indexOf("<script>") + "<script>".length, html.lastIndexOf("</script>"));
+    const win = new Window();
+    const doc = win.document;
+    doc.body.innerHTML = html.slice(0, html.indexOf("<script>"));
+    new Function("window", "document", "CustomEvent", script)(win, doc, win.CustomEvent);
+    const state = win as unknown as {
+      __sgPreviewTokenPanelCapture: { ready: boolean; pending: number };
+      __sgPreviewTokenPanelToggleFromHeader(): void;
+    };
+    state.__sgPreviewTokenPanelCapture.ready = true;
+    let delivered = 0;
+    win.addEventListener("toggle-preview-token-panel", () => { delivered++; });
+
+    state.__sgPreviewTokenPanelToggleFromHeader();
+    expect(delivered).toBe(1);
+
+    doc.dispatchEvent(new win.Event("zfb:before-swap"));
+    state.__sgPreviewTokenPanelToggleFromHeader();
+    expect(delivered).toBe(1);
+    doc.dispatchEvent(new win.Event("zfb:after-swap"));
+    expect(delivered).toBe(1);
+    await Promise.resolve();
+    expect(delivered).toBe(2);
+
+    doc.dispatchEvent(new win.Event("zfb:before-swap"));
+    doc.addEventListener("zfb:after-swap", () => {
+      state.__sgPreviewTokenPanelToggleFromHeader();
+      expect(delivered).toBe(2);
+    }, { once: true });
+    doc.dispatchEvent(new win.Event("zfb:after-swap"));
+    await Promise.resolve();
+    expect(delivered).toBe(3);
+
+    doc.dispatchEvent(new win.Event("zfb:before-swap"));
+    state.__sgPreviewTokenPanelToggleFromHeader();
+    state.__sgPreviewTokenPanelToggleFromHeader();
+    doc.dispatchEvent(new win.Event("zfb:navigation-aborted"));
+    await Promise.resolve();
+    expect(delivered).toBe(3);
+
+    doc.dispatchEvent(new win.Event("zfb:before-swap"));
+    state.__sgPreviewTokenPanelToggleFromHeader();
+    doc.dispatchEvent(new win.Event("zfb:navigation-aborted"));
+    await Promise.resolve();
+    expect(delivered).toBe(4);
+
+    state.__sgPreviewTokenPanelCapture.ready = false;
+    doc.dispatchEvent(new win.Event("zfb:before-swap"));
+    state.__sgPreviewTokenPanelToggleFromHeader();
+    expect(delivered).toBe(5);
+    expect(state.__sgPreviewTokenPanelCapture.pending).toBe(1);
   });
 });
 

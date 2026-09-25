@@ -334,7 +334,7 @@ async function proveReadyHostBootstrap(page, origin, panelChunkPaths) {
       if (button && !button.hidden && !button.disabled) button.click();
       window.__packedConfiguredSwapClick = {
         visible: Boolean(button && !button.hidden && !button.disabled),
-        clickEvents: window.__packedReadyClickEvents - before,
+        clickEventsBefore: before,
         ready,
         pending,
         shellAtClick: Boolean(document.querySelector(".tokenpanel-shell")),
@@ -431,7 +431,8 @@ async function proveReadyHostBootstrap(page, origin, panelChunkPaths) {
     await forward;
     if (turn === 0) {
       const configuredClick = await page.evaluate(() => window.__packedConfiguredSwapClick);
-      check(configuredClick?.visible && configuredClick.clickEvents === 1 && configuredClick.ready === true && configuredClick.pending === 0,
+      const delivered = await page.evaluate(() => window.__packedReadyClickEvents);
+      check(configuredClick?.visible && delivered - configuredClick.clickEventsBefore === 1 && configuredClick.ready === true && configuredClick.pending === 0,
         `configured after-swap click missed the public preview channel: ${JSON.stringify(configuredClick)}`);
       const afterSwapClick = await panelDiagnostics(page);
       const afterDispatch = await page.evaluate(() => window.__packedConfiguredAfterDispatch);
