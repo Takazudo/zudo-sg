@@ -245,6 +245,82 @@ async function proveEarlyClick(page, origin) {
   check(badResponses.length === 0, `failed browser requests during early-click flow: ${badResponses.join(" | ")}`);
 }
 
+async function proveReadyHostBootstrap(page, origin) {
+  let releaseLoader;
+  const loaderGate = new Promise((resolve) => { releaseLoader = resolve; });
+  page.once("close", () => releaseLoader());
+  let heldLoader = false;
+  await page.route(/\/assets\/[^/]*zdtp-loader[^/]*\.js(?:\?.*)?$/u, async (route) => {
+    heldLoader = true;
+    await loaderGate;
+    await route.continue();
+  });
+  await page.goto(`${origin}${BASE}docs/getting-started`, { waitUntil: "load" });
+  const trigger = page.locator("#sg-preview-tokens-trigger");
+  await trigger.waitFor({ state: "attached" });
+  check(!(await trigger.isVisible()), "the host route exposed the engine trigger");
+  await page.waitForFunction(() => window.__sgPreviewTokenPanelCapture?.ready === true);
+
+  await page.evaluate(() => {
+    window.__packedReadyHeader = document.querySelector("header[data-zfb-transition-persist]");
+    window.__packedReadyProof = null;
+    window.__packedBeforeSwapProof = null;
+    document.addEventListener("zfb:before-swap", () => {
+      const capture = window.__sgPreviewTokenPanelCapture;
+      window.__packedBeforeSwapProof = { ready: capture?.ready, pending: capture?.pending };
+    }, { once: true });
+    document.addEventListener("zfb:after-swap", () => {
+      const button = document.getElementById("sg-preview-tokens-trigger");
+      const capture = window.__sgPreviewTokenPanelCapture;
+      window.__packedReadyProof = {
+        persisted: window.__packedReadyHeader === document.querySelector("header[data-zfb-transition-persist]"),
+        visible: Boolean(button && !button.hidden && !button.disabled),
+        before: { ready: capture?.ready, pending: capture?.pending },
+      };
+      if (button && !button.hidden && !button.disabled) button.click();
+      window.__packedReadyProof.after = { ready: capture?.ready, pending: capture?.pending };
+    }, { once: true });
+  });
+  const loaderRequest = page.waitForRequest(/\/assets\/[^/]*zdtp-loader[^/]*\.js(?:\?.*)?$/u);
+  const swapped = afterSwapPromise(page);
+  await page.getByRole("link", { name: "Components", exact: true }).first().click();
+  await swapped;
+  await loaderRequest;
+  const proof = await page.evaluate(() => window.__packedReadyProof);
+  const beforeSwap = await page.evaluate(() => window.__packedBeforeSwapProof);
+  check(beforeSwap?.ready === true && beforeSwap.pending === 0, `host bootstrap was not ready before the body swap: ${JSON.stringify(beforeSwap)}`);
+  check(proof?.persisted && proof.visible, `ready host probe missed its persisted visible trigger: ${JSON.stringify(proof)}`);
+  check(proof.before.ready === true && proof.after.ready === true, `capture was not ready across the click: ${JSON.stringify(proof)}`);
+  check(proof.before.pending === 0 && proof.after.pending === 0, `a ready click entered the early queue: ${JSON.stringify(proof)}`);
+  check(heldLoader, "the real lazy zdtp loader was not held after the ready click");
+  await assertPanelState(page, false);
+  releaseLoader();
+  await assertPanelState(page, true);
+  await trigger.click();
+  await assertPanelState(page, false);
+  await trigger.click();
+  await assertPanelState(page, true);
+
+  for (let turn = 0; turn < 2; turn++) {
+    const back = afterSwapPromise(page);
+    await page.goBack();
+    await back;
+    check(!(await trigger.isVisible()), "the trigger stayed visible on the host route");
+    const forward = afterSwapPromise(page);
+    await page.goForward();
+    await forward;
+    await assertPanelState(page, true);
+    check(await trigger.count() === 1, "SPA navigation duplicated the preview trigger");
+  }
+
+  await page.goto(`${origin}${BASE}components`, { waitUntil: "load" });
+  await trigger.waitFor({ state: "visible" });
+  await assertPanelState(page, true);
+  await trigger.click();
+  await assertPanelState(page, false);
+  console.log("OK — ready host bootstrap delivered the persisted-header click and preserved toggles across SPA remounts and direct load.");
+}
+
 async function proveStoryRoutes(page, origin, scenario) {
   const errors = [];
   const badResponses = [];
@@ -285,13 +361,15 @@ async function main() {
   const args = process.argv.slice(2);
   const hostIndex = args.indexOf("--host");
   const scenarioIndex = args.indexOf("--scenario");
-  check(hostIndex >= 0 && args[hostIndex + 1], "usage: node scripts/verify-styleguide-install-browser.mjs --host <packed-host-dir> --scenario <default|custom-collision|outside-namespace> [--early-click]");
+  check(hostIndex >= 0 && args[hostIndex + 1], "usage: node scripts/verify-styleguide-install-browser.mjs --host <packed-host-dir> --scenario <default|custom-collision|outside-namespace> [--early-click|--ready-host-bootstrap]");
   check(scenarioIndex >= 0 && SCENARIOS[args[scenarioIndex + 1]], "a known --scenario is required");
   const hostDir = path.resolve(args[hostIndex + 1]);
   const scenarioName = args[scenarioIndex + 1];
   const scenario = { ...SCENARIOS[scenarioName], name: scenarioName };
   const withEarlyClick = args.includes("--early-click");
+  const withReadyHostBootstrap = args.includes("--ready-host-bootstrap");
   check(!withEarlyClick || scenarioName === "default", "--early-click is only defined for the default route scenario");
+  check(!withReadyHostBootstrap || scenarioName === "default", "--ready-host-bootstrap is only defined for the default route scenario");
 
   const distDir = path.join(hostDir, "dist");
   const { chromium } = await import("@playwright/test");
@@ -305,6 +383,11 @@ async function main() {
       await proveEarlyClick(page, server.origin);
       await page.close();
       console.log("OK — packed host captured a visible-trigger click before bootstrap readiness, replayed one toggle, and returned through SPA history.");
+    }
+    if (withReadyHostBootstrap) {
+      const page = await context.newPage();
+      await proveReadyHostBootstrap(page, server.origin);
+      await page.close();
     }
     await proveStoryRoutes(await context.newPage(), server.origin, scenario);
     console.log(`OK — packed host ${scenarioName} detail and preview iframes rendered the expected story identities.`);

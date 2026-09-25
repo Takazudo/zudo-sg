@@ -530,13 +530,14 @@ function addScenarioRoutes(configSource, scenarioName) {
   return configSource.replace(exportStart, `${exportStart}\n  routes: ${JSON.stringify(scenario.routes)},`);
 }
 
-async function verifyPackedHostBrowser(hostDir, scenarioName, earlyClick = false) {
+async function verifyPackedHostBrowser(hostDir, scenarioName, mode = "default") {
   const args = [
     path.join(root, "scripts/verify-styleguide-install-browser.mjs"),
     "--host", hostDir,
     "--scenario", scenarioName,
   ];
-  if (earlyClick) args.push("--early-click");
+  if (mode === "early-click") args.push("--early-click");
+  if (mode === "ready-host-bootstrap") args.push("--ready-host-bootstrap");
   await run("node", args, root);
 }
 
@@ -677,7 +678,27 @@ async function main() {
     ).join("\n");
     assert(buildIslandsBundle.includes("Counter"), "dist/assets/islands-*.js does not contain Counter (half b, build side)");
 
-    await verifyPackedHostBrowser(hostDir, "default", true);
+    await verifyPackedHostBrowser(hostDir, "default", "early-click");
+
+    // The ordinary starter mounts the panel only on engine routes to prove
+    // pre-hydration capture. Rebuild a separate packed consumer with the
+    // reported public topology: the same island mounts on host and engine.
+    const wrapperPath = path.join(hostDir, "pages/lib/_engine-route-preview-token-panel-bootstrap.tsx");
+    const wrapperSource = await readFile(wrapperPath, "utf8");
+    const engineOnlyGuard = 'if (typeof document === "undefined" || !document.querySelector("[data-sg-engine-route]")) return null;';
+    assert(wrapperSource.includes(engineOnlyGuard), "fixture engine-only bootstrap guard moved");
+    await writeFile(wrapperPath, wrapperSource.replace(engineOnlyGuard, 'if (typeof document === "undefined") return null;'));
+    for (const output of ["dist", ".zfb-build"]) {
+      await rm(path.join(hostDir, output), { recursive: true, force: true });
+    }
+    console.log("zfb build (packed host + engine preview bootstrap)");
+    const readyHostBuildLog = await runStreamed("corepack", ["pnpm", "exec", "zfb", "build"], hostDir);
+    assert(!/has no matching registry entry/u.test(readyHostBuildLog), "ready-host build logged an unregistered island marker");
+    await verifyPackedHostBrowser(hostDir, "default", "ready-host-bootstrap");
+    await writeFile(wrapperPath, wrapperSource);
+    for (const output of ["dist", ".zfb-build"]) {
+      await rm(path.join(hostDir, output), { recursive: true, force: true });
+    }
 
     // Repeat clean packed-consumer builds with a preview endpoint that
     // collides with a story detail path, then one outside that namespace.
