@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { DEFAULT_SETTINGS } from "@takazudo/zudo-doc/config";
 import { makeUrlHelpers } from "@takazudo/zudo-doc/url-helpers";
 import { AFTER_NAVIGATE_EVENT } from "@takazudo/zudo-doc/transitions";
@@ -318,7 +318,7 @@ describe("withZudoSg() header token trigger", () => {
     );
     expect(html).toContain('aria-label="Open component tokens panel"');
     expect(html).toContain('title="Component tokens"');
-    expect(html).toContain("onclick=\"window.dispatchEvent(new CustomEvent('toggle-preview-token-panel'))\"");
+    expect(html).toContain('onclick="window.__sgPreviewTokenPanelToggleFromHeader()"');
     expect(html).toContain('<circle cx="9" cy="6" r="2.4" fill="currentColor" stroke="none"></circle>');
 
     expect(html).toContain("window.__sgPreviewTokensTriggerInstalled");
@@ -385,6 +385,35 @@ describe("withZudoSg() header token trigger", () => {
 
     expect(added).toBe(1);
     expect(captures).toBe(1);
+  });
+
+  it("delivers a swap click once after preview root recovery", async () => {
+    const { Window } = await import("happy-dom");
+    const html = triggerItemsOf(withZudoSg(configuredHost(), OPTIONS).plugins[0])[0]?.html as string;
+    const script = html.slice(html.indexOf("<script>") + "<script>".length, html.lastIndexOf("</script>"));
+    const win = new Window();
+    const doc = win.document;
+    doc.body.innerHTML = html.slice(0, html.indexOf("<script>"));
+    new Function("window", "document", "CustomEvent", script)(win, doc, win.CustomEvent);
+    const state = win as unknown as {
+      __sgPreviewTokenPanelCapture: { ready: boolean; pending: number };
+      __sgPreviewTokenPanelToggleFromHeader(): void;
+      __sgPreviewPanelRepair: ReturnType<typeof vi.fn>;
+    };
+    state.__sgPreviewTokenPanelCapture.ready = true;
+    const order: string[] = [];
+    state.__sgPreviewPanelRepair = vi.fn(async () => { order.push("repair"); });
+    win.addEventListener("toggle-preview-token-panel", () => order.push("toggle"));
+
+    doc.dispatchEvent(new win.Event("zfb:before-swap"));
+    doc.addEventListener("zfb:after-swap", () => state.__sgPreviewTokenPanelToggleFromHeader(), { once: true });
+    doc.dispatchEvent(new win.Event("zfb:after-swap"));
+    expect(order).toEqual([]);
+    doc.dispatchEvent(new win.Event("zfb:page-load"));
+    await vi.waitFor(() => expect(order).toEqual(["repair", "toggle"]));
+
+    state.__sgPreviewTokenPanelToggleFromHeader();
+    expect(order).toEqual(["repair", "toggle", "toggle"]);
   });
 });
 
