@@ -367,9 +367,36 @@ async function proveReadyHostBootstrap(page, origin, panelChunkPaths) {
     await page.goBack();
     await back;
     check(!(await trigger.isVisible()), "the trigger stayed visible on the host route");
+    if (turn === 0) {
+      // zdtp is configured now. Fire inside the real after-swap dispatch,
+      // after its before-swap teardown and before the router scans islands.
+      await page.evaluate(() => {
+        window.__packedConfiguredSwapClick = null;
+        document.addEventListener("zfb:after-swap", () => {
+          const button = document.getElementById("sg-preview-tokens-trigger");
+          const before = window.__packedReadyClickEvents;
+          const ready = window.__sgPreviewTokenPanelCapture?.ready;
+          const pending = window.__sgPreviewTokenPanelCapture?.pending;
+          if (button && !button.hidden && !button.disabled) button.click();
+          window.__packedConfiguredSwapClick = {
+            visible: Boolean(button && !button.hidden && !button.disabled),
+            clickEvents: window.__packedReadyClickEvents - before,
+            ready,
+            pending,
+          };
+        }, { once: true });
+      });
+    }
     const forward = afterSwapPromise(page);
     await page.goForward();
     await forward;
+    if (turn === 0) {
+      const configuredClick = await page.evaluate(() => window.__packedConfiguredSwapClick);
+      check(configuredClick?.visible && configuredClick.clickEvents === 1 && configuredClick.ready === true && configuredClick.pending === 0,
+        `configured after-swap click missed the public preview channel: ${JSON.stringify(configuredClick)}`);
+      await assertPanelState(page, false);
+      await trigger.click();
+    }
     await assertPanelState(page, true);
     check(await trigger.count() === 1, "SPA navigation duplicated the preview trigger");
   }
