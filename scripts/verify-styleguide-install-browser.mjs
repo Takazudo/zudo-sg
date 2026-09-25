@@ -320,7 +320,32 @@ async function proveReadyHostBootstrap(page, origin, panelChunkPaths) {
     window.__packedReadyProof = null;
     window.__packedBeforeSwapProof = null;
     window.__packedReadyClickEvents = 0;
+    window.__packedConfiguredSwapArmed = false;
     window.addEventListener("toggle-preview-token-panel", () => { window.__packedReadyClickEvents += 1; });
+    // Install before the first lazy zdtp activation. When armed later, this
+    // listener runs before zdtp's onPageLoad remount during after-swap.
+    document.addEventListener("zfb:after-swap", () => {
+      if (!window.__packedConfiguredSwapArmed) return;
+      window.__packedConfiguredSwapArmed = false;
+      const button = document.getElementById("sg-preview-tokens-trigger");
+      const before = window.__packedReadyClickEvents;
+      const ready = window.__sgPreviewTokenPanelCapture?.ready;
+      const pending = window.__sgPreviewTokenPanelCapture?.pending;
+      if (button && !button.hidden && !button.disabled) button.click();
+      window.__packedConfiguredSwapClick = {
+        visible: Boolean(button && !button.hidden && !button.disabled),
+        clickEvents: window.__packedReadyClickEvents - before,
+        ready,
+        pending,
+        shellAtClick: Boolean(document.querySelector(".tokenpanel-shell")),
+      };
+      queueMicrotask(() => {
+        window.__packedConfiguredAfterDispatch = {
+          shell: Boolean(document.querySelector(".tokenpanel-shell")),
+          open: localStorage.getItem("sg-preview-tweak-open"),
+        };
+      });
+    });
     document.addEventListener("zfb:before-swap", () => {
       const capture = window.__sgPreviewTokenPanelCapture;
       window.__packedBeforeSwapProof = { ready: capture?.ready, pending: capture?.pending };
@@ -395,23 +420,10 @@ async function proveReadyHostBootstrap(page, origin, panelChunkPaths) {
     await back;
     check(!(await trigger.isVisible()), "the trigger stayed visible on the host route");
     if (turn === 0) {
-      // zdtp is configured now. Fire inside the real after-swap dispatch,
-      // after its before-swap teardown and before the router scans islands.
       await page.evaluate(() => {
         window.__packedConfiguredSwapClick = null;
-        document.addEventListener("zfb:after-swap", () => {
-          const button = document.getElementById("sg-preview-tokens-trigger");
-          const before = window.__packedReadyClickEvents;
-          const ready = window.__sgPreviewTokenPanelCapture?.ready;
-          const pending = window.__sgPreviewTokenPanelCapture?.pending;
-          if (button && !button.hidden && !button.disabled) button.click();
-          window.__packedConfiguredSwapClick = {
-            visible: Boolean(button && !button.hidden && !button.disabled),
-            clickEvents: window.__packedReadyClickEvents - before,
-            ready,
-            pending,
-          };
-        }, { once: true });
+        window.__packedConfiguredAfterDispatch = null;
+        window.__packedConfiguredSwapArmed = true;
       });
     }
     const forward = afterSwapPromise(page);
@@ -422,13 +434,18 @@ async function proveReadyHostBootstrap(page, origin, panelChunkPaths) {
       check(configuredClick?.visible && configuredClick.clickEvents === 1 && configuredClick.ready === true && configuredClick.pending === 0,
         `configured after-swap click missed the public preview channel: ${JSON.stringify(configuredClick)}`);
       const afterSwapClick = await panelDiagnostics(page);
-      await assertPanelState(page, false);
+      const afterDispatch = await page.evaluate(() => window.__packedConfiguredAfterDispatch);
+      try {
+        await assertPanelState(page, false);
+      } catch (error) {
+        fail(`configured pre-remount click did not close the panel: event=${JSON.stringify(configuredClick)}; afterDispatch=${JSON.stringify(afterDispatch)}; afterSwapClick=${JSON.stringify(afterSwapClick)}; final=${JSON.stringify(await panelDiagnostics(page))}; ${error}`);
+      }
       await trigger.click();
       const afterReopenClick = await panelDiagnostics(page);
       try {
         await assertPanelState(page, true);
       } catch (error) {
-        fail(`configured SPA toggle sequence lost the panel: afterSwapClick=${JSON.stringify(afterSwapClick)}; afterReopenClick=${JSON.stringify(afterReopenClick)}; final=${JSON.stringify(await panelDiagnostics(page))}; ${error}`);
+        fail(`configured SPA toggle sequence lost the panel: event=${JSON.stringify(configuredClick)}; afterDispatch=${JSON.stringify(afterDispatch)}; afterSwapClick=${JSON.stringify(afterSwapClick)}; afterReopenClick=${JSON.stringify(afterReopenClick)}; final=${JSON.stringify(await panelDiagnostics(page))}; ${error}`);
       }
       continue;
     }
