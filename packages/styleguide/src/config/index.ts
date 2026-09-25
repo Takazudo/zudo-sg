@@ -167,26 +167,13 @@ const HEADER_TOKEN_TRIGGER_HTML =
   `<button id="${HEADER_TOKEN_TRIGGER_ID}" type="button" hidden ` +
   'class="flex items-center justify-center text-muted transition-colors hover:text-fg cursor-pointer" ' +
   'aria-label="Open component tokens panel" title="Component tokens" ' +
-  'onclick="window.__sgPreviewTokenPanelToggleFromHeader()">' +
+  `onclick="window.dispatchEvent(new CustomEvent('${PREVIEW_TOKEN_PANEL_EVENT}'))">` +
   SLIDERS_GLYPH +
   "</button>" +
   "<script>(function(){" +
   PREVIEW_TOKEN_PANEL_CAPTURE_SCRIPT +
   `if(window.${TRIGGER_INSTALLED_FLAG})return;` +
   `window.${TRIGGER_INSTALLED_FLAG}=true;` +
-  "var swapping=false;var queued=0;" +
-  `function dispatchToggle(){window.dispatchEvent(new CustomEvent(${JSON.stringify(PREVIEW_TOKEN_PANEL_EVENT)}))}` +
-  "function flush(){swapping=false;if(queued%2)dispatchToggle();queued=0}" +
-  // The native zdtp lifecycle removes its shell before a swap and restores it
-  // in an after-swap listener. zfb then runs scripts and mounts new islands
-  // before emitting page-load. A missing shell forces 'open' rather than
-  // toggling the prior state, so flush only after page-load completes.
-  "document.addEventListener('zfb:before-swap',function(){swapping=true});" +
-  "document.addEventListener('zfb:page-load',function(){queueMicrotask(flush)});" +
-  "document.addEventListener('zfb:navigation-aborted',function(){queueMicrotask(flush)});" +
-  "window.__sgPreviewTokenPanelToggleFromHeader=function(){" +
-  "if(swapping&&window.__sgPreviewTokenPanelCapture?.ready){queued++;return}" +
-  "dispatchToggle()};" +
   "function sync(){" +
   `var btn=document.getElementById(${JSON.stringify(HEADER_TOKEN_TRIGGER_ID)});` +
   "if(!btn)return;" +
