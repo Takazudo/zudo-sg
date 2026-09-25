@@ -3,7 +3,7 @@
 // workspace and has the real engine tarball installed in node_modules.
 
 import { createServer } from "node:http";
-import { readFile, stat } from "node:fs/promises";
+import { readFile, readdir, stat } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
@@ -138,6 +138,19 @@ async function startBuiltHost(distDir) {
   };
 }
 
+async function findPanelChunks(distDir) {
+  const assetsDir = path.join(distDir, "assets");
+  const files = (await readdir(assetsDir)).filter((name) => name.endsWith(".js"));
+  const panelChunks = [];
+  for (const name of files) {
+    if ((await readFile(path.join(assetsDir, name), "utf8")).includes("tokenpanel-shell")) {
+      panelChunks.push(name);
+    }
+  }
+  check(panelChunks.length > 0, `packed host has no JS chunk containing the real tokenpanel-shell implementation (${files.join(", ")})`);
+  return new Set(panelChunks.map((name) => `${BASE}assets/${name}`));
+}
+
 async function assertPanelState(page, visible) {
   const panel = page.locator(".tokenpanel-shell");
   if (visible) {
@@ -245,7 +258,7 @@ async function proveEarlyClick(page, origin) {
   check(badResponses.length === 0, `failed browser requests during early-click flow: ${badResponses.join(" | ")}`);
 }
 
-async function proveReadyHostBootstrap(page, origin) {
+async function proveReadyHostBootstrap(page, origin, panelChunkPaths) {
   const scriptRequests = [];
   page.on("request", (request) => {
     if (request.resourceType() === "script") scriptRequests.push(request.url());
@@ -254,16 +267,26 @@ async function proveReadyHostBootstrap(page, origin) {
   const loaderGate = new Promise((resolve) => { releaseLoader = resolve; });
   page.once("close", () => releaseLoader());
   let heldLoader = false;
-  await page.route(/\/assets\/[^/]*zdtp-loader[^/]*\.js(?:\?.*)?$/u, async (route) => {
-    heldLoader = true;
-    await loaderGate;
-    await route.continue();
-  });
   await page.goto(`${origin}${BASE}docs/getting-started`, { waitUntil: "load" });
   const trigger = page.locator("#sg-preview-tokens-trigger");
   await trigger.waitFor({ state: "attached" });
   check(!(await trigger.isVisible()), "the host route exposed the engine trigger");
   await page.waitForFunction(() => window.__sgPreviewTokenPanelCapture?.ready === true);
+  const previewStateKeys = await page.evaluate(() => Object.keys(localStorage)
+    .filter((key) => key.startsWith("sg-preview-tweak")));
+  check(previewStateKeys.length === 0, `the ready-host proof started with persisted preview state: ${previewStateKeys.join(", ")}`);
+  const loadedPanelChunk = await page.evaluate((paths) => performance.getEntriesByType("resource")
+    .some((entry) => paths.includes(new URL(entry.name).pathname)), [...panelChunkPaths]);
+  check(!loadedPanelChunk, "the panel implementation was eagerly loaded on a fresh host route");
+  await page.route("**/*.js", async (route) => {
+    if (!panelChunkPaths.has(new URL(route.request().url()).pathname)) {
+      await route.continue();
+      return;
+    }
+    heldLoader = true;
+    await loaderGate;
+    await route.continue();
+  });
 
   await page.evaluate(() => {
     window.__packedReadyHeader = document.querySelector("header[data-zfb-transition-persist]");
@@ -296,7 +319,7 @@ async function proveReadyHostBootstrap(page, origin) {
       observer.observe(button, { attributes: true, attributeFilter: ["hidden", "disabled"] });
     }, { once: true });
   });
-  const loaderRequest = page.waitForRequest(/\/assets\/[^/]*zdtp-loader[^/]*\.js(?:\?.*)?$/u, { timeout: 10_000 })
+  const loaderRequest = page.waitForRequest((request) => panelChunkPaths.has(new URL(request.url()).pathname), { timeout: 10_000 })
     .catch((error) => error);
   const swapped = afterSwapPromise(page);
   await page.getByRole("link", { name: "Components", exact: true }).first().click();
@@ -328,7 +351,7 @@ async function proveReadyHostBootstrap(page, origin) {
     const resources = await page.evaluate(() => performance.getEntriesByType("resource")
       .filter((entry) => entry.name.endsWith(".js"))
       .map((entry) => entry.name));
-    fail(`lazy loader request was not observed after a ready click: proof=${JSON.stringify(proof)}; clickEvents=${clickEvents}; scriptRequests=${JSON.stringify(scriptRequests)}; resources=${JSON.stringify(resources)}; ${loaderResult}`);
+    fail(`lazy panel chunk request was not observed after a ready click: panelChunks=${JSON.stringify([...panelChunkPaths])}; proof=${JSON.stringify(proof)}; clickEvents=${clickEvents}; scriptRequests=${JSON.stringify(scriptRequests)}; resources=${JSON.stringify(resources)}; ${loaderResult}`);
   }
   check(heldLoader, "the real lazy zdtp loader was not held after the ready click");
   await assertPanelState(page, false);
@@ -410,6 +433,7 @@ async function main() {
   check(!withReadyHostBootstrap || scenarioName === "default", "--ready-host-bootstrap is only defined for the default route scenario");
 
   const distDir = path.join(hostDir, "dist");
+  const panelChunkPaths = withReadyHostBootstrap ? await findPanelChunks(distDir) : null;
   const { chromium } = await import("@playwright/test");
   const server = await startBuiltHost(distDir);
   let browser;
@@ -423,9 +447,12 @@ async function main() {
       console.log("OK — packed host captured a visible-trigger click before bootstrap readiness, replayed one toggle, and returned through SPA history.");
     }
     if (withReadyHostBootstrap) {
-      const page = await context.newPage();
-      await proveReadyHostBootstrap(page, server.origin);
-      await page.close();
+      // The early-click proof writes persisted open state. A new browser
+      // context keeps the ready-host click as the first lazy activation.
+      const readyContext = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+      const page = await readyContext.newPage();
+      await proveReadyHostBootstrap(page, server.origin, panelChunkPaths);
+      await readyContext.close();
     }
     await proveStoryRoutes(await context.newPage(), server.origin, scenario);
     console.log(`OK — packed host ${scenarioName} detail and preview iframes rendered the expected story identities.`);
