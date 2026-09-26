@@ -70,7 +70,7 @@ export default function ComponentsIndexRoute(): JSX.Element {
             <div class="sg-grid">
               {group.stories.map((story) => (
                 <div class="sg-tile" data-sg-tile>
-                  <CatalogThumb entry={story} />
+                  <CatalogThumb entry={story} base={ctx.base} />
                   <a
                     href={withBase(componentHref(ctx.routes, story.slug))}
                     class="sg-tile-meta"
