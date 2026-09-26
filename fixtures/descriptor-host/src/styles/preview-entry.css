@@ -1,0 +1,8 @@
+/*
+ * previewStyles entry (zudo-sg.config.mjs). Required by
+ * @takazudo/zudo-sg/plugins/preview-css regardless of registry mode; this
+ * fixture's own external preview frame (public/frame/) does not link the
+ * compiled output, since it is a plain static document outside the engine's
+ * chrome, but the option itself is still mandatory.
+ */
+@import "tailwindcss";

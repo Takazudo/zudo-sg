@@ -10,6 +10,9 @@
 #   unit                 — pnpm test:unit (vitest)
 #   styleguide-install   — pnpm verify:styleguide-install (#665 foreign-install
 #                          proof: packed tarball, fixtures/engine-host, non-root base)
+#   descriptor-host-install — pnpm verify:descriptor-host-install (#887 foreign-install
+#                          proof for descriptor mode + externalPreview: packed
+#                          tarball, fixtures/descriptor-host, no react/.stories.tsx)
 #   create-zudo-sg       — pnpm verify:create-zudo-sg (#737 packed initializer
 #                          scaffold, local engine install, build + dev proof)
 #   build                — pnpm build (zfb build → dist/)
@@ -147,6 +150,30 @@ jobs:
 
       - name: Verify foreign install
         run: pnpm verify:styleguide-install
+
+  # ---------------------------------------------------------------------------
+  # Job: descriptor-host consumer foreign-install proof (#887, epic #879 confirm)
+  # Packs @takazudo/zudo-sg, installs it into fixtures/descriptor-host outside
+  # this workspace (descriptor registry mode + externalPreview, no react, no
+  # .stories.tsx), builds under a non-root base, and runs the browser proof
+  # that the external frame answers the postMessage protocol.
+  # ---------------------------------------------------------------------------
+  descriptor-host-install:
+    name: Descriptor Host Foreign Install
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v5
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: Install Chromium
+        run: pnpm exec playwright install chromium --with-deps
+
+      - name: Verify descriptor-host foreign install
+        run: pnpm verify:descriptor-host-install
 
   # ---------------------------------------------------------------------------
   # Job: create-zudo-sg initializer foreign-install proof (#737)
