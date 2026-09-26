@@ -15,9 +15,11 @@
 // unreliable across branch switches, so `buildInputsHash()` hashes the
 // contents of `src/**`, `package.json`, `tsconfig*.json` and the build
 // pipeline's own scripts (tsup config + its `onSuccess` steps) instead. A
-// missing or mismatched stamp triggers a rebuild; a match skips it. After
-// editing package sources, run `pnpm --filter @takazudo/zudo-sg build` (or
-// `--force` here) — either always rewrites the stamp on success.
+// missing or mismatched stamp triggers a rebuild; a match skips it. Only this
+// script writes the stamp: a direct `pnpm --filter @takazudo/zudo-sg build`
+// wipes it (tsup `clean`), so the next run here rebuilds once more — use
+// `--force` here instead to rebuild and stamp in one go. The stamp is excluded
+// from the published tarball (`!dist/.build-stamp` in the package's `files`).
 //
 // Usage:
 //   node scripts/ensure-styleguide-build.mjs          # build only if missing/stale

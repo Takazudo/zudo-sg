@@ -124,7 +124,9 @@ shape: every literal `./dist/**` exports target must exist, else build).
 The pre-step also catches staleness, not just absence: a content-hash stamp
 (`dist/.build-stamp`, gitignored with the rest of `dist/`) over `src/**`,
 `package.json`, `tsconfig*.json` and the tsup build pipeline's own scripts is
-written after each successful build, and a mismatch (or missing stamp)
+written by the pre-step after each successful build it runs (a direct package
+build wipes it via tsup `clean`; `files` excludes it from the tarball), and a
+mismatch (or missing stamp)
 triggers a rebuild the same as a missing dist target does — mtimes are
 unreliable across branch switches, so the check is content, not time
 (#897). Source-only exports (the `@zudo-sg/ui` shape) are rejected: plugins

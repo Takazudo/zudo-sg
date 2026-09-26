@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -156,5 +156,6 @@ describe("ensureStyleguideBuild", () => {
     const runBuild = () => ({ status: 1 });
     const code = ensureStyleguideBuild({ root: rootDir!, log: () => {}, runBuild });
     expect(code).toBe(1);
+    expect(existsSync(join(pkgDir!, "dist/.build-stamp"))).toBe(false);
   });
 });
