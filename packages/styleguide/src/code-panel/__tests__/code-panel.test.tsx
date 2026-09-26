@@ -17,7 +17,9 @@ import { describe, expect, it, vi } from "vitest";
 import CodePanel, { type CodePanelVariant } from "../code-panel.js";
 
 vi.mock("../source-editor.js", () => ({
-  default: ({ value }: { value: string }) => <pre>{value}</pre>,
+  default: ({ value, label }: { value: string; label?: string }) => (
+    <pre aria-label={label}>{value}</pre>
+  ),
 }));
 
 const THREE_VARIANTS: CodePanelVariant[] = [
@@ -100,5 +102,33 @@ describe("CodePanel variant tabs (#900)", () => {
     renderPanel([THREE_VARIANTS[0]!]);
     expect(screen.queryByRole("tablist")).toBeNull();
     expect(screen.queryByRole("tabpanel")).toBeNull();
+  });
+});
+
+describe("CodePanel editor names + region hooks (#901)", () => {
+  it("renders the stable source and live-CSS region hooks", () => {
+    renderPanel(THREE_VARIANTS);
+    expect(
+      document.querySelector('.sg-code-source[data-sg-code-region="source"]'),
+    ).toBeTruthy();
+    expect(
+      document.querySelector('.sg-code-live-css[data-sg-code-region="live-css"]'),
+    ).toBeTruthy();
+  });
+
+  it("renders the source region hook on the tabpanel wrapper when variants > 1", () => {
+    renderPanel(THREE_VARIANTS);
+    const region = document.querySelector('[data-sg-code-region="source"]');
+    expect(region).toHaveAttribute("role", "tabpanel");
+  });
+
+  it("passes the source and Live CSS accessible names to SourceEditor", () => {
+    renderPanel(THREE_VARIANTS);
+    expect(
+      screen.getByText("const a = 1;").closest("pre"),
+    ).toHaveAttribute("aria-label", "Source code for Card: Default");
+    expect(
+      screen.getByText(/Live CSS —/).closest("pre"),
+    ).toHaveAttribute("aria-label", "Live CSS for Card");
   });
 });

@@ -13,6 +13,8 @@ export interface SourceEditorProps {
   value: string;
   language: "css" | "tsx";
   editable?: boolean;
+  /** Accessible name for the editor (and its <pre> fallback before it mounts). */
+  label?: string;
   onChange?: (value: string) => void;
 }
 
@@ -20,6 +22,7 @@ export default function SourceEditor({
   value,
   language,
   editable = false,
+  label,
   onChange,
 }: SourceEditorProps): JSX.Element {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -35,6 +38,7 @@ export default function SourceEditor({
       viewRef.current = createEditorView(value, containerRef.current, {
         language,
         editable,
+        label,
         onChange: (v) => onChangeRef.current?.(v),
       });
       setLoaded(true);
@@ -44,20 +48,23 @@ export default function SourceEditor({
       viewRef.current?.destroy();
       viewRef.current = null;
     };
-    // Editor is created once; `value`, `language`, and `editable` are read as
-    // initial config only. They are intentionally omitted from the deps — the
-    // editor owns its buffer thereafter, and re-running this effect would
-    // destroy/recreate the CodeMirror view (losing cursor/scroll) on every
-    // prop change. Callers that swap to an unrelated `value` (e.g. the code
-    // panel's per-variant source view) must pass a `key` that changes with the
-    // identity, so Preact remounts this component instead of leaving stale
-    // content displayed (#105).
+    // Editor is created once; `value`, `language`, `editable`, and `label`
+    // are read as initial config only. They are intentionally omitted from
+    // the deps — the editor owns its buffer thereafter, and re-running this
+    // effect would destroy/recreate the CodeMirror view (losing cursor/scroll)
+    // on every prop change. Callers that swap to an unrelated `value` (e.g.
+    // the code panel's per-variant source view) must pass a `key` that
+    // changes with the identity, so Preact remounts this component instead
+    // of leaving stale content displayed (#105).
   }, []);
 
   return (
     <div class="relative text-small">
       {!loaded && (
-        <pre class="m-0 overflow-auto rounded-md bg-[var(--sg-surface-2)] p-hsp-sm text-xs text-[color:var(--sg-muted)]">
+        <pre
+          class="m-0 overflow-auto rounded-md bg-[var(--sg-surface-2)] p-hsp-sm text-xs text-[color:var(--sg-muted)]"
+          aria-label={label}
+        >
           <code>{value}</code>
         </pre>
       )}
