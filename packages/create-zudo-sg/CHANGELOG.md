@@ -4,6 +4,15 @@ All notable changes to `create-zudo-sg` are documented in this file.
 
 The format is based on Keep a Changelog.
 
+## [0.1.10] - 2026-09-27
+
+### Changed
+
+- Update the starter engine range to `@takazudo/zudo-sg ^0.4.1`, which brings
+  the WCAG AA, scheme-following code-panel editor theme.
+- Update the starter's `@takazudo/zudo-doc` pin to 5.28.0, including its exact
+  release-age exclusion.
+
 ## [0.1.9] - 2026-09-27
 
 ### Changed
