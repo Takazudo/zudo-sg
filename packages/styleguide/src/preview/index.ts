@@ -4,6 +4,7 @@ export { default as DetailWorkbench } from "./detail-workbench.js";
 export type { DetailWorkbenchProps, WorkbenchVariant } from "./detail-workbench.js";
 export {
   default as VariantFrame,
+  DEFAULT_FRAME_SANDBOX,
   DEFAULT_THEME_MODE,
   DEFAULT_VIEWPORT_ID,
   THEME_OPTIONS,

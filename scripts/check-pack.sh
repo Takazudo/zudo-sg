@@ -16,7 +16,10 @@ set -euo pipefail
 #   4. imports the exports subpaths that are safe to import under plain
 #      Node — @takazudo/zfb type-only imports erase at build time, so
 #      config/registry/stories/plugins/* have no runtime peer dependency and
-#      import cleanly. NOT imported here: `./chrome`, `./chrome/panel-contract`,
+#      import cleanly. `./preview/messages` is here too: it is the
+#      framework-free protocol module (#880), and importing it with no
+#      `preact` installed is the proof that it stays framework-free.
+#      NOT imported here: `./chrome`, `./chrome/panel-contract`,
 #      `./islands`, `./catalog`, `./preview`, `./token-tweak*`, `./search`,
 #      `./code-panel`, `./token-dashboard` and the `./routes-src/*` sources —
 #      these render Preact JSX or reach a zfb `Island` helper at module scope,
@@ -149,6 +152,7 @@ const subpaths = [
   '@takazudo/zudo-sg/plugins/routes',
   '@takazudo/zudo-sg/plugins/preview-css',
   '@takazudo/zudo-sg/plugins/zdtp-apply-proxy',
+  '@takazudo/zudo-sg/preview/messages',
 ];
 for (const subpath of subpaths) {
   await import(subpath);
