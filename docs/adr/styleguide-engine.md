@@ -121,8 +121,16 @@ must be JS: `dist/plugins/*.js`. `packages/styleguide` is consumed from `dist`
 even inside the workspace; `scripts/run-root-build.mjs` gains an
 `ensure-styleguide-build` pre-step (zudo-doc's `ensure-workspace-build.mjs`
 shape: every literal `./dist/**` exports target must exist, else build).
-Source-only exports (the `@zudo-sg/ui` shape) are rejected: plugins must be
-JS, and the safelist generator scans `dist`.
+The pre-step also catches staleness, not just absence: a content-hash stamp
+(`dist/.build-stamp`, gitignored with the rest of `dist/`) over `src/**`,
+`package.json`, `tsconfig*.json` and the tsup build pipeline's own scripts is
+written by the pre-step after each successful build it runs (a direct package
+build wipes it via tsup `clean`; `files` excludes it from the tarball), and a
+mismatch (or missing stamp)
+triggers a rebuild the same as a missing dist target does — mtimes are
+unreliable across branch switches, so the check is content, not time
+(#897). Source-only exports (the `@zudo-sg/ui` shape) are rejected: plugins
+must be JS, and the safelist generator scans `dist`.
 
 ### 3. Story contract home — option (ii), duplicated structural types + drift check
 

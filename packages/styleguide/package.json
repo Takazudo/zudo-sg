@@ -122,6 +122,7 @@
   },
   "files": [
     "dist",
+    "!dist/.build-stamp",
     "bin",
     "routes-src",
     "virtual-modules.d.ts",
