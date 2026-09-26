@@ -37,4 +37,18 @@ export interface SgContext {
   catalog: SgCatalogText;
   /** One entry per components root: its registry key prefix + MDX docs collection (`[]` = no docs). */
   componentDocs: ComponentDocsRoot[];
+  /**
+   * Route keys with no injected `injectRoute()` call (`routes.<key>: false`,
+   * or implied — `componentsPreview` when `externalPreview` is set, `tokens`
+   * in descriptor mode with no token manifest). Kept separate from `routes`
+   * (which stays all-strings) rather than widening `SgRoutes` to `string | false`.
+   */
+  disabledRoutes: Array<keyof SgRoutes>;
+  /**
+   * Root-absolute host document URL (before the base prefix) that replaces
+   * the in-engine preview route, or `null` when none is configured. The
+   * detail route passes `withBase(externalPreviewUrl ?? routes.componentsPreview)`
+   * as `previewUrl` to `DetailWorkbench` and the code panel.
+   */
+  externalPreviewUrl: string | null;
 }

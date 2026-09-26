@@ -41,7 +41,14 @@ import {
   type SgContext,
   type SgRegistryMode,
 } from "../sg-context.js";
-import { DEFAULT_SG_ROUTES, previewCollisionSlug, type SgRoutes } from "../sg-routes.js";
+import {
+  DEFAULT_SG_ROUTES,
+  DISABLEABLE_ROUTE_KEYS,
+  isTokensRouteEnabled,
+  previewCollisionSlug,
+  type SgRoutes,
+  type SgRoutesOption,
+} from "../sg-routes.js";
 
 export const PLUGIN_NAME = "@takazudo/zudo-sg/plugins/routes";
 
@@ -84,7 +91,16 @@ export interface RoutesPluginOptions {
    * export is absent — as its default export. Must sit inside the project root.
    */
   descriptorModule?: string;
-  routes?: Partial<SgRoutes>;
+  routes?: SgRoutesOption;
+  /**
+   * A host-served preview document that replaces the in-engine
+   * `componentsPreview` route (which is then implied disabled). `url` must be
+   * root-absolute (a single leading `/`, no scheme, no `//`); `trailingSlash`
+   * normalizes it (`"never"` strips a trailing `/`, `"always"` adds one).
+   * Required in descriptor mode: descriptors carry no render functions, so
+   * the engine has nothing to render at an in-engine preview route.
+   */
+  externalPreview?: { url: string; trailingSlash?: "never" | "always" };
   categoryOrder?: string[];
   uiPackageName?: string;
   previewCssUrl?: string;
@@ -112,6 +128,10 @@ export type ResolvedRegistrySource =
 export interface ResolvedRoutesPluginOptions {
   registry: ResolvedRegistrySource;
   routes: SgRoutes;
+  /** Route keys with no `injectRoute()` call — explicit `false` or implied (see `SgContext.disabledRoutes`). */
+  disabledRoutes: Array<keyof SgRoutes>;
+  /** Root-absolute URL of the host preview document, or `null` — see `RoutesPluginOptions.externalPreview`. */
+  externalPreviewUrl: string | null;
   categoryOrder: string[];
   uiPackageName: string | null;
   previewCssUrl: string;
@@ -133,6 +153,7 @@ const OPTION_KEYS = new Set([
   "registryModule",
   "descriptorModule",
   "routes",
+  "externalPreview",
   "categoryOrder",
   "uiPackageName",
   "previewCssUrl",
@@ -162,8 +183,14 @@ function urlPath(name: string, value: string): string {
   return value;
 }
 
-function normalizeRoutes(value: unknown): SgRoutes {
-  if (value === undefined || value === null) return { ...DEFAULT_SG_ROUTES };
+interface NormalizedRoutes {
+  routes: SgRoutes;
+  /** Route keys explicitly set to `false`. */
+  disabledRoutes: Array<keyof SgRoutes>;
+}
+
+function normalizeRoutes(value: unknown): NormalizedRoutes {
+  if (value === undefined || value === null) return { routes: { ...DEFAULT_SG_ROUTES }, disabledRoutes: [] };
   if (!isPlainObject(value)) fail(`option "routes" must be an object`);
   for (const key of Object.keys(value)) {
     if (!(ROUTE_KEYS as string[]).includes(key)) {
@@ -171,8 +198,17 @@ function normalizeRoutes(value: unknown): SgRoutes {
     }
   }
   const routes = { ...DEFAULT_SG_ROUTES };
+  const disabledRoutes: Array<keyof SgRoutes> = [];
   for (const key of ROUTE_KEYS) {
-    const pattern = optionalString(`routes.${key}`, value[key]);
+    const raw = value[key];
+    if (raw === false) {
+      if (!DISABLEABLE_ROUTE_KEYS.has(key)) {
+        fail(`option "routes.${key}" cannot be disabled — it is the engine's point (expected a string, or "false" for one of ${[...DISABLEABLE_ROUTE_KEYS].join(", ")})`);
+      }
+      disabledRoutes.push(key);
+      continue;
+    }
+    const pattern = optionalString(`routes.${key}`, raw);
     if (pattern !== undefined) routes[key] = urlPath(`routes.${key}`, pattern);
   }
   if (!routes.componentsSlug.includes("[slug]")) {
@@ -182,11 +218,40 @@ function normalizeRoutes(value: unknown): SgRoutes {
   previewCollisionSlug(routes);
   const seen = new Map<string, keyof SgRoutes>();
   for (const key of ROUTE_KEYS) {
+    if (disabledRoutes.includes(key)) continue;
     const other = seen.get(routes[key]);
     if (other) fail(`options "routes.${other}" and "routes.${key}" both resolve to "${routes[key]}"`);
     seen.set(routes[key], key);
   }
-  return routes;
+  return { routes, disabledRoutes };
+}
+
+/** Root-absolute, single-leading-slash: rejects `http:`/`https:` (or any scheme), `//host`, and relative paths. */
+function isRootAbsoluteUrl(value: string): boolean {
+  return /^\/(?!\/)/.test(value);
+}
+
+function normalizeExternalPreview(value: unknown): { url: string } | null {
+  if (value === undefined || value === null) return null;
+  if (!isPlainObject(value)) fail(`option "externalPreview" must be an object ({ url, trailingSlash? })`);
+  for (const key of Object.keys(value)) {
+    if (key !== "url" && key !== "trailingSlash") {
+      fail(`option "externalPreview.${key}" is not supported (expected url, trailingSlash)`);
+    }
+  }
+  const rawUrl = value.url;
+  if (typeof rawUrl !== "string" || rawUrl === "") fail(`option "externalPreview.url" must be a non-empty string`);
+  if (!isRootAbsoluteUrl(rawUrl)) {
+    fail(`option "externalPreview.url" = "${rawUrl}" must be a root-absolute path starting with a single "/" (no scheme, no "//")`);
+  }
+  const trailingSlash = value.trailingSlash;
+  if (trailingSlash !== undefined && trailingSlash !== "never" && trailingSlash !== "always") {
+    fail(`option "externalPreview.trailingSlash" must be "never" or "always"`);
+  }
+  let url = rawUrl;
+  if (trailingSlash === "never") url = url.length > 1 ? url.replace(/\/+$/, "") : url;
+  if (trailingSlash === "always" && !url.endsWith("/")) url = `${url}/`;
+  return { url };
 }
 
 function normalizeCategoryOrder(value: unknown): string[] {
@@ -286,9 +351,41 @@ export function resolveRoutesPluginOptions(
     example: "./src/config/ui-design-tokens-manifest.ts",
   });
 
+  const rawRoutes = isPlainObject(options.routes) ? options.routes : {};
+  const { routes, disabledRoutes: explicitlyDisabledRoutes } = normalizeRoutes(options.routes);
+  const disabledRoutes = new Set(explicitlyDisabledRoutes);
+  const externalPreview = normalizeExternalPreview(options.externalPreview);
+
+  if (externalPreview) {
+    if (typeof rawRoutes.componentsPreview === "string") {
+      fail(
+        `option "routes.componentsPreview" cannot be set together with "externalPreview" — ` +
+          `externalPreview replaces the in-engine preview route`,
+      );
+    }
+    disabledRoutes.add("componentsPreview");
+  }
+
+  if (registry.mode === "descriptor" && !externalPreview) {
+    fail(`descriptor mode has no in-engine preview; set externalPreview`);
+  }
+
+  // Narrowing of pgen E2, descriptor mode only (epic #879 delegated decision 2):
+  // an explicit `routes.tokens` (string or `false`) always wins over this —
+  // `"tokens" in rawRoutes` covers both, since `normalizeRoutes` already
+  // recorded an explicit `false` in `disabledRoutes`.
+  if (
+    !("tokens" in rawRoutes) &&
+    !isTokensRouteEnabled({ registryMode: registry.mode, tokensRouteOption: undefined, hasTokensManifest: Boolean(tokensManifestModule) })
+  ) {
+    disabledRoutes.add("tokens");
+  }
+
   return {
     registry,
-    routes: normalizeRoutes(options.routes),
+    routes,
+    disabledRoutes: [...disabledRoutes],
+    externalPreviewUrl: externalPreview?.url ?? null,
     categoryOrder: normalizeCategoryOrder(options.categoryOrder),
     uiPackageName: optionalString("uiPackageName", options.uiPackageName) ?? null,
     previewCssUrl: previewCssUrl === undefined ? DEFAULT_PREVIEW_CSS_URL : urlPath("previewCssUrl", previewCssUrl),
@@ -321,6 +418,8 @@ export function buildSgContext(base: string | undefined, resolved: ResolvedRoute
     previewCssUrl: resolved.previewCssUrl,
     catalog: resolved.catalog,
     componentDocs: resolved.componentDocs,
+    disabledRoutes: resolved.disabledRoutes,
+    externalPreviewUrl: resolved.externalPreviewUrl,
   };
 }
 
@@ -366,10 +465,19 @@ export function resolvePackageRoot(): string {
   return toForwardSlash(dirname(realpathSync(require.resolve("@takazudo/zudo-sg/package.json"))));
 }
 
-/** Pairs every route pattern with its `routes-src/` entrypoint under `packageRoot`. */
-export function deriveRouteInjections(routes: SgRoutes, packageRoot: string): RouteInjection[] {
+/**
+ * Pairs every ENABLED route pattern with its `routes-src/` entrypoint under
+ * `packageRoot`. `disabledRoutes` keys get no entry — no `injectRoute()` call,
+ * and their entrypoint file is not required to exist.
+ */
+export function deriveRouteInjections(
+  routes: SgRoutes,
+  packageRoot: string,
+  disabledRoutes: ReadonlyArray<keyof SgRoutes> = [],
+): RouteInjection[] {
   const routesSrc = toForwardSlash(join(packageRoot, "routes-src"));
-  return ROUTE_KEYS.map((key) => ({
+  const disabled = new Set(disabledRoutes);
+  return ROUTE_KEYS.filter((key) => !disabled.has(key)).map((key) => ({
     key,
     pattern: routes[key],
     entrypoint: `${routesSrc}/${ROUTE_ENTRYPOINTS[key]}`,
@@ -389,7 +497,7 @@ export function createRoutesPlugin({ packageRoot = resolvePackageRoot }: CreateR
       const resolved = resolveRoutesPluginOptions(ctx.projectRoot, ctx.options);
       assertZudoDocRoutesPlugin(ctx.config);
 
-      const injections = deriveRouteInjections(resolved.routes, packageRoot());
+      const injections = deriveRouteInjections(resolved.routes, packageRoot(), resolved.disabledRoutes);
       for (const { entrypoint } of injections) {
         if (!existsSync(entrypoint)) {
           fail(

@@ -432,6 +432,95 @@ describe("withZudoSg() header token trigger", () => {
   });
 });
 
+describe("zudoSg() externalPreview + route opt-out", () => {
+  it("forwards externalPreview verbatim to the routes plugin", () => {
+    const { plugins } = zudoSg({ ...OPTIONS, externalPreview: { url: "/preview/frame", trailingSlash: "never" } });
+    expect(plugins[0]?.options).toMatchObject({ externalPreview: { url: "/preview/frame", trailingSlash: "never" } });
+  });
+
+  it("forwards routes.componentsPreview: false / routes.tokens: false verbatim", () => {
+    const { plugins } = zudoSg({ ...OPTIONS, routes: { componentsPreview: false, tokens: false } });
+    expect(plugins[0]?.options).toMatchObject({ routes: { componentsPreview: false, tokens: false } });
+  });
+
+  it("descriptor mode forwards externalPreview alongside registryMode/descriptorModule", () => {
+    const { componentsRoots: _roots, registryOut: _out, ...BASE } = OPTIONS;
+    const fragment = zudoSg({
+      ...BASE,
+      registry: { mode: "descriptor", module: "./src/sg/descriptors.ts" },
+      externalPreview: { url: "/preview/frame" },
+    });
+    expect(fragment.plugins[0]?.options).toMatchObject({
+      registryMode: "descriptor",
+      descriptorModule: "./src/sg/descriptors.ts",
+      externalPreview: { url: "/preview/frame" },
+    });
+  });
+});
+
+describe("withZudoSg() Design Tokens nav link follows tokens-route visibility", () => {
+  const bareHost = () => ({
+    plugins: [{ name: "@takazudo/zudo-doc/plugins/routes", options: { settings: { headerNav: [], headerRightItems: [] } } }],
+    collections: [],
+  });
+
+  function headerNavOf(merged: ReturnType<typeof withZudoSg>): Array<Record<string, unknown>> {
+    return (merged.plugins[0] as { options: { settings: { headerNav: Array<Record<string, unknown>> } } }).options.settings
+      .headerNav;
+  }
+
+  function localePrefixesOf(merged: ReturnType<typeof withZudoSg>): string[] {
+    return (merged.plugins[0] as { options: { settings: { defaultLocaleOnlyPrefixes: string[] } } }).options.settings
+      .defaultLocaleOnlyPrefixes;
+  }
+
+  it("keeps the Design Tokens link when tokens is enabled (module mode default)", () => {
+    const merged = withZudoSg(bareHost(), OPTIONS);
+    expect(headerNavOf(merged).map((item) => item.label)).toEqual(["Components", "Design Tokens"]);
+    expect(localePrefixesOf(merged)).toContain("/tokens/");
+  });
+
+  it("drops the Design Tokens link when routes.tokens: false", () => {
+    const merged = withZudoSg(bareHost(), { ...OPTIONS, routes: { tokens: false } });
+    expect(headerNavOf(merged).map((item) => item.label)).toEqual(["Components"]);
+    expect(localePrefixesOf(merged)).not.toContain("/tokens/");
+  });
+
+  it("drops the Design Tokens link in descriptor mode with no token manifest (implied disable)", () => {
+    const { componentsRoots: _roots, registryOut: _out, tokens: _tokens, ...BASE } = OPTIONS;
+    const merged = withZudoSg(bareHost(), {
+      ...BASE,
+      registry: { mode: "descriptor", module: "./src/sg/descriptors.ts" },
+      externalPreview: { url: "/preview/frame" },
+    });
+    expect(headerNavOf(merged).map((item) => item.label)).toEqual(["Components"]);
+    expect(localePrefixesOf(merged)).not.toContain("/tokens/");
+  });
+
+  it("keeps the Design Tokens link in descriptor mode when a token manifest is configured", () => {
+    const { componentsRoots: _roots, registryOut: _out, ...BASE } = OPTIONS;
+    const merged = withZudoSg(bareHost(), {
+      ...BASE,
+      registry: { mode: "descriptor", module: "./src/sg/descriptors.ts" },
+      externalPreview: { url: "/preview/frame" },
+    });
+    // BASE keeps OPTIONS.tokens (manifestOut set) — the shared helper must agree with the plugin here.
+    expect(headerNavOf(merged).map((item) => item.label)).toEqual(["Components", "Design Tokens"]);
+  });
+
+  it("an explicit routes.tokens pattern overrides the descriptor-mode implied disable", () => {
+    const { componentsRoots: _roots, registryOut: _out, tokens: _tokens, ...BASE } = OPTIONS;
+    const merged = withZudoSg(bareHost(), {
+      ...BASE,
+      registry: { mode: "descriptor", module: "./src/sg/descriptors.ts" },
+      externalPreview: { url: "/preview/frame" },
+      routes: { tokens: "/design-tokens" },
+    });
+    expect(headerNavOf(merged).map((item) => item.label)).toEqual(["Components", "Design Tokens"]);
+    expect(headerNavOf(merged).find((item) => item.label === "Design Tokens")?.path).toBe("/design-tokens");
+  });
+});
+
 describe("config module purity", () => {
   it("has no node: imports (zfb evaluates configs node-free)", () => {
     const source = readFileSync(resolve(HERE, "../index.ts"), "utf8");
