@@ -131,7 +131,8 @@ export default function CodePanel({
         )}
         {active && (
           <div
-            class="mt-vsp-xs"
+            class="sg-code-source mt-vsp-xs"
+            data-sg-code-region="source"
             {...(variants.length > 1
               ? {
                   id: panelId,
@@ -151,12 +152,13 @@ export default function CodePanel({
               value={active.source}
               language="tsx"
               editable={false}
+              label={`Source code for ${storyTitle}: ${active.name}`}
             />
           </div>
         )}
       </div>
 
-      <div class="flex min-h-0 flex-1 flex-col">
+      <div class="sg-code-live-css flex min-h-0 flex-1 flex-col" data-sg-code-region="live-css">
         <h2 class="text-small font-semibold uppercase tracking-wide text-[color:var(--sg-muted)]">
           Live CSS
         </h2>
@@ -169,6 +171,7 @@ export default function CodePanel({
             language="css"
             editable
             onChange={handleCssChange}
+            label={`Live CSS for ${storyTitle}`}
           />
         </div>
       </div>
