@@ -128,6 +128,7 @@ The same library drives a multi-page demo site, so the components can be explore
   designTokenPanel: false as boolean,
   tocMinDepth: 2 as number,
   tocMaxDepth: 4 as number,
+  // zudo-doc 5.28.0 types this as required (runtime default is 3000): https://github.com/zudolab/zudo-doc/issues/4420
   searchMaxBodyLength: 3000 as number,
   sidebarResizer: true as boolean,
   sidebarToggle: true as boolean,
