@@ -60,6 +60,25 @@
     var(--zd-fg, light-dark(oklch(.185 .005 65), oklch(.965 .004 65)))
   );
   --sg-success: var(--zd-success, light-dark(oklch(.470 .140 145), oklch(.680 .145 145)));
+  /* Code editor (#910): fixed literals, not chained to --zd-*, so the WCAG AA
+   * contrast asserted by src/code-panel/__tests__/editor-theme-contrast.test.ts
+   * holds regardless of host palette. Override any of them on :root. */
+  --sg-code-bg: light-dark(#ffffff, #161b22);
+  --sg-code-fg: light-dark(#1f2328, #e6edf3);
+  --sg-code-gutter-bg: light-dark(#f6f8fa, #0d1117);
+  --sg-code-gutter-fg: light-dark(#57606a, #8b949e);
+  --sg-code-active-line-bg: light-dark(#eaeef2, #212830);
+  --sg-code-selection-bg: light-dark(#c8ddf7, #264f78);
+  --sg-code-cursor: light-dark(#1f2328, #e6edf3);
+  --sg-code-keyword: light-dark(#b3261e, #ff7b72);
+  --sg-code-string: light-dark(#0a3069, #a5d6ff);
+  --sg-code-number: light-dark(#0550ae, #79c0ff);
+  --sg-code-comment: light-dark(#57606a, #8b949e);
+  --sg-code-function: light-dark(#6639ba, #d2a8ff);
+  --sg-code-property: light-dark(#0550ae, #79c0ff);
+  --sg-code-type: light-dark(#8a3700, #ffa657);
+  --sg-code-tag: light-dark(#116329, #7ee787);
+  --sg-code-attribute: light-dark(#0550ae, #79c0ff);
 }
 
 :root {
