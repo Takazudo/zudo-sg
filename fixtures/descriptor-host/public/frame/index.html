@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Descriptor host — external preview frame</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 24px;
+        font-family: system-ui, sans-serif;
+        color: #1a1a1a;
+        background: #ffffff;
+      }
+      [data-frame-root] {
+        border: 1px dashed #999;
+        border-radius: 6px;
+        padding: 16px;
+        /*
+         * Deliberately far from VariantFrame's 180px pre-report fallback
+         * (packages/styleguide/src/preview/variant-frame.tsx,
+         * INITIAL_FRAME_HEIGHT) — the browser proof asserts the reported
+         * `sg:height` moved the rendered iframe off that fallback, so this
+         * frame's natural height must not coincidentally equal it.
+         */
+        min-height: 260px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-frame-root>Loading preview…</div>
+    <script src="./frame.js"></script>
+  </body>
+</html>

@@ -3,11 +3,53 @@
 // workspace and has the real engine tarball installed in node_modules.
 
 import { createServer } from "node:http";
+import { existsSync, readdirSync } from "node:fs";
 import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
-const BASE = "/styleguide/";
+export const BASE = "/styleguide/";
+
+/** Newest `chromium-<rev>` build with a real binary under `browsersPath`, or `null`. */
+function findFallbackChromiumExecutable(browsersPath) {
+  if (!browsersPath || !existsSync(browsersPath)) return null;
+  const candidates = readdirSync(browsersPath, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory() && /^chromium-\d+$/u.test(entry.name))
+    .map((entry) => ({ name: entry.name, revision: Number(entry.name.split("-")[1]) }))
+    .sort((a, b) => b.revision - a.revision);
+  for (const candidate of candidates) {
+    const exe = path.join(browsersPath, candidate.name, "chrome-linux", "chrome");
+    if (existsSync(exe)) return exe;
+  }
+  return null;
+}
+
+/**
+ * Launches Chromium, falling back to whichever `chromium-<rev>` build is
+ * actually present under `PLAYWRIGHT_BROWSERS_PATH` when the pinned
+ * `@playwright/test` package expects a newer revision than a sandboxed
+ * container has cached (its `browsers.json` pins an exact revision per
+ * `chromium.launch()` call, and headless mode resolves to a separate
+ * `chromium_headless_shell-<rev>` build that may be missing even when the
+ * full browser is present). CI always installs the matching revision
+ * (`pnpm exec playwright install chromium --with-deps`), so this only
+ * activates in a container whose cached Chromium predates the pinned
+ * package — it re-throws when nothing usable is found, so a genuinely
+ * missing browser still fails loudly rather than being masked.
+ */
+export async function launchChromium(chromium, options = {}) {
+  try {
+    return await chromium.launch({ headless: true, ...options });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (!/Executable doesn't exist/u.test(message)) throw error;
+    const fallback = findFallbackChromiumExecutable(process.env.PLAYWRIGHT_BROWSERS_PATH);
+    if (!fallback) throw error;
+    console.warn(`[verify] pinned Chromium revision missing; falling back to the cached build at ${fallback}`);
+    return await chromium.launch({ headless: true, executablePath: fallback, ...options });
+  }
+}
+
 export const PACKED_HOST_SCENARIOS = {
   default: {
     routes: {},
@@ -62,10 +104,8 @@ const MIME_TYPES = new Map([
   [".woff2", "font/woff2"],
 ]);
 
-async function resolveBuiltFile(distDir, pathname) {
-  if (!pathname.startsWith(BASE)) return null;
-  const relativePath = decodeURIComponent(pathname.slice(BASE.length));
-  const resolvedDist = path.resolve(distDir);
+/** Resolves one candidate relative path under `resolvedDist` to a servable file, expanding a directory to its `index.html`. `null` when nothing servable is there. */
+async function resolveCandidate(resolvedDist, relativePath) {
   let target = path.resolve(resolvedDist, relativePath || "index.html");
   if (target !== resolvedDist && !target.startsWith(`${resolvedDist}${path.sep}`)) return null;
 
@@ -94,7 +134,24 @@ async function resolveBuiltFile(distDir, pathname) {
   }
 }
 
-async function startBuiltHost(distDir) {
+async function resolveBuiltFile(distDir, pathname) {
+  if (!pathname.startsWith(BASE)) return null;
+  const resolvedDist = path.resolve(distDir);
+
+  // Page routes are emitted un-nested at the dist root (`dist/components/…`,
+  // per `dist/__zfb/routes.json`'s base-less `output`), so the base segment
+  // is stripped first. `public/` assets, though, are copied by zfb TO the
+  // base segment (`dist/<base>/…`) when `base` is non-root — a real fixture
+  // exercising both a non-root base AND a `public/` dir (descriptor-host's
+  // externalPreview frame + thumbnail image, #887) is the first to need
+  // this: fall back to the base-KEPT path when the stripped one 404s.
+  const stripped = decodeURIComponent(pathname.slice(BASE.length));
+  const strippedTarget = await resolveCandidate(resolvedDist, stripped);
+  if (strippedTarget) return strippedTarget;
+  return resolveCandidate(resolvedDist, decodeURIComponent(pathname.replace(/^\/+/u, "")));
+}
+
+export async function startBuiltHost(distDir) {
   const server = createServer(async (request, response) => {
     let pathname;
     try {
@@ -298,7 +355,7 @@ async function main() {
   const server = await startBuiltHost(distDir);
   let browser;
   try {
-    browser = await chromium.launch({ headless: true });
+    browser = await launchChromium(chromium);
     const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
     if (withEarlyClick) {
       const page = await context.newPage();
