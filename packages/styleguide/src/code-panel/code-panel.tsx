@@ -59,8 +59,9 @@ export default function CodePanel({
   const reactId = useId();
   const tabsId = `sg-code-panel-${slug ?? reactId}`;
 
-  const activeIndex = variants.findIndex((v) => v.exportName === activeVariant);
-  const active = variants[activeIndex] ?? variants[0];
+  const foundIndex = variants.findIndex((v) => v.exportName === activeVariant);
+  const activeIndex = foundIndex >= 0 ? foundIndex : 0;
+  const active = variants[activeIndex];
 
   const tabId = (index: number): string => `${tabsId}-tab-${index}`;
   const panelId = `${tabsId}-panel`;
@@ -104,7 +105,7 @@ export default function CodePanel({
             class="mt-vsp-2xs flex flex-wrap gap-hsp-3xs"
           >
             {variants.map((v, index) => {
-              const selected = v.exportName === activeVariant;
+              const selected = index === activeIndex;
               return (
                 <button
                   key={v.exportName}
@@ -137,7 +138,7 @@ export default function CodePanel({
               ? {
                   id: panelId,
                   role: "tabpanel",
-                  "aria-labelledby": activeIndex >= 0 ? tabId(activeIndex) : undefined,
+                  "aria-labelledby": tabId(activeIndex),
                 }
               : {})}
           >
