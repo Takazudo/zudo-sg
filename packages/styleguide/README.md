@@ -259,6 +259,17 @@ migrate that declaration to `--sg-border` (and use the matching `--sg-*` role fo
 other chrome color). Bare `--color-border` remains a valid host component token, but it
 no longer controls zudo-sg chrome.
 
+The code panel's editor surface has its own sixteen `--sg-code-*` roles (background,
+foreground, gutter, active line, selection, cursor, and the syntax token colors), themed
+the same order-independent way. Their `light-dark()` defaults hold WCAG AA (≥ 4.5:1)
+contrast and follow the host's `color-scheme`; any override must preserve that contrast.
+`SourceEditor`'s `extensions` prop lets a host mounting the editor directly pass its own
+CodeMirror extensions, which win over the engine's theme extension — it's read once at
+mount, so change it by remounting with a new `key`. `CodePanel` doesn't expose this prop,
+since island props must be JSON-serializable. See
+[Tokens and preview CSS](../../src/content/docs/architecture/tokens-and-preview-css.mdx)
+for the full token list and override example.
+
 The zudo-doc theme supplies framework defaults, including the breakpoints
 needed by responsive sidebar utilities. Its color-token reset precedes your
 tokens so they survive. Use `theme-no-reset.css` instead to preserve

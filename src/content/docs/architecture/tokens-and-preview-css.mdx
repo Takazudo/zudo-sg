@@ -56,6 +56,48 @@ override to `--sg-border` (and migrate any other chrome role to its matching `--
 role). Bare `--color-border` remains available for the host's own component library, but
 it is no longer an engine-chrome hook.
 
+## Code panel editor colors
+
+The code panel's editor surface — the read-only code view and the editable Live CSS
+editor — is themed by sixteen plain custom properties: `--sg-code-bg`, `--sg-code-fg`,
+`--sg-code-gutter-bg`, `--sg-code-gutter-fg`, `--sg-code-active-line-bg`,
+`--sg-code-selection-bg`, `--sg-code-cursor`, `--sg-code-keyword`, `--sg-code-string`,
+`--sg-code-number`, `--sg-code-comment`, `--sg-code-function`, `--sg-code-property`,
+`--sg-code-type`, `--sg-code-tag`, and `--sg-code-attribute`.
+
+Their defaults use `light-dark()`, chosen to hold WCAG AA contrast (≥ 4.5:1) against
+`--sg-code-bg` in both color schemes, and they follow the page's active scheme instead of
+a fixed palette. This requires the host to import `@takazudo/zudo-sg/styles.css` and set
+the CSS `color-scheme` property on an ancestor element; zudo-doc already does this from
+its `data-theme` attribute, so hosts built on zudo-doc get correct scheme-following for
+free.
+
+Hosts can override any of the sixteen roles with an ordinary, unlayered root rule, the
+same as the eleven chrome roles above:
+
+```css
+:root {
+  --sg-code-bg: #1e1e2e;
+  --sg-code-keyword: #cba6f7;
+}
+```
+
+Any override must keep ≥ 4.5:1 contrast for plain text (`--sg-code-fg` against
+`--sg-code-bg`) and for each syntax color against `--sg-code-bg` — the engine does not
+validate contrast for a host-supplied palette.
+
+The editable Live CSS editor highlights its active line with `--sg-code-active-line-bg`,
+applied to both the line content and its gutter cell.
+
+### `SourceEditor`'s `extensions` prop
+
+`SourceEditor` — for hosts that mount the editor directly instead of through
+`CodePanel` — accepts a CodeMirror `extensions` prop. Host extensions are appended after
+the engine's own theme extension, so they win over it; the engine theme is intentionally
+low precedence. The prop is read once, at mount — change it by remounting with a new
+`key`, not by passing a new array on re-render. `CodePanel` does not expose this prop
+itself, because island props must be JSON-serializable and CodeMirror extensions are not.
+
 ## Import order still matters for host component tokens
 
 The order-proof engine namespace does not change zudo-doc's namespace contract for
