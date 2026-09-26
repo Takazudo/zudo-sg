@@ -13,7 +13,7 @@ import {
   componentDocsRoots,
 } from "../registry/component-docs.js";
 import { DEFAULT_PREVIEW_CSS_URL } from "../sg-context.js";
-import { resolveSgRoutes, type SgRoutes } from "../sg-routes.js";
+import { isTokensRouteEnabled, resolveSgRoutes, type SgRoutes, type SgRoutesOption } from "../sg-routes.js";
 import type { HostTokensSpec } from "../token-spec.js";
 import { PREVIEW_TOKEN_PANEL_CAPTURE_SCRIPT } from "../token-tweak/preview-token-panel-capture.js";
 export type { HostTokensSpec, HostTokenGroupSpec, HostTokenSpec, TokenPreview, TokenControl, GeneratedTokenGroups, GeneratedTokenGroup } from "../token-spec.js";
@@ -87,7 +87,17 @@ export interface ZudoSgComposeBaseOptions {
   previewStyles: string;
   /** Default `/_zudo-sg/preview.css`. */
   previewCssUrl?: string;
-  routes?: Partial<SgRoutes>;
+  routes?: SgRoutesOption;
+  /**
+   * A host-served preview document that replaces the in-engine
+   * `componentsPreview` route (implied disabled once this is set). `url` must
+   * be root-absolute; `previewStyles`'s compiled CSS and the code panel both
+   * still apply — only the document that hosts the preview iframe moves.
+   * Required in descriptor mode (descriptors carry no render functions).
+   * Forwarded verbatim to the routes plugin's `externalPreview` option, which
+   * validates and normalizes it.
+   */
+  externalPreview?: { url: string; trailingSlash?: "never" | "always" };
   catalog?: { title?: string; intro?: string };
   /**
    * Populate an otherwise empty zudo-doc header with links to the engine-owned
@@ -132,7 +142,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function withStyleguideChromeDefaults(plugin: unknown, routes: SgRoutes): unknown {
+function withStyleguideChromeDefaults(plugin: unknown, routes: SgRoutes, tokensEnabled: boolean): unknown {
   if (!isRecord(plugin) || plugin.name !== ZUDO_DOC_ROUTES_PLUGIN_NAME) return plugin;
 
   const options = isRecord(plugin.options) ? plugin.options : {};
@@ -148,20 +158,27 @@ function withStyleguideChromeDefaults(plugin: unknown, routes: SgRoutes): unknow
     (item) => isRecord(item) && item.type === "component" && item.component === "search",
   );
 
+  // `tokensEnabled` is the same `isTokensRouteEnabled()` verdict the routes
+  // plugin uses to decide whether `/tokens` is injected at all (do-item 4) —
+  // a disabled route gets no nav link and no localization prefix for it.
+  const navGlobalPaths = tokensEnabled ? [routes.componentsIndex, routes.tokens] : [routes.componentsIndex];
+
   return {
     ...plugin,
     options: {
       ...options,
       settings: {
         ...settings,
-        headerNav: [
-          { label: "Components", path: routes.componentsIndex, categoryMatch: "components", versioned: false },
-          { label: "Design Tokens", path: routes.tokens, versioned: false },
-        ],
+        headerNav: tokensEnabled
+          ? [
+              { label: "Components", path: routes.componentsIndex, categoryMatch: "components", versioned: false },
+              { label: "Design Tokens", path: routes.tokens, versioned: false },
+            ]
+          : [{ label: "Components", path: routes.componentsIndex, categoryMatch: "components", versioned: false }],
         // Engine navigation targets global routes, including from translated docs.
         defaultLocaleOnlyPrefixes: [...new Set([
           ...(Array.isArray(settings.defaultLocaleOnlyPrefixes) ? settings.defaultLocaleOnlyPrefixes : []),
-          ...[routes.componentsIndex, routes.tokens].map((path) => `${path.replace(/\/+$/, "")}/`),
+          ...navGlobalPaths.map((path) => `${path.replace(/\/+$/, "")}/`),
         ])],
         headerRightItems: hasSearch
           ? headerRightItems
@@ -300,6 +317,16 @@ function descriptorModuleOf(registry: unknown): string | null {
   throw new Error(`[zudo-sg] option "registry.mode" must be "module" or "descriptor" (got ${JSON.stringify(registry.mode)})`);
 }
 
+/** Strips the `false` opt-out values `SgRoutesOption` allows, for callers (`resolveSgRoutes`) that need plain patterns. */
+function stringRoutesOnly(routes: SgRoutesOption | undefined): Partial<SgRoutes> {
+  const out: Partial<SgRoutes> = {};
+  if (!routes) return out;
+  for (const [key, value] of Object.entries(routes)) {
+    if (typeof value === "string") out[key as keyof SgRoutes] = value;
+  }
+  return out;
+}
+
 /** Returns the engine's zfb plugin descriptors and content collections. */
 export function zudoSg(options: ZudoSgComposeOptions): ZudoSgFragment {
   if (!options || typeof options !== "object") {
@@ -325,6 +352,7 @@ export function zudoSg(options: ZudoSgComposeOptions): ZudoSgFragment {
       options: definedOnly({
         ...registrySource,
         routes: options.routes,
+        externalPreview: options.externalPreview,
         categoryOrder: options.categoryOrder,
         uiPackageName: options.uiPackageName,
         previewCssUrl,
@@ -367,10 +395,16 @@ export function withZudoSg<
 } {
   const sg = zudoSg(options);
   const presetPlugins = [...(presetFragment.plugins ?? [])];
+  const registryMode = descriptorModuleOf(options.registry) === null ? "module" : "descriptor";
+  const tokensEnabled = isTokensRouteEnabled({
+    registryMode,
+    tokensRouteOption: options.routes?.tokens,
+    hasTokensManifest: options.tokens?.manifestOut !== undefined,
+  });
   const pluginsWithChrome =
     options.chromeDefaults === false
       ? presetPlugins
-      : presetPlugins.map((plugin) => withStyleguideChromeDefaults(plugin, resolveSgRoutes(options.routes)));
+      : presetPlugins.map((plugin) => withStyleguideChromeDefaults(plugin, resolveSgRoutes(stringRoutesOnly(options.routes)), tokensEnabled));
   // Runs AFTER the chrome pass so the trigger trails the `search` item that
   // pass may have appended.
   const pluginsWithTrigger =

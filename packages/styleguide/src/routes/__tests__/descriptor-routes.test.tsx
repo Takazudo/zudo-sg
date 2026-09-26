@@ -47,6 +47,10 @@ vi.mock("../_context.js", () => ({
     previewCssUrl: "/_zudo-sg/preview.css",
     catalog: { title: "Catalog", intro: null },
     componentDocs: [],
+    // Descriptor mode requires externalPreview (issue #884); no manifest here,
+    // so tokens is implied disabled too.
+    disabledRoutes: ["componentsPreview", "tokens"],
+    externalPreviewUrl: "/preview/frame",
   },
   withBase: (path: string) => path,
 }));
@@ -131,6 +135,8 @@ describe("components-slug route (descriptor mode)", () => {
     expect(html).toContain("&quot;prop&quot;:&quot;disabled&quot;");
     expect(html).not.toContain("Live demo");
     expect(getEntry).not.toHaveBeenCalled();
+    // The host's externalPreview replaces the (disabled) in-engine preview route.
+    expect(html).toContain("&quot;previewUrl&quot;:&quot;/preview/frame&quot;");
   });
 
   it("renders not-found for an unknown slug", async () => {
@@ -139,13 +145,8 @@ describe("components-slug route (descriptor mode)", () => {
   });
 });
 
-describe("components-preview route (descriptor mode)", () => {
-  it("serves a static notice document instead of the preview island", async () => {
-    const { default: ComponentsPreviewRoute } = await import("../components-preview.js");
-    const html = render(ComponentsPreviewRoute());
-    expect(html).toMatch(/^<html lang="en" data-sg-preview-doc="true" data-sg-engine-route="true">/);
-    expect(html).toContain("data-sg-preview-descriptor-notice");
-    expect(html).toContain("Descriptor mode needs an external preview");
-    expect(html).not.toContain("data-island");
-  });
-});
+// components-preview.tsx no longer branches on descriptor mode (issue #884):
+// resolveRoutesPluginOptions requires externalPreview there, which implies
+// componentsPreview disabled, so the routes plugin never injects this
+// entrypoint in descriptor mode at all. Generic componentsPreview rendering
+// is covered by components-preview.test.tsx.

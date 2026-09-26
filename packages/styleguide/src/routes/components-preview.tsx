@@ -14,6 +14,11 @@
 // `:root[data-sg-preview-doc]`, so the preview world's tokens beat the host
 // bundle zfb injects into every route. This entrypoint links assets only; it
 // never calls plugin helpers.
+//
+// Descriptor mode never reaches this file: `resolveRoutesPluginOptions`
+// (issue #884) requires an `externalPreview` in descriptor mode, which
+// implies `componentsPreview` disabled — the route plugin never injects this
+// entrypoint there, so it needs no descriptor-mode branch of its own.
 
 import type { JSX, VNode } from "preact";
 import { Island } from "@takazudo/zfb";
@@ -30,32 +35,7 @@ export const frontmatter = { title: "Preview" };
 const LIVERELOAD_STUB =
   "(function(){try{var R=window.EventSource;if(!R)return;window.EventSource=function(u,o){if(typeof u==='string'&&u.indexOf('__zfb/reload')!==-1){return{close:function(){},addEventListener:function(){},removeEventListener:function(){},onmessage:null,onerror:null,onopen:null,readyState:2};}return new R(u,o);};window.EventSource.prototype=R.prototype;}catch(e){}})();";
 
-/**
- * Descriptor mode has no render functions, so this route cannot render a
- * story; it serves a static notice instead of mounting the preview island.
- */
-function DescriptorModeNotice(): JSX.Element {
-  return (
-    <html lang="en" data-sg-preview-doc data-sg-engine-route>
-      <head>
-        <meta charset="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <meta name="robots" content="noindex" />
-        <title>Preview</title>
-      </head>
-      <body>
-        <p data-sg-preview-descriptor-notice>
-          Descriptor mode needs an external preview: story descriptors carry no render functions, so the engine
-          cannot render this variant.
-        </p>
-      </body>
-    </html>
-  );
-}
-
 export default function ComponentsPreviewRoute(): JSX.Element {
-  if (ctx.registryMode === "descriptor") return <DescriptorModeNotice />;
-
   // SSR-skip island: the variant depends on `location.search`, so nothing
   // renders server-side and the runtime mounts ConfiguredPreviewApp on load.
   const app = Island({

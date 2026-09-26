@@ -51,7 +51,10 @@ export function paths(): Array<{ params: { slug: string }; props: SlugProps }> {
 export default function ComponentsSlugRoute(props: SlugProps & { params: { slug: string } }): JSX.Element {
   const slug = props.slug ?? props.params.slug;
   const entry = registry.getStoryBySlug(slug);
-  const previewUrl = withBase(ctx.routes.componentsPreview);
+  // `externalPreviewUrl` (issue #884) replaces the in-engine preview route
+  // when the host serves its own preview document — same-shape `previewUrl`
+  // either way, so DetailWorkbench and the code panel need no branching.
+  const previewUrl = withBase(ctx.externalPreviewUrl ?? ctx.routes.componentsPreview);
   const chrome = chromeProps({
     pageTitle: entry ? entry.title : "Not found",
     path: componentHref(ctx.routes, slug),
