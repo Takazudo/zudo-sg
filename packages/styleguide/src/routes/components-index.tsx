@@ -4,10 +4,12 @@
 // landing: category-grouped tiles, each carrying its component rendered
 // INLINE server-side (no preview iframes), filtered client-side by the
 // CatalogFilter island, inside the StyleguideLayout docs-section shell.
+// Reads the mode-neutral `CatalogEntry` fields, so module and descriptor
+// registries render through the same markup.
 
 import type { JSX, VNode } from "preact";
 import { Island } from "@takazudo/zfb";
-import { ComponentThumb, TILE_SIZE_RESTORE_SCRIPT } from "../catalog/index.js";
+import { CatalogThumb, TILE_SIZE_RESTORE_SCRIPT } from "../catalog/index.js";
 import { StyleguideLayout } from "../chrome/index.js";
 import { OVERVIEW_SLUG } from "../registry/index.js";
 import { CatalogFilter } from "../search/index.js";
@@ -44,13 +46,18 @@ export default function ComponentsIndexRoute(): JSX.Element {
       <header class="mb-vsp-lg max-w-[56rem]">
         <h1 class="text-heading font-bold mb-vsp-2xs">{ctx.catalog.title}</h1>
         <p class="text-[color:var(--sg-muted)] text-small" data-sg-catalog-intro>
-          {ctx.catalog.intro ?? (
+          {ctx.catalog.intro ?? (ctx.registryMode === "descriptor" ? (
+            <>
+              {total} components{ctx.uiPackageName ? <> from <code>{ctx.uiPackageName}</code></> : null}, listed from
+              the host's story descriptors.
+            </>
+          ) : (
             <>
               {total} components{ctx.uiPackageName ? <> from <code>{ctx.uiPackageName}</code></> : null},
               discovered from their <code>.stories.tsx</code> files. Each tile previews the
               component's first variant, rendered here on the server.
             </>
-          )}
+          ))}
         </p>
       </header>
 
@@ -63,19 +70,19 @@ export default function ComponentsIndexRoute(): JSX.Element {
             <div class="sg-grid">
               {group.stories.map((story) => (
                 <div class="sg-tile" data-sg-tile>
-                  <ComponentThumb entry={story} />
+                  <CatalogThumb entry={story} />
                   <a
                     href={withBase(componentHref(ctx.routes, story.slug))}
                     class="sg-tile-meta"
                     data-sg-card
-                    data-name={story.meta.title.toLowerCase()}
+                    data-name={story.title.toLowerCase()}
                     data-category={group.category}
-                    data-keywords={[story.meta.title, story.meta.description ?? "", story.meta.category ?? ""]
+                    data-keywords={[story.title, story.description, story.category ?? ""]
                       .join(" ")
                       .toLowerCase()}
                   >
-                    <h3 class="sg-tile-title">{story.meta.title}</h3>
-                    <p class="sg-tile-desc">{story.meta.description}</p>
+                    <h3 class="sg-tile-title">{story.title}</h3>
+                    <p class="sg-tile-desc">{story.description}</p>
                     <p class="sg-tile-count">
                       {story.variants.length} variant
                       {story.variants.length === 1 ? "" : "s"}

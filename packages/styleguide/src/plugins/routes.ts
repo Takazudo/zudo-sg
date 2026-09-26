@@ -8,13 +8,15 @@
 // loads this file from `dist/plugins/routes.js`.
 //
 // `setup(ctx)`:
-//   1. normalizes the options and resolves `registryModule` through the shared
-//      host-path contract (throws with the option name + resolved path);
+//   1. normalizes the options and resolves `registryModule` (module mode) or
+//      `descriptorModule` (descriptor mode) through the shared host-path
+//      contract (throws with the option name + resolved path);
 //   2. requires the `@takazudo/zudo-doc/plugins/routes` descriptor — the engine
 //      routes import `virtual:zudo-doc-route-context` /
 //      `virtual:zudo-doc-chrome-bindings`, which only that plugin registers;
 //   3. registers `virtual:zudo-sg-context` (JSON data only),
-//      `virtual:zudo-sg-registry` (re-export of the host registry file) and
+//      `virtual:zudo-sg-registry` (fixed shape in both modes: `storyModules`,
+//      `storyExportOrder`, `storyDescriptors`) and
 //      `virtual:zudo-sg-tokens` (the `/tokens` route's design-token manifest,
 //      assembled from the host `tokensManifestModule` or `null`);
 //   4. injects the four routes, pointing at `routes-src/<entry>.tsx` under this
@@ -37,6 +39,7 @@ import {
   DEFAULT_PREVIEW_CSS_URL,
   type SgCatalogText,
   type SgContext,
+  type SgRegistryMode,
 } from "../sg-context.js";
 import { DEFAULT_SG_ROUTES, previewCollisionSlug, type SgRoutes } from "../sg-routes.js";
 
@@ -71,8 +74,16 @@ export const ROUTE_ENTRYPOINTS: Readonly<Record<keyof SgRoutes, string>> = Objec
 });
 
 export interface RoutesPluginOptions {
-  /** Project-root-relative path to the generated host registry (`zudo-sg.config.mjs` `registryOut`). */
-  registryModule: string;
+  /** Default `"module"`. `"descriptor"` reads plain-data story descriptors from `descriptorModule` instead. */
+  registryMode?: SgRegistryMode;
+  /** Module mode (required there): project-root-relative path to the generated host registry (`registryOut`). */
+  registryModule?: string;
+  /**
+   * Descriptor mode (required there): project-root-relative module exporting
+   * `StoryDescriptor[]` as the named export `storyDescriptors`, or — when that
+   * export is absent — as its default export. Must sit inside the project root.
+   */
+  descriptorModule?: string;
   routes?: Partial<SgRoutes>;
   categoryOrder?: string[];
   uiPackageName?: string;
@@ -93,9 +104,13 @@ export interface RoutesPluginOptions {
   componentDocs?: ComponentDocsRoot[];
 }
 
+/** The resolved story source; both paths are forward-slash absolute. */
+export type ResolvedRegistrySource =
+  | { mode: "module"; registryModule: string }
+  | { mode: "descriptor"; descriptorModule: string };
+
 export interface ResolvedRoutesPluginOptions {
-  /** Forward-slash absolute path of the host registry file. */
-  registryModule: string;
+  registry: ResolvedRegistrySource;
   routes: SgRoutes;
   categoryOrder: string[];
   uiPackageName: string | null;
@@ -114,7 +129,9 @@ export interface RouteInjection {
 }
 
 const OPTION_KEYS = new Set([
+  "registryMode",
   "registryModule",
+  "descriptorModule",
   "routes",
   "categoryOrder",
   "uiPackageName",
@@ -211,7 +228,45 @@ function normalizeComponentDocs(value: unknown): ComponentDocsRoot[] {
   });
 }
 
-/** Validates the options block and resolves `registryModule`; throws `[zudo-sg] …` on invalid input. */
+function isPresent(value: unknown): boolean {
+  return value !== undefined && value !== null;
+}
+
+function hostPathValue(name: string, value: unknown): string | null | undefined {
+  if (isPresent(value) && typeof value !== "string") fail(`option "${name}" must be a string (project-root-relative path)`);
+  return value as string | null | undefined;
+}
+
+function resolveRegistrySource(projectRoot: string, options: Record<string, unknown>): ResolvedRegistrySource {
+  const mode = options.registryMode ?? "module";
+  if (mode !== "module" && mode !== "descriptor") {
+    fail(`option "registryMode" must be "module" or "descriptor" (got ${JSON.stringify(mode)})`);
+  }
+  if (mode === "module") {
+    if (isPresent(options.descriptorModule)) {
+      fail(`option "descriptorModule" is only valid with registryMode: "descriptor" (registryMode is "module")`);
+    }
+    const registryModule = resolveHostModule(projectRoot, "registryModule", hostPathValue("registryModule", options.registryModule), {
+      required: true,
+      example: "./src/styleguide/sg-registry.ts",
+    });
+    return { mode, registryModule };
+  }
+  if (isPresent(options.registryModule)) {
+    fail(`option "registryModule" is only valid with registryMode: "module" (registryMode is "descriptor")`);
+  }
+  if (Array.isArray(options.componentDocs) && options.componentDocs.length > 0) {
+    fail(`option "componentDocs" is only valid with registryMode: "module" (descriptor stories have no registry key to match)`);
+  }
+  const descriptorModule = resolveHostModule(projectRoot, "descriptorModule", hostPathValue("descriptorModule", options.descriptorModule), {
+    required: true,
+    example: "./src/styleguide/story-descriptors.ts",
+    insideRoot: true,
+  });
+  return { mode, descriptorModule };
+}
+
+/** Validates the options block and resolves the registry source; throws `[zudo-sg] …` on invalid input. */
 export function resolveRoutesPluginOptions(
   projectRoot: string,
   options: Record<string, unknown>,
@@ -221,14 +276,7 @@ export function resolveRoutesPluginOptions(
       fail(`unknown option "${key}" for ${PLUGIN_NAME} (expected one of ${[...OPTION_KEYS].join(", ")})`);
     }
   }
-  const registryValue = options.registryModule;
-  if (registryValue !== undefined && registryValue !== null && typeof registryValue !== "string") {
-    fail(`option "registryModule" must be a string (project-root-relative path)`);
-  }
-  const registryModule = resolveHostModule(projectRoot, "registryModule", registryValue, {
-    required: true,
-    example: "./src/styleguide/sg-registry.ts",
-  });
+  const registry = resolveRegistrySource(projectRoot, options);
   const previewCssUrl = optionalString("previewCssUrl", options.previewCssUrl);
   const tokensValue = options.tokensManifestModule;
   if (tokensValue !== undefined && tokensValue !== null && typeof tokensValue !== "string") {
@@ -239,7 +287,7 @@ export function resolveRoutesPluginOptions(
   });
 
   return {
-    registryModule,
+    registry,
     routes: normalizeRoutes(options.routes),
     categoryOrder: normalizeCategoryOrder(options.categoryOrder),
     uiPackageName: optionalString("uiPackageName", options.uiPackageName) ?? null,
@@ -267,6 +315,7 @@ export function buildSgContext(base: string | undefined, resolved: ResolvedRoute
   return {
     base: base === undefined || base === "" ? "/" : base,
     routes: resolved.routes,
+    registryMode: resolved.registry.mode,
     categoryOrder: resolved.categoryOrder,
     uiPackageName: resolved.uiPackageName,
     previewCssUrl: resolved.previewCssUrl,
@@ -279,8 +328,24 @@ export function buildContextModuleSource(context: SgContext): string {
   return `export const sgContext = ${JSON.stringify(context)};\n`;
 }
 
-export function buildRegistryModuleSource(registryModule: string): string {
-  return `export { storyModules, storyExportOrder } from ${JSON.stringify(toForwardSlash(registryModule))};\n`;
+/**
+ * `virtual:zudo-sg-registry` exports the same three names in every mode, because
+ * the one fixed `routes-src/` tree (and the preview island) imports all of them.
+ * Descriptor mode imports no StoryModule: only the host descriptor module.
+ */
+export function buildRegistryModuleSource(source: ResolvedRegistrySource): string {
+  if (source.mode === "module") {
+    return (
+      `export { storyModules, storyExportOrder } from ${JSON.stringify(toForwardSlash(source.registryModule))};\n` +
+      "export const storyDescriptors = [];\n"
+    );
+  }
+  return (
+    `import * as descriptorModule from ${JSON.stringify(toForwardSlash(source.descriptorModule))};\n` +
+    "export const storyModules = {};\n" +
+    "export const storyExportOrder = {};\n" +
+    'export const storyDescriptors = "storyDescriptors" in descriptorModule ? descriptorModule.storyDescriptors : descriptorModule.default;\n'
+  );
 }
 
 export function buildTokensModuleSource(tokensManifestModule: string | null): string {
@@ -336,7 +401,7 @@ export function createRoutesPlugin({ packageRoot = resolvePackageRoot }: CreateR
 
       const context = buildSgContext(ctx.config.base, resolved);
       ctx.addVirtualModule(CONTEXT_MODULE_ID, () => buildContextModuleSource(context));
-      ctx.addVirtualModule(REGISTRY_MODULE_ID, () => buildRegistryModuleSource(resolved.registryModule));
+      ctx.addVirtualModule(REGISTRY_MODULE_ID, () => buildRegistryModuleSource(resolved.registry));
       ctx.addVirtualModule(TOKENS_MODULE_ID, () => buildTokensModuleSource(resolved.tokensManifestModule));
 
       for (const { pattern, entrypoint } of injections) {

@@ -17,10 +17,18 @@ export interface SgCatalogText {
   intro: string | null;
 }
 
+/**
+ * Where the catalog's stories come from. `"module"`: the generated StoryModule
+ * registry (`registryModule`). `"descriptor"`: host-supplied plain-data
+ * `StoryDescriptor`s (`descriptorModule`) — no render functions reach the engine.
+ */
+export type SgRegistryMode = "module" | "descriptor";
+
 export interface SgContext {
   /** zfb `config.base` (`"/"` when unset). */
   base: string;
   routes: SgRoutes;
+  registryMode: SgRegistryMode;
   categoryOrder: string[];
   /** Package name shown in code-panel import snippets; `null` when the host did not set one. */
   uiPackageName: string | null;

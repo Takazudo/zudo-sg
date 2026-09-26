@@ -27,6 +27,7 @@ import { componentHref, DEFAULT_SG_ROUTES } from "../../sg-routes.js";
 
 const PACKAGE_DIR = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
 const REGISTRY = "./src/styleguide/sg-registry.ts";
+const DESCRIPTORS = "./src/styleguide/story-descriptors.ts";
 const ZUDO_DOC_DESCRIPTOR = { name: ZUDO_DOC_ROUTES_PLUGIN_NAME, options: { settings: {} } };
 
 let sandbox: string;
@@ -42,6 +43,8 @@ beforeAll(() => {
   sandbox = realpathSync(mkdtempSync(join(tmpdir(), "zudo-sg-routes-plugin-")));
   projectRoot = join(sandbox, "host");
   touch(join(projectRoot, REGISTRY));
+  touch(join(projectRoot, DESCRIPTORS));
+  touch(join(sandbox, "outside/descriptors.ts"));
   mkdirSync(join(projectRoot, "src/styleguide/dir-not-file"), { recursive: true });
 
   // Installed-shape package: realpath under node_modules/.pnpm/….
@@ -95,7 +98,7 @@ async function loadContext(reg: Registration): Promise<unknown> {
 describe("resolveRoutesPluginOptions", () => {
   it("fills defaults and resolves registryModule to a forward-slash absolute path", () => {
     expect(resolveRoutesPluginOptions(projectRoot, { registryModule: REGISTRY })).toEqual({
-      registryModule: toForwardSlash(join(projectRoot, REGISTRY)),
+      registry: { mode: "module", registryModule: toForwardSlash(join(projectRoot, REGISTRY)) },
       routes: { ...DEFAULT_SG_ROUTES },
       categoryOrder: [],
       uiPackageName: null,
@@ -207,6 +210,62 @@ describe("resolveRoutesPluginOptions", () => {
   });
 });
 
+describe("resolveRoutesPluginOptions — descriptor mode", () => {
+  it("resolves descriptorModule and needs no registryModule", () => {
+    expect(
+      resolveRoutesPluginOptions(projectRoot, { registryMode: "descriptor", descriptorModule: DESCRIPTORS }).registry,
+    ).toEqual({ mode: "descriptor", descriptorModule: toForwardSlash(join(projectRoot, DESCRIPTORS)) });
+  });
+
+  it("accepts an explicit module mode", () => {
+    expect(resolveRoutesPluginOptions(projectRoot, { registryMode: "module", registryModule: REGISTRY }).registry.mode).toBe(
+      "module",
+    );
+  });
+
+  it("fails when descriptor mode has no descriptorModule", () => {
+    expect(() => resolveRoutesPluginOptions(projectRoot, { registryMode: "descriptor" })).toThrow(
+      new Error(
+        `[zudo-sg] option "descriptorModule" is required (project-root-relative path, e.g. "./src/styleguide/story-descriptors.ts")`,
+      ),
+    );
+  });
+
+  it("fails with the option name when descriptorModule resolves outside the project root", () => {
+    const outside = toForwardSlash(join(sandbox, "outside/descriptors.ts"));
+    expect(() =>
+      resolveRoutesPluginOptions(projectRoot, { registryMode: "descriptor", descriptorModule: "../outside/descriptors.ts" }),
+    ).toThrow(
+      new Error(
+        `[zudo-sg] option "descriptorModule" = "../outside/descriptors.ts" resolved to ${outside}, which is outside projectRoot ${toForwardSlash(projectRoot)}`,
+      ),
+    );
+    expect(() =>
+      resolveRoutesPluginOptions(projectRoot, { registryMode: "descriptor", descriptorModule: outside }),
+    ).toThrow(/option "descriptorModule" = .* which is outside projectRoot/);
+  });
+
+  it("fails when descriptorModule is not a file", () => {
+    expect(() =>
+      resolveRoutesPluginOptions(projectRoot, { registryMode: "descriptor", descriptorModule: "./nope.ts" }),
+    ).toThrow(/option "descriptorModule" = "\.\/nope\.ts" resolved to .* which is not a file$/);
+  });
+
+  it.each([
+    [{ registryMode: "descriptors", descriptorModule: DESCRIPTORS }, /option "registryMode" must be "module" or "descriptor"/],
+    [{ registryModule: REGISTRY, descriptorModule: DESCRIPTORS }, /option "descriptorModule" is only valid with registryMode: "descriptor"/],
+    [{ registryMode: "module", registryModule: REGISTRY, descriptorModule: DESCRIPTORS }, /option "descriptorModule" is only valid/],
+    [{ registryMode: "descriptor", descriptorModule: DESCRIPTORS, registryModule: REGISTRY }, /option "registryModule" is only valid with registryMode: "module"/],
+    [
+      { registryMode: "descriptor", descriptorModule: DESCRIPTORS, componentDocs: [{ keyPrefix: "ui", collection: "c" }] },
+      /option "componentDocs" is only valid with registryMode: "module"/,
+    ],
+    [{ registryMode: "descriptor", descriptorModule: 42 }, /option "descriptorModule" must be a string/],
+  ])("rejects contradictory or invalid registry options %j", (options, message) => {
+    expect(() => resolveRoutesPluginOptions(projectRoot, options)).toThrow(message);
+  });
+});
+
 describe("deriveRouteInjections", () => {
   it("maps the default patterns to routes-src entrypoints", () => {
     expect(deriveRouteInjections({ ...DEFAULT_SG_ROUTES }, "/pkg")).toEqual([
@@ -244,16 +303,58 @@ describe("assertZudoDocRoutesPlugin", () => {
 });
 
 describe("virtual module sources", () => {
-  it("re-exports the host registry through a forward-slash absolute specifier", () => {
-    expect(buildRegistryModuleSource("C:\\host\\src\\styleguide\\sg-registry.ts")).toBe(
-      'export { storyModules, storyExportOrder } from "C:/host/src/styleguide/sg-registry.ts";\n',
+  it("module mode re-exports the host registry through a forward-slash absolute specifier", () => {
+    expect(
+      buildRegistryModuleSource({ mode: "module", registryModule: "C:\\host\\src\\styleguide\\sg-registry.ts" }),
+    ).toBe(
+      'export { storyModules, storyExportOrder } from "C:/host/src/styleguide/sg-registry.ts";\n' +
+        "export const storyDescriptors = [];\n",
     );
+  });
+
+  it("descriptor mode imports only the descriptor module and stubs the StoryModule exports", () => {
+    const source = buildRegistryModuleSource({ mode: "descriptor", descriptorModule: "C:\\host\\sg\\descriptors.ts" });
+    expect(source).toBe(
+      'import * as descriptorModule from "C:/host/sg/descriptors.ts";\n' +
+        "export const storyModules = {};\n" +
+        "export const storyExportOrder = {};\n" +
+        'export const storyDescriptors = "storyDescriptors" in descriptorModule ? descriptorModule.storyDescriptors : descriptorModule.default;\n',
+    );
+    const imports = source.match(/^import .*$/gm) ?? [];
+    expect(imports).toEqual(['import * as descriptorModule from "C:/host/sg/descriptors.ts";']);
+    expect(source).not.toMatch(/stories\.tsx|sg-registry/);
+  });
+
+  it.each([
+    ["module", { mode: "module", registryModule: "/h/r.ts" }],
+    ["descriptor", { mode: "descriptor", descriptorModule: "/h/d.ts" }],
+  ] as const)("%s mode exports storyModules, storyExportOrder and storyDescriptors", (_mode, source) => {
+    const text = buildRegistryModuleSource(source);
+    for (const name of ["storyModules", "storyExportOrder", "storyDescriptors"]) {
+      expect(text).toMatch(new RegExp(`export (const ${name} =|\\{[^}]*\\b${name}\\b[^}]*\\})`));
+    }
+  });
+
+  it("descriptor mode reads the named export first, then the default export", async () => {
+    // Evaluates the emitted body against stand-in module namespaces.
+    const body = buildRegistryModuleSource({ mode: "descriptor", descriptorModule: "/h/d.ts" })
+      .replace(/^import .*\n/, "")
+      .replace(/export const /g, "exports.");
+    const evaluate = (descriptorModule: Record<string, unknown>) => {
+      const exports: Record<string, unknown> = {};
+      new Function("descriptorModule", "exports", body)(descriptorModule, exports);
+      return exports;
+    };
+    expect(evaluate({ storyDescriptors: ["named"], default: ["default"] }).storyDescriptors).toEqual(["named"]);
+    expect(evaluate({ default: ["default"] }).storyDescriptors).toEqual(["default"]);
+    expect(evaluate({})).toMatchObject({ storyModules: {}, storyExportOrder: {} });
   });
 
   it("emits the context as a JSON literal", () => {
     const source = buildContextModuleSource({
       base: "/",
       routes: { ...DEFAULT_SG_ROUTES },
+      registryMode: "module",
       categoryOrder: [],
       uiPackageName: null,
       previewCssUrl: DEFAULT_PREVIEW_CSS_URL,
@@ -295,6 +396,7 @@ describe("routes plugin setup", () => {
     expect(await loadContext(reg)).toEqual({
       base: "/styleguide/",
       routes: { ...DEFAULT_SG_ROUTES, componentsIndex: "/ui" },
+      registryMode: "module",
       categoryOrder: ["Actions"],
       uiPackageName: "@zudo-sg/demo-ui",
       previewCssUrl: "/_zudo-sg/preview.css",
@@ -302,7 +404,8 @@ describe("routes plugin setup", () => {
       componentDocs: [{ keyPrefix: "ui", collection: "componentDocs" }],
     });
     expect(await reg.virtualModules.get(REGISTRY_MODULE_ID)!()).toBe(
-      `export { storyModules, storyExportOrder } from ${JSON.stringify(toForwardSlash(join(projectRoot, REGISTRY)))};\n`,
+      `export { storyModules, storyExportOrder } from ${JSON.stringify(toForwardSlash(join(projectRoot, REGISTRY)))};\n` +
+        "export const storyDescriptors = [];\n",
     );
     expect(reg.routes).toEqual([
       { pattern: "/ui", entrypoint: `${packageRoot}/routes-src/components-index.tsx` },
@@ -310,6 +413,14 @@ describe("routes plugin setup", () => {
       { pattern: "/components/preview", entrypoint: `${packageRoot}/routes-src/components-preview.tsx` },
       { pattern: "/tokens", entrypoint: `${packageRoot}/routes-src/tokens.tsx` },
     ]);
+  });
+
+  it("descriptor mode registers the descriptor re-export and flags the context", async () => {
+    const reg = runSetup({ registryMode: "descriptor", descriptorModule: DESCRIPTORS });
+    expect((await loadContext(reg)) as { registryMode: string }).toMatchObject({ registryMode: "descriptor", componentDocs: [] });
+    const source = await reg.virtualModules.get(REGISTRY_MODULE_ID)!();
+    expect(source).toContain(`import * as descriptorModule from ${JSON.stringify(toForwardSlash(join(projectRoot, DESCRIPTORS)))};`);
+    expect(reg.routes).toHaveLength(4);
   });
 
   it('defaults base to "/" when the zfb config has none', async () => {

@@ -132,6 +132,50 @@ describe("zudoSg()", () => {
   });
 });
 
+describe("zudoSg() registry modes", () => {
+  const { componentsRoots: _roots, registryOut: _out, ...BASE } = OPTIONS;
+
+  it("descriptor mode passes registryMode + descriptorModule and registers no component-doc collections", () => {
+    const fragment = zudoSg({ ...BASE, registry: { mode: "descriptor", module: "./src/sg/descriptors.ts" } });
+    expect(fragment.plugins[0]?.options).toEqual({
+      registryMode: "descriptor",
+      descriptorModule: "./src/sg/descriptors.ts",
+      categoryOrder: ["Actions", "Forms"],
+      uiPackageName: "@zudo-sg/demo-ui",
+      previewCssUrl: "/_zudo-sg/preview.css",
+      catalog: { title: "Catalog" },
+      tokensManifestModule: "./src/config/ui-design-tokens-manifest.ts",
+    });
+    expect(fragment.collections).toEqual([]);
+  });
+
+  it("descriptor mode ignores componentsRoots and registryOut when a host still lists them", () => {
+    const fragment = zudoSg({ ...OPTIONS, registry: { mode: "descriptor", module: "./src/sg/descriptors.ts" } });
+    expect(fragment.plugins[0]?.options).not.toHaveProperty("registryModule");
+    expect(fragment.plugins[0]?.options).not.toHaveProperty("componentDocs");
+    expect(fragment.collections).toEqual([]);
+  });
+
+  it("an explicit module mode composes exactly like the default", () => {
+    expect(zudoSg({ ...OPTIONS, registry: { mode: "module" } })).toEqual(zudoSg(OPTIONS));
+  });
+
+  it("fails when descriptor mode has no module", () => {
+    expect(() =>
+      zudoSg({ ...BASE, registry: { mode: "descriptor" } } as unknown as ZudoSgComposeOptions),
+    ).toThrow(/option "registry.module" is required with registry.mode "descriptor"/);
+  });
+
+  it.each([
+    [{ mode: "module", module: "./src/sg/descriptors.ts" }, /option "registry.module" is only valid with registry.mode "descriptor"/],
+    [{ mode: "stories" }, /option "registry.mode" must be "module" or "descriptor"/],
+    [{ mode: "descriptor", module: "./d.ts", registryOut: "./r.ts" }, /option "registry.registryOut" is not supported/],
+    ["descriptor", /option "registry" must be/],
+  ])("rejects contradictory registry option %j", (registry, message) => {
+    expect(() => zudoSg({ ...OPTIONS, registry } as unknown as ZudoSgComposeOptions)).toThrow(message);
+  });
+});
+
 describe("withZudoSg()", () => {
   const preset = {
     collections: [{ name: "docs", path: "src/content/docs", schema: {} }],

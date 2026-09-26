@@ -16,6 +16,8 @@ export interface ResolveHostModuleOptions {
   required?: boolean;
   /** Example value quoted in the "is required" error, e.g. `./src/styleguide/sg-registry.ts`. */
   example?: string;
+  /** Reject a path that resolves outside `projectRoot`. */
+  insideRoot?: boolean;
 }
 
 /** Converts a native path to forward slashes (`C:\a\b` → `C:/a/b`). */
@@ -64,6 +66,11 @@ export function resolveHostModule(
 
   const root = toForwardSlash(resolve(projectRoot));
   const abs = toForwardSlash(isAbsolute(value) ? resolve(value) : resolve(projectRoot, value));
+  if (options.insideRoot && value !== "" && !abs.startsWith(`${root.replace(/\/+$/, "")}/`)) {
+    throw new Error(
+      `[zudo-sg] option "${optionName}" = "${value}" resolved to ${abs}, which is outside projectRoot ${root}`,
+    );
+  }
   if (value === "" || !isFile(abs)) {
     throw new Error(
       `[zudo-sg] option "${optionName}" = "${value}" resolved to ${abs} (relative to projectRoot ${root}), which is not a file`,
