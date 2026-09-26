@@ -4,7 +4,7 @@ Status: **Accepted** (epic #648, decision sub-task #650, 2026-09-13).
 Locks the contract every Wave 2+ sub-issue implements. Model: zudo-doc's
 package-owned route seam (`$HOME/repos/myoss/zudo-doc/packages/zudo-doc/docs/adr/route-injection-seam.md`).
 Current toolchain pins: `@takazudo/zfb` **2.20.3**, `@takazudo/zudo-doc`
-5.27.0, `@takazudo/zdtp` 0.8.2, pnpm 11.5.2, Node 24. The engine's peer
+5.27.0, `@takazudo/zdtp` 0.8.3, pnpm 11.5.2, Node 24. The engine's peer
 floors are `^2.20.3` / `^5.27.0`, incorporating zfb's SSR identity fix
 (#863) and zudo-doc 5.27.0's required toolchain (#848).
 
@@ -401,7 +401,7 @@ and would stub the loader the preview panel needs.)
 
 **Amendment (2026-09-24, #848):** zudo-doc 5.27.0 raises its zfb-family peer
 floors to `^2.20.2`, so the engine follows those floors. The workspace also
-adopts zdtp 0.8.2; its 0.8.1 mode-pair editing and override round-trip changes
+adopts zdtp 0.8.3; its 0.8.1 mode-pair editing and override round-trip changes
 are additive, with no host migration required. The root, docs host, and foreign
 fixture ignore `.zudo-doc/` because zudo-doc now stages installed route sources
 there during builds.

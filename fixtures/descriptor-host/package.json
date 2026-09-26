@@ -10,7 +10,7 @@
     "check": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@takazudo/zdtp": "0.8.2",
+    "@takazudo/zdtp": "0.8.3",
     "@takazudo/zfb": "2.20.3",
     "@takazudo/zfb-md-wasm": "2.20.3",
     "@takazudo/zfb-runtime": "2.20.3",
