@@ -75,9 +75,14 @@ function reportHeight(identity: FrameIdentity): void {
 
 // The frame is same-origin with its parent (the default sandbox keeps
 // `allow-same-origin`), so our own origin is the parent's: target it rather
-// than "*" so a cross-origin embedder never receives the reports (#880).
+// than "*" so a cross-origin embedder never receives the reports (#880). An
+// opaque origin ("null": a sandbox without `allow-same-origin`) is not a valid
+// target, and the parent would reject us anyway, so stay silent instead of
+// throwing.
 function postToParent(message: PreviewToParentMessage): void {
-  window.parent?.postMessage(message, window.location.origin);
+  const origin = window.location.origin;
+  if (origin === "null") return;
+  window.parent?.postMessage(message, origin);
 }
 
 function announceReady(identity: FrameIdentity): void {
@@ -108,9 +113,9 @@ function PreviewApp({ registry }: PreviewAppProps): JSX.Element {
   // (`sandbox="allow-same-origin allow-scripts allow-forms"`), so
   // `window.parent` is a same-origin window we can compare against. Accept ONLY
   // messages from our own origin whose source is the parent and whose payload
-  // is a well-formed props or theme envelope; ignore everything else. Announce readiness only
-  // after installing this listener, so the parent can safely respond without
-  // losing a message.
+  // is a well-formed props or theme envelope; ignore everything else. Announce
+  // readiness only after installing this listener, so the parent can safely
+  // respond without losing a message.
   useEffect(() => {
     function onMessage(e: MessageEvent): void {
       if (e.origin !== window.location.origin) return;

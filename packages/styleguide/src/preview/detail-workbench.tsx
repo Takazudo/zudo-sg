@@ -104,9 +104,9 @@ export interface DetailWorkbenchProps {
   /** Base-prefixed preview route URL, forwarded to every stage (see VariantFrame). */
   previewUrl?: string;
   /** Iframe `sandbox` tokens, forwarded to every stage (see VariantFrame). */
-  frameSandbox?: string[];
+  frameSandbox?: readonly string[];
   /** Iframe `allow` directives, forwarded to every stage (see VariantFrame). */
-  frameAllow?: string[];
+  frameAllow?: readonly string[];
 }
 
 function segmentClass(selected: boolean): string {

@@ -180,9 +180,12 @@ function VariantFrame(props: VariantFrameProps): JSX.Element {
   );
 
   // Same-origin frame: target our own origin, never "*", so a frame that
-  // navigated elsewhere cannot receive props or theme (#880).
+  // navigated elsewhere cannot receive props or theme (#880). An opaque
+  // "null" origin is not a valid target; skip rather than throw.
   function post(message: ParentToPreviewMessage): void {
-    iframeRef.current?.contentWindow?.postMessage(message, window.location.origin);
+    const origin = window.location.origin;
+    if (origin === "null") return;
+    iframeRef.current?.contentWindow?.postMessage(message, origin);
   }
 
   function sendTheme(theme: PreviewTheme): void {
