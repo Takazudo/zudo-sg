@@ -17,7 +17,7 @@ import { previewCollisionSlug, type SgRoutes } from "../sg-routes.js";
  */
 export const OVERVIEW_SLUG = "";
 export const TOKENS_SLUG = "tokens";
-const RESERVED_NAV_SLUGS: readonly string[] = [OVERVIEW_SLUG, TOKENS_SLUG];
+export const RESERVED_NAV_SLUGS: readonly string[] = [OVERVIEW_SLUG, TOKENS_SLUG];
 
 /** One discovered story file, normalised. */
 export interface StoryEntry {
@@ -100,18 +100,40 @@ function readMeta(mod: StoryModule): StoryMeta | undefined {
   return meta && typeof meta.title === "string" ? meta : undefined;
 }
 
+/**
+ * Shared category-order rule for the module registry and the descriptor
+ * catalog: `declared` (deduped) first, then every unlisted used category
+ * alphabetically (never dropped).
+ */
+export function orderCategories(used: Iterable<string | undefined>, declared: readonly string[] = []): string[] {
+  const listed = [...new Set(declared)];
+  const listedSet = new Set(listed);
+  const unlisted = new Set<string>();
+  for (const category of used) {
+    if (typeof category === "string" && !listedSet.has(category)) unlisted.add(category);
+  }
+  return [...listed, ...[...unlisted].sort((a, b) => a.localeCompare(b))];
+}
+
+/** Shared within-category sort: `order` ascending (unset last), then title. */
+export function compareByOrderThenTitle(
+  a: { order?: number; title: string },
+  b: { order?: number; title: string },
+): number {
+  const oa = a.order ?? Number.POSITIVE_INFINITY;
+  const ob = b.order ?? Number.POSITIVE_INFINITY;
+  if (oa !== ob) return oa - ob;
+  return a.title.localeCompare(b.title);
+}
+
 export function computeCategoryOrder(
   storyModules: Readonly<Record<string, StoryModule>>,
   declared: readonly string[] = [],
 ): string[] {
-  const listed = [...new Set(declared)];
-  const listedSet = new Set(listed);
-  const unlisted = new Set<string>();
-  for (const mod of Object.values(storyModules)) {
-    const category = readMeta(mod)?.category;
-    if (typeof category === "string" && !listedSet.has(category)) unlisted.add(category);
-  }
-  return [...listed, ...[...unlisted].sort((a, b) => a.localeCompare(b))];
+  return orderCategories(
+    Object.values(storyModules).map((mod) => readMeta(mod)?.category),
+    declared,
+  );
 }
 
 function buildEntries(
@@ -185,12 +207,7 @@ export function createRegistry(
     for (const category of categoryOrder) {
       const stories = byCategory.get(category);
       if (!stories || stories.length === 0) continue;
-      stories.sort((a, b) => {
-        const oa = a.meta.order ?? Number.POSITIVE_INFINITY;
-        const ob = b.meta.order ?? Number.POSITIVE_INFINITY;
-        if (oa !== ob) return oa - ob;
-        return a.meta.title.localeCompare(b.meta.title);
-      });
+      stories.sort((a, b) => compareByOrderThenTitle(a.meta, b.meta));
       groups.push({ category, stories });
     }
     return groups;

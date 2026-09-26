@@ -13,7 +13,24 @@ export type {
   VariantEntry,
 } from "./registry.js";
 export { buildNavNodes } from "./nav-nodes.js";
-export type { BuildNavNodesOptions, NavNode } from "./nav-nodes.js";
+export type { BuildNavNodesOptions, NavNode, NavNodesSource } from "./nav-nodes.js";
+export { validateStoryDescriptors } from "./descriptors.js";
+export type {
+  StoryDescriptor,
+  ThumbnailDescriptor,
+  ValidateStoryDescriptorsOptions,
+  VariantDescriptor,
+} from "./descriptors.js";
+export { catalogEntriesFromDescriptors, catalogEntriesFromRegistry, createCatalog } from "./catalog.js";
+export type {
+  Catalog,
+  CatalogCategoryGroup,
+  CatalogEntry,
+  CatalogVariant,
+  CreateCatalogOptions,
+  DescriptorCatalogEntry,
+  ModuleCatalogEntry,
+} from "./catalog.js";
 export {
   COMPONENT_DOCS_COLLECTION,
   componentDocsCollectionName,
