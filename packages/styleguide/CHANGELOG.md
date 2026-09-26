@@ -4,6 +4,33 @@ All notable changes to `@takazudo/zudo-sg` are documented in this file.
 
 The format is based on Keep a Changelog, and release notes are generated from the changelog MDX pages.
 
+## [0.4.1] - 2026-09-27
+
+This release replaces the code panel's fixed dark editor theme with an
+engine-owned theme that meets WCAG AA text contrast, follows the page's light
+or dark scheme, and exposes the editor colors as host-overridable tokens.
+
+### Features
+
+- Color the code panel's CodeMirror editors from 16 `--sg-code-*` custom
+  properties (background, text, gutter, active line, selection, cursor, and
+  nine syntax roles). Their defaults are `light-dark()` pairs chosen so every
+  text and syntax color reaches at least 4.5:1 against the surface it sits on,
+  so the editor is light on light pages, dark on dark pages, and switches when
+  the page theme toggles. Override any token on `:root` to match the host's
+  palette.
+- Highlight the active line and its gutter number in the editable Live CSS
+  editor. The read-only source view is unchanged.
+- Add an `extensions` option to `SourceEditor` for hosts that mount it
+  directly. The engine theme is low precedence, so a host-supplied CodeMirror
+  theme wins on conflicting rules. It is read once at mount, like `value`.
+
+### Bug Fixes
+
+- The editor gutter and comment text no longer fall below WCAG AA contrast:
+  the previous `oneDark` theme drew them at 3.86:1 and stayed dark on light
+  pages. `@codemirror/theme-one-dark` is no longer a dependency.
+
 ## [0.4.0] - 2026-09-27
 
 This release lets a non-Preact host adopt the catalog, nav, search, and
