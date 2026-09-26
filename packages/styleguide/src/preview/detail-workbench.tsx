@@ -103,6 +103,10 @@ export interface DetailWorkbenchProps {
   variants: WorkbenchVariant[];
   /** Base-prefixed preview route URL, forwarded to every stage (see VariantFrame). */
   previewUrl?: string;
+  /** Iframe `sandbox` tokens, forwarded to every stage (see VariantFrame). */
+  frameSandbox?: string[];
+  /** Iframe `allow` directives, forwarded to every stage (see VariantFrame). */
+  frameAllow?: string[];
 }
 
 function segmentClass(selected: boolean): string {
@@ -113,6 +117,8 @@ export default function DetailWorkbench({
   slug,
   variants,
   previewUrl,
+  frameSandbox,
+  frameAllow,
 }: DetailWorkbenchProps): JSX.Element {
   const [themeMode, setThemeMode] = useState<ThemeMode>(DEFAULT_THEME_MODE);
   const [viewportId, setViewportId] = useState<ViewportId>(DEFAULT_VIEWPORT_ID);
@@ -257,6 +263,8 @@ export default function DetailWorkbench({
             themeMode={themeMode}
             viewportId={viewportId}
             previewUrl={previewUrl}
+            frameSandbox={frameSandbox}
+            frameAllow={frameAllow}
           />
         ))}
       </div>

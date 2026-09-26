@@ -2,7 +2,7 @@
 import "../../__tests__/dom-test-setup.js";
 import { fireEvent, render, screen, waitFor } from "@testing-library/preact";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { MSG_READY, MSG_SET_THEME } from "../messages.js";
+import { MSG_READY, MSG_SET_THEME, PROTOCOL_VERSION } from "../messages.js";
 import DetailWorkbench, { type WorkbenchVariant } from "../detail-workbench.js";
 import {
   ATTR_CODE_PANEL_HIDDEN,
@@ -33,6 +33,7 @@ function themeSpies(): Array<ReturnType<typeof vi.spyOn>> {
         .mockImplementation(() => undefined);
       window.dispatchEvent(
         new MessageEvent("message", {
+          origin: window.location.origin,
           source: iframe.contentWindow,
           data: { type: MSG_READY },
         }),
@@ -123,7 +124,7 @@ describe("DetailWorkbench", () => {
     fireEvent.click(screen.getByRole("button", { name: "Light" }));
 
     for (const spy of spies) {
-      expect(lastTheme(spy)).toEqual({ type: MSG_SET_THEME, theme: "light" });
+      expect(lastTheme(spy)).toEqual({ type: MSG_SET_THEME, v: PROTOCOL_VERSION, theme: "light" });
     }
   });
 
@@ -148,7 +149,7 @@ describe("DetailWorkbench", () => {
     expect(stageWidths()).toEqual(["768px", "768px", "768px", "768px"]);
 
     const lateSpy = themeSpies()[3];
-    expect(lastTheme(lateSpy)).toEqual({ type: MSG_SET_THEME, theme: "dark" });
+    expect(lastTheme(lateSpy)).toEqual({ type: MSG_SET_THEME, v: PROTOCOL_VERSION, theme: "dark" });
   });
 
   it("switches the stage grid between stacked and multi-column", () => {
@@ -207,5 +208,32 @@ describe("DetailWorkbench", () => {
 
     expect(opened).toHaveBeenCalledTimes(1);
     window.removeEventListener("toggle-preview-token-panel", opened);
+  });
+
+  it("forwards frameSandbox and frameAllow to every stage", () => {
+    render(
+      <DetailWorkbench
+        slug="card"
+        variants={FOUR_VARIANTS}
+        frameSandbox={["allow-scripts", "allow-same-origin"]}
+        frameAllow={["fullscreen"]}
+      />,
+    );
+
+    const iframes = document.querySelectorAll("iframe");
+    expect(iframes).toHaveLength(FOUR_VARIANTS.length);
+    for (const iframe of iframes) {
+      expect(iframe).toHaveAttribute("sandbox", "allow-scripts allow-same-origin");
+      expect(iframe).toHaveAttribute("allow", "fullscreen");
+    }
+  });
+
+  it("keeps the default sandbox and no allow attribute when neither is given", () => {
+    render(<DetailWorkbench slug="card" variants={FOUR_VARIANTS} />);
+
+    for (const iframe of document.querySelectorAll("iframe")) {
+      expect(iframe).toHaveAttribute("sandbox", "allow-same-origin allow-scripts allow-forms");
+      expect(iframe).not.toHaveAttribute("allow");
+    }
   });
 });
