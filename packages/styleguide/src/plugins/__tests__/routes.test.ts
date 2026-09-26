@@ -108,6 +108,7 @@ describe("resolveRoutesPluginOptions", () => {
       catalog: { title: "Component catalog", intro: null },
       tokensManifestModule: null,
       componentDocs: [],
+      previewTokenPanel: false,
     });
   });
 
@@ -505,6 +506,7 @@ describe("virtual module sources", () => {
       componentDocs: [],
       disabledRoutes: [],
       externalPreviewUrl: null,
+      previewTokenPanel: false,
     });
     expect(source.startsWith("export const sgContext = {")).toBe(true);
   });
@@ -549,6 +551,7 @@ describe("routes plugin setup", () => {
       componentDocs: [{ keyPrefix: "ui", collection: "componentDocs" }],
       disabledRoutes: [],
       externalPreviewUrl: null,
+      previewTokenPanel: false,
     });
     expect(await reg.virtualModules.get(REGISTRY_MODULE_ID)!()).toBe(
       `export { storyModules, storyExportOrder } from ${JSON.stringify(toForwardSlash(join(projectRoot, REGISTRY)))};\n` +

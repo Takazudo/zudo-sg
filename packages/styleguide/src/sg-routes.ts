@@ -92,3 +92,17 @@ export function isTokensRouteEnabled({ registryMode, tokensRouteOption, hasToken
   if (registryMode === "descriptor" && !hasTokensManifest) return false;
   return true;
 }
+
+/**
+ * Whether the preview token panel is wired at all (issue #872): `zdtpApplyProxy`
+ * is what re-exports `tabs` into `virtual:zudo-sg-preview-token-panel`
+ * (`plugins/zdtp-apply-proxy.ts`), and every trigger's click handler dispatches
+ * to `PreviewTokenPanelBootstrap`, which no-ops silently when `tabs` is absent.
+ * A host without `tabsModule` has nothing to render, so the shared verdict here
+ * gates whether a trigger renders/injects at all — the single source of truth
+ * `config/index.ts` (header trigger default + the routes plugin's
+ * `previewTokenPanel` context flag) and `plugins/routes.ts` must agree on.
+ */
+export function isPreviewTokenPanelWired(zdtpApplyProxy: { tabsModule?: string } | undefined): boolean {
+  return Boolean(zdtpApplyProxy?.tabsModule);
+}

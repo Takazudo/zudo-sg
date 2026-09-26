@@ -105,6 +105,15 @@ export default function ComponentsSlugRoute(props: SlugProps & { params: { slug:
 
   // `when: "load"`: the toolbar is the page's primary control surface; each
   // iframe is `loading="lazy"`, so below-the-fold previews still defer.
+  //
+  // The engine's own detail route opts the two toolbar groups that default OFF
+  // (#883, issue #872) back in explicitly, matching what this route actually
+  // mounts: `codePanel` only when `storyEntry` exists — module mode, where the
+  // CodePanel island above is mounted (descriptor-mode entries get none, S2b) —
+  // and `tokenPanel` following `ctx.previewTokenPanel`, so the button is absent
+  // rather than dead when no `zdtpApplyProxy.tabsModule` is wired.
+  // `selection`/`theme` are passed at their pre-#883 defaults, unconditionally,
+  // to keep this route's behavior spelled out rather than implicit.
   const workbench = Island({
     when: "load",
     children: (
@@ -116,6 +125,9 @@ export default function ComponentsSlugRoute(props: SlugProps & { params: { slug:
           name: v.name,
           controls: v.controls,
         }))}
+        selection={{ mode: "all" }}
+        theme={{ mode: "toolbar" }}
+        toolbar={{ codePanel: Boolean(storyEntry), tokenPanel: ctx.previewTokenPanel }}
       />
     ),
   }) as unknown as VNode;

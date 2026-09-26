@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_SETTINGS } from "@takazudo/zudo-doc/config";
 import { makeUrlHelpers } from "@takazudo/zudo-doc/url-helpers";
 import { AFTER_NAVIGATE_EVENT } from "@takazudo/zudo-doc/transitions";
@@ -9,6 +9,7 @@ import {
   PREVIEW_CSS_PLUGIN_NAME,
   ROUTES_PLUGIN_NAME,
   ZDTP_APPLY_PROXY_PLUGIN_NAME,
+  __resetHeaderTokenTriggerWarningForTests,
   withZudoSg,
   zudoSg,
   type ZudoSgComposeOptions,
@@ -72,6 +73,7 @@ describe("zudoSg()", () => {
             { keyPrefix: "demo-ui/src", collection: "componentDocs" },
             { keyPrefix: "extra/src", collection: "componentDocs1" },
           ],
+          previewTokenPanel: true,
         },
       },
       {
@@ -145,6 +147,7 @@ describe("zudoSg() registry modes", () => {
       previewCssUrl: "/_zudo-sg/preview.css",
       catalog: { title: "Catalog" },
       tokensManifestModule: "./src/config/ui-design-tokens-manifest.ts",
+      previewTokenPanel: true,
     });
     expect(fragment.collections).toEqual([]);
   });
@@ -429,6 +432,66 @@ describe("withZudoSg() header token trigger", () => {
 
     expect(added).toBe(1);
     expect(captures).toBe(1);
+  });
+});
+
+describe("withZudoSg() header token trigger — wiring-gated default (#872/#886)", () => {
+  const bareHost = () => ({
+    plugins: [{ name: "@takazudo/zudo-doc/plugins/routes", options: { settings: { headerNav: [], headerRightItems: [] } } }],
+    collections: [],
+  });
+  const { zdtpApplyProxy: _wired, ...UNWIRED_OPTIONS } = OPTIONS;
+
+  beforeEach(() => {
+    __resetHeaderTokenTriggerWarningForTests();
+  });
+
+  it("injects the trigger by default when zdtpApplyProxy.tabsModule is wired (unchanged from before #886)", () => {
+    const merged = withZudoSg(bareHost(), OPTIONS);
+    expect(triggerItemsOf(merged.plugins[0])).toHaveLength(1);
+  });
+
+  it("injects no trigger by default when the panel is not wired", () => {
+    const merged = withZudoSg(bareHost(), UNWIRED_OPTIONS);
+    expect(triggerItemsOf(merged.plugins[0])).toHaveLength(0);
+  });
+
+  it("an explicit headerTokenTrigger: true still injects the trigger even when unwired", () => {
+    const merged = withZudoSg(bareHost(), { ...UNWIRED_OPTIONS, headerTokenTrigger: true });
+    expect(triggerItemsOf(merged.plugins[0])).toHaveLength(1);
+  });
+
+  it("warns once when headerTokenTrigger: true is forced on while unwired", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      withZudoSg(bareHost(), { ...UNWIRED_OPTIONS, headerTokenTrigger: true });
+      withZudoSg(bareHost(), { ...UNWIRED_OPTIONS, headerTokenTrigger: true });
+      expect(warn).toHaveBeenCalledTimes(1);
+      expect(warn.mock.calls[0]?.[0]).toContain("zdtpApplyProxy.tabsModule");
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("does not warn when headerTokenTrigger: true is set and the panel is wired", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      withZudoSg(bareHost(), { ...OPTIONS, headerTokenTrigger: true });
+      expect(warn).not.toHaveBeenCalled();
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("an explicit headerTokenTrigger: false stays off and warns nothing, wired or not", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      expect(triggerItemsOf(withZudoSg(bareHost(), { ...OPTIONS, headerTokenTrigger: false }).plugins[0])).toHaveLength(0);
+      expect(triggerItemsOf(withZudoSg(bareHost(), { ...UNWIRED_OPTIONS, headerTokenTrigger: false }).plugins[0])).toHaveLength(0);
+      expect(warn).not.toHaveBeenCalled();
+    } finally {
+      warn.mockRestore();
+    }
   });
 });
 
