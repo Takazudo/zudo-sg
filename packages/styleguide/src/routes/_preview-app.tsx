@@ -23,11 +23,11 @@ import type { JSX } from "preact";
 import { useEffect } from "preact/hooks";
 import { PreviewApp } from "../preview/index.js";
 import { installIframeReceiver } from "../token-tweak/index.js";
-import { registry } from "./_registry.js";
+import { storyRegistry } from "./_registry.js";
 
 export default function ConfiguredPreviewApp(): JSX.Element {
   useEffect(() => installIframeReceiver(window), []);
-  return <PreviewApp registry={registry} />;
+  return <PreviewApp registry={storyRegistry} />;
 }
 
 ConfiguredPreviewApp.displayName = "ConfiguredPreviewApp";

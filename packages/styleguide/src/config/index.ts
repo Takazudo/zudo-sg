@@ -45,11 +45,42 @@ export interface ZudoSgCollection {
   include: string[];
 }
 
-export interface ZudoSgComposeOptions {
+/** Module mode (default): stories come from the generated StoryModule registry (`registryOut`). */
+export interface ZudoSgModuleRegistry {
+  mode: "module";
+}
+
+/**
+ * Descriptor mode: stories come from plain-data `StoryDescriptor`s exported by
+ * `module` (project-root-relative, inside the project) as the named export
+ * `storyDescriptors`, or as the default export when that name is absent.
+ */
+export interface ZudoSgDescriptorRegistry {
+  mode: "descriptor";
+  module: string;
+}
+
+export type ZudoSgRegistryOption = ZudoSgModuleRegistry | ZudoSgDescriptorRegistry;
+
+interface ZudoSgModuleSourceOptions {
+  registry?: ZudoSgModuleRegistry;
   /** Story corpora; one `componentDocs*` collection is registered per `dir`. */
   componentsRoots: ReadonlyArray<{ dir: string; importBase?: string }>;
   /** Project-root-relative generated registry (the routes plugin's `registryModule`). */
   registryOut: string;
+}
+
+interface ZudoSgDescriptorSourceOptions {
+  registry: ZudoSgDescriptorRegistry;
+  /** Ignored by the engine in descriptor mode (no component-doc collections); CLI-only. */
+  componentsRoots?: ReadonlyArray<{ dir: string; importBase?: string }>;
+  /** Ignored by the engine in descriptor mode; CLI-only. */
+  registryOut?: string;
+}
+
+export type ZudoSgComposeOptions = ZudoSgComposeBaseOptions & (ZudoSgModuleSourceOptions | ZudoSgDescriptorSourceOptions);
+
+export interface ZudoSgComposeBaseOptions {
   categoryOrder?: string[];
   uiPackageName?: string;
   /** Project-root-relative preview stylesheet entry (the preview-css plugin's input). */
@@ -240,28 +271,65 @@ function withHeaderTokenTrigger(plugin: unknown): unknown {
   };
 }
 
+/** Validates `options.registry`; returns the descriptor module path in descriptor mode, else `null`. */
+function descriptorModuleOf(registry: unknown): string | null {
+  if (registry === undefined) return null;
+  if (!isRecord(registry)) {
+    throw new Error('[zudo-sg] option "registry" must be { mode: "module" } or { mode: "descriptor", module }');
+  }
+  for (const key of Object.keys(registry)) {
+    if (key !== "mode" && key !== "module") {
+      throw new Error(`[zudo-sg] option "registry.${key}" is not supported (expected mode, module)`);
+    }
+  }
+  if (registry.mode === "module") {
+    if (registry.module !== undefined) {
+      throw new Error('[zudo-sg] option "registry.module" is only valid with registry.mode "descriptor"');
+    }
+    return null;
+  }
+  if (registry.mode === "descriptor") {
+    if (typeof registry.module !== "string" || registry.module === "") {
+      throw new Error(
+        '[zudo-sg] option "registry.module" is required with registry.mode "descriptor" ' +
+          '(project-root-relative path, e.g. "./src/styleguide/story-descriptors.ts")',
+      );
+    }
+    return registry.module;
+  }
+  throw new Error(`[zudo-sg] option "registry.mode" must be "module" or "descriptor" (got ${JSON.stringify(registry.mode)})`);
+}
+
 /** Returns the engine's zfb plugin descriptors and content collections. */
 export function zudoSg(options: ZudoSgComposeOptions): ZudoSgFragment {
   if (!options || typeof options !== "object") {
     throw new Error("[zudo-sg] zudoSg(options) requires an options object (the zudo-sg.config.mjs shape)");
   }
-  const roots = Array.isArray(options.componentsRoots) ? options.componentsRoots : [];
+  const descriptorModule = descriptorModuleOf(options.registry);
+  // Descriptor mode registers no component-doc collections: descriptors carry no registry key to pair with.
+  const roots = descriptorModule === null && Array.isArray(options.componentsRoots) ? options.componentsRoots : [];
   const previewCssUrl = options.previewCssUrl ?? DEFAULT_PREVIEW_CSS_URL;
+  const registrySource =
+    descriptorModule === null
+      ? {
+          registryModule: options.registryOut,
+          // Pairs each root's registry key prefix with its collection below, so the
+          // detail route resolves a story's doc from the root its key belongs to.
+          componentDocs: componentDocsRoots(roots),
+        }
+      : { registryMode: "descriptor", descriptorModule };
 
   const plugins: ZudoSgPluginDescriptor[] = [
     {
       name: ROUTES_PLUGIN_NAME,
       options: definedOnly({
-        registryModule: options.registryOut,
+        ...registrySource,
         routes: options.routes,
         categoryOrder: options.categoryOrder,
         uiPackageName: options.uiPackageName,
         previewCssUrl,
         catalog: options.catalog,
         tokensManifestModule: options.tokens?.manifestOut,
-        // Pairs each root's registry key prefix with its collection below, so the
-        // detail route resolves a story's doc from the root its key belongs to.
-        componentDocs: componentDocsRoots(roots),
       }),
     },
     {

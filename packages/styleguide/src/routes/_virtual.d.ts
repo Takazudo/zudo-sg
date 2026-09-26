@@ -13,6 +13,12 @@ declare module "virtual:zudo-sg-context" {
 declare module "virtual:zudo-sg-registry" {
   export const storyModules: Record<string, import("../stories/index.js").StoryModule>;
   export const storyExportOrder: Record<string, string[]>;
+  /**
+   * Descriptor mode: the host module's raw `storyDescriptors` (validated by
+   * `_registry.ts` at build time). Module mode: `[]`. Both other names are `{}`
+   * in descriptor mode.
+   */
+  export const storyDescriptors: unknown;
 }
 
 declare module "virtual:zudo-sg-tokens" {

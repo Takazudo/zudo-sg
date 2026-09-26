@@ -9,6 +9,10 @@
 // base-prefixed preview URL (VariantFrame builds iframe `src` from it; the
 // code panel's CSS injection selects iframes by it). The optional co-located
 // component MDX doc renders as a trailing section.
+//
+// Descriptor-mode entries carry no story source, so they get no CodePanel
+// island, no component doc and no live-demo link — only the header and the
+// workbench, built from the mode-neutral `CatalogEntry` fields.
 
 import type { JSX, VNode } from "preact";
 import { Island } from "@takazudo/zfb";
@@ -49,7 +53,7 @@ export default function ComponentsSlugRoute(props: SlugProps & { params: { slug:
   const entry = registry.getStoryBySlug(slug);
   const previewUrl = withBase(ctx.routes.componentsPreview);
   const chrome = chromeProps({
-    pageTitle: entry ? entry.meta.title : "Not found",
+    pageTitle: entry ? entry.title : "Not found",
     path: componentHref(ctx.routes, slug),
     activeSlug: slug,
   });
@@ -62,33 +66,39 @@ export default function ComponentsSlugRoute(props: SlugProps & { params: { slug:
     );
   }
 
-  const panelVariants: CodePanelVariant[] = entry.variants.map((v) => ({
-    exportName: v.exportName,
-    name: v.name,
-    source: v.story.source ?? entry.meta.usage,
-  }));
-  const codePanelIsland = Island({
-    when: "load",
-    children: <CodePanel storyTitle={entry.meta.title} variants={panelVariants} previewUrl={previewUrl} />,
-  }) as unknown as VNode;
-  const codePanel = (
-    <aside id="sg-code-panel" class="sg-code-panel" aria-label="Code panel">
-      <div
-        class="sg-code-panel-resizer"
-        data-sg-code-panel-resizer
-        role="separator"
-        aria-label="Resize code panel"
-        aria-orientation="vertical"
-        tabindex={0}
-      />
-      {codePanelIsland}
-    </aside>
-  ) as unknown as VNode;
+  const storyEntry = entry.source === "module" ? entry.storyEntry : undefined;
+
+  let codePanel: VNode | null = null;
+  if (storyEntry) {
+    const panelVariants: CodePanelVariant[] = storyEntry.variants.map((v) => ({
+      exportName: v.exportName,
+      name: v.name,
+      source: v.story.source ?? storyEntry.meta.usage,
+    }));
+    const codePanelIsland = Island({
+      when: "load",
+      children: <CodePanel storyTitle={entry.title} variants={panelVariants} previewUrl={previewUrl} />,
+    }) as unknown as VNode;
+    codePanel = (
+      <aside id="sg-code-panel" class="sg-code-panel" aria-label="Code panel">
+        <div
+          class="sg-code-panel-resizer"
+          data-sg-code-panel-resizer
+          role="separator"
+          aria-label="Resize code panel"
+          aria-orientation="vertical"
+          tabindex={0}
+        />
+        {codePanelIsland}
+      </aside>
+    ) as unknown as VNode;
+  }
 
   // The collection of the components root this story's registry key belongs to
   // (`./<keyPrefix>/<dir>/<name>.stories.tsx` → `<dir>/<name>`).
-  const docRef = resolveComponentDoc(entry.path, ctx.componentDocs);
+  const docRef = storyEntry ? resolveComponentDoc(storyEntry.path, ctx.componentDocs) : null;
   const doc = docRef ? getEntry(docRef.collection, docRef.slug) : undefined;
+  const previewRoute = storyEntry?.meta.previewRoute;
 
   // `when: "load"`: the toolbar is the page's primary control surface; each
   // iframe is `loading="lazy"`, so below-the-fold previews still defer.
@@ -101,7 +111,7 @@ export default function ComponentsSlugRoute(props: SlugProps & { params: { slug:
         variants={entry.variants.map((v) => ({
           exportName: v.exportName,
           name: v.name,
-          controls: v.story.controls,
+          controls: v.controls,
         }))}
       />
     ),
@@ -111,18 +121,18 @@ export default function ComponentsSlugRoute(props: SlugProps & { params: { slug:
     <StyleguideLayout {...chrome} activeSlug={slug} codePanel={codePanel} contentWide>
       <div>
         <header class="mb-vsp-lg max-w-[56rem]">
-          <h1 class="text-2xl font-bold text-[color:var(--sg-fg)]">{entry.meta.title}</h1>
-          <p class="mt-vsp-xs text-[color:var(--sg-muted)]">{entry.meta.description}</p>
+          <h1 class="text-2xl font-bold text-[color:var(--sg-fg)]">{entry.title}</h1>
+          <p class="mt-vsp-xs text-[color:var(--sg-muted)]">{entry.description}</p>
           <span class="mt-vsp-xs inline-block rounded-full border border-[color:var(--sg-border)] px-hsp-sm py-vsp-3xs text-caption leading-normal text-[color:var(--sg-muted)]">
-            {entry.meta.category}
+            {entry.category}
           </span>
         </header>
 
-        {entry.meta.previewRoute && (
+        {previewRoute && (
           <section class="mb-vsp-xl max-w-[56rem] rounded-md border border-[color:var(--sg-border)] bg-[var(--sg-surface-2)] p-hsp-md">
             <h2 class="mb-vsp-2xs text-small font-semibold uppercase tracking-wide text-[color:var(--sg-muted)]">Live demo</h2>
             <a
-              href={withBase(entry.meta.previewRoute)}
+              href={withBase(previewRoute)}
               class="text-sm font-medium text-[color:var(--sg-accent)] underline underline-offset-2"
             >
               Open live demo →

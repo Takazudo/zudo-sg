@@ -1,6 +1,8 @@
 export {
   ATOM_SCALE_CATEGORIES,
+  CatalogThumb,
   ComponentThumb,
+  DESCRIPTOR_THUMB_PENDING_NOTE,
   THUMB_OPT_OUTS,
   THUMB_VIEWPORT_W,
   THUMB_VIEWPORT_W_ATOM,
@@ -9,7 +11,7 @@ export {
   thumbScale,
   thumbViewportWidth,
 } from "./component-thumb.js";
-export type { ComponentThumbProps } from "./component-thumb.js";
+export type { CatalogThumbProps, ComponentThumbProps } from "./component-thumb.js";
 export {
   ATTR_TILE_SIZE,
   DEFAULT_TILE_SIZE,
