@@ -10,7 +10,17 @@ import {
   MSG_REQUEST_READY,
   MSG_SET_THEME,
   MSG_UPDATE_PROPS,
+  PROTOCOL_VERSION,
 } from "../messages.js";
+
+const IDENTITY = { slug: "fixture", variant: "Fixture" } as const;
+const READY = { type: MSG_READY, v: PROTOCOL_VERSION, ...IDENTITY };
+const height = (value: number) => ({
+  type: MSG_HEIGHT,
+  v: PROTOCOL_VERSION,
+  height: value,
+  ...IDENTITY,
+});
 
 // PreviewApp receives the registry as a prop (never island props — see the
 // component header); a structural fixture stands in for createRegistry().
@@ -95,6 +105,7 @@ describe("PreviewApp parent messaging", () => {
           // if its listener was installed before the handshake was sent.
           window.dispatchEvent(
             new MessageEvent("message", {
+              origin: window.location.origin,
               data: { type: MSG_SET_THEME, theme: "dark" },
               source: window.parent,
             }),
@@ -104,18 +115,20 @@ describe("PreviewApp parent messaging", () => {
 
     render(<PreviewApp registry={registry} />);
 
-    expect(postMessage).toHaveBeenCalledWith({ type: MSG_READY }, "*");
+    expect(postMessage).toHaveBeenCalledWith(READY, window.location.origin);
     expect(document.documentElement.dataset.theme).toBe("dark");
 
     act(() => {
       window.dispatchEvent(
         new MessageEvent("message", {
+          origin: window.location.origin,
           data: { type: MSG_SET_THEME, theme: "light" },
           source: null,
         }),
       );
       window.dispatchEvent(
         new MessageEvent("message", {
+          origin: window.location.origin,
           data: { type: MSG_UPDATE_PROPS, props: { label: "Updated" } },
           source: window.parent,
         }),
@@ -131,11 +144,12 @@ describe("PreviewApp parent messaging", () => {
       .mockImplementation(() => undefined);
 
     render(<PreviewApp registry={registry} />);
-    expect(postMessage).toHaveBeenCalledWith({ type: MSG_READY }, "*");
+    expect(postMessage).toHaveBeenCalledWith(READY, window.location.origin);
 
     act(() => {
       window.dispatchEvent(
         new MessageEvent("message", {
+          origin: window.location.origin,
           data: { type: MSG_REQUEST_READY },
           source: window.parent,
         }),
@@ -166,16 +180,17 @@ describe("PreviewApp parent messaging", () => {
     act(() => {
       window.dispatchEvent(
         new MessageEvent("message", {
+          origin: window.location.origin,
           data: { type: MSG_REQUEST_READY },
           source: window.parent,
         }),
       );
     });
 
-    expect(postMessage).toHaveBeenCalledWith({ type: MSG_READY }, "*");
+    expect(postMessage).toHaveBeenCalledWith(READY, window.location.origin);
     expect(postMessage).toHaveBeenCalledWith(
-      { type: MSG_HEIGHT, height: 125 },
-      "*",
+      height(125),
+      window.location.origin,
     );
   });
 });
@@ -209,8 +224,8 @@ describe("PreviewApp height reporting", () => {
       document.body.getBoundingClientRect().bottom + window.scrollY,
     ).toBe(FRACTIONAL_FIXTURE_DOCUMENT_BOTTOM);
     expect(postMessage).toHaveBeenCalledWith(
-      { type: MSG_HEIGHT, height: 125 },
-      "*",
+      height(125),
+      window.location.origin,
     );
 
     // Preserve the reporter's immediate, 100ms, and 500ms calls.
@@ -227,8 +242,8 @@ describe("PreviewApp height reporting", () => {
     resizeCallback?.([] as ResizeObserverEntry[], {} as ResizeObserver);
 
     expect(postMessage).toHaveBeenLastCalledWith(
-      { type: MSG_HEIGHT, height: 85 },
-      "*",
+      height(85),
+      window.location.origin,
     );
   });
 });
@@ -238,5 +253,66 @@ describe("PreviewApp hydration marker", () => {
     expect(document.documentElement.hasAttribute("data-sg-preview-hydrated")).toBe(false);
     render(<PreviewApp registry={registry} />);
     expect(document.documentElement.getAttribute("data-sg-preview-hydrated")).toBe("1");
+  });
+});
+
+describe("PreviewApp protocol v1 (#880)", () => {
+  function send(data: unknown, init: { origin?: string; source?: Window | null } = {}): void {
+    act(() => {
+      window.dispatchEvent(
+        new MessageEvent("message", {
+          origin: init.origin ?? window.location.origin,
+          source: "source" in init ? init.source : window.parent,
+          data,
+        }),
+      );
+    });
+  }
+
+  it("announces sg:ready with v and the frame's identity from location.search", () => {
+    const postMessage = vi
+      .spyOn(window.parent, "postMessage")
+      .mockImplementation(() => undefined);
+
+    render(<PreviewApp registry={registry} />);
+
+    expect(postMessage).toHaveBeenCalledWith(
+      { type: MSG_READY, v: 1, slug: "fixture", variant: "Fixture" },
+      window.location.origin,
+    );
+    for (const [message, target] of postMessage.mock.calls) {
+      expect(target).toBe(window.location.origin);
+      expect((message as { v?: unknown }).v).toBe(PROTOCOL_VERSION);
+    }
+  });
+
+  it("ignores a cross-origin message even when its source is the parent", () => {
+    vi.spyOn(window.parent, "postMessage").mockImplementation(() => undefined);
+    render(<PreviewApp registry={registry} />);
+
+    send({ type: MSG_SET_THEME, theme: "dark" }, { origin: "https://evil.example" });
+    expect(document.documentElement.dataset.theme).toBeUndefined();
+
+    send({ type: MSG_SET_THEME, theme: "dark" });
+    expect(document.documentElement.dataset.theme).toBe("dark");
+  });
+
+  it("ignores a same-origin message whose source is not the parent", () => {
+    vi.spyOn(window.parent, "postMessage").mockImplementation(() => undefined);
+    render(<PreviewApp registry={registry} />);
+
+    send({ type: MSG_SET_THEME, theme: "dark" }, { source: null });
+    expect(document.documentElement.dataset.theme).toBeUndefined();
+  });
+
+  it("accepts a legacy parent message without v and rejects v: 2", () => {
+    vi.spyOn(window.parent, "postMessage").mockImplementation(() => undefined);
+    render(<PreviewApp registry={registry} />);
+
+    send({ type: MSG_SET_THEME, v: 2, theme: "light" });
+    expect(document.documentElement.dataset.theme).toBeUndefined();
+
+    send({ type: MSG_SET_THEME, theme: "light" });
+    expect(document.documentElement.dataset.theme).toBe("light");
   });
 });

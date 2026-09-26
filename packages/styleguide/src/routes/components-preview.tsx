@@ -14,6 +14,11 @@
 // `:root[data-sg-preview-doc]`, so the preview world's tokens beat the host
 // bundle zfb injects into every route. This entrypoint links assets only; it
 // never calls plugin helpers.
+//
+// Descriptor mode never reaches this file: `resolveRoutesPluginOptions`
+// (issue #884) requires an `externalPreview` in descriptor mode, which
+// implies `componentsPreview` disabled — the route plugin never injects this
+// entrypoint there, so it needs no descriptor-mode branch of its own.
 
 import type { JSX, VNode } from "preact";
 import { Island } from "@takazudo/zfb";

@@ -41,6 +41,22 @@ Categories are plain strings, not a fixed enum: a host lists the categories it w
 
 This is the concept-level shape only. The full authoring contract — control types, source-display rules, the live preview-props channel, and the scaffolding CLI — is the package's own documentation, not this site (see [Relationship to zudo-doc](./relationship-to-zudo-doc) for why the root site and the package docs stay two separate places).
 
+## A second story source for non-Preact hosts
+
+Everything above describes **module mode** — stories as `*.stories.tsx`
+files with real `render` functions, the engine's own default. A host that
+cannot run Preact stories directly instead switches to **descriptor mode**
+(`registry: { mode: "descriptor" }`): stories become plain-data
+`StoryDescriptor`s with no `render` function, and the host serves its own
+preview document at `externalPreview.url` instead of relying on the engine's
+in-engine `/components/preview` route. The engine still renders the catalog,
+nav, search, and the detail page's chrome either way — only the preview
+document's contents change hands. See
+[Adopting the engine](./adopting) for the framework-scope framing and the
+`doc/` workspace's
+[Descriptor mode & external preview](https://zudo-sg-doc.takazudomodular.com/docs/reference/descriptor-mode)
+for the full contract.
+
 ## No staging
 
 Earlier zfb releases required a package injecting routes from outside a project's own source tree to stage its route entrypoints into a project-local hidden directory before the bundler would resolve them. That gap is closed as of the zfb release this engine targets: a route entrypoint's virtual-module imports resolve correctly straight from the package's own realpath, whether the package is workspace-linked or installed from a tarball into `node_modules`. The engine therefore ships its route entrypoints as `.tsx` source (not compiled `.js` — the bundler extracts each route's dynamic `paths()` by parsing the source file) and injects them directly, with nothing to stage and nothing under the host's own tree to `.gitignore`.

@@ -23,15 +23,23 @@
 // tweaks live-update it.
 
 import type { JSX } from "preact";
-import { useEffect, useMemo, useRef, useState } from "preact/hooks";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "preact/hooks";
 import { onAfterNavigate } from "@takazudo/zudo-doc/transitions";
 import type { StoryControl } from "../stories/index.js";
 import {
   MSG_REQUEST_READY,
   MSG_SET_THEME,
   MSG_UPDATE_PROPS,
+  PROTOCOL_VERSION,
   isHeightMessage,
   isReadyMessage,
+  matchesPreviewIdentity,
+  type ParentToPreviewMessage,
   type PreviewTheme,
 } from "./messages.js";
 import { PREVIEW_ROUTE_PATH } from "./route.js";
@@ -79,6 +87,38 @@ export const THEME_OPTIONS: ThemeOption[] = [
 
 export const DEFAULT_THEME_MODE: ThemeMode = "follow";
 
+/**
+ * What a stage does about theme. `"none"` hands theme to the host (#883): the
+ * stage never posts `sg:setTheme`, so a preview document that picks its own
+ * theme (e.g. from a `previewParams` entry) is never overridden.
+ */
+export type FrameThemeMode = ThemeMode | "none";
+
+/** Query keys the stage owns; `previewParams` entries using them are ignored. */
+export const RESERVED_PREVIEW_PARAMS: readonly string[] = ["slug", "variant"];
+
+/**
+ * The preview document URL for one variant: `slug` and `variant` first, then
+ * every `previewParams` entry URL-encoded in insertion order. A reserved key
+ * in `previewParams` is dropped rather than thrown on — the identity pair must
+ * stay authoritative, and throwing from an island would blank the whole page.
+ */
+export function buildPreviewSrc(
+  previewUrl: string,
+  slug: string,
+  exportName: string,
+  previewParams?: Readonly<Record<string, string>>,
+): string {
+  let src = `${previewUrl}?slug=${encodeURIComponent(slug)}&variant=${encodeURIComponent(exportName)}`;
+  if (previewParams) {
+    for (const [key, value] of Object.entries(previewParams)) {
+      if (RESERVED_PREVIEW_PARAMS.includes(key)) continue;
+      src += `&${encodeURIComponent(key)}=${encodeURIComponent(value)}`;
+    }
+  }
+  return src;
+}
+
 function viewportWidth(id: ViewportId): string {
   const preset = VIEWPORTS.find((v) => v.id === id) ?? VIEWPORTS.at(-1);
   return preset?.width ?? "100%";
@@ -89,6 +129,25 @@ function readCatalogTheme(): PreviewTheme | null {
   return theme === "light" || theme === "dark" ? theme : null;
 }
 
+/** Initial iframe height (px) before the frame reports its own, and after a variant change. */
+const INITIAL_FRAME_HEIGHT = 180;
+
+/**
+ * `allow-forms` is required by `packages/demo-ui/src/forms/` stories: #499 saw
+ * Chromium block submission without it (the submit listener did not fire and
+ * the frame did not navigate), while with it the listener fired and the frame
+ * navigated to the real action. The catalog form stories omit their enhancer
+ * islands, so `contact-form.stories.tsx` cannot show this: it renders
+ * `<ContactForm />` alone; `ContactFormEnhancer` lives at previewRoute
+ * `/preview/contact`, which the detail page links out to instead of rendering
+ * in a preview iframe.
+ */
+export const DEFAULT_FRAME_SANDBOX: readonly string[] = [
+  "allow-same-origin",
+  "allow-scripts",
+  "allow-forms",
+];
+
 export interface VariantFrameProps {
   slug: string;
   /** Story export name (e.g. "Variants"). */
@@ -97,8 +156,11 @@ export interface VariantFrameProps {
   name: string;
   /** Declarative control descriptors (metadata only). */
   controls?: StoryControl[];
-  /** Toolbar-owned theme mode. "follow" tracks the catalog's `data-theme`. */
-  themeMode: ThemeMode;
+  /**
+   * Toolbar-owned theme mode. "follow" tracks the catalog's `data-theme`;
+   * "none" never posts `sg:setTheme` (host-controlled theme).
+   */
+  themeMode: FrameThemeMode;
   /** Toolbar-owned viewport preset. */
   viewportId: ViewportId;
   /**
@@ -106,6 +168,25 @@ export interface VariantFrameProps {
    * `routes.componentsPreview`). Defaults to the unprefixed PREVIEW_ROUTE_PATH.
    */
   previewUrl?: string;
+  /**
+   * Iframe `sandbox` tokens. Defaults to DEFAULT_FRAME_SANDBOX. Dropping
+   * `allow-same-origin` gives the frame an opaque origin, which the protocol's
+   * same-origin rule then rejects — only do that with a frame that does not
+   * need to talk back.
+   */
+  frameSandbox?: readonly string[];
+  /** Iframe `allow` (permissions policy) directives, joined with `; `. Absent by default. */
+  frameAllow?: readonly string[];
+  /**
+   * Extra query params appended, URL-encoded, after `slug`/`variant`. The
+   * reserved keys `slug` and `variant` are ignored.
+   */
+  previewParams?: Readonly<Record<string, string>>;
+  /**
+   * Fixed iframe height in px. When set, `sg:height` reports are ignored;
+   * when absent the frame auto-sizes from them.
+   */
+  fixedHeight?: number;
 }
 
 function VariantFrame(props: VariantFrameProps): JSX.Element {
@@ -117,35 +198,62 @@ function VariantFrame(props: VariantFrameProps): JSX.Element {
     themeMode,
     viewportId,
     previewUrl = PREVIEW_ROUTE_PATH,
+    frameSandbox = DEFAULT_FRAME_SANDBOX,
+    frameAllow,
+    previewParams,
+    fixedHeight,
   } = props;
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const readyRef = useRef(false);
   // Mirror the prop into a ref so the `[]`-deps listeners below (message,
   // MutationObserver, after-navigate) read the CURRENT mode without being torn
   // down and re-installed on every toolbar change.
-  const themeModeRef = useRef<ThemeMode>(themeMode);
+  const themeModeRef = useRef<FrameThemeMode>(themeMode);
   themeModeRef.current = themeMode;
-  const [height, setHeight] = useState(180);
+  // The frame's current identity, read by the `[]`-deps message listener to
+  // drop reports from a document that no longer belongs to this stage.
+  const identityRef = useRef({ slug, variant: exportName });
+  identityRef.current = { slug, variant: exportName };
+  const fixedHeightRef = useRef(fixedHeight);
+  fixedHeightRef.current = fixedHeight;
+  const [height, setHeight] = useState(INITIAL_FRAME_HEIGHT);
 
   // `previewUrl` is shared with css-injection.ts's iframe selector (the code
   // panel receives the same value) — keep them in agreement by passing one
-  // value, not by re-typing the literal (#48, #105).
-  const src = useMemo(
-    () =>
-      `${previewUrl}?slug=${encodeURIComponent(slug)}&variant=${encodeURIComponent(exportName)}`,
-    [previewUrl, slug, exportName],
-  );
+  // value, not by re-typing the literal (#48, #105). A plain string (no memo):
+  // a fresh-but-equal `previewParams` object yields the same `src`, so it
+  // never triggers the document reset below.
+  const src = buildPreviewSrc(previewUrl, slug, exportName, previewParams);
+
+  // Same-origin frame: target our own origin, never "*", so a frame that
+  // navigated elsewhere cannot receive props or theme (#880). An opaque
+  // "null" origin is not a valid target; skip rather than throw.
+  function post(message: ParentToPreviewMessage): void {
+    const origin = window.location.origin;
+    if (origin === "null") return;
+    iframeRef.current?.contentWindow?.postMessage(message, origin);
+  }
 
   function sendTheme(theme: PreviewTheme): void {
-    iframeRef.current?.contentWindow?.postMessage(
-      { type: MSG_SET_THEME, theme },
-      "*",
-    );
+    post({ type: MSG_SET_THEME, v: PROTOCOL_VERSION, theme });
   }
+
+  // A new `src` is a new document: forget the old one's readiness and height
+  // so the stage works without a keyed remount. A layout effect runs
+  // synchronously after the commit that swapped `src`, so no message event
+  // can land between the swap and this reset.
+  const committedSrcRef = useRef(src);
+  useLayoutEffect(() => {
+    if (committedSrcRef.current === src) return;
+    committedSrcRef.current = src;
+    readyRef.current = false;
+    setHeight(INITIAL_FRAME_HEIGHT);
+  }, [src]);
 
   function syncTheme(): void {
     if (!readyRef.current) return;
     const mode = themeModeRef.current;
+    if (mode === "none") return;
     const theme = mode === "follow" ? readCatalogTheme() : mode;
     if (theme) sendTheme(theme);
   }
@@ -155,13 +263,17 @@ function VariantFrame(props: VariantFrameProps): JSX.Element {
   // resolved theme while its listener is still being installed.
   useEffect(() => {
     function onMessage(e: MessageEvent): void {
+      if (e.origin !== window.location.origin) return;
       if (e.source !== iframeRef.current?.contentWindow) return;
       if (isReadyMessage(e.data)) {
+        if (!matchesPreviewIdentity(e.data, identityRef.current)) return;
         readyRef.current = true;
         syncTheme();
         return;
       }
       if (isHeightMessage(e.data)) {
+        if (!matchesPreviewIdentity(e.data, identityRef.current)) return;
+        if (fixedHeightRef.current !== undefined) return;
         setHeight(Math.max(80, Math.ceil(e.data.height)));
       }
     }
@@ -169,10 +281,7 @@ function VariantFrame(props: VariantFrameProps): JSX.Element {
     // `PreviewApp` sends `sg:ready` once from a `when="load"` island. If
     // that signal raced this effect during parent/iframe startup, ask the
     // already-mounted frame to answer now that this listener is active.
-    iframeRef.current?.contentWindow?.postMessage(
-      { type: MSG_REQUEST_READY },
-      "*",
-    );
+    post({ type: MSG_REQUEST_READY, v: PROTOCOL_VERSION });
     return () => window.removeEventListener("message", onMessage);
   }, []);
 
@@ -219,10 +328,7 @@ function VariantFrame(props: VariantFrameProps): JSX.Element {
 
   // Push live control values to the iframe.
   function sendProps(props: Record<string, unknown>): void {
-    iframeRef.current?.contentWindow?.postMessage(
-      { type: MSG_UPDATE_PROPS, props },
-      "*",
-    );
+    post({ type: MSG_UPDATE_PROPS, v: PROTOCOL_VERSION, props });
   }
 
   return (
@@ -237,24 +343,16 @@ function VariantFrame(props: VariantFrameProps): JSX.Element {
         class="flex overflow-x-auto bg-[var(--sg-bg)] p-hsp-md focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[color:var(--sg-focus)]"
       >
         <div class="mx-auto shrink-0" style={{ width: viewportWidth(viewportId) }}>
-          {/* `allow-forms` is required by `packages/demo-ui/src/forms/` stories:
-              #499 saw Chromium block submission without it (the submit
-              listener did not fire and the frame did not navigate), while
-              with it the listener fired and the frame navigated to the real
-              action. The catalog form stories omit their enhancer islands,
-              so `contact-form.stories.tsx` cannot show this: it renders
-              `<ContactForm />` alone; `ContactFormEnhancer` lives at
-              previewRoute `/preview/contact`, which the detail page links out
-              to instead of rendering in a preview iframe. */}
           <iframe
             ref={iframeRef}
             src={src}
             title={`${slug} — ${name}`}
             loading="lazy"
-            sandbox="allow-same-origin allow-scripts allow-forms"
+            sandbox={frameSandbox.join(" ")}
+            allow={frameAllow ? frameAllow.join("; ") : undefined}
             style={{
               width: "100%",
-              height: `${height}px`,
+              height: `${fixedHeight ?? height}px`,
               // An iframe's layout viewport is its content box. Keep the
               // border at zero so a 1280px preset reaches the 1280px
               // breakpoint; a visible border belongs on the wrapper.
@@ -266,7 +364,9 @@ function VariantFrame(props: VariantFrameProps): JSX.Element {
       </div>
       {controls && controls.length > 0 && (
         <div class="border-t border-[color:var(--sg-border)] px-hsp-md py-vsp-xs">
-          <ControlsPanel controls={controls} onChange={sendProps} />
+          {/* Keyed by `src`: a new variant document starts from its defaults,
+              so the panel must too. */}
+          <ControlsPanel key={src} controls={controls} onChange={sendProps} />
         </div>
       )}
     </section>

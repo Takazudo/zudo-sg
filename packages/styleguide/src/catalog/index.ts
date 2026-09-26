@@ -10,6 +10,10 @@ export {
   thumbViewportWidth,
 } from "./component-thumb.js";
 export type { ComponentThumbProps } from "./component-thumb.js";
+export { DESCRIPTOR_THUMB_MISSING_NOTE, DescriptorThumb } from "./descriptor-thumb.js";
+export type { DescriptorThumbProps } from "./descriptor-thumb.js";
+export { CatalogThumb } from "./catalog-thumb.js";
+export type { CatalogThumbProps } from "./catalog-thumb.js";
 export {
   ATTR_TILE_SIZE,
   DEFAULT_TILE_SIZE,

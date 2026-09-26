@@ -25,6 +25,15 @@
 //
 // A variant's OWN story-prop controls are not hoisted — they stay with their
 // variant inside the stage (see ./variant-frame.tsx).
+//
+// Host-controlled props (#883) let a foreign host (the pgen pilot) drive the
+// workbench instead of wrapping it: `selection` (one live frame behind variant
+// tabs), `theme` (host owns theme; no `sg:setTheme`), `previewParams` (extra
+// frame-URL query), `sizing` (fixed height), and `toolbar` (per-group flags).
+// Every default reproduces the pre-#883 output, EXCEPT `toolbar.codePanel` and
+// `toolbar.tokenPanel`, which default OFF: a standalone workbench has no code
+// panel or preview token panel to drive, and a dead control is the bug (#872).
+// The engine's own detail route opts both back in.
 
 import type { JSX } from "preact";
 import { useEffect, useState } from "preact/hooks";
@@ -34,6 +43,7 @@ import VariantFrame, {
   DEFAULT_VIEWPORT_ID,
   THEME_OPTIONS,
   VIEWPORTS,
+  type FrameThemeMode,
   type ThemeMode,
   type ViewportId,
 } from "./variant-frame.js";
@@ -98,32 +108,127 @@ export interface WorkbenchVariant {
   controls?: StoryControl[];
 }
 
+/**
+ * `all` (default) renders one stage per variant. `single` renders variant tabs
+ * and exactly one live stage, switched by props (no remount). `active` makes
+ * the selection controlled; without it the first variant starts selected.
+ */
+export type WorkbenchSelection =
+  | { mode: "all" }
+  | {
+      mode: "single";
+      active?: string;
+      onChange?: (exportName: string) => void;
+    };
+
+/**
+ * `toolbar` (default) renders the Follow/Light/Dark group and posts
+ * `sg:setTheme`. `host` renders no theme group and never posts `sg:setTheme`.
+ */
+export type WorkbenchTheme = { mode: "toolbar" } | { mode: "host" };
+
+/**
+ * `auto` (default) sizes each frame from its `sg:height` reports. `fixed`
+ * pins every frame to `height` px and ignores `sg:height`.
+ */
+export type WorkbenchSizing = { mode: "auto" } | { mode: "fixed"; height: number };
+
+/**
+ * Per-group toolbar flags. A false group does not render at all; with every
+ * group hidden no toolbar box renders.
+ */
+export interface WorkbenchToolbar {
+  /** Viewport preset group. Default `true`. */
+  viewport?: boolean;
+  /** Stacked/Grid layout group. Default `true`. */
+  layout?: boolean;
+  /** Code-panel toggle. Default `false` — only a page with a code panel should enable it. */
+  codePanel?: boolean;
+  /** Preview-tokens trigger. Default `false` — only a page mounting the preview token panel should enable it. */
+  tokenPanel?: boolean;
+}
+
 export interface DetailWorkbenchProps {
   slug: string;
   variants: WorkbenchVariant[];
   /** Base-prefixed preview route URL, forwarded to every stage (see VariantFrame). */
   previewUrl?: string;
+  /** Iframe `sandbox` tokens, forwarded to every stage (see VariantFrame). */
+  frameSandbox?: readonly string[];
+  /** Iframe `allow` directives, forwarded to every stage (see VariantFrame). */
+  frameAllow?: readonly string[];
+  /** Variant presentation. Default `{ mode: "all" }`. */
+  selection?: WorkbenchSelection;
+  /** Who owns the preview theme. Default `{ mode: "toolbar" }`. */
+  theme?: WorkbenchTheme;
+  /**
+   * Extra query params appended, URL-encoded, to every frame URL after
+   * `slug`/`variant`. The reserved keys `slug` and `variant` are ignored.
+   */
+  previewParams?: Readonly<Record<string, string>>;
+  /** Frame height policy. Default `{ mode: "auto" }`. */
+  sizing?: WorkbenchSizing;
+  /** Which toolbar groups render. */
+  toolbar?: WorkbenchToolbar;
 }
+
+const TABLIST_CLASS =
+  "flex flex-wrap items-center gap-hsp-2xs border-b border-[color:var(--sg-border)]";
+const TAB_BASE_CLASS =
+  "-mb-px rounded-t-sm border-b-2 px-hsp-sm py-vsp-2xs text-caption leading-normal transition-colors cursor-pointer ";
+const TAB_ON_CLASS = "border-[color:var(--sg-border-strong)] text-[color:var(--sg-fg)]";
+const TAB_OFF_CLASS =
+  "border-transparent text-[color:var(--sg-muted)] hover:text-[color:var(--sg-fg)]";
 
 function segmentClass(selected: boolean): string {
   return SEGMENT_BASE_CLASS + (selected ? SEGMENT_ON_CLASS : SEGMENT_OFF_CLASS);
+}
+
+
+function tabClass(selected: boolean): string {
+  return TAB_BASE_CLASS + (selected ? TAB_ON_CLASS : TAB_OFF_CLASS);
 }
 
 export default function DetailWorkbench({
   slug,
   variants,
   previewUrl,
+  frameSandbox,
+  frameAllow,
+  selection = { mode: "all" },
+  theme = { mode: "toolbar" },
+  previewParams,
+  sizing = { mode: "auto" },
+  toolbar = {},
 }: DetailWorkbenchProps): JSX.Element {
   const [themeMode, setThemeMode] = useState<ThemeMode>(DEFAULT_THEME_MODE);
   const [viewportId, setViewportId] = useState<ViewportId>(DEFAULT_VIEWPORT_ID);
   const [layout, setLayout] = useState<StageLayout>("stacked");
   const [codePanelShown, setCodePanelShown] = useState(true);
+  const [internalActive, setInternalActive] = useState<string | undefined>(
+    undefined,
+  );
+  // Derived from the slug, not `useId`, so the ids an island hydrates against
+  // match its SSR output without depending on render-tree position.
+  const tabsId = `sg-workbench-${slug}`;
+
+  const showTheme = theme.mode === "toolbar";
+  const showViewport = toolbar.viewport ?? true;
+  const showLayout = toolbar.layout ?? true;
+  const showCodePanel = toolbar.codePanel ?? false;
+  const showTokenPanel = toolbar.tokenPanel ?? false;
+  const showToolbar =
+    showTheme || showViewport || showLayout || showCodePanel || showTokenPanel;
+
+  const frameThemeMode: FrameThemeMode = showTheme ? themeMode : "none";
+  const fixedHeight = sizing.mode === "fixed" ? sizing.height : undefined;
 
   // The panel's hidden state is restored onto <html> by the blocking head
   // script before first paint, and survives SPA swaps, so read it after mount
   // rather than guessing during SSR. Observing the attribute keeps
   // `aria-pressed` honest no matter who flipped it.
   useEffect(() => {
+    if (!showCodePanel) return;
     const sync = (): void => setCodePanelShown(!isCodePanelHidden());
     sync();
     const observer = new MutationObserver(sync);
@@ -132,133 +237,225 @@ export default function DetailWorkbench({
       attributeFilter: [ATTR_CODE_PANEL_HIDDEN],
     });
     return () => observer.disconnect();
-  }, []);
+  }, [showCodePanel]);
 
   function openPreviewTokenPanel(): void {
     window.dispatchEvent(new CustomEvent("toggle-preview-token-panel"));
   }
 
+  // Single mode: a controlled `active` wins; otherwise internal state. Either
+  // falls back to the first variant when it names no current variant.
+  const single = selection.mode === "single";
+  const requested = single ? (selection.active ?? internalActive) : undefined;
+  const activeVariant = single
+    ? (variants.find((v) => v.exportName === requested) ?? variants[0])
+    : undefined;
+
+  function selectVariant(exportName: string): void {
+    if (selection.mode !== "single") return;
+    if (selection.active === undefined) setInternalActive(exportName);
+    selection.onChange?.(exportName);
+  }
+
+  function onTabKeyDown(e: KeyboardEvent, index: number): void {
+    let next: number;
+    if (e.key === "ArrowRight") next = (index + 1) % variants.length;
+    else if (e.key === "ArrowLeft")
+      next = (index - 1 + variants.length) % variants.length;
+    else if (e.key === "Home") next = 0;
+    else if (e.key === "End") next = variants.length - 1;
+    else return;
+    e.preventDefault();
+    const target = variants[next];
+    if (!target) return;
+    selectVariant(target.exportName);
+    const tablist = (e.currentTarget as HTMLElement).parentElement;
+    (tablist?.children[next] as HTMLElement | undefined)?.focus();
+  }
+
+  function renderStage(variant: WorkbenchVariant, key?: string): JSX.Element {
+    return (
+      <VariantFrame
+        key={key ?? variant.exportName}
+        slug={slug}
+        exportName={variant.exportName}
+        name={variant.name}
+        controls={variant.controls}
+        themeMode={frameThemeMode}
+        viewportId={viewportId}
+        previewUrl={previewUrl}
+        frameSandbox={frameSandbox}
+        frameAllow={frameAllow}
+        previewParams={previewParams}
+        fixedHeight={fixedHeight}
+      />
+    );
+  }
+
+  const tabId = (index: number): string => `${tabsId}-tab-${index}`;
+  const panelId = `${tabsId}-panel`;
+  const activeIndex = activeVariant ? variants.indexOf(activeVariant) : -1;
+
   return (
     <div>
-      <div class="sg-workbench-toolbar">
-        <div role="group" aria-label="Preview theme" class={TRACK_CLASS}>
-          {THEME_OPTIONS.map((option) => (
-            <button
-              key={option.id}
-              type="button"
-              onClick={() => setThemeMode(option.id)}
-              aria-pressed={themeMode === option.id}
-              class={segmentClass(themeMode === option.id)}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
+      {showToolbar && (
+        <div class="sg-workbench-toolbar">
+          {showTheme && (
+            <div role="group" aria-label="Preview theme" class={TRACK_CLASS}>
+              {THEME_OPTIONS.map((option) => (
+                <button
+                  key={option.id}
+                  type="button"
+                  onClick={() => setThemeMode(option.id)}
+                  aria-pressed={themeMode === option.id}
+                  class={segmentClass(themeMode === option.id)}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          )}
 
-        <div role="group" aria-label="Preview viewport" class={TRACK_CLASS}>
-          {VIEWPORTS.map((preset) => (
-            <button
-              key={preset.id}
-              type="button"
-              onClick={() => setViewportId(preset.id)}
-              aria-pressed={viewportId === preset.id}
-              class={segmentClass(viewportId === preset.id)}
-            >
-              {preset.label}
-            </button>
-          ))}
-        </div>
+          {showViewport && (
+            <div role="group" aria-label="Preview viewport" class={TRACK_CLASS}>
+              {VIEWPORTS.map((preset) => (
+                <button
+                  key={preset.id}
+                  type="button"
+                  onClick={() => setViewportId(preset.id)}
+                  aria-pressed={viewportId === preset.id}
+                  class={segmentClass(viewportId === preset.id)}
+                >
+                  {preset.label}
+                </button>
+              ))}
+            </div>
+          )}
 
-        <div role="group" aria-label="Preview layout" class={TRACK_CLASS}>
-          {LAYOUT_OPTIONS.map((option) => (
-            <button
-              key={option.id}
-              type="button"
-              onClick={() => setLayout(option.id)}
-              aria-pressed={layout === option.id}
-              class={segmentClass(layout === option.id)}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
+          {showLayout && (
+            <div role="group" aria-label="Preview layout" class={TRACK_CLASS}>
+              {LAYOUT_OPTIONS.map((option) => (
+                <button
+                  key={option.id}
+                  type="button"
+                  onClick={() => setLayout(option.id)}
+                  aria-pressed={layout === option.id}
+                  class={segmentClass(layout === option.id)}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          )}
 
-        <div class="ms-auto flex flex-wrap items-center gap-hsp-sm">
-          <button
-            type="button"
-            onClick={() => toggleCodePanel()}
-            aria-pressed={codePanelShown}
-            title="Toggle code panel"
-            class={
-              PILL_BASE_CLASS +
-              (codePanelShown ? PILL_ON_CLASS : PILL_OFF_CLASS)
-            }
-          >
-            {/* Code/brackets glyph — feather `<>` style, matched to the chrome
-                icon set (20×20 viewBox, stroke-width 2). */}
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              aria-hidden="true"
-            >
-              <polyline points="16 18 22 12 16 6" />
-              <polyline points="8 6 2 12 8 18" />
-            </svg>
-            Code panel
-          </button>
-          <button
-            type="button"
-            onClick={openPreviewTokenPanel}
-            title="Edit the design tokens used inside the preview iframes"
-            class={PILL_BASE_CLASS + PILL_OFF_CLASS}
-          >
-            {/* Stacked-frames / layers glyph — evokes "preview iframe tokens".
-                Cohesive matched pair with the root-header Design Tokens sliders
-                glyph: same 20×20 viewBox, feather stroke-width 2, distinct
-                shape. */}
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              aria-hidden="true"
-            >
-              <rect x="3" y="3" width="13" height="13" rx="1.5" />
-              <path d="M8 8h12.5A1.5 1.5 0 0 1 22 9.5V20a1.5 1.5 0 0 1-1.5 1.5H10A1.5 1.5 0 0 1 8.5 20" />
-            </svg>
-            Preview tokens
-          </button>
+          {(showCodePanel || showTokenPanel) && (
+            <div class="ms-auto flex flex-wrap items-center gap-hsp-sm">
+              {showCodePanel && (
+                <button
+                  type="button"
+                  onClick={() => toggleCodePanel()}
+                  aria-pressed={codePanelShown}
+                  title="Toggle code panel"
+                  class={
+                    PILL_BASE_CLASS +
+                    (codePanelShown ? PILL_ON_CLASS : PILL_OFF_CLASS)
+                  }
+                >
+                  {/* Code/brackets glyph — feather `<>` style, matched to the chrome
+                      icon set (20×20 viewBox, stroke-width 2). */}
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <polyline points="16 18 22 12 16 6" />
+                    <polyline points="8 6 2 12 8 18" />
+                  </svg>
+                  Code panel
+                </button>
+              )}
+              {showTokenPanel && (
+                <button
+                  type="button"
+                  onClick={openPreviewTokenPanel}
+                  title="Edit the design tokens used inside the preview iframes"
+                  class={PILL_BASE_CLASS + PILL_OFF_CLASS}
+                >
+                  {/* Stacked-frames / layers glyph — evokes "preview iframe tokens".
+                      Cohesive matched pair with the root-header Design Tokens sliders
+                      glyph: same 20×20 viewBox, feather stroke-width 2, distinct
+                      shape. */}
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <rect x="3" y="3" width="13" height="13" rx="1.5" />
+                    <path d="M8 8h12.5A1.5 1.5 0 0 1 22 9.5V20a1.5 1.5 0 0 1-1.5 1.5H10A1.5 1.5 0 0 1 8.5 20" />
+                  </svg>
+                  Preview tokens
+                </button>
+              )}
+            </div>
+          )}
         </div>
-      </div>
+      )}
+
+      {single && (
+        <div role="tablist" aria-label="Variants" class={TABLIST_CLASS}>
+          {variants.map((variant, index) => {
+            const selected = index === activeIndex;
+            return (
+              <button
+                key={variant.exportName}
+                id={tabId(index)}
+                type="button"
+                role="tab"
+                aria-selected={selected}
+                aria-controls={panelId}
+                tabIndex={selected ? 0 : -1}
+                onClick={() => selectVariant(variant.exportName)}
+                onKeyDown={(e) => onTabKeyDown(e, index)}
+                class={tabClass(selected)}
+              >
+                {variant.name}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       <div
         data-sg-stage-grid={layout}
         class={layout === "grid" ? COLUMNS_GRID_CLASS : STACKED_GRID_CLASS}
+        {...(single
+          ? {
+              id: panelId,
+              role: "tabpanel",
+              "aria-labelledby": activeIndex >= 0 ? tabId(activeIndex) : undefined,
+            }
+          : {})}
       >
-        {variants.map((variant) => (
-          <VariantFrame
-            key={variant.exportName}
-            slug={slug}
-            exportName={variant.exportName}
-            name={variant.name}
-            controls={variant.controls}
-            themeMode={themeMode}
-            viewportId={viewportId}
-            previewUrl={previewUrl}
-          />
-        ))}
+        {single
+          ? // One constant key: switching tabs changes the stage's props, and
+            // VariantFrame resets readiness/height on the new `src` (#880)
+            // instead of remounting the iframe.
+            activeVariant && renderStage(activeVariant, "sg-single-stage")
+          : variants.map((variant) => renderStage(variant))}
       </div>
     </div>
   );

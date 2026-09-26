@@ -40,6 +40,14 @@ export default defineConfig({
         __dirname,
         "packages/styleguide/src/routes/__tests__/stubs/virtual-doc-chrome-bindings.ts",
       ),
+      "virtual:zudo-sg-registry": resolve(
+        __dirname,
+        "packages/styleguide/src/routes/__tests__/stubs/virtual-sg-registry.ts",
+      ),
+      "virtual:zudo-sg-tokens": resolve(
+        __dirname,
+        "packages/styleguide/src/routes/__tests__/stubs/virtual-sg-tokens.ts",
+      ),
       // React → Preact compat aliases (mirrors production zfb/vite build).
       // Most-specific keys first so `react/jsx-runtime` is not swallowed by `react`.
       "react/jsx-runtime": "preact/jsx-runtime",

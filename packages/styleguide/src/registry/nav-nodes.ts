@@ -10,7 +10,8 @@
 // authoritative (the registry already sorts categories and stories).
 
 import { componentHref, resolveSgRoutes, type SgRoutes } from "../sg-routes.js";
-import { OVERVIEW_SLUG, type Registry } from "./registry.js";
+import type { Catalog, CatalogEntry } from "./catalog.js";
+import { OVERVIEW_SLUG, type Registry, type StoryEntry } from "./registry.js";
 
 /** Structural copy of zudo-doc's sidebar `NavNode`. */
 export interface NavNode {
@@ -33,10 +34,14 @@ export interface BuildNavNodesOptions {
   overviewLabel?: string;
 }
 
-export function buildNavNodes(
-  registry: Pick<Registry, "getCategoryGroups">,
-  options: BuildNavNodesOptions,
-): NavNode[] {
+/** Anything with the registry's grouping query: a module `Registry` or a mode-neutral `Catalog`. */
+export type NavNodesSource = Pick<Registry, "getCategoryGroups"> | Pick<Catalog, "getCategoryGroups">;
+
+function storyLabel(story: StoryEntry | CatalogEntry): string {
+  return "meta" in story ? story.meta.title : story.title;
+}
+
+export function buildNavNodes(registry: NavNodesSource, options: BuildNavNodesOptions): NavNode[] {
   const { withBase } = options;
   const routes = resolveSgRoutes(options.routes);
   let position = 0;
@@ -58,9 +63,9 @@ export function buildNavNodes(
     label: group.category,
     position: next(),
     hasPage: false,
-    children: group.stories.map((story) => ({
+    children: group.stories.map((story: StoryEntry | CatalogEntry) => ({
       slug: story.slug,
-      label: story.meta.title,
+      label: storyLabel(story),
       position: next(),
       href: withBase(componentHref(routes, story.slug)),
       hasPage: true,

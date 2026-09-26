@@ -28,6 +28,7 @@ const required = [
   "export const sgContext",
   "export const storyModules",
   "export const storyExportOrder",
+  "export const storyDescriptors",
   'import("@takazudo/zudo-sg/sg-context")',
   'import("@takazudo/zudo-sg/stories")',
 ];

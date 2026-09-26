@@ -27,6 +27,7 @@ import { componentHref, DEFAULT_SG_ROUTES } from "../../sg-routes.js";
 
 const PACKAGE_DIR = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
 const REGISTRY = "./src/styleguide/sg-registry.ts";
+const DESCRIPTORS = "./src/styleguide/story-descriptors.ts";
 const ZUDO_DOC_DESCRIPTOR = { name: ZUDO_DOC_ROUTES_PLUGIN_NAME, options: { settings: {} } };
 
 let sandbox: string;
@@ -42,6 +43,8 @@ beforeAll(() => {
   sandbox = realpathSync(mkdtempSync(join(tmpdir(), "zudo-sg-routes-plugin-")));
   projectRoot = join(sandbox, "host");
   touch(join(projectRoot, REGISTRY));
+  touch(join(projectRoot, DESCRIPTORS));
+  touch(join(sandbox, "outside/descriptors.ts"));
   mkdirSync(join(projectRoot, "src/styleguide/dir-not-file"), { recursive: true });
 
   // Installed-shape package: realpath under node_modules/.pnpm/….
@@ -95,14 +98,17 @@ async function loadContext(reg: Registration): Promise<unknown> {
 describe("resolveRoutesPluginOptions", () => {
   it("fills defaults and resolves registryModule to a forward-slash absolute path", () => {
     expect(resolveRoutesPluginOptions(projectRoot, { registryModule: REGISTRY })).toEqual({
-      registryModule: toForwardSlash(join(projectRoot, REGISTRY)),
+      registry: { mode: "module", registryModule: toForwardSlash(join(projectRoot, REGISTRY)) },
       routes: { ...DEFAULT_SG_ROUTES },
+      disabledRoutes: [],
+      externalPreviewUrl: null,
       categoryOrder: [],
       uiPackageName: null,
       previewCssUrl: DEFAULT_PREVIEW_CSS_URL,
       catalog: { title: "Component catalog", intro: null },
       tokensManifestModule: null,
       componentDocs: [],
+      previewTokenPanel: false,
     });
   });
 
@@ -207,6 +213,196 @@ describe("resolveRoutesPluginOptions", () => {
   });
 });
 
+describe("resolveRoutesPluginOptions — descriptor mode", () => {
+  it("resolves descriptorModule and needs no registryModule", () => {
+    expect(
+      resolveRoutesPluginOptions(projectRoot, {
+        registryMode: "descriptor",
+        descriptorModule: DESCRIPTORS,
+        externalPreview: { url: "/preview/frame" },
+      }).registry,
+    ).toEqual({ mode: "descriptor", descriptorModule: toForwardSlash(join(projectRoot, DESCRIPTORS)) });
+  });
+
+  it("fails when descriptor mode has no externalPreview (S2b's temporary notice is replaced by this)", () => {
+    expect(() =>
+      resolveRoutesPluginOptions(projectRoot, { registryMode: "descriptor", descriptorModule: DESCRIPTORS }),
+    ).toThrow(new Error(`[zudo-sg] descriptor mode has no in-engine preview; set externalPreview`));
+  });
+
+  it("accepts an explicit module mode", () => {
+    expect(resolveRoutesPluginOptions(projectRoot, { registryMode: "module", registryModule: REGISTRY }).registry.mode).toBe(
+      "module",
+    );
+  });
+
+  it("fails when descriptor mode has no descriptorModule", () => {
+    expect(() => resolveRoutesPluginOptions(projectRoot, { registryMode: "descriptor" })).toThrow(
+      new Error(
+        `[zudo-sg] option "descriptorModule" is required (project-root-relative path, e.g. "./src/styleguide/story-descriptors.ts")`,
+      ),
+    );
+  });
+
+  it("fails with the option name when descriptorModule resolves outside the project root", () => {
+    const outside = toForwardSlash(join(sandbox, "outside/descriptors.ts"));
+    expect(() =>
+      resolveRoutesPluginOptions(projectRoot, { registryMode: "descriptor", descriptorModule: "../outside/descriptors.ts" }),
+    ).toThrow(
+      new Error(
+        `[zudo-sg] option "descriptorModule" = "../outside/descriptors.ts" resolved to ${outside}, which is outside projectRoot ${toForwardSlash(projectRoot)}`,
+      ),
+    );
+    expect(() =>
+      resolveRoutesPluginOptions(projectRoot, { registryMode: "descriptor", descriptorModule: outside }),
+    ).toThrow(/option "descriptorModule" = .* which is outside projectRoot/);
+  });
+
+  it("fails when descriptorModule is not a file", () => {
+    expect(() =>
+      resolveRoutesPluginOptions(projectRoot, { registryMode: "descriptor", descriptorModule: "./nope.ts" }),
+    ).toThrow(/option "descriptorModule" = "\.\/nope\.ts" resolved to .* which is not a file$/);
+  });
+
+  it.each([
+    [{ registryMode: "descriptors", descriptorModule: DESCRIPTORS }, /option "registryMode" must be "module" or "descriptor"/],
+    [{ registryModule: REGISTRY, descriptorModule: DESCRIPTORS }, /option "descriptorModule" is only valid with registryMode: "descriptor"/],
+    [{ registryMode: "module", registryModule: REGISTRY, descriptorModule: DESCRIPTORS }, /option "descriptorModule" is only valid/],
+    [{ registryMode: "descriptor", descriptorModule: DESCRIPTORS, registryModule: REGISTRY }, /option "registryModule" is only valid with registryMode: "module"/],
+    [
+      { registryMode: "descriptor", descriptorModule: DESCRIPTORS, componentDocs: [{ keyPrefix: "ui", collection: "c" }] },
+      /option "componentDocs" is only valid with registryMode: "module"/,
+    ],
+    [{ registryMode: "descriptor", descriptorModule: 42 }, /option "descriptorModule" must be a string/],
+  ])("rejects contradictory or invalid registry options %j", (options, message) => {
+    expect(() => resolveRoutesPluginOptions(projectRoot, options)).toThrow(message);
+  });
+});
+
+describe("resolveRoutesPluginOptions — externalPreview", () => {
+  it("resolves the url verbatim and implies componentsPreview disabled", () => {
+    const resolved = resolveRoutesPluginOptions(projectRoot, {
+      registryModule: REGISTRY,
+      externalPreview: { url: "/styleguide-preview/frame" },
+    });
+    expect(resolved.externalPreviewUrl).toBe("/styleguide-preview/frame");
+    expect(resolved.disabledRoutes).toEqual(["componentsPreview"]);
+  });
+
+  it.each([
+    ["never", "/preview/frame/", "/preview/frame"],
+    ["never", "/preview/frame", "/preview/frame"],
+    ["never", "/", "/"],
+    ["always", "/preview/frame", "/preview/frame/"],
+    ["always", "/preview/frame/", "/preview/frame/"],
+  ] as const)("normalizes trailingSlash %s (%s -> %s)", (trailingSlash, url, expected) => {
+    expect(
+      resolveRoutesPluginOptions(projectRoot, { registryModule: REGISTRY, externalPreview: { url, trailingSlash } })
+        .externalPreviewUrl,
+    ).toBe(expected);
+  });
+
+  it("keeps the url as given when trailingSlash is omitted", () => {
+    expect(
+      resolveRoutesPluginOptions(projectRoot, { registryModule: REGISTRY, externalPreview: { url: "/preview/frame/" } })
+        .externalPreviewUrl,
+    ).toBe("/preview/frame/");
+  });
+
+  it.each([
+    [{ url: "http://evil.example/preview" }, /must be a root-absolute path/],
+    [{ url: "https://evil.example/preview" }, /must be a root-absolute path/],
+    [{ url: "//evil.example/preview" }, /must be a root-absolute path/],
+    [{ url: "preview/frame" }, /must be a root-absolute path/],
+    [{ url: "" }, /must be a non-empty string/],
+    [{ url: 42 }, /must be a non-empty string/],
+    [{ url: "/preview", trailingSlash: "sometimes" }, /must be "never" or "always"/],
+    [{ url: "/preview", extra: true }, /option "externalPreview.extra" is not supported/],
+    ["not-an-object", /option "externalPreview" must be an object/],
+  ])("rejects invalid externalPreview shapes %j", (externalPreview, message) => {
+    expect(() =>
+      resolveRoutesPluginOptions(projectRoot, { registryModule: REGISTRY, externalPreview }),
+    ).toThrow(message);
+  });
+
+  it("errors when routes.componentsPreview and externalPreview are both set", () => {
+    expect(() =>
+      resolveRoutesPluginOptions(projectRoot, {
+        registryModule: REGISTRY,
+        routes: { componentsPreview: "/components/live" },
+        externalPreview: { url: "/preview/frame" },
+      }),
+    ).toThrow(/option "routes.componentsPreview" cannot be set together with "externalPreview"/);
+  });
+
+  it("allows an explicit routes.componentsPreview: false alongside externalPreview", () => {
+    const resolved = resolveRoutesPluginOptions(projectRoot, {
+      registryModule: REGISTRY,
+      routes: { componentsPreview: false },
+      externalPreview: { url: "/preview/frame" },
+    });
+    expect(resolved.disabledRoutes).toEqual(["componentsPreview"]);
+  });
+});
+
+describe("resolveRoutesPluginOptions — route opt-out", () => {
+  it("accepts routes.componentsPreview: false and routes.tokens: false", () => {
+    const resolved = resolveRoutesPluginOptions(projectRoot, {
+      registryModule: REGISTRY,
+      routes: { componentsPreview: false, tokens: false },
+    });
+    expect(resolved.disabledRoutes).toEqual(["componentsPreview", "tokens"]);
+    // The default pattern is kept as a plain string — SgRoutes stays all-strings.
+    expect(resolved.routes.componentsPreview).toBe("/components/preview");
+    expect(resolved.routes.tokens).toBe("/tokens");
+  });
+
+  it.each([["componentsIndex"], ["componentsSlug"]] as const)(
+    "rejects routes.%s: false — it is the engine's point",
+    (key) => {
+      expect(() =>
+        resolveRoutesPluginOptions(projectRoot, { registryModule: REGISTRY, routes: { [key]: false } }),
+      ).toThrow(/cannot be disabled — it is the engine's point/);
+    },
+  );
+
+  it("implies tokens disabled in descriptor mode with no token manifest", () => {
+    const resolved = resolveRoutesPluginOptions(projectRoot, {
+      registryMode: "descriptor",
+      descriptorModule: DESCRIPTORS,
+      externalPreview: { url: "/preview/frame" },
+    });
+    expect(resolved.disabledRoutes).toEqual(expect.arrayContaining(["tokens"]));
+  });
+
+  it("does not imply tokens disabled in descriptor mode when a token manifest is configured", () => {
+    touch(join(projectRoot, "src/config/tokens-manifest-2.ts"));
+    const resolved = resolveRoutesPluginOptions(projectRoot, {
+      registryMode: "descriptor",
+      descriptorModule: DESCRIPTORS,
+      externalPreview: { url: "/preview/frame" },
+      tokensManifestModule: "./src/config/tokens-manifest-2.ts",
+    });
+    expect(resolved.disabledRoutes).not.toContain("tokens");
+  });
+
+  it("an explicit routes.tokens pattern overrides the descriptor-mode implied disable", () => {
+    const resolved = resolveRoutesPluginOptions(projectRoot, {
+      registryMode: "descriptor",
+      descriptorModule: DESCRIPTORS,
+      externalPreview: { url: "/preview/frame" },
+      routes: { tokens: "/design-tokens" },
+    });
+    expect(resolved.disabledRoutes).not.toContain("tokens");
+    expect(resolved.routes.tokens).toBe("/design-tokens");
+  });
+
+  it("module mode never implies tokens disabled", () => {
+    const resolved = resolveRoutesPluginOptions(projectRoot, { registryModule: REGISTRY });
+    expect(resolved.disabledRoutes).toEqual([]);
+  });
+});
+
 describe("deriveRouteInjections", () => {
   it("maps the default patterns to routes-src entrypoints", () => {
     expect(deriveRouteInjections({ ...DEFAULT_SG_ROUTES }, "/pkg")).toEqual([
@@ -224,6 +420,13 @@ describe("deriveRouteInjections", () => {
       ["/ui/[slug]", "/pkg/routes-src/components-slug.tsx"],
       ["/ui-preview", "/pkg/routes-src/components-preview.tsx"],
       ["/ui/tokens", "/pkg/routes-src/tokens.tsx"],
+    ]);
+  });
+
+  it("omits disabled route keys entirely", () => {
+    expect(deriveRouteInjections({ ...DEFAULT_SG_ROUTES }, "/pkg", ["componentsPreview", "tokens"]).map((i) => i.key)).toEqual([
+      "componentsIndex",
+      "componentsSlug",
     ]);
   });
 });
@@ -244,21 +447,66 @@ describe("assertZudoDocRoutesPlugin", () => {
 });
 
 describe("virtual module sources", () => {
-  it("re-exports the host registry through a forward-slash absolute specifier", () => {
-    expect(buildRegistryModuleSource("C:\\host\\src\\styleguide\\sg-registry.ts")).toBe(
-      'export { storyModules, storyExportOrder } from "C:/host/src/styleguide/sg-registry.ts";\n',
+  it("module mode re-exports the host registry through a forward-slash absolute specifier", () => {
+    expect(
+      buildRegistryModuleSource({ mode: "module", registryModule: "C:\\host\\src\\styleguide\\sg-registry.ts" }),
+    ).toBe(
+      'export { storyModules, storyExportOrder } from "C:/host/src/styleguide/sg-registry.ts";\n' +
+        "export const storyDescriptors = [];\n",
     );
+  });
+
+  it("descriptor mode imports only the descriptor module and stubs the StoryModule exports", () => {
+    const source = buildRegistryModuleSource({ mode: "descriptor", descriptorModule: "C:\\host\\sg\\descriptors.ts" });
+    expect(source).toBe(
+      'import * as descriptorModule from "C:/host/sg/descriptors.ts";\n' +
+        "export const storyModules = {};\n" +
+        "export const storyExportOrder = {};\n" +
+        'export const storyDescriptors = "storyDescriptors" in descriptorModule ? descriptorModule.storyDescriptors : descriptorModule.default;\n',
+    );
+    const imports = source.match(/^import .*$/gm) ?? [];
+    expect(imports).toEqual(['import * as descriptorModule from "C:/host/sg/descriptors.ts";']);
+    expect(source).not.toMatch(/stories\.tsx|sg-registry/);
+  });
+
+  it.each([
+    ["module", { mode: "module", registryModule: "/h/r.ts" }],
+    ["descriptor", { mode: "descriptor", descriptorModule: "/h/d.ts" }],
+  ] as const)("%s mode exports storyModules, storyExportOrder and storyDescriptors", (_mode, source) => {
+    const text = buildRegistryModuleSource(source);
+    for (const name of ["storyModules", "storyExportOrder", "storyDescriptors"]) {
+      expect(text).toMatch(new RegExp(`export (const ${name} =|\\{[^}]*\\b${name}\\b[^}]*\\})`));
+    }
+  });
+
+  it("descriptor mode reads the named export first, then the default export", async () => {
+    // Evaluates the emitted body against stand-in module namespaces.
+    const body = buildRegistryModuleSource({ mode: "descriptor", descriptorModule: "/h/d.ts" })
+      .replace(/^import .*\n/, "")
+      .replace(/export const /g, "exports.");
+    const evaluate = (descriptorModule: Record<string, unknown>) => {
+      const exports: Record<string, unknown> = {};
+      new Function("descriptorModule", "exports", body)(descriptorModule, exports);
+      return exports;
+    };
+    expect(evaluate({ storyDescriptors: ["named"], default: ["default"] }).storyDescriptors).toEqual(["named"]);
+    expect(evaluate({ default: ["default"] }).storyDescriptors).toEqual(["default"]);
+    expect(evaluate({})).toMatchObject({ storyModules: {}, storyExportOrder: {} });
   });
 
   it("emits the context as a JSON literal", () => {
     const source = buildContextModuleSource({
       base: "/",
       routes: { ...DEFAULT_SG_ROUTES },
+      registryMode: "module",
       categoryOrder: [],
       uiPackageName: null,
       previewCssUrl: DEFAULT_PREVIEW_CSS_URL,
       catalog: { title: "t", intro: null },
       componentDocs: [],
+      disabledRoutes: [],
+      externalPreviewUrl: null,
+      previewTokenPanel: false,
     });
     expect(source.startsWith("export const sgContext = {")).toBe(true);
   });
@@ -295,14 +543,19 @@ describe("routes plugin setup", () => {
     expect(await loadContext(reg)).toEqual({
       base: "/styleguide/",
       routes: { ...DEFAULT_SG_ROUTES, componentsIndex: "/ui" },
+      registryMode: "module",
       categoryOrder: ["Actions"],
       uiPackageName: "@zudo-sg/demo-ui",
       previewCssUrl: "/_zudo-sg/preview.css",
       catalog: { title: "Component catalog", intro: null },
       componentDocs: [{ keyPrefix: "ui", collection: "componentDocs" }],
+      disabledRoutes: [],
+      externalPreviewUrl: null,
+      previewTokenPanel: false,
     });
     expect(await reg.virtualModules.get(REGISTRY_MODULE_ID)!()).toBe(
-      `export { storyModules, storyExportOrder } from ${JSON.stringify(toForwardSlash(join(projectRoot, REGISTRY)))};\n`,
+      `export { storyModules, storyExportOrder } from ${JSON.stringify(toForwardSlash(join(projectRoot, REGISTRY)))};\n` +
+        "export const storyDescriptors = [];\n",
     );
     expect(reg.routes).toEqual([
       { pattern: "/ui", entrypoint: `${packageRoot}/routes-src/components-index.tsx` },
@@ -310,6 +563,42 @@ describe("routes plugin setup", () => {
       { pattern: "/components/preview", entrypoint: `${packageRoot}/routes-src/components-preview.tsx` },
       { pattern: "/tokens", entrypoint: `${packageRoot}/routes-src/tokens.tsx` },
     ]);
+  });
+
+  it("descriptor mode registers the descriptor re-export and flags the context", async () => {
+    const reg = runSetup({
+      registryMode: "descriptor",
+      descriptorModule: DESCRIPTORS,
+      externalPreview: { url: "/preview/frame" },
+    });
+    expect((await loadContext(reg)) as { registryMode: string }).toMatchObject({
+      registryMode: "descriptor",
+      componentDocs: [],
+      externalPreviewUrl: "/preview/frame",
+      // No token manifest configured: descriptor mode implies /tokens disabled too.
+      disabledRoutes: ["componentsPreview", "tokens"],
+    });
+    const source = await reg.virtualModules.get(REGISTRY_MODULE_ID)!();
+    expect(source).toContain(`import * as descriptorModule from ${JSON.stringify(toForwardSlash(join(projectRoot, DESCRIPTORS)))};`);
+    // Only componentsIndex and componentsSlug are injected — the engine's own point.
+    expect(reg.routes.map((r) => r.pattern)).toEqual(["/components", "/components/[slug]"]);
+  });
+
+  it("fails at setup when descriptor mode has no externalPreview", () => {
+    expect(() => runSetup({ registryMode: "descriptor", descriptorModule: DESCRIPTORS })).toThrow(
+      /descriptor mode has no in-engine preview; set externalPreview/,
+    );
+  });
+
+  it("injects no route and requires no entrypoint for disabled route keys", () => {
+    const reg = runSetup({ registryModule: REGISTRY, routes: { componentsPreview: false, tokens: false } });
+    expect(reg.routes.map((r) => r.pattern)).toEqual(["/components", "/components/[slug]"]);
+  });
+
+  it("externalPreview implies componentsPreview disabled at setup and threads externalPreviewUrl into the context", async () => {
+    const reg = runSetup({ registryModule: REGISTRY, externalPreview: { url: "/preview/frame" } });
+    expect(reg.routes.map((r) => r.pattern)).toEqual(["/components", "/components/[slug]", "/tokens"]);
+    expect(await loadContext(reg)).toMatchObject({ externalPreviewUrl: "/preview/frame", disabledRoutes: ["componentsPreview"] });
   });
 
   it('defaults base to "/" when the zfb config has none', async () => {

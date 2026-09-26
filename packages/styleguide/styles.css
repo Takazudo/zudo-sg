@@ -495,6 +495,16 @@
   transform-origin: top left;
 }
 
+/* Descriptor-mode image thumbnail (epic #879, E3): a pre-captured snapshot,
+ * not a live layout, so it fills the tile frame directly rather than going
+ * through the virtual-viewport transform above. */
+.sg-thumb-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 /* Documented per-component opt-out (THUMB_OPT_OUTS): a static, legible note in
  * place of a rendered component, at tile scale rather than virtual scale. */
 .sg-thumb-note {

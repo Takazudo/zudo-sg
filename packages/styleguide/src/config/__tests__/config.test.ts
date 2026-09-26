@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_SETTINGS } from "@takazudo/zudo-doc/config";
 import { makeUrlHelpers } from "@takazudo/zudo-doc/url-helpers";
 import { AFTER_NAVIGATE_EVENT } from "@takazudo/zudo-doc/transitions";
@@ -9,6 +9,7 @@ import {
   PREVIEW_CSS_PLUGIN_NAME,
   ROUTES_PLUGIN_NAME,
   ZDTP_APPLY_PROXY_PLUGIN_NAME,
+  __resetHeaderTokenTriggerWarningForTests,
   withZudoSg,
   zudoSg,
   type ZudoSgComposeOptions,
@@ -72,6 +73,7 @@ describe("zudoSg()", () => {
             { keyPrefix: "demo-ui/src", collection: "componentDocs" },
             { keyPrefix: "extra/src", collection: "componentDocs1" },
           ],
+          previewTokenPanel: true,
         },
       },
       {
@@ -129,6 +131,51 @@ describe("zudoSg()", () => {
   it("is JSON-serializable data (bare-specifier descriptors, no functions)", () => {
     const fragment = zudoSg(OPTIONS);
     expect(JSON.parse(JSON.stringify(fragment))).toEqual(fragment);
+  });
+});
+
+describe("zudoSg() registry modes", () => {
+  const { componentsRoots: _roots, registryOut: _out, ...BASE } = OPTIONS;
+
+  it("descriptor mode passes registryMode + descriptorModule and registers no component-doc collections", () => {
+    const fragment = zudoSg({ ...BASE, registry: { mode: "descriptor", module: "./src/sg/descriptors.ts" } });
+    expect(fragment.plugins[0]?.options).toEqual({
+      registryMode: "descriptor",
+      descriptorModule: "./src/sg/descriptors.ts",
+      categoryOrder: ["Actions", "Forms"],
+      uiPackageName: "@zudo-sg/demo-ui",
+      previewCssUrl: "/_zudo-sg/preview.css",
+      catalog: { title: "Catalog" },
+      tokensManifestModule: "./src/config/ui-design-tokens-manifest.ts",
+      previewTokenPanel: true,
+    });
+    expect(fragment.collections).toEqual([]);
+  });
+
+  it("descriptor mode ignores componentsRoots and registryOut when a host still lists them", () => {
+    const fragment = zudoSg({ ...OPTIONS, registry: { mode: "descriptor", module: "./src/sg/descriptors.ts" } });
+    expect(fragment.plugins[0]?.options).not.toHaveProperty("registryModule");
+    expect(fragment.plugins[0]?.options).not.toHaveProperty("componentDocs");
+    expect(fragment.collections).toEqual([]);
+  });
+
+  it("an explicit module mode composes exactly like the default", () => {
+    expect(zudoSg({ ...OPTIONS, registry: { mode: "module" } })).toEqual(zudoSg(OPTIONS));
+  });
+
+  it("fails when descriptor mode has no module", () => {
+    expect(() =>
+      zudoSg({ ...BASE, registry: { mode: "descriptor" } } as unknown as ZudoSgComposeOptions),
+    ).toThrow(/option "registry.module" is required with registry.mode "descriptor"/);
+  });
+
+  it.each([
+    [{ mode: "module", module: "./src/sg/descriptors.ts" }, /option "registry.module" is only valid with registry.mode "descriptor"/],
+    [{ mode: "stories" }, /option "registry.mode" must be "module" or "descriptor"/],
+    [{ mode: "descriptor", module: "./d.ts", registryOut: "./r.ts" }, /option "registry.registryOut" is not supported/],
+    ["descriptor", /option "registry" must be/],
+  ])("rejects contradictory registry option %j", (registry, message) => {
+    expect(() => zudoSg({ ...OPTIONS, registry } as unknown as ZudoSgComposeOptions)).toThrow(message);
   });
 });
 
@@ -385,6 +432,155 @@ describe("withZudoSg() header token trigger", () => {
 
     expect(added).toBe(1);
     expect(captures).toBe(1);
+  });
+});
+
+describe("withZudoSg() header token trigger — wiring-gated default (#872/#886)", () => {
+  const bareHost = () => ({
+    plugins: [{ name: "@takazudo/zudo-doc/plugins/routes", options: { settings: { headerNav: [], headerRightItems: [] } } }],
+    collections: [],
+  });
+  const { zdtpApplyProxy: _wired, ...UNWIRED_OPTIONS } = OPTIONS;
+
+  beforeEach(() => {
+    __resetHeaderTokenTriggerWarningForTests();
+  });
+
+  it("injects the trigger by default when zdtpApplyProxy.tabsModule is wired (unchanged from before #886)", () => {
+    const merged = withZudoSg(bareHost(), OPTIONS);
+    expect(triggerItemsOf(merged.plugins[0])).toHaveLength(1);
+  });
+
+  it("injects no trigger by default when the panel is not wired", () => {
+    const merged = withZudoSg(bareHost(), UNWIRED_OPTIONS);
+    expect(triggerItemsOf(merged.plugins[0])).toHaveLength(0);
+  });
+
+  it("an explicit headerTokenTrigger: true still injects the trigger even when unwired", () => {
+    const merged = withZudoSg(bareHost(), { ...UNWIRED_OPTIONS, headerTokenTrigger: true });
+    expect(triggerItemsOf(merged.plugins[0])).toHaveLength(1);
+  });
+
+  it("warns once when headerTokenTrigger: true is forced on while unwired", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      withZudoSg(bareHost(), { ...UNWIRED_OPTIONS, headerTokenTrigger: true });
+      withZudoSg(bareHost(), { ...UNWIRED_OPTIONS, headerTokenTrigger: true });
+      expect(warn).toHaveBeenCalledTimes(1);
+      expect(warn.mock.calls[0]?.[0]).toContain("zdtpApplyProxy.tabsModule");
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("does not warn when headerTokenTrigger: true is set and the panel is wired", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      withZudoSg(bareHost(), { ...OPTIONS, headerTokenTrigger: true });
+      expect(warn).not.toHaveBeenCalled();
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("an explicit headerTokenTrigger: false stays off and warns nothing, wired or not", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      expect(triggerItemsOf(withZudoSg(bareHost(), { ...OPTIONS, headerTokenTrigger: false }).plugins[0])).toHaveLength(0);
+      expect(triggerItemsOf(withZudoSg(bareHost(), { ...UNWIRED_OPTIONS, headerTokenTrigger: false }).plugins[0])).toHaveLength(0);
+      expect(warn).not.toHaveBeenCalled();
+    } finally {
+      warn.mockRestore();
+    }
+  });
+});
+
+describe("zudoSg() externalPreview + route opt-out", () => {
+  it("forwards externalPreview verbatim to the routes plugin", () => {
+    const { plugins } = zudoSg({ ...OPTIONS, externalPreview: { url: "/preview/frame", trailingSlash: "never" } });
+    expect(plugins[0]?.options).toMatchObject({ externalPreview: { url: "/preview/frame", trailingSlash: "never" } });
+  });
+
+  it("forwards routes.componentsPreview: false / routes.tokens: false verbatim", () => {
+    const { plugins } = zudoSg({ ...OPTIONS, routes: { componentsPreview: false, tokens: false } });
+    expect(plugins[0]?.options).toMatchObject({ routes: { componentsPreview: false, tokens: false } });
+  });
+
+  it("descriptor mode forwards externalPreview alongside registryMode/descriptorModule", () => {
+    const { componentsRoots: _roots, registryOut: _out, ...BASE } = OPTIONS;
+    const fragment = zudoSg({
+      ...BASE,
+      registry: { mode: "descriptor", module: "./src/sg/descriptors.ts" },
+      externalPreview: { url: "/preview/frame" },
+    });
+    expect(fragment.plugins[0]?.options).toMatchObject({
+      registryMode: "descriptor",
+      descriptorModule: "./src/sg/descriptors.ts",
+      externalPreview: { url: "/preview/frame" },
+    });
+  });
+});
+
+describe("withZudoSg() Design Tokens nav link follows tokens-route visibility", () => {
+  const bareHost = () => ({
+    plugins: [{ name: "@takazudo/zudo-doc/plugins/routes", options: { settings: { headerNav: [], headerRightItems: [] } } }],
+    collections: [],
+  });
+
+  function headerNavOf(merged: ReturnType<typeof withZudoSg>): Array<Record<string, unknown>> {
+    return (merged.plugins[0] as { options: { settings: { headerNav: Array<Record<string, unknown>> } } }).options.settings
+      .headerNav;
+  }
+
+  function localePrefixesOf(merged: ReturnType<typeof withZudoSg>): string[] {
+    return (merged.plugins[0] as { options: { settings: { defaultLocaleOnlyPrefixes: string[] } } }).options.settings
+      .defaultLocaleOnlyPrefixes;
+  }
+
+  it("keeps the Design Tokens link when tokens is enabled (module mode default)", () => {
+    const merged = withZudoSg(bareHost(), OPTIONS);
+    expect(headerNavOf(merged).map((item) => item.label)).toEqual(["Components", "Design Tokens"]);
+    expect(localePrefixesOf(merged)).toContain("/tokens/");
+  });
+
+  it("drops the Design Tokens link when routes.tokens: false", () => {
+    const merged = withZudoSg(bareHost(), { ...OPTIONS, routes: { tokens: false } });
+    expect(headerNavOf(merged).map((item) => item.label)).toEqual(["Components"]);
+    expect(localePrefixesOf(merged)).not.toContain("/tokens/");
+  });
+
+  it("drops the Design Tokens link in descriptor mode with no token manifest (implied disable)", () => {
+    const { componentsRoots: _roots, registryOut: _out, tokens: _tokens, ...BASE } = OPTIONS;
+    const merged = withZudoSg(bareHost(), {
+      ...BASE,
+      registry: { mode: "descriptor", module: "./src/sg/descriptors.ts" },
+      externalPreview: { url: "/preview/frame" },
+    });
+    expect(headerNavOf(merged).map((item) => item.label)).toEqual(["Components"]);
+    expect(localePrefixesOf(merged)).not.toContain("/tokens/");
+  });
+
+  it("keeps the Design Tokens link in descriptor mode when a token manifest is configured", () => {
+    const { componentsRoots: _roots, registryOut: _out, ...BASE } = OPTIONS;
+    const merged = withZudoSg(bareHost(), {
+      ...BASE,
+      registry: { mode: "descriptor", module: "./src/sg/descriptors.ts" },
+      externalPreview: { url: "/preview/frame" },
+    });
+    // BASE keeps OPTIONS.tokens (manifestOut set) — the shared helper must agree with the plugin here.
+    expect(headerNavOf(merged).map((item) => item.label)).toEqual(["Components", "Design Tokens"]);
+  });
+
+  it("an explicit routes.tokens pattern overrides the descriptor-mode implied disable", () => {
+    const { componentsRoots: _roots, registryOut: _out, tokens: _tokens, ...BASE } = OPTIONS;
+    const merged = withZudoSg(bareHost(), {
+      ...BASE,
+      registry: { mode: "descriptor", module: "./src/sg/descriptors.ts" },
+      externalPreview: { url: "/preview/frame" },
+      routes: { tokens: "/design-tokens" },
+    });
+    expect(headerNavOf(merged).map((item) => item.label)).toEqual(["Components", "Design Tokens"]);
+    expect(headerNavOf(merged).find((item) => item.label === "Design Tokens")?.path).toBe("/design-tokens");
   });
 });
 

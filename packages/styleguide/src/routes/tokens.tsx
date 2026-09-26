@@ -39,10 +39,15 @@ function buildDashboardChromeStyle(): Record<string, string> | undefined {
 }
 
 export default function TokensRoute(): JSX.Element {
-  const previewTokensButton = Island({
-    when: "load",
-    children: <PreviewTokensButton />,
-  }) as unknown as VNode;
+  // Gated on `ctx.previewTokenPanel` (issue #872): with no `zdtpApplyProxy.tabsModule`
+  // wired, `PreviewTokenPanelBootstrap` no-ops and this button would dispatch to
+  // nothing.
+  const previewTokensButton = ctx.previewTokenPanel
+    ? (Island({
+        when: "load",
+        children: <PreviewTokensButton />,
+      }) as unknown as VNode)
+    : null;
 
   return (
     <StyleguideLayout

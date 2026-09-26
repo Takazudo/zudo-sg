@@ -21,10 +21,16 @@ interface ZudoSgConfig {
   tokens?: { cssFiles: [string, string]; manifestOut: string };
   previewStyles: string;
   previewCssUrl?: string;
-  routes?: Record<string, string>;
+  routes?: Record<string, string | false>;
   catalog?: { title?: string; intro?: string };
 }
 ```
+
+This is the shape read by the `zudo-sg` CLI. The same file is also passed as
+`withZudoSg()`'s second argument in `zfb.config.ts`, which accepts a few
+compose-only fields beyond this list — `registry`, `externalPreview`,
+`chromeDefaults`, `headerTokenTrigger`, `zdtpApplyProxy` — that the CLI never
+reads. See [Descriptor mode & external preview](./descriptor-mode) for those.
 
 | field | type | default | meaning |
 |---|---|---|---|
@@ -38,7 +44,7 @@ interface ZudoSgConfig {
 | `tokens.manifestOut` | `string` | required when `tokens` is set | Project-root-relative output path for the generated design-token manifest. |
 | `previewStyles` | `string` | required | Project-root-relative path to the host's preview stylesheet entry (compiled standalone by the preview-css plugin). |
 | `previewCssUrl` | `string` | `/_zudo-sg/preview.css` | URL the compiled preview stylesheet is served/emitted at. |
-| `routes` | `Record<string, string>` | see below | Overrides for the four catalog route patterns. |
+| `routes` | `Record<string, string \| false>` | see below | Overrides for the four catalog route patterns. `componentsPreview` and `tokens` also accept `false` to disable that route entirely; `componentsIndex` and `componentsSlug` cannot be disabled. |
 | `catalog` | `{ title?, intro? }` | `{ title: "Component catalog" }` | Catalog page heading text. |
 
 ### `routes` defaults
@@ -52,6 +58,17 @@ interface ZudoSgConfig {
 
 A host `pages/` file with the same URL shape silently shadows the injected
 route (zfb precedence) — this is the documented escape hatch, not a bug.
+
+:::caution[No route segment may start with `_`]
+zfb silently drops any route segment beginning with an underscore when it
+builds the static site — the page compiles with no error, but the route
+never appears in the output. This applies to every `routes.*` pattern here
+and to `externalPreview.url` (see
+[Descriptor mode & external preview](./descriptor-mode)) alike: a value like
+`/components/_preview` or `/_preview/catalog` silently produces no route at
+all rather than failing the build. Tracked upstream at
+[Takazudo/zudo-front-builder#3183](https://github.com/Takazudo/zudo-front-builder/issues/3183).
+:::
 
 ## Example
 

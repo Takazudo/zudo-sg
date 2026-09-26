@@ -1,0 +1,306 @@
+---
+title: Descriptor mode & external preview
+sidebar_position: 4
+description: Adopting the catalog into a non-Preact host via registry descriptor mode, externalPreview, and the protocol v1 preview contract.
+---
+
+Everything on this page is about the **second registry source** the engine
+supports — `registry: { mode: "descriptor" }` — and the `externalPreview`
+option it requires. Skip this page if your stories are `*.stories.tsx` files
+discovered by `gen-registry` (the default, `registry: { mode: "module" }`);
+see [Story Spec](./story-spec) instead.
+
+## What descriptor mode is for
+
+Module mode's stories are `StoryModule`s: real objects whose variants carry a
+`render` function the engine's own Preact preview app invokes inside an
+in-engine iframe (`/components/preview`). That only works for a Preact host.
+
+Descriptor mode replaces `render` with plain, JSON-serializable metadata —
+a `StoryDescriptor` — and hands the actual rendering to a preview document
+**the host builds and owns**, at a URL configured with `externalPreview`. The
+engine still renders everything else: the catalog index, category groups,
+search, and the detail page's chrome (`DetailWorkbench`'s toolbar, variant
+tabs, layout grid). Only the preview iframe's *contents* move to the host.
+
+This is the seam a foreign-framework host (a React app, or any other
+framework zfb doesn't render) uses to adopt the catalog without adopting
+Preact. See `docs/adr/styleguide-engine.md` decision 8's amendment for why
+this replaced the earlier `previewRendererModule` sketch, and decisions 16–17
+for the protocol and route-visibility rules referenced below.
+
+:::note[Reference host]
+`fixtures/descriptor-host` in this repository is the reference host for
+descriptor mode and `externalPreview` — a from-scratch project wired the
+way this page describes, kept in sync with the engine as it evolves.
+:::
+
+## Configuring `registry`
+
+```ts
+// zfb.config.ts
+import { withZudoSg } from "@takazudo/zudo-sg/config";
+
+export default defineConfig({
+  // ...
+  ...withZudoSg(preset, {
+    registry: { mode: "descriptor", module: "./src/styleguide/story-descriptors.ts" },
+    externalPreview: { url: "/preview" },
+    previewStyles: "./src/styles/preview-entry.css",
+    // componentsRoots / registryOut are ignored in descriptor mode (CLI-only, module-mode fields)
+  }),
+});
+```
+
+| field | type | meaning |
+|---|---|---|
+| `registry.mode` | `"module"` \| `"descriptor"` | Default `"module"`. `"descriptor"` switches the story source to `registry.module`. |
+| `registry.module` | `string` | Required with `mode: "descriptor"`. Project-root-relative path to a module exporting `StoryDescriptor[]` as the named export `storyDescriptors`, or — when that export is absent — as its default export. |
+
+`registry.module` must resolve **inside the project root** — this is the one
+host-path option the engine checks with `insideRoot: true`
+(`resolveHostModule`, `host-paths.ts`), unlike every other host-path option
+(`previewStyles`, `tokensManifestModule`, module mode's `registryOut`), which
+accept any existing file. A descriptor module outside the project root fails
+with:
+
+```
+[zudo-sg] option "descriptorModule" = "<value>" resolved to <abs>, which is outside projectRoot <root>
+```
+
+This matters specifically because of zfb's shadow-copy build: the bundler
+mirrors the project root into a build-time shadow tree, and a descriptor
+module living outside it would not travel into that shadow with the rest of
+the project's source.
+
+In descriptor mode, `componentsRoots` and `registryOut` (module mode's own
+fields) are accepted but ignored — descriptor stories have no
+`*.stories.tsx` files for `gen-registry` to discover and no generated
+registry key to pair a component-docs collection against, so `componentDocs`
+also has no effect and renders no per-component MDX docs.
+
+## The `StoryDescriptor` / `ThumbnailDescriptor` shapes
+
+```ts
+interface StoryDescriptor {
+  id: string;               // host-stable identity, unique
+  slug: string;              // URL slug, honored verbatim — never re-slugified
+  category: string;
+  title: string;
+  description?: string;
+  sourcePath?: string;       // informational only
+  order?: number;            // sort hint within the category
+  variants: VariantDescriptor[]; // non-empty
+  thumbnail?: ThumbnailDescriptor;
+}
+
+interface VariantDescriptor {
+  exportName: string;  // stable preview-URL id, unique within the story
+  name: string;         // human label
+  controls?: StoryControl[]; // same shape as module-mode Story controls
+}
+
+type ThumbnailDescriptor =
+  | { kind: "image"; src: string; width: number; height: number; alt?: string }
+  | { kind: "placeholder"; note: string };
+```
+
+`slug` is used **as given** — descriptor mode never re-slugifies a title the
+way `gen-registry` does for module-mode stories, so it is the caller's
+responsibility to keep slugs URL-safe and stable across host releases (this
+is the URL a reader bookmarks). No `StoryDescriptor` field, at any depth, may
+be a function — descriptors are validated as plain data (see
+"Validation" below).
+
+A story with no `thumbnail` at all renders a labelled "No thumbnail
+provided" tile rather than a blank one; a `{ kind: "placeholder", note }`
+thumbnail renders that note instead of an image, for a component that has no
+pre-captured snapshot yet. An `{ kind: "image" }` thumbnail's `width`/`height`
+are required (not inferred) so the catalog can lay out the tile without
+waiting on the image to load.
+
+### Validation and its error messages
+
+`validateStoryDescriptors()` (`registry/descriptors.ts`) runs at build time
+and throws a `[zudo-sg]`-prefixed `Error` naming the offending entry's index
+and id, e.g. `storyDescriptors[2] (id "badge")`. The checks, in the order
+they run:
+
+| Problem | Message shape |
+|---|---|
+| `storyDescriptors` itself isn't an array | `[zudo-sg] storyDescriptors must be an array of story descriptors (got <type>)` |
+| Entry isn't an object | `[zudo-sg] storyDescriptors[N] (id ...): must be an object` |
+| Any function found anywhere inside an entry | `[zudo-sg] storyDescriptors[N] (id ...): descriptor.<path> is a function; descriptors must be plain data` |
+| `id` / `slug` / `title` / `category` missing or empty | `[zudo-sg] storyDescriptors[N] (id ...): "<field>" must be a non-empty string` |
+| `slug` contains `/ \ ? # %` or whitespace, or is `.`/`..` | `[zudo-sg] storyDescriptors[N] (id ...): slug "<slug>" is not URL-safe (no "/", "\\", "?", "#", "%" or whitespace)` |
+| `slug` collides with a reserved nav slug, or with the slug the preview endpoint occupies | `[zudo-sg] storyDescriptors[N] (id ...): slug "<slug>" is reserved by the styleguide routes` |
+| Duplicate `id` or `slug` across entries | `[zudo-sg] storyDescriptors[N] (id ...): duplicate id "<id>" (also used by storyDescriptors[M])` (or the `slug` equivalent) |
+| `variants` missing, not an array, or empty | `[zudo-sg] storyDescriptors[N] (id ...): "variants" must be a non-empty array` |
+| A variant missing `exportName`/`name`, or a duplicate `exportName` within the story | `[zudo-sg] storyDescriptors[N] (id ...): variants[M].exportName must be a non-empty string` (or the duplicate/`name` equivalent) |
+| A malformed `thumbnail` | `[zudo-sg] storyDescriptors[N] (id ...): malformed thumbnail: <detail>` (e.g. `image thumbnail needs a positive finite "width"`) |
+
+The slug-collision check reuses the same `previewCollisionSlug()` logic
+module mode's `createRegistry()` uses (decision 6): whatever slug the
+resolved `componentsSlug` pattern plus `componentsPreview` (or
+`externalPreview.url`, when the preview lives at the detail URL shape) would
+occupy is reserved the same way in both registry modes.
+
+## `externalPreview`
+
+```ts
+externalPreview?: { url: string; trailingSlash?: "never" | "always" }
+```
+
+`url` must be **root-absolute** — a single leading `/`, no scheme, no `//`
+(rejects `http://…`, `//host/…`, and relative paths). `trailingSlash`
+normalizes it: `"never"` strips a trailing `/` (except for `"/"` itself),
+`"always"` adds one if missing. Setting `externalPreview` implies
+`routes.componentsPreview` is disabled (decision 17) — the host document
+*replaces* the in-engine preview route rather than living alongside it, so
+setting `routes.componentsPreview` together with `externalPreview` is
+rejected at `setup()`:
+
+```
+[zudo-sg] option "routes.componentsPreview" cannot be set together with "externalPreview" — externalPreview replaces the in-engine preview route
+```
+
+**`externalPreview` is required in descriptor mode** — a descriptor carries
+no `render` function, so there is nothing for an in-engine preview route to
+call. Module mode may also set `externalPreview`, if a host wants its own
+preview document even while stories still come from `*.stories.tsx` files.
+
+:::caution[The preview document must be same-origin with the catalog]
+Protocol v1 (below) checks `event.origin` against `window.location.origin`
+on both sides. `externalPreview.url` only has to be root-absolute — it says
+nothing about *which server* answers that path — but if the catalog and the
+preview document are served from different origins (most commonly: two
+separate dev server ports), every postMessage is silently dropped by the
+origin check and the preview never receives props, theme, or readiness
+requests. In development, put both behind **one origin** — a single dev
+server, or a reverse proxy in front of both — before wiring up
+`externalPreview`. The engine ships no such proxy itself.
+:::
+
+:::caution[No route segment may start with `_`]
+Same zfb limitation as the built-in `routes.*` patterns (see
+[zudo-sg.config.mjs](./zudo-sg-config)): a segment of `externalPreview.url`
+beginning with `_` is silently dropped from the built site rather than
+failing the build. Tracked upstream at
+[Takazudo/zudo-front-builder#3183](https://github.com/Takazudo/zudo-front-builder/issues/3183).
+:::
+
+## Protocol v1: a minimal framework-free preview frame
+
+The whole contract is exported from a leaf module with no imports of its
+own, `@takazudo/zudo-sg/preview/messages`, so an `externalPreview` document
+can implement it in any framework (or none) without depending on Preact.
+
+```ts
+import {
+  MSG_READY, MSG_HEIGHT, MSG_UPDATE_PROPS, MSG_SET_THEME, MSG_REQUEST_READY,
+  PROTOCOL_VERSION,
+  isUpdatePropsMessage, isSetThemeMessage, isRequestReadyMessage,
+} from "@takazudo/zudo-sg/preview/messages";
+
+// Read `?slug=…&variant=…` from the frame's own URL — the parent parks this
+// story/variant's descriptor at that address.
+const params = new URLSearchParams(location.search);
+const identity = { slug: params.get("slug") ?? "", variant: params.get("variant") ?? "" };
+
+function post(message: unknown): void {
+  // Never post to "*" — the origin check on the parent's side requires it.
+  parent.postMessage(message, location.origin);
+}
+
+function reportHeight(): void {
+  post({ type: MSG_HEIGHT, v: PROTOCOL_VERSION, ...identity, height: document.documentElement.scrollHeight });
+}
+
+window.addEventListener("message", (e) => {
+  if (e.origin !== location.origin) return; // reject cross-origin senders
+  if (e.source !== parent) return;           // reject anything but the embedding parent
+  const data = e.data;
+  if (isRequestReadyMessage(data)) {
+    post({ type: MSG_READY, v: PROTOCOL_VERSION, ...identity });
+  } else if (isUpdatePropsMessage(data)) {
+    // Merge data.props over the variant's static props, then re-render.
+    rerenderWithProps(data.props);
+    reportHeight();
+  } else if (isSetThemeMessage(data)) {
+    // data.theme is always the RESOLVED "light" | "dark" — never "auto".
+    document.documentElement.dataset.theme = data.theme;
+  }
+});
+
+// Render the variant named by `identity`, then announce readiness — do not
+// wait for a `sg:requestReady` request; it exists only to recover a race
+// where the parent's listener was not yet attached when this frame's own
+// unconditional `sg:ready` was sent.
+renderInitial();
+post({ type: MSG_READY, v: PROTOCOL_VERSION, ...identity });
+reportHeight();
+new ResizeObserver(reportHeight).observe(document.body);
+```
+
+Rules this example follows, all load-bearing:
+
+- Post to `location.origin`, never `"*"`, and validate `e.origin` /
+  `e.source` on every message received — see decision 16 for the full
+  origin + source + identity contract.
+- Include `v: PROTOCOL_VERSION` on every message the frame sends. The parent
+  accepts a message with **no** `v` (legacy v1) or `v: 1`; anything else is
+  rejected, so an unversioned frame still works today but should not rely on
+  that leniency going forward.
+- Include `{ slug, variant }` identity on `sg:ready` / `sg:height` so a stale
+  frame's late report cannot be mistaken for the currently active one.
+- `sg:setTheme`'s `theme` is always resolved (`"light"` or `"dark"`) — the
+  frame is never asked to interpret `"auto"` itself.
+
+For the props reaching this frame from `DetailWorkbench`'s side, see the next
+section.
+
+## `DetailWorkbench` props reference
+
+`DetailWorkbench` (`@takazudo/zudo-sg`'s detail-page island,
+`preview/detail-workbench.tsx`) is the one island that owns the page-level
+toolbar and every variant stage below it. Its props let a foreign host drive
+it directly (issue #883) instead of only reaching it through the engine's own
+detail route:
+
+| prop | type | default | meaning |
+|---|---|---|---|
+| `slug` | `string` | — | Required. Used to derive stable DOM ids and as `identity.slug` for every stage's preview frame. |
+| `variants` | `WorkbenchVariant[]` | — | Required. `{ exportName, name, controls? }` per variant — the flattened, JSON-serializable shape an island can take (no `render` function). |
+| `previewUrl` | `string` | the in-engine preview route | Base-prefixed URL of the preview document — pass the host's `withBase`-applied `externalPreview.url` here in descriptor mode. |
+| `frameSandbox` | `readonly string[]` | `DEFAULT_FRAME_SANDBOX` (`allow-same-origin`, `allow-scripts`, `allow-forms`) | Iframe `sandbox` tokens. Dropping `allow-same-origin` gives the frame an opaque `"null"` origin, which protocol v1's origin check then always rejects. |
+| `frameAllow` | `readonly string[]` | none | Iframe `allow` (permissions policy) directives, joined with `"; "`. |
+| `selection` | `{ mode: "all" }` \| `{ mode: "single"; active?: string; onChange?: (exportName: string) => void }` | `{ mode: "all" }` | `"all"` renders one stage per variant (the engine's own default). `"single"` renders variant tabs and exactly one live stage, switched by props with no iframe remount; `active` makes the selection host-controlled, otherwise the workbench tracks it internally starting from the first variant. |
+| `theme` | `{ mode: "toolbar" }` \| `{ mode: "host" }` | `{ mode: "toolbar" }` | `"toolbar"` renders the Follow/Light/Dark control group and posts `sg:setTheme`. `"host"` renders no theme group and never posts `sg:setTheme` — use this when the host owns theme itself. |
+| `previewParams` | `Readonly<Record<string, string>>` | none | Extra query params URL-encoded onto every frame URL after `slug`/`variant`. The reserved keys `slug` and `variant` are ignored if supplied here. |
+| `sizing` | `{ mode: "auto" }` \| `{ mode: "fixed"; height: number }` | `{ mode: "auto" }` | `"auto"` sizes each frame from its `sg:height` reports. `"fixed"` pins every frame to `height` px and ignores `sg:height` entirely. |
+| `toolbar` | `{ viewport?: boolean; layout?: boolean; codePanel?: boolean; tokenPanel?: boolean }` | `{ viewport: true, layout: true, codePanel: false, tokenPanel: false }` | Per-group toolbar visibility. A `false` group does not render; with every group (and `theme`) off, no toolbar box renders at all. |
+
+`toolbar.codePanel` and `toolbar.tokenPanel` default **off** — every other
+default reproduces the pre-#883 (engine-route) output exactly, but a
+standalone workbench embedded by a foreign host has no code panel or preview
+token panel of its own to drive, and a control with nothing behind it is
+exactly the dead-button failure mode issue #872 exists to avoid. The
+engine's own detail route opts both back in explicitly, since it does mount
+a code panel and the preview token panel.
+
+## The `headerTokenTrigger` default changed
+
+`withZudoSg()`'s `headerTokenTrigger` option (decision 15) used to default to
+`true` unconditionally — every host got the header button whether or not the
+preview token panel was actually wired up, which meant an unwired host
+shipped a control that opened nothing. As of #872 the default is
+`isPreviewTokenPanelWired(zdtpApplyProxy)` — `true` only when
+`zdtpApplyProxy.tabsModule` is configured, `false` otherwise. An explicit
+`headerTokenTrigger: true` still forces the button on regardless, but now
+logs a one-time `console.warn` naming `zdtpApplyProxy.tabsModule` when the
+panel isn't actually wired, since the button would otherwise be silently
+dead. An explicit `headerTokenTrigger: false` is unaffected either way. This
+same wiring verdict now also gates `DetailWorkbench`'s
+`toolbar.tokenPanel` default through `sgContext.previewTokenPanel` — see
+[Design Token Panel](/docs/overview/token-panels) on the root site for the
+reader-facing behavior.

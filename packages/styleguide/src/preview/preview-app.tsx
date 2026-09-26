@@ -27,12 +27,19 @@ import type { StoryControl } from "../stories/index.js";
 import {
   MSG_HEIGHT,
   MSG_READY,
+  PROTOCOL_VERSION,
   isRequestReadyMessage,
   isSetThemeMessage,
   isUpdatePropsMessage,
+  type PreviewToParentMessage,
 } from "./messages.js";
 
-function readParams(): { slug: string; variant: string } {
+interface FrameIdentity {
+  slug: string;
+  variant: string;
+}
+
+function readParams(): FrameIdentity {
   if (typeof location === "undefined") return { slug: "", variant: "" };
   const p = new URLSearchParams(location.search);
   return { slug: p.get("slug") ?? "", variant: p.get("variant") ?? "" };
@@ -60,10 +67,26 @@ function defaultsFromControls(
  * reporter and the `sg:requestReady` handler below can call the same
  * measurement — see #537.
  */
-function reportHeight(): void {
+function reportHeight(identity: FrameIdentity): void {
   const rect = document.body.getBoundingClientRect();
   const height = Math.ceil(rect.bottom + window.scrollY);
-  window.parent?.postMessage({ type: MSG_HEIGHT, height }, "*");
+  postToParent({ type: MSG_HEIGHT, v: PROTOCOL_VERSION, height, ...identity });
+}
+
+// The frame is same-origin with its parent (the default sandbox keeps
+// `allow-same-origin`), so our own origin is the parent's: target it rather
+// than "*" so a cross-origin embedder never receives the reports (#880). An
+// opaque origin ("null": a sandbox without `allow-same-origin`) is not a valid
+// target, and the parent would reject us anyway, so stay silent instead of
+// throwing.
+function postToParent(message: PreviewToParentMessage): void {
+  const origin = window.location.origin;
+  if (origin === "null") return;
+  window.parent?.postMessage(message, origin);
+}
+
+function announceReady(identity: FrameIdentity): void {
+  postToParent({ type: MSG_READY, v: PROTOCOL_VERSION, ...identity });
 }
 
 export interface PreviewAppProps {
@@ -72,7 +95,8 @@ export interface PreviewAppProps {
 }
 
 function PreviewApp({ registry }: PreviewAppProps): JSX.Element {
-  const [{ slug, variant }] = useState(readParams);
+  const [identity] = useState(readParams);
+  const { slug, variant } = identity;
   // Live prop overrides pushed from the parent's controls panel. Read on every
   // render and merged into the story's render args (see `merged` below).
   const [overrides, setOverrides] = useState<Record<string, unknown>>({});
@@ -88,12 +112,13 @@ function PreviewApp({ registry }: PreviewAppProps): JSX.Element {
   // Trust model: this preview iframe is same-origin with its parent
   // (`sandbox="allow-same-origin allow-scripts allow-forms"`), so
   // `window.parent` is a same-origin window we can compare against. Accept ONLY
-  // messages whose source is the parent and whose payload is a well-formed
-  // props or theme envelope; ignore everything else. Announce readiness only
-  // after installing this listener, so the parent can safely respond without
-  // losing a message.
+  // messages from our own origin whose source is the parent and whose payload
+  // is a well-formed props or theme envelope; ignore everything else. Announce
+  // readiness only after installing this listener, so the parent can safely
+  // respond without losing a message.
   useEffect(() => {
     function onMessage(e: MessageEvent): void {
+      if (e.origin !== window.location.origin) return;
       if (e.source !== window.parent) return;
       if (isRequestReadyMessage(e.data)) {
         // The parent installs its message listener from a client-side effect,
@@ -104,8 +129,8 @@ function PreviewApp({ registry }: PreviewAppProps): JSX.Element {
         // below-the-fold frame) also misses the mount/100ms/500ms height
         // reports below, with no other recovery path, so re-post the current
         // height alongside readiness (#537).
-        window.parent?.postMessage({ type: MSG_READY }, "*");
-        reportHeight();
+        announceReady(identity);
+        reportHeight(identity);
         return;
       }
       if (isUpdatePropsMessage(e.data)) {
@@ -119,16 +144,17 @@ function PreviewApp({ registry }: PreviewAppProps): JSX.Element {
     window.addEventListener("message", onMessage);
     // Hydration marker read by the dev/e2e acceptance checks (ADR proof table).
     document.documentElement.dataset.sgPreviewHydrated = "1";
-    window.parent?.postMessage({ type: MSG_READY }, "*");
+    announceReady(identity);
     return () => window.removeEventListener("message", onMessage);
   }, []);
 
   // Report content height to the parent so it can size the iframe.
   useEffect(() => {
-    reportHeight();
-    const t1 = window.setTimeout(reportHeight, 100);
-    const t2 = window.setTimeout(reportHeight, 500);
-    const ro = new ResizeObserver(reportHeight);
+    const report = (): void => reportHeight(identity);
+    report();
+    const t1 = window.setTimeout(report, 100);
+    const t2 = window.setTimeout(report, 500);
+    const ro = new ResizeObserver(report);
     ro.observe(document.body);
     return () => {
       window.clearTimeout(t1);

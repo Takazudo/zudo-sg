@@ -24,6 +24,14 @@ export default defineConfig({
         import.meta.dirname,
         "src/routes/__tests__/stubs/virtual-doc-chrome-bindings.ts",
       ),
+      "virtual:zudo-sg-registry": resolve(
+        import.meta.dirname,
+        "src/routes/__tests__/stubs/virtual-sg-registry.ts",
+      ),
+      "virtual:zudo-sg-tokens": resolve(
+        import.meta.dirname,
+        "src/routes/__tests__/stubs/virtual-sg-tokens.ts",
+      ),
     },
   },
   oxc: {

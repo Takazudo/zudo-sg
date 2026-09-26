@@ -83,6 +83,23 @@ as required, and the generated token manifest depends on it.
 
 7. **(Optional) Import the islands seed.** `@takazudo/zudo-sg/islands` is a one-line side-effect import that pulls every engine island into the host's island graph. On zfb ≥ 2.18.0 (the engine's peer floor) it is not needed — the dev server seeds its scanner from the injected routes — and it is harmless if present; it exists for hosts that adopted the engine on zfb 2.17.0. See [The engine package](./engine-package).
 
-## Scope: Preact/zfb only, for now
+## Scope: Preact/zfb only, with one exception
 
-React hosts are an explicit non-goal of this release. The seam that would make a future React (or other framework) integration possible is a host-supplied preview-renderer module, resolved the same way the other host paths are — but that seam is not built yet; adopting the engine today means adopting it into a Preact/zfb host.
+React hosts are an explicit non-goal of this release for the default,
+module-mode install path above. There is one exception: a host can adopt the
+catalog, category nav, search, and detail-page chrome from **any** framework
+(or none) by switching the story source to **descriptor mode**
+(`registry: { mode: "descriptor" }`) and serving its own preview document at
+`externalPreview.url` — the engine renders everything except the preview
+document itself, and the two sides talk over a small, versioned,
+framework-free postMessage contract. This is the seam that superseded the
+earlier idea of a host-supplied preview-renderer module invoked inside the
+engine's own preview route.
+
+This page and the rest of this category stay at the concept level; the full
+descriptor-mode contract — the `StoryDescriptor` shape, `externalPreview`,
+the postMessage protocol, and a minimal framework-free preview-frame example —
+lives in the [`doc/` workspace reference](https://zudo-sg-doc.takazudomodular.com/docs/reference/descriptor-mode)
+(see [Relationship to zudo-doc](./relationship-to-zudo-doc) for why that split
+exists). Adopting the default, module-mode path today still means adopting
+the engine into a Preact/zfb host.

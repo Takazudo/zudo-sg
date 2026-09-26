@@ -1,24 +1,45 @@
 // @vitest-environment happy-dom
 import "../../__tests__/dom-test-setup.js";
-import { fireEvent, render, screen, waitFor } from "@testing-library/preact";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/preact";
 import type { StoryControl } from "../../stories/index.js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AFTER_NAVIGATE_EVENT } from "@takazudo/zudo-doc/transitions";
-import { MSG_READY, MSG_REQUEST_READY, MSG_SET_THEME } from "../messages.js";
+import {
+  MSG_HEIGHT,
+  MSG_READY,
+  MSG_REQUEST_READY,
+  MSG_SET_THEME,
+  MSG_UPDATE_PROPS,
+  PROTOCOL_VERSION,
+} from "../messages.js";
 import VariantFrame, {
+  DEFAULT_FRAME_SANDBOX,
   DEFAULT_THEME_MODE,
   DEFAULT_VIEWPORT_ID,
   type ThemeMode,
   type ViewportId,
 } from "../variant-frame.js";
 
+/** Dispatch a message as if `iframe`'s document posted it (same origin by default). */
+function fromFrame(
+  iframe: HTMLIFrameElement,
+  data: unknown,
+  init: { origin?: string; source?: Window | null } = {},
+): void {
+  act(() => {
+    window.dispatchEvent(
+      new MessageEvent("message", {
+        origin: init.origin ?? window.location.origin,
+        source: "source" in init ? init.source : iframe.contentWindow,
+        data,
+      }),
+    );
+  });
+}
+
+/** A legacy (pre-v1) ready signal: no `v`, no identity. */
 function readyFrame(iframe: HTMLIFrameElement): void {
-  window.dispatchEvent(
-    new MessageEvent("message", {
-      source: iframe.contentWindow,
-      data: { type: MSG_READY },
-    }),
-  );
+  fromFrame(iframe, { type: MSG_READY });
 }
 
 function themeMessages(spy: ReturnType<typeof vi.spyOn>): unknown[] {
@@ -36,6 +57,7 @@ function themeMessages(spy: ReturnType<typeof vi.spyOn>): unknown[] {
 function Stage(props: {
   slug?: string;
   exportName?: string;
+  previewUrl?: string;
   name?: string;
   controls?: StoryControl[];
   themeMode?: ThemeMode;
@@ -49,6 +71,7 @@ function Stage(props: {
       controls={props.controls}
       themeMode={props.themeMode ?? DEFAULT_THEME_MODE}
       viewportId={props.viewportId ?? DEFAULT_VIEWPORT_ID}
+      previewUrl={props.previewUrl}
     />
   );
 }
@@ -144,7 +167,7 @@ describe("VariantFrame", () => {
     readyFrame(iframe);
 
     expect(themeMessages(postMessage)).toEqual([
-      { type: MSG_SET_THEME, theme: "dark" },
+      { type: MSG_SET_THEME, v: PROTOCOL_VERSION, theme: "dark" },
     ]);
   });
 
@@ -163,7 +186,7 @@ describe("VariantFrame", () => {
     readyFrame(iframe);
 
     expect(themeMessages(postMessage)).toEqual([
-      { type: MSG_SET_THEME, theme: "light" },
+      { type: MSG_SET_THEME, v: PROTOCOL_VERSION, theme: "light" },
     ]);
   });
 
@@ -176,7 +199,10 @@ describe("VariantFrame", () => {
 
     const { unmount } = render(<Stage name="First" />);
 
-    expect(postMessage).toHaveBeenCalledWith({ type: MSG_REQUEST_READY }, "*");
+    expect(postMessage).toHaveBeenCalledWith(
+      { type: MSG_REQUEST_READY, v: PROTOCOL_VERSION },
+      window.location.origin,
+    );
 
     // Keep the mocked contentWindow in place through effect cleanup so the
     // registry unregisters the same frame identity it registered.
@@ -193,12 +219,13 @@ describe("VariantFrame", () => {
       .mockImplementation(() => undefined);
     readyFrame(iframe);
     expect(themeMessages(postMessage)).toEqual([
-      { type: MSG_SET_THEME, theme: "dark" },
+      { type: MSG_SET_THEME, v: PROTOCOL_VERSION, theme: "dark" },
     ]);
 
     rerender(<Stage name="First" themeMode="light" />);
     expect(themeMessages(postMessage).at(-1)).toEqual({
       type: MSG_SET_THEME,
+      v: PROTOCOL_VERSION,
       theme: "light",
     });
 
@@ -212,6 +239,7 @@ describe("VariantFrame", () => {
     rerender(<Stage name="First" themeMode="follow" />);
     expect(themeMessages(postMessage).at(-1)).toEqual({
       type: MSG_SET_THEME,
+      v: PROTOCOL_VERSION,
       theme: "dark",
     });
   });
@@ -229,6 +257,7 @@ describe("VariantFrame", () => {
     await waitFor(() => {
       expect(themeMessages(postMessage).at(-1)).toEqual({
         type: MSG_SET_THEME,
+        v: PROTOCOL_VERSION,
         theme: "light",
       });
     });
@@ -238,6 +267,7 @@ describe("VariantFrame", () => {
     await waitFor(() => {
       expect(themeMessages(postMessage).at(-1)).toEqual({
         type: MSG_SET_THEME,
+        v: PROTOCOL_VERSION,
         theme: "dark",
       });
     });
@@ -262,7 +292,7 @@ describe("VariantFrame", () => {
 
     readyFrame(first);
     expect(themeMessages(firstPost)).toEqual([
-      { type: MSG_SET_THEME, theme: "dark" },
+      { type: MSG_SET_THEME, v: PROTOCOL_VERSION, theme: "dark" },
     ]);
     expect(themeMessages(secondPost)).toEqual([]);
   });
@@ -281,17 +311,192 @@ describe("VariantFrame", () => {
     const iframe = screen.getByTitle("cta-button — CTA button") as HTMLIFrameElement;
     const input = screen.getByLabelText("Label") as HTMLInputElement;
     readyFrame(iframe);
-    window.dispatchEvent(
-      new MessageEvent("message", {
-        source: iframe.contentWindow,
-        data: { type: "sg:height", height: 246.2 },
-      }),
-    );
+    fromFrame(iframe, { type: MSG_HEIGHT, height: 246.2 });
     fireEvent.input(input, { target: { value: "Kept value" } });
 
     rerender(<Stage controls={controls} themeMode="light" />);
 
     expect(input.value).toBe("Kept value");
     expect(iframe).toHaveStyle({ height: "247px" });
+  });
+});
+
+describe("VariantFrame protocol v1 (#880)", () => {
+  beforeEach(() => {
+    document.documentElement.dataset.theme = "dark";
+  });
+
+  function frame(name = "CTA button"): HTMLIFrameElement {
+    return screen.getByTitle(`cta-button — ${name}`) as HTMLIFrameElement;
+  }
+
+  function spyPost(iframe: HTMLIFrameElement) {
+    return vi
+      .spyOn(iframe.contentWindow!, "postMessage")
+      .mockImplementation(() => undefined);
+  }
+
+  it("posts every message to its own origin with v: 1, never to \"*\"", () => {
+    const controls: StoryControl[] = [
+      { type: "text", prop: "children", label: "Label", defaultValue: "Go" },
+    ];
+    render(<Stage controls={controls} />);
+    const post = spyPost(frame());
+
+    fromFrame(frame(), { type: MSG_READY, v: 1, slug: "cta-button", variant: "Playground" });
+    fireEvent.input(screen.getByLabelText("Label"), { target: { value: "Next" } });
+
+    expect(post.mock.calls.length).toBeGreaterThanOrEqual(2);
+    for (const [message, target] of post.mock.calls) {
+      expect(target).toBe(window.location.origin);
+      expect((message as { v?: unknown }).v).toBe(PROTOCOL_VERSION);
+    }
+    expect(post).toHaveBeenCalledWith(
+      { type: MSG_UPDATE_PROPS, v: PROTOCOL_VERSION, props: { children: "Next" } },
+      window.location.origin,
+    );
+  });
+
+  it("ignores a cross-origin message even from its own frame", () => {
+    render(<Stage />);
+    const iframe = frame();
+    const post = spyPost(iframe);
+
+    fromFrame(iframe, { type: MSG_READY }, { origin: "https://evil.example" });
+    fromFrame(iframe, { type: MSG_HEIGHT, height: 400 }, { origin: "https://evil.example" });
+
+    expect(themeMessages(post)).toEqual([]);
+    expect(iframe).toHaveStyle({ height: "180px" });
+  });
+
+  it("ignores a same-origin message whose source is another window", () => {
+    render(<Stage />);
+    const iframe = frame();
+    const post = spyPost(iframe);
+
+    fromFrame(iframe, { type: MSG_READY }, { source: window });
+    fromFrame(iframe, { type: MSG_HEIGHT, height: 400 }, { source: window });
+
+    expect(themeMessages(post)).toEqual([]);
+    expect(iframe).toHaveStyle({ height: "180px" });
+  });
+
+  it("ignores a ready or height message carrying a stale identity", () => {
+    render(<Stage />);
+    const iframe = frame();
+    const post = spyPost(iframe);
+
+    fromFrame(iframe, { type: MSG_READY, v: 1, slug: "cta-button", variant: "Old" });
+    fromFrame(iframe, { type: MSG_READY, v: 1, slug: "other", variant: "Playground" });
+    fromFrame(iframe, { type: MSG_HEIGHT, v: 1, height: 400, slug: "other" });
+    fromFrame(iframe, { type: MSG_HEIGHT, v: 1, height: 400, variant: "Old" });
+
+    expect(themeMessages(post)).toEqual([]);
+    expect(iframe).toHaveStyle({ height: "180px" });
+
+    fromFrame(iframe, { type: MSG_READY, v: 1, slug: "cta-button", variant: "Playground" });
+    fromFrame(iframe, {
+      type: MSG_HEIGHT,
+      v: 1,
+      height: 300,
+      slug: "cta-button",
+      variant: "Playground",
+    });
+    expect(themeMessages(post)).toHaveLength(1);
+    expect(iframe).toHaveStyle({ height: "300px" });
+  });
+
+  it("drops a message with an unsupported protocol version", () => {
+    render(<Stage />);
+    const iframe = frame();
+    const post = spyPost(iframe);
+
+    fromFrame(iframe, { type: MSG_READY, v: 2 });
+    fromFrame(iframe, { type: MSG_HEIGHT, v: 2, height: 400 });
+
+    expect(themeMessages(post)).toEqual([]);
+    expect(iframe).toHaveStyle({ height: "180px" });
+  });
+
+  it("still works with a legacy frame that sends no v and no identity", () => {
+    render(<Stage />);
+    const iframe = frame();
+    const post = spyPost(iframe);
+
+    fromFrame(iframe, { type: MSG_READY });
+    fromFrame(iframe, { type: MSG_HEIGHT, height: 321 });
+
+    expect(themeMessages(post)).toHaveLength(1);
+    expect(iframe).toHaveStyle({ height: "321px" });
+  });
+
+  it.each([
+    ["exportName", { exportName: "Pair" }],
+    ["slug", { slug: "other-button" }],
+    ["previewUrl", { previewUrl: "/sg/components/preview" }],
+  ] as const)(
+    "resets ready and height when %s changes, without a remount",
+    (prop, change) => {
+      const { rerender } = render(<Stage />);
+      const iframe = document.querySelector("iframe") as HTMLIFrameElement;
+      const post = spyPost(iframe);
+
+      readyFrame(iframe);
+      fromFrame(iframe, { type: MSG_HEIGHT, height: 400 });
+      expect(themeMessages(post)).toHaveLength(1);
+      expect(iframe).toHaveStyle({ height: "400px" });
+
+      rerender(<Stage {...change} />);
+
+      // Same element: no keyed remount happened.
+      expect(document.querySelector("iframe")).toBe(iframe);
+      expect(iframe).toHaveStyle({ height: "180px" });
+
+      // Not ready any more: a theme change waits for the new document.
+      rerender(<Stage {...change} themeMode="light" />);
+      expect(themeMessages(post)).toHaveLength(1);
+
+      const slug = "slug" in change ? change.slug : "cta-button";
+      const variant = "exportName" in change ? change.exportName : "Playground";
+
+      // A late ready from the OLD document names the old identity and is dropped.
+      if (prop !== "previewUrl") {
+        fromFrame(iframe, { type: MSG_READY, v: 1, slug: "cta-button", variant: "Playground" });
+        expect(themeMessages(post)).toHaveLength(1);
+      }
+
+      fromFrame(iframe, { type: MSG_READY, v: 1, slug, variant });
+      expect(themeMessages(post)).toHaveLength(2);
+      expect(themeMessages(post).at(-1)).toEqual({
+        type: MSG_SET_THEME,
+        v: PROTOCOL_VERSION,
+        theme: "light",
+      });
+    },
+  );
+
+  it("renders the default sandbox and no allow attribute by default", () => {
+    render(<Stage />);
+    const iframe = frame();
+    expect(DEFAULT_FRAME_SANDBOX).toEqual(["allow-same-origin", "allow-scripts", "allow-forms"]);
+    expect(iframe).toHaveAttribute("sandbox", "allow-same-origin allow-scripts allow-forms");
+    expect(iframe).not.toHaveAttribute("allow");
+  });
+
+  it("renders frameSandbox and frameAllow as given", () => {
+    render(
+      <VariantFrame
+        slug="cta-button"
+        exportName="Playground"
+        name="CTA button"
+        themeMode={DEFAULT_THEME_MODE}
+        viewportId={DEFAULT_VIEWPORT_ID}
+        frameSandbox={["allow-scripts", "allow-same-origin", "allow-popups"]}
+        frameAllow={["clipboard-read", "fullscreen"]}
+      />,
+    );
+    const iframe = frame();
+    expect(iframe).toHaveAttribute("sandbox", "allow-scripts allow-same-origin allow-popups");
+    expect(iframe).toHaveAttribute("allow", "clipboard-read; fullscreen");
   });
 });

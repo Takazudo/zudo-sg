@@ -92,6 +92,11 @@ jobs:
       - name: Verify foreign install (fixtures/engine-host)
         run: pnpm verify:styleguide-install
 
+      # Descriptor mode + externalPreview (#887, epic #879 confirm): the
+      # foreign-install proof above only exercises module-mode hosts.
+      - name: Verify descriptor-host foreign install (fixtures/descriptor-host)
+        run: pnpm verify:descriptor-host-install
+
       # Real-artifact gate, run BEFORE `pnpm publish`: packs the tree,
       # installs the tarball into a scratch project exactly like a consumer
       # would, and imports the exports map. Last chance to catch a

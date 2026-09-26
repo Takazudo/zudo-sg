@@ -13,7 +13,7 @@ import {
   componentDocsRoots,
 } from "../registry/component-docs.js";
 import { DEFAULT_PREVIEW_CSS_URL } from "../sg-context.js";
-import { resolveSgRoutes, type SgRoutes } from "../sg-routes.js";
+import { isPreviewTokenPanelWired, isTokensRouteEnabled, resolveSgRoutes, type SgRoutes, type SgRoutesOption } from "../sg-routes.js";
 import type { HostTokensSpec } from "../token-spec.js";
 import { PREVIEW_TOKEN_PANEL_CAPTURE_SCRIPT } from "../token-tweak/preview-token-panel-capture.js";
 export type { HostTokensSpec, HostTokenGroupSpec, HostTokenSpec, TokenPreview, TokenControl, GeneratedTokenGroups, GeneratedTokenGroup } from "../token-spec.js";
@@ -45,18 +45,59 @@ export interface ZudoSgCollection {
   include: string[];
 }
 
-export interface ZudoSgComposeOptions {
+/** Module mode (default): stories come from the generated StoryModule registry (`registryOut`). */
+export interface ZudoSgModuleRegistry {
+  mode: "module";
+}
+
+/**
+ * Descriptor mode: stories come from plain-data `StoryDescriptor`s exported by
+ * `module` (project-root-relative, inside the project) as the named export
+ * `storyDescriptors`, or as the default export when that name is absent.
+ */
+export interface ZudoSgDescriptorRegistry {
+  mode: "descriptor";
+  module: string;
+}
+
+export type ZudoSgRegistryOption = ZudoSgModuleRegistry | ZudoSgDescriptorRegistry;
+
+interface ZudoSgModuleSourceOptions {
+  registry?: ZudoSgModuleRegistry;
   /** Story corpora; one `componentDocs*` collection is registered per `dir`. */
   componentsRoots: ReadonlyArray<{ dir: string; importBase?: string }>;
   /** Project-root-relative generated registry (the routes plugin's `registryModule`). */
   registryOut: string;
+}
+
+interface ZudoSgDescriptorSourceOptions {
+  registry: ZudoSgDescriptorRegistry;
+  /** Ignored by the engine in descriptor mode (no component-doc collections); CLI-only. */
+  componentsRoots?: ReadonlyArray<{ dir: string; importBase?: string }>;
+  /** Ignored by the engine in descriptor mode; CLI-only. */
+  registryOut?: string;
+}
+
+export type ZudoSgComposeOptions = ZudoSgComposeBaseOptions & (ZudoSgModuleSourceOptions | ZudoSgDescriptorSourceOptions);
+
+export interface ZudoSgComposeBaseOptions {
   categoryOrder?: string[];
   uiPackageName?: string;
   /** Project-root-relative preview stylesheet entry (the preview-css plugin's input). */
   previewStyles: string;
   /** Default `/_zudo-sg/preview.css`. */
   previewCssUrl?: string;
-  routes?: Partial<SgRoutes>;
+  routes?: SgRoutesOption;
+  /**
+   * A host-served preview document that replaces the in-engine
+   * `componentsPreview` route (implied disabled once this is set). `url` must
+   * be root-absolute; `previewStyles`'s compiled CSS and the code panel both
+   * still apply — only the document that hosts the preview iframe moves.
+   * Required in descriptor mode (descriptors carry no render functions).
+   * Forwarded verbatim to the routes plugin's `externalPreview` option, which
+   * validates and normalizes it.
+   */
+  externalPreview?: { url: string; trailingSlash?: "never" | "always" };
   catalog?: { title?: string; intro?: string };
   /**
    * Populate an otherwise empty zudo-doc header with links to the engine-owned
@@ -79,9 +120,15 @@ export interface ZudoSgComposeOptions {
     | { routingFile?: undefined; writeRoot?: undefined; tabsModule?: string };
   /**
    * Append the engine's header trigger for the preview token panel to the
-   * zudo-doc routes plugin's `headerRightItems`. Defaults to true. Unlike
+   * zudo-doc routes plugin's `headerRightItems`. Defaults to whether the panel
+   * is wired at all (`isPreviewTokenPanelWired(zdtpApplyProxy)`, issue #872) —
+   * `true` when `zdtpApplyProxy.tabsModule` is set, `false` otherwise, so an
+   * unwired host no longer ships a dead button by default. Unlike
    * `chromeDefaults` this is unconditional: a host with its own `headerNav`
-   * still gets the trigger.
+   * still gets the trigger. An explicit `true` always injects the trigger,
+   * even when unwired — `withZudoSg` then emits a one-time `console.warn`
+   * naming `zdtpApplyProxy.tabsModule`, since the button would otherwise be
+   * dead with no signal. An explicit `false` always stays off.
    */
   headerTokenTrigger?: boolean;
   /** Extra keys of `zudo-sg.config.mjs` (e.g. `barrelIndex`) are CLI-only and ignored here. */
@@ -101,7 +148,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function withStyleguideChromeDefaults(plugin: unknown, routes: SgRoutes): unknown {
+function withStyleguideChromeDefaults(plugin: unknown, routes: SgRoutes, tokensEnabled: boolean): unknown {
   if (!isRecord(plugin) || plugin.name !== ZUDO_DOC_ROUTES_PLUGIN_NAME) return plugin;
 
   const options = isRecord(plugin.options) ? plugin.options : {};
@@ -117,20 +164,27 @@ function withStyleguideChromeDefaults(plugin: unknown, routes: SgRoutes): unknow
     (item) => isRecord(item) && item.type === "component" && item.component === "search",
   );
 
+  // `tokensEnabled` is the same `isTokensRouteEnabled()` verdict the routes
+  // plugin uses to decide whether `/tokens` is injected at all (do-item 4) —
+  // a disabled route gets no nav link and no localization prefix for it.
+  const navGlobalPaths = tokensEnabled ? [routes.componentsIndex, routes.tokens] : [routes.componentsIndex];
+
   return {
     ...plugin,
     options: {
       ...options,
       settings: {
         ...settings,
-        headerNav: [
-          { label: "Components", path: routes.componentsIndex, categoryMatch: "components", versioned: false },
-          { label: "Design Tokens", path: routes.tokens, versioned: false },
-        ],
+        headerNav: tokensEnabled
+          ? [
+              { label: "Components", path: routes.componentsIndex, categoryMatch: "components", versioned: false },
+              { label: "Design Tokens", path: routes.tokens, versioned: false },
+            ]
+          : [{ label: "Components", path: routes.componentsIndex, categoryMatch: "components", versioned: false }],
         // Engine navigation targets global routes, including from translated docs.
         defaultLocaleOnlyPrefixes: [...new Set([
           ...(Array.isArray(settings.defaultLocaleOnlyPrefixes) ? settings.defaultLocaleOnlyPrefixes : []),
-          ...[routes.componentsIndex, routes.tokens].map((path) => `${path.replace(/\/+$/, "")}/`),
+          ...navGlobalPaths.map((path) => `${path.replace(/\/+$/, "")}/`),
         ])],
         headerRightItems: hasSearch
           ? headerRightItems
@@ -240,28 +294,84 @@ function withHeaderTokenTrigger(plugin: unknown): unknown {
   };
 }
 
+let warnedUnwiredHeaderTrigger = false;
+
+/** Test seam: re-arms the one-shot "trigger forced on while unwired" warning (issue #872). */
+export function __resetHeaderTokenTriggerWarningForTests(): void {
+  warnedUnwiredHeaderTrigger = false;
+}
+
+/** Validates `options.registry`; returns the descriptor module path in descriptor mode, else `null`. */
+function descriptorModuleOf(registry: unknown): string | null {
+  if (registry === undefined) return null;
+  if (!isRecord(registry)) {
+    throw new Error('[zudo-sg] option "registry" must be { mode: "module" } or { mode: "descriptor", module }');
+  }
+  for (const key of Object.keys(registry)) {
+    if (key !== "mode" && key !== "module") {
+      throw new Error(`[zudo-sg] option "registry.${key}" is not supported (expected mode, module)`);
+    }
+  }
+  if (registry.mode === "module") {
+    if (registry.module !== undefined) {
+      throw new Error('[zudo-sg] option "registry.module" is only valid with registry.mode "descriptor"');
+    }
+    return null;
+  }
+  if (registry.mode === "descriptor") {
+    if (typeof registry.module !== "string" || registry.module === "") {
+      throw new Error(
+        '[zudo-sg] option "registry.module" is required with registry.mode "descriptor" ' +
+          '(project-root-relative path, e.g. "./src/styleguide/story-descriptors.ts")',
+      );
+    }
+    return registry.module;
+  }
+  throw new Error(`[zudo-sg] option "registry.mode" must be "module" or "descriptor" (got ${JSON.stringify(registry.mode)})`);
+}
+
+/** Strips the `false` opt-out values `SgRoutesOption` allows, for callers (`resolveSgRoutes`) that need plain patterns. */
+function stringRoutesOnly(routes: SgRoutesOption | undefined): Partial<SgRoutes> {
+  const out: Partial<SgRoutes> = {};
+  if (!routes) return out;
+  for (const [key, value] of Object.entries(routes)) {
+    if (typeof value === "string") out[key as keyof SgRoutes] = value;
+  }
+  return out;
+}
+
 /** Returns the engine's zfb plugin descriptors and content collections. */
 export function zudoSg(options: ZudoSgComposeOptions): ZudoSgFragment {
   if (!options || typeof options !== "object") {
     throw new Error("[zudo-sg] zudoSg(options) requires an options object (the zudo-sg.config.mjs shape)");
   }
-  const roots = Array.isArray(options.componentsRoots) ? options.componentsRoots : [];
+  const descriptorModule = descriptorModuleOf(options.registry);
+  // Descriptor mode registers no component-doc collections: descriptors carry no registry key to pair with.
+  const roots = descriptorModule === null && Array.isArray(options.componentsRoots) ? options.componentsRoots : [];
   const previewCssUrl = options.previewCssUrl ?? DEFAULT_PREVIEW_CSS_URL;
+  const registrySource =
+    descriptorModule === null
+      ? {
+          registryModule: options.registryOut,
+          // Pairs each root's registry key prefix with its collection below, so the
+          // detail route resolves a story's doc from the root its key belongs to.
+          componentDocs: componentDocsRoots(roots),
+        }
+      : { registryMode: "descriptor", descriptorModule };
 
   const plugins: ZudoSgPluginDescriptor[] = [
     {
       name: ROUTES_PLUGIN_NAME,
       options: definedOnly({
-        registryModule: options.registryOut,
+        ...registrySource,
         routes: options.routes,
+        externalPreview: options.externalPreview,
         categoryOrder: options.categoryOrder,
         uiPackageName: options.uiPackageName,
         previewCssUrl,
         catalog: options.catalog,
         tokensManifestModule: options.tokens?.manifestOut,
-        // Pairs each root's registry key prefix with its collection below, so the
-        // detail route resolves a story's doc from the root its key belongs to.
-        componentDocs: componentDocsRoots(roots),
+        previewTokenPanel: isPreviewTokenPanelWired(options.zdtpApplyProxy),
       }),
     },
     {
@@ -299,14 +409,32 @@ export function withZudoSg<
 } {
   const sg = zudoSg(options);
   const presetPlugins = [...(presetFragment.plugins ?? [])];
+  const registryMode = descriptorModuleOf(options.registry) === null ? "module" : "descriptor";
+  const tokensEnabled = isTokensRouteEnabled({
+    registryMode,
+    tokensRouteOption: options.routes?.tokens,
+    hasTokensManifest: Boolean(options.tokens?.manifestOut),
+  });
   const pluginsWithChrome =
     options.chromeDefaults === false
       ? presetPlugins
-      : presetPlugins.map((plugin) => withStyleguideChromeDefaults(plugin, resolveSgRoutes(options.routes)));
+      : presetPlugins.map((plugin) => withStyleguideChromeDefaults(plugin, resolveSgRoutes(stringRoutesOnly(options.routes)), tokensEnabled));
+  // Default follows whether the panel is wired at all (issue #872): a host
+  // that never set `zdtpApplyProxy.tabsModule` no longer ships a dead button.
+  // An explicit `true` still forces the trigger on but warns once, since the
+  // button would otherwise be dead with nothing to say so.
+  const previewTokenPanelWired = isPreviewTokenPanelWired(options.zdtpApplyProxy);
+  const triggerEnabled = options.headerTokenTrigger ?? previewTokenPanelWired;
+  if (options.headerTokenTrigger === true && !previewTokenPanelWired && !warnedUnwiredHeaderTrigger) {
+    warnedUnwiredHeaderTrigger = true;
+    console.warn(
+      '[zudo-sg] headerTokenTrigger is explicitly enabled but "zdtpApplyProxy.tabsModule" is not configured — ' +
+        "the header trigger will render as a dead control until tabsModule is set (issue #872)",
+    );
+  }
   // Runs AFTER the chrome pass so the trigger trails the `search` item that
   // pass may have appended.
-  const pluginsWithTrigger =
-    options.headerTokenTrigger === false ? pluginsWithChrome : pluginsWithChrome.map(withHeaderTokenTrigger);
+  const pluginsWithTrigger = triggerEnabled ? pluginsWithChrome.map(withHeaderTokenTrigger) : pluginsWithChrome;
   return {
     ...presetFragment,
     plugins: [...pluginsWithTrigger, ...sg.plugins],

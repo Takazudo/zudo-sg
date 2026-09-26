@@ -69,16 +69,16 @@ const skippedFixtureFilePatterns = [
 const keep = process.argv.includes("--keep") || Boolean(process.env.ZUDO_SG_VERIFY_KEEP);
 const readmeInstallOnly = process.argv.includes("--readme-install-only");
 
-function fail(message) {
+export function fail(message) {
   throw new Error(`[verify styleguide install] ${message}`);
 }
 
-function assert(condition, message) {
+export function assert(condition, message) {
   if (!condition) fail(message);
 }
 
 /** stdio inherited: build/dev output is the point of a failure, and should stream while running. */
-function run(command, commandArgs, cwd) {
+export function run(command, commandArgs, cwd) {
   return new Promise((resolvePromise, reject) => {
     const child = spawn(command, commandArgs, { cwd, env: process.env, stdio: "inherit" });
     child.on("error", (error) => reject(new Error(`${command} could not start: ${error.message}`)));
@@ -93,7 +93,7 @@ function run(command, commandArgs, cwd) {
 }
 
 /** Like `run`, but also accumulates the streamed output for post-hoc log assertions. */
-function runStreamed(command, commandArgs, cwd) {
+export function runStreamed(command, commandArgs, cwd) {
   return new Promise((resolvePromise, reject) => {
     let output = "";
     const child = spawn(command, commandArgs, { cwd, env: process.env });
@@ -117,7 +117,7 @@ function runStreamed(command, commandArgs, cwd) {
 }
 
 /** Captures command output for pack filenames and tarball inspection. */
-function runCapture(command, commandArgs, cwd, includeStderr = false) {
+export function runCapture(command, commandArgs, cwd, includeStderr = false) {
   return new Promise((resolvePromise, reject) => {
     let stdout = "";
     let stderr = "";
@@ -135,7 +135,7 @@ function runCapture(command, commandArgs, cwd, includeStderr = false) {
   });
 }
 
-function freePort() {
+export function freePort() {
   return new Promise((resolvePort, reject) => {
     const server = createServer();
     server.once("error", reject);
@@ -146,7 +146,7 @@ function freePort() {
   });
 }
 
-async function waitForOk(url, timeoutMs, child, log) {
+export async function waitForOk(url, timeoutMs, child, log) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     if (child.exitCode !== null) fail(`zfb dev exited (${child.exitCode}) before answering ${url}:\n${log()}`);
@@ -161,7 +161,7 @@ async function waitForOk(url, timeoutMs, child, log) {
   fail(`zfb dev did not answer ${url} within ${timeoutMs}ms:\n${log()}`);
 }
 
-function stopDevServer(child) {
+export function stopDevServer(child) {
   if (!child || child.exitCode !== null || child.signalCode !== null || child.pid === undefined) return;
   try {
     process.kill(-child.pid, "SIGTERM");
@@ -170,7 +170,7 @@ function stopDevServer(child) {
   }
 }
 
-async function stopDevServerAndWait(child) {
+export async function stopDevServerAndWait(child) {
   if (!child || child.exitCode !== null || child.signalCode !== null) return;
   const closed = new Promise((resolve) => child.once("close", resolve));
   stopDevServer(child);
@@ -188,7 +188,7 @@ async function stopDevServerAndWait(child) {
   assert(killed, "zfb dev did not exit after SIGKILL before the foreign fixture build");
 }
 
-async function packEngine(destination) {
+export async function packEngine(destination) {
   await mkdir(destination, { recursive: true });
   // `pnpm --filter @takazudo/zudo-sg pack`: the package has no lockfile of its
   // own (unlike packages/demo-ui), so this runs safely from the repo root — no
@@ -234,7 +234,7 @@ function assertNoWhitelistEscape(files) {
   }
 }
 
-async function assertTarballShape(tarballPath) {
+export async function assertTarballShape(tarballPath) {
   const listing = await runCapture("tar", ["-tzf", tarballPath], root);
   const files = listing.trim().split(/\r?\n/u).filter(Boolean);
   assert(files.length > 0, `packed tarball ${tarballPath} is empty`);
@@ -277,7 +277,7 @@ export function parseDocumentedInstall(readme, fixtureManifest, packageManifest)
   return { command: commands[0][0], specs, names, prerequisites };
 }
 
-async function assertForeignPackage(hostDir) {
+export async function assertForeignPackage(hostDir) {
   const installed = await realpath(path.join(hostDir, "node_modules/@takazudo/zudo-sg"));
   const modules = path.join(await realpath(hostDir), "node_modules") + path.sep;
   assert(installed.startsWith(modules), `installed engine resolves outside the scratch node_modules: ${installed}`);
@@ -318,11 +318,18 @@ async function verifyDocumentedInstall(tarballPath, packageManifest) {
   }
 }
 
-async function copyFixture(destination) {
-  await cp(fixtureRoot, destination, {
+/**
+ * Copies a fixture directory (`fixtures/engine-host`, or a sibling like
+ * `fixtures/descriptor-host`) to a scratch destination, skipping build
+ * output and zfb's transient dotfiles. Exported so a sibling verify script
+ * (e.g. verify-descriptor-host-install.mjs) reuses the same copy contract
+ * instead of re-implementing it.
+ */
+export async function copyFixtureDir(sourceRoot, destination) {
+  await cp(sourceRoot, destination, {
     recursive: true,
     filter: (source) => {
-      const relative = path.relative(fixtureRoot, source);
+      const relative = path.relative(sourceRoot, source);
       if (relative === "") return true;
       const segments = relative.split(path.sep);
       return (
@@ -333,11 +340,15 @@ async function copyFixture(destination) {
   });
 }
 
-function read(hostDir, rel) {
+async function copyFixture(destination) {
+  await copyFixtureDir(fixtureRoot, destination);
+}
+
+export function read(hostDir, rel) {
   return readFile(path.join(hostDir, rel), "utf8");
 }
 
-async function collectHtmlFiles(directory) {
+export async function collectHtmlFiles(directory) {
   const files = [];
   for (const entry of await readdir(directory, { withFileTypes: true })) {
     const entryPath = path.join(directory, entry.name);

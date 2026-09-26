@@ -4,6 +4,51 @@ All notable changes to `@takazudo/zudo-sg` are documented in this file.
 
 The format is based on Keep a Changelog, and release notes are generated from the changelog MDX pages.
 
+## [0.4.0] - 2026-09-26
+
+This release lets a non-Preact host adopt the catalog, nav, search, and
+detail-page chrome while keeping full ownership of the preview document, and
+carries two behavior changes to defaults set by earlier releases.
+
+### Features
+
+- Add a second registry source, `registry: { mode: "descriptor", module }`:
+  plain-data `StoryDescriptor`/`ThumbnailDescriptor` metadata in place of
+  `*.stories.tsx` files with `render` functions, validated at build time with
+  named, indexed error messages.
+- Add `externalPreview: { url, trailingSlash? }`, a host-served preview
+  document that replaces the in-engine `/components/preview` route. Required
+  in descriptor mode; optional in module mode.
+- Version the preview iframe postMessage contract as protocol v1 (`v: 1`,
+  legacy messages with no `v` still accepted) and publish it as the
+  framework-free leaf module `@takazudo/zudo-sg/preview/messages`, so an
+  `externalPreview` document can implement it without depending on Preact.
+- Add `routes.componentsPreview: false` and `routes.tokens: false` opt-outs,
+  plus an implied `tokens` opt-out in descriptor mode when no token manifest
+  is configured.
+- Extend `DetailWorkbench` with host-controlled props (`selection`, `theme`,
+  `previewParams`, `sizing`, `toolbar`) so a foreign host can drive the
+  detail-page chrome directly instead of only reaching it through the
+  engine's own detail route.
+
+### Breaking Changes
+
+- `withZudoSg()`'s `headerTokenTrigger` option now defaults to whether the
+  preview token panel is actually wired (`zdtpApplyProxy.tabsModule` set),
+  rather than defaulting to `true` unconditionally. A host that never wired
+  the apply proxy's tabs module no longer gets a header button that opened
+  nothing; setting `headerTokenTrigger: true` explicitly still forces it on
+  (with a one-time console warning when the panel isn't wired).
+- A standalone `DetailWorkbench` (driven directly, outside the engine's own
+  detail route) now defaults `toolbar.codePanel` and `toolbar.tokenPanel` to
+  `false`. The engine's own detail route is unaffected — it opts both back
+  in explicitly — but existing direct consumers of `DetailWorkbench` that
+  relied on those controls appearing by default must now pass
+  `toolbar: { codePanel: true, tokenPanel: true }`.
+
+See [Descriptor mode & external preview](/docs/reference/descriptor-mode) for
+the full contract and a minimal framework-free preview-frame example.
+
 ## [0.3.6] - 2026-09-25
 
 This release updates the supported zfb toolchain to 2.20.3 so staged
