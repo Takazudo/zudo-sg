@@ -26,7 +26,6 @@ import type { JSX } from "preact";
 import {
   useEffect,
   useLayoutEffect,
-  useMemo,
   useRef,
   useState,
 } from "preact/hooks";
@@ -88,6 +87,38 @@ export const THEME_OPTIONS: ThemeOption[] = [
 
 export const DEFAULT_THEME_MODE: ThemeMode = "follow";
 
+/**
+ * What a stage does about theme. `"none"` hands theme to the host (#883): the
+ * stage never posts `sg:setTheme`, so a preview document that picks its own
+ * theme (e.g. from a `previewParams` entry) is never overridden.
+ */
+export type FrameThemeMode = ThemeMode | "none";
+
+/** Query keys the stage owns; `previewParams` entries using them are ignored. */
+export const RESERVED_PREVIEW_PARAMS: readonly string[] = ["slug", "variant"];
+
+/**
+ * The preview document URL for one variant: `slug` and `variant` first, then
+ * every `previewParams` entry URL-encoded in insertion order. A reserved key
+ * in `previewParams` is dropped rather than thrown on — the identity pair must
+ * stay authoritative, and throwing from an island would blank the whole page.
+ */
+export function buildPreviewSrc(
+  previewUrl: string,
+  slug: string,
+  exportName: string,
+  previewParams?: Readonly<Record<string, string>>,
+): string {
+  let src = `${previewUrl}?slug=${encodeURIComponent(slug)}&variant=${encodeURIComponent(exportName)}`;
+  if (previewParams) {
+    for (const [key, value] of Object.entries(previewParams)) {
+      if (RESERVED_PREVIEW_PARAMS.includes(key)) continue;
+      src += `&${encodeURIComponent(key)}=${encodeURIComponent(value)}`;
+    }
+  }
+  return src;
+}
+
 function viewportWidth(id: ViewportId): string {
   const preset = VIEWPORTS.find((v) => v.id === id) ?? VIEWPORTS.at(-1);
   return preset?.width ?? "100%";
@@ -125,8 +156,11 @@ export interface VariantFrameProps {
   name: string;
   /** Declarative control descriptors (metadata only). */
   controls?: StoryControl[];
-  /** Toolbar-owned theme mode. "follow" tracks the catalog's `data-theme`. */
-  themeMode: ThemeMode;
+  /**
+   * Toolbar-owned theme mode. "follow" tracks the catalog's `data-theme`;
+   * "none" never posts `sg:setTheme` (host-controlled theme).
+   */
+  themeMode: FrameThemeMode;
   /** Toolbar-owned viewport preset. */
   viewportId: ViewportId;
   /**
@@ -143,6 +177,16 @@ export interface VariantFrameProps {
   frameSandbox?: readonly string[];
   /** Iframe `allow` (permissions policy) directives, joined with `; `. Absent by default. */
   frameAllow?: readonly string[];
+  /**
+   * Extra query params appended, URL-encoded, after `slug`/`variant`. The
+   * reserved keys `slug` and `variant` are ignored.
+   */
+  previewParams?: Readonly<Record<string, string>>;
+  /**
+   * Fixed iframe height in px. When set, `sg:height` reports are ignored;
+   * when absent the frame auto-sizes from them.
+   */
+  fixedHeight?: number;
 }
 
 function VariantFrame(props: VariantFrameProps): JSX.Element {
@@ -156,28 +200,30 @@ function VariantFrame(props: VariantFrameProps): JSX.Element {
     previewUrl = PREVIEW_ROUTE_PATH,
     frameSandbox = DEFAULT_FRAME_SANDBOX,
     frameAllow,
+    previewParams,
+    fixedHeight,
   } = props;
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const readyRef = useRef(false);
   // Mirror the prop into a ref so the `[]`-deps listeners below (message,
   // MutationObserver, after-navigate) read the CURRENT mode without being torn
   // down and re-installed on every toolbar change.
-  const themeModeRef = useRef<ThemeMode>(themeMode);
+  const themeModeRef = useRef<FrameThemeMode>(themeMode);
   themeModeRef.current = themeMode;
   // The frame's current identity, read by the `[]`-deps message listener to
   // drop reports from a document that no longer belongs to this stage.
   const identityRef = useRef({ slug, variant: exportName });
   identityRef.current = { slug, variant: exportName };
+  const fixedHeightRef = useRef(fixedHeight);
+  fixedHeightRef.current = fixedHeight;
   const [height, setHeight] = useState(INITIAL_FRAME_HEIGHT);
 
   // `previewUrl` is shared with css-injection.ts's iframe selector (the code
   // panel receives the same value) — keep them in agreement by passing one
-  // value, not by re-typing the literal (#48, #105).
-  const src = useMemo(
-    () =>
-      `${previewUrl}?slug=${encodeURIComponent(slug)}&variant=${encodeURIComponent(exportName)}`,
-    [previewUrl, slug, exportName],
-  );
+  // value, not by re-typing the literal (#48, #105). A plain string (no memo):
+  // a fresh-but-equal `previewParams` object yields the same `src`, so it
+  // never triggers the document reset below.
+  const src = buildPreviewSrc(previewUrl, slug, exportName, previewParams);
 
   // Same-origin frame: target our own origin, never "*", so a frame that
   // navigated elsewhere cannot receive props or theme (#880). An opaque
@@ -207,6 +253,7 @@ function VariantFrame(props: VariantFrameProps): JSX.Element {
   function syncTheme(): void {
     if (!readyRef.current) return;
     const mode = themeModeRef.current;
+    if (mode === "none") return;
     const theme = mode === "follow" ? readCatalogTheme() : mode;
     if (theme) sendTheme(theme);
   }
@@ -226,6 +273,7 @@ function VariantFrame(props: VariantFrameProps): JSX.Element {
       }
       if (isHeightMessage(e.data)) {
         if (!matchesPreviewIdentity(e.data, identityRef.current)) return;
+        if (fixedHeightRef.current !== undefined) return;
         setHeight(Math.max(80, Math.ceil(e.data.height)));
       }
     }
@@ -304,7 +352,7 @@ function VariantFrame(props: VariantFrameProps): JSX.Element {
             allow={frameAllow ? frameAllow.join("; ") : undefined}
             style={{
               width: "100%",
-              height: `${height}px`,
+              height: `${fixedHeight ?? height}px`,
               // An iframe's layout viewport is its content box. Keep the
               // border at zero so a 1280px preset reaches the 1280px
               // breakpoint; a visible border belongs on the wrapper.
