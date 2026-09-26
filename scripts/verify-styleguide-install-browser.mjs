@@ -539,11 +539,15 @@ async function proveReadyHostBootstrap(page, origin, panelChunkPaths) {
       const afterSwapClick = await panelDiagnostics(page);
       const afterDispatch = await page.evaluate(() => window.__packedConfiguredAfterDispatch);
       const lifecycleSnapshots = await page.evaluate(() => window.__packedPanelLifecycleSnapshots);
+      // The click lands after the swap removed the host root and before page-load remounts it, so
+      // zdtp treats it as a fresh-mount toggle, which always opens (zudolab/zudo-doc#1633).
       try {
-        await assertPanelState(page, false);
+        await assertPanelState(page, true);
       } catch (error) {
-        fail(`configured pre-remount click did not close the panel: event=${JSON.stringify(configuredClick)}; afterDispatch=${JSON.stringify(afterDispatch)}; afterSwapClick=${JSON.stringify(afterSwapClick)}; lifecycle=${JSON.stringify(lifecycleSnapshots)}; browserErrors=${JSON.stringify(browserErrors)}; final=${JSON.stringify(await panelDiagnostics(page))}; ${error}`);
+        fail(`configured pre-remount click did not open the panel: event=${JSON.stringify(configuredClick)}; afterDispatch=${JSON.stringify(afterDispatch)}; afterSwapClick=${JSON.stringify(afterSwapClick)}; lifecycle=${JSON.stringify(lifecycleSnapshots)}; browserErrors=${JSON.stringify(browserErrors)}; final=${JSON.stringify(await panelDiagnostics(page))}; ${error}`);
       }
+      await trigger.click();
+      await assertPanelState(page, false);
       await trigger.click();
       const afterReopenClick = await panelDiagnostics(page);
       try {
