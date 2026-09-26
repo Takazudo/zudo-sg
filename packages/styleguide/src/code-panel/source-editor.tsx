@@ -8,6 +8,7 @@
 import type { JSX } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import type { EditorView } from "@codemirror/view";
+import type { Extension } from "@codemirror/state";
 
 export interface SourceEditorProps {
   value: string;
@@ -16,6 +17,14 @@ export interface SourceEditorProps {
   /** Accessible name for the editor (and its <pre> fallback before it mounts). */
   label?: string;
   onChange?: (value: string) => void;
+  /**
+   * Extra CodeMirror extensions (e.g. a host theme), applied after — and so
+   * overriding — the engine's own. For direct `SourceEditor` use only: they are
+   * not serializable across the `CodePanel` island boundary, so `CodePanel`
+   * does not accept them. Initial configuration only, like `value` — change
+   * them by remounting with a new `key`.
+   */
+  extensions?: Extension[];
 }
 
 export default function SourceEditor({
@@ -24,6 +33,7 @@ export default function SourceEditor({
   editable = false,
   label,
   onChange,
+  extensions,
 }: SourceEditorProps): JSX.Element {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
@@ -40,6 +50,7 @@ export default function SourceEditor({
         editable,
         label,
         onChange: (v) => onChangeRef.current?.(v),
+        extensions,
       });
       setLoaded(true);
     });
@@ -48,8 +59,8 @@ export default function SourceEditor({
       viewRef.current?.destroy();
       viewRef.current = null;
     };
-    // Editor is created once; `value`, `language`, `editable`, and `label`
-    // are read as initial config only. They are intentionally omitted from
+    // Editor is created once; `value`, `language`, `editable`, `label`, and
+    // `extensions` are read as initial config only. They are omitted from
     // the deps — the editor owns its buffer thereafter, and re-running this
     // effect would destroy/recreate the CodeMirror view (losing cursor/scroll)
     // on every prop change. Callers that swap to an unrelated `value` (e.g.
