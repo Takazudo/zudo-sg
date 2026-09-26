@@ -57,12 +57,61 @@ const COLOR_TAB_SENTINEL = "oklch(0.42 0.18 210)";
  * Navigate to the first component detail page (reused across several tests).
  */
 async function gotoFirstDetailPage(page: Page): Promise<void> {
+  await recordBridgeReadySignals(page);
   await page.goto("/components");
   const firstCard = page.locator("[data-sg-card]").first();
   await expect(firstCard).toBeAttached();
   const href = await firstCard.getAttribute("href");
   expect(href).toBeTruthy();
   await page.goto(href!);
+}
+
+// Window key the init script below records bridge `ready` senders under.
+const READY_SOURCES_KEY = "__sgBridgeReadySources";
+
+type ReadyRecorderWindow = Window & { [READY_SOURCES_KEY]?: MessageEventSource[] };
+
+/**
+ * Record every bridge `ready` message the host window receives, keyed by the
+ * sending iframe's WindowProxy. Installed as an init script so it is listening
+ * before any iframe can boot — a `ready` fired before the test starts waiting
+ * is still observed. Must run before the navigation it should cover.
+ */
+async function recordBridgeReadySignals(page: Page): Promise<void> {
+  await page.addInitScript(
+    ({ bridgeSource, key }) => {
+      const sources: MessageEventSource[] = [];
+      (window as unknown as Record<string, unknown>)[key] = sources;
+      window.addEventListener("message", (event) => {
+        if (event.origin !== window.location.origin) return;
+        const data = event.data as { source?: unknown; type?: unknown } | null;
+        if (data?.source !== bridgeSource || data.type !== "ready") return;
+        if (event.source) sources.push(event.source);
+      });
+    },
+    { bridgeSource: BRIDGE_SOURCE, key: READY_SOURCES_KEY },
+  );
+}
+
+/**
+ * Wait until the first preview iframe's bridge receiver is listening: its
+ * document has hydrated and `installIframeReceiver` has posted `ready` to the
+ * host. A raw postMessage sent before this point is dropped (the receiver is
+ * installed in a post-hydration effect, and the iframe is loading="lazy").
+ */
+async function waitForFirstIframeBridgeReady(page: Page): Promise<void> {
+  await page.waitForFunction(
+    (key) => {
+      const iframe = document.querySelector<HTMLIFrameElement>(
+        'iframe[src*="/components/preview"]',
+      );
+      const win = iframe?.contentWindow;
+      const sources = (window as ReadyRecorderWindow)[key as typeof READY_SOURCES_KEY];
+      return Boolean(win && sources?.includes(win));
+    },
+    READY_SOURCES_KEY,
+    { timeout: 15_000 },
+  );
 }
 
 /**
@@ -206,6 +255,10 @@ async function setPanelColorAccent(page: Page, value: string): Promise<void> {
  * project-owned iframe-css-vars-bridge postMessage API. Tests the iframe
  * receiver only; does NOT populate the panel's previewOverrides registry Map.
  *
+ * Waits for the iframe's bridge `ready` signal before sending, so the message
+ * can never arrive before the receiver is listening (a raw postMessage has no
+ * replay-on-ready safety net, unlike the registry's sink path).
+ *
  * Use this for tests that verify the iframe bridge receiver is installed and
  * the CSS cascade is correct. Do NOT use this when you need Reset to clear
  * the values afterward (use panel UI instead — see setPanelRadiusMd).
@@ -214,6 +267,7 @@ async function applyVarsToFirstIframe(
   page: Page,
   vars: Array<[string, string]>,
 ): Promise<void> {
+  await waitForFirstIframeBridgeReady(page);
   await page.evaluate(
     ({ bridgeSource, vars }) => {
       const iframe = document.querySelector(
@@ -229,8 +283,6 @@ async function applyVarsToFirstIframe(
     },
     { bridgeSource: BRIDGE_SOURCE, vars },
   );
-  // Small settle to let the iframe process the message.
-  await page.waitForTimeout(100);
 }
 
 /**
@@ -298,9 +350,9 @@ test("preview panel: overrides reach iframe :root; host <html> is unchanged", as
     ["--radius-md", radiusOverride],
   ]);
 
-  // Assert iframe :root has the overrides applied. The postMessage receiver
-  // runs asynchronously, so poll the observable state instead of relying on
-  // the helper's short scheduling settle under parallel browser load.
+  // Assert iframe :root has the overrides applied. The helper only sends once
+  // the receiver has signalled ready, but the receiver still handles the
+  // message asynchronously, so poll the observable state.
   await expect.poll(() => getIframeRootVar(frame, "--color-accent"))
     .toBe(brandOverride);
   await expect.poll(() => getIframeRootVar(frame, "--radius-md"))
@@ -387,8 +439,10 @@ test("preview panel: Reset clears preview overrides; host chrome state is untouc
   //   sendApplyCssVars(iframe, [["--radius-md", "20rem"]]) → iframe postMessage.
   await setPanelRadiusMd(page, "20");
 
-  // Verify the iframe received the override.
-  expect(await getIframeRootVar(frame, "--radius-md")).toBe("20rem");
+  // Verify the iframe received the override. If the iframe's receiver was not
+  // yet listening, the registry replays the override on its `ready` signal —
+  // poll so the assertion waits for that replay instead of racing it.
+  await expect.poll(() => getIframeRootVar(frame, "--radius-md")).toBe("20rem");
 
   // Click Reset.
   await clickPanelAction(page, "Reset");
@@ -543,8 +597,9 @@ test("preview panel: late-mounted iframe replays current overrides on ready", as
   await openPreviewPanel(page);
   await setPanelRadiusMd(page, "20");
 
-  // Confirm the first (already-mounted) iframe has the override.
-  expect(await getIframeRootVar(frame, "--radius-md")).toBe("20rem");
+  // Confirm the first (already-mounted) iframe has the override (polled: it
+  // may land via the registry's on-ready replay rather than the direct send).
+  await expect.poll(() => getIframeRootVar(frame, "--radius-md")).toBe("20rem");
 
   // Check for a second preview iframe (multi-variant story).
   const allIframes = page.locator('iframe[src*="/components/preview"]');
@@ -554,23 +609,15 @@ test("preview panel: late-mounted iframe replays current overrides on ready", as
     // Scroll the second iframe into view to trigger VariantFrame hydration.
     const secondIframeEl = allIframes.nth(1);
     await secondIframeEl.scrollIntoViewIfNeeded();
-    // Wait for it to fully hydrate and signal ready via the bridge.
     await expect(secondIframeEl).toBeAttached({ timeout: 10_000 });
 
-    // Allow time for onIframeReady → replaySinkOverrides to fire.
-    // The replay happens when the iframe's bridge receiver calls postMessage
-    // with type "ready" and the host's onIframeReady callback fires.
-    await page.waitForTimeout(500);
-
+    // The replay happens when the iframe's bridge receiver posts `ready` and
+    // the host's onIframeReady → replaySinkOverrides fires; poll until it lands.
     const secondFrame = page
       .frameLocator('iframe[src*="/components/preview"]')
       .nth(1);
-    const secondRadius = await secondFrame.locator(":root").evaluate(
-      (el, name) => getComputedStyle(el).getPropertyValue(name).trim(),
-      "--radius-md",
-    );
     // The second iframe should have received the replayed override.
-    expect(secondRadius).toBe("20rem");
+    await expect.poll(() => getIframeRootVar(secondFrame, "--radius-md")).toBe("20rem");
   } else {
     // Single-iframe page: re-assert the first iframe carries the override.
     // The late-mount replay path is architecturally covered by the registry
@@ -594,8 +641,9 @@ test("preview panel: Reset clears overrides from all visible preview iframes", a
   await openPreviewPanel(page);
   await setPanelRadiusMd(page, "20");
 
-  // Confirm the first iframe has the override.
-  expect(await getIframeRootVar(frame, "--radius-md")).toBe("20rem");
+  // Confirm the first iframe has the override (polled: it may land via the
+  // registry's on-ready replay rather than the direct send).
+  await expect.poll(() => getIframeRootVar(frame, "--radius-md")).toBe("20rem");
 
   // Click Reset.
   await clickPanelAction(page, "Reset");
