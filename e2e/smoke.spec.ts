@@ -141,9 +141,10 @@ test("/components/<slug> code panel updates when switching variant tabs", async 
   const codePanel = page.locator("#sg-code-panel");
   await expect(codePanel).toBeAttached();
 
-  // The read-only source view is the FIRST CodeMirror instance in the panel
-  // (the editable Live CSS buffer is the second).
-  const sourceCode = codePanel.locator(".cm-content").first();
+  // Target the source region by its stable data hook (#901) rather than
+  // instance order (the editable Live CSS buffer is a second, later
+  // `.cm-content` in the same panel).
+  const sourceCode = codePanel.locator('[data-sg-code-region="source"] .cm-content');
 
   // Select tabs by name rather than relying on the default: this test targets
   // #105 — that switching tabs actually re-renders the source — so it explicitly
@@ -178,6 +179,72 @@ test("/components/cta-button defaults its code-panel tab to the first-authored s
   await expect(
     codePanel.getByRole("tab", { selected: true }),
   ).toHaveAccessibleName("Playground", { timeout: 15_000 });
+});
+
+test("/components/cta-button code panel tablist is keyboard- and screen-reader-accessible (#889/#899)", async ({
+  page,
+}) => {
+  // End-to-end confirmation of the #889 Expected list against the real built
+  // site (#900 tabs, #901 editor names + region hooks). CtaButton's two
+  // variants (Playground, "Primary + secondary pair") give distinct source
+  // text to assert against, same as the #105 test above.
+  const response = await page.goto("/components/cta-button");
+  expect(response?.status()).toBe(200);
+
+  const codePanel = page.locator("#sg-code-panel");
+  await expect(codePanel).toBeAttached();
+
+  // Expected: "The variant tablist has an accessible name."
+  const tablist = codePanel.getByRole("tablist", { name: "Source variant" });
+  await expect(tablist).toBeAttached();
+
+  const playgroundTab = codePanel.getByRole("tab", { name: "Playground" });
+  const pairTab = codePanel.getByRole("tab", { name: "Primary + secondary pair" });
+  const sourceCode = codePanel.locator('[data-sg-code-region="source"] .cm-content');
+  await expect(sourceCode).toContainText("Browse products", { timeout: 15_000 });
+
+  // Expected: "Tabs use a roving tabindex" — Tab from the preceding control
+  // (Copy source) lands on the selected tab only; the non-selected tab has
+  // tabindex -1 and is skipped, so a single Tab press proves the roving
+  // behaviour without depending on the rest of the page's tab order.
+  await codePanel.getByRole("button", { name: "Copy source" }).focus();
+  await page.keyboard.press("Tab");
+  await expect(playgroundTab).toBeFocused();
+  await expect(playgroundTab).toHaveAttribute("aria-selected", "true");
+  await expect(pairTab).toHaveAttribute("tabindex", "-1");
+
+  // Expected: "role=tab / role=tabpanel are wired with aria-controls /
+  // aria-labelledby."
+  const tabpanel = codePanel.getByRole("tabpanel");
+  await expect(playgroundTab).toHaveAttribute("aria-controls", (await tabpanel.getAttribute("id")) ?? "");
+  await expect(tabpanel).toHaveAttribute("aria-labelledby", (await playgroundTab.getAttribute("id")) ?? "");
+
+  // Expected: "ArrowLeft/ArrowRight/Home/End move and activate the
+  // selection" — each keystroke both moves focus and changes the rendered
+  // source in the same step.
+  await page.keyboard.press("ArrowRight");
+  await expect(pairTab).toBeFocused();
+  await expect(pairTab).toHaveAttribute("aria-selected", "true");
+  await expect(sourceCode).toContainText("Company info", { timeout: 15_000 });
+
+  await page.keyboard.press("Home");
+  await expect(playgroundTab).toBeFocused();
+  await expect(playgroundTab).toHaveAttribute("aria-selected", "true");
+  await expect(sourceCode).toContainText("Browse products", { timeout: 15_000 });
+  await expect(sourceCode).not.toContainText("Company info");
+
+  await page.keyboard.press("End");
+  await expect(pairTab).toBeFocused();
+  await expect(pairTab).toHaveAttribute("aria-selected", "true");
+  await expect(sourceCode).toContainText("Company info", { timeout: 15_000 });
+
+  // Expected: "Each CodeMirror editor has an accessible name."
+  await expect(
+    codePanel.getByRole("textbox", { name: /^Source code for .+: .+/ }),
+  ).toBeAttached();
+  await expect(
+    codePanel.getByRole("textbox", { name: /^Live CSS for / }),
+  ).toBeAttached();
 });
 
 test("/components/<slug> detail page preview iframe loads", async ({ page }) => {
