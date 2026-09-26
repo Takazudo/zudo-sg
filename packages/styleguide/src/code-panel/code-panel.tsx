@@ -14,10 +14,11 @@
 // pre-resolved source strings, not the Story objects.
 
 import type { JSX } from "preact";
-import { useRef, useState } from "preact/hooks";
+import { useId, useRef, useState } from "preact/hooks";
 import SourceEditor from "./source-editor.js";
 import CopyButton from "./copy-button.js";
 import { injectCssToAllPreviews } from "./css-injection.js";
+import { handleTablistKeyDown } from "../shared/tablist-keyboard.js";
 
 export interface CodePanelVariant {
   exportName: string;
@@ -31,6 +32,13 @@ export interface CodePanelProps {
   variants: CodePanelVariant[];
   /** Base-prefixed preview route URL — the same value DetailWorkbench receives. */
   previewUrl?: string;
+  /**
+   * Story slug, used to build stable variant-tab/tabpanel ids that match
+   * SSR output (mirrors `DetailWorkbench`'s `tabsId`). Falls back to
+   * `useId()` when the host doesn't pass one — still unique per page, just
+   * not stable across an SSR/hydration boundary.
+   */
+  slug?: string;
 }
 
 const STARTER_CSS = `/* Live CSS — edits inject into every preview above.
@@ -42,19 +50,42 @@ export default function CodePanel({
   storyTitle,
   variants,
   previewUrl,
+  slug,
 }: CodePanelProps): JSX.Element {
   const [activeVariant, setActiveVariant] = useState(
     variants[0]?.exportName ?? "",
   );
   const debounceRef = useRef<number | undefined>(undefined);
+  const reactId = useId();
+  const tabsId = `sg-code-panel-${slug ?? reactId}`;
 
-  const active = variants.find((v) => v.exportName === activeVariant) ?? variants[0];
+  const activeIndex = variants.findIndex((v) => v.exportName === activeVariant);
+  const active = variants[activeIndex] ?? variants[0];
+
+  const tabId = (index: number): string => `${tabsId}-tab-${index}`;
+  const panelId = `${tabsId}-panel`;
 
   function handleCssChange(css: string): void {
     window.clearTimeout(debounceRef.current);
     debounceRef.current = window.setTimeout(() => {
       injectCssToAllPreviews("live", css, previewUrl);
     }, 250);
+  }
+
+  function onTabKeyDown(e: KeyboardEvent, index: number): void {
+    handleTablistKeyDown(
+      e,
+      index,
+      variants.length,
+      (next) => {
+        const target = variants[next];
+        if (target) setActiveVariant(target.exportName);
+      },
+      (next) => {
+        const tablist = (e.currentTarget as HTMLElement).parentElement;
+        (tablist?.children[next] as HTMLElement | undefined)?.focus();
+      },
+    );
   }
 
   return (
@@ -67,32 +98,54 @@ export default function CodePanel({
           {active && <CopyButton text={active.source} label="Copy source" />}
         </div>
         {variants.length > 1 && (
-          <div role="tablist" class="mt-vsp-2xs flex flex-wrap gap-hsp-3xs">
-            {variants.map((v) => (
-              <button
-                key={v.exportName}
-                type="button"
-                role="tab"
-                aria-selected={v.exportName === activeVariant}
-                onClick={() => setActiveVariant(v.exportName)}
-                class={
-                  "px-hsp-xs py-vsp-3xs text-xs rounded-sm border transition-colors " +
-                  (v.exportName === activeVariant
-                    ? "border-[color:var(--sg-accent)] bg-[var(--sg-accent)] text-[color:var(--sg-on-accent)]"
-                    : "border-[color:var(--sg-border)] text-[color:var(--sg-muted)] hover:text-[color:var(--sg-fg)]")
-                }
-              >
-                {v.name}
-              </button>
-            ))}
+          <div
+            role="tablist"
+            aria-label="Source variant"
+            class="mt-vsp-2xs flex flex-wrap gap-hsp-3xs"
+          >
+            {variants.map((v, index) => {
+              const selected = v.exportName === activeVariant;
+              return (
+                <button
+                  key={v.exportName}
+                  id={tabId(index)}
+                  type="button"
+                  role="tab"
+                  aria-selected={selected}
+                  aria-controls={panelId}
+                  tabIndex={selected ? 0 : -1}
+                  onClick={() => setActiveVariant(v.exportName)}
+                  onKeyDown={(e) => onTabKeyDown(e, index)}
+                  class={
+                    "px-hsp-xs py-vsp-3xs text-xs rounded-sm border transition-colors " +
+                    (selected
+                      ? "border-[color:var(--sg-accent)] bg-[var(--sg-accent)] text-[color:var(--sg-on-accent)]"
+                      : "border-[color:var(--sg-border)] text-[color:var(--sg-muted)] hover:text-[color:var(--sg-fg)]")
+                  }
+                >
+                  {v.name}
+                </button>
+              );
+            })}
           </div>
         )}
         {active && (
-          <div class="mt-vsp-xs">
+          <div
+            class="mt-vsp-xs"
+            {...(variants.length > 1
+              ? {
+                  id: panelId,
+                  role: "tabpanel",
+                  "aria-labelledby": activeIndex >= 0 ? tabId(activeIndex) : undefined,
+                }
+              : {})}
+          >
             {/* key remounts SourceEditor per variant: it creates its CodeMirror
                 view once and never diffs `value` (see source-editor.tsx), so
                 without a key switching tabs kept showing the first variant's
-                source (#105). */}
+                source (#105). This wrapper's own id/role/aria-labelledby stay
+                on the OUTER div, outside the key, so they don't reset when the
+                keyed child remounts (#900). */}
             <SourceEditor
               key={active.exportName}
               value={active.source}
