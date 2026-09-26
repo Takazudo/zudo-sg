@@ -51,4 +51,12 @@ export interface SgContext {
    * as `previewUrl` to `DetailWorkbench` and the code panel.
    */
   externalPreviewUrl: string | null;
+  /**
+   * Whether `zdtpApplyProxy.tabsModule` is configured (issue #872's
+   * `isPreviewTokenPanelWired()` verdict, `sg-routes.ts`). Gates the `/tokens`
+   * "Preview tokens" button and the detail route's `DetailWorkbench`
+   * `toolbar.tokenPanel` flag — an unwired host renders neither, instead of a
+   * dead control that dispatches to nothing.
+   */
+  previewTokenPanel: boolean;
 }

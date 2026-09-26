@@ -51,6 +51,8 @@ vi.mock("../_context.js", () => ({
     // so tokens is implied disabled too.
     disabledRoutes: ["componentsPreview", "tokens"],
     externalPreviewUrl: "/preview/frame",
+    // No token manifest and no zdtpApplyProxy.tabsModule wired in this fixture.
+    previewTokenPanel: false,
   },
   withBase: (path: string) => path,
 }));
@@ -140,6 +142,10 @@ describe("components-slug route (descriptor mode)", () => {
     expect(getEntry).not.toHaveBeenCalled();
     // The host's externalPreview replaces the (disabled) in-engine preview route.
     expect(html).toContain("&quot;previewUrl&quot;:&quot;/preview/frame&quot;");
+    // Descriptor mode mounts no CodePanel island (S2b); the workbench toolbar
+    // must not offer a dead toggle for it, and tokenPanel follows the (here,
+    // unwired) previewTokenPanel flag (#886/#872).
+    expect(html).toContain("&quot;toolbar&quot;:{&quot;codePanel&quot;:false,&quot;tokenPanel&quot;:false}");
   });
 
   it("renders not-found for an unknown slug", async () => {

@@ -118,6 +118,13 @@ export interface RoutesPluginOptions {
    * `componentsRoots`; omitted → detail pages render no component docs.
    */
   componentDocs?: ComponentDocsRoot[];
+  /**
+   * `sgContext.previewTokenPanel` (issue #872): computed by `config/index.ts`'s
+   * `zudoSg()`/`withZudoSg()` from `isPreviewTokenPanelWired(zdtpApplyProxy)`
+   * and forwarded here verbatim — this plugin has no `zdtpApplyProxy` option of
+   * its own to derive it from. Default `false` (unwired) when omitted.
+   */
+  previewTokenPanel?: boolean;
 }
 
 /** The resolved story source; both paths are forward-slash absolute. */
@@ -139,6 +146,8 @@ export interface ResolvedRoutesPluginOptions {
   /** Forward-slash absolute path of the host token manifest, or `null`. */
   tokensManifestModule: string | null;
   componentDocs: ComponentDocsRoot[];
+  /** See `RoutesPluginOptions.previewTokenPanel`. */
+  previewTokenPanel: boolean;
 }
 
 export interface RouteInjection {
@@ -160,6 +169,7 @@ const OPTION_KEYS = new Set([
   "catalog",
   "tokensManifestModule",
   "componentDocs",
+  "previewTokenPanel",
 ]);
 const ROUTE_KEYS = Object.keys(DEFAULT_SG_ROUTES) as Array<keyof SgRoutes>;
 const CATALOG_KEYS = new Set(["title", "intro"]);
@@ -293,6 +303,12 @@ function normalizeComponentDocs(value: unknown): ComponentDocsRoot[] {
   });
 }
 
+function optionalBoolean(name: string, value: unknown): boolean {
+  if (value === undefined || value === null) return false;
+  if (typeof value !== "boolean") fail(`option "${name}" must be a boolean`);
+  return value;
+}
+
 function isPresent(value: unknown): boolean {
   return value !== undefined && value !== null;
 }
@@ -392,6 +408,7 @@ export function resolveRoutesPluginOptions(
     catalog: normalizeCatalog(options.catalog),
     tokensManifestModule: tokensManifestModule ?? null,
     componentDocs: normalizeComponentDocs(options.componentDocs),
+    previewTokenPanel: optionalBoolean("previewTokenPanel", options.previewTokenPanel),
   };
 }
 
@@ -420,6 +437,7 @@ export function buildSgContext(base: string | undefined, resolved: ResolvedRoute
     componentDocs: resolved.componentDocs,
     disabledRoutes: resolved.disabledRoutes,
     externalPreviewUrl: resolved.externalPreviewUrl,
+    previewTokenPanel: resolved.previewTokenPanel,
   };
 }
 

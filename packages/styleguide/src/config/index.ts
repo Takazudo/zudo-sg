@@ -13,7 +13,7 @@ import {
   componentDocsRoots,
 } from "../registry/component-docs.js";
 import { DEFAULT_PREVIEW_CSS_URL } from "../sg-context.js";
-import { isTokensRouteEnabled, resolveSgRoutes, type SgRoutes, type SgRoutesOption } from "../sg-routes.js";
+import { isPreviewTokenPanelWired, isTokensRouteEnabled, resolveSgRoutes, type SgRoutes, type SgRoutesOption } from "../sg-routes.js";
 import type { HostTokensSpec } from "../token-spec.js";
 import { PREVIEW_TOKEN_PANEL_CAPTURE_SCRIPT } from "../token-tweak/preview-token-panel-capture.js";
 export type { HostTokensSpec, HostTokenGroupSpec, HostTokenSpec, TokenPreview, TokenControl, GeneratedTokenGroups, GeneratedTokenGroup } from "../token-spec.js";
@@ -120,9 +120,15 @@ export interface ZudoSgComposeBaseOptions {
     | { routingFile?: undefined; writeRoot?: undefined; tabsModule?: string };
   /**
    * Append the engine's header trigger for the preview token panel to the
-   * zudo-doc routes plugin's `headerRightItems`. Defaults to true. Unlike
+   * zudo-doc routes plugin's `headerRightItems`. Defaults to whether the panel
+   * is wired at all (`isPreviewTokenPanelWired(zdtpApplyProxy)`, issue #872) —
+   * `true` when `zdtpApplyProxy.tabsModule` is set, `false` otherwise, so an
+   * unwired host no longer ships a dead button by default. Unlike
    * `chromeDefaults` this is unconditional: a host with its own `headerNav`
-   * still gets the trigger.
+   * still gets the trigger. An explicit `true` always injects the trigger,
+   * even when unwired — `withZudoSg` then emits a one-time `console.warn`
+   * naming `zdtpApplyProxy.tabsModule`, since the button would otherwise be
+   * dead with no signal. An explicit `false` always stays off.
    */
   headerTokenTrigger?: boolean;
   /** Extra keys of `zudo-sg.config.mjs` (e.g. `barrelIndex`) are CLI-only and ignored here. */
@@ -288,6 +294,13 @@ function withHeaderTokenTrigger(plugin: unknown): unknown {
   };
 }
 
+let warnedUnwiredHeaderTrigger = false;
+
+/** Test seam: re-arms the one-shot "trigger forced on while unwired" warning (issue #872). */
+export function __resetHeaderTokenTriggerWarningForTests(): void {
+  warnedUnwiredHeaderTrigger = false;
+}
+
 /** Validates `options.registry`; returns the descriptor module path in descriptor mode, else `null`. */
 function descriptorModuleOf(registry: unknown): string | null {
   if (registry === undefined) return null;
@@ -358,6 +371,7 @@ export function zudoSg(options: ZudoSgComposeOptions): ZudoSgFragment {
         previewCssUrl,
         catalog: options.catalog,
         tokensManifestModule: options.tokens?.manifestOut,
+        previewTokenPanel: isPreviewTokenPanelWired(options.zdtpApplyProxy),
       }),
     },
     {
@@ -405,10 +419,22 @@ export function withZudoSg<
     options.chromeDefaults === false
       ? presetPlugins
       : presetPlugins.map((plugin) => withStyleguideChromeDefaults(plugin, resolveSgRoutes(stringRoutesOnly(options.routes)), tokensEnabled));
+  // Default follows whether the panel is wired at all (issue #872): a host
+  // that never set `zdtpApplyProxy.tabsModule` no longer ships a dead button.
+  // An explicit `true` still forces the trigger on but warns once, since the
+  // button would otherwise be dead with nothing to say so.
+  const previewTokenPanelWired = isPreviewTokenPanelWired(options.zdtpApplyProxy);
+  const triggerEnabled = options.headerTokenTrigger ?? previewTokenPanelWired;
+  if (options.headerTokenTrigger === true && !previewTokenPanelWired && !warnedUnwiredHeaderTrigger) {
+    warnedUnwiredHeaderTrigger = true;
+    console.warn(
+      '[zudo-sg] headerTokenTrigger is explicitly enabled but "zdtpApplyProxy.tabsModule" is not configured — ' +
+        "the header trigger will render as a dead control until tabsModule is set (issue #872)",
+    );
+  }
   // Runs AFTER the chrome pass so the trigger trails the `search` item that
   // pass may have appended.
-  const pluginsWithTrigger =
-    options.headerTokenTrigger === false ? pluginsWithChrome : pluginsWithChrome.map(withHeaderTokenTrigger);
+  const pluginsWithTrigger = triggerEnabled ? pluginsWithChrome.map(withHeaderTokenTrigger) : pluginsWithChrome;
   return {
     ...presetFragment,
     plugins: [...pluginsWithTrigger, ...sg.plugins],
