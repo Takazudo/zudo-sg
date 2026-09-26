@@ -14,8 +14,8 @@
     "typecheck": "zfb check"
   },
   "dependencies": {
-    "@takazudo/zfb": "2.20.3",
-    "@takazudo/zfb-runtime": "2.20.3",
+    "@takazudo/zfb": "2.21.1",
+    "@takazudo/zfb-runtime": "2.21.1",
     "@zudo-sg/demo-ui": "workspace:*",
     "preact": "^10.29.8",
     "preact-render-to-string": "^6.6.6",

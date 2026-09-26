@@ -80,7 +80,14 @@ export default function ComponentsSlugRoute(props: SlugProps & { params: { slug:
     }));
     const codePanelIsland = Island({
       when: "load",
-      children: <CodePanel storyTitle={entry.title} variants={panelVariants} previewUrl={previewUrl} />,
+      children: (
+        <CodePanel
+          storyTitle={entry.title}
+          variants={panelVariants}
+          previewUrl={previewUrl}
+          slug={slug}
+        />
+      ),
     }) as unknown as VNode;
     codePanel = (
       <aside id="sg-code-panel" class="sg-code-panel" aria-label="Code panel">

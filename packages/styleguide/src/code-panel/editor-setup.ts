@@ -18,6 +18,8 @@ export interface CreateEditorOptions {
   language: "css" | "tsx";
   /** Whether the editor is editable (false = read-only source view). */
   editable: boolean;
+  /** Accessible name for the editor's `.cm-content` (role="textbox"). */
+  label?: string;
   /** Fired on every document change with the full text. */
   onChange?: (value: string) => void;
 }
@@ -40,6 +42,10 @@ export function createEditorView(
     EditorState.readOnly.of(!opts.editable),
     EditorView.editable.of(opts.editable),
   ];
+
+  if (opts.label) {
+    extensions.push(EditorView.contentAttributes.of({ "aria-label": opts.label }));
+  }
 
   if (opts.onChange) {
     extensions.push(

@@ -12,10 +12,10 @@
     "gen-token-manifest": "zudo-sg gen-token-manifest"
   },
   "dependencies": {
-    "@takazudo/zdtp": "0.8.2",
-    "@takazudo/zfb": "2.20.3",
-    "@takazudo/zfb-md-wasm": "2.20.3",
-    "@takazudo/zfb-runtime": "2.20.3",
+    "@takazudo/zdtp": "0.8.5",
+    "@takazudo/zfb": "2.21.1",
+    "@takazudo/zfb-md-wasm": "2.21.1",
+    "@takazudo/zfb-runtime": "2.21.1",
     "@takazudo/zudo-doc": "5.27.0",
     "@takazudo/zudo-sg": "^0.3.6",
     "diff": "^8.0.4",

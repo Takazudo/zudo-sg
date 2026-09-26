@@ -52,6 +52,7 @@ import {
   isCodePanelHidden,
   toggleCodePanel,
 } from "../chrome/panel-contract.js";
+import { handleTablistKeyDown } from "../shared/tablist-keyboard.js";
 
 /** How the stages are arranged in the preview column. */
 type StageLayout = "stacked" | "grid";
@@ -258,19 +259,19 @@ export default function DetailWorkbench({
   }
 
   function onTabKeyDown(e: KeyboardEvent, index: number): void {
-    let next: number;
-    if (e.key === "ArrowRight") next = (index + 1) % variants.length;
-    else if (e.key === "ArrowLeft")
-      next = (index - 1 + variants.length) % variants.length;
-    else if (e.key === "Home") next = 0;
-    else if (e.key === "End") next = variants.length - 1;
-    else return;
-    e.preventDefault();
-    const target = variants[next];
-    if (!target) return;
-    selectVariant(target.exportName);
-    const tablist = (e.currentTarget as HTMLElement).parentElement;
-    (tablist?.children[next] as HTMLElement | undefined)?.focus();
+    handleTablistKeyDown(
+      e,
+      index,
+      variants.length,
+      (next) => {
+        const target = variants[next];
+        if (target) selectVariant(target.exportName);
+      },
+      (next) => {
+        const tablist = (e.currentTarget as HTMLElement).parentElement;
+        (tablist?.children[next] as HTMLElement | undefined)?.focus();
+      },
+    );
   }
 
   function renderStage(variant: WorkbenchVariant, key?: string): JSX.Element {
