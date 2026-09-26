@@ -4,6 +4,17 @@ All notable changes to `create-zudo-sg` are documented in this file.
 
 The format is based on Keep a Changelog.
 
+## [0.1.9] - 2026-09-27
+
+### Changed
+
+- Update the starter engine range to `@takazudo/zudo-sg ^0.4.0`.
+- Update the starter's `@takazudo/zdtp` pin to 0.8.5, the version the new
+  engine requires, which keeps the preview token panel working across SPA
+  navigation and reloads.
+- Update the starter's zfb, zfb-runtime, and zfb-md-wasm pins to 2.21.1,
+  including the exact release-age exclusions for their native packages.
+
 ## [0.1.8] - 2026-09-25
 
 ### Changed
