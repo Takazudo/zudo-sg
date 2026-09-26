@@ -268,6 +268,49 @@ as `virtual:zudo-sg-preview-renderer` with the same resolve/guard rules as
 decision 10; the routes-only preview wrapper would import it instead of
 Preact's `render`. Not built in this epic.
 
+**Amendment (2026-09-26, epic #879, S1–S6).** Partly superseded. A
+non-Preact host is now supported through a second registry source —
+**descriptor registry mode** — combined with **`externalPreview`** — rather
+than through the `previewRendererModule` sketch above, which stays unbuilt
+and is not planned. The split:
+
+- The **engine still renders** the catalog index, category nav, search, and
+  the detail page's chrome (`DetailWorkbench`'s toolbar, variant tabs,
+  layout grid) — none of that requires running the host's component
+  framework.
+- The **host owns the preview document** entirely: the actual iframe page at
+  `externalPreview.url` that mounts a story variant in whatever framework it
+  is written in. The engine never renders a story's markup itself in this
+  mode; `StoryDescriptor` (`packages/styleguide/src/registry/descriptors.ts`)
+  is plain, serializable metadata — an id, slug, category, title, one or more
+  `VariantDescriptor`s (`exportName` + `name` + optional `controls`), and an
+  optional `ThumbnailDescriptor` — never a `render` function. `registry: {
+  mode: "descriptor", module }` (`config/index.ts`'s `ZudoSgDescriptorRegistry`,
+  `plugins/routes.ts`'s `registryMode: "descriptor"`) reads that array from a
+  host module instead of the generated `StoryModule` registry, and the routes
+  plugin refuses to start descriptor mode without an `externalPreview` set
+  (`resolveRoutesPluginOptions`: `"descriptor mode has no in-engine preview;
+  set externalPreview"`) — descriptors carry nothing to render at an
+  in-engine preview route.
+- The two sides of the iframe speak **protocol v1** (decision 16) — a small,
+  framework-free postMessage contract — instead of the engine mounting
+  Preact directly into the frame the way module mode's own
+  `/components/preview` route does.
+
+`previewRendererModule` would have asked a non-Preact host to hand the
+engine a `renderPreview`/`unmountPreview` pair invoked *inside the engine's
+own* preview route — i.e. still one shared document, with the engine
+choosing when and how to call into the host's renderer. Descriptor mode +
+`externalPreview` rejects that shape: the host's preview document is a
+completely separate route the host builds, serves, and owns end to end, and
+the engine only iframes it. This is why the epic committed to descriptor
+registry mode together with `externalPreview` instead of finishing the
+`previewRendererModule` seam — it needed no new render-time coupling to the
+host's framework, only a data contract (`StoryDescriptor`) and a postMessage
+contract (protocol v1).
+`fixtures/descriptor-host` (a sibling issue, #887) is the reference
+descriptor-mode + `externalPreview` host.
+
 ### 9. Composition API
 
 `import { zudoSg, withZudoSg } from "@takazudo/zudo-sg/config"` (pure data,
@@ -570,6 +613,101 @@ showcase lists it in `settings.headerRightItems`, and `withHeaderTokenTrigger`
 detects the already-installed button id and skips its own append, so exactly
 one button is emitted per page. Adopters whose `/` renders a zudo-doc header
 must do the same.
+
+### 16. Preview postMessage protocol v1
+
+**Accepted (2026-09-26, epic #879).** The parent catalog page and a variant
+preview iframe (in-engine or, since decision 8's amendment, an
+`externalPreview` host document) speak a small, versioned, framework-free
+postMessage contract: `packages/styleguide/src/preview/messages.ts`,
+published on its own as the leaf subpath `@takazudo/zudo-sg/preview/messages`
+so a foreign-framework frame can implement it without pulling in Preact. The
+module imports nothing and must stay that way.
+
+- **`v` field.** Every message the engine sends carries `v: 1`
+  (`PROTOCOL_VERSION`). `isSupportedProtocolVersion()` accepts a message
+  whose `v` is `1` **or absent** (legacy v1 — a frame written before this
+  field existed still works) and rejects any other value, including a future
+  `2`, so a version bump is a breaking change a frame must opt into rather
+  than one the parent silently reinterprets.
+- **Message set.** Parent → iframe: `sg:requestReady` (recovers a one-shot
+  readiness race), `sg:updateProps` (live control values), `sg:setTheme`
+  (the resolved `"light" | "dark"` theme — the frame never receives the
+  unresolved `"auto"`). Iframe → parent: `sg:ready`, `sg:height`. Each has a
+  type guard (`isReadyMessage`, `isHeightMessage`, …) that checks both the
+  protocol version and the message's own required fields.
+- **Origin + source + identity.** Both directions post to their own
+  `window.location.origin` — **never `"*"`** — and the receiving side
+  accepts a message only when its `event.origin` matches that origin AND its
+  `event.source` is the exact expected window (the specific iframe's
+  `contentWindow` on the parent side). `sg:ready` / `sg:height` may
+  additionally carry the frame's own `{ slug, variant }` identity;
+  `matchesPreviewIdentity()` drops a report whose identity names a different
+  slug/variant than the stage currently expects (a stale document that has
+  not yet been torn down), while a legacy frame that omits identity still
+  matches on origin + source alone. This three-layer check (origin, source,
+  optional identity) is what lets `VariantFrame` reuse one iframe across a
+  variant change instead of remounting it on every switch.
+- **Same-origin is a hard requirement, not a convenience.** `externalPreview`
+  (decision 8's amendment) makes this operationally significant: the host's
+  preview document is a *separate route*, but it must still resolve to the
+  **same origin** as the catalog page for the protocol's origin check to
+  pass at all. A host that serves its preview document from a different dev
+  port than the catalog is serving two origins and the protocol silently
+  stops working (no messages ever match) — the engine ships no dev proxy to
+  paper over this; see the external-preview guide (`doc/` reference) for the
+  one-origin-in-dev requirement this implies.
+- **`DEFAULT_FRAME_SANDBOX`** (`preview/variant-frame.tsx`) is
+  `["allow-same-origin", "allow-scripts", "allow-forms"]`. Dropping
+  `allow-same-origin` gives the frame an opaque `"null"` origin, which the
+  protocol's origin check then always rejects — a host that needs a
+  sandboxed frame with no postMessage channel back to the parent can do
+  that deliberately, but not by accident.
+
+### 17. Route opt-out and its implied opt-outs
+
+**Accepted (2026-09-26, epic #879).** A host may set `routes.<key>: false`
+for the two routes the catalog does not strictly need to function as a
+component reference — `componentsPreview` and `tokens`
+(`DISABLEABLE_ROUTE_KEYS`, `sg-routes.ts`). `componentsIndex` and
+`componentsSlug` can never be disabled this way — they are the engine's
+point — and the routes plugin fails fast
+(`resolveRoutesPluginOptions`/`normalizeRoutes`) if a host tries:
+`option "routes.<key>" cannot be disabled — it is the engine's point`.
+
+Beyond that explicit opt-out, two **implied** opt-outs exist, and the same
+verdict function backs both the routes plugin's route injection and
+`config/index.ts`'s chrome-defaults nav so the two engine layers cannot
+disagree about which routes exist:
+
+- **`componentsPreview` is implied disabled whenever `externalPreview` is
+  set.** The host's preview document replaces the in-engine route entirely,
+  so injecting both would serve two documents at conflicting URLs; setting
+  `routes.componentsPreview` together with `externalPreview` is a
+  configuration error (`resolveRoutesPluginOptions` fails fast).
+- **`tokens` is implied disabled in descriptor mode with no token
+  manifest.** `isTokensRouteEnabled()` (`sg-routes.ts`) narrows the route's
+  default visibility: an explicit `routes.tokens` (a string, or `false`)
+  always wins; absent that, descriptor mode with no `tokensManifestModule`
+  configured turns the route off by default, because a descriptor-only host
+  has nothing to populate the dashboards from. **This narrowing is scoped to
+  descriptor mode only** — a module-mode host keeps the pre-#879 default
+  (route enabled) even with no token manifest, rendering the `/tokens` page
+  with an empty-state note, exactly as before. `isPreviewTokenPanelWired()`
+  is the sibling verdict for the *preview token panel* trigger (issue #872,
+  unrelated to registry mode): it depends on whether
+  `zdtpApplyProxy.tabsModule` is configured, not on registry mode, and now
+  backs `withZudoSg()`'s `headerTokenTrigger` **default** (still overridable
+  either way) — a host that never wires the apply proxy's tabs module no
+  longer ships a dead header button by default, where every earlier release
+  defaulted the trigger to `true` unconditionally (see decision 15, and
+  `sgContext.previewTokenPanel` gating `DetailWorkbench`'s
+  `toolbar.tokenPanel`).
+
+`disabledRoutes` (`SgContext`) records every route key with no injected
+route — explicit `false` and both implied cases alike — kept separate from
+`SgRoutes` (which stays all-strings) so nothing downstream has to widen its
+route-pattern type to accept `false`.
 
 ## Spike report — proof items (a)–(g)
 
