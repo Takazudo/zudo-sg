@@ -303,12 +303,11 @@ own* preview route — i.e. still one shared document, with the engine
 choosing when and how to call into the host's renderer. Descriptor mode +
 `externalPreview` rejects that shape: the host's preview document is a
 completely separate route the host builds, serves, and owns end to end, and
-the engine only iframes it. This is why the epic committed to registry mode
-
-+ `externalPreview` instead of finishing the `previewRendererModule` seam —
-
-it needed no new render-time coupling to the host's framework, only a
-data contract (`StoryDescriptor`) and a postMessage contract (protocol v1).
+the engine only iframes it. This is why the epic committed to descriptor
+registry mode together with `externalPreview` instead of finishing the
+`previewRendererModule` seam — it needed no new render-time coupling to the
+host's framework, only a data contract (`StoryDescriptor`) and a postMessage
+contract (protocol v1).
 `fixtures/descriptor-host` (a sibling issue, #887) is the reference
 descriptor-mode + `externalPreview` host.
 
