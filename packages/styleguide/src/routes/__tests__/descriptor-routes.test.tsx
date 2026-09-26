@@ -98,7 +98,7 @@ describe("components-slug paths()", () => {
 });
 
 describe("components-index route (descriptor mode)", () => {
-  it("renders tiles from CatalogEntry fields with a labelled pending thumbnail", async () => {
+  it("renders tiles from CatalogEntry fields with a labelled missing-thumbnail note", async () => {
     const { default: ComponentsIndexRoute } = await import("../components-index.js");
     const html = render(<ComponentsIndexRoute />);
 
@@ -107,8 +107,11 @@ describe("components-index route (descriptor mode)", () => {
     expect(html).toContain('data-keywords="button clickable action. actions"');
     expect(html).toContain('<h3 class="sg-tile-title">Card</h3>');
     expect(html).toContain("2 variant");
-    expect(html.match(/data-sg-thumb-pending/g)).toHaveLength(2);
-    expect(html).toContain("Thumbnail pending");
+    // Neither fixture entry declares a `thumbnail`, so both tiles fall back to
+    // the default missing-thumbnail note.
+    expect(html.match(/data-sg-thumb-note/g)).toHaveLength(2);
+    expect(html.match(/No thumbnail provided/g)).toHaveLength(2);
+    expect(html).not.toContain("<img");
     expect(html).toContain("listed from");
     expect(html).not.toContain(".stories.tsx");
     // categoryOrder puts Layout before Actions.

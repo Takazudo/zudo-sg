@@ -33,7 +33,6 @@ import type { JSX } from "preact";
 import { render as renderToStaticHtml } from "preact-render-to-string";
 import type { StoryControl } from "../stories/types.js";
 import type { StoryEntry } from "../registry/registry.js";
-import type { CatalogEntry } from "../registry/catalog.js";
 
 /** Virtual-viewport width (CSS px) a thumbnail lays its component out at. */
 export const THUMB_VIEWPORT_W = 720;
@@ -250,26 +249,3 @@ export function ComponentThumb({ entry }: ComponentThumbProps): JSX.Element {
 }
 
 ComponentThumb.displayName = "ComponentThumb";
-
-/** Tile note for a descriptor story until descriptor thumbnails land (epic #879, E3). */
-export const DESCRIPTOR_THUMB_PENDING_NOTE = "Thumbnail pending: descriptor stories have no server-rendered preview yet.";
-
-export interface CatalogThumbProps {
-  entry: CatalogEntry;
-}
-
-/**
- * Catalog tile thumbnail for either registry mode. A module entry renders its
- * story inline through `ComponentThumb`; a descriptor entry has no render
- * function, so it gets a labelled note rather than a blank tile.
- */
-export function CatalogThumb({ entry }: CatalogThumbProps): JSX.Element {
-  if (entry.source === "module") return <ComponentThumb entry={entry.storyEntry} />;
-  return (
-    <div class="sg-thumb" data-sg-preview-scope data-sg-thumb-pending aria-hidden="true" inert>
-      <p class="sg-thumb-note">{DESCRIPTOR_THUMB_PENDING_NOTE}</p>
-    </div>
-  );
-}
-
-CatalogThumb.displayName = "CatalogThumb";
