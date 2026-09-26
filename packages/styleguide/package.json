@@ -155,12 +155,12 @@
   },
   "peerDependencies": {
     "@takazudo/zfb": "^2.20.3",
-    "@takazudo/zdtp": "^0.8.4",
+    "@takazudo/zdtp": "^0.8.5",
     "@takazudo/zudo-doc": "^5.27.0",
     "preact": "^10.29.8"
   },
   "devDependencies": {
-    "@takazudo/zdtp": "0.8.4",
+    "@takazudo/zdtp": "0.8.5",
     "@takazudo/zfb": "2.21.1",
     "@takazudo/zudo-doc": "5.27.0",
     "@testing-library/jest-dom": "^6.9.1",

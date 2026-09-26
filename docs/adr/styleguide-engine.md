@@ -4,7 +4,7 @@ Status: **Accepted** (epic #648, decision sub-task #650, 2026-09-13).
 Locks the contract every Wave 2+ sub-issue implements. Model: zudo-doc's
 package-owned route seam (`$HOME/repos/myoss/zudo-doc/packages/zudo-doc/docs/adr/route-injection-seam.md`).
 Current toolchain pins: `@takazudo/zfb` **2.21.1**, `@takazudo/zudo-doc`
-5.27.0, `@takazudo/zdtp` 0.8.4, pnpm 11.5.2, Node 24. The engine's peer
+5.27.0, `@takazudo/zdtp` 0.8.5, pnpm 11.5.2, Node 24. The engine's peer
 floors are `^2.20.3` / `^5.27.0`, incorporating zfb's SSR identity fix
 (#863) and zudo-doc 5.27.0's required toolchain (#848).
 
@@ -401,16 +401,18 @@ and would stub the loader the preview panel needs.)
 
 **Amendment (2026-09-24, #848):** zudo-doc 5.27.0 raises its zfb-family peer
 floors to `^2.20.2`, so the engine follows those floors. The workspace also
-adopts zdtp 0.8.3; its 0.8.1 mode-pair editing and override round-trip changes
+adopts zdtp 0.8.2; its 0.8.1 mode-pair editing and override round-trip changes
 are additive, with no host migration required. The root, docs host, and foreign
 fixture ignore `.zudo-doc/` because zudo-doc now stages installed route sources
 there during builds.
 
-**Amendment (2026-09-27, #893):** the zdtp floor advances to `^0.8.4`, which
-recovers an owned panel root left empty by an SPA remount
-(Takazudo/zudo-design-token-panel#986). Consumers below it lose the preview
-token panel after host -> engine SPA navigation, so this is a correctness floor
-like #863's. The zfb family pins move to 2.21.1, but the zfb floor stays at `^2.20.3`
+**Amendment (2026-09-27, #893):** the zdtp floor advances to `^0.8.5`.
+0.8.4 recovers an owned panel root left empty by an SPA remount
+(Takazudo/zudo-design-token-panel#986). 0.8.5 stops a fresh mount from
+persisting a closed state over the stored open intent for one flush
+(Takazudo/zudo-design-token-panel#1000). Without both, a host loses the
+preview token panel across SPA navigation or a reload, so this is a
+correctness floor like #863's. The zfb family pins move to 2.21.1, but the zfb floor stays at `^2.20.3`
 because nothing in 2.21.x is required.
 
 **Amendment (2026-09-25, #863):** the zfb floor advances to `^2.20.3`

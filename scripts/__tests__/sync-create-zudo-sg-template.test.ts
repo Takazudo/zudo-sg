@@ -151,7 +151,7 @@ describe("sync-create-zudo-sg-template.mjs", () => {
       'base: "/"',
     );
     expect(readReleaseAgeExcludes(target)).toEqual([
-      "@takazudo/zdtp@0.8.4",
+      "@takazudo/zdtp@0.8.5",
       "@takazudo/zfb-darwin-arm64@2.21.1",
       "@takazudo/zfb-darwin-x64@2.21.1",
       "@takazudo/zfb-linux-arm64-gnu@2.21.1",
