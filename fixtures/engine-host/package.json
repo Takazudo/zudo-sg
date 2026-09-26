@@ -16,7 +16,7 @@
     "@takazudo/zfb": "2.21.1",
     "@takazudo/zfb-md-wasm": "2.21.1",
     "@takazudo/zfb-runtime": "2.21.1",
-    "@takazudo/zudo-doc": "5.27.0",
+    "@takazudo/zudo-doc": "5.28.0",
     "@takazudo/zudo-sg": "file:.tarball/zudo-sg-engine.tgz",
     "diff": "^8.0.4",
     "katex": "^0.16.38",

@@ -160,7 +160,7 @@ describe("sync-create-zudo-sg-template.mjs", () => {
       "@takazudo/zfb-runtime@2.21.1",
       "@takazudo/zfb-win32-x64-msvc@2.21.1",
       "@takazudo/zfb@2.21.1",
-      "@takazudo/zudo-doc@5.27.0",
+      "@takazudo/zudo-doc@5.28.0",
       `@takazudo/zudo-sg@${STYLEGUIDE_VERSION}`,
     ]);
     expect(readFileSync(join(target, "pages/index.tsx"), "utf8")).toContain(

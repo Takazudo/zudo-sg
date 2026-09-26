@@ -4,7 +4,7 @@ Status: **Accepted** (epic #648, decision sub-task #650, 2026-09-13).
 Locks the contract every Wave 2+ sub-issue implements. Model: zudo-doc's
 package-owned route seam (`$HOME/repos/myoss/zudo-doc/packages/zudo-doc/docs/adr/route-injection-seam.md`).
 Current toolchain pins: `@takazudo/zfb` **2.21.1**, `@takazudo/zudo-doc`
-5.27.0, `@takazudo/zdtp` 0.8.5, pnpm 11.5.2, Node 24. The engine's peer
+5.28.0, `@takazudo/zdtp` 0.8.5, pnpm 11.5.2, Node 24. The engine's peer
 floors are `^2.20.3` / `^5.27.0`, incorporating zfb's SSR identity fix
 (#863) and zudo-doc 5.27.0's required toolchain (#848).
 
