@@ -16,17 +16,23 @@ import {
 } from "../registry/index.js";
 import { ctx } from "./_context.js";
 
+// The detail-URL slug to reserve is the one the served preview document
+// occupies: the host's `externalPreview` URL when set (the in-engine
+// `componentsPreview` route is then not injected), else `componentsPreview`.
+const collisionRoutes =
+  ctx.externalPreviewUrl ? { ...ctx.routes, componentsPreview: ctx.externalPreviewUrl } : ctx.routes;
+
 /** Module-mode StoryModule registry (render closures, for the preview app). Empty in descriptor mode. */
 export const storyRegistry = createRegistry(storyModules, {
   categoryOrder: ctx.categoryOrder,
   storyExportOrder,
-  routes: ctx.routes,
+  routes: collisionRoutes,
 });
 
 /** The mode-neutral catalog every route, the nav and search read. */
 export const registry =
   ctx.registryMode === "descriptor"
-    ? createCatalog(catalogEntriesFromDescriptors(validateStoryDescriptors(storyDescriptors, { routes: ctx.routes })), {
+    ? createCatalog(catalogEntriesFromDescriptors(validateStoryDescriptors(storyDescriptors, { routes: collisionRoutes })), {
         categoryOrder: ctx.categoryOrder,
       })
     : createCatalog(catalogEntriesFromRegistry(storyRegistry), { categoryOrder: storyRegistry.categoryOrder });

@@ -387,12 +387,13 @@ export function resolveRoutesPluginOptions(
   }
 
   // Narrowing of pgen E2, descriptor mode only (epic #879 delegated decision 2):
-  // an explicit `routes.tokens` (string or `false`) always wins over this —
-  // `"tokens" in rawRoutes` covers both, since `normalizeRoutes` already
-  // recorded an explicit `false` in `disabledRoutes`.
+  // an explicit `routes.tokens` (string or `false`) always wins over this.
+  // An `undefined`/`null` value counts as absent, matching withZudoSg's chrome
+  // verdict so the nav link and the injected route cannot disagree.
+  const tokensRouteOption =
+    rawRoutes.tokens === false ? false : typeof rawRoutes.tokens === "string" ? rawRoutes.tokens : undefined;
   if (
-    !("tokens" in rawRoutes) &&
-    !isTokensRouteEnabled({ registryMode: registry.mode, tokensRouteOption: undefined, hasTokensManifest: Boolean(tokensManifestModule) })
+    !isTokensRouteEnabled({ registryMode: registry.mode, tokensRouteOption, hasTokensManifest: Boolean(tokensManifestModule) })
   ) {
     disabledRoutes.add("tokens");
   }

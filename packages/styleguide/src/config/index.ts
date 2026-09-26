@@ -413,7 +413,7 @@ export function withZudoSg<
   const tokensEnabled = isTokensRouteEnabled({
     registryMode,
     tokensRouteOption: options.routes?.tokens,
-    hasTokensManifest: options.tokens?.manifestOut !== undefined,
+    hasTokensManifest: Boolean(options.tokens?.manifestOut),
   });
   const pluginsWithChrome =
     options.chromeDefaults === false
