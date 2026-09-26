@@ -128,6 +128,7 @@ The same library drives a multi-page demo site, so the components can be explore
   designTokenPanel: false as boolean,
   tocMinDepth: 2 as number,
   tocMaxDepth: 4 as number,
+  searchMaxBodyLength: 3000 as number,
   sidebarResizer: true as boolean,
   sidebarToggle: true as boolean,
   tocToggle: true as boolean,
