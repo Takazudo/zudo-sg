@@ -18,7 +18,7 @@
   "dependencies": {
     "@takazudo/zfb-md-wasm": "2.21.1",
     "@takazudo/zudo-sg": "workspace:*",
-    "dompurify": "^3.4.11"
+    "dompurify": "^3.4.16"
   },
   "peerDependencies": {
     "preact": "^10.29.8",
