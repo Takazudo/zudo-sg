@@ -34,7 +34,7 @@ export default defineConfig((options) => ({
   clean: !options.watch,
   // Post-build steps (one-shot and each --watch recompile). Must run AFTER
   // tsup, not before: a one-shot build's `clean` wipes dist/ first, and the
-  // safelist generator only scans compiled JS (#661; model: @takazudo/zudo-doc).
+  // wind manifest generator only scans compiled JS (#661; model: @takazudo/zudo-doc).
   onSuccess:
-    "node scripts/copy-routes-src.mjs && node scripts/copy-virtual-modules.mjs && node scripts/emit-islands-dts.mjs && node scripts/gen-safelist.mjs",
+    "node scripts/copy-routes-src.mjs && node scripts/copy-virtual-modules.mjs && node scripts/emit-islands-dts.mjs && node scripts/gen-wind-manifest.mjs",
 }));

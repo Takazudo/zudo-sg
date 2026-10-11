@@ -12,6 +12,7 @@ let pkgDir: string | undefined;
 const COMPLETE_BUILD_OUTPUTS = [
   "dist/config/index.d.ts",
   "dist/config/index.js",
+  "dist/wind.json",
   "routes-src/_context.ts",
   "routes-src/tokens.tsx",
   "virtual-modules.d.ts",
@@ -32,6 +33,7 @@ function fakePackage(): void {
       exports: {
         "./config": { types: "./dist/config/index.d.ts", default: "./dist/config/index.js" },
         "./styles.css": "./styles.css",
+        "./wind.json": "./dist/wind.json",
       },
     }),
   );
@@ -75,6 +77,7 @@ describe("missingDistTargets", () => {
       [
         "./dist/config/index.d.ts",
         "./dist/config/index.js",
+        "./dist/wind.json",
         "./routes-src/_context.ts",
         "./routes-src/tokens.tsx",
         "./virtual-modules.d.ts",
@@ -87,7 +90,7 @@ describe("missingDistTargets", () => {
     touch("dist/config/index.d.ts");
     touch("dist/config/index.js");
     expect(missingDistTargets(pkgDir!).sort()).toEqual(
-      ["./routes-src/_context.ts", "./routes-src/tokens.tsx", "./virtual-modules.d.ts"].sort(),
+      ["./dist/wind.json", "./routes-src/_context.ts", "./routes-src/tokens.tsx", "./virtual-modules.d.ts"].sort(),
     );
   });
 
@@ -96,6 +99,7 @@ describe("missingDistTargets", () => {
     for (const file of [
       "dist/config/index.d.ts",
       "dist/config/index.js",
+      "dist/wind.json",
       "routes-src/_context.ts",
       "routes-src/tokens.tsx",
       "virtual-modules.d.ts",
@@ -158,4 +162,12 @@ describe("ensureStyleguideBuild", () => {
     expect(code).toBe(1);
     expect(existsSync(join(pkgDir!, "dist/.build-stamp"))).toBe(false);
   });
+});
+
+
+it.each(["scripts/gen-wind-manifest.mjs", "scripts/wind-manifest.config.ts", "scripts/check-package-wind-manifest.mjs"])("hashes wind build input %s", (script) => {
+  fakePackage();
+  const before = buildInputsHash(pkgDir!);
+  touch(script, "// changed");
+  expect(buildInputsHash(pkgDir!)).not.toBe(before);
 });

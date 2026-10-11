@@ -26,7 +26,7 @@ dogfoods the engine as its own styleguide host — see
   CSS with `@tailwindcss/node` and rescopes it under
   `:root[data-sg-preview-doc]` so it coexists with the host's global
   stylesheet.
-- Generated safelist and chrome styles (`@takazudo/zudo-sg/safelist.css`,
+- Generated wind manifest and chrome styles (`@takazudo/zudo-sg/wind.json`,
   `@takazudo/zudo-sg/styles.css`) so the catalog UI ships its own Tailwind
   utilities without depending on the host's content scan.
 - Token dashboards and a preview design-token panel, driven by a
@@ -208,25 +208,15 @@ this entry already. Use this import order, replacing `ui-tokens.css` with
 your own token stylesheet as needed:
 
 ```css
-@layer zd-preflight, zd-flow;
-/* One element reset: theme.css resets color tokens, not elements. */
-@import "tailwindcss/preflight" layer(zd-preflight);
-@import "tailwindcss/utilities";
+@layer zw-reset, zd-flow;
 @import "@takazudo/zudo-doc/theme.css";
 @import "./ui-tokens.css";
 /* Add your component package stylesheet here. */
-@import "@takazudo/zudo-doc/safelist.css";
 @import "@takazudo/zudo-doc/content.css";
 @import "@takazudo/zudo-doc/features.css";
 @import "@takazudo/zudo-doc/page-loading.css";
 @import "@takazudo/zdtp/dashboard/styles.css";
 @import "@takazudo/zudo-sg/styles.css";
-@import "@takazudo/zudo-sg/safelist.css";
-
-/* zfb global-entry paths are project-root-relative; add your UI package here. */
-@source "pages/**/*.{tsx,ts,jsx,js}";
-@source "ui/**/*.{tsx,ts,jsx,js,mdx,md}";
-@source "src/content/**/*.{mdx,md}";
 ```
 
 ### Three token worlds and the engine override hook
@@ -235,13 +225,13 @@ The host contains three independent color-token worlds:
 
 - zudo-doc's `--zd-*` roles style the documentation shell and doc chrome.
 - zudo-sg's raw `--sg-*` roles style the catalog engine chrome.
-- The host component library owns its own `@theme` color tokens, usually the
+- The host component library owns its own `:root` color tokens, usually the
   `--color-*` semantic roles used by previews.
 
 The engine's eleven public chrome roles are `--sg-bg`, `--sg-fg`, `--sg-surface`,
 `--sg-surface-2`, `--sg-border`, `--sg-border-strong`, `--sg-muted`, `--sg-accent`,
 `--sg-on-accent`, `--sg-focus`, and `--sg-success`. They are plain properties in a
-zero-specificity `:where(:root)` block, not an engine `@theme` color tier. zudo-doc's
+zero-specificity `:where(:root)` block, not an engine color tier. zudo-doc's
 `theme.css` resets `--color-*`, so these raw properties survive regardless of whether
 the engine stylesheet is imported before or after that reset.
 
@@ -270,31 +260,26 @@ since island props must be JSON-serializable. See
 [Tokens and preview CSS](../../src/content/docs/architecture/tokens-and-preview-css.mdx)
 for the full token list and override example.
 
-The zudo-doc theme supplies framework defaults, including the breakpoints
-needed by responsive sidebar utilities. Its color-token reset precedes your
-tokens so they survive. Use `theme-no-reset.css` instead to preserve
-consumer-only color tokens imported earlier; tokens defined by both
-stylesheets still follow source order. Do not import both variants or add
-another preflight/full `tailwindcss` import. A host that already defines the
-full zudo-doc token contract can keep its own theme.
+Declare host tokens as ordinary `:root` custom properties and map utilities to
+those live variables in `wind.tokens`. Pass the host's `wind` configuration in
+the preset fragment given to `withZudoSg()`. The helper deep-merges engine tokens
+with explicit host entries last, preserves host source controls, and registers
+`@takazudo/zudo-sg/wind.json` automatically. Hosts need no manual manifest import.
+The defaults declare sm/md/lg/xl at 640/768/1024/1280px, strict compilation,
+`dark: false`, `reset: "owned-v1"` and utilities placed before authored CSS.
 
-Those zudo-doc namespace and import-order rules still apply to the host's own `@theme`
-colors: place
-`@takazudo/zudo-doc/theme.css` before the host component token stylesheet, or use
-`@takazudo/zudo-doc/theme-no-reset.css` when preserving consumer-only tokens declared
-earlier is intentional. The order-proof `--sg-*` hook does not remove this requirement
-for host-owned `--color-*` tokens.
+Keep utility overrides and engine styles unlayered. The `zw-reset` layer precedes
+`zd-flow`; the dashboard stylesheet belongs after zudo-doc content CSS.
+Configure consumer source roots in `wind.sources`; the engine manifest covers
+only engine utility candidates.
 
-Keep utilities and engine styles unlayered. The `zd-flow` layer must beat
-preflight's margin reset while allowing utility margins to win, and catalog
-chrome overrides must compete with utilities. The zdtp dashboard stylesheet
-belongs after zudo-doc content CSS so dashboard rules win ties with prose.
-Safelists cover package chrome; your `@source` globs cover consumer code.
-
-Add the component package's CSS and source scan to your `previewStyles` entry
-as well; that standalone entry compiles separately and resolves `@source`
-paths relative to its stylesheet. Dashboard and catalog CSS stay in the
-host entry.
+`previewStyles` remains an independent CSS entry containing your component
+tokens and authored component styles. The preview plugin invokes the host's
+installed `zfb css` with composed wind configuration and component roots, then
+scopes token roots to `:root[data-sg-preview-doc]`. CSS imports and component
+source changes refresh without a restart. Host config or imported token-config
+changes require zfb config reload/restart so the snapshot contains fresh data.
+This token precedence rule does not isolate every host stylesheet selector.
 
 ## Release scheme
 
