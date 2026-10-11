@@ -36,7 +36,7 @@ const PILLARS: [FeatureSplitProps["pillars"][0], FeatureSplitProps["pillars"][1]
 export const Default: Story<FeatureSplitProps> = {
   name: "Default",
   render: () => (
-    <div style={{ maxWidth: "960px" }}>
+    <div style={{ "max-width": "960px" }}>
       <FeatureSplit
         eyebrow="Sample Tagline"
         heading="Two strengths, one company"
@@ -50,7 +50,7 @@ export const Default: Story<FeatureSplitProps> = {
 export const Narrow: Story<FeatureSplitProps> = {
   name: "Narrow (collapses to 1 column)",
   render: () => (
-    <div style={{ maxWidth: "420px" }}>
+    <div style={{ "max-width": "420px" }}>
       <FeatureSplit heading="Two strengths, one company" pillars={PILLARS} />
     </div>
   ),

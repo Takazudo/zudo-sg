@@ -26,7 +26,7 @@ const LINKS: SectionNavLink[] = [
 export const Default: Story<SectionNavProps> = {
   name: "Default (6 sections)",
   render: () => (
-    <div style={{ maxWidth: "960px" }}>
+    <div style={{ "max-width": "960px" }}>
       <SectionNav heading="Explore the site" links={LINKS} />
     </div>
   ),
@@ -35,7 +35,7 @@ export const Default: Story<SectionNavProps> = {
 export const WithExternalLink: Story<SectionNavProps> = {
   name: "With an external link",
   render: () => (
-    <div style={{ maxWidth: "720px" }}>
+    <div style={{ "max-width": "720px" }}>
       <SectionNav
         heading="Main menu"
         links={[

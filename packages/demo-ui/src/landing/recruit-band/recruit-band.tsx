@@ -1,4 +1,4 @@
-import type { JSX } from "preact";
+import type { JSX } from "@takazudo/zfb/zudo-react/jsx-runtime";
 import { cx } from "../../lib/cx";
 import { Container } from "../../shared/container/container";
 import { SectionHeading } from "../../shared/section-heading/section-heading";
@@ -17,7 +17,7 @@ export type RecruitBandProps = {
 // Same full-width, soft accent-tinted band idiom as Hero (color-mix keeps it
 // theme-correct in light and dark without a hard-coded color).
 const BAND_STYLE: JSX.CSSProperties = {
-  backgroundColor: "color-mix(in srgb, var(--color-accent) 6%, var(--color-bg))",
+  "background-color": "color-mix(in srgb, var(--color-accent) 6%, var(--color-bg))",
 };
 
 /**

@@ -1,10 +1,10 @@
-import type { ComponentChildren } from "preact";
+import type { Child } from "@takazudo/zfb/zudo-react";
 import { Hero, type HeroAction } from "../../shared/hero/hero";
 
 export type LandingHeroProps = {
   eyebrow?: string;
-  heading?: ComponentChildren;
-  lead?: ComponentChildren;
+  heading?: Child;
+  lead?: Child;
   actions?: HeroAction[];
   class?: string;
 };

@@ -1,31 +1,41 @@
-import { render, screen } from "@testing-library/preact";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
+import { renderIsland, disposeAll, getByText } from "../../../test-utils/zudo-react";
+import { queryHeading } from "../../test-utils";
+import type { Child } from "@takazudo/zfb/zudo-react";
 import { FinancialHighlights } from "../financial-highlights";
+
+afterEach(disposeAll);
+
+function render(node: Child) {
+  return renderIsland(function Fixture() {
+    return node;
+  }, {});
+}
 
 describe("FinancialHighlights", () => {
   it("renders the pending label when a metric has no value", () => {
-    render(
+    const { container } = render(
       <FinancialHighlights heading="Financial highlights" metrics={[{ label: "Net sales", unit: "million yen" }]} />,
     );
-    expect(screen.getByText("Net sales")).toBeInTheDocument();
-    expect(screen.getByText(/Updated at earnings release/)).toBeInTheDocument();
+    expect(getByText(container, "Net sales")).toBeInTheDocument();
+    expect(getByText(container, /Updated at earnings release/)).toBeInTheDocument();
   });
 
   it("renders the value and unit when set", () => {
-    render(
+    const { container } = render(
       <FinancialHighlights
         heading="Financial highlights"
         metrics={[{ label: "Net sales", unit: "million yen", value: "82,340" }]}
       />,
     );
-    expect(screen.getByText("82,340")).toBeInTheDocument();
-    expect(screen.getByText("million yen")).toBeInTheDocument();
+    expect(getByText(container, "82,340")).toBeInTheDocument();
+    expect(getByText(container, "million yen")).toBeInTheDocument();
   });
 
   it("omits the heading in bare mode", () => {
-    render(
+    const { container } = render(
       <FinancialHighlights heading="Financial highlights" metrics={[{ label: "Net sales", unit: "million yen" }]} bare />,
     );
-    expect(screen.queryByRole("heading", { name: "Financial highlights" })).not.toBeInTheDocument();
+    expect(queryHeading(container, "Financial highlights")).not.toBeInTheDocument();
   });
 });

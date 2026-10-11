@@ -1,10 +1,20 @@
-import { render, screen } from "@testing-library/preact";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
+import { renderIsland, disposeAll, getByText } from "../../../test-utils/zudo-react";
+import { getHeading } from "../../test-utils";
+import type { Child } from "@takazudo/zfb/zudo-react";
 import { FeatureSplit } from "../feature-split";
+
+afterEach(disposeAll);
+
+function render(node: Child) {
+  return renderIsland(function Fixture() {
+    return node;
+  }, {});
+}
 
 describe("FeatureSplit", () => {
   it("renders the heading and both pillars", () => {
-    render(
+    const { container } = render(
       <FeatureSplit
         heading="Two strengths, one company"
         pillars={[
@@ -13,9 +23,9 @@ describe("FeatureSplit", () => {
         ]}
       />,
     );
-    expect(screen.getByRole("heading", { name: "Two strengths, one company" })).toBeInTheDocument();
-    expect(screen.getByText("Electronics")).toBeInTheDocument();
-    expect(screen.getByText("Chemicals")).toBeInTheDocument();
-    expect(screen.getByText("First pillar body.")).toBeInTheDocument();
+    expect(getHeading(container, "Two strengths, one company")).toBeInTheDocument();
+    expect(getByText(container, "Electronics")).toBeInTheDocument();
+    expect(getByText(container, "Chemicals")).toBeInTheDocument();
+    expect(getByText(container, "First pillar body.")).toBeInTheDocument();
   });
 });

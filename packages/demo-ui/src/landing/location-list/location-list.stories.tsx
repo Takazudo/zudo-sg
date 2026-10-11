@@ -44,7 +44,7 @@ const GROUPS: LocationGroup[] = [
 export const Default: Story<LocationListProps> = {
   name: "Default (3 groups)",
   render: () => (
-    <div style={{ maxWidth: "760px" }}>
+    <div style={{ "max-width": "760px" }}>
       <LocationList groups={GROUPS} />
     </div>
   ),
@@ -53,7 +53,7 @@ export const Default: Story<LocationListProps> = {
 export const SingleGroup: Story<LocationListProps> = {
   name: "Single group",
   render: () => (
-    <div style={{ maxWidth: "760px" }}>
+    <div style={{ "max-width": "760px" }}>
       <LocationList
         groups={[
           {

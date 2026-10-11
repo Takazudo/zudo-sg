@@ -23,7 +23,7 @@ const PILLARS: ValuePillar[] = [
 export const Default: Story<ValuePillarsProps> = {
   name: "Default",
   render: () => (
-    <div style={{ maxWidth: "960px" }}>
+    <div style={{ "max-width": "960px" }}>
       <ValuePillars heading="Where we create value" intro="Three strengths that shape how we build new business." pillars={PILLARS} />
     </div>
   ),
@@ -32,7 +32,7 @@ export const Default: Story<ValuePillarsProps> = {
 export const Narrow: Story<ValuePillarsProps> = {
   name: "Narrow (card wrap)",
   render: () => (
-    <div style={{ maxWidth: "380px" }}>
+    <div style={{ "max-width": "380px" }}>
       <ValuePillars heading="Where we create value" pillars={PILLARS} />
     </div>
   ),

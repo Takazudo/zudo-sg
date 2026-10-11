@@ -1,10 +1,20 @@
-import { render, screen } from "@testing-library/preact";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
+import { renderIsland, disposeAll, getByText, getByRole } from "../../../test-utils/zudo-react";
+import { getHeading } from "../../test-utils";
+import type { Child } from "@takazudo/zfb/zudo-react";
 import { BusinessSegments } from "../business-segments";
+
+afterEach(disposeAll);
+
+function render(node: Child) {
+  return renderIsland(function Fixture() {
+    return node;
+  }, {});
+}
 
 describe("BusinessSegments", () => {
   it("renders the heading and each segment as a link", () => {
-    render(
+    const { container } = render(
       <BusinessSegments
         heading="Our business segments"
         segments={[
@@ -13,11 +23,11 @@ describe("BusinessSegments", () => {
         ]}
       />,
     );
-    expect(screen.getByRole("heading", { name: "Our business segments" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Electronics/ })).toHaveAttribute(
+    expect(getHeading(container, "Our business segments")).toBeInTheDocument();
+    expect(getByRole(container, "link", { name: /Electronics/ })).toHaveAttribute(
       "href",
       "/products/electronics",
     );
-    expect(screen.getByText("Body two.")).toBeInTheDocument();
+    expect(getByText(container, "Body two.")).toBeInTheDocument();
   });
 });

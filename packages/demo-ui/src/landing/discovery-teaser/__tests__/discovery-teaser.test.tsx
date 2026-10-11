@@ -1,6 +1,16 @@
-import { render, screen } from "@testing-library/preact";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
+import { renderIsland, disposeAll, getByText, getByRole } from "../../../test-utils/zudo-react";
+import { getHeading } from "../../test-utils";
+import type { Child } from "@takazudo/zfb/zudo-react";
 import { DiscoveryTeaser } from "../discovery-teaser";
+
+afterEach(disposeAll);
+
+function render(node: Child) {
+  return renderIsland(function Fixture() {
+    return node;
+  }, {});
+}
 
 const SCENES = [
   { title: "Cars", body: "Body one." },
@@ -9,19 +19,19 @@ const SCENES = [
 
 describe("DiscoveryTeaser", () => {
   it("renders the heading, scenes, and a view-all link", () => {
-    render(
+    const { container } = render(
       <DiscoveryTeaser heading="Everyday places" scenes={SCENES} href="/company/discovery" />,
     );
-    expect(screen.getByRole("heading", { name: "Everyday places" })).toBeInTheDocument();
-    expect(screen.getByText("Cars")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /See all scenes/ })).toHaveAttribute(
+    expect(getHeading(container, "Everyday places")).toBeInTheDocument();
+    expect(getByText(container, "Cars")).toBeInTheDocument();
+    expect(getByRole(container, "link", { name: /See all scenes/ })).toHaveAttribute(
       "href",
       "/company/discovery",
     );
   });
 
   it("uses a custom link label when provided", () => {
-    render(
+    const { container } = render(
       <DiscoveryTeaser
         heading="Everyday places"
         scenes={SCENES}
@@ -29,6 +39,6 @@ describe("DiscoveryTeaser", () => {
         linkLabel="Explore more"
       />,
     );
-    expect(screen.getByRole("link", { name: /Explore more/ })).toBeInTheDocument();
+    expect(getByRole(container, "link", { name: /Explore more/ })).toBeInTheDocument();
   });
 });

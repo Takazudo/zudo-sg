@@ -1,10 +1,19 @@
-import { render, screen } from "@testing-library/preact";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
+import { renderIsland, disposeAll, getByText } from "../../../test-utils/zudo-react";
+import type { Child } from "@takazudo/zfb/zudo-react";
 import { HistoryTimeline } from "../history-timeline";
+
+afterEach(disposeAll);
+
+function render(node: Child) {
+  return renderIsland(function Fixture() {
+    return node;
+  }, {});
+}
 
 describe("HistoryTimeline", () => {
   it("renders each entry's year and event as a list item", () => {
-    render(
+    const { container } = render(
       <HistoryTimeline
         entries={[
           { year: "1953", event: "Company founded." },
@@ -12,10 +21,10 @@ describe("HistoryTimeline", () => {
         ]}
       />,
     );
-    const items = screen.getAllByRole("listitem");
+    const items = Array.from(container.querySelectorAll("li"));
     expect(items).toHaveLength(2);
-    expect(screen.getByText("1953")).toBeInTheDocument();
-    expect(screen.getByText("Company founded.")).toBeInTheDocument();
-    expect(screen.getByText("2022")).toBeInTheDocument();
+    expect(getByText(container, "1953")).toBeInTheDocument();
+    expect(getByText(container, "Company founded.")).toBeInTheDocument();
+    expect(getByText(container, "2022")).toBeInTheDocument();
   });
 });
