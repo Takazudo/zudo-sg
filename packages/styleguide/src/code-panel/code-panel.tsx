@@ -16,7 +16,7 @@
 import { computed, For, getScope, signal } from "@takazudo/zfb/zudo-react";
 import SourceEditor from "./source-editor.js";
 import CopyButton from "./copy-button.js";
-import { injectCssToAllPreviews } from "./css-injection.js";
+import { createPreviewCssOwner } from "./css-injection.js";
 import { handleTablistKeyDown } from "../shared/tablist-keyboard.js";
 
 export interface CodePanelVariant {
@@ -55,7 +55,16 @@ export default function CodePanel({
   const active = computed(() => variants[activeIndex.value]);
   const activeItems = computed(() => active.value ? [active.value] : []);
   let debounce: number | undefined;
-  getScope().onActivate(() => () => window.clearTimeout(debounce));
+  let cssOwner: ReturnType<typeof createPreviewCssOwner> | undefined;
+  getScope().onActivate(() => {
+    const owner = createPreviewCssOwner(previewUrl);
+    cssOwner = owner;
+    return () => {
+      window.clearTimeout(debounce);
+      owner.dispose();
+      if (cssOwner === owner) cssOwner = undefined;
+    };
+  });
   // Deterministic fallback agrees between SSR and hydration; hosts should pass
   // a unique slug when rendering multiple panels for the same story title.
   const tabsId = `sg-code-panel-${slug ?? encodeURIComponent(storyTitle)}`;
@@ -64,10 +73,11 @@ export default function CodePanel({
   const panelId = `${tabsId}-panel`;
 
   function handleCssChange(css: string): void {
+    const owner = cssOwner;
+    if (!owner) return;
+    owner.set("live", css);
     window.clearTimeout(debounce);
-    debounce = window.setTimeout(() => {
-      injectCssToAllPreviews("live", css, previewUrl);
-    }, 250);
+    debounce = window.setTimeout(() => owner.apply(), 250);
   }
 
   function onTabKeyDown(e: KeyboardEvent, index: number): void {
