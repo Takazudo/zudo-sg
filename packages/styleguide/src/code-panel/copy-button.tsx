@@ -9,36 +9,8 @@
 // modern API is the primary path; a hidden-textarea + execCommand fallback
 // covers the rare insecure-context case so the button never silently no-ops.
 
-import type { JSX } from "preact";
-import { useState } from "preact/hooks";
-
-export async function copyText(text: string): Promise<boolean> {
-  try {
-    if (
-      typeof navigator !== "undefined" &&
-      navigator.clipboard?.writeText
-    ) {
-      await navigator.clipboard.writeText(text);
-      return true;
-    }
-  } catch {
-    // fall through to the legacy path
-  }
-  // Legacy fallback for insecure contexts where navigator.clipboard is absent.
-  try {
-    const ta = document.createElement("textarea");
-    ta.value = text;
-    ta.style.position = "fixed";
-    ta.style.opacity = "0";
-    document.body.appendChild(ta);
-    ta.select();
-    const ok = document.execCommand("copy");
-    document.body.removeChild(ta);
-    return ok;
-  } catch {
-    return false;
-  }
-}
+import { computed, getScope, signal, Show } from "@takazudo/zfb/zudo-react";
+import { copyText } from "./copy-text.js";
 
 export interface CopyButtonProps {
   /** Verbatim text placed on the clipboard. */
@@ -53,43 +25,30 @@ export default function CopyButton({
   text,
   label = "Copy",
   class: extraClass = "",
-}: CopyButtonProps): JSX.Element {
-  const [copied, setCopied] = useState(false);
+}: CopyButtonProps) {
+  const copied = signal(false);
+  const scope = getScope();
+  let timer: number | undefined;
+  scope.onActivate(() => () => window.clearTimeout(timer));
 
   async function handleClick(): Promise<void> {
     const ok = await copyText(text);
-    if (!ok) return;
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1400);
+    if (!ok || scope.abortSignal.aborted) return;
+    copied.value = true;
+    window.clearTimeout(timer);
+    timer = window.setTimeout(() => { copied.value = false; }, 1400);
   }
 
   return (
     <button
       type="button"
       class={`sg-copy-btn ${extraClass}`}
-      onClick={() => void handleClick()}
-      aria-label={copied ? "Copied" : label}
-      title={copied ? "Copied" : label}
-      data-copied={copied ? "true" : undefined}
+      on:click={() => void handleClick()}
+      aria-label={computed(() => copied.value ? "Copied" : label)}
+      title={computed(() => copied.value ? "Copied" : label)}
+      data-copied={computed(() => copied.value ? "true" : undefined)}
     >
-      {copied ? (
-        <>
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2.5"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true"
-          >
-            <path d="M20 6 9 17l-5-5" />
-          </svg>
-          <span>Copied</span>
-        </>
-      ) : (
+      <Show when={copied} fallback={() => (
         <>
           <svg
             width="14"
@@ -107,9 +66,24 @@ export default function CopyButton({
           </svg>
           <span>Copy</span>
         </>
-      )}
+      )}>{() => (
+        <>
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M20 6 9 17l-5-5" />
+          </svg>
+          <span>Copied</span>
+        </>
+      )}</Show>
     </button>
   );
 }
-
-CopyButton.displayName = "CopyButton";

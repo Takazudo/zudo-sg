@@ -12,14 +12,20 @@
 // per-file with `happy-dom` (the installed dep) instead — see
 // `preview/__tests__/detail-workbench.test.tsx` for the same convention.
 import "../../__tests__/dom-test-setup.js";
-import { fireEvent, render, screen } from "@testing-library/preact";
+import { fire, flushAll, getByRole, getByText, queryAllByRole, renderIsland } from "../../__tests__/helpers/zudo-react.js";
+import { getScope } from "@takazudo/zfb/zudo-react";
 import { describe, expect, it, vi } from "vitest";
 import CodePanel, { type CodePanelVariant } from "../code-panel.js";
 
+const editors = vi.hoisted(() => ({ activated: vi.fn(), disposed: vi.fn() }));
 vi.mock("../source-editor.js", () => ({
-  default: ({ value, label }: { value: string; label?: string }) => (
-    <pre aria-label={label}>{value}</pre>
-  ),
+  default: ({ value, label }: { value: string; label?: string }) => {
+    getScope().onActivate(() => {
+      editors.activated(value);
+      return () => { editors.disposed(value); };
+    });
+    return <pre aria-label={label}>{value}</pre>;
+  },
 }));
 
 const THREE_VARIANTS: CodePanelVariant[] = [
@@ -28,85 +34,95 @@ const THREE_VARIANTS: CodePanelVariant[] = [
   { exportName: "Wide", name: "Wide", source: "const c = 3;" },
 ];
 
+let container: Element;
 function renderPanel(variants: CodePanelVariant[]) {
-  return render(<CodePanel storyTitle="Card" variants={variants} slug="card" />);
+  const island = renderIsland(CodePanel, { storyTitle: "Card", variants, slug: "card" });
+  container = island.container;
+  return island;
 }
 
-describe("CodePanel variant tabs (#900)", () => {
-  it("names the tablist \"Source variant\"", () => {
+describe("CodePanel variant tabs (#900)", async () => {
+  it("names the tablist \"Source variant\"", async () => {
     renderPanel(THREE_VARIANTS);
-    expect(screen.getByRole("tablist", { name: "Source variant" })).toBeTruthy();
+    expect(getByRole(container, "tablist", { name: "Source variant" })).toBeTruthy();
   });
 
-  it("gives only the selected tab tabindex 0", () => {
+  it("gives only the selected tab tabindex 0", async () => {
     renderPanel(THREE_VARIANTS);
-    expect(screen.getByRole("tab", { name: "Default" })).toHaveAttribute("tabindex", "0");
-    expect(screen.getByRole("tab", { name: "Compact" })).toHaveAttribute("tabindex", "-1");
-    expect(screen.getByRole("tab", { name: "Wide" })).toHaveAttribute("tabindex", "-1");
+    expect(getByRole(container, "tab", { name: "Default" })).toHaveAttribute("tabindex", "0");
+    expect(getByRole(container, "tab", { name: "Compact" })).toHaveAttribute("tabindex", "-1");
+    expect(getByRole(container, "tab", { name: "Wide" })).toHaveAttribute("tabindex", "-1");
   });
 
-  it("ArrowRight moves selection and focus to the next tab, wrapping at the end", () => {
+  it("ArrowRight moves selection and focus to the next tab, wrapping at the end", async () => {
     renderPanel(THREE_VARIANTS);
 
-    fireEvent.keyDown(screen.getByRole("tab", { name: "Default" }), { key: "ArrowRight" });
-    const compact = screen.getByRole("tab", { name: "Compact" });
+    fire(getByRole(container, "tab", { name: "Default" }), "keydown", { key: "ArrowRight" });
+    await flushAll();
+    const compact = getByRole(container, "tab", { name: "Compact" });
     expect(compact).toHaveAttribute("aria-selected", "true");
     expect(compact).toHaveAttribute("tabindex", "0");
     expect(document.activeElement).toBe(compact);
 
-    fireEvent.keyDown(compact, { key: "ArrowRight" });
-    fireEvent.keyDown(screen.getByRole("tab", { name: "Wide" }), { key: "ArrowRight" });
-    const wrapped = screen.getByRole("tab", { name: "Default" });
+    fire(compact, "keydown", { key: "ArrowRight" });
+    await flushAll();
+    fire(getByRole(container, "tab", { name: "Wide" }), "keydown", { key: "ArrowRight" });
+    await flushAll();
+    const wrapped = getByRole(container, "tab", { name: "Default" });
     expect(wrapped).toHaveAttribute("aria-selected", "true");
     expect(document.activeElement).toBe(wrapped);
   });
 
-  it("ArrowLeft moves selection and focus to the previous tab, wrapping at the start", () => {
+  it("ArrowLeft moves selection and focus to the previous tab, wrapping at the start", async () => {
     renderPanel(THREE_VARIANTS);
 
-    fireEvent.keyDown(screen.getByRole("tab", { name: "Default" }), { key: "ArrowLeft" });
-    const wide = screen.getByRole("tab", { name: "Wide" });
+    fire(getByRole(container, "tab", { name: "Default" }), "keydown", { key: "ArrowLeft" });
+    await flushAll();
+    const wide = getByRole(container, "tab", { name: "Wide" });
     expect(wide).toHaveAttribute("aria-selected", "true");
     expect(document.activeElement).toBe(wide);
   });
 
-  it("Home selects the first tab and End selects the last", () => {
+  it("Home selects the first tab and End selects the last", async () => {
     renderPanel(THREE_VARIANTS);
 
-    fireEvent.keyDown(screen.getByRole("tab", { name: "Default" }), { key: "End" });
-    const wide = screen.getByRole("tab", { name: "Wide" });
+    fire(getByRole(container, "tab", { name: "Default" }), "keydown", { key: "End" });
+    await flushAll();
+    const wide = getByRole(container, "tab", { name: "Wide" });
     expect(wide).toHaveAttribute("aria-selected", "true");
     expect(document.activeElement).toBe(wide);
 
-    fireEvent.keyDown(wide, { key: "Home" });
-    const first = screen.getByRole("tab", { name: "Default" });
+    fire(wide, "keydown", { key: "Home" });
+    await flushAll();
+    const first = getByRole(container, "tab", { name: "Default" });
     expect(first).toHaveAttribute("aria-selected", "true");
     expect(document.activeElement).toBe(first);
   });
 
-  it("wires aria-controls to the tabpanel and aria-labelledby to the active tab", () => {
+  it("wires aria-controls to the tabpanel and aria-labelledby to the active tab", async () => {
     renderPanel(THREE_VARIANTS);
 
-    const defaultTab = screen.getByRole("tab", { name: "Default" });
-    const panel = screen.getByRole("tabpanel");
+    const defaultTab = getByRole(container, "tab", { name: "Default" });
+    const panel = getByRole(container, "tabpanel");
     expect(defaultTab).toHaveAttribute("aria-controls", panel.id);
     expect(panel).toHaveAttribute("aria-labelledby", defaultTab.id);
 
-    fireEvent.keyDown(defaultTab, { key: "ArrowRight" });
-    const compactTab = screen.getByRole("tab", { name: "Compact" });
+    fire(defaultTab, "keydown", { key: "ArrowRight" });
+    await flushAll();
+    const compactTab = getByRole(container, "tab", { name: "Compact" });
     expect(compactTab).toHaveAttribute("aria-controls", panel.id);
     expect(panel).toHaveAttribute("aria-labelledby", compactTab.id);
   });
 
-  it("renders no tablist and no tabpanel for a single variant", () => {
+  it("renders no tablist and no tabpanel for a single variant", async () => {
     renderPanel([THREE_VARIANTS[0]!]);
-    expect(screen.queryByRole("tablist")).toBeNull();
-    expect(screen.queryByRole("tabpanel")).toBeNull();
+    expect(queryAllByRole(container, "tablist")[0] ?? null).toBeNull();
+    expect(queryAllByRole(container, "tabpanel")[0] ?? null).toBeNull();
   });
 });
 
-describe("CodePanel editor names + region hooks (#901)", () => {
-  it("renders the stable source and live-CSS region hooks", () => {
+describe("CodePanel editor names + region hooks (#901)", async () => {
+  it("renders the stable source and live-CSS region hooks", async () => {
     renderPanel(THREE_VARIANTS);
     expect(
       document.querySelector('.sg-code-source[data-sg-code-region="source"]'),
@@ -116,19 +132,46 @@ describe("CodePanel editor names + region hooks (#901)", () => {
     ).toBeTruthy();
   });
 
-  it("renders the source region hook on the tabpanel wrapper when variants > 1", () => {
+  it("renders the source region hook on the tabpanel wrapper when variants > 1", async () => {
     renderPanel(THREE_VARIANTS);
     const region = document.querySelector('[data-sg-code-region="source"]');
     expect(region).toHaveAttribute("role", "tabpanel");
   });
 
-  it("passes the source and Live CSS accessible names to SourceEditor", () => {
+  it("passes the source and Live CSS accessible names to SourceEditor", async () => {
     renderPanel(THREE_VARIANTS);
     expect(
-      screen.getByText("const a = 1;").closest("pre"),
+      getByText(container, "const a = 1;").closest("pre"),
     ).toHaveAttribute("aria-label", "Source code for Card: Default");
     expect(
-      screen.getByText(/Live CSS —/).closest("pre"),
+      getByText(container, /Live CSS —/).closest("pre"),
     ).toHaveAttribute("aria-label", "Live CSS for Card");
+  });
+});
+
+
+describe("CodePanel keyed source lifecycle", () => {
+  it("replaces the source editor and copy text while preserving the panel wrapper", async () => {
+    const island = renderPanel(THREE_VARIANTS);
+    const panel = getByRole(container, "tabpanel");
+    editors.activated.mockClear();
+    editors.disposed.mockClear();
+    fire(getByRole(container, "tab", { name: "Compact" }), "click");
+    await island.flush();
+    expect(getByRole(container, "tabpanel")).toBe(panel);
+    expect(getByText(container, "const b = 2;")).toBeTruthy();
+    expect(container.textContent).not.toContain("const a = 1;");
+    expect(editors.disposed).toHaveBeenCalledExactlyOnceWith("const a = 1;");
+    expect(editors.activated).toHaveBeenCalledExactlyOnceWith("const b = 2;");
+    const writeText = vi.spyOn(navigator.clipboard, "writeText").mockResolvedValue(undefined);
+    fire(getByRole(container, "button", { name: "Copy source" }), "click");
+    await vi.waitFor(() => expect(writeText).toHaveBeenCalledExactlyOnceWith("const b = 2;"));
+    await island.flush();
+    writeText.mockRestore();
+  });
+
+  it("hydrates deterministic ids when a host omits the slug", () => {
+    const island = renderIsland(CodePanel, { storyTitle: "Card example", variants: THREE_VARIANTS });
+    expect(getByRole(island.container, "tabpanel").id).toBe("sg-code-panel-Card%20example-panel");
   });
 });
