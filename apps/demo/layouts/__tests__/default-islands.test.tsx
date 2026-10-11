@@ -21,8 +21,10 @@ it("registers real page Island boundaries while preserving the chrome persistenc
   });
   expect(html.match(/data-zfb-island-skip-ssr="ThemeControl"/g)).toHaveLength(2);
   expect(html.match(/data-zfb-island-skip-ssr=/g)).toHaveLength(7);
-  expect(html.match(/data-when="load"/g)).toHaveLength(4);
-  expect(html.match(/data-when="visible"/g)).toHaveLength(3);
+  // Both ThemeControl instances and all five body-end islands activate on load.
+  expect(html.match(/data-when="load"/g)).toHaveLength(7);
+  expect(html.match(/data-when="visible"/g)).toBeNull();
+  expect(html.match(/data-zfb-island-skip-ssr="ThemeControl" data-when="load"/g)).toHaveLength(2);
   // A body-end render-null placeholder is not the header's visibility target.
   // Browse must bind before interaction without requiring a scroll to this island.
   expect(html).toMatch(/data-zfb-island-skip-ssr="ContextSwitcherEnhancer" data-when="load"/);

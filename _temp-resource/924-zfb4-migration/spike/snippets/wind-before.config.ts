@@ -1,1 +1,0 @@
-export default { wind: { tokens: { colors: { accent: "#123456", overlay: "#000000" }, spacing: { "hsp-md": "1rem", "vsp-xs": "0.25rem" }, fontSizes: { caption: { size: "0.75rem", lineHeight: "1rem" } } }, breakpoints: { sm: { minWidthPx: 640 }, md: { minWidthPx: 768 } }, utilities: { placement: "before-authored" }, sources: { roots: ["components"] } } };
