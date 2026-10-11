@@ -892,9 +892,9 @@ async function main() {
     // reported public topology: the same island mounts on host and engine.
     const wrapperPath = path.join(hostDir, "pages/lib/_engine-route-preview-token-panel-bootstrap.tsx");
     const wrapperSource = await readFile(wrapperPath, "utf8");
-    const engineOnlyGuard = 'if (typeof document === "undefined" || !document.querySelector("[data-sg-engine-route]")) return null;';
+    const engineOnlyGuard = 'active.value = Boolean(document.querySelector("[data-sg-engine-route]"));';
     assert(wrapperSource.includes(engineOnlyGuard), "fixture engine-only bootstrap guard moved");
-    await writeFile(wrapperPath, wrapperSource.replace(engineOnlyGuard, 'if (typeof document === "undefined") return null;'));
+    await writeFile(wrapperPath, wrapperSource.replace(engineOnlyGuard, 'active.value = true;'));
     for (const output of ["dist", ".zfb-build"]) {
       await rm(path.join(hostDir, output), { recursive: true, force: true });
     }
