@@ -13,6 +13,12 @@ function entry(variant = "Default") {
 }
 
 describe("canonical external catalog manifest", () => {
+  it("rejects sparse top-level manifests instead of silently skipping unvalidated rows", () => {
+    expect(() => validateExternalCatalogManifest(new Array(1))).toThrow(/dense, serializable/);
+    const sparse = [entry()];
+    sparse.length = 2;
+    expect(() => validateExternalCatalogManifest(sparse)).toThrow(/dense, serializable/);
+  });
   it("normalizes independent copies without importing fixture modules", () => {
     const input = entry();
     const result = validateExternalCatalogManifest([{ ...input, extra: "dropped" }]);

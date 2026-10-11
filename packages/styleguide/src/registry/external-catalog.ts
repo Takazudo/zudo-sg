@@ -1,7 +1,7 @@
 // Canonical, renderer-free metadata for opt-in external preview catalogs.
 // File existence, emitted image dimensions and actual runtime capture belong
 // to build/capture tooling, not this import-safe data validator.
-import { isSerializableProps } from "../preview/external-runtime.js";
+import { isJsonValue, isSerializableProps } from "../preview/external-runtime.js";
 
 /** Tuple encoding avoids collisions even when an authored variant contains '/'. */
 export function externalCatalogKey(slug: string, variant: string): string {
@@ -78,6 +78,7 @@ function positiveDimension(value: unknown): value is number {
  */
 export function validateExternalCatalogManifest(input: unknown): ExternalCatalogEntry[] {
   if (!Array.isArray(input)) throw new Error("[zudo-sg] external catalog manifest must be an array");
+  if (!isJsonValue(input)) throw new Error("[zudo-sg] external catalog manifest must contain only dense, serializable data");
   const keys = new Set<string>();
   const assets = new Set<string>();
   return input.map((raw: unknown, index) => {
