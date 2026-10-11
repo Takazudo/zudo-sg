@@ -65,6 +65,7 @@ export function createExternalPreviewRuntime(options: ExternalPreviewRuntimeOpti
   let propsRevision = 0;
   let ready = false;
   let error: ExternalRuntimeError | null = null;
+  let errorRevision = 0;
   let errorNode: HTMLElement | null = null;
   let disposed = false;
   let epoch = 0;
@@ -91,6 +92,7 @@ export function createExternalPreviewRuntime(options: ExternalPreviewRuntimeOpti
   }
   function reportError(value: ExternalRuntimeError): void {
     if (disposed) return;
+    errorRevision++;
     error = { ...value };
     ready = false;
     if (!errorNode) {
@@ -220,8 +222,11 @@ export function createExternalPreviewRuntime(options: ExternalPreviewRuntimeOpti
         const snapshot = props;
         const owner = epoch;
         queue(async () => {
+          const previousErrorRevision = errorRevision;
           await mounted.update(snapshot);
-          if (!current(owner)) return;
+          // A renderer may report an error through its mount context without
+          // rejecting update(). Only recover an error that predates this update.
+          if (!current(owner) || previousErrorRevision !== errorRevision) return;
           const recovering = !!error;
           clearError();
           ready = true;

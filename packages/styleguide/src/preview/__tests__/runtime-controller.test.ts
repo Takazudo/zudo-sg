@@ -106,6 +106,30 @@ describe("external preview runtime controller", () => {
     expect(runtime.getSnapshot().error?.code).toBe("render");
   });
 
+  it.each([false, true])("preserves callback-reported update errors (async: %s) and recovers on a later successful update", async (asynchronous) => {
+    let context!: ExternalFixtureMountContext;
+    const pending = deferred<void>();
+    const update = vi.fn().mockImplementationOnce(() => {
+      context.reportError({ code: "render", message: "actual failed render", recoverable: true });
+      return asynchronous ? pending.promise : undefined;
+    }).mockResolvedValue(undefined);
+    const runtime = make((value) => {
+      context = value;
+      return { update, dispose: vi.fn() };
+    });
+    await runtime.whenStable();
+    send(runtime, "sg:updateProps", { props: { fail: true } });
+    await vi.waitFor(() => expect(update).toHaveBeenCalledTimes(1));
+    expect(runtime.getSnapshot()).toMatchObject({ ready: false, error: { message: "actual failed render" } });
+    pending.resolve();
+    await expect(runtime.whenStable()).rejects.toThrow("actual failed render");
+    expect(document.querySelector('[role="alert"]')?.textContent).toContain("actual failed render");
+    send(runtime, "sg:updateProps", { props: { fail: false } }, 1);
+    await runtime.whenStable();
+    expect(runtime.getSnapshot()).toMatchObject({ ready: true, error: null });
+    expect(document.querySelector('[role="alert"]')).toBeNull();
+  });
+
   it("reports late cancelled mount cleanup failures without replacing the active fixture state", async () => {
     const pending = deferred<ExternalFixtureInstance>();
     const onCleanupError = vi.fn();
