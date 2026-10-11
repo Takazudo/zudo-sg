@@ -19,13 +19,33 @@ All three sites are fully static (no SSR). If an SSR route (`prerender = false`)
 Find your account ID in the Cloudflare dashboard (right sidebar on the Workers overview page) or via:
 
 ```sh
-npx wrangler@4.85.0 whoami
+node tools/deploy/wrangler.mjs whoami
 ```
 
-> The version above (and in §5) is a local-shell copy for convenience. The
-> source of truth is the `WRANGLER_VERSION` env var in `main-deploy.yml` and
-> `preview-deploy.yml` — bump the workflow env vars and every local command
-> example in this file together.
+Install the deployment toolchain first:
+
+```sh
+pnpm --dir tools/deploy install --frozen-lockfile
+```
+
+The exact Wrangler version lives in `tools/deploy/package.json`, with its
+transitive dependencies locked in `tools/deploy/pnpm-lock.yaml`. This private,
+separate pnpm workspace installs only deployment tools; it does not install or
+run lifecycle scripts for the application workspace. CI's `setup-deploy` action
+uses Node 24 and pnpm 11.5.2 from that manifest.
+
+The wrapper invokes only the installed local binary and always runs from the
+repository root. Config paths remain repository-relative; each config's
+`assets.directory = "./dist"` remains relative to that config file. It fails
+if the tools are absent instead of fetching an unreviewed fallback.
+
+Maintenance #955 initially evaluated Wrangler 4.85.0. Its isolated full and
+production audits reported 10 high, 11 moderate, and 6 low findings, including
+vulnerable Miniflare dependencies (`undici`, `ws`, and `sharp`). Wrangler is now
+pinned to 4.149.0, a same-major update validated with local config dry runs.
+Future bumps must update this manifest and its own lockfile together, then run
+frozen-install, full/production audits, and the three dry runs in §5. Dependabot
+tracks `/tools/deploy` separately from the application workspace.
 
 Add it as a GitHub Actions secret named `CLOUDFLARE_ACCOUNT_ID`.
 
@@ -123,29 +143,19 @@ change a custom domain.
 
 ```sh
 # Validate root site config
-npx wrangler@4.85.0 deploy --dry-run --config wrangler.toml
+node tools/deploy/wrangler.mjs deploy --dry-run --config wrangler.toml
 
 # Validate demo site config
-npx wrangler@4.85.0 deploy --dry-run --config apps/demo/wrangler.toml
+node tools/deploy/wrangler.mjs deploy --dry-run --config apps/demo/wrangler.toml
 
 # Validate doc site config
-npx wrangler@4.85.0 deploy --dry-run --config doc/wrangler.toml
+node tools/deploy/wrangler.mjs deploy --dry-run --config doc/wrangler.toml
 ```
 
-> See the note on the pinned version in §1 — keep this in step with
-> `WRANGLER_VERSION` in the workflows.
-
-`--dry-run` validates the config and reports what would be deployed without sending anything to Cloudflare. It does not require credentials. If wrangler prompts for auth even with `--dry-run`, validate the TOML syntax instead:
-
-```sh
-# Parse TOML and print (requires toml parser — or just open the file and check manually)
-node -e "
-const fs = require('fs');
-// TOML is valid if this does not throw
-console.log('wrangler.toml — checking syntax via node');
-const content = fs.readFileSync('wrangler.toml', 'utf8');
-console.log(content);
-"
-```
+Build the corresponding site before its dry run (`pnpm build`,
+`pnpm --filter @zudo-sg/demo build`, or `pnpm build:doc`), so its assets exist.
+`--dry-run` validates the config and assets without publishing a Worker or
+requiring Cloudflare credentials. The wrapper uses the exact installed version
+from §1 for all three sites.
 
 All configs are intentionally minimal (no `main`, no `nodejs_compat`) because all three sites are static.

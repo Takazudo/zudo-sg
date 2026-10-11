@@ -33,11 +33,6 @@ concurrency:
 permissions:
   contents: read
 
-env:
-  # Pin lives here — see DEPLOY.md §5 for the local dry-run commands, which
-  # must be bumped in step with this value.
-  WRANGLER_VERSION: "4.85.0"
-
 jobs:
   # ---------------------------------------------------------------------------
   # Job: Build the root styleguide site
@@ -140,8 +135,11 @@ jobs:
         # wrangler reads wrangler.toml from the repo root at deploy time.
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v5
 
+      - name: Setup deployment tools
+        uses: ./.github/actions/setup-deploy
+
       - name: Download site build output
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: site-dist
           path: ${{ runner.temp }}
@@ -150,7 +148,7 @@ jobs:
         run: mkdir -p dist && tar -xf "$RUNNER_TEMP/site-dist.tar" -C dist
 
       - name: Deploy to Cloudflare Workers
-        run: npx wrangler@${{ env.WRANGLER_VERSION }} deploy --config wrangler.toml
+        run: node tools/deploy/wrangler.mjs deploy --config wrangler.toml
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -178,8 +176,11 @@ jobs:
         # wrangler reads apps/demo/wrangler.toml at deploy time.
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v5
 
+      - name: Setup deployment tools
+        uses: ./.github/actions/setup-deploy
+
       - name: Download demo build output
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: demo-dist
           path: ${{ runner.temp }}
@@ -188,7 +189,7 @@ jobs:
         run: mkdir -p apps/demo/dist && tar -xf "$RUNNER_TEMP/demo-dist.tar" -C apps/demo/dist
 
       - name: Deploy to Cloudflare Workers
-        run: npx wrangler@${{ env.WRANGLER_VERSION }} deploy --config apps/demo/wrangler.toml
+        run: node tools/deploy/wrangler.mjs deploy --config apps/demo/wrangler.toml
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -212,8 +213,11 @@ jobs:
         # wrangler reads doc/wrangler.toml at deploy time.
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v5
 
+      - name: Setup deployment tools
+        uses: ./.github/actions/setup-deploy
+
       - name: Download doc build output
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: doc-dist
           path: ${{ runner.temp }}
@@ -222,7 +226,7 @@ jobs:
         run: mkdir -p doc/dist && tar -xf "$RUNNER_TEMP/doc-dist.tar" -C doc/dist
 
       - name: Deploy to Cloudflare Workers
-        run: npx wrangler@${{ env.WRANGLER_VERSION }} deploy --config doc/wrangler.toml
+        run: node tools/deploy/wrangler.mjs deploy --config doc/wrangler.toml
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

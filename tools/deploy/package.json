@@ -1,0 +1,12 @@
+{
+  "name": "@zudo-sg/deploy-tools",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.5.2",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "dependencies": {
+    "wrangler": "4.149.0"
+  }
+}
