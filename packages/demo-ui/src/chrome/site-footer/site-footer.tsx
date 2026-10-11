@@ -39,7 +39,7 @@ export function SiteFooter({ sections, brand = "Acme Corp.", policyLinks = [], c
             <div key={section.label} role="group" aria-labelledby={labelId}>
               <p id={labelId} class="mb-vsp-xs border-b border-border pb-vsp-2xs text-small font-semibold text-fg">
                 {section.href ? (
-                  <a class="text-inherit no-underline hover:text-accent" href={section.href}>
+                  <a class="zc-link-inherit no-underline hover:text-accent" href={section.href}>
                     {section.label}
                   </a>
                 ) : (

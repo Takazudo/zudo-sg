@@ -57,7 +57,6 @@ function FilterButton({ category, label, pressed = false }: FilterButtonProps) {
         "px-hsp-sm py-vsp-2xs",
         "text-caption font-medium text-muted transition-colors",
         "hover:border-accent hover:text-accent",
-        "aria-pressed:border-accent aria-pressed:bg-accent aria-pressed:text-bg",
       )}
     >
       {label}
