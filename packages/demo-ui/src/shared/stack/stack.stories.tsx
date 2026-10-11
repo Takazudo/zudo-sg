@@ -56,7 +56,7 @@ export const Horizontal: Story<StackProps> = {
 
 export const Narrow: Story<StackProps> = {
   name: "Narrow (horizontal wraps without overflow)",
-  source: `<div style={{ maxWidth: "220px" }}>
+  source: `<div style={{ "max-width": "220px" }}>
   <Stack direction="horizontal" gap="sm">
     <div>Alpha</div>
     <div>Bravo</div>
@@ -64,7 +64,7 @@ export const Narrow: Story<StackProps> = {
   </Stack>
 </div>`,
   render: () => (
-    <div style={{ maxWidth: "220px" }}>
+    <div style={{ "max-width": "220px" }}>
       <Stack direction="horizontal" gap="sm">
         <Filler label="Alpha" />
         <Filler label="Bravo" />

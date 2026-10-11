@@ -1,4 +1,4 @@
-import type { ComponentChildren } from "preact";
+import type { Child } from "@takazudo/zfb/zudo-react";
 import { cx } from "../../lib/cx";
 import { externalLinkAttrs } from "../external-link/external-link";
 
@@ -8,7 +8,7 @@ export type CardLinkProps = {
   external?: boolean;
   "aria-label"?: string;
   class?: string;
-  children?: ComponentChildren;
+  children?: Child;
 };
 
 /**
@@ -25,7 +25,7 @@ export function CardLink({ href, external, class: cls, children, ...rest }: Card
       {...externalLinkAttrs(external)}
       {...rest}
       class={cx("group block h-full no-underline", cls)}
-      style={{ textDecoration: "none", color: "inherit" }}
+      style={{ "text-decoration": "none", color: "inherit" }}
     >
       {children}
     </a>
@@ -35,7 +35,7 @@ export function CardLink({ href, external, class: cls, children, ...rest }: Card
 export type ViewAllLinkProps = {
   href: string;
   class?: string;
-  children?: ComponentChildren;
+  children?: Child;
 };
 
 /** Accent-colored "view all" inline link with a trailing arrow. */

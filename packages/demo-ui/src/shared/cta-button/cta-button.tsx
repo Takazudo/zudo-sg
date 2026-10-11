@@ -1,4 +1,4 @@
-import type { ComponentChildren } from "preact";
+import type { Child } from "@takazudo/zfb/zudo-react";
 import { cx } from "../../lib/cx";
 
 export type CtaButtonVariant = "primary" | "secondary";
@@ -11,8 +11,8 @@ const VARIANT_CLASS: Record<CtaButtonVariant, string> = {
 };
 
 // `.zd-content`'s prose stylesheet unlayers `a { color; text-decoration }`,
-// which can outrank this component's layered utilities when it renders
-// inside MDX body copy — pin color + textDecoration inline as a second guard.
+// can compete with link styles inside MDX body copy — pin color and
+// text-decoration inline as a second guard.
 const TEXT_COLOR: Record<CtaButtonVariant, string> = {
   primary: "var(--color-bg)",
   secondary: "var(--color-accent)",
@@ -24,7 +24,7 @@ export type CtaButtonProps = {
   /** Show the trailing arrow glyph. Defaults to true. */
   arrow?: boolean;
   class?: string;
-  children?: ComponentChildren;
+  children?: Child;
 };
 
 /** Accent-filled or outlined call-to-action link. */
@@ -44,7 +44,7 @@ export function CtaButton({
         VARIANT_CLASS[variant],
         cls,
       )}
-      style={{ textDecoration: "none", color: TEXT_COLOR[variant] }}
+      style={{ "text-decoration": "none", color: TEXT_COLOR[variant] }}
     >
       {/* Label wrapped in its own decoration-free element so it can be
           targeted independently of the trailing arrow. */}

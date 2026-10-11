@@ -1,4 +1,6 @@
-import { useEffect, useState } from "preact/hooks";
+"use client";
+
+import { computed, getScope, signal } from "@takazudo/zfb/zudo-react";
 import { cx } from "../../lib/cx";
 import {
   applyTheme,
@@ -11,7 +13,7 @@ import {
 export type ThemeControlProps = {
   /** Optional consumer layout hook; visual colors remain semantic tokens. */
   class?: string;
-  /** Notifies a host after the root selection has changed. */
+  /** Client-scope callback; cannot be serialized across a server Island boundary. */
   onThemeChange?: (theme: Theme) => void;
 };
 
@@ -26,17 +28,20 @@ const CONTROL_CLASS =
  * semantic token system in `styles/colors.css`.
  */
 export function ThemeControl({ class: className, onThemeChange }: ThemeControlProps) {
-  const [theme, setTheme] = useState<Theme>(() => themeFromRoot());
+  // SSR must be independent of ambient browser state. Activation synchronizes
+  // with the prepaint selection after hydration has matched the light fallback.
+  const theme = signal<Theme>("light");
+  const scope = getScope();
 
-  useEffect(() => {
+  scope.onActivate(() => {
     const root = document.documentElement;
-    const syncTheme = () => setTheme(themeFromRoot(root));
+    const syncTheme = () => { theme.value = themeFromRoot(root); };
     syncTheme();
 
     const observer = new MutationObserver(syncTheme);
     observer.observe(root, { attributes: true, attributeFilter: ["data-theme"] });
     return () => observer.disconnect();
-  }, []);
+  });
 
   const selectNextTheme = () => {
     // Always calculate from the root rather than this instance's last render.
@@ -45,7 +50,7 @@ export function ThemeControl({ class: className, onThemeChange }: ThemeControlPr
     const next = nextTheme(themeFromRoot());
     applyTheme(next);
     storeTheme(next);
-    setTheme(next);
+    theme.value = next;
     onThemeChange?.(next);
   };
 
@@ -58,17 +63,17 @@ export function ThemeControl({ class: className, onThemeChange }: ThemeControlPr
     if (!event.repeat) selectNextTheme();
   };
 
-  const isDark = theme === "dark";
+  const isDark = computed(() => theme.value === "dark");
   return (
     <button
       type="button"
       class={cx(CONTROL_CLASS, className)}
       aria-pressed={isDark}
-      aria-label={isDark ? "Switch to light theme" : "Switch to dark theme"}
-      onClick={selectNextTheme}
-      onKeyDown={onKeyDown}
+      aria-label={computed(() => isDark.value ? "Switch to light theme" : "Switch to dark theme")}
+      on:click={selectNextTheme}
+      on:keydown={onKeyDown}
     >
-      <span aria-hidden="true">{isDark ? "☾" : "☀"}</span>
+      <span aria-hidden="true">{computed(() => isDark.value ? "☾" : "☀")}</span>
     </button>
   );
 }
