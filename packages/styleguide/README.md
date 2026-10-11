@@ -420,8 +420,10 @@ Descriptors may opt into `variant.source = { key, code }`. Obtain `key` from
 `externalCatalogKey(slug, exportName)`; it encodes a JSON tuple, avoiding
 delimiter collisions. `code` is verbatim text, including JSX or characters
 that resemble HTML; never evaluate or inject it as markup. Existing
-descriptors without source remain valid. The Source panel integration follows
-in #959; `sourcePath` remains informational.
+descriptors without source remain valid. Sourced variants mount the existing
+accessible CodePanel, including source tabs/copy and isolated Live CSS. Variants
+without source have no Source tab; a completely source-less descriptor has no
+panel or panel toggle. `sourcePath` remains informational.
 
 `validateExternalCatalogManifest(input)` validates and normalizes an array of
 `ExternalCatalogEntry` rows, each containing `slug`, `variant`,
@@ -442,11 +444,77 @@ promises a real capture of the named external runtime: capture after committed
 readiness and its stability barrier, then verify the emitted file, actual
 dimensions and fixture/source/loader key agreement before claiming success.
 Missing or invalid promised images fail the build/capture check; explicit
-failed dispositions remain visibly labelled. Compare exact generated key sets,
+failed dispositions throw with their recorded note. Compare exact generated key sets,
 source contents and loader references, including extra entries, before build.
-The Node/capture integration follows in #959 and the packed React proof in
-#960. Never substitute engine React SSR, decorative fake screenshots, or a
+The packed React proof is maintained separately. Never substitute engine React
+SSR, decorative fake screenshots, or a
 host route shadow for this boundary.
+
+### Node prebuild and capture API
+
+Import these Node-only helpers from
+`@takazudo/zudo-sg/registry/external-catalog-node` in a host build script.
+Do not import them from `zfb.config` (its graph must remain node-free) or from
+the browser bundle. The engine does not install a browser or import React.
+
+- `validateExternalCatalogOutputs({manifest, descriptors, loaders, sources})`
+  compares complete generated arrays: missing/extra/duplicate keys, actual
+  source text and loader module/export references. Generate browser loaders and
+  their metadata from the same canonical manifest. The first authored variant
+  owns the story's catalog tile; use
+  `thumbnailFromExternalCapture(first.capture)` for its thumbnail. Every
+  variant's image promise is checked, including those not used for that tile.
+- `captureExternalCatalogImages({manifest, projectRoot, assetRoot, origin,
+  base, previewUrl, page})` visits the actual external document with canonical
+  slug/variant query parameters. `origin` is an HTTP(S) origin without a
+  trailing slash, `base` defaults to `/`, and `previewUrl` is the root-absolute
+  document path before adding the base.
+- `validateExternalCatalogAssets({manifest, projectRoot, assetRoot, captures})`
+  checks capture receipts against files. Missing images, stale loader/source
+  hashes, wrong image hash/dimensions/fixture identity, and `failed` dispositions
+  throw. Intentional placeholders remain labelled. Paths reject symlinks,
+  including parents, before reading/writing. Captures must be complete,
+  noninterlaced 8-bit PNGs of at most 16,777,216 pixels, matching the declared
+  viewport dimensions. Only IHDR/IDAT/IEND critical chunks are supported;
+  palette chunks are outside this browser screenshot format. Legacy descriptor
+  SVG/remote image semantics are unchanged.
+
+`loaders` and `sources` are arrays of `ExternalCatalogLoader` and
+`DescriptorSource`. Pass actual generated outputs rather than reconstructing
+expected copies inside the check. Receipts record actual runtime identity and
+SHA-256 hashes of the loader entry file, displayed source and PNG. The loader
+hash covers the entry file, not its transitive imports: rerun captures after
+fixture dependency or asset changes. Receipts establish capture consistency,
+not independent attestation of arbitrary host-supplied metadata.
+
+The caller-owned `page` adapter implements `goto(url)`,
+`setViewportSize({width,height})`, `screenshot({type: "png", scale: "css"})`,
+`whenStable()` and `getSnapshot()`. The latter two invoke the actual
+`createExternalPreviewRuntime()` controller in the loaded document. Wait for
+the host-exposed controller property to exist before calling `whenStable()`;
+apply the browser runner's normal timeout. The helper checks committed
+readiness, errors and identity before and after the screenshot. The host must
+surface browser console errors and close its browser/server in `finally`.
+
+Run this sequence from a Node script in the host's build command:
+
+1. Generate descriptors/source/loader metadata from the canonical manifest and
+   call `validateExternalCatalogOutputs`.
+2. Build the independent external preview, serve it under the intended base,
+   and capture into `public/`. Missing promised images cannot represent a
+   successful catalog build.
+3. Save the returned serializable receipts, validate assets in `public/`, then
+   run the final `zfb build` to copy those assets into `dist/`.
+4. Validate the same receipts against the emitted asset directory and verify
+   built browser loads. Use `assetRoot: "dist"` at the root base; zfb 4 copies
+   public assets under the base, so `/styleguide/` uses
+   `assetRoot: "dist/styleguide"`. Capture `src` stays `/captures/example.png`;
+   the helper resolves it beneath `assetRoot` without adding the URL base.
+
+Adding source text alone neither runs captures nor makes thumbnails mandatory
+for existing catalogs. Source-less legacy descriptors do not use this opt-in
+manifest check. The focused helper tests cover framework-independent capture
+orchestration; the separately installed React consumer supplies real screenshots.
 
 ## Release scheme
 

@@ -75,6 +75,10 @@
       "types": "./dist/registry/external-catalog.d.ts",
       "default": "./dist/registry/external-catalog.js"
     },
+    "./registry/external-catalog-node": {
+      "types": "./dist/registry/external-catalog-node.d.ts",
+      "default": "./dist/registry/external-catalog-node.js"
+    },
     "./code-panel": {
       "types": "./dist/code-panel/index.d.ts",
       "default": "./dist/code-panel/index.js"

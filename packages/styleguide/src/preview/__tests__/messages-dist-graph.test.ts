@@ -79,3 +79,13 @@ describe.each(["preview/external-runtime", "preview/runtime-controller", "regist
     expect(typeof (contract.isSerializableProps ?? contract.validateExternalCatalogManifest ?? contract.createExternalPreviewRuntime)).toBe("function");
   });
 });
+
+describe("Node-only external catalog API", () => {
+  const entry = resolve(PKG_ROOT, "dist/registry/external-catalog-node.js");
+  it("imports in plain Node with only built-in bare dependencies and no renderer", async () => {
+    expect(typeof globalThis.window).toBe("undefined");
+    expect(frameworkFreeViolations(entry)).toEqual([]);
+    expect(collectImportGraph(entry).bare.every((specifier: string) => specifier.startsWith("node:"))).toBe(true);
+    expect(typeof (await import(entry)).captureExternalCatalogImages).toBe("function");
+  });
+});

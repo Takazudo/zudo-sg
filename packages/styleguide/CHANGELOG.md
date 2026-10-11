@@ -15,6 +15,8 @@ The format is based on Keep a Changelog, and release notes are generated from th
 - An opt-in external preview controller and strict workbench configuration, with
   retained controls/theme/token/live-CSS replay, separate full fixture reset,
   visible errors, async cleanup and a committed fixture stability barrier.
+- Real descriptor source panels and Node capture/prebuild helpers that compare
+  generated catalog identities and validate runtime capture receipts and assets.
 
 ## [0.5.0] - 2026-10-12
 

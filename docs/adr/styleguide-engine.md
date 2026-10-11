@@ -627,8 +627,15 @@ barrier never substitutes listener initialization for a committed fixture.
 source, external loader metadata and capture disposition. Optional
 `VariantDescriptor.source` is plain text keyed to its exact slug/variant;
 existing source-less descriptors and thumbnails stay valid. Canonical image
-metadata is a promise, not capture evidence. #959 owns source rendering, exact
-generated-output agreement and real runtime/emitted-asset checks, while #960
+metadata is a promise, not capture evidence. The existing CodePanel consumes
+descriptor source without a render function. Node-only public
+`registry/external-catalog-node` helpers compare generated-output sets and
+capture through a caller-owned browser after runtime `whenStable()`. They check
+receipt identities/hashes, actual PNG dimensions and contained asset paths;
+failed captures throw with their note, while intentional placeholders remain
+explicit. Hosts invoke this prebuild contract from Node scripts, keeping zfb
+config and browser imports node-free. Framework-independent helper tests do not
+claim React capture proof; #960
 owns the independent packed React consumer proof. Neither contract imports
 React or changes module-story remount-on-args semantics. The intentional
 opaque Preact/zdtp adapter remains independent.
