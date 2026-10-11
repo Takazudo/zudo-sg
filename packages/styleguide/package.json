@@ -143,7 +143,7 @@
     "check:package-wind-manifest": "node scripts/check-package-wind-manifest.mjs"
   },
   "dependencies": {
-    "@codemirror/commands": "^6.0.0",
+    "@codemirror/commands": "^6.11.1",
     "@codemirror/lang-css": "^6.0.0",
     "@codemirror/lang-javascript": "^6.0.0",
     "@codemirror/language": "^6.0.0",
