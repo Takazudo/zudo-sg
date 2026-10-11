@@ -1,0 +1,145 @@
+{
+  "site": "root",
+  "state": "docs-overview",
+  "path": "/docs/overview",
+  "url": "http://localhost:22032/docs/overview/",
+  "viewport": {
+    "width": 800,
+    "height": 900
+  },
+  "theme": "light",
+  "themeMethod": "appearance-helper",
+  "screenshot": "full-page",
+  "actions": {},
+  "styles": {
+    "h1": {
+      "matchCount": 1,
+      "tagName": "h1",
+      "id": null,
+      "className": "text-heading font-bold border-b border-fg pb-vsp-xs mb-vsp-xs break-words",
+      "styles": {
+        "color": "oklch(0.185 0.005 65)",
+        "background-color": "rgba(0, 0, 0, 0)",
+        "font-size": "28px",
+        "line-height": "49px",
+        "padding": "0px 0px 14px",
+        "margin": "0px 0px 14px",
+        "gap": "normal",
+        "width": "752px",
+        "height": "64px",
+        "transition-duration": "0s"
+      }
+    },
+    "header": {
+      "matchCount": 1,
+      "tagName": "header",
+      "id": null,
+      "className": "sticky top-0 z-toolbar flex h-[3.5rem] items-center border-b border-muted bg-surface px-hsp-lg",
+      "styles": {
+        "color": "oklch(0.185 0.005 65)",
+        "background-color": "oklch(0.965 0.004 65)",
+        "font-size": "16px",
+        "line-height": "24px",
+        "padding": "0px 16px",
+        "margin": "0px",
+        "gap": "normal",
+        "width": "800px",
+        "height": "56px",
+        "transition-duration": "0s"
+      }
+    },
+    "#desktop-sidebar": {
+      "matchCount": 1,
+      "tagName": "aside",
+      "id": "desktop-sidebar",
+      "className": "hidden lg:block fixed top-[3.5rem] left-0 z-sidebar w-[var(--zd-sidebar-w)] h-[calc(100vh-3.5rem)] overflow-y-auto bg-bg border-r border-muted pb-vsp-xl",
+      "styles": {
+        "color": "oklch(0.185 0.005 65)",
+        "background-color": "oklch(0.965 0.004 65)",
+        "font-size": "16px",
+        "line-height": "24px",
+        "padding": "0px 0px 40px",
+        "margin": "0px",
+        "gap": "normal",
+        "width": "224px",
+        "height": "844px",
+        "transition-duration": "0s"
+      }
+    },
+    ".zd-doc-content-band": {
+      "matchCount": 1,
+      "tagName": "div",
+      "id": null,
+      "className": "zd-doc-content-band flex w-full gap-[clamp(1.5rem,3vw,4rem)]",
+      "styles": {
+        "color": "oklch(0.185 0.005 65)",
+        "background-color": "rgba(0, 0, 0, 0)",
+        "font-size": "16px",
+        "line-height": "24px",
+        "padding": "0px",
+        "margin": "0px",
+        "gap": "24px",
+        "width": "800px",
+        "height": "844px",
+        "transition-duration": "0s"
+      }
+    },
+    "[data-sg-card]": null,
+    ".sg-workbench-toolbar": null,
+    "[data-nav-item]": {
+      "matchCount": 4,
+      "tagName": "a",
+      "id": null,
+      "className": "px-hsp-md py-vsp-2xs text-small font-medium transition-colors shrink-0 bg-fg text-bg",
+      "styles": {
+        "color": "oklch(0.965 0.004 65)",
+        "background-color": "oklch(0.185 0.005 65)",
+        "font-size": "16px",
+        "line-height": "24px",
+        "padding": "7px 12px",
+        "margin": "0px",
+        "gap": "normal",
+        "width": "auto",
+        "height": "auto",
+        "transition-duration": "0.15s"
+      }
+    },
+    "#zd-page-loading-overlay": null,
+    "main button, main a": {
+      "matchCount": 4,
+      "tagName": "a",
+      "id": null,
+      "className": "text-muted hover:text-accent hover:underline focus-visible:text-accent focus-visible:underline flex items-center gap-x-hsp-2xs",
+      "styles": {
+        "color": "oklch(0.48 0.008 65)",
+        "background-color": "rgba(0, 0, 0, 0)",
+        "font-size": "16px",
+        "line-height": "24px",
+        "padding": "0px",
+        "margin": "0px",
+        "gap": "normal 2px",
+        "width": "25.1875px",
+        "height": "25.1875px",
+        "transition-duration": "0s"
+      }
+    },
+    "first-main-control": {
+      "matchCount": 4,
+      "tagName": "a",
+      "id": null,
+      "className": "text-muted hover:text-accent hover:underline focus-visible:text-accent focus-visible:underline flex items-center gap-x-hsp-2xs",
+      "styles": {
+        "color": "oklch(0.48 0.008 65)",
+        "background-color": "rgba(0, 0, 0, 0)",
+        "font-size": "16px",
+        "line-height": "24px",
+        "padding": "0px",
+        "margin": "0px",
+        "gap": "normal 2px",
+        "width": "25.1875px",
+        "height": "25.1875px",
+        "transition-duration": "0s"
+      }
+    }
+  }
+}

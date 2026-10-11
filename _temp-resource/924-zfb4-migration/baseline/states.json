@@ -1,0 +1,88 @@
+{
+  "schemaVersion": 1,
+  "baseSha": "30ff6442b9e2dc96df4e72a6fd73096ed4e5f800",
+  "viewports": [
+    { "width": 390, "height": 844 },
+    { "width": 800, "height": 900 },
+    { "width": 1280, "height": 900 }
+  ],
+  "themes": ["light", "dark"],
+  "styleProperties": [
+    "color",
+    "background-color",
+    "font-size",
+    "line-height",
+    "padding",
+    "margin",
+    "gap",
+    "width",
+    "height",
+    "transition-duration"
+  ],
+  "styleSelectors": [
+    "h1",
+    "header",
+    "#desktop-sidebar",
+    ".zd-doc-content-band",
+    "[data-sg-card]",
+    ".sg-workbench-toolbar",
+    "[data-nav-item]",
+    "#zd-page-loading-overlay",
+    "main button, main a"
+  ],
+  "sites": [
+    {
+      "id": "root",
+      "dist": "dist",
+      "buildCommand": "pnpm build",
+      "previewCommand": "pnpm exec zfb preview{hostFlag} --port {port}",
+      "states": [
+        { "id": "home", "path": "/", "screenshot": "full-page" },
+        { "id": "docs-overview", "path": "/docs/overview", "screenshot": "full-page" },
+        { "id": "docs-architecture", "path": "/docs/architecture", "screenshot": "viewport" },
+        { "id": "components", "path": "/components", "screenshot": "viewport" },
+        {
+          "id": "components-cta-button",
+          "path": "/components/cta-button",
+          "actions": ["workbench-ready", "open-code-panel"],
+          "screenshot": "full-page"
+        },
+        {
+          "id": "preview-cta-button-playground",
+          "path": "/components/preview?slug=cta-button&variant=Playground",
+          "actions": ["preview-ready"],
+          "screenshot": "full-page"
+        },
+        { "id": "tokens", "path": "/tokens", "screenshot": "viewport" }
+      ]
+    },
+    {
+      "id": "demo",
+      "dist": "apps/demo/dist",
+      "buildCommand": "pnpm --filter @zudo-sg/demo build",
+      "previewCommand": "pnpm --filter @zudo-sg/demo exec zfb preview{hostFlag} --port {port}",
+      "states": [
+        { "id": "home", "path": "/", "screenshot": "viewport" },
+        { "id": "business-line-vacuum", "path": "/lines/vacuum", "screenshot": "viewport" },
+        { "id": "search-product", "path": "/search?q=product", "screenshot": "viewport" },
+        { "id": "contact-form", "path": "/contact", "screenshot": "full-page" },
+        {
+          "id": "mobile-nav-open",
+          "path": "/",
+          "actions": ["open-mobile-nav"],
+          "screenshot": "viewport"
+        }
+      ]
+    },
+    {
+      "id": "doc",
+      "dist": "doc/dist",
+      "buildCommand": "pnpm build:doc",
+      "previewCommand": "pnpm --filter @zudo-sg/doc exec zfb preview{hostFlag} --port {port}",
+      "states": [
+        { "id": "home", "path": "/", "screenshot": "full-page" },
+        { "id": "docs-getting-started", "path": "/docs/getting-started", "screenshot": "viewport" }
+      ]
+    }
+  ]
+}
