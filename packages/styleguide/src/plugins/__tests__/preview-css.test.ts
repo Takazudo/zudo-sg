@@ -1,6 +1,6 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, utimesSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, utimesSync, renameSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { CompilePreviewCssResult } from "../../preview-css/compile.js";
 import { toForwardSlash } from "../../host-paths.js";
@@ -48,6 +48,7 @@ function fakeCompiler(css: () => string = () => "a{}") {
 
 beforeEach(() => {
   root = mkdtempSync(join(tmpdir(), "zudo-sg-preview-css-"));
+  symlinkSync(resolve(import.meta.dirname, "../../../../../node_modules"), join(root, "node_modules"), "dir");
   mkdirSync(join(root, "src/styles"), { recursive: true });
   mkdirSync(join(root, "components"), { recursive: true });
   entry = join(root, "src/styles/preview-entry.css");
@@ -112,6 +113,7 @@ describe("registered URL respects base", () => {
       const plugin = createPreviewCssPlugin({ compile });
       const registered = new Map<string, Handler>();
       await plugin[hook]?.({
+        scratchDir: join(root, ".zfb"),
         projectRoot: root,
         config: { base } as DevCtx["config"],
         options: { previewStyles: "./src/styles/preview-entry.css" },
@@ -170,13 +172,14 @@ describe("createPreviewCssCache", () => {
     expect(compile).toHaveBeenCalledTimes(1);
   });
 
-  it("recompiles when an @import dependency mtime changes", async () => {
+  it("recompiles when imported CSS content changes despite unchanged mtime", async () => {
     let version = 1;
     const compile = fakeCompiler(() => `v${version}`);
     const cache = createPreviewCssCache(entry, compile);
     expect(await cache.get()).toBe("v1");
     version = 2;
-    touch(dep, -30);
+    writeFileSync(dep, ":root { --a: 2; }\n");
+    touch(dep, -60);
     expect(await cache.get()).toBe("v2");
     expect(compile).toHaveBeenCalledTimes(2);
     expect(await cache.get()).toBe("v2");
@@ -187,7 +190,7 @@ describe("createPreviewCssCache", () => {
     const compile = fakeCompiler();
     const cache = createPreviewCssCache(entry, compile);
     await cache.get();
-    touch(sourceFile, -30);
+    writeFileSync(sourceFile, "export const x = 'bg-surface';");
     await cache.get();
     expect(compile).toHaveBeenCalledTimes(2);
     rmSync(sourceFile);
@@ -205,6 +208,69 @@ describe("createPreviewCssCache", () => {
     expect(compile).toHaveBeenCalledTimes(2);
   });
 
+  it("re-enumerates initially empty roots, nested additions, renames and removals", async () => {
+    const empty = join(root, "empty");
+    mkdirSync(empty);
+    const compile = fakeCompiler();
+    const cache = createPreviewCssCache(entry, compile, undefined, { projectRoot: root, sources: ["empty/**/*.tsx"] });
+    await cache.get();
+    mkdirSync(join(empty, "nested"));
+    writeFileSync(join(empty, "nested/a.tsx"), '<div class="flex"/>');
+    await cache.get();
+    renameSync(join(empty, "nested/a.tsx"), join(empty, "nested/b.tsx"));
+    await cache.get();
+    rmSync(join(empty, "nested/b.tsx"));
+    await cache.get();
+    expect(compile).toHaveBeenCalledTimes(4);
+  });
+
+  it("detects a newly imported CSS dependency and subsequent content edits", async () => {
+    const compile = fakeCompiler();
+    const cache = createPreviewCssCache(entry, compile);
+    await cache.get();
+    const nested = join(root, "src/styles/nested.css");
+    writeFileSync(nested, ":root { --nested: 1; }");
+    writeFileSync(dep, '@import "./nested.css";');
+    await cache.get();
+    writeFileSync(nested, ":root { --nested: 2; }");
+    await cache.get();
+    expect(compile).toHaveBeenCalledTimes(3);
+  });
+
+  it("detects creation of a previously absent host config", async () => {
+    const cache = createPreviewCssCache(entry, fakeCompiler(), undefined, { projectRoot: root });
+    await cache.get();
+    writeFileSync(join(root, "zfb.config.ts"), "export default {}; ");
+    await expect(cache.get()).rejects.toThrow(/reload\/restart/);
+  });
+
+  it("requires fresh config after an imported token-config edit", async () => {
+    writeFileSync(join(root, "zfb.config.ts"), 'import { tokens } from "./tokens.js"; export default { wind: { tokens } };');
+    writeFileSync(join(root, "tokens.ts"), 'export const tokens = { colors: { brand: "red" } };');
+    const compile = fakeCompiler();
+    const cache = createPreviewCssCache(entry, compile, undefined, { projectRoot: root });
+    await cache.get();
+    writeFileSync(join(root, "tokens.ts"), 'export const tokens = { colors: { brand: "blue" } };');
+    await expect(cache.get()).rejects.toThrow(/reload\/restart/);
+    expect(compile).toHaveBeenCalledTimes(1);
+    const fresh = createPreviewCssCache(entry, compile, undefined, { projectRoot: root, wind: { tokens: { colors: { brand: "blue" } } } });
+    await fresh.get();
+    expect(compile).toHaveBeenLastCalledWith(entry, expect.objectContaining({ wind: { tokens: { colors: { brand: "blue" } } } }));
+  });
+
+  it("invalidates manifest content and never serves stale success after failure", async () => {
+    const manifest = join(root, "wind.json");
+    writeFileSync(manifest, '{"candidates":["flex"]}');
+    const compile = fakeCompiler();
+    const cache = createPreviewCssCache(entry, compile, undefined, { projectRoot: root, wind: { manifests: { fixture: { path: "./wind.json" } } } });
+    await cache.get();
+    compile.mockRejectedValueOnce(new Error("broken"));
+    writeFileSync(manifest, '{"candidates":["block"]}');
+    await expect(cache.get()).rejects.toThrow("broken");
+    await cache.get();
+    expect(compile).toHaveBeenCalledTimes(3);
+  });
+
   it("dedupes concurrent requests into one compile", async () => {
     const compile = fakeCompiler();
     const cache = createPreviewCssCache(entry, compile);
@@ -214,7 +280,7 @@ describe("createPreviewCssCache", () => {
 
   it("does not trust a compile whose inputs changed while it ran", async () => {
     const compile = vi.fn(async (): Promise<CompilePreviewCssResult> => {
-      touch(dep, 1);
+      writeFileSync(dep, `:root { --a: ${Math.random()}; }`);
       return { css: "a{}", dependencies: [toForwardSlash(dep)], sourceFiles: [], candidateCount: 0 };
     });
     const cache = createPreviewCssCache(entry, compile);
@@ -242,6 +308,7 @@ describe("build emit", () => {
     const plugin = createPreviewCssPlugin({ compile: fakeCompiler(() => ".built{}") });
     const logger = makeLogger();
     await plugin.postBuild?.({
+      scratchDir: join(root, ".zfb"),
       projectRoot: root,
       outDir,
       config: { base: "/spike/" } as BuildCtx["config"],
@@ -260,6 +327,7 @@ describe("build emit", () => {
     writeFileSync(target, ".stale{}");
 
     const ctx = {
+      scratchDir: join(root, ".zfb"),
       projectRoot: root,
       outDir,
       config: { base: "/" } as BuildCtx["config"],
@@ -298,6 +366,7 @@ describe("real compiler end-to-end (temp host)", () => {
     const plugin = createPreviewCssPlugin();
     const registered = new Map<string, Handler>();
     await plugin.devMiddleware?.({
+      scratchDir: join(root, ".zfb"),
       projectRoot: root,
       config: { base: "/" } as DevCtx["config"],
       options: { previewStyles: "./src/styles/preview-entry.css" },
@@ -306,12 +375,11 @@ describe("real compiler end-to-end (temp host)", () => {
     });
     const handler = registered.get("/_zudo-sg/preview.css")!;
     const first = await handler({ method: "GET", url: "/_zudo-sg/preview.css", headers: {} });
-    expect(first?.body).toContain("--a:1");
+    expect(first?.body).toContain("--a: 1");
     expect(first?.body).toContain(":root[data-sg-preview-doc]");
 
     writeFileSync(dep, ":root { --a: 2; }\n");
-    touch(dep, -30);
     const second = await handler({ method: "GET", url: "/_zudo-sg/preview.css", headers: {} });
-    expect(second?.body).toContain("--a:2");
+    expect(second?.body).toContain("--a: 2");
   });
 });

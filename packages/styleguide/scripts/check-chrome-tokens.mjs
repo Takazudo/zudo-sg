@@ -3,7 +3,7 @@
 //
 // The engine stylesheet is embedded into a host that may reset Tailwind's
 // --color-* theme tier.  Keep the engine chrome on its raw --sg-* tier and on
-// the bracket arbitrary-value form that survives the package safelist
+// declared sg-* utilities resolved by the package wind manifest
 // extractor.  This is intentionally a small, deterministic source lint: the
 // diagnostics are sorted by file, line, and source offset so a CI failure is
 // easy to reproduce locally.
@@ -225,8 +225,7 @@ function isAllowlisted(path, category, token) {
 }
 
 function replacementForUtility(prefix, role) {
-  if (prefix === "bg") return `${prefix}-[var(--sg-${role})]`;
-  return `${prefix}-[color:var(--sg-${role})]`;
+  return `${prefix}-sg-${role}`;
 }
 
 function replacementForVariable(variable) {
@@ -315,12 +314,9 @@ function scanParenUtilities(source, filePath, findings) {
     if (isAllowlisted(packageRelative(filePath), "paren utility", token)) continue;
     const { variants = "", important = "", prefix, variable, modifier = "" } = match.groups;
     const normalizedPrefix = prefix.toLowerCase();
-    const replacement =
-      normalizedPrefix === "bg"
-        ? `${variants}${important}${normalizedPrefix}-[var(${variable})]${modifier}`
-        : COLOR_UTILITY_PREFIXES.includes(normalizedPrefix)
-          ? `${variants}${important}${normalizedPrefix}-[color:var(${variable})]${modifier}`
-          : `${variants}${important}${normalizedPrefix}-[var(${variable})]${modifier}`;
+    const replacement = COLOR_UTILITY_PREFIXES.includes(normalizedPrefix)
+      ? `${variants}${important}${normalizedPrefix}-sg-${variable.slice(5)}${modifier}`
+      : `${variants}${important}${normalizedPrefix}-[var(${variable})]${modifier}`;
     addFinding(findings, source, filePath, match.index, "paren utility", token, replacement);
   }
 }
@@ -358,6 +354,12 @@ export function lintSource(
   scanForbiddenSpellings(source, filePath, findings);
   scanBareUtilities(source, filePath, findings);
   scanParenUtilities(source, filePath, findings);
+  for (const match of stripComments(source).matchAll(/((?:[a-z-]+:)*)(bg|text|border|outline|ring|fill|stroke)-\[(?:color:)?var\(--sg-([a-z0-9-]+)\)\]/g)) {
+    addFinding(findings, source, filePath, match.index, "bracket chrome utility", match[0], `${match[1]}${match[2]}-sg-${match[3]}`);
+  }
+  for (const match of stripComments(source).matchAll(/(?:bg|text|border|outline|ring|fill|stroke)-sg-([a-z0-9-]+)/g)) {
+    if (!declaredRoles.has(match[1])) addFinding(findings, source, filePath, match.index, "undeclared role", match[0], `--sg-${match[1]}`);
+  }
   scanRoleReferences(source, filePath, declaredRoles, declaredVariables, findings);
   return findings;
 }

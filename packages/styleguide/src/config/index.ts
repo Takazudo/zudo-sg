@@ -7,6 +7,7 @@
 // Host paths are validated later, inside each plugin's `setup()` (fail-fast,
 // like zudo-doc's preset: a missing host module throws there, not here).
 
+import { engineWindDefaults, mergeWind } from "./wind.js";
 import {
   COMPONENT_DOCS_COLLECTION,
   componentDocsCollectionName,
@@ -376,7 +377,7 @@ export function zudoSg(options: ZudoSgComposeOptions): ZudoSgFragment {
     },
     {
       name: PREVIEW_CSS_PLUGIN_NAME,
-      options: definedOnly({ previewStyles: options.previewStyles, previewCssUrl }),
+      options: definedOnly({ previewStyles: options.previewStyles, previewCssUrl, componentsRoots: roots }),
     },
     {
       name: ZDTP_APPLY_PROXY_PLUGIN_NAME,
@@ -399,15 +400,19 @@ export function zudoSg(options: ZudoSgComposeOptions): ZudoSgFragment {
  * zudo-doc routes descriptor to be present).
  */
 export function withZudoSg<
-  P extends { plugins?: ReadonlyArray<unknown>; collections?: ReadonlyArray<unknown> },
+  P extends { plugins?: ReadonlyArray<unknown>; collections?: ReadonlyArray<unknown>; wind?: Record<string, unknown> },
 >(
   presetFragment: P,
   options: ZudoSgComposeOptions,
 ): Omit<P, "plugins" | "collections"> & {
   plugins: Array<NonNullable<P["plugins"]>[number] | ZudoSgPluginDescriptor>;
   collections: Array<NonNullable<P["collections"]>[number] | ZudoSgCollection>;
+  wind: Record<string, unknown>;
 } {
   const sg = zudoSg(options);
+  const wind = mergeWind(engineWindDefaults, presetFragment.wind ?? {});
+  wind.manifests = { ...(wind.manifests as Record<string, unknown> ?? {}), "zudo-sg": { path: "@takazudo/zudo-sg/wind.json" } };
+  sg.plugins.find(p => p.name === PREVIEW_CSS_PLUGIN_NAME)!.options!.wind = wind;
   const presetPlugins = [...(presetFragment.plugins ?? [])];
   const registryMode = descriptorModuleOf(options.registry) === null ? "module" : "descriptor";
   const tokensEnabled = isTokensRouteEnabled({
@@ -437,6 +442,7 @@ export function withZudoSg<
   const pluginsWithTrigger = triggerEnabled ? pluginsWithChrome.map(withHeaderTokenTrigger) : pluginsWithChrome;
   return {
     ...presetFragment,
+    wind,
     plugins: [...pluginsWithTrigger, ...sg.plugins],
     collections: [...(presetFragment.collections ?? []), ...sg.collections],
   };

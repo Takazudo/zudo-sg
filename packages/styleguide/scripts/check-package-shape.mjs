@@ -67,6 +67,8 @@ for (const [subpath, entry] of Object.entries(FRAMEWORK_FREE_EXPORTS)) {
   }
 }
 
+if (manifest.exports?.["./wind.json"] !== "./dist/wind.json") errors.push('exports["./wind.json"] must target "./dist/wind.json"');
+
 const files = Array.isArray(manifest.files) ? manifest.files : [];
 for (const entry of REQUIRED_FILES) {
   if (!files.includes(entry)) errors.push(`files is missing "${entry}"`);
