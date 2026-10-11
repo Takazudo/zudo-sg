@@ -16,7 +16,11 @@ updates:
     ignore:
       - dependency-name: "@takazudo/*"
 
+  # "/" only scans .github/workflows; the composite actions under
+  # .github/actions/* carry their own setup-node / action-setup pins.
   - package-ecosystem: "github-actions"
-    directory: "/"
+    directories:
+      - "/"
+      - "/.github/actions/*"
     schedule:
       interval: "weekly"

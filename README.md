@@ -1,6 +1,6 @@
 # zudo-sg
 
-A style-guide framework built on [zudo-doc](https://github.com/Takazudo/zudo-doc) (zfb + Tailwind v4 + Preact).
+A style-guide framework built on [zudo-doc](https://github.com/Takazudo/zudo-doc) (zfb + zudo-wind + zudo-react).
 
 ## What this is
 
@@ -8,7 +8,7 @@ A pnpm-workspace monorepo producing four artifacts from one shared component lib
 
 - **Root** — the styleguide host and component catalog → `https://zudo-sg.takazudomodular.com/`
 - **`doc/`** — the full documentation workspace → `https://zudo-sg-doc.takazudomodular.com/`
-- **`packages/demo-ui`** — shared Preact component library (single source of truth)
+- **`packages/demo-ui`** — shared zudo-react component library (single source of truth)
 - **`apps/demo`** — demo marketing site → `https://zudo-sg-demo-site.takazudomodular.com/`
 
 The root site and the `doc/` workspace are two independently built, tested, and
