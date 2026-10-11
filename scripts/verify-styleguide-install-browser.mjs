@@ -630,15 +630,19 @@ async function main() {
     try {
       const page = await browser.newPage();
       const errors = [];
+      const badResponses = [];
       page.on("pageerror", (error) => errors.push(error.message));
       page.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });
+      page.on("response", (response) => {
+        if (response.status() >= 400) badResponses.push(`${response.status()} ${response.url()}`);
+      });
       await page.goto(`${origin}${BASE}components/preview?slug=counter&variant=Basic`, { waitUntil: "domcontentloaded" });
       const counter = page.locator("[data-counter]");
       await counter.waitFor({ state: "visible", timeout: 15_000 });
       check((await counter.textContent())?.trim() === "count: 3", "seedless dev Counter lost its declared initial state");
       await counter.click();
       await page.waitForFunction(() => document.querySelector("[data-counter]")?.textContent?.trim() === "count: 4", null, { timeout: 15_000 });
-      check(errors.length === 0, `seedless dev Counter browser errors: ${errors.join(" | ")}`);
+      check(errors.length === 0 && badResponses.length === 0, `seedless dev Counter browser errors: ${errors.join(" | ")}; failed responses: ${badResponses.join(" | ")}`);
       console.log("OK — seedless dev virtual registry rendered Counter and its real click updated count: 3 → count: 4.");
     } finally {
       await browser.close();
