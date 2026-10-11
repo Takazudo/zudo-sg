@@ -87,6 +87,38 @@ artifact names, tar extraction, destinations and authorization conditions remain
 Source PRs stay open until their verified replacement reaches main. This register
 does not itself authorize closing #908 or any incomplete parent.
 
+#### Consumer lock compatibility follow-up: #963 remains open
+
+The tuple above proves this repository's graph and the freshly installed packed
+consumers; it does not guarantee a single Lezer identity in an existing consumer
+lock. A separate foreign probe used the exact compiled editor modules with all
+seven direct dependencies already at the tested versions: commands 6.11.1,
+lang-css 6.3.1, lang-javascript 6.2.5, language 6.13.1, state 6.7.6,
+view 6.43.1 and highlight 1.2.3. Its deliberately seeded, valid lock retained
+highlight → common 1.5.2 while the other parser paths used common 1.5.3,
+matching the historical split in #915. Frozen and normal pnpm 11.5.2 installs
+preserved it. All four TSX/CSS editable/read-only probes logged
+`tags is not iterable` and lost highlighting, even though construction and edits
+did not throw. This is an isolated compiled-editor probe with Happy DOM, not a
+complete packed-host browser proof.
+
+In that consumer, `pnpm dedupe --check` detected the split;
+`pnpm dedupe --ignore-scripts`
+unified common at 1.5.3, after which the same four probes highlighted correctly
+without plugin errors. Baseline `429ac055` already allowed every direct version
+in this graph and has the same editor implementation. This is a pre-existing
+consumer-lock constraint, not a newly introduced React-preview regression.
+
+Raising the remaining direct floors, adding a direct common dependency, or
+checking only the root lock does not establish a universal fix. Inspected
+published metadata still permits common 1.5.2: highlight 1.2.5 uses `^1.3.0`,
+lr 1.4.11 uses `^1.0.0`, language 6.13.1 uses `^1.5.0`, and the latest inspected
+CSS/JavaScript parsers 1.3.9/1.5.6 use `^1.2.0`. No speculative pin, override,
+or editor replacement was added. Affected consumers should deduplicate their
+own graph and verify actual source highlighting and Live CSS editing. Keep
+#963 open for retained-lock packed-host coverage and upstream shared-identity
+guidance; fresh-install success alone does not close it.
+
 ### Counts separated by cause
 
 | Phase | Root packages / snapshots | Meaning |
