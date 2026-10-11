@@ -1,2 +1,0 @@
-info running /home/takazudo/.cache/zudo-sg-zfb4-spike/spike/node_modules/.bin/tsc --noEmit
-✓ checked 1 collection and tsc — no errors

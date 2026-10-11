@@ -1,7 +1,0 @@
-info package route `/docs/[[...slug]]` (from plugin `@takazudo/zudo-doc/plugins/routes`) is shadowed by a user pages/ route (user wins); skipping
-info package route `/404` → pages/404.tsx
-info package route `/robots.txt` → pages/robots.txt.tsx
-info package route `/foo` → pages/foo.tsx
-zfb info: ZB010 plugin:search-index: Generated search index with 3 entries
-✓ 7 pages built in 3.97s
-heavy-guard: verdict=PASS exit=0 secs=5 min_mem_mb=9710 reason=-

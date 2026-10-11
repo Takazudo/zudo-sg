@@ -1,6 +1,0 @@
-data-zfb-island="MobileToc"
-data-zfb-island="SidebarToggle"
-data-zfb-island="SidebarTree"
-data-zfb-island="SiteTreeNav"
-data-zfb-island="ThemeToggle"
-data-zfb-island="Toc"

@@ -1,9 +1,0 @@
-Progress: resolved 0, reused 1, downloaded 0, added 0
-Packages: -37
--------------------------------------
-Progress: resolved 149, reused 119, downloaded 0, added 0, done
-
-dependencies:
-- @takazudo/zudo-sg 0.4.1
-
-Done in 665ms using pnpm v10.30.3
