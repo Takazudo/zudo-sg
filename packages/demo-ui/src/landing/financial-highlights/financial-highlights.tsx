@@ -44,7 +44,7 @@ export function FinancialHighlights({
               ) : (
                 <span class="text-small text-muted">
                   {pendingLabel}
-                  <span class="ms-hsp-2xs text-micro text-muted">({metric.unit})</span>
+                  <span class="zc-metric-unit-offset text-micro text-muted">({metric.unit})</span>
                 </span>
               )}
             </dd>
