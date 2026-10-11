@@ -138,7 +138,7 @@ entry is needed. Keep its imports in this order:
 Wind utilities and engine styles are unlayered. Configure
 `wind.sources.roots` in `zfb.config.ts` for host source directories;
 `withZudoSg()` registers the engine's public `wind.json` manifest. Do not add
-Tailwind imports, `@source` directives, or a second preflight.
+a separate utility stylesheet or another reset.
 
 ### Three token worlds and engine overrides
 
@@ -147,8 +147,9 @@ the documentation shell, zudo-sg's raw `--sg-*` roles for catalog chrome, and
 the host component library's `:root` tokens (usually `--color-*`) for previewed
 components. Keep the engine and component-library roles separate.
 
-The engine defaults are plain `--sg-*` properties under `:where(:root)`, so zudo-doc's
-`theme.css` `--color-*` reset cannot erase them. Retheme engine chrome with an ordinary,
+The engine defaults are plain `--sg-*` properties under `:where(:root)`, separate from
+the host's `--color-*` properties. zudo-doc 6's `theme.css` supplies its own token
+values without resetting host colors. Retheme engine chrome with an ordinary,
 unlayered override in any import position:
 
 ```css
@@ -159,11 +160,9 @@ unlayered override in any import position:
 
 If the host previously used bare `--color-border` to style engine chrome, migrate that
 declaration to `--sg-border` (and migrate each other chrome role to its corresponding
-`--sg-*` role). `--color-border` can still style the host's own components. The
-order-proof engine hook does not change the import-order contract for those
-host-owned `--color-*` tokens: import `theme.css` before them. This is the
-zudo-doc namespace contract for host-owned color tokens; the engine's raw
-`--sg-*` namespace is separate.
+`--sg-*` role). `--color-border` can still style the host's own components. Import
+`theme.css` before the host's token styles, then declare intentional `:root`
+overrides afterward. The engine's raw `--sg-*` namespace remains separate.
 
 The preview document uses `src/styles/preview-entry.css` independently. Keep
 its input local to the host:
