@@ -47,6 +47,11 @@
   .zc-nav-drawer {
     top: 0;
   }
+
+  /* Wind peers use :where(); own the checked state above the mobile offset. */
+  [data-nav-toggle]:checked ~ .zc-nav-drawer {
+    translate: 0 0;
+  }
 }
 
 .zc-nav-submenu {

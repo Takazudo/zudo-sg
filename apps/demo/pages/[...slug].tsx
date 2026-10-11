@@ -75,10 +75,10 @@ export default function ContentPage({ entry, slug }: Props) {
         </div>
       </Container>
 
-      <Island when="visible" ssrFallback={null}>
+      <Island when="load" ssrFallback={null}>
         <ContactFormEnhancer />
       </Island>
-      <Island when="visible" ssrFallback={null}>
+      <Island when="load" ssrFallback={null}>
         <RecruitFormEnhancer />
       </Island>
     </DefaultLayout>

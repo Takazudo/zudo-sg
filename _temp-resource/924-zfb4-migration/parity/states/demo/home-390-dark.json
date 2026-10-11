@@ -1,0 +1,128 @@
+{
+  "site": "demo",
+  "state": "home",
+  "path": "/",
+  "url": "http://localhost:4701/",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "theme": "dark",
+  "themeMethod": "demo-theme-control",
+  "screenshot": "viewport",
+  "actions": {},
+  "styles": {
+    "h1": {
+      "matchCount": 1,
+      "tagName": "h1",
+      "id": null,
+      "className": "mt-vsp-sm max-w-[20ch] font-bold leading-tight text-fg",
+      "styles": {
+        "color": "oklch(0.97 0.006 75)",
+        "background-color": "rgba(0, 0, 0, 0)",
+        "font-size": "40px",
+        "line-height": "50px",
+        "padding": "0px",
+        "margin": "20px 0px 0px",
+        "gap": "normal",
+        "width": "358.812px",
+        "height": "100px",
+        "transition-duration": "0s"
+      }
+    },
+    "header": {
+      "matchCount": 1,
+      "tagName": "header",
+      "id": null,
+      "className": "sticky top-0 z-ui-dropdown w-full border-b border-rail-border bg-rail-bg-strong text-rail-fg max-sm:hidden",
+      "styles": {
+        "color": "oklch(0.97 0.006 75)",
+        "background-color": "oklch(0.235 0.01 75)",
+        "font-size": "16px",
+        "line-height": "28px",
+        "padding": "0px",
+        "margin": "0px",
+        "gap": "normal",
+        "width": "100%",
+        "height": "auto",
+        "transition-duration": "0s"
+      }
+    },
+    "#desktop-sidebar": null,
+    ".zd-doc-content-band": null,
+    "[data-sg-card]": null,
+    ".sg-workbench-toolbar": null,
+    "[data-nav-item]": {
+      "matchCount": 8,
+      "tagName": "details",
+      "id": null,
+      "className": "group",
+      "styles": {
+        "color": "oklch(0.97 0.006 75)",
+        "background-color": "rgba(0, 0, 0, 0)",
+        "font-size": "16px",
+        "line-height": "28px",
+        "padding": "0px",
+        "margin": "0px",
+        "gap": "normal",
+        "width": "271px",
+        "height": "56px",
+        "transition-duration": "0s"
+      }
+    },
+    "#zd-page-loading-overlay": {
+      "matchCount": 1,
+      "tagName": "div",
+      "id": "zd-page-loading-overlay",
+      "className": "page-loading-overlay",
+      "styles": {
+        "color": "oklch(0.97 0.006 75)",
+        "background-color": "color(srgb 0.129004 0.115586 0.0977473 / 0.4)",
+        "font-size": "16px",
+        "line-height": "28px",
+        "padding": "0px",
+        "margin": "0px",
+        "gap": "normal",
+        "width": "390px",
+        "height": "844px",
+        "transition-duration": "0.2s, 0s"
+      }
+    },
+    "main button, main a": {
+      "matchCount": 28,
+      "tagName": "a",
+      "id": null,
+      "className": "inline-flex items-center gap-x-hsp-xs rounded-md px-hsp-xl py-vsp-sm text-small font-semibold no-underline transition-colors bg-accent text-bg hover:bg-accent-hover border border-accent hover:border-accent-hover",
+      "styles": {
+        "color": "oklch(0.235 0.01 75)",
+        "background-color": "oklch(0.7 0.158 62)",
+        "font-size": "16px",
+        "line-height": "28px",
+        "padding": "20px 24px",
+        "margin": "0px",
+        "gap": "normal 6px",
+        "width": "149.516px",
+        "height": "70px",
+        "transition-duration": "0.15s"
+      }
+    },
+    "first-main-control": {
+      "matchCount": 28,
+      "tagName": "a",
+      "id": null,
+      "className": "inline-flex items-center gap-x-hsp-xs rounded-md px-hsp-xl py-vsp-sm text-small font-semibold no-underline transition-colors bg-accent text-bg hover:bg-accent-hover border border-accent hover:border-accent-hover",
+      "styles": {
+        "color": "oklch(0.235 0.01 75)",
+        "background-color": "oklch(0.7 0.158 62)",
+        "font-size": "16px",
+        "line-height": "28px",
+        "padding": "20px 24px",
+        "margin": "0px",
+        "gap": "normal 6px",
+        "width": "149.516px",
+        "height": "70px",
+        "transition-duration": "0.15s"
+      }
+    }
+  }
+}
