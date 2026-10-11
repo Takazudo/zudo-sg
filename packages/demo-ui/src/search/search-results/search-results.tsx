@@ -64,6 +64,7 @@ export function SearchResults({ docs, query, action = "/search" }: SearchResults
   // never inconsistent even before the enhancer takes over. Uses the same
   // matchDoc the enhancer uses client-side, so SSR and CSR never disagree.
   const initial = docs.filter((d) => matchDoc(d, lower));
+  const indexJson = JSON.stringify(docs).replace(/</g, "\\u003c");
 
   return (
     <div data-search-root>
@@ -73,10 +74,7 @@ export function SearchResults({ docs, query, action = "/search" }: SearchResults
       <script
         type="application/json"
         data-search-index
-        // eslint-disable-next-line react/no-danger
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify(docs).replace(/</g, "\\u003c"),
-        }}
+        rawHtml={indexJson}
       />
 
       {/* Plain-HTML search box. Submitting it (JS disabled, or before hydration)

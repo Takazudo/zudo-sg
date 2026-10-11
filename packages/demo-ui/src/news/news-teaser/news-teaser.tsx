@@ -38,7 +38,7 @@ export function NewsTeaser({
         </ViewAllLink>
       </div>
       {intro && (
-        <p class="mt-vsp-xs max-w-[44rem] text-small leading-relaxed text-fg" style={{ textWrap: "pretty" }}>
+        <p class="mt-vsp-xs max-w-[44rem] text-small leading-relaxed text-fg" style={{ "text-wrap": "pretty" }}>
           {intro}
         </p>
       )}

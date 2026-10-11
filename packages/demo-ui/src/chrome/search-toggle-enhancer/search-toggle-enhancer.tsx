@@ -2,7 +2,7 @@
 
 /**
  * SearchToggleEnhancer — a11y layer on top of SiteHeader's search toggle
- * (chrome/site-header), which discloses via pure CSS (`group/search`
+ * (chrome/site-header), which discloses via pure CSS (`.zc-header-search`
  * focus-within). Without this island, tabbing from the trigger into the
  * input still opens it and a plain GET form submit (`/search?q=`) still
  * works. What JS adds:
@@ -29,7 +29,7 @@
  * `<Island when="visible" ssrFallback={null}>` (required — evaluating this
  * island during SSR throws). It draws no DOM of its own.
  */
-import { useEffect } from "preact/hooks";
+import { getScope } from "@takazudo/zfb/zudo-react";
 
 function enhance(): () => void {
   const form = document.querySelector<HTMLElement>("[data-search-form]");
@@ -41,8 +41,8 @@ function enhance(): () => void {
   if (!trigger || !input) return () => {};
 
   form.dataset.searchToggleEnhanced = "true";
-  const ac = new AbortController();
-  const { signal } = ac;
+  const cleanups: Array<() => void> = [];
+  let disposed = false;
 
   // Real visible state == focus-within, matching the CSS disclosure source.
   const isOpen = (): boolean => form.contains(document.activeElement);
@@ -54,56 +54,52 @@ function enhance(): () => void {
   // Click/tap = focus the input (opens it for touch/keyboard too). If the
   // input already has focus, clear it and return focus to the trigger
   // instead — a toggle-to-close.
-  trigger.addEventListener(
-    "click",
-    () => {
-      if (document.activeElement === input) {
-        input.value = "";
-        trigger.focus();
-      } else {
-        input.focus();
-      }
-      queueMicrotask(() => {
-        if (!signal.aborted) syncExpanded();
-      });
-    },
-    { signal },
-  );
+  const onTriggerClick = () => {
+    if (document.activeElement === input) {
+      input.value = "";
+      trigger.focus();
+    } else {
+      input.focus();
+    }
+    queueMicrotask(() => {
+      if (!disposed) syncExpanded();
+    });
+  };
+  trigger.addEventListener("click", onTriggerClick);
+  cleanups.push(() => trigger.removeEventListener("click", onTriggerClick));
 
   // Deferred to a microtask: right after `focusout`, `document.activeElement`
   // is briefly `<body>` even when focus is only moving within the form.
   const syncDeferred = () =>
     queueMicrotask(() => {
-      if (!signal.aborted) syncExpanded();
+      if (!disposed) syncExpanded();
     });
-  form.addEventListener("focusin", syncDeferred, { signal });
-  form.addEventListener("focusout", syncDeferred, { signal });
+  form.addEventListener("focusin", syncDeferred);
+  cleanups.push(() => form.removeEventListener("focusin", syncDeferred));
+  form.addEventListener("focusout", syncDeferred);
+  cleanups.push(() => form.removeEventListener("focusout", syncDeferred));
 
   // Escape clears the input and returns focus to the trigger, which drops
   // focus-within and lets the pure-CSS baseline close it.
-  input.addEventListener(
-    "keydown",
-    (e: KeyboardEvent) => {
-      if (e.key !== "Escape") return;
-      input.value = "";
-      trigger.focus();
-      syncDeferred();
-    },
-    { signal },
-  );
+  const onInputKeyDown = (e: KeyboardEvent) => {
+    if (e.key !== "Escape") return;
+    input.value = "";
+    trigger.focus();
+    syncDeferred();
+  };
+  input.addEventListener("keydown", onInputKeyDown);
+  cleanups.push(() => input.removeEventListener("keydown", onInputKeyDown));
 
   syncExpanded(); // initial sync from SSR's "false" default
 
   return () => {
-    ac.abort();
+    disposed = true;
+    cleanups.forEach((cleanup) => cleanup());
     delete form.dataset.searchToggleEnhanced;
   };
 }
 
 export default function SearchToggleEnhancer() {
-  useEffect(() => {
-    const dispose = enhance();
-    return dispose;
-  }, []);
+  getScope().onActivate(() => enhance());
   return null;
 }

@@ -23,7 +23,7 @@
  * `<Island when="visible" ssrFallback={null}>` (required — evaluating this
  * island during SSR throws). It draws no DOM of its own.
  */
-import { useEffect } from "preact/hooks";
+import { getScope } from "@takazudo/zfb/zudo-react";
 
 function enhance(): () => void {
   const nav = document.querySelector<HTMLElement>('nav[aria-label="Global navigation"]');
@@ -65,9 +65,6 @@ function enhance(): () => void {
 }
 
 export default function NavEnhancer() {
-  useEffect(() => {
-    const dispose = enhance();
-    return dispose;
-  }, []);
+  getScope().onActivate(() => enhance());
   return null;
 }

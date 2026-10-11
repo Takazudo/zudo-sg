@@ -1,15 +1,16 @@
-import { fireEvent, render, screen } from "@testing-library/preact";
 import { describe, expect, it } from "vitest";
+import { fire, flushAll, getByRole, getByText, renderIsland } from "../../../test-utils/zudo-react.js";
 import { NewsFilter } from "../news-filter";
 import NewsFilterEnhancer from "../news-filter-enhancer";
 import { NewsList, type NewsItem } from "../../news-list/news-list";
 
 describe("NewsFilter", () => {
   it("renders an 'All' button (pressed) plus one per category", () => {
-    render(<NewsFilter categories={["Corporate", "IR"]} />);
-    expect(screen.getByRole("button", { name: "All" })).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByRole("button", { name: "Corporate" })).toHaveAttribute("aria-pressed", "false");
-    expect(screen.getByRole("button", { name: "IR" })).toHaveAttribute("aria-pressed", "false");
+    const app = renderIsland(NewsFilter, { categories: ["Corporate", "IR"] });
+
+    expect(getByRole(app.container, "button", { name: "All" }).getAttribute("aria-pressed")).toBe("true");
+    expect(getByRole(app.container, "button", { name: "Corporate" }).getAttribute("aria-pressed")).toBe("false");
+    expect(getByRole(app.container, "button", { name: "IR" }).getAttribute("aria-pressed")).toBe("false");
   });
 });
 
@@ -18,28 +19,54 @@ const ITEMS: NewsItem[] = [
   { date: "2026-06-18", category: "IR", title: "IR item", slug: "news/b" },
 ];
 
-describe("NewsFilter + NewsFilterEnhancer + NewsList (real ported markup, mounted together)", () => {
-  it("hides non-matching rows on click and restores them via 'All'", () => {
-    render(
-      <div>
-        <NewsList items={ITEMS} showFilter />
-        <NewsFilterEnhancer />
-      </div>,
-    );
+function NewsFilterFixture() {
+  return (
+    <>
+      <NewsList items={ITEMS} showFilter />
+      <NewsFilterEnhancer />
+    </>
+  );
+}
 
-    expect(screen.getByText("Corporate item")).toBeVisible();
-    expect(screen.getByText("IR item")).toBeVisible();
+describe("NewsFilter + NewsFilterEnhancer + NewsList (SSR and enhancer mounted together)", () => {
+  it("hides non-matching rows on click and restores them via 'All'", async () => {
+    const app = renderIsland(NewsFilterFixture, {});
+    const corporate = getByText(app.container, "Corporate item").closest("li") as HTMLLIElement;
+    const ir = getByText(app.container, "IR item").closest("li") as HTMLLIElement;
+    const irButton = getByRole(app.container, "button", { name: "IR" });
+    const allButton = getByRole(app.container, "button", { name: "All" });
 
-    fireEvent.click(screen.getByRole("button", { name: "IR" }));
+    expect(corporate.hidden).toBe(false);
+    expect(ir.hidden).toBe(false);
 
-    expect(screen.getByText("Corporate item").closest("li")).toHaveAttribute("hidden");
-    expect(screen.getByText("IR item").closest("li")).not.toHaveAttribute("hidden");
-    expect(screen.getByRole("button", { name: "IR" })).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByRole("button", { name: "All" })).toHaveAttribute("aria-pressed", "false");
+    fire(irButton, "click");
+    await flushAll();
 
-    fireEvent.click(screen.getByRole("button", { name: "All" }));
+    expect(corporate.hidden).toBe(true);
+    expect(ir.hidden).toBe(false);
+    expect(irButton.getAttribute("aria-pressed")).toBe("true");
+    expect(allButton.getAttribute("aria-pressed")).toBe("false");
 
-    expect(screen.getByText("Corporate item").closest("li")).not.toHaveAttribute("hidden");
-    expect(screen.getByText("IR item").closest("li")).not.toHaveAttribute("hidden");
+    fire(allButton, "click");
+    await flushAll();
+
+    expect(corporate.hidden).toBe(false);
+    expect(ir.hidden).toBe(false);
+    expect(app.container.isConnected).toBe(true);
+    app.dispose();
+    expect(app.container.isConnected).toBe(false);
+  });
+
+  it("removes the click handler when disposed", async () => {
+    const app = renderIsland(NewsFilterFixture, {});
+    const corporate = getByText(app.container, "Corporate item").closest("li") as HTMLLIElement;
+    const irButton = getByRole(app.container, "button", { name: "IR" });
+
+    app.dispose();
+    fire(irButton, "click");
+    await flushAll();
+
+    expect(corporate.hidden).toBe(false);
+    expect(irButton.getAttribute("aria-pressed")).toBe("false");
   });
 });

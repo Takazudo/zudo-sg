@@ -1,4 +1,4 @@
-import type { ComponentChildren } from "preact";
+import type { Child } from "@takazudo/zfb/zudo-react";
 import { cx } from "../../lib/cx";
 
 /**
@@ -36,7 +36,7 @@ export type SiteNavProps = {
   /** Current page slug — drives active-section highlighting + default-open accordion. */
   currentSlug?: string;
   /** Client-island control supplied by the host; SiteNav stays framework-neutral. */
-  mobileThemeControl?: ComponentChildren;
+  mobileThemeControl?: Child;
   class?: string;
 };
 
@@ -117,7 +117,7 @@ export function SiteNav({
             data-nav-hamburger
             aria-hidden="true"
           >
-            <span class="relative block h-[2px] w-[1.25rem] bg-rail-fg before:absolute before:inset-x-0 before:-top-[6px] before:block before:h-[2px] before:bg-rail-fg before:content-[''] after:absolute after:inset-x-0 after:top-[6px] after:block after:h-[2px] after:bg-rail-fg after:content-['']" aria-hidden="true" />
+            <span class="zc-nav-toggle-icon relative block h-[2px] w-[1.25rem] bg-rail-fg before:absolute before:inset-x-0 before:-top-[6px] before:block before:h-[2px] before:bg-rail-fg after:absolute after:inset-x-0 after:top-[6px] after:block after:h-[2px] after:bg-rail-fg" aria-hidden="true" />
           </label>
         </div>
       </div>
@@ -149,7 +149,7 @@ export function SiteNav({
             for={NAV_TOGGLE_ID}
             data-nav-close
             role="button"
-            tabIndex={0}
+            tabindex={0}
             aria-label="Close menu"
           >
             <span class="text-heading leading-none" aria-hidden="true">
@@ -209,9 +209,7 @@ const LEAF_LINK_CLASS =
 const SUMMARY_CLASS =
   "flex w-full cursor-pointer list-none items-center justify-between gap-hsp-xs border-s-[3px] border-s-transparent px-hsp-md py-vsp-xs text-start text-small font-medium text-rail-fg transition-colors" +
   " hover:border-s-accent hover:bg-rail-hover-bg hover:text-rail-fg" +
-  " focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-rail-fg" +
-  " group-data-[current=true]:border-s-accent group-data-[current=true]:bg-rail-hover-bg group-data-[current=true]:text-rail-fg" +
-  " group-open:border-s-accent group-open:bg-rail-hover-bg group-open:text-rail-fg";
+  " focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-rail-fg zc-nav-summary";
 
 /**
  * A section's `<summary>` (the accordion toggle). Never a link itself — that
@@ -221,7 +219,7 @@ const SUMMARY_CLASS =
  */
 function SectionSummary({ section, hasChildren, current }: { section: NavSection; hasChildren: boolean; current: boolean }) {
   const chevron = hasChildren ? (
-    <span class="flex-none text-rail-muted transition-transform group-open:rotate-90 group-data-[current=true]:text-rail-fg group-open:text-rail-fg" aria-hidden="true">
+    <span class="zc-nav-chevron flex-none text-rail-muted transition-transform" aria-hidden="true">
       ›
     </span>
   ) : null;

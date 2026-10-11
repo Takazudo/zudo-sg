@@ -1,8 +1,8 @@
 /**
  * CSR (`innerHTML`) renderer for one search-result row.
  *
- * Framework-free — no JSX/preact import — so the enhancer island doesn't need
- * to bundle `preact-render-to-string` just to redraw the result list. Class
+ * Framework-free — no JSX renderer import — so the enhancer island doesn't need
+ * to bundle a server renderer just to redraw the result list. Class
  * strings come from `search-result-item-classes.ts`, the same module the SSR
  * JSX component uses, so both sides render identical markup for the same doc
  * (see the shared contract test in `../__tests__/search-result-item-contract.test.ts`).

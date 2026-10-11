@@ -1,5 +1,5 @@
-import { render, screen } from "@testing-library/preact";
 import { describe, expect, it } from "vitest";
+import { getByRole, getByText, queryAllByRole, renderIsland } from "../../../test-utils/zudo-react.js";
 import { NewsList, type NewsItem } from "../news-list";
 
 const ITEMS: NewsItem[] = [
@@ -9,37 +9,41 @@ const ITEMS: NewsItem[] = [
 
 describe("NewsList", () => {
   it("renders a row per item with a formatted date and category badge", () => {
-    render(<NewsList items={ITEMS} />);
-    expect(screen.getByText("First item")).toBeInTheDocument();
-    expect(screen.getByText("2026.06.19")).toBeInTheDocument();
-    expect(screen.getByText("Sustainability")).toBeInTheDocument();
+    const app = renderIsland(NewsList, { items: ITEMS });
+
+    expect(getByText(app.container, "First item")).toBeTruthy();
+    expect(getByText(app.container, "2026.06.19")).toBeTruthy();
+    expect(getByText(app.container, "Sustainability")).toBeTruthy();
   });
 
   it("links to /<slug> when href is absent, and to href when present", () => {
-    render(<NewsList items={ITEMS} />);
-    expect(screen.getByText("First item").closest("a")).toHaveAttribute("href", "/news/first");
-    expect(screen.getByText("Second item (external)").closest("a")).toHaveAttribute(
-      "href",
-      "https://example.com/x",
-    );
+    const app = renderIsland(NewsList, { items: ITEMS });
+
+    expect(getByRole(app.container, "link", { name: /First item/ }).getAttribute("href")).toBe("/news/first");
+    expect(getByRole(app.container, "link", { name: /Second item/ }).getAttribute("href")).toBe("https://example.com/x");
   });
 
   it("shows an empty-state message when there are no items", () => {
-    render(<NewsList items={[]} />);
-    expect(screen.getByText("There are no news items yet.")).toBeInTheDocument();
+    const app = renderIsland(NewsList, { items: [] });
+
+    expect(getByText(app.container, "There are no news items yet.")).toBeTruthy();
   });
 
   it("renders the heading only when provided", () => {
-    const { rerender } = render(<NewsList items={ITEMS} heading="News" />);
-    expect(screen.getByRole("heading", { name: "News" })).toBeInTheDocument();
-    rerender(<NewsList items={ITEMS} />);
-    expect(screen.queryByRole("heading")).not.toBeInTheDocument();
+    const withHeading = renderIsland(NewsList, { items: ITEMS, heading: "News" });
+    expect(withHeading.container.querySelector("h2")?.textContent).toBe("News");
+    withHeading.dispose();
+
+    const withoutHeading = renderIsland(NewsList, { items: ITEMS });
+    expect(withoutHeading.container.querySelector("h2")).toBeNull();
   });
 
   it("shows the filter bar only when showFilter is set and there is more than one category", () => {
-    const { rerender } = render(<NewsList items={ITEMS} showFilter />);
-    expect(screen.getByRole("group", { name: "Filter by category" })).toBeInTheDocument();
-    rerender(<NewsList items={[ITEMS[0]]} showFilter />);
-    expect(screen.queryByRole("group", { name: "Filter by category" })).not.toBeInTheDocument();
+    const multiple = renderIsland(NewsList, { items: ITEMS, showFilter: true });
+    expect(queryAllByRole(multiple.container, "group", { name: "Filter by category" })).toHaveLength(1);
+    multiple.dispose();
+
+    const single = renderIsland(NewsList, { items: [ITEMS[0]!], showFilter: true });
+    expect(queryAllByRole(single.container, "group", { name: "Filter by category" })).toHaveLength(0);
   });
 });
