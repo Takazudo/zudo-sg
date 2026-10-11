@@ -2,11 +2,9 @@
   "schemaVersion": 1,
   "compilerVersion": "4.3.1",
   "windConfigSha256": "ba11b0184c80ceabed26a62e842af1636a1e7b04cc078cd198088c295a2e6435",
-  "candidateSetSha256": "e5b24137550afcbcdcf515c2ee52ab42580b3375d90cf87a9570b714ba060e13",
+  "candidateSetSha256": "478478942a02c3aded0a7136427019391d5362c1808c095091ccbb46f33cfd2a",
   "candidates": [
-    "-me-hsp-xs",
     "-translate-y-1/2",
-    "[top:4rem]",
     "absolute",
     "after:absolute",
     "after:bg-rail-fg",
@@ -16,9 +14,6 @@
     "after:top-[6px]",
     "align-middle",
     "appearance-none",
-    "aria-pressed:bg-accent",
-    "aria-pressed:border-accent",
-    "aria-pressed:text-bg",
     "before:-top-[6px]",
     "before:absolute",
     "before:bg-rail-fg",
@@ -50,15 +45,11 @@
     "border-border",
     "border-collapse",
     "border-current",
-    "border-e",
     "border-l-[3px]",
     "border-l-4",
     "border-l-accent",
     "border-l-border",
     "border-rail-border",
-    "border-s-[3px]",
-    "border-s-2",
-    "border-s-transparent",
     "border-t",
     "border-t-2",
     "border-t-accent",
@@ -66,12 +57,14 @@
     "cursor-pointer",
     "disabled:cursor-not-allowed",
     "disabled:opacity-50",
+    "extra-class",
     "first:border-t-0",
     "fixed",
     "flex",
     "flex-auto",
     "flex-col",
     "flex-none",
+    "flex-row",
     "flex-wrap",
     "focus-visible:-outline-offset-2",
     "focus-visible:bg-rail-hover-bg",
@@ -96,6 +89,7 @@
     "gap-px",
     "gap-vsp-2xs",
     "gap-vsp-sm",
+    "gap-x-hsp-2xl",
     "gap-x-hsp-2xs",
     "gap-x-hsp-lg",
     "gap-x-hsp-md",
@@ -106,6 +100,7 @@
     "gap-y-vsp-lg",
     "gap-y-vsp-md",
     "gap-y-vsp-sm",
+    "gap-y-vsp-xl",
     "gap-y-vsp-xs",
     "grid",
     "grid-cols-[5rem_auto_1fr]",
@@ -146,7 +141,6 @@
     "hover:bg-surface-2",
     "hover:border-accent",
     "hover:border-accent-hover",
-    "hover:border-s-accent",
     "hover:text-accent",
     "hover:text-accent-hover",
     "hover:text-rail-fg",
@@ -193,6 +187,7 @@
     "max-w-[28rem]",
     "max-w-[36rem]",
     "max-w-[44rem]",
+    "max-w-[88rem]",
     "mb-vsp-2xs",
     "mb-vsp-lg",
     "mb-vsp-md",
@@ -206,7 +201,6 @@
     "min-w-[44px]",
     "min-w-0",
     "ml-0",
-    "ms-hsp-2xs",
     "mt-vsp-2xs",
     "mt-vsp-lg",
     "mt-vsp-md",
@@ -217,7 +211,6 @@
     "opacity-0",
     "order-1",
     "order-2",
-    "origin-left",
     "outline-none",
     "overflow-hidden",
     "overflow-y-auto",
@@ -241,9 +234,6 @@
     "placeholder:text-muted",
     "placeholder:text-rail-muted",
     "pointer-events-none",
-    "ps-hsp-2xs",
-    "ps-hsp-lg",
-    "ps-hsp-sm",
     "pt-vsp-lg",
     "pt-vsp-sm",
     "px-hsp-lg",
@@ -279,7 +269,6 @@
     "sm:items-start",
     "sm:justify-between",
     "sr-only",
-    "start-0",
     "sticky",
     "tabular-nums",
     "text-accent",
@@ -291,7 +280,6 @@
     "text-display",
     "text-fg",
     "text-heading",
-    "text-inherit",
     "text-left",
     "text-micro",
     "text-muted",
@@ -335,8 +323,16 @@
     "zc-context-switcher-arrow",
     "zc-field-badge",
     "zc-header-search",
+    "zc-header-search-input",
+    "zc-history-entry-event",
+    "zc-link-inherit",
+    "zc-location-group-heading",
+    "zc-metric-unit-offset",
     "zc-nav-chevron",
+    "zc-nav-drawer",
+    "zc-nav-hit-area",
     "zc-nav-story-frame",
+    "zc-nav-submenu",
     "zc-nav-summary",
     "zc-nav-toggle-icon",
     "zc-product-category-item",
@@ -367,53 +363,6 @@
     "schemaVersion": 1,
     "command": "explain",
     "explanations": [
-      {
-        "candidate": "-me-hsp-xs",
-        "outcome": "foreign_utility",
-        "specVersion": 1,
-        "specRevision": 14,
-        "parsed": {
-          "variantChain": [],
-          "utility": "me-hsp-xs",
-          "negative": true,
-          "arbitraryValue": null,
-          "slashModifier": null
-        },
-        "entryIdentifier": null,
-        "valueStatus": null,
-        "tokenResolutions": [],
-        "selector": null,
-        "conditions": [],
-        "declarations": [],
-        "sortTuple": null,
-        "diagnostics": [
-          {
-            "severity": "error",
-            "code": "ZW014",
-            "candidate": "-me-hsp-xs",
-            "origin": {
-              "kind": "source",
-              "sourceId": "zudo-wind://explain/candidate",
-              "byteOffset": 0,
-              "byteLength": 10,
-              "line": 1,
-              "byteColumn": 1,
-              "literalByteOffset": 0,
-              "literalByteLength": 10,
-              "positionKind": "class",
-              "owner": null,
-              "producer": null,
-              "path": null,
-              "index": null,
-              "keyPath": null,
-              "roleKey": null
-            },
-            "message": "unsupported foreign utility (migration vocabulary v7): -me-hsp-xs uses the Tailwind `me` utility, which zudo-wind v1 does not implement, so no CSS is generated. Author a margin-inline-end declaration in CSS and reserve the class with wind.authoredClasses: { \"-me-hsp-xs\": true }",
-            "suggestion": null,
-            "rejectionId": null
-          }
-        ]
-      },
       {
         "candidate": "-translate-y-1/2",
         "outcome": "resolved_utility",
@@ -454,47 +403,6 @@
           "rawCandidate": "-translate-y-1/2"
         },
         "diagnostics": []
-      },
-      {
-        "candidate": "[top:4rem]",
-        "outcome": "invalid",
-        "specVersion": 1,
-        "specRevision": 14,
-        "parsed": null,
-        "entryIdentifier": null,
-        "valueStatus": null,
-        "tokenResolutions": [],
-        "selector": null,
-        "conditions": [],
-        "declarations": [],
-        "sortTuple": null,
-        "diagnostics": [
-          {
-            "severity": "error",
-            "code": "ZW004",
-            "candidate": "[top:4rem]",
-            "origin": {
-              "kind": "source",
-              "sourceId": "zudo-wind://explain/candidate",
-              "byteOffset": 0,
-              "byteLength": 10,
-              "line": 1,
-              "byteColumn": 1,
-              "literalByteOffset": 0,
-              "literalByteLength": 10,
-              "positionKind": "class",
-              "owner": null,
-              "producer": null,
-              "path": null,
-              "index": null,
-              "keyPath": null,
-              "roleKey": null
-            },
-            "message": "arbitrary properties are unsupported",
-            "suggestion": null,
-            "rejectionId": "R10"
-          }
-        ]
       },
       {
         "candidate": "absolute",
@@ -852,129 +760,6 @@
           "rawCandidate": "appearance-none"
         },
         "diagnostics": []
-      },
-      {
-        "candidate": "aria-pressed:bg-accent",
-        "outcome": "invalid",
-        "specVersion": 1,
-        "specRevision": 14,
-        "parsed": null,
-        "entryIdentifier": null,
-        "valueStatus": null,
-        "tokenResolutions": [],
-        "selector": null,
-        "conditions": [],
-        "declarations": [],
-        "sortTuple": null,
-        "diagnostics": [
-          {
-            "severity": "error",
-            "code": "ZW004",
-            "candidate": "aria-pressed:bg-accent",
-            "origin": {
-              "kind": "source",
-              "sourceId": "zudo-wind://explain/candidate",
-              "byteOffset": 0,
-              "byteLength": 22,
-              "line": 1,
-              "byteColumn": 1,
-              "literalByteOffset": 0,
-              "literalByteLength": 22,
-              "positionKind": "class",
-              "owner": null,
-              "producer": null,
-              "path": null,
-              "index": null,
-              "keyPath": null,
-              "roleKey": null
-            },
-            "message": "attribute variants are unsupported",
-            "suggestion": null,
-            "rejectionId": "R08"
-          }
-        ]
-      },
-      {
-        "candidate": "aria-pressed:border-accent",
-        "outcome": "invalid",
-        "specVersion": 1,
-        "specRevision": 14,
-        "parsed": null,
-        "entryIdentifier": null,
-        "valueStatus": null,
-        "tokenResolutions": [],
-        "selector": null,
-        "conditions": [],
-        "declarations": [],
-        "sortTuple": null,
-        "diagnostics": [
-          {
-            "severity": "error",
-            "code": "ZW004",
-            "candidate": "aria-pressed:border-accent",
-            "origin": {
-              "kind": "source",
-              "sourceId": "zudo-wind://explain/candidate",
-              "byteOffset": 0,
-              "byteLength": 26,
-              "line": 1,
-              "byteColumn": 1,
-              "literalByteOffset": 0,
-              "literalByteLength": 26,
-              "positionKind": "class",
-              "owner": null,
-              "producer": null,
-              "path": null,
-              "index": null,
-              "keyPath": null,
-              "roleKey": null
-            },
-            "message": "attribute variants are unsupported",
-            "suggestion": null,
-            "rejectionId": "R08"
-          }
-        ]
-      },
-      {
-        "candidate": "aria-pressed:text-bg",
-        "outcome": "invalid",
-        "specVersion": 1,
-        "specRevision": 14,
-        "parsed": null,
-        "entryIdentifier": null,
-        "valueStatus": null,
-        "tokenResolutions": [],
-        "selector": null,
-        "conditions": [],
-        "declarations": [],
-        "sortTuple": null,
-        "diagnostics": [
-          {
-            "severity": "error",
-            "code": "ZW004",
-            "candidate": "aria-pressed:text-bg",
-            "origin": {
-              "kind": "source",
-              "sourceId": "zudo-wind://explain/candidate",
-              "byteOffset": 0,
-              "byteLength": 20,
-              "line": 1,
-              "byteColumn": 1,
-              "literalByteOffset": 0,
-              "literalByteLength": 20,
-              "positionKind": "class",
-              "owner": null,
-              "producer": null,
-              "path": null,
-              "index": null,
-              "keyPath": null,
-              "roleKey": null
-            },
-            "message": "attribute variants are unsupported",
-            "suggestion": null,
-            "rejectionId": "R08"
-          }
-        ]
       },
       {
         "candidate": "before:-top-[6px]",
@@ -2412,53 +2197,6 @@
         "diagnostics": []
       },
       {
-        "candidate": "border-e",
-        "outcome": "foreign_utility",
-        "specVersion": 1,
-        "specRevision": 14,
-        "parsed": {
-          "variantChain": [],
-          "utility": "border-e",
-          "negative": false,
-          "arbitraryValue": null,
-          "slashModifier": null
-        },
-        "entryIdentifier": null,
-        "valueStatus": null,
-        "tokenResolutions": [],
-        "selector": null,
-        "conditions": [],
-        "declarations": [],
-        "sortTuple": null,
-        "diagnostics": [
-          {
-            "severity": "error",
-            "code": "ZW014",
-            "candidate": "border-e",
-            "origin": {
-              "kind": "source",
-              "sourceId": "zudo-wind://explain/candidate",
-              "byteOffset": 0,
-              "byteLength": 8,
-              "line": 1,
-              "byteColumn": 1,
-              "literalByteOffset": 0,
-              "literalByteLength": 8,
-              "positionKind": "class",
-              "owner": null,
-              "producer": null,
-              "path": null,
-              "index": null,
-              "keyPath": null,
-              "roleKey": null
-            },
-            "message": "unsupported foreign utility (migration vocabulary v7): border-e uses the Tailwind `border-e` utility, which zudo-wind v1 does not implement, so no CSS is generated. Author border-inline-end width, style or color declarations in CSS and reserve the class with wind.authoredClasses: { \"border-e\": true }",
-            "suggestion": null,
-            "rejectionId": null
-          }
-        ]
-      },
-      {
         "candidate": "border-l-[3px]",
         "outcome": "resolved_utility",
         "specVersion": 1,
@@ -2686,147 +2424,6 @@
           "rawCandidate": "border-rail-border"
         },
         "diagnostics": []
-      },
-      {
-        "candidate": "border-s-[3px]",
-        "outcome": "foreign_utility",
-        "specVersion": 1,
-        "specRevision": 14,
-        "parsed": {
-          "variantChain": [],
-          "utility": "border-s-[3px]",
-          "negative": false,
-          "arbitraryValue": "3px",
-          "slashModifier": null
-        },
-        "entryIdentifier": null,
-        "valueStatus": null,
-        "tokenResolutions": [],
-        "selector": null,
-        "conditions": [],
-        "declarations": [],
-        "sortTuple": null,
-        "diagnostics": [
-          {
-            "severity": "error",
-            "code": "ZW014",
-            "candidate": "border-s-[3px]",
-            "origin": {
-              "kind": "source",
-              "sourceId": "zudo-wind://explain/candidate",
-              "byteOffset": 0,
-              "byteLength": 14,
-              "line": 1,
-              "byteColumn": 1,
-              "literalByteOffset": 0,
-              "literalByteLength": 14,
-              "positionKind": "class",
-              "owner": null,
-              "producer": null,
-              "path": null,
-              "index": null,
-              "keyPath": null,
-              "roleKey": null
-            },
-            "message": "unsupported foreign utility (migration vocabulary v7): border-s-[3px] uses the Tailwind `border-s` utility, which zudo-wind v1 does not implement, so no CSS is generated. Author border-inline-start width, style or color declarations in CSS and reserve the class with wind.authoredClasses: { \"border-s-[3px]\": true }",
-            "suggestion": null,
-            "rejectionId": null
-          }
-        ]
-      },
-      {
-        "candidate": "border-s-2",
-        "outcome": "foreign_utility",
-        "specVersion": 1,
-        "specRevision": 14,
-        "parsed": {
-          "variantChain": [],
-          "utility": "border-s-2",
-          "negative": false,
-          "arbitraryValue": null,
-          "slashModifier": null
-        },
-        "entryIdentifier": null,
-        "valueStatus": null,
-        "tokenResolutions": [],
-        "selector": null,
-        "conditions": [],
-        "declarations": [],
-        "sortTuple": null,
-        "diagnostics": [
-          {
-            "severity": "error",
-            "code": "ZW014",
-            "candidate": "border-s-2",
-            "origin": {
-              "kind": "source",
-              "sourceId": "zudo-wind://explain/candidate",
-              "byteOffset": 0,
-              "byteLength": 10,
-              "line": 1,
-              "byteColumn": 1,
-              "literalByteOffset": 0,
-              "literalByteLength": 10,
-              "positionKind": "class",
-              "owner": null,
-              "producer": null,
-              "path": null,
-              "index": null,
-              "keyPath": null,
-              "roleKey": null
-            },
-            "message": "unsupported foreign utility (migration vocabulary v7): border-s-2 uses the Tailwind `border-s` utility, which zudo-wind v1 does not implement, so no CSS is generated. Author border-inline-start width, style or color declarations in CSS and reserve the class with wind.authoredClasses: { \"border-s-2\": true }",
-            "suggestion": null,
-            "rejectionId": null
-          }
-        ]
-      },
-      {
-        "candidate": "border-s-transparent",
-        "outcome": "foreign_utility",
-        "specVersion": 1,
-        "specRevision": 14,
-        "parsed": {
-          "variantChain": [],
-          "utility": "border-s-transparent",
-          "negative": false,
-          "arbitraryValue": null,
-          "slashModifier": null
-        },
-        "entryIdentifier": null,
-        "valueStatus": null,
-        "tokenResolutions": [],
-        "selector": null,
-        "conditions": [],
-        "declarations": [],
-        "sortTuple": null,
-        "diagnostics": [
-          {
-            "severity": "error",
-            "code": "ZW014",
-            "candidate": "border-s-transparent",
-            "origin": {
-              "kind": "source",
-              "sourceId": "zudo-wind://explain/candidate",
-              "byteOffset": 0,
-              "byteLength": 20,
-              "line": 1,
-              "byteColumn": 1,
-              "literalByteOffset": 0,
-              "literalByteLength": 20,
-              "positionKind": "class",
-              "owner": null,
-              "producer": null,
-              "path": null,
-              "index": null,
-              "keyPath": null,
-              "roleKey": null
-            },
-            "message": "unsupported foreign utility (migration vocabulary v7): border-s-transparent uses the Tailwind `border-s` utility, which zudo-wind v1 does not implement, so no CSS is generated. Author border-inline-start width, style or color declarations in CSS and reserve the class with wind.authoredClasses: { \"border-s-transparent\": true }",
-            "suggestion": null,
-            "rejectionId": null
-          }
-        ]
       },
       {
         "candidate": "border-t",
@@ -3108,6 +2705,27 @@
         "diagnostics": []
       },
       {
+        "candidate": "extra-class",
+        "outcome": "ordinary",
+        "specVersion": 1,
+        "specRevision": 14,
+        "parsed": {
+          "variantChain": [],
+          "utility": "extra-class",
+          "negative": false,
+          "arbitraryValue": null,
+          "slashModifier": null
+        },
+        "entryIdentifier": null,
+        "valueStatus": null,
+        "tokenResolutions": [],
+        "selector": null,
+        "conditions": [],
+        "declarations": [],
+        "sortTuple": null,
+        "diagnostics": []
+      },
+      {
         "candidate": "first:border-t-0",
         "outcome": "resolved_utility",
         "specVersion": 1,
@@ -3332,6 +2950,43 @@
           "scopeRank": 0,
           "catalogRank": 3,
           "rawCandidate": "flex-none"
+        },
+        "diagnostics": []
+      },
+      {
+        "candidate": "flex-row",
+        "outcome": "resolved_utility",
+        "specVersion": 1,
+        "specRevision": 14,
+        "parsed": {
+          "variantChain": [],
+          "utility": "flex-row",
+          "negative": false,
+          "arbitraryValue": null,
+          "slashModifier": null
+        },
+        "entryIdentifier": "v1.flex-row",
+        "valueStatus": "verified",
+        "tokenResolutions": [],
+        "selector": ".flex-row",
+        "conditions": [],
+        "declarations": [
+          {
+            "property": "flex-direction",
+            "value": "row"
+          }
+        ],
+        "sortTuple": {
+          "responsiveRank": 0,
+          "darkRank": 0,
+          "pointerRank": 0,
+          "relationRank": 0,
+          "stateRank": 0,
+          "pseudoRank": 0,
+          "conflictGroupRank": 4,
+          "scopeRank": 0,
+          "catalogRank": 3,
+          "rawCandidate": "flex-row"
         },
         "diagnostics": []
       },
@@ -4434,6 +4089,51 @@
         "diagnostics": []
       },
       {
+        "candidate": "gap-x-hsp-2xl",
+        "outcome": "resolved_utility",
+        "specVersion": 1,
+        "specRevision": 14,
+        "parsed": {
+          "variantChain": [],
+          "utility": "gap-x-hsp-2xl",
+          "negative": false,
+          "arbitraryValue": null,
+          "slashModifier": null
+        },
+        "entryIdentifier": "v1.gap-x",
+        "valueStatus": "categoryUnverified",
+        "tokenResolutions": [
+          {
+            "tokenName": "hsp-2xl",
+            "category": "spacing",
+            "variable": "--zw-spacing-hsp-2xl",
+            "configuredValue": "var(--spacing-hsp-2xl)",
+            "categoryUnverified": true
+          }
+        ],
+        "selector": ".gap-x-hsp-2xl",
+        "conditions": [],
+        "declarations": [
+          {
+            "property": "column-gap",
+            "value": "var(--zw-spacing-hsp-2xl)"
+          }
+        ],
+        "sortTuple": {
+          "responsiveRank": 0,
+          "darkRank": 0,
+          "pointerRank": 0,
+          "relationRank": 0,
+          "stateRank": 0,
+          "pseudoRank": 0,
+          "conflictGroupRank": 11,
+          "scopeRank": 1,
+          "catalogRank": 1,
+          "rawCandidate": "gap-x-hsp-2xl"
+        },
+        "diagnostics": []
+      },
+      {
         "candidate": "gap-x-hsp-2xs",
         "outcome": "resolved_utility",
         "specVersion": 1,
@@ -4880,6 +4580,51 @@
           "scopeRank": 1,
           "catalogRank": 2,
           "rawCandidate": "gap-y-vsp-sm"
+        },
+        "diagnostics": []
+      },
+      {
+        "candidate": "gap-y-vsp-xl",
+        "outcome": "resolved_utility",
+        "specVersion": 1,
+        "specRevision": 14,
+        "parsed": {
+          "variantChain": [],
+          "utility": "gap-y-vsp-xl",
+          "negative": false,
+          "arbitraryValue": null,
+          "slashModifier": null
+        },
+        "entryIdentifier": "v1.gap-y",
+        "valueStatus": "categoryUnverified",
+        "tokenResolutions": [
+          {
+            "tokenName": "vsp-xl",
+            "category": "spacing",
+            "variable": "--zw-spacing-vsp-xl",
+            "configuredValue": "var(--spacing-vsp-xl)",
+            "categoryUnverified": true
+          }
+        ],
+        "selector": ".gap-y-vsp-xl",
+        "conditions": [],
+        "declarations": [
+          {
+            "property": "row-gap",
+            "value": "var(--zw-spacing-vsp-xl)"
+          }
+        ],
+        "sortTuple": {
+          "responsiveRank": 0,
+          "darkRank": 0,
+          "pointerRank": 0,
+          "relationRank": 0,
+          "stateRank": 0,
+          "pseudoRank": 0,
+          "conflictGroupRank": 11,
+          "scopeRank": 1,
+          "catalogRank": 2,
+          "rawCandidate": "gap-y-vsp-xl"
         },
         "diagnostics": []
       },
@@ -6502,55 +6247,6 @@
           "rawCandidate": "hover:border-accent-hover"
         },
         "diagnostics": []
-      },
-      {
-        "candidate": "hover:border-s-accent",
-        "outcome": "foreign_utility",
-        "specVersion": 1,
-        "specRevision": 14,
-        "parsed": {
-          "variantChain": [
-            "hover"
-          ],
-          "utility": "border-s-accent",
-          "negative": false,
-          "arbitraryValue": null,
-          "slashModifier": null
-        },
-        "entryIdentifier": null,
-        "valueStatus": null,
-        "tokenResolutions": [],
-        "selector": null,
-        "conditions": [],
-        "declarations": [],
-        "sortTuple": null,
-        "diagnostics": [
-          {
-            "severity": "error",
-            "code": "ZW014",
-            "candidate": "hover:border-s-accent",
-            "origin": {
-              "kind": "source",
-              "sourceId": "zudo-wind://explain/candidate",
-              "byteOffset": 0,
-              "byteLength": 21,
-              "line": 1,
-              "byteColumn": 1,
-              "literalByteOffset": 0,
-              "literalByteLength": 21,
-              "positionKind": "class",
-              "owner": null,
-              "producer": null,
-              "path": null,
-              "index": null,
-              "keyPath": null,
-              "roleKey": null
-            },
-            "message": "unsupported foreign utility (migration vocabulary v7): hover:border-s-accent uses the Tailwind `border-s` utility, which zudo-wind v1 does not implement, so no CSS is generated. Author border-inline-start width, style or color declarations in CSS and reserve the class with wind.authoredClasses: { \"hover:border-s-accent\": true }",
-            "suggestion": null,
-            "rejectionId": null
-          }
-        ]
       },
       {
         "candidate": "hover:text-accent",
@@ -8442,6 +8138,43 @@
         "diagnostics": []
       },
       {
+        "candidate": "max-w-[88rem]",
+        "outcome": "resolved_utility",
+        "specVersion": 1,
+        "specRevision": 14,
+        "parsed": {
+          "variantChain": [],
+          "utility": "max-w-[88rem]",
+          "negative": false,
+          "arbitraryValue": "88rem",
+          "slashModifier": null
+        },
+        "entryIdentifier": "v1.max-w",
+        "valueStatus": "verified",
+        "tokenResolutions": [],
+        "selector": ".max-w-\\[88rem\\]",
+        "conditions": [],
+        "declarations": [
+          {
+            "property": "max-width",
+            "value": "88rem"
+          }
+        ],
+        "sortTuple": {
+          "responsiveRank": 0,
+          "darkRank": 0,
+          "pointerRank": 0,
+          "relationRank": 0,
+          "stateRank": 0,
+          "pseudoRank": 0,
+          "conflictGroupRank": 8,
+          "scopeRank": 1,
+          "catalogRank": 3,
+          "rawCandidate": "max-w-[88rem]"
+        },
+        "diagnostics": []
+      },
+      {
         "candidate": "mb-vsp-2xs",
         "outcome": "resolved_utility",
         "specVersion": 1,
@@ -8983,53 +8716,6 @@
         "diagnostics": []
       },
       {
-        "candidate": "ms-hsp-2xs",
-        "outcome": "foreign_utility",
-        "specVersion": 1,
-        "specRevision": 14,
-        "parsed": {
-          "variantChain": [],
-          "utility": "ms-hsp-2xs",
-          "negative": false,
-          "arbitraryValue": null,
-          "slashModifier": null
-        },
-        "entryIdentifier": null,
-        "valueStatus": null,
-        "tokenResolutions": [],
-        "selector": null,
-        "conditions": [],
-        "declarations": [],
-        "sortTuple": null,
-        "diagnostics": [
-          {
-            "severity": "error",
-            "code": "ZW014",
-            "candidate": "ms-hsp-2xs",
-            "origin": {
-              "kind": "source",
-              "sourceId": "zudo-wind://explain/candidate",
-              "byteOffset": 0,
-              "byteLength": 10,
-              "line": 1,
-              "byteColumn": 1,
-              "literalByteOffset": 0,
-              "literalByteLength": 10,
-              "positionKind": "class",
-              "owner": null,
-              "producer": null,
-              "path": null,
-              "index": null,
-              "keyPath": null,
-              "roleKey": null
-            },
-            "message": "unsupported foreign utility (migration vocabulary v7): ms-hsp-2xs uses the Tailwind `ms` utility, which zudo-wind v1 does not implement, so no CSS is generated. Author a margin-inline-start declaration in CSS and reserve the class with wind.authoredClasses: { \"ms-hsp-2xs\": true }",
-            "suggestion": null,
-            "rejectionId": null
-          }
-        ]
-      },
-      {
         "candidate": "mt-vsp-2xs",
         "outcome": "resolved_utility",
         "specVersion": 1,
@@ -9446,53 +9132,6 @@
           "rawCandidate": "order-2"
         },
         "diagnostics": []
-      },
-      {
-        "candidate": "origin-left",
-        "outcome": "foreign_utility",
-        "specVersion": 1,
-        "specRevision": 14,
-        "parsed": {
-          "variantChain": [],
-          "utility": "origin-left",
-          "negative": false,
-          "arbitraryValue": null,
-          "slashModifier": null
-        },
-        "entryIdentifier": null,
-        "valueStatus": null,
-        "tokenResolutions": [],
-        "selector": null,
-        "conditions": [],
-        "declarations": [],
-        "sortTuple": null,
-        "diagnostics": [
-          {
-            "severity": "error",
-            "code": "ZW014",
-            "candidate": "origin-left",
-            "origin": {
-              "kind": "source",
-              "sourceId": "zudo-wind://explain/candidate",
-              "byteOffset": 0,
-              "byteLength": 11,
-              "line": 1,
-              "byteColumn": 1,
-              "literalByteOffset": 0,
-              "literalByteLength": 11,
-              "positionKind": "class",
-              "owner": null,
-              "producer": null,
-              "path": null,
-              "index": null,
-              "keyPath": null,
-              "roleKey": null
-            },
-            "message": "unsupported foreign utility (migration vocabulary v7): origin-left uses the Tailwind `origin` utility, which zudo-wind v1 does not implement, so no CSS is generated. Author a transform-origin declaration in CSS and reserve the class with wind.authoredClasses: { \"origin-left\": true }",
-            "suggestion": null,
-            "rejectionId": null
-          }
-        ]
       },
       {
         "candidate": "outline-none",
@@ -10462,147 +10101,6 @@
           "rawCandidate": "pointer-events-none"
         },
         "diagnostics": []
-      },
-      {
-        "candidate": "ps-hsp-2xs",
-        "outcome": "foreign_utility",
-        "specVersion": 1,
-        "specRevision": 14,
-        "parsed": {
-          "variantChain": [],
-          "utility": "ps-hsp-2xs",
-          "negative": false,
-          "arbitraryValue": null,
-          "slashModifier": null
-        },
-        "entryIdentifier": null,
-        "valueStatus": null,
-        "tokenResolutions": [],
-        "selector": null,
-        "conditions": [],
-        "declarations": [],
-        "sortTuple": null,
-        "diagnostics": [
-          {
-            "severity": "error",
-            "code": "ZW014",
-            "candidate": "ps-hsp-2xs",
-            "origin": {
-              "kind": "source",
-              "sourceId": "zudo-wind://explain/candidate",
-              "byteOffset": 0,
-              "byteLength": 10,
-              "line": 1,
-              "byteColumn": 1,
-              "literalByteOffset": 0,
-              "literalByteLength": 10,
-              "positionKind": "class",
-              "owner": null,
-              "producer": null,
-              "path": null,
-              "index": null,
-              "keyPath": null,
-              "roleKey": null
-            },
-            "message": "unsupported foreign utility (migration vocabulary v7): ps-hsp-2xs uses the Tailwind `ps` utility, which zudo-wind v1 does not implement, so no CSS is generated. Author a padding-inline-start declaration in CSS and reserve the class with wind.authoredClasses: { \"ps-hsp-2xs\": true }",
-            "suggestion": null,
-            "rejectionId": null
-          }
-        ]
-      },
-      {
-        "candidate": "ps-hsp-lg",
-        "outcome": "foreign_utility",
-        "specVersion": 1,
-        "specRevision": 14,
-        "parsed": {
-          "variantChain": [],
-          "utility": "ps-hsp-lg",
-          "negative": false,
-          "arbitraryValue": null,
-          "slashModifier": null
-        },
-        "entryIdentifier": null,
-        "valueStatus": null,
-        "tokenResolutions": [],
-        "selector": null,
-        "conditions": [],
-        "declarations": [],
-        "sortTuple": null,
-        "diagnostics": [
-          {
-            "severity": "error",
-            "code": "ZW014",
-            "candidate": "ps-hsp-lg",
-            "origin": {
-              "kind": "source",
-              "sourceId": "zudo-wind://explain/candidate",
-              "byteOffset": 0,
-              "byteLength": 9,
-              "line": 1,
-              "byteColumn": 1,
-              "literalByteOffset": 0,
-              "literalByteLength": 9,
-              "positionKind": "class",
-              "owner": null,
-              "producer": null,
-              "path": null,
-              "index": null,
-              "keyPath": null,
-              "roleKey": null
-            },
-            "message": "unsupported foreign utility (migration vocabulary v7): ps-hsp-lg uses the Tailwind `ps` utility, which zudo-wind v1 does not implement, so no CSS is generated. Author a padding-inline-start declaration in CSS and reserve the class with wind.authoredClasses: { \"ps-hsp-lg\": true }",
-            "suggestion": null,
-            "rejectionId": null
-          }
-        ]
-      },
-      {
-        "candidate": "ps-hsp-sm",
-        "outcome": "foreign_utility",
-        "specVersion": 1,
-        "specRevision": 14,
-        "parsed": {
-          "variantChain": [],
-          "utility": "ps-hsp-sm",
-          "negative": false,
-          "arbitraryValue": null,
-          "slashModifier": null
-        },
-        "entryIdentifier": null,
-        "valueStatus": null,
-        "tokenResolutions": [],
-        "selector": null,
-        "conditions": [],
-        "declarations": [],
-        "sortTuple": null,
-        "diagnostics": [
-          {
-            "severity": "error",
-            "code": "ZW014",
-            "candidate": "ps-hsp-sm",
-            "origin": {
-              "kind": "source",
-              "sourceId": "zudo-wind://explain/candidate",
-              "byteOffset": 0,
-              "byteLength": 9,
-              "line": 1,
-              "byteColumn": 1,
-              "literalByteOffset": 0,
-              "literalByteLength": 9,
-              "positionKind": "class",
-              "owner": null,
-              "producer": null,
-              "path": null,
-              "index": null,
-              "keyPath": null,
-              "roleKey": null
-            },
-            "message": "unsupported foreign utility (migration vocabulary v7): ps-hsp-sm uses the Tailwind `ps` utility, which zudo-wind v1 does not implement, so no CSS is generated. Author a padding-inline-start declaration in CSS and reserve the class with wind.authoredClasses: { \"ps-hsp-sm\": true }",
-            "suggestion": null,
-            "rejectionId": null
-          }
-        ]
       },
       {
         "candidate": "pt-vsp-lg",
@@ -12196,53 +11694,6 @@
         "diagnostics": []
       },
       {
-        "candidate": "start-0",
-        "outcome": "foreign_utility",
-        "specVersion": 1,
-        "specRevision": 14,
-        "parsed": {
-          "variantChain": [],
-          "utility": "start-0",
-          "negative": false,
-          "arbitraryValue": null,
-          "slashModifier": null
-        },
-        "entryIdentifier": null,
-        "valueStatus": null,
-        "tokenResolutions": [],
-        "selector": null,
-        "conditions": [],
-        "declarations": [],
-        "sortTuple": null,
-        "diagnostics": [
-          {
-            "severity": "error",
-            "code": "ZW014",
-            "candidate": "start-0",
-            "origin": {
-              "kind": "source",
-              "sourceId": "zudo-wind://explain/candidate",
-              "byteOffset": 0,
-              "byteLength": 7,
-              "line": 1,
-              "byteColumn": 1,
-              "literalByteOffset": 0,
-              "literalByteLength": 7,
-              "positionKind": "class",
-              "owner": null,
-              "producer": null,
-              "path": null,
-              "index": null,
-              "keyPath": null,
-              "roleKey": null
-            },
-            "message": "unsupported foreign utility (migration vocabulary v7): start-0 uses the Tailwind `start` utility, which zudo-wind v1 does not implement, so no CSS is generated. Author an inset-inline-start declaration in CSS and reserve the class with wind.authoredClasses: { \"start-0\": true }",
-            "suggestion": null,
-            "rejectionId": null
-          }
-        ]
-      },
-      {
         "candidate": "sticky",
         "outcome": "resolved_utility",
         "specVersion": 1,
@@ -12712,53 +12163,6 @@
           "rawCandidate": "text-heading"
         },
         "diagnostics": []
-      },
-      {
-        "candidate": "text-inherit",
-        "outcome": "invalid",
-        "specVersion": 1,
-        "specRevision": 14,
-        "parsed": {
-          "variantChain": [],
-          "utility": "text-inherit",
-          "negative": false,
-          "arbitraryValue": null,
-          "slashModifier": null
-        },
-        "entryIdentifier": null,
-        "valueStatus": null,
-        "tokenResolutions": [],
-        "selector": null,
-        "conditions": [],
-        "declarations": [],
-        "sortTuple": null,
-        "diagnostics": [
-          {
-            "severity": "error",
-            "code": "ZW006",
-            "candidate": "text-inherit",
-            "origin": {
-              "kind": "source",
-              "sourceId": "zudo-wind://explain/candidate",
-              "byteOffset": 0,
-              "byteLength": 12,
-              "line": 1,
-              "byteColumn": 1,
-              "literalByteOffset": 0,
-              "literalByteLength": 12,
-              "positionKind": "class",
-              "owner": null,
-              "producer": null,
-              "path": null,
-              "index": null,
-              "keyPath": null,
-              "roleKey": null
-            },
-            "message": "unknown value or token inherit. If this is a genuine authored class, reserve its complete name with wind.authoredClasses: { \"text-inherit\": true }; otherwise correct or declare the intended token. No generated utility CSS is emitted for this candidate",
-            "suggestion": null,
-            "rejectionId": "R17"
-          }
-        ]
       },
       {
         "candidate": "text-left",
@@ -14400,6 +13804,111 @@
         "diagnostics": []
       },
       {
+        "candidate": "zc-header-search-input",
+        "outcome": "ordinary",
+        "specVersion": 1,
+        "specRevision": 14,
+        "parsed": {
+          "variantChain": [],
+          "utility": "zc-header-search-input",
+          "negative": false,
+          "arbitraryValue": null,
+          "slashModifier": null
+        },
+        "entryIdentifier": null,
+        "valueStatus": null,
+        "tokenResolutions": [],
+        "selector": null,
+        "conditions": [],
+        "declarations": [],
+        "sortTuple": null,
+        "diagnostics": []
+      },
+      {
+        "candidate": "zc-history-entry-event",
+        "outcome": "ordinary",
+        "specVersion": 1,
+        "specRevision": 14,
+        "parsed": {
+          "variantChain": [],
+          "utility": "zc-history-entry-event",
+          "negative": false,
+          "arbitraryValue": null,
+          "slashModifier": null
+        },
+        "entryIdentifier": null,
+        "valueStatus": null,
+        "tokenResolutions": [],
+        "selector": null,
+        "conditions": [],
+        "declarations": [],
+        "sortTuple": null,
+        "diagnostics": []
+      },
+      {
+        "candidate": "zc-link-inherit",
+        "outcome": "ordinary",
+        "specVersion": 1,
+        "specRevision": 14,
+        "parsed": {
+          "variantChain": [],
+          "utility": "zc-link-inherit",
+          "negative": false,
+          "arbitraryValue": null,
+          "slashModifier": null
+        },
+        "entryIdentifier": null,
+        "valueStatus": null,
+        "tokenResolutions": [],
+        "selector": null,
+        "conditions": [],
+        "declarations": [],
+        "sortTuple": null,
+        "diagnostics": []
+      },
+      {
+        "candidate": "zc-location-group-heading",
+        "outcome": "ordinary",
+        "specVersion": 1,
+        "specRevision": 14,
+        "parsed": {
+          "variantChain": [],
+          "utility": "zc-location-group-heading",
+          "negative": false,
+          "arbitraryValue": null,
+          "slashModifier": null
+        },
+        "entryIdentifier": null,
+        "valueStatus": null,
+        "tokenResolutions": [],
+        "selector": null,
+        "conditions": [],
+        "declarations": [],
+        "sortTuple": null,
+        "diagnostics": []
+      },
+      {
+        "candidate": "zc-metric-unit-offset",
+        "outcome": "ordinary",
+        "specVersion": 1,
+        "specRevision": 14,
+        "parsed": {
+          "variantChain": [],
+          "utility": "zc-metric-unit-offset",
+          "negative": false,
+          "arbitraryValue": null,
+          "slashModifier": null
+        },
+        "entryIdentifier": null,
+        "valueStatus": null,
+        "tokenResolutions": [],
+        "selector": null,
+        "conditions": [],
+        "declarations": [],
+        "sortTuple": null,
+        "diagnostics": []
+      },
+      {
         "candidate": "zc-nav-chevron",
         "outcome": "ordinary",
         "specVersion": 1,
@@ -14421,6 +13930,48 @@
         "diagnostics": []
       },
       {
+        "candidate": "zc-nav-drawer",
+        "outcome": "ordinary",
+        "specVersion": 1,
+        "specRevision": 14,
+        "parsed": {
+          "variantChain": [],
+          "utility": "zc-nav-drawer",
+          "negative": false,
+          "arbitraryValue": null,
+          "slashModifier": null
+        },
+        "entryIdentifier": null,
+        "valueStatus": null,
+        "tokenResolutions": [],
+        "selector": null,
+        "conditions": [],
+        "declarations": [],
+        "sortTuple": null,
+        "diagnostics": []
+      },
+      {
+        "candidate": "zc-nav-hit-area",
+        "outcome": "ordinary",
+        "specVersion": 1,
+        "specRevision": 14,
+        "parsed": {
+          "variantChain": [],
+          "utility": "zc-nav-hit-area",
+          "negative": false,
+          "arbitraryValue": null,
+          "slashModifier": null
+        },
+        "entryIdentifier": null,
+        "valueStatus": null,
+        "tokenResolutions": [],
+        "selector": null,
+        "conditions": [],
+        "declarations": [],
+        "sortTuple": null,
+        "diagnostics": []
+      },
+      {
         "candidate": "zc-nav-story-frame",
         "outcome": "ordinary",
         "specVersion": 1,
@@ -14428,6 +13979,27 @@
         "parsed": {
           "variantChain": [],
           "utility": "zc-nav-story-frame",
+          "negative": false,
+          "arbitraryValue": null,
+          "slashModifier": null
+        },
+        "entryIdentifier": null,
+        "valueStatus": null,
+        "tokenResolutions": [],
+        "selector": null,
+        "conditions": [],
+        "declarations": [],
+        "sortTuple": null,
+        "diagnostics": []
+      },
+      {
+        "candidate": "zc-nav-submenu",
+        "outcome": "ordinary",
+        "specVersion": 1,
+        "specRevision": 14,
+        "parsed": {
+          "variantChain": [],
+          "utility": "zc-nav-submenu",
           "negative": false,
           "arbitraryValue": null,
           "slashModifier": null

@@ -14,7 +14,7 @@ export interface ClassScan {
   dynamicConstructions: string[];
 }
 
-const DYNAMIC_SOURCE_DIRS = new Set(["__tests__", "__snapshots__"]);
+const EXCLUDED_SOURCE_DIRS = new Set(["__snapshots__"]);
 
 const WIND_CONFIG_INPUTS = [
   "zfb.config.ts",
@@ -62,7 +62,7 @@ function listTsxFiles(dir: string): string[] {
   const files: string[] = [];
   for (const entry of readdirSync(dir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
     if (entry.isDirectory()) {
-      if (!DYNAMIC_SOURCE_DIRS.has(entry.name)) files.push(...listTsxFiles(join(dir, entry.name)));
+      if (!EXCLUDED_SOURCE_DIRS.has(entry.name)) files.push(...listTsxFiles(join(dir, entry.name)));
     } else if (entry.isFile() && extname(entry.name) === ".tsx") {
       files.push(join(dir, entry.name));
     }
@@ -76,21 +76,28 @@ function propertyName(name: ts.PropertyName | ts.BindingName | undefined): strin
   return undefined;
 }
 
-function declarationInScope(identifier: ts.Identifier): ts.VariableDeclaration | undefined {
+interface ResolvedDeclaration {
+  declaration: ts.VariableDeclaration;
+  sourceFile: ts.SourceFile;
+}
+
+function declarationInScope(identifier: ts.Identifier): ResolvedDeclaration | undefined {
   let current: ts.Node | undefined = identifier.parent;
+  const sourceFile = identifier.getSourceFile();
   while (current) {
     if (ts.isSourceFile(current) || ts.isBlock(current)) {
       for (const statement of current.statements) {
         if (!ts.isVariableStatement(statement)) continue;
         for (const declaration of statement.declarationList.declarations) {
-          if (ts.isIdentifier(declaration.name) && declaration.name.text === identifier.text) return declaration;
+          if (ts.isIdentifier(declaration.name) && declaration.name.text === identifier.text) {
+            return { declaration, sourceFile };
+          }
         }
       }
     }
     current = current.parent;
   }
 
-  const sourceFile = identifier.getSourceFile();
   for (const statement of sourceFile.statements) {
     if (!ts.isImportDeclaration(statement) || !ts.isStringLiteral(statement.moduleSpecifier)) continue;
     const bindings = statement.importClause?.namedBindings;
@@ -103,7 +110,9 @@ function declarationInScope(identifier: ts.Identifier): ts.VariableDeclaration |
       for (const importedStatement of importedSource.statements) {
         if (!ts.isVariableStatement(importedStatement)) continue;
         for (const declaration of importedStatement.declarationList.declarations) {
-          if (ts.isIdentifier(declaration.name) && declaration.name.text === importedName) return declaration;
+          if (ts.isIdentifier(declaration.name) && declaration.name.text === importedName) {
+            return { declaration, sourceFile: importedSource };
+          }
         }
       }
     }
@@ -212,11 +221,11 @@ export function scanDemoUiClasses(repoRoot: string): ClassScan {
       return;
     }
     if (ts.isIdentifier(expression)) {
-      const declaration = declarationInScope(expression);
-      if (!declaration?.initializer || visitedDeclarations.has(declaration)) return;
+      const resolved = declarationInScope(expression);
+      if (!resolved?.declaration.initializer || visitedDeclarations.has(resolved.declaration)) return;
       const nextVisited = new Set(visitedDeclarations);
-      nextVisited.add(declaration);
-      evaluateClassExpression(declaration.initializer, sourceFile, location, nextVisited);
+      nextVisited.add(resolved.declaration);
+      evaluateClassExpression(resolved.declaration.initializer, resolved.sourceFile, location, nextVisited);
       return;
     }
     if (ts.isParenthesizedExpression(expression) || ts.isAsExpression(expression) || ts.isTypeAssertionExpression(expression)) {

@@ -33,6 +33,9 @@ const MARKER_ONLY_CLASSES = new Map([
 const HOOK_ONLY_CLASSES = new Map([
   ["hash-link", "zudo-doc heading permalink hook consumed by ProseA"],
 ]);
+const TEST_FIXTURE_CLASSES = new Map([
+  ["extra-class", "consumer-provided class in card-grid.test.tsx to verify class forwarding; not emitted by demo-ui"],
+]);
 const RESERVED_AUTHORED_CLASSES = new Map<string, string>();
 
 describe("demo-ui authored class coverage", () => {
@@ -78,6 +81,13 @@ describe("demo-ui authored class coverage", () => {
 
       if (MARKER_ONLY_CLASSES.has(token)) {
         if (explanation.outcome !== "marker") malformed.push(`${token}: expected marker, got ${explanation.outcome}`);
+        continue;
+      }
+
+      if (TEST_FIXTURE_CLASSES.has(token)) {
+        if (!locations.every((location) => location.includes("/__tests__/"))) {
+          malformed.push(`${token}: test-fixture exception also appears in production source`);
+        }
         continue;
       }
 
