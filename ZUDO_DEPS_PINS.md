@@ -116,7 +116,8 @@ pnpm dlx create-zudo-doc@<ver> a<ver> --yes --pm pnpm --no-install --no-git \
 
   At 6.0.0, the 5.28.0 → 6.0.0 `templates/` diff changes five files: base `tsconfig.json`
   paths, base `src/styles/global.css`, base and i18n `[[...slug]].tsx`, and the
-  `zudo-doc-design-system` skill template (the skill hunks were merged in P2). The
+  `zudo-doc-design-system` skill template (the local merge is recorded in the
+  "create-zudo-doc (claude skills)" entry below). The
   `setup-doc-skill.sh` template and other skill templates are unchanged. Scaffold dependencies
   now use zfb 4.3.1 and zudo-doc `^6.0.0`, with no Preact dependency.
 
@@ -181,3 +182,13 @@ pnpm dlx create-zudo-doc@<ver> a<ver> --yes --pm pnpm --no-install --no-git \
   At 5.27.0, the published Claude skill templates are unchanged from 5.26.2. No merge is needed; the documented customizations and unknown original provenance remain unchanged.
 
   At 5.28.0, the published Claude skill templates are unchanged from 5.27.0. No merge is needed.
+
+  At 6.0.0, the published `zudo-doc-design-system` template changes utility
+  terminology to zudo-wind, reads token values from `:root` properties, adds a
+  CSS pipeline section for `@layer zw-reset, zd-flow` and top-level `wind`
+  configuration, and changes its component runtime guidance to zudo-react.
+  Three-way merged those hunks into this project fork: the local two-token-world
+  model, accent budget, border ladder, and component-specific rules remain, while
+  root utility mappings now point to `zfb.config.ts` and CSS properties to
+  `src/styles/global.css`. No changes were needed to the version-bump or
+  translation skill templates.

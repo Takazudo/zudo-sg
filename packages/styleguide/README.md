@@ -22,13 +22,13 @@ dogfoods the engine as its own styleguide host — see
   `Story<P>`, `StoryControl<P>`, `StoryModule`, `defineStory`. Categories are
   open, host-ordered data (`categoryOrder: string[]`), never a closed type.
 - A standalone preview stylesheet compiler
-  (`@takazudo/zudo-sg/plugins/preview-css`) that compiles the host's own token
-  CSS with `@tailwindcss/node` and rescopes it under
-  `:root[data-sg-preview-doc]` so it coexists with the host's global
-  stylesheet.
+  (`@takazudo/zudo-sg/plugins/preview-css`) that invokes the host-installed
+  `zfb css` command with the composed wind config and component sources, then
+  scopes the output under `:root[data-sg-preview-doc]` so it coexists with the
+  host's global stylesheet.
 - Generated wind manifest and chrome styles (`@takazudo/zudo-sg/wind.json`,
-  `@takazudo/zudo-sg/styles.css`) so the catalog UI ships its own Tailwind
-  utilities without depending on the host's content scan.
+  `@takazudo/zudo-sg/styles.css`) so zfb includes the catalog's utility
+  candidates without depending on the host's source scan.
 - Token dashboards and a preview design-token panel, driven by a
   `gen-token-manifest`-produced manifest.
 
@@ -96,9 +96,11 @@ inside detail-page iframes.
 
 ## Framework scope
 
-Preact + zfb hosts only. React 19 hosts are an explicit non-goal for this
-release (see the ADR's "Framework scope" decision for the seam that would
-enable them later).
+Module-mode stories use zfb's zudo-react runtime. Hosts using another
+framework can use descriptor mode with an external preview document; see the
+ADR's "Framework scope" decision. The `/tokens` dashboard is the one renderer
+exception: its opaque adapter mounts zdtp's Preact widget internally, with
+Preact installed as an engine dependency rather than a host peer.
 
 ## Quick start with the initializer
 
@@ -113,7 +115,7 @@ pnpm gen-token-manifest
 pnpm dev
 ```
 
-It copies a private starter with three example Preact components, stories,
+It copies a private starter with three example zudo-react components, stories,
 token CSS, a preview entry, and the zfb/zudo-doc composition already wired.
 The CLI prints the same next steps after scaffolding.
 
@@ -136,7 +138,7 @@ pnpm add @takazudo/zudo-sg@latest @takazudo/zfb@^4.3.1 @takazudo/zfb-md-wasm@^4.
 The engine peers are `@takazudo/zfb ^4.3.1`, `@takazudo/zudo-doc ^6.0.0`,
 and `@takazudo/zdtp ^0.8.6`. `@takazudo/zdtp` is required:
 the injected `/tokens` route loads its dashboard through the engine-owned
-Preact adapter. The engine installs Preact as its own regular dependency. The
+opaque Preact adapter. Preact is a regular engine dependency, not a host peer. The
 `@takazudo/zfb-md-wasm`, `@takazudo/zfb-runtime`, `diff`, `katex`, and `zod`
 entries are prerequisites inherited from zfb/zudo-doc; zudo-doc's published
 route dist imports `diff` and `katex` even when those features are disabled
@@ -180,11 +182,11 @@ control. Any non-empty host navigation stays authoritative; set
 `chromeDefaults: false` in the second argument to keep an intentionally empty
 header. The engine requires `packageOwnedRoutes: true` on the host (its
 routes import zudo-doc's route-context virtual modules). On the engine's zfb
-peer floor (≥ 2.18.0) nothing else is needed: `zfb dev` seeds its island
+peer floor (4.3.1) nothing else is needed: `zfb dev` seeds its island
 scanner from the injected routes. `@takazudo/zudo-sg/islands` remains
 exported as a side-effect module that statically imports every engine
 island — importing it once from a host `pages/` file is optional and
-harmless (it was required on zfb < 2.18.0).
+harmless (it was required before zfb 2.18.0).
 
 `uiPackageName` is optional. When set, it names the package used in generated
 usage snippets and catalog labels; when omitted, scaffolded usage snippets
@@ -231,9 +233,9 @@ The host contains three independent color-token worlds:
 The engine's eleven public chrome roles are `--sg-bg`, `--sg-fg`, `--sg-surface`,
 `--sg-surface-2`, `--sg-border`, `--sg-border-strong`, `--sg-muted`, `--sg-accent`,
 `--sg-on-accent`, `--sg-focus`, and `--sg-success`. They are plain properties in a
-zero-specificity `:where(:root)` block, not an engine color tier. zudo-doc's
-`theme.css` resets `--color-*`, so these raw properties survive regardless of whether
-the engine stylesheet is imported before or after that reset.
+zero-specificity `:where(:root)` block, not an engine color tier. zudo-doc 6's
+`theme.css` supplies package token values without resetting host `--color-*`
+properties; the engine's raw `--sg-*` namespace remains separate.
 
 Override engine chrome from the host with an ordinary, unlayered root rule:
 

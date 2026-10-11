@@ -52,8 +52,8 @@ The styleguide catalog is dogfooded from the `@takazudo/zudo-sg` engine
 silently shadows the injected route. `pages/index.tsx` must keep importing
 `pages/lib/_body-end-islands.tsx`; it also imports
 `pages/lib/_zudo-sg-islands.ts`, kept for `@takazudo/zudo-sg/islands` API
-stability (a no-op since zfb 2.18.0 seeds dev islands from injected routes —
-ADR finding 4 amendment).
+stability (a no-op under the current zfb 4.3.1 floor; injected-route island
+scanning first landed in 2.18.0 — ADR finding 4 amendment).
 
 The tree above covers only the root host's own `src/`. `packages/demo-ui`'s
 component tree and `apps/demo`'s content/route tree are separate workspace
@@ -120,9 +120,9 @@ Do NOT use h1 (`#`) in doc content — the page title from frontmatter is render
   component set adopting the engine. It is not installed by the engine or its
   scaffold CLI, and it is not consumed by any other product; `zudo-composer`
   (Composer/Sitemapper) is a separate repository with no coupling to this one.
-- **Route invariant** — the styleguide-only root build emits 88 HTML routes
-  (zfb reports 89 pages, the 89th being `/robots.txt`). The zfb 4.3.1 migration
-  retains the S1 baseline count: no HTML route delta. The four catalog routes
+- **Route invariant** — C2 confirmed that the styleguide-only root build emits
+  88 HTML routes (zfb reports 89 pages, the 89th being `/robots.txt`), with no
+  HTML-route delta from the S1 baseline. The four catalog routes
   are injected by `@takazudo/zudo-sg` (`dist/__zfb/routes.json` lists them as
   `pages/components.tsx`, `pages/components/[slug].tsx`,
   `pages/components/preview.tsx`, `pages/tokens.tsx` overlay sources) and none

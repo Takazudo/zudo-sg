@@ -1,12 +1,17 @@
 # ADR: Styleguide engine package (`@takazudo/zudo-sg`) — seam and contract
 
-Status: **Accepted** (epic #648, decision sub-task #650, 2026-09-13).
-Locks the contract every Wave 2+ sub-issue implements. Model: zudo-doc's
-package-owned route seam (`$HOME/repos/myoss/zudo-doc/packages/zudo-doc/docs/adr/route-injection-seam.md`).
-Current toolchain pins: `@takazudo/zfb` **2.21.1**, `@takazudo/zudo-doc`
-5.28.0, `@takazudo/zdtp` 0.8.5, pnpm 11.5.2, Node 24. The engine's peer
-floors are `^2.20.3` / `^5.27.0`, incorporating zfb's SSR identity fix
-(#863) and zudo-doc 5.27.0's required toolchain (#848).
+Status: **Accepted** (epic #648, decision sub-task #650, 2026-09-13), with
+framework-migration amendments recorded below. Model: zudo-doc's package-owned
+route seam (`$HOME/repos/myoss/zudo-doc/packages/zudo-doc/docs/adr/route-injection-seam.md`).
+Current toolchain pins: `@takazudo/zfb` **4.3.1**, `@takazudo/zudo-doc`
+**6.0.0**, `@takazudo/zdtp` **0.8.6**, pnpm 11.5.2, Node 24. The engine's
+peer floors are `^4.3.1` / `^6.0.0` / `^0.8.6`; Preact is a regular engine
+dependency for the opaque zdtp dashboard adapter, not a host peer.
+
+The original sections and spike report retain the implementation history from
+the earlier zfb and zudo-doc releases. The 2026-10-11 migration amendments
+below define the current preview-CSS pipeline, framework scope, package peers,
+wind manifest, and chrome-token contract.
 
 ## Context
 
@@ -129,8 +134,9 @@ build wipes it via tsup `clean`; `files` excludes it from the tarball), and a
 mismatch (or missing stamp)
 triggers a rebuild the same as a missing dist target does — mtimes are
 unreliable across branch switches, so the check is content, not time
-(#897). Source-only exports (the `@zudo-sg/ui` shape) are rejected: plugins
-must be JS, and the safelist generator scans `dist`.
+(#897). Source-only exports (the `@zudo-sg/ui` shape) are rejected: plugin
+entrypoints must resolve from `dist`, and the wind-manifest generator scans
+the compiled package plus the route source files.
 
 ### 3. Story contract home — option (ii), duplicated structural types + drift check
 
@@ -178,32 +184,37 @@ unchanged.
 
 ### 4. Preview stylesheet — standalone compile, one URL
 
-- Host option `previewStyles` (required, project-root-relative path, e.g.
-  `./src/styles/preview-entry.css`), compiled by
-  `@takazudo/zudo-sg/plugins/preview-css` with `@tailwindcss/node`
-  (`compile` → `@tailwindcss/oxide` `Scanner` over `compiler.sources` +
-  `compiler.root` → `compiler.build(candidates)` → `optimize`). Package
-  `dependencies`: `@tailwindcss/node ^4.2.0`, `@tailwindcss/oxide ^4.2.0`.
-- Option `previewCssUrl`, default **`/_zudo-sg/preview.css`**. Dev:
-  `devMiddleware` registers `${stripTrailingSlash(base)}${previewCssUrl}`
-  (zfb matches the FULL URL; `base` read from `ctx.config.base`), serves
-  `text/css; charset=utf-8`, `cache-control: no-store`, recompiles when any
-  compile dependency's mtime changed (the entry + every `onDependency` path).
-  Build: `postBuild` writes **`<outDir>/<previewCssUrl>`** — NOT nested under
-  the base segment — mirroring zfb's own `dist/assets/*` (linked as
-  `<base>/assets/*`) and zudo-doc's `search-index.json`. `previewMiddleware`
-  registers the same handler so `zfb preview` serves it too.
-- **Cascade rule (mandatory):** zfb injects the single global stylesheet into
-  every route, after the preview `<link>`, and has no per-route opt-out. The
-  compiler therefore rewrites `:root, :host {` → `:root[data-sg-preview-doc], :host {`
-  and `:root {` → `:root[data-sg-preview-doc] {` (the zzmod rule) so the
-  preview world's tokens beat the host bundle's colliding `--color-*` at
-  specificity (0,1,1) vs (0,1,0). The preview document's `<html>` carries
-  `data-sg-preview-doc`.
-- Host consequence: `src/styles/preview.css` and the `@theme` re-assertion
-  block in `src/styles/global.css` are deleted (#663); the root
-  `src/styles/preview-entry.css` = `tailwindcss/preflight` + `utilities` +
-  `@zudo-sg/demo-ui/styles/tokens.css` + `colors.css` + `@source "../../packages/demo-ui/src"`.
+**Current contract (amendment 2026-10-11, migration decisions D1/E4/C2).**
+
+- Host option `previewStyles` is a required project-root-relative CSS entry.
+  `withZudoSg()` passes the composed host wind data and configured component
+  roots to the preview-CSS plugin. The entry is compiled independently of the
+  host's global stylesheet so preview documents do not inherit host chrome.
+- `compilePreviewCss()` invokes the host-installed zfb 4.3.1 CLI with an
+  argument array: `zfb css --input <entry> --output <temp css> --config
+  <generated config> --project-root <host root>`, followed by the component
+  `--source` arguments and `--no-auto-source`. The generated config contains
+  plain `wind` data only. Preserve explicit host sources and manifests; do not
+  fetch a CLI or depend on a private compiler API.
+- The plugin rewrites selector `:root` nodes to
+  `:root[data-sg-preview-doc]`, including generated wind roots, without
+  changing declaration values or duplicating the attribute. The preview
+  document's `<html>` carries `data-sg-preview-doc`, giving its token roots
+  greater specificity than the host's ordinary `:root` rules.
+- `previewCssUrl` defaults to **`/_zudo-sg/preview.css`**. In dev the plugin
+  registers the unprefixed route; zfb mounts it under the configured base and
+  serves `text/css` with `cache-control: no-store`. It tracks the entry and
+  imports, host config and wind manifests, component source paths and contents,
+  compiler version, and source options. Build writes
+  **`<outDir>/_zudo-sg/preview.css`**, without the base segment, using a temp
+  file and atomic rename. The middleware does not serve stale success after a
+  failed compile.
+
+**Historical contract (before the 2026-10-11 migration).** The earlier
+implementation called the private Tailwind compiler API directly, emitted a
+generated safelist stylesheet, and used a host source directive. The zfb 4
+implementation replaces those mechanisms with the public CLI and `wind.json`
+package manifests; the standalone entry and scoped-root behavior remain.
 
 ### 5. Categories are data
 
@@ -234,28 +245,26 @@ ambiguous pattern before injecting routes.
 
 ### 7. What the host keeps
 
-`pages/index.tsx` (zfb can inject `/` since 2.16 but the root page stays
-host-owned: it is the site identity and it is the host's static-import root
-for site-wide islands), `pages/docs/versions.tsx`, `pages/preview/contact.tsx`
+The host retains `pages/index.tsx` as its identity page and static-import root
+for site-wide islands, plus `pages/docs/versions.tsx`,
+`pages/preview/contact.tsx`, `src/features/styleguide/preview-demos/`, and
+`pages/lib/_chrome-bindings.tsx` with `_body-end-islands.tsx`. The body-end
+composition mounts the engine preview token panel, zudo-doc feature islands,
+and sidebar-resizer initialization. The host also owns `src/config/settings.ts`,
+`zfb.config.ts`, **`zudo-sg.config.mjs`**, the generated registry
+**`src/styleguide/sg-registry.ts`** (committed; checked with
+`zudo-sg gen-registry --check`), `src/config/ui-design-tokens-manifest.ts`,
+`packages/demo-ui/styles/*.css`, and `src/styles/preview-entry.css`.
 
-+ `src/features/styleguide/preview-demos/`, `pages/lib/_chrome-bindings.tsx` +
-
-`_body-end-islands.tsx` (doc-chrome token panel stays host-owned),
-`src/config/settings.ts` + `zfb.config.ts` (zudo-doc config),
-**`zudo-sg.config.mjs`**, the generated registry
-**`src/styleguide/sg-registry.ts`** (committed; `zudo-sg gen-registry --check`
-in CI), `src/config/ui-design-tokens-manifest.ts` (generated by the CLI),
-`packages/demo-ui/styles/*.css` (token CSS), `src/styles/preview-entry.css`.
-**Island rule (amended for finding 4; relaxed 2026-09-16):** every
-`"use client"` component that must hydrate on an engine route is reached by
-the island scanner either through the injected route entrypoints (zfb ≥
-2.18.0 in both build and dev, plugin virtual modules included) or through a
-static import from a host `pages/` file. The host keeps one shim,
-`pages/lib/_zudo-sg-islands.ts`, containing exactly
+**Current island rule (amended for finding 4; relaxed 2026-09-16 and rechecked
+for zfb 4.3.1).** Every `"use client"` component that must hydrate on an
+engine route is reached through the injected route entrypoints; the zfb 4.3.1
+scanner includes package routes and plugin virtual modules in both build and
+dev. The host keeps one shim, `pages/lib/_zudo-sg-islands.ts`, containing
 `import "@takazudo/zudo-sg/islands";`, imported by `pages/index.tsx` (which
-already reaches the preview token panel through `_body-end-islands.tsx`) —
-retained for `@takazudo/zudo-sg/islands` API stability; it is a no-op on the
-engine's zfb peer floor. `@takazudo/zudo-sg/islands` (`src/islands.ts` →
+also reaches the preview token panel through `_body-end-islands.tsx`). It is
+retained for API stability and is a no-op under the current peer floor.
+`@takazudo/zudo-sg/islands` (`src/islands.ts` →
 `dist/islands.js`) is a
 side-effect module that statically imports every engine island:
 `DetailWorkbench`, `CodePanel`, `CatalogFilter`, `PreviewTokensButton`, the
@@ -319,6 +328,14 @@ contract (protocol v1).
 `fixtures/descriptor-host` (a sibling issue, #887) is the reference
 descriptor-mode + `externalPreview` host.
 
+**Migration amendment (2026-10-11, zfb 4 migration D1/E3).** Module mode is
+now scoped to zfb hosts using its zudo-react runtime; stories and engine
+islands use that runtime. The descriptor-mode + `externalPreview` path above
+is unchanged and remains available to hosts using another framework or none.
+The `/tokens` route still mounts zdtp through an opaque, dynamically loaded
+Preact adapter inside a zudo-react island. The engine owns that Preact runtime
+as a regular dependency; it is not a host peer.
+
 ### 9. Composition API
 
 `import { zudoSg, withZudoSg } from "@takazudo/zudo-sg/config"` (pure data,
@@ -356,10 +373,10 @@ disables this minimal-host default.
 | Staging | **none** — inject `routes-src/*.tsx` from the package realpath (workspace or node_modules); no `.zudo-sg/` dir, nothing to gitignore |
 | Route entrypoints | link assets only (`<link href={withBase(sgContext.previewCssUrl)}>`), read data from the virtual modules, call zudo-doc factories (`createRouteContext`, `createChrome`) — never plugin helpers |
 | Preview island | `routes-src/_preview-app.tsx`: `"use client"`, default export `ConfiguredPreviewApp` (displayName equal), statically imported by `components-preview.tsx`, renders `<PreviewApp registry={registry}/>`; the registry travels as an in-bundle argument, NEVER as island props (`data-props` is JSON — render closures would be dropped) |
-| Dev-hydration seed | `@takazudo/zudo-sg/islands` → `./dist/islands.js` (side-effect imports of every engine island + `../routes-src/_preview-app.tsx`); host shim `pages/lib/_zudo-sg-islands.ts` = `import "@takazudo/zudo-sg/islands";`, imported by `pages/index.tsx`. Kept for API stability; a no-op on zfb ≥ 2.18.0 (finding 4 amendment) — the same module reached through two graphs is deduped by path, so it is harmless in dev and build |
+| Dev-hydration seed | `@takazudo/zudo-sg/islands` → `./dist/islands.js` (side-effect imports of every engine island + `../routes-src/_preview-app.tsx`); host shim `pages/lib/_zudo-sg-islands.ts` = `import "@takazudo/zudo-sg/islands";`, imported by `pages/index.tsx`. Kept for API stability; a no-op at the current zfb 4.3.1 floor, where dev and build scan injected routes |
 | Registry shim | `routes-src/_registry.ts` builds `createRegistry(storyModules, { categoryOrder, storyExportOrder, routes: ctx.routes })` once; every entrypoint and the preview wrapper import it |
-| Stylesheet exports | `@takazudo/zudo-sg/styles.css` → `./styles.css` (hand-authored catalog chrome CSS, package root); `@takazudo/zudo-sg/safelist.css` → `./dist/safelist.css` (generated `@source inline(...)`) |
-| Consumer CSS order | zfb discovers `styles/global.css`, falling back to `src/styles/global.css`. Declare `@layer zd-preflight, zd-flow;` → `tailwindcss/preflight` in `layer(zd-preflight)` → unlayered `tailwindcss/utilities` → zudo-doc `theme.css` (unless the host supplies its full token contract) → consumer token/component CSS → zudo-doc `safelist.css` → `content.css` → `features.css` → `page-loading.css` → `@takazudo/zdtp/dashboard/styles.css` → unlayered `@takazudo/zudo-sg/styles.css` → `@takazudo/zudo-sg/safelist.css` → host `@source` globs (project-root-relative in zfb's global entry) → optional project `@theme {}` overrides. Preflight is the only element reset; `theme.css` resets color tokens only (`theme-no-reset.css` omits that token reset). **Engine chrome colors no longer depend on this import order**: raw `--sg-*` defaults survive the reset, and an unlayered host `:root` override wins before or after the engine stylesheet (decision 14). The host's own `@theme` colors still need to follow the framework reset. Utilities must outrank `zd-flow`; engine CSS stays unlayered to compete with utilities; dashboard CSS follows content CSS to win ties with prose. |
+| Package styles and wind manifest | `@takazudo/zudo-sg/styles.css` → `./styles.css` (engine chrome styles); `@takazudo/zudo-sg/wind.json` → `./dist/wind.json` (engine utility candidates registered by `withZudoSg()`). zudo-doc 6 also supplies its own public `wind.json`; zfb composes package manifests with host `wind` configuration. There is no engine utility stylesheet export. |
+| Consumer CSS order | The current starter declares `@layer zw-reset, zd-flow`, then imports zudo-doc `theme.css`, host token/component CSS, zudo-doc `content.css`, `features.css`, `page-loading.css`, zdtp dashboard CSS, and zudo-sg `styles.css`. zfb composes wind utilities from host configuration and package manifests; utilities and authored engine styles are unlayered, and dashboard styles follow content CSS to win ties with prose. zudo-doc 6's `theme.css` supplies token values without the former color reset. |
 | Host-path contract | option value = project-root-relative path string (absolute accepted); `resolve(ctx.projectRoot, value)`; must be an existing FILE; normalized to a forward-slash absolute path; the virtual module re-exports that absolute path verbatim (zfb remaps it into the shadow); missing/empty/directory → throw at `setup()`: `[zudo-sg] option "<name>" = "<value>" resolved to <abs> (relative to projectRoot <root>), which is not a file`; absent-and-required → `[zudo-sg] option "<name>" is required (project-root-relative path, e.g. "<example>")`. Shared module `packages/styleguide/src/host-paths.ts` (`resolveHostModule(projectRoot, optionName, value, { required, example })`, `withBaseUrl(base, path)`) |
 | `zudo-sg.config.mjs` | `{ componentsRoots: [{ dir, importBase }], registryOut: "./src/styleguide/sg-registry.ts", categoryOrder, uiPackageName?: "@zudo-sg/demo-ui", barrelIndex, tokens: { cssFiles, manifestOut }, previewStyles: "./src/styles/preview-entry.css", previewCssUrl?, routes?, catalog? }`; `uiPackageName` is optional and only names the package used in generated usage snippets and catalog labels; the routes plugin's `registryModule` is `registryOut` |
 | CLI | `bin: { "zudo-sg": "./bin/zudo-sg.js" }`; commands `gen-registry [--check]`, `new-component <name> --category <c> [--nested] [--skip-barrel]`, `gen-token-manifest [--check]` |
@@ -383,6 +400,17 @@ prerelease handling, no dist-tag cleanup. Version source of truth is
 run from `main` after the epic merges.
 
 ### 13. Required peers and inherited host prerequisites
+
+**Migration amendment (2026-10-11, zfb 4 migration S3a/E3).** Current
+required engine peers are `@takazudo/zfb ^4.3.1`, `@takazudo/zudo-doc
+^6.0.0`, and `@takazudo/zdtp ^0.8.6`. The engine has no Preact peer. It
+declares `preact ^10.29.1` as a regular dependency solely for the opaque
+dashboard adapter that mounts zdtp inside the always-injected `/tokens`
+route; zdtp's compatible range resolves to the same runtime. Hosts render
+components and stories with zudo-react and do not install a renderer directly.
+The host also retains zfb's matching runtime and Markdown WASM packages, plus
+`diff`, `katex`, and `zod` required by the published zudo-doc/zfb route graph;
+the package README records the fixture-equivalent install command.
 
 **Amendment (2026-09-15, #696 / #671):** reverse the original optional-peer
 treatment of `@takazudo/zdtp`. It is now a required peer at `^0.8.0`: the
@@ -443,110 +471,54 @@ fixture dependency set and links the upstream packaging report.
 
 ### 14. Engine chrome color namespace
 
-**Accepted (2026-09-21, #797 / #798).** Chrome consumes its own raw
-`--sg-<role>` custom properties, declared outside `@theme` at the top of
-`packages/styleguide/styles.css`. zudo-doc's `theme.css` resets
-`--color-*: initial`: an earlier embedder `@theme` color disappears even
-when its name is namespaced or its block is `static`. Borrowing the host's
-bare roles also lets component palettes silently recolor engine controls.
-
-Compile probes with `@tailwindcss/node` / Tailwind **4.3.1** established:
-
-| Shape | Engine CSS after the framework reset | Engine CSS before the framework reset |
-|---|---|---|
-| `@theme static { --color-sg-border: … }` + `border-sg-border` | Token and utility emitted | Token wiped; utility emits nothing |
-| Plain `--sg-border` + `var(--sg-border)` in CSS | Works | Works |
-| Plain `--sg-border` + `border-[color:var(--sg-border)]` | Works | Works |
-
-There is **no engine `@theme` color tier**. The eleven public roles are
+**Accepted (2026-09-21, #797 / #798); rechecked 2026-10-11 under the zfb 4
+migration (D1/E4/H1).** The engine owns eleven raw color properties:
 `--sg-bg`, `--sg-fg`, `--sg-surface`, `--sg-surface-2`, `--sg-border`,
 `--sg-border-strong`, `--sg-muted`, `--sg-accent`, `--sg-on-accent`,
-`--sg-focus`, and `--sg-success`. This prefix matches the engine's existing
-`--sg-header-h` and zudo-doc's raw `--zd-*` tier. `--color-sg-*` is forbidden
-because the reset wipes it; `--sg-color-*` is a disconnected third spelling
-and is also forbidden.
+`--sg-focus`, and `--sg-success`. `packages/styleguide/styles.css` declares
+their defaults in one `:where(:root)` block. `packages/styleguide/src/config/wind.ts`
+maps matching `sg-*` color tokens to those properties, and the package's
+`wind.json` manifest makes engine utility candidates available to zfb.
 
-The defaults live in one **`:where(:root)`** block. Its zero specificity
-allows an unlayered host `:root { --sg-border: … }` to override a role
-whether imported before or after engine CSS, without `!important`. Two
-ordinary `:root` blocks would still depend on source order: the namespace
-avoids the Tailwind reset, while `:where()` provides the override contract.
-Cascade layers still apply; a host override placed in a layer loses to
-these unlayered defaults. Keep the host's overrides unlayered too.
+The raw namespace remains independent of zudo-doc's `--zd-*` roles and the
+host component library's `--color-*` roles. Its defaults have zero specificity,
+so an ordinary, unlayered host `:root { --sg-border: … }` rule can override an
+engine value regardless of stylesheet order. Keep host overrides unlayered;
+layered rules lose to the engine's unlayered defaults. The host owns
+`color-scheme`, and all color values use `light-dark()` or values derived from
+zudo-doc's raw scheme-aware properties. A complete retheme should override each
+relevant role because derived defaults read the `--zd-*` properties directly.
 
-`bg`, `fg`, `surface`, `muted`, `accent`, and `success` map directly to the
-matching scheme-aware `--zd-*` properties. Every raw-tier reference has a
-last-resort literal color; fallback `light-dark()` pairs keep a missing
-upstream role usable in either scheme. The other five roles derive from
-zudo-doc's raw colors through `color-mix(in oklch, …)`, never through the
-host's `--color-*` aliases:
+Use the semantic classes registered in the engine wind map: `bg-sg-*` for
+backgrounds, `text-sg-*` for text, and the matching `border-sg-*` and
+`outline-sg-*` utilities for those properties. The code panel editor has its
+own sixteen `--sg-code-*` properties; host overrides should preserve at least
+4.5:1 contrast for text and syntax colors against the editor background.
 
-| Derived role | Light scheme | Dark scheme |
-|---|---|---|
-| `surface-2` | 10% `--zd-fg` + 90% `--zd-surface` | 29% foreground + 71% surface |
-| `border` | 14% `--zd-fg` + 86% `--zd-bg` | 38% foreground + 62% background |
-| `border-strong` | 31.5% `--zd-fg` + 68.5% `--zd-bg` | 66.7% foreground + 33.3% background |
-| `on-accent` | 99% `--zd-bg` + 1% `--zd-fg` | 94% background + 6% foreground |
-| `focus` | 95% `--zd-accent` + 5% `--zd-fg` | Same mix with the dark raw values |
+**Host content stays host-owned.** Scaffolded component source, token
+manifests, `/tokens` dashboards, the preview canvas background, root pages,
+and `apps/demo` use the host's token vocabulary. The preview document scopes
+the component palette under `:root[data-sg-preview-doc]`, separate from engine
+chrome. Dashboard light/dark inventory backgrounds retain their
+`--zdtp-dashboard-*` values.
 
-The host owns `color-scheme`, as it does for zudo-doc. With the root host's
-warm `.965` / `.185` background/foreground endpoints, the border lightness
-is `.8558` / `.4814`, and the strong border is `.7193` / `.7053`: close to
-its existing `.855` / `.480` and `.720` / `.705` ladders. The raised surface
-is `.887` / `.4112`, close to the old component palette's `.885` / `.410`.
-These ratios retain the hierarchy while following a host's zudo-doc palette.
-Overriding one `--sg-*` role changes that role only; derived defaults read
-`--zd-*` directly, so a full chrome theme should override all relevant roles.
+Hosts that previously themed engine chrome with bare `--color-border` or
+other component roles must move those overrides to `--sg-*`. The breaking
+theming-hook change is recorded in the engine's migration notes.
 
-CSS consumes `var(--sg-<role>)`. TSX uses bracket arbitrary values, with a
-`color:` type hint for ambiguous utility prefixes:
+**Historical rationale from the earlier toolchain.** The original decision
+was made while zudo-doc's older `theme.css` applied a color reset and the
+engine used the older `@theme`/utility compiler pipeline. Those compiler and
+reset details were replaced by zudo-doc 6's plain CSS token values and zfb's
+wind configuration. The raw engine namespace and zero-specificity override
+contract remain in force.
 
-| Old utility | Chrome utility |
-|---|---|
-| `bg-X` | `bg-[var(--sg-X)]` |
-| `border-X` | `border-[color:var(--sg-X)]` |
-| `outline-X` | `outline-[color:var(--sg-X)]` |
-| `ring-X` | `ring-[color:var(--sg-X)]` |
-| `text-X` | `text-[color:var(--sg-X)]` |
-
-Retain variants such as `hover:` and `focus-visible:`. Never use the paren
-shorthand, e.g. `border-(--sg-border)`: the package's
-`scripts/gen-safelist.mjs` masks balanced `[...]` regions, then rejects
-parentheses outside them. The shorthand is silently dropped from
-`dist/safelist.css`. Bracket candidates survive `extractTokens()` and compile
-through `@source inline(...)` even when a later theme resets colors.
-
-**Host content is exempt.** `packages/styleguide/src/cli/scaffold/**`
-generates host components; `src/cli/token-manifest/**` (under the same
-package) reads their tokens. The `/tokens` dashboard displays host values,
-and the preview canvas `<body class="bg-bg">` in
-`src/routes/components-preview.tsx` must follow the host background. They
-keep host tokens, as do root `src/`, `pages/`, and `apps/demo` UI. The
-thumbnail's scoped `--color-*` declarations restore the previewed component
-palette and remain separate from the surrounding chrome. Dashboard
-light/dark inventory backgrounds retain their `--zdtp-dashboard-*` values.
-
-Hosts that previously themed chrome via bare `--color-border` or other
-component roles must move those overrides to `--sg-*`. This is a breaking
-theming-hook change, planned as a minor engine release with a migration note.
-
-**Non-color follow-up audit (zudo-doc 5.26.2, fixture host).** This decision
-does not migrate geometry, typography, or elevation. The fixture imports
-zudo-doc `theme.css` followed by its own
-`fixtures/engine-host/src/styles/ui-tokens.css`; a focused Tailwind compile
-emits the utility candidates listed below.
-
-| Chrome dependency | Definition used by the fixture | Follow-up |
-|---|---|---|
-| `rounded-sm`, `rounded-md` / `--radius-sm`, `--radius-md` | Fixture `ui-tokens.css`: `0.25rem`, `0.5rem` | zudo-doc does not define these two sizes; controls and tiles currently require host tokens. |
-| `rounded-full` / `--radius-full` | Both zudo-doc `theme.css` and fixture `ui-tokens.css`: `9999px` | Already supplied upstream; the fixture repeats the same value. |
-| `text-xs`, `text-sm` | Fixture `ui-tokens.css`: `0.75rem`, `0.875rem`, with `1.5` line height | zudo-doc uses semantic sizes instead; code-panel labels, search status, and the demo link rely on these host sizes. |
-| `text-heading` | zudo-doc `theme.css`: `--text-heading: var(--text-scale-xl)`, backed by `:root { --text-scale-xl: 3rem }` | Both the semantic alias and its raw scale value are supplied upstream; no fixture token is needed. |
-| `--shadow-card` (selected `.sg-seg-btn`) | Fixture `ui-tokens.css`: `0 1px 2px #0000001a` | The engine has no chrome `shadow-*` utility call sites; this direct CSS reference still depends on the host. zudo-doc supplies `--shadow-lg`, while fixture `--shadow-raised` / `--shadow-overlay` are not used by engine chrome. |
-
-Keep these remaining host prerequisites explicit in a later non-color token
-decision; the color namespace alone does not make every chrome token
-self-contained.
+**Historical non-color audit (zudo-doc 5.26.2, fixture host).** The old
+fixture audit recorded that the host supplied `rounded-sm`, `rounded-md`,
+small text sizes, and `--shadow-card`, while zudo-doc supplied `rounded-full`,
+`text-heading`, and `--shadow-lg`. It predates the zfb 4 wind migration; the
+current token map and package manifests are authoritative for the present
+contract.
 
 ### 15. Header token trigger
 
@@ -638,8 +610,8 @@ preview iframe (in-engine or, since decision 8's amendment, an
 `externalPreview` host document) speak a small, versioned, framework-free
 postMessage contract: `packages/styleguide/src/preview/messages.ts`,
 published on its own as the leaf subpath `@takazudo/zudo-sg/preview/messages`
-so a foreign-framework frame can implement it without pulling in Preact. The
-module imports nothing and must stay that way.
+so a foreign-framework frame can implement it without importing the engine's
+renderer. The module imports nothing and must stay that way.
 
 - **`v` field.** Every message the engine sends carries `v: 1`
   (`PROTOCOL_VERSION`). `isSupportedProtocolVersion()` accepts a message
@@ -798,7 +770,7 @@ preview faithful. (4) The engine's own `node_modules` must not carry a second
 - #664: no host route stub is required for hydration; keep `pages/index.tsx`
   importing `_body-end-islands.tsx` and add the islands seed shim above.
 
-## Upstream notes (verified against zfb 2.18.0 / zudo-doc 5.25.0)
+## Historical upstream notes (verified against zfb 2.18.0 / zudo-doc 5.25.0)
 
 The six findings from #673 were re-checked against the current release source
 and reported to their owning public upstream tracker. **All six are now
@@ -881,3 +853,36 @@ The other four rest on their release notes alone.
    [zudolab/zudo-doc#4213](https://github.com/zudolab/zudo-doc/issues/4213)
    (closed `completed`; landed via the implementing epic
    [#4222](https://github.com/zudolab/zudo-doc/issues/4222)).
+
+## Upstream notes (re-verified against zfb 4.3.1 / zudo-doc 6.0.0)
+
+The migration was checked against the pinned package manifests and published
+runtime contracts. The earlier upstream findings above remain historical
+records; the current integration uses the new runtime and stylesheet package
+surfaces below.
+
+- **zfb owns the host component runtime and utility compiler.** zfb 4.3.1
+  exposes its zudo-react runtime, JSX entrypoints, island APIs, and the `css`
+  command. Root and demo-ui components compile with that runtime; engine
+  preview CSS is compiled by invoking the host's installed zfb CLI with its
+  composed wind configuration.
+- **zudo-doc 6 supplies CSS values and public wind candidates.** Its public
+  exports include `theme.css` and `wind.json`; the theme stylesheet provides
+  package custom-property values, while zfb composes its wind manifest with
+  host and engine manifests. The prior alternate color-reset stylesheet and
+  separately generated utility stylesheet are not part of the 6.0.0 package.
+- **The `/tokens` route remains engine-owned and always injected.** It renders
+  the three declared-default dashboards through the zdtp public dashboard
+  component. The engine's client island dynamically loads the opaque Preact
+  adapter; the server and zudo-react renderer never receive a Preact node.
+  Preact remains a regular engine dependency for this adapter, not a host peer.
+- **The engine package publishes `wind.json`.** `withZudoSg()` registers this
+  manifest with the composed host `wind` config, replacing the earlier
+  `safelist.css` export and standalone utility stylesheet. Engine-owned classes
+  therefore do not rely on host source scanning.
+- **Framework scope is unchanged for descriptor mode.** Module mode uses
+  zudo-react stories on zfb; descriptor mode plus `externalPreview` remains
+  framework-independent and keeps protocol v1.
+
+These findings reaffirm the dated migration amendments to decisions 4, 8, 10,
+13, and 14. The older details remain above for implementation history.
