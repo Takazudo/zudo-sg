@@ -370,7 +370,7 @@ export default function DetailWorkbench({
           )}
 
           {(showCodePanel || showTokenPanel) && (
-            <div class="ms-auto flex flex-wrap items-center gap-hsp-sm">
+            <div class="sg-workbench-toolbar-actions flex flex-wrap items-center gap-hsp-sm">
               {showCodePanel && (
                 <button
                   type="button"

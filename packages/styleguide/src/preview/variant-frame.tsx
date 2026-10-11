@@ -256,7 +256,7 @@ function VariantFrame(props: VariantFrameProps): Description {
         role="region"
         aria-label="Preview viewport canvas"
         tabindex={0}
-        class="flex overflow-x-auto bg-sg-bg p-hsp-md focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-sg-focus"
+        class="flex overflow-x-auto bg-sg-bg p-hsp-md focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-sg-focus"
       >
         <div
           class="mx-auto shrink-0"

@@ -101,7 +101,7 @@ export default function CodePanel({
           <div
             role="tablist"
             aria-label="Source variant"
-            class="mt-vsp-2xs flex flex-wrap gap-hsp-3xs"
+            class="mt-vsp-2xs flex flex-wrap gap-hsp-2xs"
           >
             {variants.map((v, index) => {
               const selected = computed(() => index === activeIndex.value);

@@ -14,7 +14,10 @@ function fixture() {
   mkdirSync(join(root, "components"));
   writeFileSync(join(root, "tokens.css"), ':root { --brand: #0a5; }');
   writeFileSync(join(root, "entry.css"), '@import "./tokens.css"; .authored { color: var(--brand); }');
-  writeFileSync(join(root, "components/card.tsx"), '<div class="bg-brand flex"/>');
+  writeFileSync(
+    join(root, "components/card.tsx"),
+    readFileSync(join(import.meta.dirname, "../../../test-fixtures/preview-css/components/card.tsx"), "utf8"),
+  );
 }
 describe("preview compiler", () => {
   it("scopes selector roots, preserves comments/strings/values and is idempotent", () => {
