@@ -33,7 +33,7 @@
 // `collections[name]` array identity), so every memo here misses and
 // recomputes — matching the old content-keyed cache's change detection.
 
-import { getCollection, getContentSnapshot } from "zfb/content";
+import { getCollection, getContentSnapshot } from "@takazudo/zfb/content";
 import { bridgeDocsEntries, type ZfbDocsData } from "../_data";
 import type { DocPageEntry } from "./_doc-page-props";
 

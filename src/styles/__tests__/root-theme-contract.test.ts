@@ -8,7 +8,7 @@ const globalCss = readFileSync(
   "utf8",
 );
 
-describe("root zudo-doc 5 theme contract", () => {
+describe("root zudo-doc 6 theme contract", () => {
   it("defines every tracking role used by the package component-token surface", () => {
     const componentDefaults = COMPONENT_TOKENS.map(({ default: value }) => value);
 
@@ -28,14 +28,17 @@ describe("root zudo-doc 5 theme contract", () => {
     const orderedImports = [
       '@import "@zudo-sg/demo-ui/styles/tokens.css"',
       '@import "@zudo-sg/demo-ui/styles/colors.css"',
-      '@import "@takazudo/zudo-doc/safelist.css"',
+      '@import "@zudo-sg/demo-ui/styles/components.css"',
       '@import "@takazudo/zudo-doc/content.css"',
       '@import "@takazudo/zudo-doc/features.css"',
+      '@import "@takazudo/zdtp/dashboard/styles.css"',
       '@import "@takazudo/zudo-sg/styles.css"',
-      '@import "@takazudo/zudo-sg/safelist.css"',
     ];
     const positions = orderedImports.map((entry) => globalCss.indexOf(entry));
 
+    expect(globalCss).not.toContain("@theme");
+    expect(globalCss).not.toContain("/safelist.css");
+    expect(globalCss).toMatch(/:root\s*\{/);
     expect(positions.every((position) => position >= 0)).toBe(true);
     expect(positions).toEqual([...positions].sort((a, b) => a - b));
   });

@@ -1,6 +1,6 @@
 // pages/_data.ts — zfb-compatible data helpers for doc page modules.
 //
-// Provides the bridge between zfb's CollectionEntry (from "zfb/content") and
+// Provides the bridge between zfb's CollectionEntry (from "@takazudo/zfb/content") and
 // the utility functions in @/utils/docs that expect DocsEntry (which carries
 // an `id` field mirroring Astro's collection entry id).
 //
@@ -10,8 +10,8 @@
 //   wrapper on the type is a v0 artefact — the synchronous snapshot path is
 //   the production contract.
 
-import { getCollection } from "zfb/content";
-import type { CollectionEntry } from "zfb/content";
+import { getCollection } from "@takazudo/zfb/content";
+import type { CollectionEntry } from "@takazudo/zfb/content";
 import type { DocsData } from "@/config/docs-schema";
 import type { DocsEntry } from "@/types/docs-entry";
 import type { DocPageEntry } from "./lib/_doc-page-props";

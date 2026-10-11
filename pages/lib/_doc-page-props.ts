@@ -5,7 +5,7 @@
 // Discriminating on `kind` lets TypeScript narrow `entry` / `autoIndex` to
 // non-null inside each branch — eliminating all `entry!` assertions.
 
-import type { CollectionEntry } from "zfb/content";
+import type { CollectionEntry } from "@takazudo/zfb/content";
 import type { DocsEntry } from "@/types/docs-entry";
 import type { NavNode, BreadcrumbItem } from "@/utils/docs";
 import type { extractHeadings } from "./_extract-headings";

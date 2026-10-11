@@ -1,6 +1,6 @@
 import { Tabs } from "@takazudo/zudo-doc/code-syntax";
 import { TabItem } from "@takazudo/zudo-doc/tab-item";
-import type { ComponentChildren } from "preact";
+import type { Child } from "@takazudo/zfb/zudo-react";
 
 /**
  * Adapter for zfb's `:::code-group` directive (codeTabs Option A).
@@ -17,7 +17,7 @@ import type { ComponentChildren } from "preact";
  *
  * Code inside each <pre> is raw text (NOT hi-* highlighted — the Rust
  * pipeline does not run highlight inside code-group fences). We render
- * the <pre> inside a <TabItem> with explicit styling via Tailwind tokens
+ * the <pre> inside a <TabItem> with explicit styling via wind tokens
  * so it looks like a code block visually.
  *
  * TabsInit (the companion init script) is present in the layout
@@ -27,12 +27,12 @@ import type { ComponentChildren } from "preact";
 
 type Props = {
   tabs?: string[];
-  children?: ComponentChildren;
+  children?: Child;
   // zfb forwards `:::code-group{name="x"}` as the `name` prop (used as Tabs groupId).
   name?: string;
 };
 
-function toArray(children: ComponentChildren): ComponentChildren[] {
+function toArray(children: Child): Child[] {
   if (!children) return [];
   if (Array.isArray(children)) return children;
   return [children];
@@ -64,7 +64,6 @@ export function CodeGroup({ tabs = [], children, name }: Props) {
         // (e.g. both titled "ts") get distinct stable tab identities; the
         // label stays the visible text.
         <TabItem
-          key={`${label}-${i}`}
           label={label}
           value={`${label}-${i}`}
           default={i === 0 ? true : undefined}

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
 
 import config from "../../../zfb.config";
 import { settings } from "../settings";
@@ -81,7 +82,30 @@ describe("root zfb integration contract", () => {
     });
   });
 
-  it("keeps the zudo-doc 5 task-list and footnote defaults", () => {
+  it("preserves wind policies, package manifests, engine roles and complete search candidates", () => {
+    expect(config.wind).toMatchObject({
+      strict: true,
+      dark: false,
+      reset: "owned-v1",
+      utilities: { placement: "before-authored" },
+      breakpoints: {
+        sm: { minWidthPx: 640 }, md: { minWidthPx: 768 },
+        lg: { minWidthPx: 1024 }, xl: { minWidthPx: 1280 },
+      },
+      sources: { roots: ["pages", "src", "packages/demo-ui/src"], classHelpers: ["cx", "cn"] },
+      tokens: { colors: { "sg-fg": "var(--sg-fg)", fg: "var(--color-fg)" } },
+    });
+    // zudo-doc owns its manifest through its preset, the engine augments wind.
+    expect(config.presets).toHaveLength(1);
+    expect(Object.keys(config.wind?.manifests ?? {})).toEqual(["zudo-sg"]);
+    const script = readFileSync("pages/lib/_search-widget-script.ts", "utf8");
+    const candidates = [...script.matchAll(/\.className\s*=\s*"([^"]+)"/g)]
+      .flatMap((match) => match[1]!.split(/\s+/));
+    expect(candidates.length).toBeGreaterThan(0);
+    expect(new Set(config.wind?.safelist?.["search-widget"])).toEqual(new Set(candidates));
+  });
+
+  it("keeps the zudo-doc 6 task-list and footnote defaults", () => {
     expect(config.markdown?.gfm).toEqual({
       taskListItem: true,
       footnoteDefinition: true,
