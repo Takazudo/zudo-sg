@@ -1,3 +1,4 @@
+import type { Child } from "@takazudo/zfb/zudo-react";
 import type { Story, StoryMeta } from "@takazudo/zudo-sg/stories";
 import { Card } from "./card.tsx";
 
@@ -11,5 +12,5 @@ export default meta;
 
 export const Basic: Story = {
   name: "Basic",
-  render: () => <Card title="Example">Body content</Card>,
+  render: (): Child => <Card title="Example">Body content</Card>,
 };

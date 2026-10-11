@@ -415,6 +415,7 @@ const SCAFFOLD_PROOFS = [
 
 async function assertNewComponentScaffolds(hostDir) {
   const generatedFiles = [];
+  const generatedTests = [];
   for (const proof of SCAFFOLD_PROOFS) {
     const args = ["exec", "zudo-sg", "new-component", proof.name, "--category", proof.category];
     if (proof.nested) args.push("--nested");
@@ -425,8 +426,10 @@ async function assertNewComponentScaffolds(hostDir) {
       : path.join("ui", proof.name);
     const componentPath = path.join(hostDir, componentDir, `${proof.name}.tsx`);
     const storyPath = path.join(hostDir, componentDir, `${proof.name}.stories.tsx`);
+    const testPath = path.join(hostDir, componentDir, "__tests__", `${proof.name}.test.tsx`);
     const component = await readFile(componentPath, "utf8");
     const story = await readFile(storyPath, "utf8");
+    const test = await readFile(testPath, "utf8");
     const pascalName = proof.name
       .split("-")
       .map((segment) => segment[0].toUpperCase() + segment.slice(1))
@@ -439,13 +442,17 @@ async function assertNewComponentScaffolds(hostDir) {
       `${componentDir}/${proof.name}.stories.tsx does not import the public story contract`);
     assert(story.includes(`import { ${pascalName}, type ${pascalName}Props } from "./${proof.name}";`),
       `${componentDir}/${proof.name}.stories.tsx does not import its runtime component`);
+    assert(test.includes('from "@takazudo/zfb/zudo-react/testing"'),
+      `${componentDir}/__tests__/${proof.name}.test.tsx does not use the public zudo-react test API`);
+    assert(test.includes("test.dispose();") && test.includes("test.diagnostics"),
+      `${componentDir}/__tests__/${proof.name}.test.tsx does not dispose and check diagnostics`);
 
     generatedFiles.push(componentPath, storyPath);
+    generatedTests.push(testPath);
   }
 
-  // The default starter does not install a test runner. Typecheck the actual
-  // emitted component/story modules directly; zfb build below then exercises
-  // their runtime import path through the generated registry.
+  // Typecheck the emitted component/story modules with the consumer renderer
+  // transform; Vitest below typechecks and runs each generated suite.
   console.log("Typechecking the emitted flat and nested component/story modules.");
   await run(packageManager[0], [
     ...packageManager.slice(1),
@@ -462,11 +469,13 @@ async function assertNewComponentScaffolds(hostDir) {
     "--jsx",
     "react-jsx",
     "--jsxImportSource",
-    "preact",
+    "@takazudo/zfb/zudo-react",
     ...generatedFiles,
   ], hostDir);
+  console.log("Running the generated flat and nested component tests.");
+  await run(packageManager[0], [...packageManager.slice(1), "test"], hostDir);
   await assertGeneratedRegistry(hostDir, 8);
-  console.log("OK — flat and nested scaffold imports resolve in the initialized host.");
+  console.log(`OK — flat and nested scaffold imports resolve, and ${generatedTests.length} generated suites pass.`);
 }
 
 async function assertGeneratedTokenManifest(hostDir) {
@@ -512,7 +521,7 @@ async function assertBuildRoutes(hostDir) {
     assert(css.includes(`${selector}{`) || css.includes(`${selector} {`),
       `starter homepage stylesheet is missing ${selector}; check the pages @source directive`);
   }
-  console.log("OK — starter homepage includes a styled shell, heading, navigation, and emitted utilities.");
+  console.log("OK — starter homepage includes a styled shell, heading, navigation, and emitted wind candidates.");
 
   const componentEntries = await readdir(path.join(distDir, "components"), { withFileTypes: true });
   const slugs = componentEntries

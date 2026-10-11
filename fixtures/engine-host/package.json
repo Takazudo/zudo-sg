@@ -8,6 +8,7 @@
     "dev": "zfb dev",
     "build": "zfb build",
     "check": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run --passWithNoTests",
     "gen-registry": "zudo-sg gen-registry",
     "gen-token-manifest": "zudo-sg gen-token-manifest"
   },
@@ -24,6 +25,9 @@
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
-    "typescript": "^5.9.0"
+    "happy-dom": "20.14.6",
+    "typescript": "^5.9.0",
+    "vite": "7.3.5",
+    "vitest": "4.1.11"
   }
 }

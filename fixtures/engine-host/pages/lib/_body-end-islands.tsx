@@ -15,7 +15,7 @@
 // against that registered constructor too — not just this starter's
 // host-owned `/`.
 
-import type { VNode, JSX } from "preact";
+import type { Description } from "@takazudo/zfb/zudo-react";
 import { Island } from "@takazudo/zfb";
 import EngineRoutePreviewTokenPanelBootstrap from "./_engine-route-preview-token-panel-bootstrap";
 import { previewTokenPanelCaptureScript } from "@takazudo/zudo-sg/token-tweak";
@@ -24,17 +24,14 @@ import { previewTokenPanelCaptureScript } from "@takazudo/zudo-sg/token-tweak";
  * The body-end islands this starter mounts. Currently just the preview
  * token panel bootstrap the header trigger opens.
  */
-export function BodyEndIslands(): JSX.Element {
+export function BodyEndIslands(): Description {
   return (
     <>
       {/* Capture pre-hydration clicks; the bootstrap drains this once it loads. */}
-      <script
-        dangerouslySetInnerHTML={{ __html: previewTokenPanelCaptureScript() }}
-      />
-      {Island({
-        when: "load",
-        children: <EngineRoutePreviewTokenPanelBootstrap />,
-      }) as unknown as VNode}
+      <script rawHtml={previewTokenPanelCaptureScript()} />
+      <Island when="load">
+        <EngineRoutePreviewTokenPanelBootstrap />
+      </Island>
     </>
   );
 }

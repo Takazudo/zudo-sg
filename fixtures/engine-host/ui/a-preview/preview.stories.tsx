@@ -1,3 +1,4 @@
+import type { Child } from "@takazudo/zfb/zudo-react";
 import type { Story, StoryMeta } from "@takazudo/zudo-sg/stories";
 
 const meta: StoryMeta = {
@@ -10,5 +11,5 @@ export default meta;
 
 export const Default: Story = {
   name: "Default",
-  render: () => <div data-packed-story-identity="packed-preview-default">Preview route probe</div>,
+  render: (): Child => <div data-packed-story-identity="packed-preview-default">Preview route probe</div>,
 };
