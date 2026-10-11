@@ -8,7 +8,7 @@
 // override (doc-chrome token panel, preview token panel, enlarge islands)
 // mounts on the engine routes exactly as on the zudo-doc doc routes.
 
-import type { JSX } from "preact";
+import type { JSX } from "@takazudo/zfb/zudo-react/jsx-runtime";
 import { routeContext } from "virtual:zudo-doc-route-context";
 import { chromeBindings } from "virtual:zudo-doc-chrome-bindings";
 import { createRouteContext, type RouteContextPayload } from "@takazudo/zudo-doc/route-context";

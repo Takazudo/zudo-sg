@@ -2,10 +2,10 @@
 // entry's `source` BEFORE touching anything story-shaped, so a descriptor
 // entry (which has no `variants[0].story` to render) never reaches the
 // module-mode SSR path — see `component-thumb.tsx` (module mode, imports
-// `preact-render-to-string`) and `descriptor-thumb.tsx` (descriptor mode,
+// `@takazudo/zfb/zudo-react/server`) and `descriptor-thumb.tsx` (descriptor mode,
 // does not). This file is the only one that imports both.
 
-import type { JSX } from "preact";
+import type { JSX } from "@takazudo/zfb/zudo-react/jsx-runtime";
 import type { CatalogEntry } from "../registry/catalog.js";
 import { ComponentThumb } from "./component-thumb.js";
 import { DescriptorThumb } from "./descriptor-thumb.js";
@@ -26,5 +26,3 @@ export function CatalogThumb({ entry, base }: CatalogThumbProps): JSX.Element {
   if (entry.source === "module") return <ComponentThumb entry={entry.storyEntry} />;
   return <DescriptorThumb entry={entry} base={base} />;
 }
-
-CatalogThumb.displayName = "CatalogThumb";

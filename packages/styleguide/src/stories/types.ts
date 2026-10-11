@@ -7,7 +7,7 @@
  * `packages/demo-ui/src/stories/types.ts`) re-export it rather than copy it.
  */
 
-import type { ComponentChildren } from "preact";
+import type { Child } from "@takazudo/zfb/zudo-react";
 
 /**
  * `StoryMeta.category` is an OPEN string — any value is valid, so a host
@@ -81,7 +81,9 @@ export interface Story<P = Record<string, unknown>> {
   /** Variant label, e.g. "Primary". */
   name: string;
   /**
-   * Returns the preview node. Must be pure + synchronous.
+   * Returns the preview child synchronously, once per mounted story scope.
+   * Setup may allocate signals and register lifecycle hooks; changing args
+   * remounts the story subtree.
    *
    * Receives the merged render args — control defaults overlaid with any live
    * overrides from the controls panel — typed as a partial `P` so `args.foo`
@@ -89,7 +91,7 @@ export interface Story<P = Record<string, unknown>> {
    * optional/defaulted so non-control variants (which ignore `args`) still
    * render with no arguments.
    */
-  render: (args?: Partial<P>) => ComponentChildren;
+  render: (args?: Partial<P>) => Child;
   /** Optional live-control descriptors that drive `render(args)`. */
   controls?: StoryControl<P>[];
   /** Optional verbatim JSX source string for the code panel. */

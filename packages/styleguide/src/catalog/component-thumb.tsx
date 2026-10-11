@@ -27,8 +27,9 @@
 // Framing (virtual viewport, scale, fit) lives in the package's `styles.css`;
 // this module only supplies the per-tile geometry variable and the markup.
 
-import type { JSX } from "preact";
-import { render as renderToStaticHtml } from "preact-render-to-string";
+import type { Child } from "@takazudo/zfb/zudo-react";
+import type { JSX } from "@takazudo/zfb/zudo-react/jsx-runtime";
+import { renderToString as renderToStaticHtml } from "@takazudo/zfb/zudo-react/server";
 import type { StoryControl } from "../stories/types.js";
 import type { StoryEntry } from "../registry/registry.js";
 
@@ -176,11 +177,12 @@ function buildThumb(entry: StoryEntry): Thumb {
   const variant = entry.variants[0];
   if (!variant) return { kind: "note", reason: "No variants declared" };
   try {
-    // `render` returns ComponentChildren (possibly a string or an array), so
-    // wrap it in a fragment rather than casting it to a VNode.
-    const html = renderToStaticHtml(
-      <>{variant.story.render(defaultsFromControls(variant.story.controls))}</>,
-    );
+    // Run story setup inside its own renderer scope, including stories that
+    // allocate signals or register lifecycle cleanup during setup.
+    function StorySnapshot(): Child {
+      return variant!.story.render(defaultsFromControls(variant!.story.controls));
+    }
+    const html = renderToStaticHtml(<StorySnapshot />);
     return { kind: "html", html: scopeThumbHtml(html, thumbIdPrefix(entry.slug)) };
   } catch (error) {
     return {
@@ -239,11 +241,9 @@ export function ComponentThumb({ entry }: ComponentThumbProps): JSX.Element {
       ) : (
         <div
           class="sg-thumb-inner"
-          dangerouslySetInnerHTML={{ __html: thumb.html }}
+          rawHtml={thumb.html}
         />
       )}
     </div>
   );
 }
-
-ComponentThumb.displayName = "ComponentThumb";

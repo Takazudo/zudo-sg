@@ -12,8 +12,8 @@
 // Every dependency below crosses a package boundary this test stubs rather
 // than exercises — same seam pattern as
 // `../../chrome/__tests__/_styleguide-layout.test.tsx` (#538).
-import type { ComponentChildren, VNode } from "preact";
-import { render } from "preact-render-to-string";
+import type { Child } from "@takazudo/zfb/zudo-react";
+import { renderSsr as render } from "../../__tests__/helpers/zudo-react.js";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("virtual:zudo-doc-route-context", () => ({ routeContext: {} }));
@@ -48,10 +48,9 @@ vi.mock("../_context.js", () => ({
 }));
 
 // `chromeProps()`'s `header`/`bodyEnd` are typed as the broader
-// `ComponentChildren` (via `StyleguideLayoutProps`), but both mocks above
-// always return a real element — narrow for `render`'s `VNode` parameter.
-function renderSlot(node: ComponentChildren): string {
-  return render(node as VNode);
+// Every chrome slot accepts the public zudo-react child contract.
+function renderSlot(node: Child): string {
+  return render(node);
 }
 
 describe("chromeProps engine-route marker (#815)", () => {

@@ -2,8 +2,8 @@
 // facade, the catalog route, the detail route and its `paths()` rendered from a
 // plain-data descriptor fixture. Chrome, layout and zfb runtime are stubbed —
 // only the route bodies and the registry wiring are under test.
-import type { ComponentChildren, VNode } from "preact";
-import { render } from "preact-render-to-string";
+import type { Child, Description } from "@takazudo/zfb/zudo-react";
+import { renderSsr as render } from "../../__tests__/helpers/zudo-react.js";
 import { describe, expect, it, vi } from "vitest";
 import { DEFAULT_SG_ROUTES } from "../../sg-routes.js";
 
@@ -64,7 +64,7 @@ vi.mock("../_chrome.js", () => ({
 vi.mock("../_preview-app.js", () => ({ default: () => null }));
 
 vi.mock("../../chrome/index.js", () => ({
-  StyleguideLayout: ({ children, codePanel, title }: { children: ComponentChildren; codePanel?: unknown; title: string }) => (
+  StyleguideLayout: ({ children, codePanel, title }: { children: Child; codePanel?: unknown; title: string }) => (
     <main data-title={title} data-code-panel={codePanel ? "present" : "absent"}>
       {children}
     </main>
@@ -73,7 +73,7 @@ vi.mock("../../chrome/index.js", () => ({
 
 // Render each island as a named marker so the test can see which ones mount.
 vi.mock("@takazudo/zfb", () => ({
-  Island: ({ children }: { children: VNode }) => {
+  Island: ({ children }: { children: Description }) => {
     const type = children.type as { displayName?: string; name?: string };
     return <div data-island={type.displayName ?? type.name} data-props={JSON.stringify(children.props)} />;
   },

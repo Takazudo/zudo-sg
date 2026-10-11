@@ -1,10 +1,10 @@
 // Mode-neutral catalog thumbnail contracts (epic #879, E3). `CatalogThumb`
 // branches on `entry.source` before touching anything story-shaped, so a
 // descriptor entry must never reach the module-mode SSR renderer
-// (`preact-render-to-string`) — see the "renderer isolation" block below,
+// (`@takazudo/zfb/zudo-react/server`) — see the "renderer isolation" block below,
 // which proves that with a spy rather than by reading the source.
 
-import { render } from "preact-render-to-string";
+import { renderSsr as render } from "../../__tests__/helpers/zudo-react.js";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { DescriptorCatalogEntry, ModuleCatalogEntry } from "../../registry/catalog.js";
 import { createRegistry } from "../../registry/registry.js";
@@ -115,18 +115,18 @@ describe("CatalogThumb dispatch", () => {
 
 describe("renderer isolation", () => {
   afterEach(() => {
-    vi.doUnmock("preact-render-to-string");
+    vi.doUnmock("@takazudo/zfb/zudo-react/server");
     vi.resetModules();
   });
 
-  it("never calls preact-render-to-string's render for a descriptor entry, but still does for a module entry", async () => {
+  it("never calls @takazudo/zfb/zudo-react/server's render for a descriptor entry, but still does for a module entry", async () => {
     const renderSpy = vi.fn(() => "<div>spied</div>");
-    vi.doMock("preact-render-to-string", () => ({ render: renderSpy }));
+    vi.doMock("@takazudo/zfb/zudo-react/server", () => ({ renderToString: renderSpy }));
     vi.resetModules();
 
-    const [{ CatalogThumb: FreshCatalogThumb }, { render: realRender }] = await Promise.all([
+    const [{ CatalogThumb: FreshCatalogThumb }, { renderToString: realRender }] = await Promise.all([
       import("../catalog-thumb.js"),
-      vi.importActual<typeof import("preact-render-to-string")>("preact-render-to-string"),
+      vi.importActual<typeof import("@takazudo/zfb/zudo-react/server")>("@takazudo/zfb/zudo-react/server"),
     ]);
 
     const html = realRender(<FreshCatalogThumb entry={descriptorEntry({ thumbnail: { kind: "placeholder", note: "x" } })} />);

@@ -3,8 +3,8 @@
 // only in module mode (where the CodePanel island above is actually mounted),
 // `tokenPanel` following `ctx.previewTokenPanel`. Descriptor mode is covered
 // by `descriptor-routes.test.tsx`; this file is module mode.
-import type { ComponentChildren, VNode } from "preact";
-import { render } from "preact-render-to-string";
+import type { Child, Description } from "@takazudo/zfb/zudo-react";
+import { renderSsr as render } from "../../__tests__/helpers/zudo-react.js";
 import { describe, expect, it, vi } from "vitest";
 import { DEFAULT_SG_ROUTES } from "../../sg-routes.js";
 
@@ -56,7 +56,7 @@ vi.mock("../_chrome.js", () => ({
 }));
 
 vi.mock("../../chrome/index.js", () => ({
-  StyleguideLayout: ({ children, title }: { children: ComponentChildren; title: string }) => (
+  StyleguideLayout: ({ children, title }: { children: Child; title: string }) => (
     <main data-title={title}>{children}</main>
   ),
 }));
@@ -75,7 +75,7 @@ vi.mock("@takazudo/zudo-doc/content-admonition", () => ({ makeAdmonition: () => 
 // Render each island as a marker carrying its props, so the toolbar/selection/
 // theme props passed to DetailWorkbench are inspectable from the SSR output.
 vi.mock("@takazudo/zfb", () => ({
-  Island: ({ children }: { children: VNode }) => {
+  Island: ({ children }: { children: Description }) => {
     const type = children.type as { displayName?: string; name?: string };
     return <div data-island={type.displayName ?? type.name} data-props={JSON.stringify(children.props)} />;
   },
