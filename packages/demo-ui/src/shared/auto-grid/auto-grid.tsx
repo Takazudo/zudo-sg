@@ -1,11 +1,11 @@
-import type { ComponentChildren, JSX } from "preact";
+import type { Child } from "@takazudo/zfb/zudo-react";
 import { cx } from "../../lib/cx";
 
 export type AutoGridMin = "11rem" | "13rem" | "14rem" | "15rem" | "16rem" | "18rem";
 export type AutoGridGap = "sm" | "md" | "split";
 type AutoGridAs = "div" | "ul" | "ol";
 
-// Tailwind v4 only generates utilities for literal class strings found in
+// Wind only generates utilities for literal class strings found in
 // source — `minmax(${min}rem,1fr)` can't be composed dynamically — so each
 // `min` step needs its own literal class below instead of an interpolated one.
 const FIT_COLS: Record<AutoGridMin, string> = {
@@ -47,7 +47,7 @@ export type AutoGridProps = {
   as?: AutoGridAs;
   "aria-label"?: string;
   class?: string;
-  children?: ComponentChildren;
+  children?: Child;
 };
 
 /**
@@ -66,7 +66,7 @@ export function AutoGrid({
 }: AutoGridProps) {
   const cols = (fill ? FILL_COLS : FIT_COLS)[min];
   const list = as === "ul" || as === "ol" ? "list-none p-0" : "";
-  const Tag = as as keyof JSX.IntrinsicElements;
+  const Tag = as;
   return (
     <Tag class={cx("grid", cols, GAP_CLASS[gap], list, className)} {...rest}>
       {children}

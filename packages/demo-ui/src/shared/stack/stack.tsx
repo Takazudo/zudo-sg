@@ -1,4 +1,5 @@
-import type { ComponentChildren, JSX } from "preact";
+import type { Child } from "@takazudo/zfb/zudo-react";
+import { jsx, type JSX } from "@takazudo/zfb/zudo-react/jsx-runtime";
 import { cx } from "../../lib/cx";
 
 export type StackDirection = "vertical" | "horizontal";
@@ -48,7 +49,7 @@ export type StackProps = {
   /** Wrapping element tag. Defaults to div. */
   as?: keyof JSX.IntrinsicElements;
   class?: string;
-  children?: ComponentChildren;
+  children?: Child;
 };
 
 /**
@@ -67,18 +68,15 @@ export function Stack({
   children,
 }: StackProps) {
   const gapClass = direction === "horizontal" ? HORIZONTAL_GAP_CLASS[gap] : VERTICAL_GAP_CLASS[gap];
-  return (
-    <Tag
-      class={cx(
-        "flex",
-        direction === "horizontal" ? "flex-row flex-wrap" : "flex-col",
-        gapClass,
-        ALIGN_CLASS[align],
-        JUSTIFY_CLASS[justify],
-        cls,
-      )}
-    >
-      {children}
-    </Tag>
-  );
+  return jsx(Tag, {
+    class: cx(
+      "flex",
+      direction === "horizontal" ? "flex-row flex-wrap" : "flex-col",
+      gapClass,
+      ALIGN_CLASS[align],
+      JUSTIFY_CLASS[justify],
+      cls,
+    ),
+    children,
+  });
 }
