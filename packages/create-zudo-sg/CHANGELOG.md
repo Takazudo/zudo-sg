@@ -4,6 +4,32 @@ All notable changes to `create-zudo-sg` are documented in this file.
 
 The format is based on Keep a Changelog.
 
+## [0.2.0] - 2026-10-12
+
+This release moves the generated starter to the zfb 4 and zudo-doc 6 stack and
+the newly published `@takazudo/zudo-sg` 0.5 line.
+
+### Breaking Changes
+
+- New projects use zudo-react and zudo-wind instead of the old Preact host and
+  Tailwind setup. The template pins zfb, zfb-runtime, and zfb-md-wasm to 4.3.1,
+  zudo-doc to 6.0.0, and zdtp to 0.8.6. Existing generated projects should
+  follow the migration guides rather than replacing files in place.
+- The starter now installs `@takazudo/zudo-sg ^0.5.0`; its new framework and
+  peer contracts do not resolve through the prior `^0.4.1` range.
+
+### Changed
+
+- Generate zudo-react stories, component scaffolds, route wrappers, and token
+  panel bootstrap wiring that hydrate under zfb 4.
+- Configure wind tokens and the engine's `wind.json` manifest, and generate
+  the UI token manifest for the migrated CSS pipeline.
+
+### Fixed
+
+- Defer the engine-route preview panel bootstrap decision until client
+  activation, so the generated starter hydrates and replays early clicks.
+
 ## [0.1.10] - 2026-09-27
 
 ### Changed
