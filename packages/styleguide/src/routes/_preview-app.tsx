@@ -17,15 +17,12 @@
 // Keep the combined `export default function Name() {}` form: zfb's island
 // scanner matches the SSR marker against the exported function name.
 
-import type { JSX } from "preact";
-import { useEffect } from "preact/hooks";
+import { getScope, type Description } from "@takazudo/zfb/zudo-react";
 import { PreviewApp } from "../preview/index.js";
 import { installIframeReceiver } from "../token-tweak/index.js";
 import { storyRegistry } from "./_registry.js";
 
-export default function ConfiguredPreviewApp(): JSX.Element {
-  useEffect(() => installIframeReceiver(window), []);
+export default function ConfiguredPreviewApp(): Description {
+  getScope().onActivate(() => installIframeReceiver(window));
   return <PreviewApp registry={storyRegistry} />;
 }
-
-ConfiguredPreviewApp.displayName = "ConfiguredPreviewApp";
