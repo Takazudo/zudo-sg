@@ -1,11 +1,11 @@
-import type { ComponentChildren } from "preact";
+import type { Child } from "@takazudo/zfb/zudo-react";
 import { Hero, type HeroAction } from "../../shared/hero/hero";
 
 export type LineHeroProps = {
   /** Short brand/domain label (e.g. "Vacuum Solutions — example-brand.com"). */
   eyebrow?: string;
-  heading?: ComponentChildren;
-  lead?: ComponentChildren;
+  heading?: Child;
+  lead?: Child;
   actions?: HeroAction[];
   class?: string;
 };

@@ -24,15 +24,15 @@ export function CertList({ heading, certs, bare = false, class: cls }: CertListP
             <span
               class="shrink-0 rounded-md border border-border px-hsp-sm py-vsp-2xs text-caption font-bold text-accent"
               style={{
-                backgroundColor: "color-mix(in srgb, var(--color-accent) 8%, var(--color-bg))",
-                borderColor: "color-mix(in srgb, var(--color-accent) 30%, var(--color-border))",
+                "background-color": "color-mix(in srgb, var(--color-accent) 8%, var(--color-bg))",
+                "border-color": "color-mix(in srgb, var(--color-accent) 30%, var(--color-border))",
               }}
             >
               {cert.code}
             </span>
             <div>
               <h3 class="text-title font-semibold text-fg">{cert.name}</h3>
-              <p class="mt-vsp-2xs text-small leading-relaxed text-fg" style={{ textWrap: "pretty" }}>
+              <p class="mt-vsp-2xs text-small leading-relaxed text-fg" style={{ "text-wrap": "pretty" }}>
                 {cert.scope}
               </p>
             </div>

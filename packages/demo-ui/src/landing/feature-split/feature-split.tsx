@@ -29,7 +29,7 @@ export function FeatureSplit({ eyebrow, heading, lead, pillars, class: cls }: Fe
           >
             <p class="text-title font-bold text-accent">{pillar.index}</p>
             <h3 class="mt-vsp-xs text-title font-semibold text-fg">{pillar.title}</h3>
-            <p class="mt-vsp-xs text-small leading-relaxed text-fg" style={{ textWrap: "pretty" }}>
+            <p class="mt-vsp-xs text-small leading-relaxed text-fg" style={{ "text-wrap": "pretty" }}>
               {pillar.body}
             </p>
           </div>

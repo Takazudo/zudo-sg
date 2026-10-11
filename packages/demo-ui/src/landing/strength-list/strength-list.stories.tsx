@@ -24,7 +24,7 @@ const STRENGTHS: Strength[] = [
 export const Default: Story<StrengthListProps> = {
   name: "Default",
   render: () => (
-    <div style={{ maxWidth: "720px" }}>
+    <div style={{ "max-width": "720px" }}>
       <StrengthList heading="Our strengths" strengths={STRENGTHS} />
     </div>
   ),
@@ -33,7 +33,7 @@ export const Default: Story<StrengthListProps> = {
 export const Narrow: Story<StrengthListProps> = {
   name: "Narrow (number stacks above body)",
   render: () => (
-    <div style={{ maxWidth: "360px" }}>
+    <div style={{ "max-width": "360px" }}>
       <StrengthList heading="Our strengths" strengths={STRENGTHS} />
     </div>
   ),

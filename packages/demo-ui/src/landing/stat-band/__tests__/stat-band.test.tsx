@@ -1,10 +1,19 @@
-import { render, screen } from "@testing-library/preact";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
+import { renderIsland, disposeAll, getByText } from "../../../test-utils/zudo-react";
+import type { Child } from "@takazudo/zfb/zudo-react";
 import { StatBand } from "../stat-band";
+
+afterEach(disposeAll);
+
+function render(node: Child) {
+  return renderIsland(function Fixture() {
+    return node;
+  }, {});
+}
 
 describe("StatBand", () => {
   it("renders each stat's value, unit, and label", () => {
-    render(
+    const { container } = render(
       <StatBand
         stats={[
           { value: "1953", unit: "founded", label: "Founding year" },
@@ -12,14 +21,14 @@ describe("StatBand", () => {
         ]}
       />,
     );
-    expect(screen.getByText("1953")).toBeInTheDocument();
-    expect(screen.getByText("founded")).toBeInTheDocument();
-    expect(screen.getByText("Founding year")).toBeInTheDocument();
-    expect(screen.getByText("Business segments")).toBeInTheDocument();
+    expect(getByText(container, "1953")).toBeInTheDocument();
+    expect(getByText(container, "founded")).toBeInTheDocument();
+    expect(getByText(container, "Founding year")).toBeInTheDocument();
+    expect(getByText(container, "Business segments")).toBeInTheDocument();
   });
 
   it("names the region without putting aria-label on the <dl>", () => {
-    render(<StatBand stats={[{ value: "1", label: "Stat" }]} />);
-    expect(screen.getByRole("region", { name: "Company summary" })).toBeInTheDocument();
+    const { container } = render(<StatBand stats={[{ value: "1", label: "Stat" }]} />);
+    expect(container.querySelector('section[aria-label="Company summary"]')).toBeInTheDocument();
   });
 });

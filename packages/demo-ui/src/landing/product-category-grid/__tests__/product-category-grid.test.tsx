@@ -1,10 +1,20 @@
-import { render, screen } from "@testing-library/preact";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
+import { renderIsland, disposeAll, getByText, getByRole } from "../../../test-utils/zudo-react";
+import { getHeading } from "../../test-utils";
+import type { Child } from "@takazudo/zfb/zudo-react";
 import { ProductCategoryGrid } from "../product-category-grid";
+
+afterEach(disposeAll);
+
+function render(node: Child) {
+  return renderIsland(function Fixture() {
+    return node;
+  }, {});
+}
 
 describe("ProductCategoryGrid", () => {
   it("renders each category as a link with its tagline and items", () => {
-    render(
+    const { container } = render(
       <ProductCategoryGrid
         heading="Our products"
         categories={[
@@ -17,11 +27,11 @@ describe("ProductCategoryGrid", () => {
         ]}
       />,
     );
-    expect(screen.getByRole("heading", { name: "Our products" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Electronic devices/ })).toHaveAttribute(
+    expect(getHeading(container, "Our products")).toBeInTheDocument();
+    expect(getByRole(container, "link", { name: /Electronic devices/ })).toHaveAttribute(
       "href",
       "/products/electronic-devices",
     );
-    expect(screen.getByText("Optical sensors")).toBeInTheDocument();
+    expect(getByText(container, "Optical sensors")).toBeInTheDocument();
   });
 });

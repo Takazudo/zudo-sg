@@ -24,7 +24,7 @@ const CATEGORIES: ProductCategory[] = [
 export const Default: Story<ProductCategoryGridProps> = {
   name: "Default",
   render: () => (
-    <div style={{ maxWidth: "960px" }}>
+    <div style={{ "max-width": "960px" }}>
       <ProductCategoryGrid heading="Our products" intro="Four categories spanning electronics and chemicals." categories={CATEGORIES} />
     </div>
   ),
@@ -33,7 +33,7 @@ export const Default: Story<ProductCategoryGridProps> = {
 export const Narrow: Story<ProductCategoryGridProps> = {
   name: "Narrow (card wrap)",
   render: () => (
-    <div style={{ maxWidth: "380px" }}>
+    <div style={{ "max-width": "380px" }}>
       <ProductCategoryGrid heading="Our products" categories={CATEGORIES} />
     </div>
   ),

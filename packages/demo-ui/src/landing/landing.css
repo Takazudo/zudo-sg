@@ -1,1 +1,3 @@
 /* Unlayered authored landing components (zc-*). */
+
+.zc-product-category-item::before { content: "—"; }

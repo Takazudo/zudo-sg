@@ -1,10 +1,20 @@
-import { render, screen } from "@testing-library/preact";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
+import { renderIsland, disposeAll, getByText } from "../../../test-utils/zudo-react";
+import { getHeading, queryHeading } from "../../test-utils";
+import type { Child } from "@takazudo/zfb/zudo-react";
 import { StrengthList } from "../strength-list";
+
+afterEach(disposeAll);
+
+function render(node: Child) {
+  return renderIsland(function Fixture() {
+    return node;
+  }, {});
+}
 
 describe("StrengthList", () => {
   it("renders each strength's number, title, and body", () => {
-    render(
+    const { container } = render(
       <StrengthList
         heading="Our strengths"
         strengths={[
@@ -13,13 +23,13 @@ describe("StrengthList", () => {
         ]}
       />,
     );
-    expect(screen.getByRole("heading", { name: "Our strengths" })).toBeInTheDocument();
-    expect(screen.getByText("01")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Broad supplier network" })).toBeInTheDocument();
+    expect(getHeading(container, "Our strengths")).toBeInTheDocument();
+    expect(getByText(container, "01")).toBeInTheDocument();
+    expect(getHeading(container, "Broad supplier network")).toBeInTheDocument();
   });
 
   it("omits the heading in bare mode", () => {
-    render(<StrengthList heading="Our strengths" strengths={[{ no: "01", title: "A", body: "B" }]} bare />);
-    expect(screen.queryByRole("heading", { name: "Our strengths" })).not.toBeInTheDocument();
+    const { container } = render(<StrengthList heading="Our strengths" strengths={[{ no: "01", title: "A", body: "B" }]} bare />);
+    expect(queryHeading(container, "Our strengths")).not.toBeInTheDocument();
   });
 });

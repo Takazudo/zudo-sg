@@ -25,7 +25,7 @@ const SOLAR_INITIATIVES: Initiative[] = [
 export const Default: Story<InitiativeGridProps> = {
   name: "Default (5 initiatives)",
   render: () => (
-    <div style={{ maxWidth: "960px" }}>
+    <div style={{ "max-width": "960px" }}>
       <InitiativeGrid heading="Our solar power initiatives" initiatives={SOLAR_INITIATIVES} />
     </div>
   ),
@@ -34,7 +34,7 @@ export const Default: Story<InitiativeGridProps> = {
 export const Sdgs: Story<InitiativeGridProps> = {
   name: "SDGs initiatives (data swap)",
   render: () => (
-    <div style={{ maxWidth: "960px" }}>
+    <div style={{ "max-width": "960px" }}>
       <InitiativeGrid
         heading="Our SDGs initiatives"
         intro="Contributing to the SDGs through both our business activities and community engagement."
@@ -51,7 +51,7 @@ export const Sdgs: Story<InitiativeGridProps> = {
 export const Narrow: Story<InitiativeGridProps> = {
   name: "Narrow (card wrap)",
   render: () => (
-    <div style={{ maxWidth: "380px" }}>
+    <div style={{ "max-width": "380px" }}>
       <InitiativeGrid heading="Our solar power initiatives" initiatives={SOLAR_INITIATIVES} />
     </div>
   ),

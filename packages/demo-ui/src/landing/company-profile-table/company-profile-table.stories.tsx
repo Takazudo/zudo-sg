@@ -28,7 +28,7 @@ const ROWS: CompanyProfileRow[] = [
 export const Default: Story<CompanyProfileTableProps> = {
   name: "Default",
   render: () => (
-    <div style={{ maxWidth: "640px" }}>
+    <div style={{ "max-width": "640px" }}>
       <CompanyProfileTable rows={ROWS} />
     </div>
   ),
@@ -37,7 +37,7 @@ export const Default: Story<CompanyProfileTableProps> = {
 export const CustomRows: Story<CompanyProfileTableProps> = {
   name: "Custom rows (any count)",
   render: () => (
-    <div style={{ maxWidth: "640px" }}>
+    <div style={{ "max-width": "640px" }}>
       <CompanyProfileTable
         rows={[
           { label: "Company name", value: "Example Co., Ltd." },
@@ -52,7 +52,7 @@ export const CustomRows: Story<CompanyProfileTableProps> = {
 export const Narrow: Story<CompanyProfileTableProps> = {
   name: "Narrow (label stacks above value)",
   render: () => (
-    <div style={{ maxWidth: "360px" }}>
+    <div style={{ "max-width": "360px" }}>
       <CompanyProfileTable rows={ROWS} />
     </div>
   ),

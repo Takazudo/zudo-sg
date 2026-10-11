@@ -29,7 +29,7 @@ const LINES: BusinessLinePortalLine[] = [
 export const Default: Story<BusinessLinePortalProps> = {
   name: "Default (all lines)",
   render: () => (
-    <div style={{ maxWidth: "960px" }}>
+    <div style={{ "max-width": "960px" }}>
       <BusinessLinePortal
         heading="Our business lines"
         intro="Five specialized lines, each with its own site and product lineup."
@@ -42,7 +42,7 @@ export const Default: Story<BusinessLinePortalProps> = {
 export const Filtered: Story<BusinessLinePortalProps> = {
   name: "Filtered subset (only)",
   render: () => (
-    <div style={{ maxWidth: "720px" }}>
+    <div style={{ "max-width": "720px" }}>
       <BusinessLinePortal heading="Featured lines" lines={LINES} only={["vacuum", "laser"]} />
     </div>
   ),
@@ -51,7 +51,7 @@ export const Filtered: Story<BusinessLinePortalProps> = {
 export const Bare: Story<BusinessLinePortalProps> = {
   name: "Bare (no heading, for MDX body embedding)",
   render: () => (
-    <div style={{ maxWidth: "960px" }}>
+    <div style={{ "max-width": "960px" }}>
       <BusinessLinePortal lines={LINES} bare />
     </div>
   ),

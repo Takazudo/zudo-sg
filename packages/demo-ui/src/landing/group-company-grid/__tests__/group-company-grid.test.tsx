@@ -1,6 +1,16 @@
-import { render, screen } from "@testing-library/preact";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
+import { renderIsland, disposeAll, getByText } from "../../../test-utils/zudo-react";
+import { getHeading, queryHeading } from "../../test-utils";
+import type { Child } from "@takazudo/zfb/zudo-react";
 import { GroupCompanyGrid } from "../group-company-grid";
+
+afterEach(disposeAll);
+
+function render(node: Child) {
+  return renderIsland(function Fixture() {
+    return node;
+  }, {});
+}
 
 const COMPANIES = [
   { name: "Example Labs Inc.", business: "Contract analysis.", established: "Founded 2020", location: "Tokyo" },
@@ -9,15 +19,15 @@ const COMPANIES = [
 
 describe("GroupCompanyGrid", () => {
   it("renders each company with business and established/location", () => {
-    render(<GroupCompanyGrid heading="Group companies" companies={COMPANIES} />);
-    expect(screen.getByRole("heading", { name: "Group companies" })).toBeInTheDocument();
-    expect(screen.getByText("Example Labs Inc.")).toBeInTheDocument();
-    expect(screen.getByText("Founded 2020 · Tokyo")).toBeInTheDocument();
-    expect(screen.getByText("Founded 2003")).toBeInTheDocument();
+    const { container } = render(<GroupCompanyGrid heading="Group companies" companies={COMPANIES} />);
+    expect(getHeading(container, "Group companies")).toBeInTheDocument();
+    expect(getByText(container, "Example Labs Inc.")).toBeInTheDocument();
+    expect(getByText(container, "Founded 2020 · Tokyo")).toBeInTheDocument();
+    expect(getByText(container, "Founded 2003")).toBeInTheDocument();
   });
 
   it("omits the heading in bare mode", () => {
-    render(<GroupCompanyGrid heading="Group companies" companies={COMPANIES} bare />);
-    expect(screen.queryByRole("heading", { name: "Group companies" })).not.toBeInTheDocument();
+    const { container } = render(<GroupCompanyGrid heading="Group companies" companies={COMPANIES} bare />);
+    expect(queryHeading(container, "Group companies")).not.toBeInTheDocument();
   });
 });

@@ -24,7 +24,7 @@ const SCENES: DiscoveryScene[] = [
 export const Default: Story<DiscoveryTeaserProps> = {
   name: "Default",
   render: () => (
-    <div style={{ maxWidth: "960px" }}>
+    <div style={{ "max-width": "960px" }}>
       <DiscoveryTeaser
         heading="Everyday places you'll find us"
         intro="Our products show up in daily life and industry in ways you might not expect."
@@ -38,7 +38,7 @@ export const Default: Story<DiscoveryTeaserProps> = {
 export const Narrow: Story<DiscoveryTeaserProps> = {
   name: "Narrow (card wrap)",
   render: () => (
-    <div style={{ maxWidth: "380px" }}>
+    <div style={{ "max-width": "380px" }}>
       <DiscoveryTeaser heading="Everyday places you'll find us" scenes={SCENES} href="/company/discovery" />
     </div>
   ),
