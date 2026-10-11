@@ -4,6 +4,41 @@ All notable changes to `@takazudo/zudo-sg` are documented in this file.
 
 The format is based on Keep a Changelog, and release notes are generated from the changelog MDX pages.
 
+## [0.5.0] - 2026-10-12
+
+This release ports the styleguide engine to zfb 4.3.1 and zudo-doc 6.0.0.
+Catalog, preview, descriptor mode, and token editing remain available on the
+new renderer and CSS pipeline.
+
+### Breaking Changes
+
+- Hosts must use zfb 4.3.1 or later in the 4.x line, zudo-doc 6.0.0 or later in
+  the 6.x line, and zdtp 0.8.6 or later in the 0.8.x line. Story renderers and
+  engine route components use zudo-react instead of Preact. Hosts should follow
+  the zfb 4 and zudo-doc 6 migration guides before upgrading.
+- The engine now publishes a `wind.json` utility manifest in place of its
+  Tailwind safelist stylesheet. Host wind configuration must include the engine
+  manifest and its declared CSS variables; the old Tailwind source and theme
+  directives no longer generate engine utilities.
+
+### Features
+
+- Render the catalog, thumbnails, detail workbench, preview frames, and search
+  islands with zudo-react. Descriptor mode and external preview routes retain
+  their framework-free data and message contracts.
+- Compile the isolated preview stylesheet through the `zfb css` CLI with
+  preview-root scoping, preserving the preview URL and host override behavior.
+- Keep `/tokens` available through a client-mounted zdtp dashboard adapter with
+  a truthful server-rendered loading shell. The engine owns the adapter's
+  Preact dependency; hosts do not need a Preact renderer.
+
+### Bug Fixes
+
+- Serve preview CSS correctly from a host mounted under a non-root base path in
+  both development and preview mode.
+- Activate the engine-route preview token panel after hydration so early clicks
+  and SPA navigation keep working in packed foreign hosts.
+
 ## [0.4.1] - 2026-09-27
 
 This release replaces the code panel's fixed dark editor theme with an
