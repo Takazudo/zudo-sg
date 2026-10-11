@@ -31,6 +31,46 @@
   content: "";
 }
 
+.zc-nav-hit-area {
+  margin-inline-end: calc(0px - var(--spacing-hsp-xs));
+}
+
+.zc-nav-drawer {
+  border-inline-end-width: 1px;
+  border-inline-end-style: solid;
+  inset-inline-start: 0;
+  top: 4rem;
+}
+
+/* Keep the authored rule aligned with max-sm:top-0, which remains on the nav. */
+@media (width < 640px) {
+  .zc-nav-drawer {
+    top: 0;
+  }
+}
+
+.zc-nav-submenu {
+  padding-inline-start: var(--spacing-hsp-lg);
+}
+
+.zc-nav-summary {
+  border-inline-start-width: 3px;
+  border-inline-start-style: solid;
+  border-inline-start-color: transparent;
+}
+
+.zc-nav-summary:hover {
+  border-inline-start-color: var(--color-accent);
+}
+
+.zc-header-search-input {
+  transform-origin: left;
+}
+
+.zc-link-inherit {
+  color: inherit;
+}
+
 .zc-nav-story-frame nav[aria-label="Global navigation"] {
   position: absolute;
 }

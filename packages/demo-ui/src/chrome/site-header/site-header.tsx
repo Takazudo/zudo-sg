@@ -97,7 +97,7 @@ export function SiteHeader({
                 data-search-input
                 placeholder="Search the site"
                 aria-label="Search keywords"
-                class="ml-0 w-0 origin-left overflow-hidden border-0 bg-transparent p-0 text-small text-rail-fg opacity-0 outline-none transition-[width,opacity,margin] placeholder:text-rail-muted focus-visible:outline-none"
+                class="zc-header-search-input ml-0 w-0 overflow-hidden border-0 bg-transparent p-0 text-small text-rail-fg opacity-0 outline-none transition-[width,opacity,margin] placeholder:text-rail-muted focus-visible:outline-none"
               />
               <button type="submit" class="sr-only">
                 Search
@@ -186,7 +186,7 @@ function BrowseCategory({ section, index }: { section: NavSection; index: number
       <h2 id={labelId} class="mb-vsp-xs text-body font-bold text-rail-fg">
         {categoryHref ? (
           <a
-            class="rounded text-inherit no-underline underline-offset-4 hover:text-accent hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rail-fg"
+            class="zc-link-inherit rounded no-underline underline-offset-4 hover:text-accent hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rail-fg"
             href={categoryHref}
           >
             {section.label}
