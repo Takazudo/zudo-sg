@@ -49,7 +49,7 @@ export default defineConfig({
   port: 4321,
   base: settings.base,
   strictContentBridge: true,
-  // zfb 2.14 guard: fail builds when JS/TS imports plain CSS bytes it cannot emit.
+  // Retained public zfb guard: reject plain CSS imports that cannot be emitted.
   strictPlainCssImports: true,
   // #215: msw's core resolves through path-to-regexp@6, a CJS-main/module-only
   // package (no `exports` map). esbuild's `--platform=neutral` page/SSR pass
@@ -179,6 +179,18 @@ export default defineConfig({
             "tooltip": "var(--z-index-tooltip)",
             "drag": "var(--z-index-drag)",
           },
+        },
+        // Search results are assembled by the inline script, outside JSX scanning.
+        safelist: {
+          "search-widget": [
+            "-mx-hsp-lg", "border-b", "border-muted", "group", "block",
+            "px-hsp-lg", "py-vsp-sm", "focus-visible:outline-2",
+            "focus-visible:outline-offset-2", "focus-visible:outline-accent",
+            "font-semibold", "text-fg", "group-hover:text-accent",
+            "group-hover:underline", "group-focus-visible:underline",
+            "mt-vsp-2xs", "text-caption", "text-muted", "leading-relaxed",
+            "decoration-muted",
+          ],
         },
         breakpoints: demoUiWindBreakpoints,
         strict: true,

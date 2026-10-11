@@ -1,7 +1,7 @@
 // Client-side script for the SiteSearch custom element.
 //
 // Implemented as a plain JavaScript IIFE (no ES-module `import` statements)
-// so it can be emitted via `dangerouslySetInnerHTML` without requiring bundler
+// so it can be emitted via `rawHtml` without requiring bundler
 // support for inline scripts.
 //
 // Key differences from the bundled module approach:

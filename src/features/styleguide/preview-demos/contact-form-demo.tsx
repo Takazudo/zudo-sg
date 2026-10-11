@@ -22,11 +22,11 @@
 // since Dialog is a plain controlled component with no document-wide query),
 // this demo keeps a SINGLE ContactForm mounted and lets the visitor pick
 // which mocked submit adapter drives it — a success path and a 5xx-recovery
-// path, matching the two variants the dialog demo exercised. `key={variant}`
+// path, matching the two variants the dialog demo exercised. A keyed `For`
 // forces a clean remount (back to the input panel) on each switch so a
 // half-completed attempt under one variant never leaks into the other.
 //
-// `msw`/`msw/browser` are loaded via a runtime `import()` INSIDE startWorker,
+// `msw`/`msw/browser` are loaded via a runtime `import()` inside the activation callback,
 // never as a static top-level import. `msw/browser` defines
 // `class CancelableMessageEvent extends MessageEvent {}` at module top
 // level, which evaluates its `extends` clause immediately on load — and
@@ -36,13 +36,13 @@
 // contact.tsx and would get pulled into that pass's bundle even though this
 // component never touches MSW during SSR, crashing the build with
 // `ReferenceError: MessageEvent is not defined`. A dynamic import deferred
-// to a browser-only effect (mirrors the zdtp lazy-load in
+// to an activation callback (mirrors the zdtp lazy-load in
 // packages/styleguide/src/token-tweak/preview-token-panel-bootstrap.tsx)
 // keeps msw's module body out of that pass entirely — ContactFormDemo itself stays a static top-level
 // export so zfb's island scanner still finds and binds the real component
-// (see pages/lib/_body-end-islands.tsx's orphan-component note).
-import type { JSX } from "preact";
-import { useEffect, useState } from "preact/hooks";
+// (see the static boundary in pages/lib/_body-end-islands.tsx).
+import { signal, computed, getScope, For } from "@takazudo/zfb/zudo-react";
+import type { JSX } from "@takazudo/zfb/zudo-react/jsx-runtime";
 import { ContactForm } from "@zudo-sg/demo-ui/src/forms/contact-form/contact-form.tsx";
 import ContactFormEnhancer from "@zudo-sg/demo-ui/src/forms/contact-form/contact-form-enhancer.tsx";
 import type { FormSubmitAdapter } from "@zudo-sg/demo-ui/src/forms/lib/create-form-enhancer.ts";
@@ -57,58 +57,9 @@ const FAILURE_PATH = "/preview/api/contact-demo/send-fail";
 // intercept fetches made by other root-host routes/pages.
 const PREVIEW_SCOPE = withBase("/preview/");
 
-// Module-scoped so the worker starts at most once even if the island
-// re-mounts (e.g. client-router page swaps, see settings.dynamicPageTransition).
-let workerReady: Promise<void> | null = null;
-
-function startWorker(): Promise<void> {
-  if (!workerReady) {
-    workerReady = Promise.all([import("msw"), import("msw/browser")])
-      .then(async ([{ http, HttpResponse }, { setupWorker }]) => {
-        // Handler patterns are base-prefixed to match the base-prefixed URLs
-        // `fetch` actually requests (see submitSuccess/submitFailure below) —
-        // both derived from the same withBase() call so they can't drift apart.
-        const worker = setupWorker(
-          http.post(withBase(SUCCESS_PATH), async () => HttpResponse.json({ ok: true })),
-          http.post(withBase(FAILURE_PATH), async () =>
-            HttpResponse.json(
-              { message: "Server rejected the request (mocked failure)." },
-              { status: 500 },
-            ),
-          ),
-        );
-        const registration = await worker.start({
-          serviceWorker: {
-            url: withBase("/mockServiceWorker.js"),
-            options: { scope: PREVIEW_SCOPE },
-          },
-          // Any request this page makes outside the two mocked endpoints
-          // above (none currently) passes through untouched instead of erroring.
-          onUnhandledRequest: "bypass",
-        });
-        // Assert the registered scope actually landed under /preview/ — a
-        // silent scope drift (e.g. from a future base-path change) would let
-        // this mock worker intercept unrelated routes, which the previewRoute
-        // contract forbids.
-        if (registration && !registration.scope.endsWith(PREVIEW_SCOPE)) {
-          throw new Error(
-            `[contact-form-demo] MSW registered at unexpected scope "${registration.scope}"; expected it to end with "${PREVIEW_SCOPE}".`,
-          );
-        }
-      })
-      .catch((err: unknown) => {
-        // Re-arm on failure: a rejected init (dynamic import, SW registration,
-        // or the scope assertion above) must NOT pin the module cache at a
-        // permanently rejected promise, which would leave the island stuck at
-        // "error" with no retry for the whole session. Reset the cache so a
-        // later mount/trigger starts fresh. The successful-once guard above is
-        // untouched, so once the worker is up no redundant second start runs.
-        workerReady = null;
-        throw err;
-      });
-  }
-  return workerReady;
-}
+// A worker belongs to one activated island. Cleanup stops it, including when
+// its asynchronous imports/registration finish after the island was disposed.
+type MockWorker = ReturnType<typeof import("msw/browser")["setupWorker"]>;
 
 const submitSuccess: FormSubmitAdapter = async (data) => {
   const res = await fetch(withBase(SUCCESS_PATH), {
@@ -136,33 +87,66 @@ const submitFailure: FormSubmitAdapter = async (data) => {
 type Variant = "success" | "failure";
 
 function ContactFormDemo(): JSX.Element {
-  const [workerState, setWorkerState] = useState<"starting" | "ready" | "error">("starting");
-  const [workerError, setWorkerError] = useState<string | null>(null);
-  const [variant, setVariant] = useState<Variant>("success");
+  const scope = getScope();
+  const workerState = signal<"starting" | "ready" | "error">("starting");
+  const workerError = signal<string | null>(null);
 
-  useEffect(() => {
-    startWorker()
-      .then(() => setWorkerState("ready"))
+  scope.onActivate(() => {
+    let aborted = false;
+    let worker: MockWorker | undefined;
+    void Promise.all([import("msw"), import("msw/browser")])
+      .then(async ([{ http, HttpResponse }, { setupWorker }]) => {
+        if (aborted) return;
+        worker = setupWorker(
+          http.post(withBase(SUCCESS_PATH), () => HttpResponse.json({ ok: true })),
+          http.post(withBase(FAILURE_PATH), () => HttpResponse.json(
+            { message: "Server rejected the request (mocked failure)." },
+            { status: 500 },
+          )),
+        );
+        const registration = await worker.start({
+          serviceWorker: {
+            url: withBase("/mockServiceWorker.js"),
+            options: { scope: PREVIEW_SCOPE },
+          },
+          onUnhandledRequest: "bypass",
+        });
+        if (aborted) { worker.stop(); return; }
+        if (registration && !registration.scope.endsWith(PREVIEW_SCOPE)) {
+          throw new Error(`[contact-form-demo] MSW registered at unexpected scope "${registration.scope}"; expected it to end with "${PREVIEW_SCOPE}".`);
+        }
+        workerState.value = "ready";
+      })
       .catch((err: unknown) => {
-        setWorkerError(err instanceof Error ? err.message : String(err));
-        setWorkerState("error");
+        worker?.stop();
+        if (aborted) return;
+        workerError.value = err instanceof Error ? err.message : String(err);
+        workerState.value = "error";
       });
-  }, []);
+    return () => { aborted = true; worker?.stop(); };
+  });
 
-  if (workerState === "error") {
-    return (
-      <p role="alert" class="text-sm text-danger">
-        Failed to start the mock service worker: {workerError}
-      </p>
-    );
-  }
+  return <For each={computed(() => [workerState.value])} by={(state) => state}>
+    {(state) => {
+      if (state.value === "error") {
+        return (
+          <p role="alert" class="text-sm text-danger">
+            Failed to start the mock service worker: {workerError.value}
+          </p>
+        );
+      }
 
-  if (workerState === "starting") {
-    return <p class="text-sm text-muted">Starting mock service worker…</p>;
-  }
+      if (state.value === "starting") {
+        return <p class="text-sm text-muted">Starting mock service worker…</p>;
+      }
 
-  const activePath = variant === "success" ? SUCCESS_PATH : FAILURE_PATH;
+      return <ContactFormVariants />;
+    }}
+  </For>;
+}
 
+function ContactFormVariants(): JSX.Element {
+  const variant = signal<Variant>("success");
   return (
     <div class="flex flex-col gap-vsp-md">
       <p class="text-sm text-muted">
@@ -173,41 +157,50 @@ function ContactFormDemo(): JSX.Element {
         <button
           type="button"
           class="rounded-md border border-border bg-surface px-hsp-md py-hsp-xs text-sm hover:border-border-strong"
-          aria-pressed={variant === "success"}
-          onClick={() => setVariant("success")}
-        >
-          Success demo
-        </button>
+          aria-pressed={computed(() => String(variant.value === "success"))}
+          on:click={() => { variant.value = "success"; }}
+        >Success demo</button>
         <button
           type="button"
           class="rounded-md border border-border bg-surface px-hsp-md py-hsp-xs text-sm hover:border-border-strong"
-          aria-pressed={variant === "failure"}
-          onClick={() => setVariant("failure")}
-        >
-          5xx-recovery demo
-        </button>
+          aria-pressed={computed(() => String(variant.value === "failure"))}
+          on:click={() => { variant.value = "failure"; }}
+        >5xx-recovery demo</button>
       </div>
       <p class="text-sm text-muted">
-        {variant === "success" ? (
-          <>
-            Submitting calls <code>POST {withBase(activePath)}</code>, mocked to resolve 200. The
-            form advances to the complete panel.
-          </>
-        ) : (
-          <>
-            Submitting calls <code>POST {withBase(activePath)}</code>, mocked to reject with 500.
-            The confirm panel stays open and shows the error so you can retry.
-          </>
-        )}
+        <For each={computed(() => [variant.value])} by={(value) => value}>
+          {(value) => <ContactFormDescription variant={value.value} />}
+        </For>
       </p>
-
-      <div key={variant} style={{ maxWidth: "760px" }}>
-        <ContactForm />
-        <ContactFormEnhancer onSubmit={variant === "success" ? submitSuccess : submitFailure} />
-      </div>
+      <For each={computed(() => [variant.value])} by={(value) => value}>
+        {(value) => <ContactFormVariant variant={value.value} />}
+      </For>
     </div>
   );
 }
-ContactFormDemo.displayName = "ContactFormDemo";
+
+function ContactFormDescription({ variant }: { variant: Variant }): JSX.Element {
+  const activePath = variant === "success" ? SUCCESS_PATH : FAILURE_PATH;
+  return variant === "success" ? (
+    <>
+      Submitting calls <code>POST {withBase(activePath)}</code>, mocked to resolve 200. The
+      form advances to the complete panel.
+    </>
+  ) : (
+    <>
+      Submitting calls <code>POST {withBase(activePath)}</code>, mocked to reject with 500.
+      The confirm panel stays open and shows the error so you can retry.
+    </>
+  );
+}
+
+function ContactFormVariant({ variant }: { variant: Variant }): JSX.Element {
+  return (
+    <div style={{ "max-width": "760px" }}>
+      <ContactForm />
+      <ContactFormEnhancer onSubmit={variant === "success" ? submitSuccess : submitFailure} />
+    </div>
+  );
+}
 
 export default ContactFormDemo;

@@ -35,7 +35,8 @@
 // those registry entries. If those pages ever stop importing these chains, add
 // a static registration path.
 
-import type { ChromeHostBindings } from "@takazudo/zudo-doc/factory-context";
+import { defineChromeBindings } from "@takazudo/zudo-doc/chrome-bindings";
+import type { BodyEndIslandsSlotProps } from "@takazudo/zudo-doc/chrome-bindings";
 import { settings } from "@/config/settings";
 import { BodyEndIslands } from "./_body-end-islands";
 import { docHistoryMeta } from "virtual:zudo-sg-doc-history-meta";
@@ -44,10 +45,10 @@ import { docHistoryMeta } from "virtual:zudo-sg-doc-history-meta";
 // host `basePath` here (only consumed by the aiAssistant-gated modal, off in
 // this project). `basePath` is a host-owned value the package can't supply, so
 // it wins over anything spread from `props`.
-const BodyEndIslandsBound: ChromeHostBindings["BodyEndIslands"] = (props) =>
+const BodyEndIslandsBound = (props: BodyEndIslandsSlotProps) =>
   BodyEndIslands({ ...props, basePath: settings.base ?? "/" });
 
-export const chromeBindings: ChromeHostBindings = {
+export const chromeBindings = defineChromeBindings({
   BodyEndIslands: BodyEndIslandsBound,
   docHistoryMeta,
-};
+});

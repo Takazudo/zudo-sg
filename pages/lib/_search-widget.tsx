@@ -23,7 +23,7 @@
 // `_header-with-defaults.tsx`'s `search` slot prop. It is self-contained
 // so B-10-2 (version-switcher) can touch the header file without conflict.
 
-import type { JSX } from "preact";
+import type { JSX } from "@takazudo/zfb/zudo-react/jsx-runtime";
 import { withBase } from "@/utils/base";
 import { SEARCH_WIDGET_SCRIPT } from "./_search-widget-script.js";
 
@@ -53,7 +53,6 @@ export function SearchWidget(props: SearchWidgetProps): JSX.Element {
 
   return (
     <>
-      {/* @ts-expect-error site-search is a custom element not in JSX intrinsics */}
       <site-search
         data-base={base}
         data-result-count-template={resultCountTemplate}
@@ -186,14 +185,13 @@ export function SearchWidget(props: SearchWidgetProps): JSX.Element {
             </div>
           </div>
         </dialog>
-      {/* @ts-expect-error closing custom element tag */}
       </site-search>
 
       {/* Inline script registers the SiteSearch custom element. Emitted once
           per page — the browser deduplicates same-id custom elements
           automatically; the `customElements.define` call below guards against
           double-registration with the `!customElements.get(...)` check. */}
-      <script dangerouslySetInnerHTML={{ __html: SEARCH_WIDGET_SCRIPT }} />
+      <script rawHtml={SEARCH_WIDGET_SCRIPT} />
     </>
   );
 }
