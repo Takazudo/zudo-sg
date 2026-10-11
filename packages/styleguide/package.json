@@ -164,7 +164,7 @@
     "@codemirror/lang-javascript": "^6.0.0",
     "@codemirror/language": "^6.13.1",
     "@codemirror/state": "^6.7.6",
-    "@codemirror/view": "^6.0.0",
+    "@codemirror/view": "^6.43.14",
     "@lezer/highlight": "^1.0.0",
     "postcss": "^8.5.28",
     "preact": "^10.29.1"
