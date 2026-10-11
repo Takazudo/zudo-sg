@@ -1,5 +1,8 @@
 import "@testing-library/jest-dom/vitest";
-import { beforeEach } from "vitest";
+import { afterEach, beforeEach } from "vitest";
+import { disposeAll } from "./src/test-utils/zudo-react.js";
+
+afterEach(disposeAll);
 
 beforeEach(() => {
   const happy = (
