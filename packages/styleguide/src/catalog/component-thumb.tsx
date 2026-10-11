@@ -1,5 +1,3 @@
-/** @jsxRuntime automatic */
-/** @jsxImportSource preact */
 // Inline, server-rendered thumbnails for a host's `/components` catalogue
 // (#540, moved into the engine package by #653).
 //

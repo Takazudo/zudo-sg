@@ -1,6 +1,4 @@
 "use client";
-/** @jsxRuntime automatic */
-/** @jsxImportSource preact */
 
 // Real `"use client"` island reached through the generated registry. It is
 // intentionally not statically imported by a host `pages/` file.

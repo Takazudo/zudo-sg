@@ -1,5 +1,3 @@
-/** @jsxRuntime automatic */
-/** @jsxImportSource preact */
 // Mode-neutral catalog tile thumbnail (epic #879, E3). Branches on the
 // entry's `source` BEFORE touching anything story-shaped, so a descriptor
 // entry (which has no `variants[0].story` to render) never reaches the

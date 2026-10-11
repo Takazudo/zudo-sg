@@ -1,5 +1,3 @@
-/** @jsxRuntime automatic */
-/** @jsxImportSource preact */
 // Injected at `sgContext.routes.componentsIndex` — the component catalog
 // landing: category-grouped tiles, each carrying its component rendered
 // INLINE server-side (no preview iframes), filtered client-side by the

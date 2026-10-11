@@ -1,5 +1,3 @@
-/** @jsxRuntime automatic */
-/** @jsxImportSource preact */
 // Injected at `sgContext.routes.componentsPreview` — the isolated variant
 // preview document loaded as the `src` of every VariantFrame iframe.
 //

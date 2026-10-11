@@ -1,5 +1,3 @@
-/** @jsxRuntime automatic */
-/** @jsxImportSource preact */
 // @vitest-environment happy-dom
 // Catalogue gallery contracts (#540, moved into the engine package by #653).
 //

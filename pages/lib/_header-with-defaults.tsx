@@ -1,5 +1,3 @@
-/** @jsxRuntime automatic */
-/** @jsxImportSource preact */
 // Locale-/version-aware Header wrapper for the zfb doc pages.
 //
 // Header data-prep utilities — builds the resolved header config from user

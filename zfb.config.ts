@@ -43,11 +43,9 @@ const preset = zudoDocPreset({
 });
 
 export default defineConfig({
-  framework: "preact",
   // Pin the dev/preview port — zfb defaults to 3000, but the generated
   // CLAUDE.md and the Tauri dev wrappers assume 4321.
   port: 4321,
-  tailwind: { enabled: true },
   base: settings.base,
   strictContentBridge: true,
   // zfb 2.14 guard: fail builds when JS/TS imports plain CSS bytes it cannot emit.
@@ -101,6 +99,20 @@ export default defineConfig({
           name: "./pages/lib/_doc-history-meta.mjs",
         },
       ],
+      wind: {
+        reset: "owned-v1",
+        tokens: {}, // filled by S3b
+        breakpoints: {
+          sm: { minWidthPx: 640 },
+          md: { minWidthPx: 768 },
+          lg: { minWidthPx: 1024 },
+          xl: { minWidthPx: 1280 },
+        },
+        strict: true,
+        dark: false,
+        utilities: { placement: "before-authored" },
+        sources: { roots: ["pages", "src", "packages/demo-ui/src"] },
+      },
     },
     {
       ...zudoSgConfig,

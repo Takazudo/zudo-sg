@@ -1,5 +1,3 @@
-/** @jsxRuntime automatic */
-/** @jsxImportSource preact */
 // Injected at `sgContext.routes.componentsSlug` — the component detail page.
 // zfb extracts `paths()` from this `.tsx` source by AST (one route per story).
 //

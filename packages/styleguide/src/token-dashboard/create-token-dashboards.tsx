@@ -1,5 +1,3 @@
-/** @jsxRuntime automatic */
-/** @jsxImportSource preact */
 import type { TabConfig } from "@takazudo/zdtp";
 import { TokenDashboard } from "@takazudo/zdtp/dashboard";
 import type { JSX } from "preact";

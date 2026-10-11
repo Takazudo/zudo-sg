@@ -14,20 +14,16 @@
     "typecheck": "zfb check"
   },
   "dependencies": {
-    "@takazudo/zfb": "2.21.1",
-    "@takazudo/zfb-runtime": "2.21.1",
+    "@takazudo/zfb": "4.3.1",
+    "@takazudo/zfb-runtime": "4.3.1",
     "@zudo-sg/demo-ui": "workspace:*",
-    "preact": "^10.29.8",
-    "preact-render-to-string": "^6.6.6",
     "zod": "^4.0.0"
   },
   "devDependencies": {
-    "@tailwindcss/vite": "^4.3.3",
-    "@testing-library/preact": "^3.2.4",
     "@types/node": "^22.0.0",
-    "tailwindcss": "^4.3.3",
     "typescript": "^5.9.0",
-    "vitest": "^4.1.9"
+    "vite": "7.3.5",
+    "vitest": "4.1.11"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

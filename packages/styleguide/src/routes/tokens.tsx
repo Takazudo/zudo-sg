@@ -1,5 +1,3 @@
-/** @jsxRuntime automatic */
-/** @jsxImportSource preact */
 // Injected at `sgContext.routes.tokens` — the declared-defaults design-token
 // dashboards. The manifest arrives through `virtual:zudo-sg-tokens` (routes
 // plugin `tokensManifestModule` = `zudo-sg.config.mjs` `tokens.manifestOut`);

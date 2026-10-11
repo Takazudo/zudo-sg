@@ -1,5 +1,3 @@
-/** @jsxRuntime automatic */
-/** @jsxImportSource preact */
 // The root page stays host-owned so it can import site-wide islands.
 import type { JSX } from "preact";
 // Optional islands seed; see pages/lib/_zudo-sg-islands.ts.

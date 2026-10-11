@@ -1,5 +1,3 @@
-/** @jsxRuntime automatic */
-/** @jsxImportSource preact */
 import type { Story, StoryMeta } from "@takazudo/zudo-sg/stories";
 
 const meta: StoryMeta = {

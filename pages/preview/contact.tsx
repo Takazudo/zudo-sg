@@ -1,5 +1,3 @@
-/** @jsxRuntime automatic */
-/** @jsxImportSource preact */
 // Live demo page for the ContactForm component's `previewRoute`
 // (packages/demo-ui/STORIES.md §6) — reachable directly at `/preview/contact`,
 // surfaced from the catalog detail page as a plain "Live demo" link. This is

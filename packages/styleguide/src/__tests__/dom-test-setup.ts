@@ -3,12 +3,7 @@
 // suite. Mirrors the root `vitest.setup.ts`, which also applies when the root
 // config runs these suites — every step here is idempotent.
 import "@testing-library/jest-dom/vitest";
-import { cleanup } from "@testing-library/preact";
-import { afterEach, beforeEach } from "vitest";
-
-afterEach(() => {
-  cleanup();
-});
+import { beforeEach } from "vitest";
 
 // #357: stop Happy DOM's async child-frame navigation for real-src preview frames.
 beforeEach(() => {

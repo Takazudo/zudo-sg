@@ -1,5 +1,3 @@
-/** @jsxRuntime automatic */
-/** @jsxImportSource preact */
 // og:title / og:description / color-scheme head injection for the zfb doc pages.
 //
 // Why this wrapper exists: the package `<DocLayout>` shell exposes a `head` slot

@@ -12,16 +12,34 @@ import { withZudoSg } from "@takazudo/zudo-sg/config";
 import zudoSgConfig from "./zudo-sg.config.mjs";
 
 export default defineConfig(
-  withZudoSg(
-    zudoDoc({
-      siteName: "Descriptor Host Fixture",
-      base: "/styleguide/",
-      port: 4399,
-      favicon: "auto",
-      mermaid: false,
-      strictContentBridge: true,
-      dynamicPageTransition: true,
-    }),
-    zudoSgConfig,
-  ),
+  {
+    ...withZudoSg(
+      {
+        ...zudoDoc({
+          siteName: "Descriptor Host Fixture",
+          base: "/styleguide/",
+          port: 4399,
+          favicon: "auto",
+          mermaid: false,
+          strictContentBridge: true,
+          dynamicPageTransition: true,
+        }),
+        wind: {
+          reset: "owned-v1",
+          tokens: {}, // filled by S3b
+          breakpoints: {
+            sm: { minWidthPx: 640 },
+            md: { minWidthPx: 768 },
+            lg: { minWidthPx: 1024 },
+            xl: { minWidthPx: 1280 },
+          },
+          strict: true,
+          dark: false,
+          utilities: { placement: "before-authored" },
+          sources: { roots: ["pages", "src"] },
+        },
+      },
+      zudoSgConfig,
+    ),
+  },
 );
