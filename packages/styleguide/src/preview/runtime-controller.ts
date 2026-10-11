@@ -75,6 +75,7 @@ export function createExternalPreviewRuntime(options: ExternalPreviewRuntimeOpti
   let abort = new AbortController();
   let operations = Promise.resolve();
   let mounting = Promise.resolve();
+  let pendingMountOwner: number | null = null;
   let disposeResult: Promise<void> | undefined;
   let restoreListener: ((event: PageTransitionEvent) => void) | null = null;
   const retiredSessions = new Set<string>();
@@ -139,6 +140,7 @@ export function createExternalPreviewRuntime(options: ExternalPreviewRuntimeOpti
   }
   function mount(): void {
     const owner = epoch;
+    pendingMountOwner = owner;
     const revision = propsRevision;
     const initial = props;
     const signal = abort.signal;
@@ -175,7 +177,21 @@ export function createExternalPreviewRuntime(options: ExternalPreviewRuntimeOpti
         }
       });
       await operations;
-    }).catch((failure) => { if (current(owner)) reportError(runtimeError(failure, "import")); });
+    }).catch((failure) => { if (current(owner)) reportError(runtimeError(failure, "import")); }).finally(() => {
+      if (pendingMountOwner === owner) pendingMountOwner = null;
+      // Props received during a failed attempt also get one new attempt. A
+      // failure with unchanged props never retries itself indefinitely.
+      if (current(owner) && !instance && error && propsRevision !== revision) retryFailedMount();
+    });
+  }
+  function retryFailedMount(): void {
+    if (pendingMountOwner !== null || instance || !error) return;
+    abort.abort();
+    abort = new AbortController();
+    epoch++;
+    ready = false;
+    clearError();
+    mount();
   }
   function reset(nextGeneration: number): void {
     const old = instance;
@@ -233,7 +249,7 @@ export function createExternalPreviewRuntime(options: ExternalPreviewRuntimeOpti
           if (recovering) announce();
           else reportHeight();
         }, owner);
-      }
+      } else retryFailedMount();
     } else if (message.type === MSG_SET_THEME) {
       target.document.documentElement.dataset.theme = message.theme;
       queue(() => options.onTheme?.(message.theme));

@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import "../../__tests__/dom-test-setup.js";
 import { signal, Show } from "@takazudo/zfb/zudo-react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
 import {
   renderIsland,
   fire,
@@ -9,6 +9,7 @@ import {
 } from "../../__tests__/helpers/zudo-react.js";
 import type { StoryControl } from "../../stories/index.js";
 import VariantFrame from "../variant-frame.js";
+import { createPreviewCssOwner } from "../../code-panel/css-injection.js";
 import {
   buildPreviewSrc,
   DEFAULT_FRAME_SANDBOX,
@@ -563,8 +564,11 @@ describe("VariantFrame strict external runtime", () => {
   });
 
   it("shows initial errors before ready and clears only same-document recovery", async () => {
-    const { app, frame, envelope, ready } = await stage();
+    const { app, frame, post, envelope, ready } = await stage();
+    const input = app.container.querySelector<HTMLInputElement>('input[type="text"]')!;
+    input.value = "corrected before handshake"; fire(input, "input");
     fromFrame(frame, { ...envelope(), type: "sg:runtimeError", error: { code: "import", message: "Cannot load editor", recoverable: true } });
+    expect(post.mock.calls.filter(([message]) => message.type === MSG_UPDATE_PROPS).at(-1)?.[0].props).toEqual({ label: "corrected before handshake" });
     await app.flush();
     expect(app.container.querySelector('[role="alert"]')?.textContent).toContain("Cannot load editor");
     expect(getByRole(app.container, "button", { name: "Reload preview" })).toBeTruthy();
@@ -574,5 +578,39 @@ describe("VariantFrame strict external runtime", () => {
     ready(1);
     await app.flush();
     expect(app.container.querySelector('[role="alert"]')).toBeNull();
+  });
+
+  it("sends recovery edits and prop Reset to the bound errored runtime, and flushes current props before full reset", async () => {
+    const { app, frame, post, envelope, ready } = await stage();
+    ready();
+    await app.flush();
+    fromFrame(frame, { ...envelope(1), type: "sg:runtimeError", error: { code: "render", message: "Bad old props", recoverable: true } });
+    await app.flush();
+    post.mockClear();
+    const input = app.container.querySelector<HTMLInputElement>('input[type="text"]')!;
+    input.value = "recovery"; fire(input, "input");
+    expect(post.mock.calls.at(-1)?.[0]).toMatchObject({ type: MSG_UPDATE_PROPS, generation: 0, props: { label: "recovery" } });
+    fire(getByRole(app.container, "button", { name: "Reset" }), "click");
+    expect(post.mock.calls.at(-1)?.[0]).toMatchObject({ type: MSG_UPDATE_PROPS, generation: 0, props: { label: "initial" } });
+    input.value = "latest"; fire(input, "input");
+    applyPreviewVars([["--e2-test", "4px"]]);
+    const cssOwner = createPreviewCssOwner("/frame/");
+    onTestFinished(() => cssOwner.dispose());
+    cssOwner.set("recovery", "body { color: purple; }");
+    post.mockClear();
+    fire(getByRole(app.container, "button", { name: "Reset fixture button" }), "click");
+    const messages = post.mock.calls.map(([message]) => message);
+    const snapshot = messages.find((message) => message.type === MSG_UPDATE_PROPS);
+    const reset = messages.find((message) => message.type === "sg:resetFixture");
+    expect(snapshot).toMatchObject({ type: MSG_UPDATE_PROPS, generation: 0, props: { label: "latest" } });
+    expect(reset).toMatchObject({ type: "sg:resetFixture", generation: 0, nextGeneration: 1 });
+    expect(Number(reset!.sequence)).toBeGreaterThan(Number(snapshot!.sequence));
+    expect(messages.find((message) => message.type === MSG_SET_THEME)).toMatchObject({ generation: 0, theme: "dark" });
+    expect(messages.find((message) => message.type === "apply-css-vars")).toMatchObject({ identity: { generation: 0 }, vars: [["--e2-test", "4px"]] });
+    expect(frame.contentDocument?.querySelector('[data-sg-injected-css="recovery"]')?.textContent).toBe("body { color: purple; }");
+    expect(messages.indexOf(snapshot!)).toBeLessThan(messages.indexOf(reset!));
+    // Edits during the next mount also use its already-bound generation.
+    input.value = "during mount"; fire(input, "input");
+    expect(post.mock.calls.at(-1)?.[0]).toMatchObject({ type: MSG_UPDATE_PROPS, generation: 1, props: { label: "during mount" } });
   });
 });

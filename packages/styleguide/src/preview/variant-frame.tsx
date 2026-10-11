@@ -201,7 +201,9 @@ function VariantFrame(props: VariantFrameProps): Description {
   }
 
   function syncProps(force = false): void {
-    if (!ready || (!(read(controls)?.length) && Object.keys(values.value).length === 0)) return;
+    // A bound strict receiver retains props while mounting or errored. Allow
+    // recovery edits then; an unbound document still waits for its handshake.
+    if ((!ready && !(runtime === "external-v1" && identity)) || (!(read(controls)?.length) && Object.keys(values.value).length === 0)) return;
     const serialized = JSON.stringify(values.value);
     if (!force && serialized === lastProps) return;
     if (runtime === "external-v1") {
@@ -220,6 +222,12 @@ function VariantFrame(props: VariantFrameProps): Description {
 
   function resetFixture(): void {
     if (!identity || !canResetFixture.value) return;
+    // The ordered snapshot reaches the runtime before reset starts its mount,
+    // even when the current fixture cannot become ready with its old props.
+    syncProps(true);
+    syncTheme();
+    const iframe = iframeRef.current;
+    if (iframe) { replayPreviewVars(iframe); replayCssToPreview(iframe); }
     const message: ExternalParentMessage = { type: MSG_RESET_FIXTURE, v: PROTOCOL_VERSION, runtimeVersion: EXTERNAL_RUNTIME_VERSION, ...identity, sequence: ++outgoing, nextGeneration: identity.generation + 1 };
     identity = { ...identity, generation: message.nextGeneration };
     incoming = -1;
@@ -238,7 +246,7 @@ function VariantFrame(props: VariantFrameProps): Description {
   }
 
   function syncTheme(): void {
-    if (!ready) return;
+    if (!ready && !(runtime === "external-v1" && identity)) return;
     const mode = read(themeMode);
     if (mode === "none") return;
     const theme = mode === "follow" ? readCatalogTheme() : mode;
@@ -273,6 +281,7 @@ function VariantFrame(props: VariantFrameProps): Description {
         } else if (data.type === MSG_RUNTIME_ERROR) {
           ready = false;
           previewError.value = data.error.message;
+          syncProps();
         } else if (fixedHeight === undefined) height.value = Math.max(80, Math.ceil(data.height));
         return;
       }
@@ -361,7 +370,7 @@ function VariantFrame(props: VariantFrameProps): Description {
   scope.onActivate(() => {
     const iframe = iframeRef.current;
     if (!iframe) return;
-    registerPreviewIframe(iframe, runtime === "external-v1" ? { identity: () => ready ? identity : null } : {});
+    registerPreviewIframe(iframe, runtime === "external-v1" ? { identity: () => identity } : {});
     const removeCss = registerCssPreview(iframe);
     if (ready) { replayPreviewVars(iframe); replayCssToPreview(iframe); }
     return () => { unregisterPreviewIframe(iframe); removeCss(); };

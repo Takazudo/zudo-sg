@@ -100,6 +100,35 @@ describe("external preview runtime controller", () => {
     runtimes.splice(runtimes.indexOf(runtime), 1);
   });
 
+  it.each(["render", "import"] as const)("retries a failed initial %s on corrected props without overlapping mounts or stale callbacks", async (code) => {
+    let failedContext!: ExternalFixtureMountContext;
+    const pending = deferred<ExternalFixtureInstance>();
+    const update = vi.fn();
+    const mount = vi.fn().mockImplementationOnce((context: ExternalFixtureMountContext) => {
+      failedContext = context;
+      throw new ExternalPreviewError(code, "Initial attempt failed");
+    }).mockImplementationOnce(() => pending.promise);
+    const runtime = make(mount);
+    await expect(runtime.whenStable()).rejects.toThrow("Initial attempt failed");
+    const identity = runtime.getSnapshot().identity;
+    expect(mount).toHaveBeenCalledTimes(1);
+    send(runtime, "sg:updateProps", { props: { valid: true } });
+    await vi.waitFor(() => expect(mount).toHaveBeenCalledTimes(2));
+    expect(mount.mock.calls[1]?.[0].props).toEqual({ valid: true });
+    expect(failedContext.signal.aborted).toBe(true);
+    send(runtime, "sg:updateProps", { props: { valid: "latest" } }, 1);
+    failedContext.reportError({ code: "render", message: "stale attempt", recoverable: true });
+    expect(runtime.getSnapshot().error).toBeNull();
+    expect(mount).toHaveBeenCalledTimes(2);
+    pending.resolve({ update, dispose: vi.fn() });
+    await runtime.whenStable();
+    expect(update).toHaveBeenCalledExactlyOnceWith({ valid: "latest" });
+    expect(runtime.getSnapshot()).toMatchObject({ identity, ready: true, error: null });
+    failedContext.reportError({ code: "render", message: "still stale", recoverable: true });
+    expect(runtime.getSnapshot().error).toBeNull();
+    expect(mount).toHaveBeenCalledTimes(2);
+  });
+
   it.each([null, undefined, {}, { update() {} }])("reports an invalid mount handle %j", async (handle) => {
     const runtime = make(vi.fn(() => handle) as unknown as ExternalFixtureMount);
     await expect(runtime.whenStable()).rejects.toThrow("must return an instance");
