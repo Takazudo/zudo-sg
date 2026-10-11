@@ -97,6 +97,11 @@ jobs:
       - name: Verify descriptor-host foreign install (fixtures/descriptor-host)
         run: pnpm verify:descriptor-host-install
 
+      # React remains fixture-owned; prove its external runtime and real workers
+      # against this exact packed engine before allowing publication (#960).
+      - name: Verify React descriptor-host foreign install (fixtures/react-descriptor-host)
+        run: pnpm verify:react-descriptor-host-install
+
       # Real-artifact gate, run BEFORE `pnpm publish`: packs the tree,
       # installs the tarball into a scratch project exactly like a consumer
       # would, and imports the exports map. Last chance to catch a

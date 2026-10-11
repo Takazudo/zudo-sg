@@ -23,6 +23,7 @@ export {
   applyPreviewVars,
   clearPreviewVars,
   registerPreviewIframe,
+  replayPreviewVars,
   unregisterPreviewIframe,
 } from "./preview-iframe-registry.js";
 export {

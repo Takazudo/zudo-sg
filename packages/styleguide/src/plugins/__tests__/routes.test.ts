@@ -14,6 +14,7 @@ import routesPlugin, {
   ZUDO_DOC_ROUTES_PLUGIN_NAME,
   assertZudoDocRoutesPlugin,
   buildContextModuleSource,
+  buildSgContext,
   buildRegistryModuleSource,
   createRoutesPlugin,
   deriveRouteInjections,
@@ -102,6 +103,7 @@ describe("resolveRoutesPluginOptions", () => {
       routes: { ...DEFAULT_SG_ROUTES },
       disabledRoutes: [],
       externalPreviewUrl: null,
+      externalPreviewRuntime: "legacy",
       categoryOrder: [],
       uiPackageName: null,
       previewCssUrl: DEFAULT_PREVIEW_CSS_URL,
@@ -280,6 +282,12 @@ describe("resolveRoutesPluginOptions — descriptor mode", () => {
 });
 
 describe("resolveRoutesPluginOptions — externalPreview", () => {
+  it("requires an explicit supported strict runtime selection", () => {
+    const resolved = resolveRoutesPluginOptions(projectRoot, { registryModule: REGISTRY, externalPreview: { url: "/frame/", runtime: "external-v1" } });
+    expect(resolved.externalPreviewRuntime).toBe("external-v1");
+    expect(buildSgContext("/base/", resolved).externalPreviewRuntime).toBe("external-v1");
+    expect(() => resolveRoutesPluginOptions(projectRoot, { registryModule: REGISTRY, externalPreview: { url: "/frame/", runtime: "unknown" } })).toThrow(/externalPreview.runtime/);
+  });
   it("resolves the url verbatim and implies componentsPreview disabled", () => {
     const resolved = resolveRoutesPluginOptions(projectRoot, {
       registryModule: REGISTRY,
@@ -506,6 +514,7 @@ describe("virtual module sources", () => {
       componentDocs: [],
       disabledRoutes: [],
       externalPreviewUrl: null,
+      externalPreviewRuntime: "legacy",
       previewTokenPanel: false,
     });
     expect(source.startsWith("export const sgContext = {")).toBe(true);
@@ -551,6 +560,7 @@ describe("routes plugin setup", () => {
       componentDocs: [{ keyPrefix: "ui", collection: "componentDocs" }],
       disabledRoutes: [],
       externalPreviewUrl: null,
+      externalPreviewRuntime: "legacy",
       previewTokenPanel: false,
     });
     expect(await reg.virtualModules.get(REGISTRY_MODULE_ID)!()).toBe(

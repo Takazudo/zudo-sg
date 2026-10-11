@@ -15,6 +15,8 @@ export type {
 export { buildNavNodes } from "./nav-nodes.js";
 export type { BuildNavNodesOptions, NavNode, NavNodesSource } from "./nav-nodes.js";
 export { validateStoryDescriptors } from "./descriptors.js";
+export { externalCatalogKey, isDescriptorSource, validateExternalCatalogManifest } from "./external-catalog.js";
+export type { DescriptorSource, ExternalFixtureReference, ExternalCatalogLoader, ExternalCaptureDisposition, ExternalCatalogEntry } from "./external-catalog.js";
 export type {
   StoryDescriptor,
   ThumbnailDescriptor,

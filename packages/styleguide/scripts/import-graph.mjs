@@ -6,21 +6,24 @@
 
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
+import ts from "typescript";
 
-// `import … from "x"`, `export … from "x"`, side-effect `import "x"`, and
-// dynamic `import("x")`. Comments are stripped first so prose cannot match.
-const SPECIFIER_RE =
-  /\b(?:import|export)\s*(?:[\w*{}\s,$]*?\s*from\s*)?["']([^"']+)["']|\bimport\s*\(\s*["']([^"']+)["']\s*\)/g;
-
-function stripComments(source) {
-  return source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:"'])\/\/.*$/gm, "$1");
-}
-
+// Parse actual import/export syntax. A regex also treats the runtime error
+// code in ["import", "render"] as an import of ", ", corrupting the graph.
 export function importSpecifiers(source) {
   const out = [];
-  for (const match of stripComments(source).matchAll(SPECIFIER_RE)) {
-    out.push(match[1] ?? match[2]);
+  const file = ts.createSourceFile("module.js", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.JS);
+  function visit(node) {
+    if ((ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) &&
+      node.moduleSpecifier && ts.isStringLiteralLike(node.moduleSpecifier)) {
+      out.push(node.moduleSpecifier.text);
+    } else if (ts.isCallExpression(node) && node.expression.kind === ts.SyntaxKind.ImportKeyword &&
+      node.arguments[0] && ts.isStringLiteralLike(node.arguments[0])) {
+      out.push(node.arguments[0].text);
+    }
+    ts.forEachChild(node, visit);
   }
+  visit(file);
   return out;
 }
 
@@ -61,7 +64,8 @@ export function frameworkFreeViolations(entryFile) {
   const { files, bare, missing } = collectImportGraph(entryFile);
   const violations = [];
   for (const spec of bare) {
-    if (spec === "preact" || spec.startsWith("preact/")) {
+    if (spec === "preact" || spec.startsWith("preact/") || spec === "react" || spec.startsWith("react/") ||
+      spec === "react-dom" || spec.startsWith("react-dom/") || spec === "@takazudo/zfb" || spec.includes("zudo-react")) {
       violations.push(`imports "${spec}"`);
     }
   }

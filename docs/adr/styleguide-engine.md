@@ -605,6 +605,41 @@ must do the same.
 
 ### 16. Preview postMessage protocol v1
 
+**Addendum (#957, external-runtime contract):** protocol v1 and its import-free
+`preview/messages` leaf remain compatible. The opt-in
+`preview/external-runtime` leaf defines `runtimeVersion: 1`, strict
+slug/variant/session/document/generation identity, ordered messages, full reset
+and runtime errors. Strict mode must be selected before first readiness and
+never falls back to identity-less messages. `sg:ready` means committed mount;
+an initialization failure reports an identity-bound error, not successful
+readiness. The public package README's “External runtime contracts” section
+specifies the handshake, ownership, separate token/direct-DOM CSS channels,
+cleanup and reset semantics. #958 implements `preview/runtime`'s
+`createExternalPreviewRuntime`, configured with `externalPreview.runtime:
+"external-v1"` (or the standalone workbench/frame `runtime` prop). Controls
+retain their current snapshot at the frame boundary. Reload establishes a new
+host challenge, full reset advances fixture generation, and async lifecycle
+work is serialized/cancelled before resource disposal. The controller exposes
+`getSnapshot` and `whenStable` for host-owned capture adapters; the stability
+barrier never substitutes listener initialization for a committed fixture.
+
+`registry/external-catalog` defines a canonical tuple key shared by descriptor
+source, external loader metadata and capture disposition. Optional
+`VariantDescriptor.source` is plain text keyed to its exact slug/variant;
+existing source-less descriptors and thumbnails stay valid. Canonical image
+metadata is a promise, not capture evidence. The existing CodePanel consumes
+descriptor source without a render function. Node-only public
+`registry/external-catalog-node` helpers compare generated-output sets and
+capture through a caller-owned browser after runtime `whenStable()`. They check
+receipt identities/hashes, actual PNG dimensions and contained asset paths;
+failed captures throw with their note, while intentional placeholders remain
+explicit. Hosts invoke this prebuild contract from Node scripts, keeping zfb
+config and browser imports node-free. Framework-independent helper tests do not
+claim React capture proof; #960
+owns the independent packed React consumer proof. Neither contract imports
+React or changes module-story remount-on-args semantics. The intentional
+opaque Preact/zdtp adapter remains independent.
+
 **Accepted (2026-09-26, epic #879).** The parent catalog page and a variant
 preview iframe (in-engine or, since decision 8's amendment, an
 `externalPreview` host document) speak a small, versioned, framework-free

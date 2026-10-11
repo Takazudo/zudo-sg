@@ -1,6 +1,6 @@
 # Dependency audit register
 
-## Current audit — 2026-10-11, sweep #950 / maintenance #951
+## Current audit — 2026-10-11, sweep #950 / maintenance #951 / React proof #952
 
 This section supersedes the historical decisions below. The zfb migration is
 already shipped by #949/#924; this sweep completes #921's remaining dependency
@@ -14,8 +14,9 @@ All ten original manifests were inspected: root, doc, apps/demo, demo-ui, engine
 initializer, its unit fixture, both foreign-install hosts, and the generated
 initializer template. Scripts, hooks, workflows, CSS, peers, package exports and
 foreign installs supplement import scanning. The new deployment-tool workspace
-is an eleventh manifest with its own lock and audit. The React proof fixture is
-owned by the subsequent #960; it is not covered by either existing audit.
+is an eleventh manifest with its own lock and audit. The React proof fixture
+introduced by #960 is a twelfth manifest and has a separately installed and
+audited graph; neither the root nor deployment audit covers it.
 
 **Zero npm dependency removals or replacements.** Deliberate KEEP: engine Preact
 for the opaque zdtp adapter; CodeMirror and Lezer for real editors; PostCSS for
@@ -87,20 +88,54 @@ artifact names, tar extraction, destinations and authorization conditions remain
 Source PRs stay open until their verified replacement reaches main. This register
 does not itself authorize closing #908 or any incomplete parent.
 
+#### Consumer lock compatibility follow-up: #963 remains open
+
+The tuple above proves this repository's graph and the freshly installed packed
+consumers; it does not guarantee a single Lezer identity in an existing consumer
+lock. A separate foreign probe used the exact compiled editor modules with all
+seven direct dependencies already at the tested versions: commands 6.11.1,
+lang-css 6.3.1, lang-javascript 6.2.5, language 6.13.1, state 6.7.6,
+view 6.43.1 and highlight 1.2.3. Its deliberately seeded, valid lock retained
+highlight → common 1.5.2 while the other parser paths used common 1.5.3,
+matching the historical split in #915. Frozen and normal pnpm 11.5.2 installs
+preserved it. All four TSX/CSS editable/read-only probes logged
+`tags is not iterable` and lost highlighting, even though construction and edits
+did not throw. This is an isolated compiled-editor probe with Happy DOM, not a
+complete packed-host browser proof.
+
+In that consumer, `pnpm dedupe --check` detected the split;
+`pnpm dedupe --ignore-scripts`
+unified common at 1.5.3, after which the same four probes highlighted correctly
+without plugin errors. Baseline `429ac055` already allowed every direct version
+in this graph and has the same editor implementation. This is a pre-existing
+consumer-lock constraint, not a newly introduced React-preview regression.
+
+Raising the remaining direct floors, adding a direct common dependency, or
+checking only the root lock does not establish a universal fix. Inspected
+published metadata still permits common 1.5.2: highlight 1.2.5 uses `^1.3.0`,
+lr 1.4.11 uses `^1.0.0`, language 6.13.1 uses `^1.5.0`, and the latest inspected
+CSS/JavaScript parsers 1.3.9/1.5.6 use `^1.2.0`. No speculative pin, override,
+or editor replacement was added. Affected consumers should deduplicate their
+own graph and verify actual source highlighting and Live CSS editing. Keep
+#963 open for retained-lock packed-host coverage and upstream shared-identity
+guidance; fresh-install success alone does not close it.
+
 ### Counts separated by cause
 
-| Phase | Root packages / snapshots | Meaning |
+| Phase | Packages / snapshots | Meaning |
 | --- | --- | --- |
 | Refreshed baseline | 433 / 433, six importers | Frozen install and nonmutating dedupe check pass; no baseline dedupe saving established |
 | Security/ownership commit `613ce8f` | 439 / 439 | Net +4 Happy DOM support records; +2 temporary PostCSS/nanoid duplicates after the ownership declaration |
 | npm reconciliation `68dc86b` | 438 / 438 | +1 CodeMirror streamparser; dedupe removes the two superseded PostCSS/nanoid records; version-family replacements otherwise net zero |
 | Package removals | 0 | No runtime dependency deleted or rewritten |
 | Deployment tooling, separate lock | 91 / 91, one importer | New dev/operations cost, not application reduction |
+| React consumer proof, separate installed lock | 182 / 182, one importer | New private fixture cost; no React dependency added to the engine, root workspace or default initializer |
 
-The final application graph is five records larger than baseline. Root/demo
-builds still emit 89/74 pages; the root HTML inventory is exactly the same 88
-routes. Root emitted files remain 378 and standalone preview CSS is byte-identical
-in the scoped comparison. HTML asset references change with the upgraded bundles;
+The maintained application graph is five records larger than baseline. At
+maintenance integration, root/demo builds emit 89/74 pages; the root HTML
+inventory is exactly the same 88 routes. Root emitted files remain 378 and
+standalone preview CSS is byte-identical in that scoped maintenance comparison.
+HTML asset references change with the upgraded bundles;
 no claim of byte-identical application output is made for dependency upgrades.
 The real authored-class generator still reports zfb 4.3.1, 343 candidates:
 310 resolved utilities, 31 ordinary classes and two markers. Only its declared
@@ -133,7 +168,41 @@ so no overlapping independent update entry is added. Standalone consumer hosts
 are maintained by their packed verifiers; generated templates are synchronized
 from engine-host, not independently updated by Dependabot.
 
-### Verification evidence and remaining integration gate
+### Independent React consumer graph
+
+`fixtures/react-descriptor-host` pins React and ReactDOM **19.3.0**, matching
+React types **19.3.0**, Monaco **0.57.0**, DOMPurify **3.4.16**, esbuild **0.28.2**
+and TypeScript **5.9.3**. Its zfb 4.3.1, zudo-doc 6.0.0 and zdtp 0.8.6 contracts
+match the application. React belongs only to the host-owned external preview;
+the catalog and engine remain on zudo-react.
+
+The actual foreign install has **182 package/snapshot records**, one importer,
+and **one low** advisory, KaTeX 0.16.47 / GHSA-238p-pmpm-9mq7, under the same
+zudo-doc peer constraint described above. There are **zero moderate, high or
+critical** findings; its separate production high-severity audit passes. The
+audit metadata divides the graph into 145 dependencies, four development
+dependencies and 33 optional platform entries. These records are a separate
+proof cost, not application dependency removals or additions.
+
+Monaco includes both a package dependency and a vendored DOMPurify 3.4.15 ESM
+copy. The fixture's scoped `monaco-editor>dompurify: 3.4.16` override handles the
+installed package, while its exact esbuild resolver substitutes the patched
+3.4.16 ESM module for Monaco's vendored import. The emitted preview metafile
+must contain the patched module and exclude the vendored file; an audit of
+package metadata alone cannot prove that browser fix. This disposition addresses
+GHSA-p98j-92pf-mc4p and GHSA-6688-9rhm-gjv2 without changing engine dependencies.
+
+The documented `pnpm verify:react-descriptor-host-install` command ensures the
+engine build is current before packing. The verifier installs that artifact
+outside the workspace, records installed versions and audits that actual graph. As with the
+existing packed hosts, it generates a fresh foreign lock instead of committing
+a lock tied to a changing local tarball integrity. Direct fixture versions are
+pinned; transitive resolutions are audited on each verification run. `--keep`
+retains the installed lock and audit evidence for diagnosis. This policy differs
+from `tools/deploy`, whose committed lock is always installed frozen. Dependabot
+covers the React fixture manifest; its build outputs and captures stay local.
+
+### Verification evidence and integration gate
 
 Newly executed baseline at `429ac055`: frozen install, `pnpm dedupe --check`,
 root/demo builds, and 168 unit files / 1,448 tests pass. Knip 6.41.0 initially

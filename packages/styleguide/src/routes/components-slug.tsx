@@ -8,9 +8,8 @@
 // code panel's CSS injection selects iframes by it). The optional co-located
 // component MDX doc renders as a trailing section.
 //
-// Descriptor-mode entries carry no story source, so they get no CodePanel
-// island, no component doc and no live-demo link — only the header and the
-// workbench, built from the mode-neutral `CatalogEntry` fields.
+// Descriptor entries may opt into source text without supplying render functions.
+// Source-less entries retain their workbench-only behavior.
 
 import type { Description } from "@takazudo/zfb/zudo-react";
 import type { JSX } from "@takazudo/zfb/zudo-react/jsx-runtime";
@@ -71,12 +70,16 @@ export default function ComponentsSlugRoute(props: SlugProps & { params: { slug:
   const storyEntry = entry.source === "module" ? entry.storyEntry : undefined;
 
   let codePanel: Description | null = null;
-  if (storyEntry) {
-    const panelVariants: CodePanelVariant[] = storyEntry.variants.map((v) => ({
+  const panelVariants: CodePanelVariant[] = storyEntry
+    ? storyEntry.variants.map((v) => ({
       exportName: v.exportName,
       name: v.name,
       source: v.story.source ?? storyEntry.meta.usage,
-    }));
+    }))
+    : entry.variants.flatMap((v) => v.source === undefined ? [] : [{
+      exportName: v.exportName, name: v.name, source: v.source.code,
+    }]);
+  if (panelVariants.length > 0) {
     const codePanelIsland = (
       <Island when="load">
         <CodePanel
@@ -113,8 +116,7 @@ export default function ComponentsSlugRoute(props: SlugProps & { params: { slug:
   //
   // The engine's own detail route opts the two toolbar groups that default OFF
   // (#883, issue #872) back in explicitly, matching what this route actually
-  // mounts: `codePanel` only when `storyEntry` exists — module mode, where the
-  // CodePanel island above is mounted (descriptor-mode entries get none, S2b) —
+  // mounts: `codePanel` only when real source variants mount a CodePanel —
   // and `tokenPanel` following `ctx.previewTokenPanel`, so the button is absent
   // rather than dead when no `zdtpApplyProxy.tabsModule` is wired.
   // `selection`/`theme` are passed at their pre-#883 defaults, unconditionally,
@@ -124,6 +126,7 @@ export default function ComponentsSlugRoute(props: SlugProps & { params: { slug:
       <DetailWorkbench
         slug={slug}
         previewUrl={previewUrl}
+        runtime={ctx.externalPreviewRuntime ?? "legacy"}
         variants={entry.variants.map((v) => ({
           exportName: v.exportName,
           name: v.name,
@@ -131,7 +134,7 @@ export default function ComponentsSlugRoute(props: SlugProps & { params: { slug:
         }))}
         selection={{ mode: "all" }}
         theme={{ mode: "toolbar" }}
-        toolbar={{ codePanel: Boolean(storyEntry), tokenPanel: ctx.previewTokenPanel }}
+        toolbar={{ codePanel: codePanel !== null, tokenPanel: ctx.previewTokenPanel }}
       />
     </Island>
   );

@@ -18,9 +18,22 @@ import {
   onIframeReady,
   type CssVarPair,
 } from "./iframe-css-vars-bridge.js";
+import type { ExternalRuntimeIdentity } from "../preview/external-runtime.js";
 
 const registered = new Set<HTMLIFrameElement>();
 const readyTeardowns = new Map<HTMLIFrameElement, () => void>();
+const strictFrames = new Map<HTMLIFrameElement, { identity: () => ExternalRuntimeIdentity | null; key: string; sequence: number }>();
+const sentNames = new Map<HTMLIFrameElement, Set<string>>();
+
+function bridgeFields(iframe: HTMLIFrameElement): { identity: ExternalRuntimeIdentity; sequence: number } | undefined | null {
+  const state = strictFrames.get(iframe);
+  if (!state) return undefined;
+  const identity = state.identity();
+  if (!identity) return null;
+  const key = JSON.stringify(identity);
+  if (state.key !== key) { state.key = key; state.sequence = -1; }
+  return { identity, sequence: ++state.sequence };
+}
 
 /**
  * Current preview overrides pushed via the sink API (`applyPreviewVars` /
@@ -40,9 +53,15 @@ function overridePairs(): CssVarPair[] {
  * so a late-mounted or re-mounted iframe receives the active tweaks once its
  * receiver is installed.
  */
-function replaySinkOverrides(iframe: HTMLIFrameElement): void {
+export function replayPreviewVars(iframe: HTMLIFrameElement): void {
   const pairs = overridePairs();
-  if (pairs.length > 0) sendApplyCssVars(iframe, pairs);
+  const fields = bridgeFields(iframe);
+  if (fields === null) return;
+  const previous = sentNames.get(iframe) ?? new Set<string>();
+  const stale = [...previous].filter((name) => !previewOverrides.has(name));
+  if (stale.length) sendClearCssVars(iframe, stale, fields);
+  if (pairs.length > 0) sendApplyCssVars(iframe, pairs, stale.length ? bridgeFields(iframe) ?? undefined : fields);
+  sentNames.set(iframe, new Set(previewOverrides.keys()));
 }
 
 /**
@@ -55,7 +74,15 @@ export function applyPreviewVars(
 ): void {
   if (pairs.length === 0) return;
   for (const [name, value] of pairs) previewOverrides.set(name, value);
-  for (const iframe of registered) sendApplyCssVars(iframe, pairs);
+  for (const iframe of registered) {
+    const fields = bridgeFields(iframe);
+    if (fields !== null) {
+      sendApplyCssVars(iframe, pairs, fields);
+      const names = sentNames.get(iframe) ?? new Set<string>();
+      for (const [name] of pairs) names.add(name);
+      sentNames.set(iframe, names);
+    }
+  }
 }
 
 /**
@@ -65,28 +92,40 @@ export function applyPreviewVars(
 export function clearPreviewVars(names: ReadonlyArray<string>): void {
   if (names.length === 0) return;
   for (const name of names) previewOverrides.delete(name);
-  for (const iframe of registered) sendClearCssVars(iframe, names);
+  for (const iframe of registered) {
+    const fields = bridgeFields(iframe);
+    if (fields !== null) {
+      sendClearCssVars(iframe, names, fields);
+      for (const name of names) sentNames.get(iframe)?.delete(name);
+    }
+  }
 }
 
 /** Register a preview iframe so future token tweaks are pushed to it. Idempotent. */
-export function registerPreviewIframe(iframe: HTMLIFrameElement): void {
+export function registerPreviewIframe(iframe: HTMLIFrameElement, options: { identity?: () => ExternalRuntimeIdentity | null } = {}): void {
   if (registered.has(iframe)) return;
   registered.add(iframe);
+  if (options.identity) {
+    strictFrames.set(iframe, { identity: options.identity, key: "", sequence: -1 });
+    return; // Strict replay is gated by VariantFrame's accepted sg:ready.
+  }
 
   // On ready, replay the current sink overrides. Replaying on ready (not merely
   // on DOM registration) is what lets a late-mounted iframe pick up tweaks that
   // were applied before it booted.
   const teardown = onIframeReady(iframe.contentWindow, () => {
-    replaySinkOverrides(iframe);
+    replayPreviewVars(iframe);
   });
   readyTeardowns.set(iframe, teardown);
   // Also attempt an immediate replay (covers already-loaded iframes).
-  replaySinkOverrides(iframe);
+  replayPreviewVars(iframe);
 }
 
 /** Stop pushing token tweaks to an iframe (on unmount). Idempotent. */
 export function unregisterPreviewIframe(iframe: HTMLIFrameElement): void {
   registered.delete(iframe);
+  strictFrames.delete(iframe);
+  sentNames.delete(iframe);
   const teardown = readyTeardowns.get(iframe);
   if (teardown) {
     teardown();

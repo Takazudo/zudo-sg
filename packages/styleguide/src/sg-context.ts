@@ -51,6 +51,8 @@ export interface SgContext {
    * as `previewUrl` to `DetailWorkbench` and the code panel.
    */
   externalPreviewUrl: string | null;
+  /** Explicit strict protocol selection, defaulting to legacy for old serialized contexts. */
+  externalPreviewRuntime?: "legacy" | "external-v1";
   /**
    * Whether `zdtpApplyProxy.tabsModule` is configured (issue #872's
    * `isPreviewTokenPanelWired()` verdict, `sg-routes.ts`). Gates the `/tokens`

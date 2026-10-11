@@ -100,6 +100,7 @@ const MIME_TYPES = new Map([
   [".svg", "image/svg+xml"],
   [".wasm", "application/wasm"],
   [".webp", "image/webp"],
+  [".ttf", "font/ttf"],
   [".woff", "font/woff"],
   [".woff2", "font/woff2"],
 ]);
@@ -134,8 +135,8 @@ async function resolveCandidate(resolvedDist, relativePath) {
   }
 }
 
-async function resolveBuiltFile(distDir, pathname) {
-  if (!pathname.startsWith(BASE)) return null;
+async function resolveBuiltFile(distDir, pathname, base) {
+  if (!pathname.startsWith(base)) return null;
   const resolvedDist = path.resolve(distDir);
 
   // Page routes are emitted un-nested at the dist root (`dist/components/…`,
@@ -145,13 +146,14 @@ async function resolveBuiltFile(distDir, pathname) {
   // exercising both a non-root base AND a `public/` dir (descriptor-host's
   // externalPreview frame + thumbnail image, #887) is the first to need
   // this: fall back to the base-KEPT path when the stripped one 404s.
-  const stripped = decodeURIComponent(pathname.slice(BASE.length));
+  const stripped = decodeURIComponent(pathname.slice(base.length));
   const strippedTarget = await resolveCandidate(resolvedDist, stripped);
   if (strippedTarget) return strippedTarget;
   return resolveCandidate(resolvedDist, decodeURIComponent(pathname.replace(/^\/+/u, "")));
 }
 
-export async function startBuiltHost(distDir) {
+export async function startBuiltHost(distDir, base = BASE) {
+  check(base.startsWith("/") && base.endsWith("/"), "base must begin and end with /");
   const server = createServer(async (request, response) => {
     let pathname;
     try {
@@ -162,11 +164,11 @@ export async function startBuiltHost(distDir) {
     }
     // Browsers may request an implicit favicon even though the fixture has
     // none. zudo-doc's actual document favicon is an inline SVG data URL.
-    if (pathname === "/favicon.ico" || pathname === `${BASE}favicon.ico`) {
+    if (pathname === "/favicon.ico" || pathname === `${base}favicon.ico`) {
       response.writeHead(204).end();
       return;
     }
-    const target = await resolveBuiltFile(distDir, pathname);
+    const target = await resolveBuiltFile(distDir, pathname, base);
     if (!target) {
       response.writeHead(404).end(`not found: ${pathname}`);
       return;

@@ -1,7 +1,7 @@
 version: 2
 
 updates:
-  # Third-party npm/pnpm deps across the workspace (root + packages/* + apps/*).
+  # Third-party npm/pnpm deps across the workspace and isolated deploy/proof tools.
   # @takazudo/* is excluded — first-party releases go through the
   # /dev-bump-zudo-deps flow, not automated PRs.
   - package-ecosystem: "npm"
@@ -10,6 +10,7 @@ updates:
       - "/packages/*"
       - "/apps/*"
       - "/tools/deploy"
+      - "/fixtures/react-descriptor-host"
     schedule:
       interval: "weekly"
     ignore:

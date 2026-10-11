@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import "../../__tests__/dom-test-setup.js";
 import { signal, Show } from "@takazudo/zfb/zudo-react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
 import {
   renderIsland,
   fire,
@@ -9,6 +9,7 @@ import {
 } from "../../__tests__/helpers/zudo-react.js";
 import type { StoryControl } from "../../stories/index.js";
 import VariantFrame from "../variant-frame.js";
+import { createPreviewCssOwner } from "../../code-panel/css-injection.js";
 import {
   buildPreviewSrc,
   DEFAULT_FRAME_SANDBOX,
@@ -63,6 +64,18 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 describe("VariantFrame", () => {
+  it("deduplicates readiness replay but preserves explicit legacy Reset messages", async () => {
+    const app = renderIsland(VariantFrame, { ...defaults, controls: [{ type: "text", prop: "label", label: "Label", defaultValue: "initial" }] satisfies StoryControl[] });
+    const frame = app.container.querySelector("iframe")!;
+    const post = vi.spyOn(frame.contentWindow!, "postMessage").mockImplementation(() => undefined);
+    fromFrame(frame, { type: MSG_READY });
+    fromFrame(frame, { type: MSG_READY });
+    const propsCalls = () => post.mock.calls.filter(([message]) => message.type === MSG_UPDATE_PROPS);
+    expect(propsCalls()).toHaveLength(1);
+    for (let i = 0; i < 2; i++) fire(getByRole(app.container, "button", { name: "Reset" }), "click");
+    await app.flush();
+    expect(propsCalls()).toHaveLength(3);
+  });
   it("preserves frame URL, sandbox, permissions and childless shell", () => {
     const app = renderIsland(VariantFrame, {
       ...defaults,
@@ -375,6 +388,7 @@ describe("VariantFrame", () => {
     const post = vi
       .spyOn(frame.contentWindow!, "postMessage")
       .mockImplementation(() => undefined);
+    fromFrame(frame, { type: MSG_READY });
     const select = app.container.querySelector("select")!;
     select.value = "large";
     fire(select, "change");
@@ -462,5 +476,141 @@ describe("VariantFrame", () => {
     fromFrame(frames[0]!, { type: MSG_READY });
     expect(one).toHaveBeenCalledTimes(1);
     expect(two).not.toHaveBeenCalled();
+  });
+});
+
+describe("VariantFrame strict external runtime", () => {
+  async function stage() {
+    const post = vi.fn((_message: Record<string, unknown>, _origin?: unknown) => {});
+    const app = renderIsland(VariantFrame, {
+      ...defaults, runtime: "external-v1" as const, previewUrl: "/frame/",
+      controls: [{ type: "text", prop: "label", label: "Label", defaultValue: "initial" }] satisfies StoryControl[],
+    }, { beforeActivate(test) {
+      vi.spyOn(test.host.querySelector("iframe")!.contentWindow!, "postMessage").mockImplementation(post);
+    } });
+    await app.flush();
+    const frame = app.container.querySelector("iframe")!;
+    const challenge = () => post.mock.calls.map(([message]) => message).filter((message) => message.type === MSG_REQUEST_READY).at(-1)!;
+    const envelope = (sequence = 0) => ({ ...challenge(), documentId: "current-document", generation: 0, sequence });
+    const ready = (sequence = 0) => fromFrame(frame, { ...envelope(sequence), type: MSG_READY, capabilities: { fullReset: true } });
+    return { app, frame, post, challenge, envelope, ready };
+  }
+
+  it("retains pre-ready edits/reset/edits and replays only the latest snapshot", async () => {
+    const { app, frame, post, ready } = await stage();
+    const input = app.container.querySelector<HTMLInputElement>('input[type="text"]')!;
+    input.value = "first"; fire(input, "input");
+    fire(getByRole(app.container, "button", { name: "Reset" }), "click");
+    input.value = "latest"; fire(input, "input");
+    fromFrame(frame, { type: MSG_READY }); // strict mode cannot downgrade, even before first ready
+    expect(post.mock.calls.filter(([message]) => message.type === MSG_UPDATE_PROPS)).toHaveLength(0);
+    ready();
+    expect(post.mock.calls.filter(([message]) => message.type === MSG_UPDATE_PROPS).map(([message]) => message.props)).toEqual([{ label: "latest" }]);
+    ready(1);
+    expect(post.mock.calls.filter(([message]) => message.type === MSG_UPDATE_PROPS)).toHaveLength(1);
+    await app.flush();
+    expect(getByRole(app.container, "button", { name: "Reset fixture button" })).toBeTruthy();
+  });
+
+  it("invalidates same-URL reload identity/height while retaining current controls", async () => {
+    const { app, frame, post, envelope, ready } = await stage();
+    ready();
+    const old = envelope(100);
+    fromFrame(frame, { ...envelope(1), type: MSG_HEIGHT, height: 500 });
+    const input = app.container.querySelector<HTMLInputElement>('input[type="text"]')!;
+    input.value = "retained"; fire(input, "input");
+    await app.flush();
+    expect(frame.style.height).toBe("500px");
+    frame.dispatchEvent(new Event("load"));
+    fromFrame(frame, { ...old, type: MSG_READY, capabilities: { fullReset: true } });
+    fromFrame(frame, { ...old, type: MSG_HEIGHT, height: 999 });
+    fromFrame(frame, { ...old, type: "sg:runtimeError", error: { code: "render", message: "stale failure", recoverable: true } });
+    await app.flush();
+    expect(frame.style.height).toBe("180px");
+    expect(app.container.querySelector('[role="alert"]')).toBeNull();
+    expect(input.value).toBe("retained");
+    ready();
+    expect(post.mock.calls.filter(([message]) => message.type === MSG_UPDATE_PROPS).at(-1)?.[0].props).toEqual({ label: "retained" });
+  });
+
+  it("rejects malformed high sequence and other documents without poisoning valid readiness", async () => {
+    const { app, frame, post, envelope, ready } = await stage();
+    fromFrame(frame, { ...envelope(100), type: MSG_READY, capabilities: { fullReset: "invalid" } });
+    fromFrame(frame, { ...envelope(100), type: MSG_READY, capabilities: { fullReset: true } }, { source: null });
+    ready();
+    fromFrame(frame, { ...envelope(100), documentId: "different", type: MSG_HEIGHT, height: 999 });
+    fromFrame(frame, { ...envelope(1), type: MSG_HEIGHT, height: 240 });
+    await app.flush();
+    expect(frame.style.height).toBe("240px");
+    expect(post.mock.calls.some(([message]) => message.type === MSG_SET_THEME)).toBe(true);
+  });
+
+  it("distinguishes prop Reset/full reset and restores current props only for the new generation", async () => {
+    const { app, frame, post, envelope, ready } = await stage();
+    ready();
+    await app.flush();
+    const input = app.container.querySelector<HTMLInputElement>('input[type="text"]')!;
+    input.value = "retained"; fire(input, "input");
+    fire(getByRole(app.container, "button", { name: "Reset fixture button" }), "click");
+    const reset = post.mock.calls.map(([message]) => message).find((message) => message.type === "sg:resetFixture")!;
+    expect(reset).toMatchObject({ generation: 0, nextGeneration: 1 });
+    fromFrame(frame, { ...envelope(99), type: MSG_READY, capabilities: { fullReset: true } });
+    fromFrame(frame, { ...envelope(0), generation: 1, type: MSG_READY, capabilities: { fullReset: true } });
+    expect(post.mock.calls.filter(([message]) => message.type === MSG_UPDATE_PROPS).at(-1)?.[0]).toMatchObject({ generation: 1, props: { label: "retained" } });
+    expect(input.value).toBe("retained");
+    fire(getByRole(app.container, "button", { name: "Reset" }), "click");
+    expect(post.mock.calls.filter(([message]) => message.type === MSG_UPDATE_PROPS).at(-1)?.[0].props).toEqual({ label: "initial" });
+    expect(post.mock.calls.filter(([message]) => message.type === "sg:resetFixture")).toHaveLength(1);
+  });
+
+  it("shows initial errors before ready and clears only same-document recovery", async () => {
+    const { app, frame, post, envelope, ready } = await stage();
+    const input = app.container.querySelector<HTMLInputElement>('input[type="text"]')!;
+    input.value = "corrected before handshake"; fire(input, "input");
+    fromFrame(frame, { ...envelope(), type: "sg:runtimeError", error: { code: "import", message: "Cannot load editor", recoverable: true } });
+    expect(post.mock.calls.filter(([message]) => message.type === MSG_UPDATE_PROPS).at(-1)?.[0].props).toEqual({ label: "corrected before handshake" });
+    await app.flush();
+    expect(app.container.querySelector('[role="alert"]')?.textContent).toContain("Cannot load editor");
+    expect(getByRole(app.container, "button", { name: "Reload preview" })).toBeTruthy();
+    fromFrame(frame, { ...envelope(10), documentId: "other", type: MSG_READY, capabilities: { fullReset: true } });
+    await app.flush();
+    expect(app.container.querySelector('[role="alert"]')).not.toBeNull();
+    ready(1);
+    await app.flush();
+    expect(app.container.querySelector('[role="alert"]')).toBeNull();
+  });
+
+  it("sends recovery edits and prop Reset to the bound errored runtime, and flushes current props before full reset", async () => {
+    const { app, frame, post, envelope, ready } = await stage();
+    ready();
+    await app.flush();
+    fromFrame(frame, { ...envelope(1), type: "sg:runtimeError", error: { code: "render", message: "Bad old props", recoverable: true } });
+    await app.flush();
+    post.mockClear();
+    const input = app.container.querySelector<HTMLInputElement>('input[type="text"]')!;
+    input.value = "recovery"; fire(input, "input");
+    expect(post.mock.calls.at(-1)?.[0]).toMatchObject({ type: MSG_UPDATE_PROPS, generation: 0, props: { label: "recovery" } });
+    fire(getByRole(app.container, "button", { name: "Reset" }), "click");
+    expect(post.mock.calls.at(-1)?.[0]).toMatchObject({ type: MSG_UPDATE_PROPS, generation: 0, props: { label: "initial" } });
+    input.value = "latest"; fire(input, "input");
+    applyPreviewVars([["--e2-test", "4px"]]);
+    const cssOwner = createPreviewCssOwner("/frame/");
+    onTestFinished(() => cssOwner.dispose());
+    cssOwner.set("recovery", "body { color: purple; }");
+    post.mockClear();
+    fire(getByRole(app.container, "button", { name: "Reset fixture button" }), "click");
+    const messages = post.mock.calls.map(([message]) => message);
+    const snapshot = messages.find((message) => message.type === MSG_UPDATE_PROPS);
+    const reset = messages.find((message) => message.type === "sg:resetFixture");
+    expect(snapshot).toMatchObject({ type: MSG_UPDATE_PROPS, generation: 0, props: { label: "latest" } });
+    expect(reset).toMatchObject({ type: "sg:resetFixture", generation: 0, nextGeneration: 1 });
+    expect(Number(reset!.sequence)).toBeGreaterThan(Number(snapshot!.sequence));
+    expect(messages.find((message) => message.type === MSG_SET_THEME)).toMatchObject({ generation: 0, theme: "dark" });
+    expect(messages.find((message) => message.type === "apply-css-vars")).toMatchObject({ identity: { generation: 0 }, vars: [["--e2-test", "4px"]] });
+    expect(frame.contentDocument?.querySelector('[data-sg-injected-css="recovery"]')?.textContent).toBe("body { color: purple; }");
+    expect(messages.indexOf(snapshot!)).toBeLessThan(messages.indexOf(reset!));
+    // Edits during the next mount also use its already-bound generation.
+    input.value = "during mount"; fire(input, "input");
+    expect(post.mock.calls.at(-1)?.[0]).toMatchObject({ type: MSG_UPDATE_PROPS, generation: 1, props: { label: "during mount" } });
   });
 });
