@@ -188,7 +188,7 @@ host and demo-ui use zudo-react and do not import that renderer directly.
 
 ## Enabled Features
 
-- **search** — Full-text search via MiniSearch (`pages/lib/_search-widget.tsx`); the
+- **search** — Built-in search from zudo-doc (fetch, substring matching, weighting, and ranking); the
   sidebar also has its own real-time filter input, implemented in the
   `@takazudo/zudo-doc/sidebar-tree-island` package island (not a separate
   toggleable feature)
