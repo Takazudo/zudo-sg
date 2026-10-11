@@ -104,6 +104,7 @@ describe("DetailWorkbench", () => {
       selection: { mode: "single" as const },
     });
     const frame = app.container.querySelector("iframe")!;
+    message(frame, { type: MSG_READY });
     message(frame, { type: MSG_HEIGHT, height: 600 });
     await app.flush();
     expect(frame.style.height).toBe("600px");

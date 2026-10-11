@@ -1,0 +1,38 @@
+{
+  "name": "zudo-sg-react-descriptor-host-fixture",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.5.2",
+  "scripts": {
+    "dev": "zfb dev",
+    "build": "node scripts/validate.mjs && zfb build",
+    "check": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p preview/tsconfig.json",
+    "preview:build": "node scripts/prepare.mjs"
+  },
+  "dependencies": {
+    "@takazudo/zdtp": "0.8.6",
+    "@takazudo/zfb": "4.3.1",
+    "@takazudo/zfb-md-wasm": "4.3.1",
+    "@takazudo/zfb-runtime": "4.3.1",
+    "@takazudo/zudo-doc": "6.0.0",
+    "@takazudo/zudo-sg": "file:.tarball/zudo-sg-engine.tgz",
+    "diff": "8.0.4",
+    "katex": "0.16.47",
+    "zod": "4.3.6",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "monaco-editor": "0.57.0",
+    "dompurify": "3.4.16"
+  },
+  "devDependencies": {
+    "@types/node": "22.19.15",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "typescript": "5.9.3",
+    "esbuild": "0.28.2"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

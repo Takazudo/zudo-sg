@@ -14,14 +14,26 @@
 import "../../__tests__/dom-test-setup.js";
 import { fire, flushAll, getByRole, getByText, queryAllByRole, renderIsland } from "../../__tests__/helpers/zudo-react.js";
 import { getScope } from "@takazudo/zfb/zudo-react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import CodePanel, { type CodePanelVariant } from "../code-panel.js";
 
-const editors = vi.hoisted(() => ({ activated: vi.fn(), disposed: vi.fn() }));
+import { PREVIEW_ROUTE_PATH } from "../../preview/route.js";
+import { registerCssPreview, replayCssToPreview } from "../css-injection.js";
+
+const editors = vi.hoisted(() => ({
+  activated: vi.fn(),
+  disposed: vi.fn(),
+  cssChange: undefined as ((css: string) => void) | undefined,
+}));
 vi.mock("../source-editor.js", () => ({
-  default: ({ value, label }: { value: string; label?: string }) => {
+  default: ({ value, label, onChange }: {
+    value: string;
+    label?: string;
+    onChange?: (css: string) => void;
+  }) => {
     getScope().onActivate(() => {
       editors.activated(value);
+      if (onChange) editors.cssChange = onChange;
       return () => { editors.disposed(value); };
     });
     return <pre aria-label={label}>{value}</pre>;
@@ -173,5 +185,63 @@ describe("CodePanel keyed source lifecycle", () => {
   it("hydrates deterministic ids when a host omits the slug", () => {
     const island = renderIsland(CodePanel, { storyTitle: "Card example", variants: THREE_VARIANTS });
     expect(getByRole(island.container, "tabpanel").id).toBe("sg-code-panel-Card%20example-panel");
+  });
+});
+
+afterEach(() => {
+  vi.useRealTimers();
+  editors.cssChange = undefined;
+});
+
+describe("CodePanel live CSS lifecycle", () => {
+  function preview() {
+    const iframe = document.createElement("iframe");
+    iframe.src = `${PREVIEW_ROUTE_PATH}?slug=card&variant=Default`;
+    document.body.appendChild(iframe);
+    return { iframe, unregister: registerCssPreview(iframe) };
+  }
+  function css(iframe: HTMLIFrameElement) {
+    return iframe.contentDocument?.querySelector('style[data-sg-injected-css="live"]')?.textContent;
+  }
+
+  it("retains the newest edit before the debounce, including a clear", () => {
+    vi.useFakeTimers();
+    const { iframe, unregister } = preview();
+    const panel = renderPanel(THREE_VARIANTS);
+    try {
+      editors.cssChange!("button { color: red; }");
+      editors.cssChange!("button { color: blue; }");
+      replayCssToPreview(iframe);
+      expect(css(iframe)).toBe("button { color: blue; }");
+      editors.cssChange!("");
+      replayCssToPreview(iframe);
+      expect(css(iframe)).toBeUndefined();
+      vi.advanceTimersByTime(250);
+      expect(css(iframe)).toBeUndefined();
+    } finally {
+      panel.dispose();
+      unregister();
+      iframe.remove();
+    }
+  });
+
+  it("cancels pending application and discards retained edits on panel disposal", () => {
+    vi.useFakeTimers();
+    const { iframe, unregister } = preview();
+    const panel = renderPanel(THREE_VARIANTS);
+    try {
+      editors.cssChange!("button { color: red; }");
+      replayCssToPreview(iframe);
+      expect(css(iframe)).toBe("button { color: red; }");
+      panel.dispose();
+      expect(css(iframe)).toBeUndefined();
+      vi.advanceTimersByTime(250);
+      replayCssToPreview(iframe);
+      expect(css(iframe)).toBeUndefined();
+    } finally {
+      panel.dispose();
+      unregister();
+      iframe.remove();
+    }
   });
 });

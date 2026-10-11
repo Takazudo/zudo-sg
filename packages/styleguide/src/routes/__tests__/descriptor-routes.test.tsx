@@ -25,7 +25,10 @@ const fixture = vi.hoisted(() => [
     slug: "card",
     category: "Layout",
     title: "Card",
-    variants: [{ exportName: "Default", name: "Default" }],
+    variants: [
+      { exportName: "Default", name: "Default", source: { key: JSON.stringify(["card", "Default"]), code: '<Card title="</script><script>neverExecute()</script>" />' } },
+      { exportName: "Other", name: "Other", source: { key: JSON.stringify(["card", "Other"]), code: "<Card compact />" } },
+    ],
     // Unknown keys are dropped by validation.
     extra: true,
   },
@@ -67,6 +70,7 @@ vi.mock("../../chrome/index.js", () => ({
   StyleguideLayout: ({ children, codePanel, title }: { children: Child; codePanel?: unknown; title: string }) => (
     <main data-title={title} data-code-panel={codePanel ? "present" : "absent"}>
       {children}
+      {codePanel as Child}
     </main>
   ),
 }));
@@ -126,6 +130,21 @@ describe("components-index route (descriptor mode)", () => {
 });
 
 describe("components-slug route (descriptor mode)", () => {
+  it("passes real descriptor source through the catalog to the accessible panel without evaluating it", async () => {
+    const { default: ComponentsSlugRoute } = await import("../components-slug.js");
+    const html = render(<ComponentsSlugRoute slug="card" params={{ slug: "card" }} />);
+    expect(html).toContain('data-code-panel="present"');
+    expect(html).toContain('data-island="CodePanel"');
+    expect(html).toContain('aria-label="Code panel"');
+    expect(html).toContain('aria-label="Resize code panel"');
+    expect(html).toContain("&quot;exportName&quot;:&quot;Default&quot;");
+    expect(html).toContain("&quot;source&quot;:&quot;&lt;Card compact /&gt;&quot;");
+    expect(html).toContain("&lt;/script&gt;&lt;script&gt;neverExecute()");
+    expect(html).not.toContain("<script>neverExecute()");
+    expect(html).toContain("&quot;toolbar&quot;:{&quot;codePanel&quot;:true,&quot;tokenPanel&quot;:false}");
+    expect(html).toContain("&quot;previewUrl&quot;:&quot;/preview/frame&quot;");
+    expect(getEntry).not.toHaveBeenCalled();
+  });
   it("renders the header and workbench from the descriptor, without a CodePanel or doc", async () => {
     const { default: ComponentsSlugRoute } = await import("../components-slug.js");
     const html = render(<ComponentsSlugRoute slug="Button_v2" params={{ slug: "Button_v2" }} />);

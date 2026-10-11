@@ -4,6 +4,7 @@
 
 import type { StoryControl } from "../stories/types.js";
 import type { StoryDescriptor, ThumbnailDescriptor } from "./descriptors.js";
+import type { DescriptorSource } from "./external-catalog.js";
 import { compareByOrderThenTitle, orderCategories, type Registry, type StoryEntry } from "./registry.js";
 
 /** One variant as the catalog sees it — no render function. */
@@ -11,6 +12,7 @@ export interface CatalogVariant {
   exportName: string;
   name: string;
   controls?: StoryControl[];
+  source?: DescriptorSource;
 }
 
 interface CatalogEntryBase {
@@ -99,6 +101,7 @@ export function catalogEntriesFromDescriptors(descriptors: readonly StoryDescrip
       exportName: v.exportName,
       name: v.name,
       ...(v.controls !== undefined && { controls: v.controls }),
+      ...(v.source !== undefined && { source: { ...v.source } }),
     })),
     ...(d.thumbnail !== undefined && { thumbnail: d.thumbnail }),
     source: "descriptor",

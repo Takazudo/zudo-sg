@@ -160,6 +160,7 @@ export interface DetailWorkbenchProps {
   variants: WorkbenchVariant[];
   /** Base-prefixed preview route URL, forwarded to every stage (see VariantFrame). */
   previewUrl?: string;
+  runtime?: "legacy" | "external-v1";
   /** Iframe `sandbox` tokens, forwarded to every stage (see VariantFrame). */
   frameSandbox?: readonly string[];
   /** Iframe `allow` directives, forwarded to every stage (see VariantFrame). */
@@ -198,6 +199,7 @@ export default function DetailWorkbench({
   slug,
   variants,
   previewUrl,
+  runtime = "legacy",
   frameSandbox,
   frameAllow,
   selection = { mode: "all" },
@@ -294,6 +296,7 @@ export default function DetailWorkbench({
         themeMode={frameThemeMode}
         viewportId={viewportId}
         previewUrl={previewUrl}
+        runtime={runtime}
         frameSandbox={frameSandbox}
         frameAllow={frameAllow}
         previewParams={previewParams}
@@ -486,6 +489,7 @@ export default function DetailWorkbench({
                 themeMode={frameThemeMode}
                 viewportId={viewportId}
                 previewUrl={previewUrl}
+                runtime={runtime}
                 frameSandbox={frameSandbox}
                 frameAllow={frameAllow}
                 previewParams={previewParams}

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { validateStoryDescriptors, type StoryDescriptor } from "../index.js";
+import { externalCatalogKey, validateStoryDescriptors, type StoryDescriptor } from "../index.js";
 
 function desc(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
@@ -23,6 +23,15 @@ function errorOf(input: unknown, options?: Parameters<typeof validateStoryDescri
 }
 
 describe("validateStoryDescriptors", () => {
+  it("preserves opt-in source as safe verbatim text and rejects a stale source key", () => {
+    const source = { key: externalCatalogKey("button", "Default"), code: "</script><img onerror=alert(1)>" };
+    const variants = [{ exportName: "Default", name: "Default", source }];
+    const result = validateStoryDescriptors([desc({ variants })]);
+    expect(result[0]?.variants[0]?.source).toEqual(source);
+    expect(result[0]?.variants[0]?.source).not.toBe(source);
+    expect(errorOf([desc({ variants: [{ ...variants[0], source: { ...source, key: "stale" } }] })])).toMatch(/source must provide/);
+    expect(errorOf([desc({ variants: [{ ...variants[0], source: { ...source, code: {} } }] })])).toMatch(/source must provide/);
+  });
   it("accepts valid descriptors and returns normalized plain copies", () => {
     const input = [
       desc({

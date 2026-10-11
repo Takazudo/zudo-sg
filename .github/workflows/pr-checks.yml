@@ -13,6 +13,8 @@
 #   descriptor-host-install — pnpm verify:descriptor-host-install (#887 foreign-install
 #                          proof for descriptor mode + externalPreview: packed
 #                          tarball, fixtures/descriptor-host, no react/.stories.tsx)
+#   react-descriptor-host-install — pnpm verify:react-descriptor-host-install
+#                          (#960 packed React 19 preview, root/non-root bases, workers)
 #   create-zudo-sg       — pnpm verify:create-zudo-sg (#737 packed initializer
 #                          scaffold, local engine install, build + dev proof)
 #   build                — pnpm build (zfb build → dist/)
@@ -174,6 +176,29 @@ jobs:
 
       - name: Verify descriptor-host foreign install
         run: pnpm verify:descriptor-host-install
+
+  # ---------------------------------------------------------------------------
+  # Job: React 19 descriptor consumer foreign-install proof (#960)
+  # Installs the packed engine outside the workspace, builds a host-owned React
+  # preview with real same-origin editor workers/assets, and verifies lifecycle
+  # behavior at root and non-root bases. React stays outside the engine graph.
+  # ---------------------------------------------------------------------------
+  react-descriptor-host-install:
+    name: React Descriptor Host Foreign Install
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v5
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: Install Chromium
+        run: pnpm exec playwright install chromium --with-deps
+
+      - name: Verify React descriptor-host foreign install
+        run: pnpm verify:react-descriptor-host-install
 
   # ---------------------------------------------------------------------------
   # Job: create-zudo-sg initializer foreign-install proof (#737)

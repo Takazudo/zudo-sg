@@ -12,7 +12,7 @@ zudo-sg hosts three independent color-token systems:
   code blocks, sidebars, and (where a host enables it) zudo-doc's own design-token panel.
 - zudo-sg's raw `--sg-*` tokens control the installable engine's catalog chrome,
   code panel, workbench, and token controls.
-- The host component library owns its own `@theme` color tokens, commonly semantic
+- The host component library owns its own plain CSS color tokens, commonly semantic
   `--color-*` roles, for target-site components and preview iframes.
 
 Keep those worlds separate. A styleguide chrome color scheme is not automatically the
@@ -21,20 +21,30 @@ panels.
 
 ## UI package token contract
 
-Consumers import the shared UI token CSS after Tailwind preflight and utilities:
+Consumers import the shared UI token CSS and register the package token map in their zfb `wind` configuration:
 
 ```css
-@import "tailwindcss/preflight";
-@import "tailwindcss/utilities";
+@layer zw-reset;
 @import "@zudo-sg/demo-ui/styles/tokens.css";
 @import "@zudo-sg/demo-ui/styles/colors.css";
 ```
 
-`tokens.css` defines spacing, typography, radius, shadow, and related non-color tokens. `colors.css` defines the UI package color system. Components use semantic utilities such as `bg-accent`, `text-fg`, `border-border`, and `bg-surface-2`; they do not reach into raw palette variables.
+`tokens.css` defines spacing, typography, radius, shadow, and related non-color custom properties. `packages/demo-ui/styles/wind-tokens.mjs` supplies their utility names; zudo-wind owns reset and utility generation. `colors.css` defines the UI package color system. Components use semantic utilities such as `bg-accent`, `text-fg`, `border-border`, and `bg-surface-2`; they do not reach into raw palette variables.
 
 ## The preview stylesheet is compiled standalone
 
-The catalog's preview iframe (and the `/tokens` dashboards) render `@zudo-sg/demo-ui` components inside the host document, which already ships its own doc-chrome Tailwind bundle. Injecting the host's global stylesheet into that preview would let it collide with the UI package's own `--color-*`/`--zd-*` tokens. Instead, the engine's preview-CSS plugin (`@takazudo/zudo-sg/plugins/preview-css`, one of the plugin descriptors `withZudoSg()` appends in `zfb.config.ts`) compiles the host's `previewStyles` entry (`zudo-sg.config.mjs`; this repo: `./src/styles/preview-entry.css` — Tailwind preflight + utilities + `@zudo-sg/demo-ui/styles/{tokens,colors}.css`) as its own standalone stylesheet with `@tailwindcss/node`, and rewrites every `:root`/`:host` selector to `:root[data-sg-preview-doc]`/`:host` so the preview world's tokens win the cascade at higher specificity than the host bundle's colliding roots. It is served at one URL (`previewCssUrl`, default `/_zudo-sg/preview.css`) in both `zfb dev` and `zfb build`, recompiling in dev whenever the entry or an `@import`ed file changes.
+The catalog renders components in a separate same-origin preview document. The
+engine's preview-CSS plugin (`@takazudo/zudo-sg/plugins/preview-css`, composed by
+`withZudoSg()`) compiles the host's `previewStyles` entry with the host-installed
+`zfb css` CLI and the composed zudo-wind token map. This repository's entry,
+`src/styles/preview-entry.css`, imports the demo-ui token, color, and component CSS.
+
+PostCSS rewrites actual `:root` selectors to `:root[data-sg-preview-doc]` without
+rewriting quoted selector values or `:host`. The iframe carries that attribute,
+so preview token defaults remain scoped. The stylesheet is served at
+`previewCssUrl` (default `/_zudo-sg/preview.css`) in development and production;
+the development compiler tracks imported CSS and source inputs for invalidation.
+The `/tokens` dashboards instead mount their own opaque zdtp widgets in the host.
 
 ## Three-tier color strategy
 
@@ -51,12 +61,12 @@ Palette groups used by the UI palette tab are `neutral`, `accent`, `state`, and 
 Semantic (Tier 2) roles built from these groups: `bg`, `surface`, `surface-2`, `border`, `fg`, `muted`, `accent`, `accent-hover`, `on-accent`, `focus`, the four state colors, and the `rail-*` family (a persistent dark nav surface — deliberately not a `light-dark()` pair, so it stays dark in both schemes).
 
 :::note[No palette utilities]
-Palette variables live in plain `:root`, not Tailwind `@theme`, so Tailwind does not generate `bg-palette-*` or `text-palette-*` utilities. Components must bind to semantic `--color-*` roles instead.
+Palette variables live in plain `:root` and are absent from the zudo-wind utility token map, so `bg-palette-*` and `text-palette-*` utilities are not generated. Components must bind to semantic `--color-*` roles instead.
 :::
 
 ## Doc chrome vs. engine chrome color models
 
-zudo-doc 3.x ships a ramp-native model for its own `--zd-*` chrome color schemes, editable
+zudo-doc 6 ships a ramp-native model for its own `--zd-*` chrome color schemes, editable
 through zudo-doc's built-in design-token panel (the `designTokenPanel` feature flag). This
 project keeps that flag off: the panel was host-only wiring that `create-zudo-sg` never
 scaffolds, so a component-catalog dogfooding host advertising it would mislead adopters.
@@ -67,8 +77,7 @@ tokens.
 The engine's own chrome roles are plain custom properties: `--sg-bg`, `--sg-fg`,
 `--sg-surface`, `--sg-surface-2`, `--sg-border`, `--sg-border-strong`, `--sg-muted`,
 `--sg-accent`, `--sg-on-accent`, `--sg-focus`, and `--sg-success`. The package declares
-their defaults under zero-specificity `:where(:root)`, outside an engine `@theme` color
-tier. zudo-doc's `theme.css` resets `--color-*`, but it cannot erase `--sg-*`, and an
+their defaults under zero-specificity `:where(:root)`, separate from the host utility token map. An
 unlayered host override wins before or after the engine stylesheet:
 
 ```css
@@ -82,14 +91,11 @@ This is the supported engine-chrome hook. If a host previously set bare
 chrome roles to their matching `--sg-*` names). Bare `--color-border` remains a host
 component-library token.
 
-The host's own `@theme` color tokens still follow zudo-doc's namespace contract. The
-published `@takazudo/zudo-doc/theme.css` includes a `--color-*: initial` reset, so a
-host `@theme` block imported before it can lose its `--color-*` entries. Import
-`theme.css` before the host component token stylesheet, or use
-`@takazudo/zudo-doc/theme-no-reset.css` when preserving consumer-only tokens declared
-earlier is intentional. The latter omits the reset; shared names still follow normal
-source order. This import-order caveat applies to host component tokens, not the
-order-proof `--sg-*` hook.
+The host's component tokens are ordinary custom properties. Import the doc theme
+before component token overrides when their names overlap, and register only the
+semantic utility names the component library needs in `wind.tokens`. Current
+zudo-doc 6 does not export the old `theme-no-reset.css` alternative; no Tailwind
+`@theme` block or wildcard color reset is part of this pipeline.
 
 ## Shared build-safe tabs (`src/config/ui-token-tabs.ts`)
 
@@ -99,9 +105,9 @@ Keep the host module importable by plain Node during a build. Its runtime depend
 
 `src/config/__tests__/ui-token-tabs.test.ts` enforces this boundary by checking the runtime import allowlist and importing the module with Node's native type stripping. It also checks the manifest mapping, the per-line palette order, the dashboard override coverage, and — via `@takazudo/zdtp/testing`'s `assertValidPanelConfig` — that the panel config these tabs feed is structurally valid.
 
-## Static token dashboard
+## Read-only token dashboard
 
-The `/tokens` route is injected by the `@takazudo/zudo-sg` engine (`packages/styleguide/src/routes/tokens.tsx`) and renders three server-rendered `TokenDashboard` instances (`@takazudo/zudo-sg/token-dashboard`). They do not use a client island, panel state, browser globals, or hydration: the light and dark views use `include="mode-dependent"` and show only rows whose declared values differ by mode, while the shared view uses `include="mode-independent"` and shows every other row once. The route uses the engine's own `uiDashboardTabs` data (built from the manifest virtual module) and `dashboardPreviewOverrides`, then gives the instances these stable IDs and titles:
+The `/tokens` route is injected by the `@takazudo/zudo-sg` engine (`packages/styleguide/src/routes/tokens.tsx`) and creates three zudo-react islands through `@takazudo/zudo-sg/token-dashboard`. Each island dynamically mounts the opaque Preact zdtp adapter, with a loading fallback and deterministic cleanup. Their values remain read-only declared defaults: the light and dark views use `include="mode-dependent"` and show only rows whose declared values differ by mode, while the shared view uses `include="mode-independent"` and shows every other row once. The route uses the engine's own `uiDashboardTabs` data (built from the manifest virtual module) and `dashboardPreviewOverrides`, then gives the instances these stable IDs and titles:
 
 | ID | `TokenDashboard` props | Title |
 | --- | --- | --- |
@@ -157,7 +163,7 @@ The same panel instance opens from three places, all dispatching the same
 - **Workbench "Preview tokens" button** — the stacked-frames-glyph button in a
   component detail page's toolbar (`/components/<slug>`).
 - **`/tokens` dashboard button** — the `PreviewTokensButton` island above the
-  static dashboards.
+  read-only dashboards.
 
 These identifiers are deliberately distinct from the retired doc-chrome trigger
 (`id="sg-doc-tweak-trigger"`, event `toggle-sg-doc-tweak`) so any regression guard

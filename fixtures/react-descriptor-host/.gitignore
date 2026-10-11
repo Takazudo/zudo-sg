@@ -1,0 +1,16 @@
+node_modules
+dist
+.zfb-build
+.zfb/
+.zudo-doc/
+.zfb-esbuild-entry-*.tsx
+.zfb-islands-tsconfig-*.json
+.zfb-virtual-*.mjs
+.tarball
+pnpm-lock.yaml
+
+public/
+artifacts/
+src/story-descriptors.ts
+src/styleguide/
+preview/loaders.ts

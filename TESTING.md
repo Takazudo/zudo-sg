@@ -10,7 +10,7 @@ when, and why.
 
 **SSG-emitting-runtime + static docs, pre-release.**
 
-zudo-sg is a documentation site built with zfb (a Vite/Preact SSG framework). The
+zudo-sg is a documentation site built with zfb 4 with zudo-react islands and zudo-wind CSS. The
 generator side is CLI-shaped (T0–T1 sufficient); the emitted runtime (islands, client
 router) is covered by T0 unit tests today, with L4 E2E coverage added in T1.
 
@@ -21,8 +21,8 @@ router) is covered by T0 unit tests today, with L4 E2E coverage added in T1.
 | Tier | Status | What runs |
 |------|--------|-----------|
 | T0 | Active | typecheck + unit tests — inner loop, constant feedback |
-| T1 | Active | PR CI gate: lint-tokens + codegen drift + typecheck + unit + root/demo/doc builds + smoke-e2e + dist-checks |
-| T2 | Not needed | T1 budget is well under 10 min; no split needed |
+| T1 | Active | PR CI gate: lint-tokens + codegen drift + typecheck + unit + root/demo/doc builds + packed consumer proofs + smoke-e2e + dist-checks |
+| T2 | Not currently used | Assess a split against measured CI durations as consumer proofs grow |
 | T3 | Deferred to release | see below |
 | T4 | Local b4push only | convenience pre-push pass (not enforcement) |
 
@@ -56,7 +56,7 @@ pnpm b4push       # runs all steps below in order
 Steps in `scripts/run-b4push.sh`:
 
 1. Format check (Markdown/MDX, including tracked skills) —
-   `pnpm dlx @takazudo/mdx-formatter --check '**/*.md' '**/*.mdx' '.claude/**/*.md'`
+   `pnpm exec mdx-formatter --check '**/*.md' '**/*.mdx' '.claude/**/*.md'`
 2. Design token lint — `pnpm lint:tokens`
 3. Codegen drift checks — all `check:*` generators
 4. Type checking — `pnpm check`
@@ -85,13 +85,23 @@ counts to fit one machine.
 ### T1 — CI gate (authoritative)
 
 The `pr-checks.yml` workflow runs on every PR targeting `main` or `base/**` and is
-the single source of truth for pass/fail. Jobs mirror the b4push steps:
+the single source of truth for pass/fail. Jobs cover the b4push steps and
+independent packed consumer proofs:
 
 - **lint-tokens** — `pnpm lint:tokens`
 - **codegen-drift** — z-index, story registry/category, and UI/root
   token-manifest drift checks
 - **typecheck** — `pnpm check`
 - **unit** — `pnpm test:unit`
+- **styleguide-install** — `pnpm verify:styleguide-install`: packed module-mode
+  consumer outside the workspace, non-root base, browser and dev-hydration proof
+- **descriptor-host-install** — `pnpm verify:descriptor-host-install`: packed
+  framework-free descriptor consumer with an external preview document
+- **react-descriptor-host-install** — `pnpm verify:react-descriptor-host-install`:
+  packed React 19 descriptor consumer, root/non-root bases, real editor workers
+  and browser lifecycle checks (20-minute job budget)
+- **create-zudo-sg** — `pnpm verify:create-zudo-sg`: packed initializer, generated
+  consumer installation, build and dev proof
 - **build** — `pnpm build` (produces and caches `dist/`)
 - **build-demo** — `pnpm --filter @zudo-sg/demo build` (produces and caches
   `apps/demo/dist`), then `pnpm check:links:demo` against it
@@ -113,6 +123,36 @@ pnpm check:links:demo   # broken internal link check for the demo (needs apps/de
 pnpm check:html         # HTML validation (needs dist/)
 pnpm test:e2e           # Playwright smoke (needs dist/ and apps/demo/dist/)
 ```
+
+### Packed consumer verification
+
+These proofs install packed artifacts in temporary directories outside the
+workspace. The engine verifiers ensure that the consumer resolves its installed
+package rather than a workspace symlink. Run them when changing public exports,
+preview runtime contracts, packaging, or initializer behavior:
+
+```bash
+pnpm verify:styleguide-install
+pnpm verify:descriptor-host-install
+pnpm verify:react-descriptor-host-install
+pnpm verify:create-zudo-sg
+pnpm check:create-template
+```
+
+The React proof lives in `fixtures/react-descriptor-host`. Its React/ReactDOM,
+editor and preview-bundler dependencies are fixture-owned; they do not enter the
+engine manifest, root host runtime, or generated default initializer template.
+Its external preview bundle and actual worker/static assets are served from the
+built same origin at both `/` and a non-root base. Browser assertions cover
+stateful prop updates, ordinary prop Reset versus full fixture reset,
+focus/portal/editor lifecycle, retained token/live-CSS state, replay and visible
+failures. The fixture's independently installed graph needs its own audit;
+application and deployment-tool audits do not cover it.
+
+`publish-zudo-sg.yml` runs the module, vanilla descriptor and React descriptor
+proofs before `check-pack` and package publication. Running any verifier locally
+does not publish a package or deploy a site. Full local packed/browser runs use
+the machine-wide heavy guard, like other browser suites.
 
 ### Worktree E2E isolation
 
@@ -275,4 +315,4 @@ for the concrete T3 implementation pattern.
 - **Logic / data transforms** → add to `src/**/__tests__/` as `*.test.ts`, picked up by vitest automatically.
 - **New E2E flows** → add `*.spec.ts` to `e2e/`. Styleguide flows belong in `smoke` or `preview-token-panel` (root preview, CI fallback 4700); demo flows belong in `demo-smoke` (demo preview, CI fallback 4701). Keep new product-specific Composer/Sitemapper tests in the standalone zudo-composer repository.
 - **Visual regression** → use `/verify-ui` skill ad-hoc; do not add L5 specs to CI until T3 is set up.
-- **Anything asserting DOMPurify output** → put `@vitest-environment jsdom` in the file's leading docblock. Under the repo-wide happy-dom environment (16.8.1) DOMPurify reports `isSupported: true` yet sanitizes nothing — `<script>` and `onerror=` pass through verbatim — so an XSS assertion there would be testing a sanitizer that never ran. `packages/demo-ui/src/content/prose-md/markdown-runtime.ts` refuses such a DOM outright (it probes the sanitizer before trusting it) and returns `html: null` with a `sanitize` error diagnostic, so the symptom is a null result rather than unsafe HTML.
+- **Anything asserting DOMPurify output** → put `@vitest-environment jsdom` in the file's leading docblock. The former happy-dom 16.8.1 environment let DOMPurify report `isSupported: true` yet sanitize nothing — `<script>` and `onerror=` passed through verbatim — so XSS assertions there tested a sanitizer that never ran. Happy DOM is now pinned to 20.14.6; keep the independent jsdom sanitizer environment and the runtime probe. `packages/demo-ui/src/content/prose-md/markdown-runtime.ts` refuses such a DOM outright (it probes the sanitizer before trusting it) and returns `html: null` with a `sanitize` error diagnostic, so the symptom is a null result rather than unsafe HTML.

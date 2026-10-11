@@ -98,7 +98,7 @@ export interface ZudoSgComposeBaseOptions {
    * Forwarded verbatim to the routes plugin's `externalPreview` option, which
    * validates and normalizes it.
    */
-  externalPreview?: { url: string; trailingSlash?: "never" | "always" };
+  externalPreview?: { url: string; trailingSlash?: "never" | "always"; runtime?: "legacy" | "external-v1" };
   catalog?: { title?: string; intro?: string };
   /**
    * Populate an otherwise empty zudo-doc header with links to the engine-owned

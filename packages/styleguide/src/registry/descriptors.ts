@@ -6,12 +6,15 @@
 import type { StoryControl } from "../stories/types.js";
 import { previewCollisionSlug, type SgRoutes } from "../sg-routes.js";
 import { RESERVED_NAV_SLUGS } from "./registry.js";
+import { externalCatalogKey, isDescriptorSource, type DescriptorSource } from "./external-catalog.js";
 
 /** One variant of a descriptor story. `exportName` is the stable preview-URL id. */
 export interface VariantDescriptor {
   exportName: string;
   name: string;
   controls?: StoryControl[];
+  /** Opt-in verbatim code text, keyed to this exact slug/variant. */
+  source?: DescriptorSource;
 }
 
 /** A pre-captured catalog tile image, or a labelled placeholder note. */
@@ -191,10 +194,14 @@ export function validateStoryDescriptors(
         const problem = validateControls(v.controls);
         if (problem) return fail(`${at}.${problem}`);
       }
+      if (v.source !== undefined && (!isDescriptorSource(v.source) || v.source.key !== externalCatalogKey(slug, v.exportName))) {
+        return fail(`${at}.source must provide code text with key ${externalCatalogKey(slug, v.exportName)}`);
+      }
       return {
         exportName: v.exportName,
         name: v.name,
         ...(v.controls !== undefined && { controls: v.controls as StoryControl[] }),
+        ...(v.source !== undefined && { source: { key: (v.source as DescriptorSource).key, code: (v.source as DescriptorSource).code } }),
       };
     });
 
