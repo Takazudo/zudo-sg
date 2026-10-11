@@ -1,21 +1,18 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { extname, join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import { describe, expect, it } from "vitest";
 
-// Regression guard for #278: Tailwind v4 Approach B (see tokens.css's file
-// header) never imports the default theme, so an unknown breakpoint VARIANT
-// (e.g. `md:` before `--breakpoint-md` existed) silently emits zero CSS
-// instead of erroring — SplitLayout stayed permanently stacked with no build
-// failure to catch it. This scans every production `.ts`/`.tsx` file across
-// the three consumers that share packages/demo-ui/styles/tokens.css (root host,
-// @zudo-sg/demo-ui itself, @zudo-sg/demo) for responsive-prefix usage and asserts
-// each breakpoint name used is backed by a `--breakpoint-*` token, so a
-// missing token fails a test instead of silently no-op-ing in the browser.
+// Guard the shared breakpoint map used by the root host, demo-ui, and demo.
+// Unknown names silently emit no CSS, so scan all three source trees for
+// responsive prefixes, including prefixes composed with state variants.
 
 // packages/demo-ui/src/shared/__tests__/breakpoint-tokens.test.ts -> repo root
 const REPO_ROOT = resolve(__dirname, "../../../../../");
-const TOKENS_CSS_PATH = resolve(REPO_ROOT, "packages/demo-ui/styles/tokens.css");
-
+const windTokensUrl = pathToFileURL(resolve(REPO_ROOT, "packages/demo-ui/styles/wind-tokens.mjs")).href;
+const { demoUiWindBreakpoints } = (await import(windTokensUrl)) as {
+  demoUiWindBreakpoints: Record<string, { minWidthPx: number }>;
+};
 const SCAN_ROOTS = [
   resolve(REPO_ROOT, "packages/demo-ui/src"),
   resolve(REPO_ROOT, "src"),
@@ -66,17 +63,12 @@ function findBreakpointUsages(source: string): string[] {
   return [...stripComments(source).matchAll(BREAKPOINT_PREFIX_RE)].map((match) => match[1]);
 }
 
-function readDefinedBreakpoints(): Set<string> {
-  const css = readFileSync(TOKENS_CSS_PATH, "utf-8");
-  return new Set([...css.matchAll(/--breakpoint-([a-zA-Z0-9]+):/g)].map((match) => match[1]));
-}
-
 describe("breakpoint token coverage", () => {
   it("every responsive prefix used in production source has a matching --breakpoint-* token", () => {
-    const definedBreakpoints = readDefinedBreakpoints();
-    // Sanity check the extraction itself found the known tokens, so a
-    // silently-empty set can't make the assertion below vacuously pass.
-    expect(definedBreakpoints).toEqual(new Set(["sm", "md", "lg", "xl"]));
+    const definedBreakpoints = new Map(
+      Object.entries(demoUiWindBreakpoints).map(([name, value]) => [name, value.minWidthPx]),
+    );
+    expect(Object.fromEntries(definedBreakpoints)).toEqual({ sm: 640, md: 768, lg: 1024, xl: 1280 });
 
     const missing: string[] = [];
     for (const root of SCAN_ROOTS) {

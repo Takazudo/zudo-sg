@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { renderSsr } from "../../test-utils/zudo-react";
 import type { StoryMeta, Story } from "../types";
 import { STORY_MODULES } from "./story-modules";
 
@@ -41,6 +42,7 @@ describe("story-authoring contract", () => {
           // render must be synchronous + produce a node (pure, no throw).
           const node = story.render();
           expect(node, `${name}.render() returned nullish`).toBeDefined();
+          expect(renderSsr(node), `${name}.render() failed SSR`).toEqual(expect.any(String));
         }
       });
 
