@@ -242,7 +242,7 @@ async function panelDiagnostics(page) {
       readyState: document.readyState,
       scripts: [...document.scripts].map((script) => ({ src: script.src, type: script.type })),
       islands: [...document.querySelectorAll("[data-zfb-island], [data-zfb-island-skip-ssr]")]
-        .map((island) => ({ attributes: Object.fromEntries([...island.attributes].map(({ name, value }) => [name, value])), children: island.childElementCount })),
+        .map((island) => ({ attributes: Object.fromEntries([...island.attributes].filter(({ name }) => name !== "data-props").map(({ name, value }) => [name, value])), propsBytes: island.getAttribute("data-props")?.length ?? 0, children: island.childElementCount })),
       previewStorage: Object.fromEntries(Object.keys(localStorage)
         .filter((key) => key.startsWith("sg-preview-tweak"))
         .map((key) => [key, localStorage.getItem(key)])),
