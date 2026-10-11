@@ -40,7 +40,8 @@
 // which derives the active slug from the URL on each page load — there is no
 // separate active-slug-sync script in this layout.
 
-import type { ComponentChildren, JSX, VNode } from "preact";
+import type { Child, Description } from "@takazudo/zfb/zudo-react";
+import type { JSX } from "@takazudo/zfb/zudo-react/jsx-runtime";
 import { Island } from "@takazudo/zfb";
 import { DocLayoutWithDefaults } from "@takazudo/zudo-doc/doclayout";
 import { SidebarTree } from "@takazudo/zudo-doc/sidebar-tree-island";
@@ -70,19 +71,19 @@ export interface StyleguideLayoutProps {
   /** Hide the component sidebar for standalone pages such as /tokens. */
   hideSidebar?: boolean;
   /** `<head>` content — the host passes its `HeadWithDefaults` output. */
-  head: ComponentChildren;
+  head: Child;
   /** Header region — the host passes its `HeaderWithDefaults` output. */
-  header: ComponentChildren;
+  header: Child;
   /** Footer region — the host passes its `FooterWithDefaults` output. */
-  footer: ComponentChildren;
+  footer: Child;
   /** Body-end islands — the host passes its `BodyEndIslands` output. */
-  bodyEnd: ComponentChildren;
+  bodyEnd: Child;
   /**
    * Right-region code panel content (detail pages only, #49). When present the
    * TOC slot hosts it; when absent the slot is empty and `hideToc` frees the
    * width.
    */
-  codePanel?: VNode | null;
+  codePanel?: Description | null;
   /**
    * Opt the content band into the DocLayout **wide** layout — forwarded
    * verbatim to `DocLayoutWithDefaults contentWide`. Defaults to `false`.
@@ -103,7 +104,7 @@ export interface StyleguideLayoutProps {
   enableClientRouter: boolean;
   /** Mirrors the host's `settings.noindex`. */
   noindex: boolean;
-  children: JSX.Element | JSX.Element[];
+  children: Child;
 }
 
 export function StyleguideLayout({
@@ -139,15 +140,16 @@ export function StyleguideLayout({
   // pages keep the package's sr-only aside empty, without a component tree.
   const sidebarOverride = hideSidebar
     ? <></>
-    : Island({
-      when: "load",
-      children: <SidebarTree nodes={navNodes} currentSlug={activeSlug} />,
-    }) as unknown as VNode;
+    : (
+      <Island when="load">
+        <SidebarTree nodes={navNodes} {...(activeSlug !== undefined ? { currentSlug: activeSlug } : {})} />
+      </Island>
+    );
 
   // The right-region (DocLayout's TOC slot) hosts the detail-page code panel
   // (#49). Empty fragment when absent so `hideToc` lets the content band fill
   // the full width on the catalog + token routes.
-  const tocOverride: VNode = showCodePanel ? (codePanel as VNode) : <></>;
+  const tocOverride: Description = codePanel ?? <></>;
 
   // Panel scripts: PanelStateHeadScript runs in <head> (passed via head slot
   // extension); PanelResizersInitScript runs at body-end (appended to bodyEnd).

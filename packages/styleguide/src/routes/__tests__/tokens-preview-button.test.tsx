@@ -2,7 +2,7 @@
 // `ctx.previewTokenPanel` is true — with no `zdtpApplyProxy.tabsModule` wired,
 // `PreviewTokenPanelBootstrap` no-ops silently and the button would dispatch to
 // nothing.
-import { render } from "preact-render-to-string";
+import { renderSsr as render } from "../../__tests__/helpers/zudo-react.js";
 import { describe, expect, it, vi } from "vitest";
 import { DEFAULT_SG_ROUTES } from "../../sg-routes.js";
 
