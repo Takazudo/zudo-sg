@@ -2,7 +2,7 @@
 // token panel wiring: this fixture ships no `tokens` block, so the
 // preview-tokens trigger stays off by default (issue #872).
 
-import type { JSX } from "preact";
+import type { JSX } from "@takazudo/zfb/zudo-react/jsx-runtime";
 
 export const frontmatter = { title: "Descriptor host fixture" };
 
@@ -10,12 +10,12 @@ export default function IndexPage(): JSX.Element {
   return (
     <html lang="en">
       <head>
-        <meta charSet="utf-8" />
+        <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <title>Descriptor host fixture</title>
       </head>
       <body class="min-h-screen bg-bg font-sans text-base leading-normal text-fg">
-        <main class="mx-auto flex max-w-[48rem] flex-col gap-vsp-lg px-hsp-lg py-vsp-2xl">
+        <main data-descriptor-home class="zc-descriptor-home mx-auto flex max-w-[48rem] flex-col gap-vsp-lg px-hsp-lg py-vsp-2xl">
           <h1 data-host-index class="text-2xl font-bold leading-tight">Descriptor host fixture</h1>
           <p class="text-muted">
             Stories are registered as plain-data descriptors, previewed through this

@@ -150,19 +150,21 @@ describe("sync-create-zudo-sg-template.mjs", () => {
     expect(readFileSync(join(target, "zfb.config.ts"), "utf8")).toContain(
       'base: "/"',
     );
-    expect(readReleaseAgeExcludes(target)).toEqual([
-      "@takazudo/zdtp@0.8.5",
-      "@takazudo/zfb-darwin-arm64@2.21.1",
-      "@takazudo/zfb-darwin-x64@2.21.1",
-      "@takazudo/zfb-linux-arm64-gnu@2.21.1",
-      "@takazudo/zfb-linux-x64-gnu@2.21.1",
-      "@takazudo/zfb-md-wasm@2.21.1",
-      "@takazudo/zfb-runtime@2.21.1",
-      "@takazudo/zfb-win32-x64-msvc@2.21.1",
-      "@takazudo/zfb@2.21.1",
-      "@takazudo/zudo-doc@5.28.0",
+    const fixturePackage = JSON.parse(readFileSync(join(target, "package.json"), "utf8"));
+    const zfbPackage = JSON.parse(readFileSync(join(sandbox, "node_modules/@takazudo/zfb/package.json"), "utf8"));
+    const releasedDependencies = [
+      "@takazudo/zfb",
+      "@takazudo/zfb-runtime",
+      "@takazudo/zfb-md-wasm",
+      "@takazudo/zudo-doc",
+      "@takazudo/zdtp",
+    ];
+    const expectedReleaseAgeExcludes = [
+      ...releasedDependencies.map((name) => `${name}@${fixturePackage.dependencies[name]}`),
+      ...Object.entries(zfbPackage.optionalDependencies).map(([name, version]) => `${name}@${version}`),
       `@takazudo/zudo-sg@${STYLEGUIDE_VERSION}`,
-    ]);
+    ].sort();
+    expect(readReleaseAgeExcludes(target)).toEqual(expectedReleaseAgeExcludes);
     expect(readFileSync(join(target, "pages/index.tsx"), "utf8")).toContain(
       'href="/components"',
     );
@@ -171,6 +173,17 @@ describe("sync-create-zudo-sg-template.mjs", () => {
     );
     expect(readFileSync(join(target, "src/styleguide/sg-registry.ts"), "utf8")).toContain(
       '"./ui/button/button.stories.tsx": button as unknown as StoryModule,',
+    );
+    expect(existsSync(join(target, "vitest.config.ts"))).toBe(true);
+    expect(fixturePackage.scripts.test).toBe("vitest run --passWithNoTests");
+    expect(fixturePackage.devDependencies).toMatchObject({
+      "happy-dom": "20.14.6",
+      vite: "7.3.5",
+      vitest: "4.1.11",
+    });
+    expect(fixturePackage.dependencies).not.toHaveProperty("preact");
+    expect(readFileSync(join(target, "vitest.config.ts"), "utf8")).toContain(
+      'jsxImportSource: "@takazudo/zfb/zudo-react"',
     );
     const generatedText = readOutputText(target);
     for (const forbidden of [
@@ -182,6 +195,7 @@ describe("sync-create-zudo-sg-template.mjs", () => {
     ]) {
       expect(generatedText).not.toContain(forbidden);
     }
+    expect(generatedText).not.toMatch(/preact|tailwindcss|@theme|@source|safelist|pragma/iu);
 
     const second = run(sandbox);
     expect(second.status).toBe(0);
@@ -314,8 +328,9 @@ describe("sync-create-zudo-sg-template.mjs", () => {
       ),
       zfbPackagePath: injectedMetadataPath,
     });
+    const zfbPackage = JSON.parse(readFileSync(injectedMetadataPath, "utf8"));
     expect(files.get("pnpm-workspace.yaml")?.toString()).toContain(
-      "@takazudo/zfb@2.21.1",
+      `@takazudo/zfb@${zfbPackage.version}`,
     );
   });
 

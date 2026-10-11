@@ -2,7 +2,7 @@
 
 `create-zudo-sg` is the pnpm-only initializer for a new
 [`@takazudo/zudo-sg`](https://github.com/Takazudo/zudo-sg/tree/main/packages/styleguide)
-styleguide host. It copies a small, working Preact + zfb project into a new
+styleguide host. It copies a small, working zudo-react + zfb project into a new
 directory; the generated project is private and is ready to customize.
 
 ## Quick start
@@ -13,10 +13,11 @@ cd my-styleguide
 pnpm install
 pnpm gen-registry
 pnpm gen-token-manifest
+pnpm test
 pnpm dev
 ```
 
-The command defaults to no dependency installation and prints the five
+The command defaults to no dependency installation and prints the setup
 commands after it creates the project. Pass `--install` when the initializer
 should run `pnpm install` for you. The generated `package.json` pins the
 package manager to pnpm, and this release has no npm, yarn, or `--pm` mode.
@@ -61,7 +62,7 @@ contains:
   `pages/lib/_zudo-sg-islands.ts` import shim, for the host page and for
   mounting the preview token panel on the injected `/components/*` and
   `/tokens` routes.
-- Three small Preact examples under `ui/`: Button, Card, and Counter, with
+- Three small zudo-react examples under `ui/`: Button, Card, and Counter, with
   co-located stories and a Button MDX document.
 - `src/styleguide/sg-registry.ts`, generated from the three example stories.
   Run `pnpm gen-registry` after changing stories; the CLI also bootstraps a
@@ -123,34 +124,27 @@ for the wiring shape.
 zfb discovers `src/styles/global.css` automatically; no page import or config
 entry is needed. Keep its imports in this order:
 
-1. Declare `@layer zd-preflight, zd-flow`, then import
-   `tailwindcss/preflight` in `layer(zd-preflight)` and unlayered
-   `tailwindcss/utilities`.
-2. Import `@takazudo/zudo-doc/theme.css`, then `./ui-tokens.css` and any
-   component package stylesheet. The theme supplies the framework tokens and
-   resets the color-token namespace; preflight is the only element reset.
-3. Import zudo-doc's `safelist.css`, `content.css`, `features.css`, and
-   `page-loading.css`, in that order.
+1. Declare `@layer zw-reset, zd-flow`; zfb's wind compiler supplies its owned
+   reset and utility rules.
+2. Import `@takazudo/zudo-doc/theme.css`, then `./ui-tokens.css` and your local
+   `./components.css`. Define host tokens as ordinary `:root` properties and
+   map them in `zfb.config.ts` under `wind.tokens`.
+3. Import zudo-doc's `content.css`, `features.css`, and `page-loading.css`, in
+   that order.
 4. Import `@takazudo/zdtp/dashboard/styles.css` after content styles so the
-   `/tokens` dashboard wins ties with prose rules, then
-   `@takazudo/zudo-sg/styles.css` and `@takazudo/zudo-sg/safelist.css`.
-5. Keep the `@source` globs for `pages/`, `ui/`, and `src/content/`; add your
-   component package's source glob alongside them. zfb resolves these
-   global-entry paths from the project root.
+   `/tokens` dashboard wins ties with prose rules, then import
+   `@takazudo/zudo-sg/styles.css`.
 
-Keep the engine styles and Tailwind utilities unlayered: utility margins must
-outrank `zd-flow`, while engine chrome overrides must compete with utilities.
-Do not add the full `tailwindcss` import or a second preflight. If an existing
-host defines consumer-only color tokens before zudo-doc's theme, replace
-`theme.css` with `theme-no-reset.css` to preserve them. That variant only
-omits the color-token reset; tokens defined by both stylesheets still follow
-source order.
+Wind utilities and engine styles are unlayered. Configure
+`wind.sources.roots` in `zfb.config.ts` for host source directories;
+`withZudoSg()` registers the engine's public `wind.json` manifest. Do not add
+Tailwind imports, `@source` directives, or a second preflight.
 
 ### Three token worlds and engine overrides
 
-The generated host has three color-token worlds: zudo-doc's `--zd-*` roles for the
-documentation shell, zudo-sg's raw `--sg-*` roles for catalog chrome, and the host
-component library's own `@theme` color tokens (usually `--color-*`) for previewed
+The generated host has three color-token worlds: zudo-doc's `--zd-*` roles for
+the documentation shell, zudo-sg's raw `--sg-*` roles for catalog chrome, and
+the host component library's `:root` tokens (usually `--color-*`) for previewed
 components. Keep the engine and component-library roles separate.
 
 The engine defaults are plain `--sg-*` properties under `:where(:root)`, so zudo-doc's
@@ -166,16 +160,23 @@ unlayered override in any import position:
 If the host previously used bare `--color-border` to style engine chrome, migrate that
 declaration to `--sg-border` (and migrate each other chrome role to its corresponding
 `--sg-*` role). `--color-border` can still style the host's own components. The
-order-proof engine hook does not change the import-order contract for those host-owned
-`@theme` colors: import `theme.css` before them, or deliberately use
-`theme-no-reset.css` when their earlier declaration must be preserved. This is the
-zudo-doc namespace contract for host-owned color tokens; the engine's raw `--sg-*`
-namespace is separate.
+order-proof engine hook does not change the import-order contract for those
+host-owned `--color-*` tokens: import `theme.css` before them. This is the
+zudo-doc namespace contract for host-owned color tokens; the engine's raw
+`--sg-*` namespace is separate.
 
-The preview document uses `src/styles/preview-entry.css` independently. Add
-your component package's styles and source scan there too when previews need
-them; its `@source` paths are relative to that stylesheet. Keep dashboard and
-catalog chrome imports in the host's global entry.
+The preview document uses `src/styles/preview-entry.css` independently. Keep
+its input local to the host:
+
+```css
+@layer zw-reset;
+@import "./ui-tokens.css";
+@import "./components.css";
+```
+
+The preview compiler scans the configured component roots and scopes token
+roots under `:root[data-sg-preview-doc]`. Keep dashboard and catalog chrome
+imports in the host's global entry.
 
 ## Release-age exemptions
 
@@ -188,7 +189,7 @@ checks each optional package independently.
 
 ## Host requirements and caveats
 
-The starter targets Preact + zfb hosts. Keep these dependencies in a host
+The starter targets zudo-react + zfb hosts. Keep these dependencies in a host
 that adopts the engine:
 
 - `@takazudo/zdtp` is required by the injected `/tokens` route at build time,
@@ -197,6 +198,9 @@ that adopts the engine:
   instead of zudo-doc's throwing stub (zudolab/zudo-doc#4261). Do not drop it.
 - `diff` and `katex` are required by the published zudo-doc route dist that
   the host loads, even when the corresponding optional features are disabled.
+- The engine owns the Preact dependency used by the opaque zdtp dashboard
+  adapter. Host components and stories use zudo-react and do not add a direct
+  `preact` dependency.
 
 Keep the `tokens` block in `zudo-sg.config.mjs` as well. The initializer's
 configuration is typed with `tokens` required, and `gen-token-manifest` needs

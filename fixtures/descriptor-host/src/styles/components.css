@@ -1,0 +1,5 @@
+/* No descriptor stories render in the external frame; this sheet keeps the
+   host's authored component entry separate from its wind utilities. */
+.zc-descriptor-home {
+  border-inline-start: 3px solid var(--color-accent);
+}

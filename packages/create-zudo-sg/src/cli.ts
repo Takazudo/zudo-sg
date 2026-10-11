@@ -105,6 +105,7 @@ export function formatNextSteps(projectDir: string): string {
     "pnpm install",
     "pnpm gen-registry",
     "pnpm gen-token-manifest",
+    "pnpm test",
     "pnpm dev",
   ].join("\n");
 }
