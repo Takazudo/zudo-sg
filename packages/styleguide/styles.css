@@ -326,6 +326,10 @@
 /* One page-level toolbar owns theme / viewport / layout / code-panel /
  * preview-tokens for every stage below it (see preview/detail-workbench.tsx).
  */
+.sg-workbench-toolbar-actions {
+  margin-inline-start: auto;
+}
+
 .sg-workbench-toolbar {
   display: flex;
   flex-wrap: wrap;
