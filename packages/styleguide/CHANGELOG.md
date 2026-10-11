@@ -4,20 +4,6 @@ All notable changes to `@takazudo/zudo-sg` are documented in this file.
 
 The format is based on Keep a Changelog, and release notes are generated from the changelog MDX pages.
 
-## [Unreleased]
-
-### Added
-
-- Framework-free external-runtime contracts with strict document/session identity,
-  JSON props, ordered messages, full-reset generations and visible error payloads.
-- Optional descriptor source data and canonical external-catalog manifest validation,
-  retaining legacy protocol v1 and existing descriptor thumbnail behavior.
-- An opt-in external preview controller and strict workbench configuration, with
-  retained controls/theme/token/live-CSS replay, separate full fixture reset,
-  visible errors, async cleanup and a committed fixture stability barrier.
-- Real descriptor source panels and Node capture/prebuild helpers that compare
-  generated catalog identities and validate runtime capture receipts and assets.
-
 ## [0.5.0] - 2026-10-12
 
 This release ports the styleguide engine to zfb 4.3.1 and zudo-doc 6.0.0.
