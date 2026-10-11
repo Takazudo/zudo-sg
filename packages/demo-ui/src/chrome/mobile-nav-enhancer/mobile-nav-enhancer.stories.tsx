@@ -35,7 +35,7 @@ export const Default: Story = {
   source: `<SiteNav sections={sections} />
 <MobileNavEnhancer />`,
   render: () => (
-    <div style={{ position: "relative", height: "360px", border: "1px solid var(--color-border)", borderRadius: "var(--radius-md)", overflow: "hidden" }}>
+    <div style={{ position: "relative", height: "360px", border: "1px solid var(--color-border)", "border-radius": "var(--radius-md)", overflow: "hidden" }}>
       <SiteNav sections={SECTIONS} />
       <MobileNavEnhancer />
     </div>

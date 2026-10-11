@@ -19,8 +19,8 @@
  * `SearchResults` uses server-side, so the two can never disagree. Row markup
  * comes from `../search-result-item-renderer`'s `renderItem`, which shares its
  * class constants with `SearchResults`'s SSR JSX (see
- * `../search-result-item-classes.ts`) — NOT `preact-render-to-string`, which
- * would otherwise bloat this island's bundle for every page that mounts it.
+ * `../search-result-item-classes.ts`) without loading a server renderer into
+ * this island's bundle for every page that mounts it.
  *
  * Render-null pattern: this component renders nothing (`return null`) and
  * only attaches behavior to the existing SSR markup via the `data-search-*`
@@ -38,11 +38,10 @@
  * skip-SSR `<Island>`) on the server.
  *
  * SPA-swap idempotency: `[data-search-root]` gets a `dataset.searchEnhanced`
- * guard, and all listeners are bound through one `AbortController`. If the
- * island is torn down and remounted (e.g. after a client-router page swap),
- * the guard is cleared on cleanup so re-enhancing is safe.
+ * guard. If the island is torn down and remounted (e.g. after a client-router
+ * page swap), the input listener is removed and the guard cleared on cleanup.
  */
-import { useEffect } from "preact/hooks";
+import { getScope } from "@takazudo/zfb/zudo-react";
 import type { SearchDoc } from "../search-doc";
 import { matchDoc } from "../search-doc";
 import { renderItem } from "../search-result-item-renderer";
@@ -67,8 +66,6 @@ function enhance(): () => void {
   }
 
   root.dataset.searchEnhanced = "true";
-  const ac = new AbortController();
-  const { signal } = ac;
 
   const apply = (rawQuery: string) => {
     const lower = rawQuery.trim().toLowerCase();
@@ -87,31 +84,26 @@ function enhance(): () => void {
     window.history.replaceState(null, "", url.toString());
   };
 
+  const onInput = () => {
+    apply(input.value);
+    syncUrl(input.value);
+  };
+
   // Initial sync: reflect `?q=` into the input, then re-filter the SSR list
   // client-side (aligns SSR's possibly-unfiltered list with the URL's query).
   const initialQuery = new URL(window.location.href).searchParams.get("q") ?? input.value ?? "";
   if (input.value !== initialQuery) input.value = initialQuery;
   apply(initialQuery);
 
-  input.addEventListener(
-    "input",
-    () => {
-      apply(input.value);
-      syncUrl(input.value);
-    },
-    { signal },
-  );
+  input.addEventListener("input", onInput);
 
   return () => {
-    ac.abort();
+    input.removeEventListener("input", onInput);
     delete root.dataset.searchEnhanced;
   };
 }
 
 export default function SearchResultsEnhancer() {
-  useEffect(() => {
-    const dispose = enhance();
-    return dispose;
-  }, []);
+  getScope().onActivate(() => enhance());
   return null;
 }

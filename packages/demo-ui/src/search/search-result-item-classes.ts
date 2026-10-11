@@ -6,7 +6,7 @@
  * byte-identical markup for the same doc — both import these constants
  * instead of duplicating class strings, so the two can never drift.
  *
- * This module is deliberately framework-free (no preact/JSX import) so it can
+ * This module is deliberately framework-free (no JSX import) so it can
  * be imported from the CSR string-renderer without pulling any render tree
  * into the island bundle.
  */

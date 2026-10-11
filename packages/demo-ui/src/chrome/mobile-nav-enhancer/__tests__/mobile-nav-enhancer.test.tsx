@@ -1,5 +1,5 @@
-import { fireEvent, render } from "@testing-library/preact";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { fire, renderIsland } from "../../../test-utils/zudo-react.js";
 import { SiteNav, type NavSection } from "../../site-nav/site-nav";
 import MobileNavEnhancer from "../mobile-nav-enhancer";
 
@@ -19,22 +19,26 @@ const SECTIONS: NavSection[] = [
 
 const ORIGINAL_INNER_WIDTH = window.innerWidth;
 
-/** Renders the real SiteNav SSR markup plus the enhancer, as a consumer would. */
-function setup() {
-  render(
+function MobileNavFixture() {
+  return (
     <>
       <SiteNav sections={SECTIONS} />
       <MobileNavEnhancer />
-    </>,
+    </>
   );
-  const toggle = document.getElementById("zui-nav-toggle") as HTMLInputElement;
-  const closeButton = document.querySelector("[data-nav-close]") as HTMLElement;
-  return { toggle, closeButton };
+}
+
+/** Renders the real SiteNav SSR markup plus the enhancer, as a consumer would. */
+function setup() {
+  const app = renderIsland(MobileNavFixture, {});
+  const toggle = app.container.querySelector("#zui-nav-toggle") as HTMLInputElement;
+  const closeButton = app.container.querySelector("[data-nav-close]") as HTMLElement;
+  return { app, toggle, closeButton };
 }
 
 function openDrawer(toggle: HTMLInputElement) {
   toggle.checked = true;
-  fireEvent.change(toggle);
+  fire(toggle, "change");
 }
 
 describe("MobileNavEnhancer", () => {
@@ -48,15 +52,17 @@ describe("MobileNavEnhancer", () => {
 
   it("syncs the toggle's aria-expanded/aria-label and locks scroll when opened", () => {
     const { toggle } = setup();
-    expect(toggle).toHaveAttribute("aria-expanded", "false");
+
+    expect(toggle.getAttribute("aria-expanded")).toBe("false");
     openDrawer(toggle);
-    expect(toggle).toHaveAttribute("aria-expanded", "true");
-    expect(toggle).toHaveAttribute("aria-label", "Close menu");
+    expect(toggle.getAttribute("aria-expanded")).toBe("true");
+    expect(toggle.getAttribute("aria-label")).toBe("Close menu");
     expect(document.body.style.overflow).toBe("hidden");
   });
 
   it("moves focus into the drawer's first focusable element when opened", () => {
     const { toggle, closeButton } = setup();
+
     openDrawer(toggle);
     expect(document.activeElement).toBe(closeButton);
   });
@@ -65,36 +71,41 @@ describe("MobileNavEnhancer", () => {
     const { toggle } = setup();
     openDrawer(toggle);
     toggle.checked = false;
-    fireEvent.change(toggle);
-    expect(toggle).toHaveAttribute("aria-expanded", "false");
-    expect(toggle).toHaveAttribute("aria-label", "Open menu");
+    fire(toggle, "change");
+
+    expect(toggle.getAttribute("aria-expanded")).toBe("false");
+    expect(toggle.getAttribute("aria-label")).toBe("Open menu");
     expect(document.body.style.overflow).toBe("");
   });
 
   it("closes and returns focus to the toggle on Escape", () => {
     const { toggle } = setup();
     openDrawer(toggle);
-    fireEvent.keyDown(document, { key: "Escape" });
+    fire(toggle, "keydown", { key: "Escape" });
+
     expect(toggle.checked).toBe(false);
-    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(toggle.getAttribute("aria-expanded")).toBe("false");
     expect(document.activeElement).toBe(toggle);
   });
 
   it("traps Tab: wraps from the last focusable element back to the first", () => {
-    const { toggle, closeButton } = setup();
-    openDrawer(toggle);
+    const { closeButton } = setup();
     const widgetsLink = document.querySelector('a[href="/products/widgets"]') as HTMLElement;
+    openDrawer(document.getElementById("zui-nav-toggle") as HTMLInputElement);
     widgetsLink.focus();
-    fireEvent.keyDown(document, { key: "Tab" });
+    fire(widgetsLink, "keydown", { key: "Tab" });
+
     expect(document.activeElement).toBe(closeButton);
   });
 
   it("traps Shift+Tab: wraps from the first focusable element back to the last", () => {
-    const { toggle, closeButton } = setup();
+    const { closeButton } = setup();
+    const toggle = document.getElementById("zui-nav-toggle") as HTMLInputElement;
     openDrawer(toggle);
     closeButton.focus();
-    fireEvent.keyDown(document, { key: "Tab", shiftKey: true });
+    fire(closeButton, "keydown", { key: "Tab", shiftKey: true });
     const widgetsLink = document.querySelector('a[href="/products/widgets"]') as HTMLElement;
+
     expect(document.activeElement).toBe(widgetsLink);
   });
 
@@ -102,39 +113,39 @@ describe("MobileNavEnhancer", () => {
     const { toggle } = setup();
     openDrawer(toggle);
     window.innerWidth = 1024;
-    fireEvent(window, new Event("resize"));
+    window.dispatchEvent(new Event("resize"));
+
     expect(toggle.checked).toBe(false);
-    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(toggle.getAttribute("aria-expanded")).toBe("false");
     expect(document.body.style.overflow).toBe("");
   });
 
   it("does not touch an already-closed drawer on resize", () => {
     const { toggle } = setup();
     window.innerWidth = 1024;
-    fireEvent(window, new Event("resize"));
+    window.dispatchEvent(new Event("resize"));
+
     expect(toggle.checked).toBe(false);
-    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(toggle.getAttribute("aria-expanded")).toBe("false");
   });
 
   it("closes on Enter/Space from the close button and returns focus to the toggle", () => {
     const { toggle, closeButton } = setup();
     openDrawer(toggle);
-    fireEvent.keyDown(closeButton, { key: "Enter" });
+    fire(closeButton, "keydown", { key: "Enter" });
+
     expect(toggle.checked).toBe(false);
     expect(document.activeElement).toBe(toggle);
   });
 
-  it("releases the scroll lock on unmount even while left open", () => {
-    const { unmount } = render(
-      <>
-        <SiteNav sections={SECTIONS} />
-        <MobileNavEnhancer />
-      </>,
-    );
-    const toggle = document.getElementById("zui-nav-toggle") as HTMLInputElement;
+  it("releases the scroll lock on disposal even while left open", () => {
+    const { app, toggle } = setup();
     openDrawer(toggle);
     expect(document.body.style.overflow).toBe("hidden");
-    unmount();
+
+    app.dispose();
+
     expect(document.body.style.overflow).toBe("");
+    expect(app.container.isConnected).toBe(false);
   });
 });

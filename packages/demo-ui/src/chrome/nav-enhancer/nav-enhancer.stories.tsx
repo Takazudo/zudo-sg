@@ -1,4 +1,4 @@
-import type { ComponentChildren } from "preact";
+import type { Child } from "@takazudo/zfb/zudo-react";
 import type { StoryMeta, Story } from "../../stories/types";
 import { SiteNav, type NavSection } from "../site-nav/site-nav";
 import NavEnhancer from "./nav-enhancer";
@@ -37,13 +37,12 @@ const SECTIONS: NavSection[] = [
   },
 ];
 
-function NavFrame({ children }: { children: ComponentChildren }) {
+function NavFrame({ children }: { children: Child }) {
   return (
     <div
-      style={{ position: "relative", height: "360px", width: "14rem", border: "1px solid var(--color-border)", borderRadius: "var(--radius-md)", overflow: "hidden" }}
-      class="zui-nav-story-frame"
+      style={{ position: "relative", height: "360px", width: "14rem", border: "1px solid var(--color-border)", "border-radius": "var(--radius-md)", overflow: "hidden" }}
+      class="zc-nav-story-frame"
     >
-      <style>{`.zui-nav-story-frame nav[aria-label="Global navigation"] { position: absolute; }`}</style>
       {children}
     </div>
   );

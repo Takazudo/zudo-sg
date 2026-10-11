@@ -3,7 +3,7 @@
 /**
  * ContextSwitcherEnhancer — a11y layer on top of SiteHeader's Browse category
  * panel (chrome/site-header), which discloses via pure CSS
- * (`group/ctx` hover / focus-within). Without this island the panel still
+ * (`.zc-context-switcher` hover / focus-within). Without this island the panel still
  * opens on hover/focus. What JS adds:
  *   1. Sync the trigger's `aria-expanded` to the real visible state — CSS
  *      hover/focus-within has no way to update an ARIA attribute itself, so
@@ -30,15 +30,15 @@
  * Idempotency: this project's SPA client-router can re-run islands on a soft
  * navigation without a full page reload, so re-running `enhance()` on the
  * same DOM must not double-bind. A `data-ctx-enhanced` guard on the disclosure's
- * common-ancestor scope (`.group\/ctx`) makes a second call a no-op; every
- * listener is tied to one `AbortController` so cleanup (which clears the
- * guard) always fully un-binds before a next mount re-enhances.
+ * common-ancestor scope (`.zc-context-switcher`) makes a second call a no-op;
+ * cleanup removes every listener and clears the guard before a next mount
+ * re-enhances.
  *
  * Render-null enhancer: mount via the consumer's own
  * `<Island when="visible" ssrFallback={null}>` (required — evaluating this
  * island during SSR throws). It draws no DOM of its own.
  */
-import { useEffect } from "preact/hooks";
+import { getScope } from "@takazudo/zfb/zudo-react";
 
 type Intent = "none" | "open" | "closed";
 
@@ -47,15 +47,15 @@ function enhance(): () => void {
   const panel = document.querySelector<HTMLElement>("[data-ctx-panel]");
   if (!trigger || !panel) return () => {};
 
-  // Common ancestor (site-header's `.group/ctx`) — the guard lives on this
+  // Common ancestor (site-header's `.zc-context-switcher`) — the guard lives on this
   // one node. Falls back to the trigger itself if it can't be found.
-  const scope = (trigger.closest<HTMLElement>(".group\\/ctx") as HTMLElement | null) ?? trigger;
+  const scope = trigger.closest<HTMLElement>(".zc-context-switcher") ?? trigger;
 
   if (scope.dataset.ctxEnhanced === "true") return () => {};
   scope.dataset.ctxEnhanced = "true";
 
-  const ac = new AbortController();
-  const { signal } = ac;
+  const cleanups: Array<() => void> = [];
+  let disposed = false;
 
   const setExpanded = (open: boolean) => {
     trigger.setAttribute("aria-expanded", open ? "true" : "false");
@@ -71,7 +71,7 @@ function enhance(): () => void {
     panel.style.opacity = "1";
     panel.style.pointerEvents = "auto";
     // Preserve the panel's horizontal centering while neutralizing only its
-    // CSS-closed upward offset. `none` would erase `-translate-x-1/2` and
+    // CSS-closed upward offset. `none` would erase its authored translate and
     // push the 72rem panel off the right edge when it is click-pinned.
     panel.style.translate = "-50% 0";
   };
@@ -106,7 +106,7 @@ function enhance(): () => void {
   // inside the scope, so reading real state immediately would misfire.
   const sync = () =>
     queueMicrotask(() => {
-      if (signal.aborted) return;
+      if (disposed) return;
       setExpanded(isOpen());
     });
 
@@ -115,40 +115,36 @@ function enhance(): () => void {
   //   not visibly open (touch/keyboard has no hover, or force-closed) → open+pin it.
   // Checking hover (not focus) is what separates "desktop hover-open, click
   // wants to close" from "touch/keyboard click that focuses AND should open".
-  trigger.addEventListener(
-    "click",
-    () => {
-      const visiblyOpen = intent === "open" || (intent === "none" && scope.matches(":hover"));
-      if (visiblyOpen) applyClosed();
-      else applyOpen();
-      sync();
-    },
-    { signal },
-  );
+  const onTriggerClick = () => {
+    const visiblyOpen = intent === "open" || (intent === "none" && scope.matches(":hover"));
+    if (visiblyOpen) applyClosed();
+    else applyOpen();
+    sync();
+  };
+  trigger.addEventListener("click", onTriggerClick);
+  cleanups.push(() => trigger.removeEventListener("click", onTriggerClick));
 
   // Pointer re-entering = renewed intent to open; clears a forced-closed
   // state back to CSS-driven. A pinned-open state is left alone.
-  scope.addEventListener(
-    "pointerenter",
-    () => {
-      if (intent === "closed") clearForce();
-      sync();
-    },
-    { signal },
-  );
-  scope.addEventListener("pointerleave", sync, { signal });
-  scope.addEventListener("focusin", sync, { signal });
+  const onPointerEnter = () => {
+    if (intent === "closed") clearForce();
+    sync();
+  };
+  scope.addEventListener("pointerenter", onPointerEnter);
+  cleanups.push(() => scope.removeEventListener("pointerenter", onPointerEnter));
+  scope.addEventListener("pointerleave", sync);
+  cleanups.push(() => scope.removeEventListener("pointerleave", sync));
+  scope.addEventListener("focusin", sync);
+  cleanups.push(() => scope.removeEventListener("focusin", sync));
   // Focus leaving the scope entirely clears any forced state (open or
   // closed) back to CSS-driven — Tab-ing away closes a pinned panel too.
-  scope.addEventListener(
-    "focusout",
-    (e: FocusEvent) => {
-      const next = e.relatedTarget as Node | null;
-      if (!next || !scope.contains(next)) clearForce();
-      sync();
-    },
-    { signal },
-  );
+  const onFocusOut = (e: FocusEvent) => {
+    const next = e.relatedTarget as Node | null;
+    if (!next || !scope.contains(next)) clearForce();
+    sync();
+  };
+  scope.addEventListener("focusout", onFocusOut);
+  cleanups.push(() => scope.removeEventListener("focusout", onFocusOut));
 
   // Escape closes if currently open, only returning focus to the trigger
   // when focus was already inside the disclosure (don't steal it from a
@@ -161,7 +157,8 @@ function enhance(): () => void {
     if (focusInside && typeof trigger.focus === "function") trigger.focus();
     sync();
   };
-  document.addEventListener("keydown", onKeyDown, { signal });
+  document.addEventListener("keydown", onKeyDown);
+  cleanups.push(() => document.removeEventListener("keydown", onKeyDown));
 
   // Outside click closes a pinned-open panel. Clicks on the trigger itself
   // are left to the click handler's toggle; clicks inside the panel (card
@@ -173,21 +170,20 @@ function enhance(): () => void {
     applyClosed();
     sync();
   };
-  document.addEventListener("pointerdown", onDocPointerDown, { signal });
+  document.addEventListener("pointerdown", onDocPointerDown);
+  cleanups.push(() => document.removeEventListener("pointerdown", onDocPointerDown));
 
   sync(); // initial sync from SSR's "false" default
 
   return () => {
-    ac.abort();
+    disposed = true;
+    cleanups.forEach((cleanup) => cleanup());
     clearForce();
     delete scope.dataset.ctxEnhanced;
   };
 }
 
 export default function ContextSwitcherEnhancer() {
-  useEffect(() => {
-    const dispose = enhance();
-    return dispose;
-  }, []);
+  getScope().onActivate(() => enhance());
   return null;
 }

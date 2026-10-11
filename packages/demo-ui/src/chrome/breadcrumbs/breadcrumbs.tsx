@@ -26,7 +26,7 @@ export function Breadcrumbs({ crumbs, class: cls }: BreadcrumbsProps) {
           return (
             // The "/" separator is a `::before` on every item but the first.
             <li
-              class="inline-flex items-center gap-hsp-xs [&:not(:first-child)]:before:text-border [&:not(:first-child)]:before:content-['/']"
+              class="zc-breadcrumb-item inline-flex items-center gap-hsp-xs"
               key={`${crumb.label}-${i}`}
             >
               {crumb.href && !isLast ? (

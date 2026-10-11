@@ -1,4 +1,4 @@
-import type { ComponentChildren } from "preact";
+import type { Child } from "@takazudo/zfb/zudo-react";
 import type { StoryMeta, Story } from "../../stories/types";
 import { SiteNav, type SiteNavProps, type NavSection } from "./site-nav";
 
@@ -68,16 +68,12 @@ const MOCK_SECTIONS: NavSection[] = [
 ];
 
 /** SiteNav is fixed-position, so stories confine it inside a relatively-positioned frame. */
-function NavFrame({ children }: { children: ComponentChildren }) {
+function NavFrame({ children }: { children: Child }) {
   return (
     <div
-      style={{ position: "relative", height: "560px", width: "14rem", border: "1px solid var(--color-border)", borderRadius: "var(--radius-md)", overflow: "hidden" }}
-      class="zui-nav-story-frame"
+      style={{ position: "relative", height: "560px", width: "14rem", border: "1px solid var(--color-border)", "border-radius": "var(--radius-md)", overflow: "hidden" }}
+      class="zc-nav-story-frame"
     >
-      <style>{`
-        /* Story-only: pin SiteNav's fixed rail to this frame instead of the viewport. */
-        .zui-nav-story-frame nav[aria-label="Global navigation"] { position: absolute; }
-      `}</style>
       {children}
     </div>
   );

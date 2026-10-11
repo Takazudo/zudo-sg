@@ -31,7 +31,7 @@ const MOCK_IR: NewsItem[] = [
 export const News: Story = {
   name: "News (all categories)",
   render: () => (
-    <div style={{ maxWidth: "960px" }}>
+    <div style={{ "max-width": "960px" }}>
       <NewsTeaser heading="News" items={MOCK_NEWS} viewAllHref="/news" />
     </div>
   ),
@@ -40,7 +40,7 @@ export const News: Story = {
 export const IRNews: Story = {
   name: "IR News",
   render: () => (
-    <div style={{ maxWidth: "960px" }}>
+    <div style={{ "max-width": "960px" }}>
       <NewsTeaser heading="IR News" items={MOCK_IR} viewAllHref="/ir/news" />
     </div>
   ),
@@ -49,7 +49,7 @@ export const IRNews: Story = {
 export const WithIntro: Story = {
   name: "With supporting copy",
   render: () => (
-    <div style={{ maxWidth: "960px" }}>
+    <div style={{ "max-width": "960px" }}>
       <NewsTeaser
         heading="News"
         intro="A roundup of our latest announcements, certifications, and events."
@@ -63,7 +63,7 @@ export const WithIntro: Story = {
 export const Narrow: Story = {
   name: "Narrow (heading row stacks)",
   render: () => (
-    <div style={{ maxWidth: "380px" }}>
+    <div style={{ "max-width": "380px" }}>
       <NewsTeaser heading="News" items={MOCK_NEWS} viewAllHref="/news" />
     </div>
   ),

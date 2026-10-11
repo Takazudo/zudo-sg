@@ -19,7 +19,7 @@ const CATEGORIES = ["Corporate", "Products", "Sustainability", "Exhibitions", "I
 export const Default: Story = {
   name: "Default",
   render: () => (
-    <div style={{ maxWidth: "720px" }}>
+    <div style={{ "max-width": "720px" }}>
       <NewsFilter categories={CATEGORIES} />
     </div>
   ),
@@ -28,7 +28,7 @@ export const Default: Story = {
 export const FewCategories: Story = {
   name: "Few categories",
   render: () => (
-    <div style={{ maxWidth: "480px" }}>
+    <div style={{ "max-width": "480px" }}>
       <NewsFilter categories={["Corporate", "IR"]} />
     </div>
   ),

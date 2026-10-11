@@ -32,7 +32,7 @@ const MOCK_NEWS: NewsItem[] = [
 export const Default: Story = {
   name: "Default (all items)",
   render: () => (
-    <div style={{ maxWidth: "720px" }}>
+    <div style={{ "max-width": "720px" }}>
       <NewsList heading="News" items={MOCK_NEWS} />
     </div>
   ),
@@ -41,7 +41,7 @@ export const Default: Story = {
 export const LimitedThree: Story = {
   name: "Limited (top 3)",
   render: () => (
-    <div style={{ maxWidth: "720px" }}>
+    <div style={{ "max-width": "720px" }}>
       <NewsList items={MOCK_NEWS.slice(0, 3)} />
     </div>
   ),
@@ -50,7 +50,7 @@ export const LimitedThree: Story = {
 export const IROnly: Story = {
   name: "IR only",
   render: () => (
-    <div style={{ maxWidth: "720px" }}>
+    <div style={{ "max-width": "720px" }}>
       <NewsList heading="IR News" items={MOCK_NEWS.filter((n) => n.category === "IR")} />
     </div>
   ),
@@ -59,7 +59,7 @@ export const IROnly: Story = {
 export const WithFilter: Story = {
   name: "With filter bar",
   render: () => (
-    <div style={{ maxWidth: "720px" }}>
+    <div style={{ "max-width": "720px" }}>
       <NewsList heading="News" showFilter items={MOCK_NEWS} />
     </div>
   ),
@@ -68,7 +68,7 @@ export const WithFilter: Story = {
 export const Empty: Story = {
   name: "Empty",
   render: () => (
-    <div style={{ maxWidth: "720px" }}>
+    <div style={{ "max-width": "720px" }}>
       <NewsList heading="News" items={[]} />
     </div>
   ),

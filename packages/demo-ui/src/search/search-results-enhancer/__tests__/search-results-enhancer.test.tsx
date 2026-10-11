@@ -1,5 +1,5 @@
-import { fireEvent, render, screen } from "@testing-library/preact";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
+import { fire, flushAll, getByText, renderIsland } from "../../../test-utils/zudo-react.js";
 import SearchResultsEnhancer from "../search-results-enhancer";
 import { SearchResults } from "../../search-results/search-results";
 import type { SearchDoc } from "../../search-doc";
@@ -16,61 +16,83 @@ const DOCS: SearchDoc[] = [
     title: "Pricing",
     href: "/pricing",
     section: "Product",
-    description: "Plans for every team size.",
+    description: "",
     excerpt: "",
   },
 ];
 
+function SearchResultsFixture({ query }: { query: string }) {
+  return (
+    <div>
+      <SearchResults docs={DOCS} query={query} />
+      <SearchResultsEnhancer />
+    </div>
+  );
+}
+
+beforeEach(() => {
+  window.history.replaceState(null, "", "/");
+});
+
 describe("SearchResultsEnhancer", () => {
   it("renders nothing itself", () => {
-    const { container } = render(<SearchResultsEnhancer />);
-    expect(container).toBeEmptyDOMElement();
+    const app = renderIsland(SearchResultsEnhancer, {});
+
+    expect(app.container.children).toHaveLength(0);
+    expect(app.container.textContent).toBe("");
   });
 
-  it("live-filters the mounted SearchResults list as the user types", () => {
-    render(
-      <div>
-        <SearchResults docs={DOCS} query="" />
-        <SearchResultsEnhancer />
-      </div>,
-    );
+  it("live-filters the SSR SearchResults list as the user types", async () => {
+    const app = renderIsland(SearchResultsFixture, { query: "" });
+    const input = app.container.querySelector("[data-search-input]") as HTMLInputElement;
+    const list = app.container.querySelector("[data-search-list]") as HTMLElement;
 
-    expect(screen.getByText("About us")).toBeInTheDocument();
-    expect(screen.getByText("Pricing")).toBeInTheDocument();
+    expect(getByText(list, "About us")).toBeTruthy();
+    expect(getByText(app.container, "Pricing")).toBeTruthy();
 
-    const input = screen.getByPlaceholderText("Search the site");
-    fireEvent.input(input, { target: { value: "pricing" } });
+    input.value = "pricing";
+    fire(input, "input");
+    await flushAll();
 
-    expect(screen.queryByText("About us")).not.toBeInTheDocument();
-    expect(screen.getByText("Pricing")).toBeInTheDocument();
-    expect(screen.getByText("1")).toBeInTheDocument();
+    expect(list.textContent).not.toContain("About us");
+    expect(getByText(app.container, "Pricing")).toBeTruthy();
+    expect(app.container.querySelector("[data-search-count]")?.textContent).toBe("1");
   });
 
-  it("shows the empty message when the live filter matches nothing", () => {
-    render(
-      <div>
-        <SearchResults docs={DOCS} query="" />
-        <SearchResultsEnhancer />
-      </div>,
-    );
+  it("shows the empty message when the live filter matches nothing", async () => {
+    const app = renderIsland(SearchResultsFixture, { query: "" });
+    const input = app.container.querySelector("[data-search-input]") as HTMLInputElement;
 
-    const input = screen.getByPlaceholderText("Search the site");
-    fireEvent.input(input, { target: { value: "nonexistent" } });
+    input.value = "nonexistent";
+    fire(input, "input");
+    await flushAll();
 
-    expect(screen.getByText(/No matching pages found/)).not.toHaveAttribute("hidden");
+    expect((app.container.querySelector("[data-search-empty]") as HTMLElement).hidden).toBe(false);
   });
 
-  it("syncs the typed query into the URL's ?q= param", () => {
-    render(
-      <div>
-        <SearchResults docs={DOCS} query="" />
-        <SearchResultsEnhancer />
-      </div>,
-    );
+  it("syncs the typed query into the URL's ?q= param", async () => {
+    const app = renderIsland(SearchResultsFixture, { query: "" });
+    const input = app.container.querySelector("[data-search-input]") as HTMLInputElement;
 
-    const input = screen.getByPlaceholderText("Search the site");
-    fireEvent.input(input, { target: { value: "pricing" } });
+    input.value = "pricing";
+    fire(input, "input");
+    await flushAll();
 
     expect(new URL(window.location.href).searchParams.get("q")).toBe("pricing");
+  });
+
+  it("removes the input handler on disposal", async () => {
+    const app = renderIsland(SearchResultsFixture, { query: "" });
+    const input = app.container.querySelector("[data-search-input]") as HTMLInputElement;
+    const list = app.container.querySelector("[data-search-list]") as HTMLElement;
+    const originalHtml = list.innerHTML;
+
+    app.dispose();
+    input.value = "pricing";
+    fire(input, "input");
+    await flushAll();
+
+    expect(list.innerHTML).toBe(originalHtml);
+    expect(app.container.isConnected).toBe(false);
   });
 });
