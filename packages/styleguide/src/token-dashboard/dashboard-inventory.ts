@@ -1,5 +1,5 @@
 /**
- * Measured SSR inventory for the three declared-defaults dashboards.
+ * Measured declared-default inventory for the three declared-defaults dashboards.
  *
  * Keep these values in sync with the rows emitted by zdtp's `include` filters
  * for the host's UI design-token manifest. They are shared by the dashboard

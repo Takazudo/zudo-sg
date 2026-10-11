@@ -11,7 +11,7 @@
 // option the virtual module exports `tabs = undefined` and this renders
 // nothing.
 
-import type { JSX } from "preact";
+import { getScope } from "@takazudo/zfb/zudo-react";
 import type { PanelConfig } from "@takazudo/zdtp";
 import { applyEndpoint, applyRouting, tabs } from "virtual:zudo-sg-preview-token-panel";
 import { bootstrapPreviewTokenPanel } from "./bootstrap-preview-token-panel.js";
@@ -31,8 +31,9 @@ function getConfig(): PanelConfig {
 // SSR marker against the exported identifier name). See the sibling
 // islands (CodePanel, DetailWorkbench, PreviewTokensButton) for the same
 // pattern, proven to survive the tsup build.
-export default function PreviewTokenPanelBootstrap(): JSX.Element | null {
-  if (tabs) bootstrapPreviewTokenPanel(getConfig);
+export default function PreviewTokenPanelBootstrap() {
+  getScope().onActivate(() => {
+    if (tabs) bootstrapPreviewTokenPanel(getConfig);
+  });
   return null;
 }
-PreviewTokenPanelBootstrap.displayName = "PreviewTokenPanelBootstrap";
