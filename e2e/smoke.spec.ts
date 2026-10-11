@@ -247,6 +247,35 @@ test("/components/cta-button code panel tablist is keyboard- and screen-reader-a
   ).toBeAttached();
 });
 
+test("CodeMirror highlights source and applies edited Live CSS only to previews", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  page.on("console", (message) => {
+    if (message.type() === "error") errors.push(message.text());
+  });
+  await page.goto("/components/cta-button");
+  const panel = page.locator("#sg-code-panel");
+  await expect(panel.locator('[data-sg-code-region="source"] .cm-line span[class]').first()).toBeAttached();
+  const iframe = page.locator('iframe[src*="/components/preview"]').first();
+  await expect(iframe).toBeAttached();
+  const frame = await (await iframe.elementHandle())!.contentFrame();
+  expect(frame).not.toBeNull();
+  await expect(frame!.locator("body")).toBeVisible();
+  const before = await frame!.locator("body").evaluate((body) => getComputedStyle(body).outlineWidth);
+  const hostBefore = await page.locator("body").evaluate((body) => getComputedStyle(body).outlineWidth);
+  const editor = panel.getByRole("textbox", { name: /^Live CSS for / });
+  await editor.click();
+  await editor.press("ControlOrMeta+a");
+  await page.keyboard.insertText("body { outline: 3px solid rgb(1, 2, 3); }");
+  await expect.poll(() => frame!.locator("body").evaluate((body) => getComputedStyle(body).outlineWidth)).toBe("3px");
+  await expect(editor.locator(".cm-line span[class]").first()).toBeAttached();
+  expect(await page.locator("body").evaluate((body) => getComputedStyle(body).outlineWidth)).toBe(hostBefore);
+  await editor.press("ControlOrMeta+a");
+  await editor.press("Backspace");
+  await expect.poll(() => frame!.locator("body").evaluate((body) => getComputedStyle(body).outlineWidth)).toBe(before);
+  expect(errors).toEqual([]);
+});
+
 test("/components/<slug> detail page preview iframe loads", async ({ page }) => {
   // Navigate to the catalog first to find a valid slug.
   await page.goto("/components");
