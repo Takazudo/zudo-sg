@@ -1,7 +1,8 @@
-import type { ComponentChildren, JSX } from "preact";
+import type { Child } from "@takazudo/zfb/zudo-react";
+import type { JSX } from "@takazudo/zfb/zudo-react/jsx-runtime";
 import { cx } from "../../lib/cx";
 
-export type ProseBlockquoteProps = { children?: ComponentChildren; class?: string } & Omit<
+export type ProseBlockquoteProps = { children?: Child; class?: string } & Omit<
   JSX.IntrinsicElements["blockquote"],
   "class"
 >;
@@ -12,7 +13,7 @@ export function ProseBlockquote({ children, class: cls, ...rest }: ProseBlockquo
     <blockquote
       class={cx(
         "text-muted italic border-l-[3px] border-l-border pl-hsp-lg",
-        "[&_p]:mb-vsp-xs",
+        "zc-prose-blockquote",
         cls,
       )}
       {...rest}

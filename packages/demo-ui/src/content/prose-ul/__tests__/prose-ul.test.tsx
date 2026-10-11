@@ -1,16 +1,17 @@
-import { render, screen } from "@testing-library/preact";
 import { describe, expect, it } from "vitest";
+import { getByText } from "../../../test-utils/zudo-react";
+import { renderStatic } from "../../__tests__/render-static";
 import { ProseUl } from "../prose-ul";
 
 describe("ProseUl", () => {
   it("renders a disc-marked list", () => {
-    render(
+    const root = renderStatic(
       <ProseUl>
         <li>Item one</li>
       </ProseUl>,
     );
-    const el = screen.getByText("Item one").parentElement as HTMLElement;
+    const el = getByText(root, "Item one").parentElement as HTMLElement;
     expect(el.tagName).toBe("UL");
-    expect(el.className).toContain("list-disc");
+    expect(el.classList.contains("list-disc")).toBe(true);
   });
 });

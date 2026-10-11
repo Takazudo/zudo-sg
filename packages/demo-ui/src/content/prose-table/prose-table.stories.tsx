@@ -1,18 +1,28 @@
 import type { StoryMeta, Story } from "../../stories/types";
-import { ProseTable, ProseTh, ProseTd, type ProseTableProps } from "./prose-table";
+import { ProseTable, type ProseTableProps } from "./prose-table";
 
 const meta: StoryMeta = {
   title: "ProseTable",
   category: "Typography",
-  description: "MDX `table`/`th`/`td` element overrides — a compact bordered table.",
-  usage: `import { ProseTable, ProseTh, ProseTd } from "@zudo-sg/demo-ui/src/content/prose-table/prose-table";
+  description: "MDX table override with explicit sections and bordered cells.",
+  usage: `import { ProseTable } from "@zudo-sg/demo-ui/src/content/prose-table/prose-table";
 
 <ProseTable>
   <thead>
-    <tr><ProseTh>Token</ProseTh><ProseTh>Value</ProseTh></tr>
+    <tr>
+      <th class="font-semibold text-fg bg-surface text-left py-vsp-xs px-hsp-md border-b-2 border-b-border"
+          style={{ "overflow-wrap": "anywhere" }}>Token</th>
+      <th class="font-semibold text-fg bg-surface text-left py-vsp-xs px-hsp-md border-b-2 border-b-border"
+          style={{ "overflow-wrap": "anywhere" }}>Value</th>
+    </tr>
   </thead>
   <tbody>
-    <tr><ProseTd>color-bg</ProseTd><ProseTd>white</ProseTd></tr>
+    <tr>
+      <td class="text-left py-vsp-xs px-hsp-md border-b border-b-border"
+          style={{ "overflow-wrap": "anywhere" }}>color-bg</td>
+      <td class="text-left py-vsp-xs px-hsp-md border-b border-b-border"
+          style={{ "overflow-wrap": "anywhere" }}>white</td>
+    </tr>
   </tbody>
 </ProseTable>`,
 };
@@ -24,18 +34,24 @@ export const Default: Story<ProseTableProps> = {
   source: `<ProseTable>
   <thead>
     <tr>
-      <ProseTh>Token</ProseTh>
-      <ProseTh>Purpose</ProseTh>
+      <th class="font-semibold text-fg bg-surface text-left py-vsp-xs px-hsp-md border-b-2 border-b-border"
+          style={{ "overflow-wrap": "anywhere" }}>Token</th>
+      <th class="font-semibold text-fg bg-surface text-left py-vsp-xs px-hsp-md border-b-2 border-b-border"
+          style={{ "overflow-wrap": "anywhere" }}>Purpose</th>
     </tr>
   </thead>
   <tbody>
     <tr>
-      <ProseTd>color-bg</ProseTd>
-      <ProseTd>Page background</ProseTd>
+      <td class="text-left py-vsp-xs px-hsp-md border-b border-b-border"
+          style={{ "overflow-wrap": "anywhere" }}>color-bg</td>
+      <td class="text-left py-vsp-xs px-hsp-md border-b border-b-border"
+          style={{ "overflow-wrap": "anywhere" }}>Page background</td>
     </tr>
     <tr>
-      <ProseTd>color-accent</ProseTd>
-      <ProseTd>Accent color</ProseTd>
+      <td class="text-left py-vsp-xs px-hsp-md border-b border-b-border"
+          style={{ "overflow-wrap": "anywhere" }}>color-accent</td>
+      <td class="text-left py-vsp-xs px-hsp-md border-b border-b-border"
+          style={{ "overflow-wrap": "anywhere" }}>Accent color</td>
     </tr>
   </tbody>
 </ProseTable>`,
@@ -43,18 +59,48 @@ export const Default: Story<ProseTableProps> = {
     <ProseTable>
       <thead>
         <tr>
-          <ProseTh>Token</ProseTh>
-          <ProseTh>Purpose</ProseTh>
+          <th
+            class="font-semibold text-fg bg-surface text-left py-vsp-xs px-hsp-md border-b-2 border-b-border"
+            style={{ "overflow-wrap": "anywhere" }}
+          >
+            Token
+          </th>
+          <th
+            class="font-semibold text-fg bg-surface text-left py-vsp-xs px-hsp-md border-b-2 border-b-border"
+            style={{ "overflow-wrap": "anywhere" }}
+          >
+            Purpose
+          </th>
         </tr>
       </thead>
       <tbody>
         <tr>
-          <ProseTd>color-bg</ProseTd>
-          <ProseTd>Page background</ProseTd>
+          <td
+            class="text-left py-vsp-xs px-hsp-md border-b border-b-border"
+            style={{ "overflow-wrap": "anywhere" }}
+          >
+            color-bg
+          </td>
+          <td
+            class="text-left py-vsp-xs px-hsp-md border-b border-b-border"
+            style={{ "overflow-wrap": "anywhere" }}
+          >
+            Page background
+          </td>
         </tr>
         <tr>
-          <ProseTd>color-accent</ProseTd>
-          <ProseTd>Accent color</ProseTd>
+          <td
+            class="text-left py-vsp-xs px-hsp-md border-b border-b-border"
+            style={{ "overflow-wrap": "anywhere" }}
+          >
+            color-accent
+          </td>
+          <td
+            class="text-left py-vsp-xs px-hsp-md border-b border-b-border"
+            style={{ "overflow-wrap": "anywhere" }}
+          >
+            Accent color
+          </td>
         </tr>
       </tbody>
     </ProseTable>

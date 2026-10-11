@@ -1,15 +1,16 @@
-import type { ComponentChildren, JSX } from "preact";
+import type { Child } from "@takazudo/zfb/zudo-react";
+import type { JSX } from "@takazudo/zfb/zudo-react/jsx-runtime";
 import { cx } from "../../lib/cx";
 
-export type ProseDlProps = { children?: ComponentChildren; class?: string } & Omit<
+export type ProseDlProps = { children?: Child; class?: string } & Omit<
   JSX.IntrinsicElements["dl"],
   "class"
 >;
-export type ProseDtProps = { children?: ComponentChildren; class?: string } & Omit<
+export type ProseDtProps = { children?: Child; class?: string } & Omit<
   JSX.IntrinsicElements["dt"],
   "class"
 >;
-export type ProseDdProps = { children?: ComponentChildren; class?: string } & Omit<
+export type ProseDdProps = { children?: Child; class?: string } & Omit<
   JSX.IntrinsicElements["dd"],
   "class"
 >;

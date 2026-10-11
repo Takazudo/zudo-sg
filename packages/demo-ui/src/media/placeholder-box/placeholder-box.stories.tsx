@@ -17,7 +17,7 @@ export const Default: Story<PlaceholderBoxProps> = {
   name: "Default (size=md, label only)",
   source: `<PlaceholderBox label="hero-image.png" />`,
   render: () => (
-    <div style={{ maxWidth: "448px" }}>
+    <div style={{ "max-width": "448px" }}>
       <PlaceholderBox label="hero-image.png" />
     </div>
   ),
@@ -29,7 +29,7 @@ export const AspectRatios: Story<PlaceholderBoxProps> = {
 <PlaceholderBox label="4 / 3" aspect="4/3" />
 <PlaceholderBox label="1 / 1 (square)" aspect="1/1" />`,
   render: () => (
-    <div class="grid gap-x-hsp-md gap-y-vsp-sm" style={{ maxWidth: "640px" }}>
+    <div class="grid gap-x-hsp-md gap-y-vsp-sm" style={{ "max-width": "640px" }}>
       <PlaceholderBox label="16 / 9" aspect="16/9" />
       <PlaceholderBox label="4 / 3" aspect="4/3" />
       <PlaceholderBox label="1 / 1 (square)" aspect="1/1" />
@@ -43,7 +43,7 @@ export const Sizes: Story<PlaceholderBoxProps> = {
 <PlaceholderBox label="size = md" size="md" />
 <PlaceholderBox label="size = lg" size="lg" />`,
   render: () => (
-    <div class="flex flex-col gap-y-vsp-sm" style={{ maxWidth: "320px" }}>
+    <div class="flex flex-col gap-y-vsp-sm" style={{ "max-width": "320px" }}>
       <PlaceholderBox label="size = sm" size="sm" />
       <PlaceholderBox label="size = md" size="md" />
       <PlaceholderBox label="size = lg" size="lg" />
@@ -60,7 +60,7 @@ export const FromMarkdownImg: Story<PlaceholderBoxProps> = {
 {/* neither → "image" */}
 <PlaceholderBox aspect="1/1" />`,
   render: () => (
-    <div class="flex flex-col gap-y-vsp-sm" style={{ maxWidth: "480px" }}>
+    <div class="flex flex-col gap-y-vsp-sm" style={{ "max-width": "480px" }}>
       <PlaceholderBox alt="Photo of the product" src="/img/product.png" aspect="16/9" />
       <PlaceholderBox src="/img/diagram.svg" aspect="4/3" />
       <PlaceholderBox aspect="1/1" />

@@ -1,27 +1,28 @@
-import { render, screen } from "@testing-library/preact";
 import { describe, expect, it } from "vitest";
+import { getByText } from "../../../test-utils/zudo-react";
+import { renderStatic } from "../../__tests__/render-static";
 import { ProseDl, ProseDt, ProseDd } from "../prose-dl";
 
 describe("ProseDl / ProseDt / ProseDd", () => {
   it("renders a definition list with its terms and descriptions", () => {
-    render(
+    const root = renderStatic(
       <ProseDl>
         <ProseDt>hsp</ProseDt>
         <ProseDd>Horizontal spacing axis.</ProseDd>
       </ProseDl>,
     );
-    expect(screen.getByText("hsp").tagName).toBe("DT");
-    expect(screen.getByText("Horizontal spacing axis.").tagName).toBe("DD");
+    expect(getByText(root, "hsp").tagName).toBe("DT");
+    expect(getByText(root, "Horizontal spacing axis.").tagName).toBe("DD");
   });
 
   it("applies bold to dt and muted to dd", () => {
-    render(
+    const root = renderStatic(
       <ProseDl>
         <ProseDt>hsp</ProseDt>
         <ProseDd>Horizontal spacing axis.</ProseDd>
       </ProseDl>,
     );
-    expect(screen.getByText("hsp").className).toContain("font-semibold");
-    expect(screen.getByText("Horizontal spacing axis.").className).toContain("text-muted");
+    expect(getByText(root, "hsp").classList.contains("font-semibold")).toBe(true);
+    expect(getByText(root, "Horizontal spacing axis.").classList.contains("text-muted")).toBe(true);
   });
 });
