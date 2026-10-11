@@ -4,6 +4,48 @@ All notable changes to `@takazudo/zudo-sg` are documented in this file.
 
 The format is based on Keep a Changelog, and release notes are generated from the changelog MDX pages.
 
+## [0.5.1] - 2026-10-12
+
+This release adds an opt-in, same-origin external preview runtime contract with
+stricter catalog checks, so a host can render React 19 fixtures in its own
+external document. It also fixes preview lifecycle bugs and updates the engine's
+dependencies after a security audit. Existing module stories and
+framework-free descriptors keep their current behavior.
+
+### Features
+
+- New `@takazudo/zudo-sg/preview/external-runtime`, `preview/runtime`,
+  `registry/external-catalog`, and `registry/external-catalog-node` exports
+  define a strict external preview and catalog contract: fixture identity,
+  serializable controls, ready/request-ready replay, height, theme, the token
+  bridge, live CSS, visible errors, and deterministic cleanup. React and
+  ReactDOM stay inside the host's external fixture document; the engine does not
+  depend on them.
+- External fixtures keep their root, hooks, focus, and editor state through
+  props updates and ordinary prop Reset. A separate full fixture reset remounts
+  fixture resources but keeps the current controls, theme, token edits, and
+  live CSS.
+- External catalog generation checks descriptor slugs and variant IDs, loader
+  keys, displayed-source keys, and thumbnail keys against each other. Thumbnails
+  must be real captures of the named fixture or carry an explicit placeholder
+  or failed-capture state. Descriptor sources can be shown in the real code
+  panel.
+
+### Bug Fixes
+
+- Reject sparse or malformed external catalog manifests, and messages from the
+  wrong origin or window or with stale document or variant identity.
+- Keep owner-scoped live CSS when an iframe becomes ready again, recover
+  external fixtures with the current preview state, and keep render errors
+  reported during fixture updates visible.
+- Keep mixed-property batches together when the preview token panel resets.
+- Restore code-panel syntax highlighting with a CodeMirror/Lezer update that
+  resolves one shared Lezer identity (`@codemirror/language` 6.13.1,
+  `@codemirror/state` 6.7.6, `@codemirror/commands` 6.11.1). Hosts that keep
+  an older `@lezer/common` in their own lockfile should run `pnpm dedupe`.
+- Fix security advisories in development and test dependencies, including the
+  move from Happy DOM 16 to 20.
+
 ## [0.5.0] - 2026-10-12
 
 This release ports the styleguide engine to zfb 4.3.1 and zudo-doc 6.0.0.
