@@ -1,0 +1,12 @@
+Progress: resolved 0, reused 1, downloaded 0, added 0
+Already up to date
+Progress: resolved 207, reused 156, downloaded 0, added 0, done
+ ERR_PNPM_PEER_DEP_ISSUES  Unmet peer dependencies
+
+.
+└─┬ @takazudo/zudo-sg 0.4.1
+  ├── ✕ unmet peer @takazudo/zfb@^2.20.3: found 4.3.1
+  └── ✕ unmet peer @takazudo/zudo-doc@^5.27.0: found 6.0.0
+hint: To disable failing on peer dependency issues, add the following to pnpm-workspace.yaml in your project root:
+
+  strictPeerDependencies: false

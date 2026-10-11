@@ -1,0 +1,3 @@
+@layer base, components, utilities;
+:root { --authored: 1; }
+.bg-accent { background-color: pink; }

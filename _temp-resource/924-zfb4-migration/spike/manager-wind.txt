@@ -1,0 +1,10 @@
+{
+  "after": {
+    "backgroundColor": "rgb(171, 205, 239)",
+    "paddingLeft": "16px"
+  },
+  "before": {
+    "backgroundColor": "rgb(255, 192, 203)",
+    "paddingLeft": "16px"
+  }
+}

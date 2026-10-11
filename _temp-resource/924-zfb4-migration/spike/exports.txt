@@ -1,0 +1,22 @@
+zfb public runtime exports: ContentBlockquote, ContentCode, ContentH2, ContentH3, ContentH4, ContentLink, ContentOl, ContentParagraph, ContentStrong, ContentTable, ContentUl, DEFAULT_WHEN, HYDRATE_MARKER_ATTR, ISLAND_MOUNTED_ATTR, Island, SKIP_SSR_MARKER_ATTR, SlugAllocator, WHEN_VALUES, cancelPendingIslands, clientScript, defaultComponents, definePlugin, isWhen, mergeMdxComponents, mountIslands, mountNewIslands, resolveWhen, scheduleHydrate, slugify, unmountIslands
+ClientRouter: function
+transition constants: zfb:before-preparation zfb:after-swap zfb:navigation-aborted
+zfb subpaths: [
+  '.',
+  './runtime',
+  './content',
+  './paginate',
+  './config',
+  './plugins',
+  './frontmatter',
+  './slugify',
+  './package.json',
+  './zudo-react',
+  './zudo-react/jsx-runtime',
+  './zudo-react/jsx-dev-runtime',
+  './zudo-react/server',
+  './zudo-react/client',
+  './zudo-react/testing'
+]
+client-router side-effect subpath import: PASS
+Runtime Node v24.13.1; pnpm 10.30.3

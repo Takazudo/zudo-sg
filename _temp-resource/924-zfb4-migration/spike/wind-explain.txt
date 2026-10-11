@@ -1,0 +1,1549 @@
+$ pnpm exec zfb wind explain --stdin --config preview/zfb.config.ts < evidence/candidates.txt
+
+candidate: md:grid-cols-2
+outcome: resolved utility
+spec: 1 revision 14
+variants: md
+utility: grid-cols-2
+negative: false
+entry: v1.grid-cols
+value status: verified
+selector: .md\:grid-cols-2
+conditions: (min-width: 768px)
+declaration: grid-template-columns: repeat(2,minmax(0,1fr))
+sort: responsive=3, dark=0, pointer=0, relation=0, state=0, pseudo=0, conflict-group=6, scope=0, catalog=3, candidate=md:grid-cols-2
+
+candidate: max-sm:grid-cols-2
+outcome: resolved utility
+spec: 1 revision 14
+variants: max-sm
+utility: grid-cols-2
+negative: false
+entry: v1.grid-cols
+value status: verified
+selector: .max-sm\:grid-cols-2
+conditions: (width < 640px)
+declaration: grid-template-columns: repeat(2,minmax(0,1fr))
+sort: responsive=2, dark=0, pointer=0, relation=0, state=0, pseudo=0, conflict-group=6, scope=0, catalog=3, candidate=max-sm:grid-cols-2
+
+candidate: group/nav
+outcome: recognized invalid or malformed
+spec: 1 revision 14
+diagnostic: ZW004 error at zudo-wind://explain/candidate:0: named markers are unsupported
+
+candidate: group-hover/nav:bg-accent
+outcome: recognized invalid or malformed
+spec: 1 revision 14
+diagnostic: ZW004 error at zudo-wind://explain/candidate:0: named relation variants are unsupported
+
+candidate: group-data-[current=true]:bg-accent
+outcome: recognized invalid or malformed
+spec: 1 revision 14
+diagnostic: ZW004 error at zudo-wind://explain/candidate:0: attribute variants are unsupported
+
+candidate: peer-checked:bg-accent
+outcome: resolved utility
+spec: 1 revision 14
+variants: peer-checked
+utility: bg-accent
+negative: false
+entry: v1.background
+value status: verified
+token: accent (colors) -> --zw-color-accent = #123456
+selector: :where(.peer:checked) ~ .peer-checked\:bg-accent
+declaration: background-color: var(--zw-color-accent)
+sort: responsive=0, dark=0, pointer=0, relation=20, state=0, pseudo=0, conflict-group=23, scope=0, catalog=0, candidate=peer-checked:bg-accent
+
+candidate: [&>ul]:mt-vsp-xs
+outcome: recognized invalid or malformed
+spec: 1 revision 14
+diagnostic: ZW004 error at zudo-wind://explain/candidate:0: arbitrary-selector variants are unsupported
+
+candidate: [&:not(:first-child)]:before:content-['']
+outcome: recognized invalid or malformed
+spec: 1 revision 14
+diagnostic: ZW004 error at zudo-wind://explain/candidate:0: arbitrary-selector variants are unsupported
+diagnostic: ZW014 warning at zudo-wind://explain/candidate:0: unsupported foreign utility (migration vocabulary v7): [&:not(:first-child)]:before:content-[''] uses the Tailwind `content` utility, which zudo-wind v1 does not implement, so no CSS is generated. Author a content declaration on a ::before or ::after rule in CSS and reserve the class with wind.authoredClasses: { "[&:not(:first-child)]:before:content-['']": true }
+
+candidate: open:bg-accent
+outcome: resolved utility
+spec: 1 revision 14
+variants: open
+utility: bg-accent
+negative: false
+entry: v1.background
+value status: verified
+token: accent (colors) -> --zw-color-accent = #123456
+selector: .open\:bg-accent:is([open], :popover-open)
+declaration: background-color: var(--zw-color-accent)
+sort: responsive=0, dark=0, pointer=0, relation=0, state=3, pseudo=0, conflict-group=23, scope=0, catalog=0, candidate=open:bg-accent
+
+candidate: marker:text-caption
+outcome: resolved utility
+spec: 1 revision 14
+variants: marker
+utility: text-caption
+negative: false
+entry: v1.text.size
+value status: verified
+token: caption (fontSizes) -> --zw-font-size-caption = 0.75rem
+token: caption-leading (fontSizes.leading) -> --zw-font-size-caption-leading = 1rem
+selector: .marker\:text-caption::marker
+declaration: font-size: var(--zw-font-size-caption)
+declaration: line-height: var(--zw-font-size-caption-leading)
+sort: responsive=0, dark=0, pointer=0, relation=0, state=0, pseudo=3, conflict-group=17, scope=0, catalog=0, candidate=marker:text-caption
+
+candidate: placeholder:text-caption
+outcome: resolved utility
+spec: 1 revision 14
+variants: placeholder
+utility: text-caption
+negative: false
+entry: v1.text.size
+value status: verified
+token: caption (fontSizes) -> --zw-font-size-caption = 0.75rem
+token: caption-leading (fontSizes.leading) -> --zw-font-size-caption-leading = 1rem
+selector: .placeholder\:text-caption::placeholder
+declaration: font-size: var(--zw-font-size-caption)
+declaration: line-height: var(--zw-font-size-caption-leading)
+sort: responsive=0, dark=0, pointer=0, relation=0, state=0, pseudo=4, conflict-group=17, scope=0, catalog=0, candidate=placeholder:text-caption
+
+candidate: before:content-['']
+outcome: unsupported foreign utility
+spec: 1 revision 14
+variants: before
+utility: content-['']
+negative: false
+arbitrary value: ''
+diagnostic: ZW014 warning at zudo-wind://explain/candidate:0: unsupported foreign utility (migration vocabulary v7): before:content-[''] uses the Tailwind `content` utility, which zudo-wind v1 does not implement, so no CSS is generated. Author a content declaration on a ::before or ::after rule in CSS and reserve the class with wind.authoredClasses: { "before:content-['']": true }
+
+candidate: grid-cols-[repeat(auto-fit,minmax(11rem,1fr))]
+outcome: resolved utility
+spec: 1 revision 14
+variants: (none)
+utility: grid-cols-[repeat(auto-fit,minmax(11rem,1fr))]
+negative: false
+arbitrary value: repeat(auto-fit,minmax(11rem,1fr))
+entry: v1.grid-cols
+value status: verified
+selector: .grid-cols-\[repeat\(auto-fit\,minmax\(11rem\,1fr\)\)\]
+declaration: grid-template-columns: repeat(auto-fit,minmax(11rem,1fr))
+sort: responsive=0, dark=0, pointer=0, relation=0, state=0, pseudo=0, conflict-group=6, scope=0, catalog=3, candidate=grid-cols-[repeat(auto-fit,minmax(11rem,1fr))]
+
+candidate: w-[min(calc(100vw-2rem),72rem)]
+outcome: recognized invalid or malformed
+spec: 1 revision 14
+variants: (none)
+utility: w-[min(calc(100vw-2rem),72rem)]
+negative: false
+arbitrary value: min(calc(100vw-2rem),72rem)
+diagnostic: ZW005 error at zudo-wind://explain/candidate:0: value is not valid for width; calc() needs spaces around + and -, written as underscores; suggested spelling: w-[min(calc(100vw_-_2rem),72rem)]
+
+candidate: shadow-[0_8px_24px_color-mix(in_srgb,black_20%,transparent)]
+outcome: resolved utility
+spec: 1 revision 14
+variants: (none)
+utility: shadow-[0_8px_24px_color-mix(in_srgb,black_20%,transparent)]
+negative: false
+arbitrary value: 0_8px_24px_color-mix(in_srgb,black_20%,transparent)
+entry: v1.shadow
+value status: verified
+selector: .shadow-\[0_8px_24px_color-mix\(in_srgb\,black_20\%\,transparent\)\]
+declaration: box-shadow: 0 8px 24px color-mix(in srgb,black 20%,transparent)
+sort: responsive=0, dark=0, pointer=0, relation=0, state=0, pseudo=0, conflict-group=33, scope=0, catalog=0, candidate=shadow-[0_8px_24px_color-mix(in_srgb,black_20%,transparent)]
+
+candidate: transition-[width,opacity,margin]
+outcome: resolved utility
+spec: 1 revision 14
+variants: (none)
+utility: transition-[width,opacity,margin]
+negative: false
+arbitrary value: width,opacity,margin
+entry: v1.transition
+value status: verified
+selector: .transition-\[width\,opacity\,margin\]
+declaration: transition-property: width,opacity,margin
+declaration: transition-duration: 150ms
+declaration: transition-timing-function: ease
+sort: responsive=0, dark=0, pointer=0, relation=0, state=0, pseudo=0, conflict-group=35, scope=0, catalog=0, candidate=transition-[width,opacity,margin]
+
+candidate: flex-[2_1_0%]
+outcome: recognized invalid or malformed
+spec: 1 revision 14
+variants: (none)
+utility: flex-[2_1_0%]
+negative: false
+arbitrary value: 2_1_0%
+diagnostic: ZW005 error at zudo-wind://explain/candidate:0: arbitrary value is unsupported for this utility
+
+candidate: sr-only
+outcome: resolved utility
+spec: 1 revision 14
+variants: (none)
+utility: sr-only
+negative: false
+entry: v1.sr-only
+value status: verified
+selector: .sr-only
+declaration: position: absolute
+declaration: width: 1px
+declaration: height: 1px
+declaration: padding: 0
+declaration: margin: -1px
+declaration: overflow: hidden
+declaration: clip: rect(0,0,0,0)
+declaration: white-space: nowrap
+declaration: border-width: 0
+sort: responsive=0, dark=0, pointer=0, relation=0, state=0, pseudo=0, conflict-group=44, scope=0, catalog=11, candidate=sr-only
+
+candidate: bg-overlay/60
+outcome: resolved utility
+spec: 1 revision 14
+variants: (none)
+utility: bg-overlay
+negative: false
+slash modifier: 60
+entry: v1.background
+value status: verified
+token: overlay (colors) -> --zw-color-overlay = #000000
+selector: .bg-overlay\/60
+declaration: background-color: color-mix(in oklab, var(--zw-color-overlay) 60%, transparent)
+sort: responsive=0, dark=0, pointer=0, relation=0, state=0, pseudo=0, conflict-group=23, scope=0, catalog=0, candidate=bg-overlay/60
+
+candidate: text-[color:var(--sg-fg)]
+outcome: recognized invalid or malformed
+spec: 1 revision 14
+variants: (none)
+utility: text-[color:var(--sg-fg)]
+negative: false
+arbitrary value: color:var(--sg-fg)
+diagnostic: ZW005 error at zudo-wind://explain/candidate:0: data-type hint `color:` is not supported; zudo-wind v1 has no type-hint grammar, so write the value without it
+
+candidate: bg-[var(--sg-role)]
+outcome: resolved utility
+spec: 1 revision 14
+variants: (none)
+utility: bg-[var(--sg-role)]
+negative: false
+arbitrary value: var(--sg-role)
+entry: v1.background
+value status: categoryUnverified
+selector: .bg-\[var\(--sg-role\)\]
+declaration: background-color: var(--sg-role)
+sort: responsive=0, dark=0, pointer=0, relation=0, state=0, pseudo=0, conflict-group=23, scope=0, catalog=0, candidate=bg-[var(--sg-role)]
+
+candidate: group-hover:bg-accent
+outcome: resolved utility
+spec: 1 revision 14
+variants: group-hover
+utility: bg-accent
+negative: false
+entry: v1.background
+value status: verified
+token: accent (colors) -> --zw-color-accent = #123456
+selector: :where(.group:hover) .group-hover\:bg-accent
+conditions: (hover: hover)
+declaration: background-color: var(--zw-color-accent)
+sort: responsive=0, dark=0, pointer=0, relation=5, state=0, pseudo=0, conflict-group=23, scope=0, catalog=0, candidate=group-hover:bg-accent
+
+candidate: w-[min(calc(100vw_-_2rem),72rem)]
+outcome: resolved utility
+spec: 1 revision 14
+variants: (none)
+utility: w-[min(calc(100vw_-_2rem),72rem)]
+negative: false
+arbitrary value: min(calc(100vw_-_2rem),72rem)
+entry: v1.w
+value status: verified
+selector: .w-\[min\(calc\(100vw_-_2rem\)\,72rem\)\]
+declaration: width: min(calc(100vw - 2rem),72rem)
+sort: responsive=0, dark=0, pointer=0, relation=0, state=0, pseudo=0, conflict-group=8, scope=1, catalog=6, candidate=w-[min(calc(100vw_-_2rem),72rem)]
+
+candidate: text-[var(--sg-fg)]
+outcome: recognized invalid or malformed
+spec: 1 revision 14
+variants: (none)
+utility: text-[var(--sg-fg)]
+negative: false
+arbitrary value: var(--sg-fg)
+diagnostic: ZW005 error at zudo-wind://explain/candidate:0: value is ambiguous across catalog entries
+
+candidate: grow-[2]
+outcome: resolved utility
+spec: 1 revision 14
+variants: (none)
+utility: grow-[2]
+negative: false
+arbitrary value: 2
+entry: v1.grow
+value status: verified
+selector: .grow-\[2\]
+declaration: flex-grow: 2
+sort: responsive=0, dark=0, pointer=0, relation=0, state=0, pseudo=0, conflict-group=5, scope=0, catalog=4, candidate=grow-[2]
+
+candidate: shrink-[1]
+outcome: resolved utility
+spec: 1 revision 14
+variants: (none)
+utility: shrink-[1]
+negative: false
+arbitrary value: 1
+entry: v1.shrink
+value status: verified
+selector: .shrink-\[1\]
+declaration: flex-shrink: 1
+sort: responsive=0, dark=0, pointer=0, relation=0, state=0, pseudo=0, conflict-group=5, scope=0, catalog=5, candidate=shrink-[1]
+
+candidate: basis-[0%]
+outcome: unsupported foreign utility
+spec: 1 revision 14
+variants: (none)
+utility: basis-[0%]
+negative: false
+arbitrary value: 0%
+diagnostic: ZW014 warning at zudo-wind://explain/candidate:0: unsupported foreign utility (migration vocabulary v7): basis-[0%] uses the Tailwind `basis` utility, which zudo-wind v1 does not implement, so no CSS is generated. Author a flex-basis declaration in CSS and reserve the class with wind.authoredClasses: { "basis-[0%]": true }
+
+$ pnpm exec zfb wind explain --stdin --json --config preview/zfb.config.ts < evidence/candidates.txt
+
+{
+  "schemaVersion": 1,
+  "command": "explain",
+  "explanations": [
+    {
+      "candidate": "md:grid-cols-2",
+      "outcome": "resolved_utility",
+      "specVersion": 1,
+      "specRevision": 14,
+      "parsed": {
+        "variantChain": [
+          "md"
+        ],
+        "utility": "grid-cols-2",
+        "negative": false,
+        "arbitraryValue": null,
+        "slashModifier": null
+      },
+      "entryIdentifier": "v1.grid-cols",
+      "valueStatus": "verified",
+      "tokenResolutions": [],
+      "selector": ".md\\:grid-cols-2",
+      "conditions": [
+        "(min-width: 768px)"
+      ],
+      "declarations": [
+        {
+          "property": "grid-template-columns",
+          "value": "repeat(2,minmax(0,1fr))"
+        }
+      ],
+      "sortTuple": {
+        "responsiveRank": 3,
+        "darkRank": 0,
+        "pointerRank": 0,
+        "relationRank": 0,
+        "stateRank": 0,
+        "pseudoRank": 0,
+        "conflictGroupRank": 6,
+        "scopeRank": 0,
+        "catalogRank": 3,
+        "rawCandidate": "md:grid-cols-2"
+      },
+      "diagnostics": []
+    },
+    {
+      "candidate": "max-sm:grid-cols-2",
+      "outcome": "resolved_utility",
+      "specVersion": 1,
+      "specRevision": 14,
+      "parsed": {
+        "variantChain": [
+          "max-sm"
+        ],
+        "utility": "grid-cols-2",
+        "negative": false,
+        "arbitraryValue": null,
+        "slashModifier": null
+      },
+      "entryIdentifier": "v1.grid-cols",
+      "valueStatus": "verified",
+      "tokenResolutions": [],
+      "selector": ".max-sm\\:grid-cols-2",
+      "conditions": [
+        "(width < 640px)"
+      ],
+      "declarations": [
+        {
+          "property": "grid-template-columns",
+          "value": "repeat(2,minmax(0,1fr))"
+        }
+      ],
+      "sortTuple": {
+        "responsiveRank": 2,
+        "darkRank": 0,
+        "pointerRank": 0,
+        "relationRank": 0,
+        "stateRank": 0,
+        "pseudoRank": 0,
+        "conflictGroupRank": 6,
+        "scopeRank": 0,
+        "catalogRank": 3,
+        "rawCandidate": "max-sm:grid-cols-2"
+      },
+      "diagnostics": []
+    },
+    {
+      "candidate": "group/nav",
+      "outcome": "invalid",
+      "specVersion": 1,
+      "specRevision": 14,
+      "parsed": null,
+      "entryIdentifier": null,
+      "valueStatus": null,
+      "tokenResolutions": [],
+      "selector": null,
+      "conditions": [],
+      "declarations": [],
+      "sortTuple": null,
+      "diagnostics": [
+        {
+          "severity": "error",
+          "code": "ZW004",
+          "candidate": "group/nav",
+          "origin": {
+            "kind": "source",
+            "sourceId": "zudo-wind://explain/candidate",
+            "byteOffset": 0,
+            "byteLength": 9,
+            "line": 1,
+            "byteColumn": 1,
+            "literalByteOffset": 0,
+            "literalByteLength": 9,
+            "positionKind": "class",
+            "owner": null,
+            "producer": null,
+            "path": null,
+            "index": null,
+            "keyPath": null,
+            "roleKey": null
+          },
+          "message": "named markers are unsupported",
+          "suggestion": null,
+          "rejectionId": "R07"
+        }
+      ]
+    },
+    {
+      "candidate": "group-hover/nav:bg-accent",
+      "outcome": "invalid",
+      "specVersion": 1,
+      "specRevision": 14,
+      "parsed": null,
+      "entryIdentifier": null,
+      "valueStatus": null,
+      "tokenResolutions": [],
+      "selector": null,
+      "conditions": [],
+      "declarations": [],
+      "sortTuple": null,
+      "diagnostics": [
+        {
+          "severity": "error",
+          "code": "ZW004",
+          "candidate": "group-hover/nav:bg-accent",
+          "origin": {
+            "kind": "source",
+            "sourceId": "zudo-wind://explain/candidate",
+            "byteOffset": 0,
+            "byteLength": 25,
+            "line": 1,
+            "byteColumn": 1,
+            "literalByteOffset": 0,
+            "literalByteLength": 25,
+            "positionKind": "class",
+            "owner": null,
+            "producer": null,
+            "path": null,
+            "index": null,
+            "keyPath": null,
+            "roleKey": null
+          },
+          "message": "named relation variants are unsupported",
+          "suggestion": null,
+          "rejectionId": "R07"
+        }
+      ]
+    },
+    {
+      "candidate": "group-data-[current=true]:bg-accent",
+      "outcome": "invalid",
+      "specVersion": 1,
+      "specRevision": 14,
+      "parsed": null,
+      "entryIdentifier": null,
+      "valueStatus": null,
+      "tokenResolutions": [],
+      "selector": null,
+      "conditions": [],
+      "declarations": [],
+      "sortTuple": null,
+      "diagnostics": [
+        {
+          "severity": "error",
+          "code": "ZW004",
+          "candidate": "group-data-[current=true]:bg-accent",
+          "origin": {
+            "kind": "source",
+            "sourceId": "zudo-wind://explain/candidate",
+            "byteOffset": 0,
+            "byteLength": 35,
+            "line": 1,
+            "byteColumn": 1,
+            "literalByteOffset": 0,
+            "literalByteLength": 35,
+            "positionKind": "class",
+            "owner": null,
+            "producer": null,
+            "path": null,
+            "index": null,
+            "keyPath": null,
+            "roleKey": null
+          },
+          "message": "attribute variants are unsupported",
+          "suggestion": null,
+          "rejectionId": "R08"
+        }
+      ]
+    },
+    {
+      "candidate": "peer-checked:bg-accent",
+      "outcome": "resolved_utility",
+      "specVersion": 1,
+      "specRevision": 14,
+      "parsed": {
+        "variantChain": [
+          "peer-checked"
+        ],
+        "utility": "bg-accent",
+        "negative": false,
+        "arbitraryValue": null,
+        "slashModifier": null
+      },
+      "entryIdentifier": "v1.background",
+      "valueStatus": "verified",
+      "tokenResolutions": [
+        {
+          "tokenName": "accent",
+          "category": "colors",
+          "variable": "--zw-color-accent",
+          "configuredValue": "#123456",
+          "categoryUnverified": false
+        }
+      ],
+      "selector": ":where(.peer:checked) ~ .peer-checked\\:bg-accent",
+      "conditions": [],
+      "declarations": [
+        {
+          "property": "background-color",
+          "value": "var(--zw-color-accent)"
+        }
+      ],
+      "sortTuple": {
+        "responsiveRank": 0,
+        "darkRank": 0,
+        "pointerRank": 0,
+        "relationRank": 20,
+        "stateRank": 0,
+        "pseudoRank": 0,
+        "conflictGroupRank": 23,
+        "scopeRank": 0,
+        "catalogRank": 0,
+        "rawCandidate": "peer-checked:bg-accent"
+      },
+      "diagnostics": []
+    },
+    {
+      "candidate": "[&>ul]:mt-vsp-xs",
+      "outcome": "invalid",
+      "specVersion": 1,
+      "specRevision": 14,
+      "parsed": null,
+      "entryIdentifier": null,
+      "valueStatus": null,
+      "tokenResolutions": [],
+      "selector": null,
+      "conditions": [],
+      "declarations": [],
+      "sortTuple": null,
+      "diagnostics": [
+        {
+          "severity": "error",
+          "code": "ZW004",
+          "candidate": "[&>ul]:mt-vsp-xs",
+          "origin": {
+            "kind": "source",
+            "sourceId": "zudo-wind://explain/candidate",
+            "byteOffset": 0,
+            "byteLength": 16,
+            "line": 1,
+            "byteColumn": 1,
+            "literalByteOffset": 0,
+            "literalByteLength": 16,
+            "positionKind": "class",
+            "owner": null,
+            "producer": null,
+            "path": null,
+            "index": null,
+            "keyPath": null,
+            "roleKey": null
+          },
+          "message": "arbitrary-selector variants are unsupported",
+          "suggestion": null,
+          "rejectionId": "R09"
+        }
+      ]
+    },
+    {
+      "candidate": "[&:not(:first-child)]:before:content-['']",
+      "outcome": "invalid",
+      "specVersion": 1,
+      "specRevision": 14,
+      "parsed": null,
+      "entryIdentifier": null,
+      "valueStatus": null,
+      "tokenResolutions": [],
+      "selector": null,
+      "conditions": [],
+      "declarations": [],
+      "sortTuple": null,
+      "diagnostics": [
+        {
+          "severity": "error",
+          "code": "ZW004",
+          "candidate": "[&:not(:first-child)]:before:content-['']",
+          "origin": {
+            "kind": "source",
+            "sourceId": "zudo-wind://explain/candidate",
+            "byteOffset": 0,
+            "byteLength": 41,
+            "line": 1,
+            "byteColumn": 1,
+            "literalByteOffset": 0,
+            "literalByteLength": 41,
+            "positionKind": "class",
+            "owner": null,
+            "producer": null,
+            "path": null,
+            "index": null,
+            "keyPath": null,
+            "roleKey": null
+          },
+          "message": "arbitrary-selector variants are unsupported",
+          "suggestion": null,
+          "rejectionId": "R09"
+        },
+        {
+          "severity": "warning",
+          "code": "ZW014",
+          "candidate": "[&:not(:first-child)]:before:content-['']",
+          "origin": {
+            "kind": "source",
+            "sourceId": "zudo-wind://explain/candidate",
+            "byteOffset": 0,
+            "byteLength": 41,
+            "line": 1,
+            "byteColumn": 1,
+            "literalByteOffset": 0,
+            "literalByteLength": 41,
+            "positionKind": "class",
+            "owner": null,
+            "producer": null,
+            "path": null,
+            "index": null,
+            "keyPath": null,
+            "roleKey": null
+          },
+          "message": "unsupported foreign utility (migration vocabulary v7): [&:not(:first-child)]:before:content-[''] uses the Tailwind `content` utility, which zudo-wind v1 does not implement, so no CSS is generated. Author a content declaration on a ::before or ::after rule in CSS and reserve the class with wind.authoredClasses: { \"[&:not(:first-child)]:before:content-['']\": true }",
+          "suggestion": null,
+          "rejectionId": null
+        }
+      ]
+    },
+    {
+      "candidate": "open:bg-accent",
+      "outcome": "resolved_utility",
+      "specVersion": 1,
+      "specRevision": 14,
+      "parsed": {
+        "variantChain": [
+          "open"
+        ],
+        "utility": "bg-accent",
+        "negative": false,
+        "arbitraryValue": null,
+        "slashModifier": null
+      },
+      "entryIdentifier": "v1.background",
+      "valueStatus": "verified",
+      "tokenResolutions": [
+        {
+          "tokenName": "accent",
+          "category": "colors",
+          "variable": "--zw-color-accent",
+          "configuredValue": "#123456",
+          "categoryUnverified": false
+        }
+      ],
+      "selector": ".open\\:bg-accent:is([open], :popover-open)",
+      "conditions": [],
+      "declarations": [
+        {
+          "property": "background-color",
+          "value": "var(--zw-color-accent)"
+        }
+      ],
+      "sortTuple": {
+        "responsiveRank": 0,
+        "darkRank": 0,
+        "pointerRank": 0,
+        "relationRank": 0,
+        "stateRank": 3,
+        "pseudoRank": 0,
+        "conflictGroupRank": 23,
+        "scopeRank": 0,
+        "catalogRank": 0,
+        "rawCandidate": "open:bg-accent"
+      },
+      "diagnostics": []
+    },
+    {
+      "candidate": "marker:text-caption",
+      "outcome": "resolved_utility",
+      "specVersion": 1,
+      "specRevision": 14,
+      "parsed": {
+        "variantChain": [
+          "marker"
+        ],
+        "utility": "text-caption",
+        "negative": false,
+        "arbitraryValue": null,
+        "slashModifier": null
+      },
+      "entryIdentifier": "v1.text.size",
+      "valueStatus": "verified",
+      "tokenResolutions": [
+        {
+          "tokenName": "caption",
+          "category": "fontSizes",
+          "variable": "--zw-font-size-caption",
+          "configuredValue": "0.75rem",
+          "categoryUnverified": false
+        },
+        {
+          "tokenName": "caption-leading",
+          "category": "fontSizes.leading",
+          "variable": "--zw-font-size-caption-leading",
+          "configuredValue": "1rem",
+          "categoryUnverified": false
+        }
+      ],
+      "selector": ".marker\\:text-caption::marker",
+      "conditions": [],
+      "declarations": [
+        {
+          "property": "font-size",
+          "value": "var(--zw-font-size-caption)"
+        },
+        {
+          "property": "line-height",
+          "value": "var(--zw-font-size-caption-leading)"
+        }
+      ],
+      "sortTuple": {
+        "responsiveRank": 0,
+        "darkRank": 0,
+        "pointerRank": 0,
+        "relationRank": 0,
+        "stateRank": 0,
+        "pseudoRank": 3,
+        "conflictGroupRank": 17,
+        "scopeRank": 0,
+        "catalogRank": 0,
+        "rawCandidate": "marker:text-caption"
+      },
+      "diagnostics": []
+    },
+    {
+      "candidate": "placeholder:text-caption",
+      "outcome": "resolved_utility",
+      "specVersion": 1,
+      "specRevision": 14,
+      "parsed": {
+        "variantChain": [
+          "placeholder"
+        ],
+        "utility": "text-caption",
+        "negative": false,
+        "arbitraryValue": null,
+        "slashModifier": null
+      },
+      "entryIdentifier": "v1.text.size",
+      "valueStatus": "verified",
+      "tokenResolutions": [
+        {
+          "tokenName": "caption",
+          "category": "fontSizes",
+          "variable": "--zw-font-size-caption",
+          "configuredValue": "0.75rem",
+          "categoryUnverified": false
+        },
+        {
+          "tokenName": "caption-leading",
+          "category": "fontSizes.leading",
+          "variable": "--zw-font-size-caption-leading",
+          "configuredValue": "1rem",
+          "categoryUnverified": false
+        }
+      ],
+      "selector": ".placeholder\\:text-caption::placeholder",
+      "conditions": [],
+      "declarations": [
+        {
+          "property": "font-size",
+          "value": "var(--zw-font-size-caption)"
+        },
+        {
+          "property": "line-height",
+          "value": "var(--zw-font-size-caption-leading)"
+        }
+      ],
+      "sortTuple": {
+        "responsiveRank": 0,
+        "darkRank": 0,
+        "pointerRank": 0,
+        "relationRank": 0,
+        "stateRank": 0,
+        "pseudoRank": 4,
+        "conflictGroupRank": 17,
+        "scopeRank": 0,
+        "catalogRank": 0,
+        "rawCandidate": "placeholder:text-caption"
+      },
+      "diagnostics": []
+    },
+    {
+      "candidate": "before:content-['']",
+      "outcome": "foreign_utility",
+      "specVersion": 1,
+      "specRevision": 14,
+      "parsed": {
+        "variantChain": [
+          "before"
+        ],
+        "utility": "content-['']",
+        "negative": false,
+        "arbitraryValue": "''",
+        "slashModifier": null
+      },
+      "entryIdentifier": null,
+      "valueStatus": null,
+      "tokenResolutions": [],
+      "selector": null,
+      "conditions": [],
+      "declarations": [],
+      "sortTuple": null,
+      "diagnostics": [
+        {
+          "severity": "warning",
+          "code": "ZW014",
+          "candidate": "before:content-['']",
+          "origin": {
+            "kind": "source",
+            "sourceId": "zudo-wind://explain/candidate",
+            "byteOffset": 0,
+            "byteLength": 19,
+            "line": 1,
+            "byteColumn": 1,
+            "literalByteOffset": 0,
+            "literalByteLength": 19,
+            "positionKind": "class",
+            "owner": null,
+            "producer": null,
+            "path": null,
+            "index": null,
+            "keyPath": null,
+            "roleKey": null
+          },
+          "message": "unsupported foreign utility (migration vocabulary v7): before:content-[''] uses the Tailwind `content` utility, which zudo-wind v1 does not implement, so no CSS is generated. Author a content declaration on a ::before or ::after rule in CSS and reserve the class with wind.authoredClasses: { \"before:content-['']\": true }",
+          "suggestion": null,
+          "rejectionId": null
+        }
+      ]
+    },
+    {
+      "candidate": "grid-cols-[repeat(auto-fit,minmax(11rem,1fr))]",
+      "outcome": "resolved_utility",
+      "specVersion": 1,
+      "specRevision": 14,
+      "parsed": {
+        "variantChain": [],
+        "utility": "grid-cols-[repeat(auto-fit,minmax(11rem,1fr))]",
+        "negative": false,
+        "arbitraryValue": "repeat(auto-fit,minmax(11rem,1fr))",
+        "slashModifier": null
+      },
+      "entryIdentifier": "v1.grid-cols",
+      "valueStatus": "verified",
+      "tokenResolutions": [],
+      "selector": ".grid-cols-\\[repeat\\(auto-fit\\,minmax\\(11rem\\,1fr\\)\\)\\]",
+      "conditions": [],
+      "declarations": [
+        {
+          "property": "grid-template-columns",
+          "value": "repeat(auto-fit,minmax(11rem,1fr))"
+        }
+      ],
+      "sortTuple": {
+        "responsiveRank": 0,
+        "darkRank": 0,
+        "pointerRank": 0,
+        "relationRank": 0,
+        "stateRank": 0,
+        "pseudoRank": 0,
+        "conflictGroupRank": 6,
+        "scopeRank": 0,
+        "catalogRank": 3,
+        "rawCandidate": "grid-cols-[repeat(auto-fit,minmax(11rem,1fr))]"
+      },
+      "diagnostics": []
+    },
+    {
+      "candidate": "w-[min(calc(100vw-2rem),72rem)]",
+      "outcome": "invalid",
+      "specVersion": 1,
+      "specRevision": 14,
+      "parsed": {
+        "variantChain": [],
+        "utility": "w-[min(calc(100vw-2rem),72rem)]",
+        "negative": false,
+        "arbitraryValue": "min(calc(100vw-2rem),72rem)",
+        "slashModifier": null
+      },
+      "entryIdentifier": null,
+      "valueStatus": null,
+      "tokenResolutions": [],
+      "selector": null,
+      "conditions": [],
+      "declarations": [],
+      "sortTuple": null,
+      "diagnostics": [
+        {
+          "severity": "error",
+          "code": "ZW005",
+          "candidate": "w-[min(calc(100vw-2rem),72rem)]",
+          "origin": {
+            "kind": "source",
+            "sourceId": "zudo-wind://explain/candidate",
+            "byteOffset": 0,
+            "byteLength": 31,
+            "line": 1,
+            "byteColumn": 1,
+            "literalByteOffset": 0,
+            "literalByteLength": 31,
+            "positionKind": "class",
+            "owner": null,
+            "producer": null,
+            "path": null,
+            "index": null,
+            "keyPath": null,
+            "roleKey": null
+          },
+          "message": "value is not valid for width; calc() needs spaces around + and -, written as underscores",
+          "suggestion": "w-[min(calc(100vw_-_2rem),72rem)]",
+          "rejectionId": "R15"
+        }
+      ]
+    },
+    {
+      "candidate": "shadow-[0_8px_24px_color-mix(in_srgb,black_20%,transparent)]",
+      "outcome": "resolved_utility",
+      "specVersion": 1,
+      "specRevision": 14,
+      "parsed": {
+        "variantChain": [],
+        "utility": "shadow-[0_8px_24px_color-mix(in_srgb,black_20%,transparent)]",
+        "negative": false,
+        "arbitraryValue": "0_8px_24px_color-mix(in_srgb,black_20%,transparent)",
+        "slashModifier": null
+      },
+      "entryIdentifier": "v1.shadow",
+      "valueStatus": "verified",
+      "tokenResolutions": [],
+      "selector": ".shadow-\\[0_8px_24px_color-mix\\(in_srgb\\,black_20\\%\\,transparent\\)\\]",
+      "conditions": [],
+      "declarations": [
+        {
+          "property": "box-shadow",
+          "value": "0 8px 24px color-mix(in srgb,black 20%,transparent)"
+        }
+      ],
+      "sortTuple": {
+        "responsiveRank": 0,
+        "darkRank": 0,
+        "pointerRank": 0,
+        "relationRank": 0,
+        "stateRank": 0,
+        "pseudoRank": 0,
+        "conflictGroupRank": 33,
+        "scopeRank": 0,
+        "catalogRank": 0,
+        "rawCandidate": "shadow-[0_8px_24px_color-mix(in_srgb,black_20%,transparent)]"
+      },
+      "diagnostics": []
+    },
+    {
+      "candidate": "transition-[width,opacity,margin]",
+      "outcome": "resolved_utility",
+      "specVersion": 1,
+      "specRevision": 14,
+      "parsed": {
+        "variantChain": [],
+        "utility": "transition-[width,opacity,margin]",
+        "negative": false,
+        "arbitraryValue": "width,opacity,margin",
+        "slashModifier": null
+      },
+      "entryIdentifier": "v1.transition",
+      "valueStatus": "verified",
+      "tokenResolutions": [],
+      "selector": ".transition-\\[width\\,opacity\\,margin\\]",
+      "conditions": [],
+      "declarations": [
+        {
+          "property": "transition-property",
+          "value": "width,opacity,margin"
+        },
+        {
+          "property": "transition-duration",
+          "value": "150ms"
+        },
+        {
+          "property": "transition-timing-function",
+          "value": "ease"
+        }
+      ],
+      "sortTuple": {
+        "responsiveRank": 0,
+        "darkRank": 0,
+        "pointerRank": 0,
+        "relationRank": 0,
+        "stateRank": 0,
+        "pseudoRank": 0,
+        "conflictGroupRank": 35,
+        "scopeRank": 0,
+        "catalogRank": 0,
+        "rawCandidate": "transition-[width,opacity,margin]"
+      },
+      "diagnostics": []
+    },
+    {
+      "candidate": "flex-[2_1_0%]",
+      "outcome": "invalid",
+      "specVersion": 1,
+      "specRevision": 14,
+      "parsed": {
+        "variantChain": [],
+        "utility": "flex-[2_1_0%]",
+        "negative": false,
+        "arbitraryValue": "2_1_0%",
+        "slashModifier": null
+      },
+      "entryIdentifier": null,
+      "valueStatus": null,
+      "tokenResolutions": [],
+      "selector": null,
+      "conditions": [],
+      "declarations": [],
+      "sortTuple": null,
+      "diagnostics": [
+        {
+          "severity": "error",
+          "code": "ZW005",
+          "candidate": "flex-[2_1_0%]",
+          "origin": {
+            "kind": "source",
+            "sourceId": "zudo-wind://explain/candidate",
+            "byteOffset": 0,
+            "byteLength": 13,
+            "line": 1,
+            "byteColumn": 1,
+            "literalByteOffset": 0,
+            "literalByteLength": 13,
+            "positionKind": "class",
+            "owner": null,
+            "producer": null,
+            "path": null,
+            "index": null,
+            "keyPath": null,
+            "roleKey": null
+          },
+          "message": "arbitrary value is unsupported for this utility",
+          "suggestion": null,
+          "rejectionId": "R15"
+        }
+      ]
+    },
+    {
+      "candidate": "sr-only",
+      "outcome": "resolved_utility",
+      "specVersion": 1,
+      "specRevision": 14,
+      "parsed": {
+        "variantChain": [],
+        "utility": "sr-only",
+        "negative": false,
+        "arbitraryValue": null,
+        "slashModifier": null
+      },
+      "entryIdentifier": "v1.sr-only",
+      "valueStatus": "verified",
+      "tokenResolutions": [],
+      "selector": ".sr-only",
+      "conditions": [],
+      "declarations": [
+        {
+          "property": "position",
+          "value": "absolute"
+        },
+        {
+          "property": "width",
+          "value": "1px"
+        },
+        {
+          "property": "height",
+          "value": "1px"
+        },
+        {
+          "property": "padding",
+          "value": "0"
+        },
+        {
+          "property": "margin",
+          "value": "-1px"
+        },
+        {
+          "property": "overflow",
+          "value": "hidden"
+        },
+        {
+          "property": "clip",
+          "value": "rect(0,0,0,0)"
+        },
+        {
+          "property": "white-space",
+          "value": "nowrap"
+        },
+        {
+          "property": "border-width",
+          "value": "0"
+        }
+      ],
+      "sortTuple": {
+        "responsiveRank": 0,
+        "darkRank": 0,
+        "pointerRank": 0,
+        "relationRank": 0,
+        "stateRank": 0,
+        "pseudoRank": 0,
+        "conflictGroupRank": 44,
+        "scopeRank": 0,
+        "catalogRank": 11,
+        "rawCandidate": "sr-only"
+      },
+      "diagnostics": []
+    },
+    {
+      "candidate": "bg-overlay/60",
+      "outcome": "resolved_utility",
+      "specVersion": 1,
+      "specRevision": 14,
+      "parsed": {
+        "variantChain": [],
+        "utility": "bg-overlay",
+        "negative": false,
+        "arbitraryValue": null,
+        "slashModifier": "60"
+      },
+      "entryIdentifier": "v1.background",
+      "valueStatus": "verified",
+      "tokenResolutions": [
+        {
+          "tokenName": "overlay",
+          "category": "colors",
+          "variable": "--zw-color-overlay",
+          "configuredValue": "#000000",
+          "categoryUnverified": false
+        }
+      ],
+      "selector": ".bg-overlay\\/60",
+      "conditions": [],
+      "declarations": [
+        {
+          "property": "background-color",
+          "value": "color-mix(in oklab, var(--zw-color-overlay) 60%, transparent)"
+        }
+      ],
+      "sortTuple": {
+        "responsiveRank": 0,
+        "darkRank": 0,
+        "pointerRank": 0,
+        "relationRank": 0,
+        "stateRank": 0,
+        "pseudoRank": 0,
+        "conflictGroupRank": 23,
+        "scopeRank": 0,
+        "catalogRank": 0,
+        "rawCandidate": "bg-overlay/60"
+      },
+      "diagnostics": []
+    },
+    {
+      "candidate": "text-[color:var(--sg-fg)]",
+      "outcome": "invalid",
+      "specVersion": 1,
+      "specRevision": 14,
+      "parsed": {
+        "variantChain": [],
+        "utility": "text-[color:var(--sg-fg)]",
+        "negative": false,
+        "arbitraryValue": "color:var(--sg-fg)",
+        "slashModifier": null
+      },
+      "entryIdentifier": null,
+      "valueStatus": null,
+      "tokenResolutions": [],
+      "selector": null,
+      "conditions": [],
+      "declarations": [],
+      "sortTuple": null,
+      "diagnostics": [
+        {
+          "severity": "error",
+          "code": "ZW005",
+          "candidate": "text-[color:var(--sg-fg)]",
+          "origin": {
+            "kind": "source",
+            "sourceId": "zudo-wind://explain/candidate",
+            "byteOffset": 0,
+            "byteLength": 25,
+            "line": 1,
+            "byteColumn": 1,
+            "literalByteOffset": 0,
+            "literalByteLength": 25,
+            "positionKind": "class",
+            "owner": null,
+            "producer": null,
+            "path": null,
+            "index": null,
+            "keyPath": null,
+            "roleKey": null
+          },
+          "message": "data-type hint `color:` is not supported; zudo-wind v1 has no type-hint grammar, so write the value without it",
+          "suggestion": null,
+          "rejectionId": "R15"
+        }
+      ]
+    },
+    {
+      "candidate": "bg-[var(--sg-role)]",
+      "outcome": "resolved_utility",
+      "specVersion": 1,
+      "specRevision": 14,
+      "parsed": {
+        "variantChain": [],
+        "utility": "bg-[var(--sg-role)]",
+        "negative": false,
+        "arbitraryValue": "var(--sg-role)",
+        "slashModifier": null
+      },
+      "entryIdentifier": "v1.background",
+      "valueStatus": "categoryUnverified",
+      "tokenResolutions": [],
+      "selector": ".bg-\\[var\\(--sg-role\\)\\]",
+      "conditions": [],
+      "declarations": [
+        {
+          "property": "background-color",
+          "value": "var(--sg-role)"
+        }
+      ],
+      "sortTuple": {
+        "responsiveRank": 0,
+        "darkRank": 0,
+        "pointerRank": 0,
+        "relationRank": 0,
+        "stateRank": 0,
+        "pseudoRank": 0,
+        "conflictGroupRank": 23,
+        "scopeRank": 0,
+        "catalogRank": 0,
+        "rawCandidate": "bg-[var(--sg-role)]"
+      },
+      "diagnostics": []
+    },
+    {
+      "candidate": "group-hover:bg-accent",
+      "outcome": "resolved_utility",
+      "specVersion": 1,
+      "specRevision": 14,
+      "parsed": {
+        "variantChain": [
+          "group-hover"
+        ],
+        "utility": "bg-accent",
+        "negative": false,
+        "arbitraryValue": null,
+        "slashModifier": null
+      },
+      "entryIdentifier": "v1.background",
+      "valueStatus": "verified",
+      "tokenResolutions": [
+        {
+          "tokenName": "accent",
+          "category": "colors",
+          "variable": "--zw-color-accent",
+          "configuredValue": "#123456",
+          "categoryUnverified": false
+        }
+      ],
+      "selector": ":where(.group:hover) .group-hover\\:bg-accent",
+      "conditions": [
+        "(hover: hover)"
+      ],
+      "declarations": [
+        {
+          "property": "background-color",
+          "value": "var(--zw-color-accent)"
+        }
+      ],
+      "sortTuple": {
+        "responsiveRank": 0,
+        "darkRank": 0,
+        "pointerRank": 0,
+        "relationRank": 5,
+        "stateRank": 0,
+        "pseudoRank": 0,
+        "conflictGroupRank": 23,
+        "scopeRank": 0,
+        "catalogRank": 0,
+        "rawCandidate": "group-hover:bg-accent"
+      },
+      "diagnostics": []
+    },
+    {
+      "candidate": "w-[min(calc(100vw_-_2rem),72rem)]",
+      "outcome": "resolved_utility",
+      "specVersion": 1,
+      "specRevision": 14,
+      "parsed": {
+        "variantChain": [],
+        "utility": "w-[min(calc(100vw_-_2rem),72rem)]",
+        "negative": false,
+        "arbitraryValue": "min(calc(100vw_-_2rem),72rem)",
+        "slashModifier": null
+      },
+      "entryIdentifier": "v1.w",
+      "valueStatus": "verified",
+      "tokenResolutions": [],
+      "selector": ".w-\\[min\\(calc\\(100vw_-_2rem\\)\\,72rem\\)\\]",
+      "conditions": [],
+      "declarations": [
+        {
+          "property": "width",
+          "value": "min(calc(100vw - 2rem),72rem)"
+        }
+      ],
+      "sortTuple": {
+        "responsiveRank": 0,
+        "darkRank": 0,
+        "pointerRank": 0,
+        "relationRank": 0,
+        "stateRank": 0,
+        "pseudoRank": 0,
+        "conflictGroupRank": 8,
+        "scopeRank": 1,
+        "catalogRank": 6,
+        "rawCandidate": "w-[min(calc(100vw_-_2rem),72rem)]"
+      },
+      "diagnostics": []
+    },
+    {
+      "candidate": "text-[var(--sg-fg)]",
+      "outcome": "invalid",
+      "specVersion": 1,
+      "specRevision": 14,
+      "parsed": {
+        "variantChain": [],
+        "utility": "text-[var(--sg-fg)]",
+        "negative": false,
+        "arbitraryValue": "var(--sg-fg)",
+        "slashModifier": null
+      },
+      "entryIdentifier": null,
+      "valueStatus": null,
+      "tokenResolutions": [],
+      "selector": null,
+      "conditions": [],
+      "declarations": [],
+      "sortTuple": null,
+      "diagnostics": [
+        {
+          "severity": "error",
+          "code": "ZW005",
+          "candidate": "text-[var(--sg-fg)]",
+          "origin": {
+            "kind": "source",
+            "sourceId": "zudo-wind://explain/candidate",
+            "byteOffset": 0,
+            "byteLength": 19,
+            "line": 1,
+            "byteColumn": 1,
+            "literalByteOffset": 0,
+            "literalByteLength": 19,
+            "positionKind": "class",
+            "owner": null,
+            "producer": null,
+            "path": null,
+            "index": null,
+            "keyPath": null,
+            "roleKey": null
+          },
+          "message": "value is ambiguous across catalog entries",
+          "suggestion": null,
+          "rejectionId": "R15"
+        }
+      ]
+    },
+    {
+      "candidate": "grow-[2]",
+      "outcome": "resolved_utility",
+      "specVersion": 1,
+      "specRevision": 14,
+      "parsed": {
+        "variantChain": [],
+        "utility": "grow-[2]",
+        "negative": false,
+        "arbitraryValue": "2",
+        "slashModifier": null
+      },
+      "entryIdentifier": "v1.grow",
+      "valueStatus": "verified",
+      "tokenResolutions": [],
+      "selector": ".grow-\\[2\\]",
+      "conditions": [],
+      "declarations": [
+        {
+          "property": "flex-grow",
+          "value": "2"
+        }
+      ],
+      "sortTuple": {
+        "responsiveRank": 0,
+        "darkRank": 0,
+        "pointerRank": 0,
+        "relationRank": 0,
+        "stateRank": 0,
+        "pseudoRank": 0,
+        "conflictGroupRank": 5,
+        "scopeRank": 0,
+        "catalogRank": 4,
+        "rawCandidate": "grow-[2]"
+      },
+      "diagnostics": []
+    },
+    {
+      "candidate": "shrink-[1]",
+      "outcome": "resolved_utility",
+      "specVersion": 1,
+      "specRevision": 14,
+      "parsed": {
+        "variantChain": [],
+        "utility": "shrink-[1]",
+        "negative": false,
+        "arbitraryValue": "1",
+        "slashModifier": null
+      },
+      "entryIdentifier": "v1.shrink",
+      "valueStatus": "verified",
+      "tokenResolutions": [],
+      "selector": ".shrink-\\[1\\]",
+      "conditions": [],
+      "declarations": [
+        {
+          "property": "flex-shrink",
+          "value": "1"
+        }
+      ],
+      "sortTuple": {
+        "responsiveRank": 0,
+        "darkRank": 0,
+        "pointerRank": 0,
+        "relationRank": 0,
+        "stateRank": 0,
+        "pseudoRank": 0,
+        "conflictGroupRank": 5,
+        "scopeRank": 0,
+        "catalogRank": 5,
+        "rawCandidate": "shrink-[1]"
+      },
+      "diagnostics": []
+    },
+    {
+      "candidate": "basis-[0%]",
+      "outcome": "foreign_utility",
+      "specVersion": 1,
+      "specRevision": 14,
+      "parsed": {
+        "variantChain": [],
+        "utility": "basis-[0%]",
+        "negative": false,
+        "arbitraryValue": "0%",
+        "slashModifier": null
+      },
+      "entryIdentifier": null,
+      "valueStatus": null,
+      "tokenResolutions": [],
+      "selector": null,
+      "conditions": [],
+      "declarations": [],
+      "sortTuple": null,
+      "diagnostics": [
+        {
+          "severity": "warning",
+          "code": "ZW014",
+          "candidate": "basis-[0%]",
+          "origin": {
+            "kind": "source",
+            "sourceId": "zudo-wind://explain/candidate",
+            "byteOffset": 0,
+            "byteLength": 10,
+            "line": 1,
+            "byteColumn": 1,
+            "literalByteOffset": 0,
+            "literalByteLength": 10,
+            "positionKind": "class",
+            "owner": null,
+            "producer": null,
+            "path": null,
+            "index": null,
+            "keyPath": null,
+            "roleKey": null
+          },
+          "message": "unsupported foreign utility (migration vocabulary v7): basis-[0%] uses the Tailwind `basis` utility, which zudo-wind v1 does not implement, so no CSS is generated. Author a flex-basis declaration in CSS and reserve the class with wind.authoredClasses: { \"basis-[0%]\": true }",
+          "suggestion": null,
+          "rejectionId": null
+        }
+      ]
+    }
+  ]
+}
