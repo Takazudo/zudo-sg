@@ -130,20 +130,20 @@ output as drift and never writes it.
 ## Installation
 
 ```sh
-pnpm add @takazudo/zudo-sg@latest @takazudo/zfb@^2.20.3 @takazudo/zfb-md-wasm@^2.20.3 @takazudo/zfb-runtime@^2.20.3 @takazudo/zudo-doc@^5.27.0 @takazudo/zdtp@^0.8.5 diff@^8.0.4 katex@^0.16.38 preact@^10.29.8 preact-render-to-string@^6.6.6 tailwindcss@^4.2.0 zod@^4.3.6
+pnpm add @takazudo/zudo-sg@latest @takazudo/zfb@^4.3.1 @takazudo/zfb-md-wasm@^4.3.1 @takazudo/zfb-runtime@^4.3.1 @takazudo/zudo-doc@^6.0.0 @takazudo/zdtp@^0.8.6 diff@^8.0.4 katex@^0.16.38 zod@^4.3.6
 ```
 
-The engine peers are `@takazudo/zfb ^2.20.3`, `@takazudo/zudo-doc ^5.27.0`,
-`@takazudo/zdtp ^0.8.5`, and `preact ^10.29.8`. `@takazudo/zdtp` is required:
-the injected `/tokens` route imports its dashboard at build time. The
+The engine peers are `@takazudo/zfb ^4.3.1`, `@takazudo/zudo-doc ^6.0.0`,
+and `@takazudo/zdtp ^0.8.6`. `@takazudo/zdtp` is required:
+the injected `/tokens` route loads its dashboard through the engine-owned
+Preact adapter. The engine installs Preact as its own regular dependency. The
 `@takazudo/zfb-md-wasm`, `@takazudo/zfb-runtime`, `diff`, `katex`, and `zod`
 entries are prerequisites inherited from zfb/zudo-doc; zudo-doc's published
 route dist imports `diff` and `katex` even when those features are disabled
 (see [zudolab/zudo-doc#4206](https://github.com/zudolab/zudo-doc/issues/4206)).
-`preact-render-to-string` and `tailwindcss` are host-specific dependencies used
-by the fixture's component and preview-style setup, respectively; add them
-when your host uses those same pieces. The command above reproduces the full
-fixture dependency set.
+The host renders components with zudo-react and compiles preview utilities with
+zfb's zudo-wind compiler. The command above reproduces the full fixture
+dependency set.
 
 Keep the `tokens` block in `zudo-sg.config.mjs`: the initializer's config
 typing treats it as required, and `gen-token-manifest` needs its two CSS paths

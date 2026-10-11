@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "compilerVersion": "4.3.1",
-  "windConfigSha256": "ba11b0184c80ceabed26a62e842af1636a1e7b04cc078cd198088c295a2e6435",
+  "windConfigSha256": "c54a7ca631e02e65b6e118e9c6492c8127a81c057c69735d84d17780522c5451",
   "candidateSetSha256": "478478942a02c3aded0a7136427019391d5362c1808c095091ccbb46f33cfd2a",
   "candidates": [
     "-translate-y-1/2",
@@ -357,7 +357,7 @@
     "--json",
     "--stdin",
     "--project-root",
-    "/home/takazudo/repos/myoss/zudo-sg/worktrees/924-u6-demo-confirm"
+    "."
   ],
   "windExplain": {
     "schemaVersion": 1,

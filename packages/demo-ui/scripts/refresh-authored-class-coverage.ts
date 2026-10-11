@@ -18,7 +18,8 @@ if (scan.dynamicConstructions.length > 0) {
 
 const candidates = scan.classes.map(({ token }) => token);
 const compilerVersion = getWindCompilerVersion(repoRoot);
-const command = ["pnpm", "exec", "zfb", "wind", "explain", "--json", "--stdin", "--project-root", repoRoot];
+// The command runs from repoRoot, so keep its recorded provenance checkout-independent.
+const command = ["pnpm", "exec", "zfb", "wind", "explain", "--json", "--stdin", "--project-root", "."];
 const result = spawnSync(command[0], command.slice(1), {
   cwd: repoRoot,
   encoding: "utf8",

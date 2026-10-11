@@ -23,6 +23,14 @@
  * move.
  * ========================================================================== */
 
+/* Engine visibility hooks must beat utility display rules in every host. */
+[data-sg-tile][hidden],
+[data-sg-section][hidden],
+[data-sg-empty][hidden],
+#sg-preview-tokens-trigger[hidden] {
+  display: none;
+}
+
 /* #797: plain properties survive the framework color reset; zero specificity
  * lets an unlayered host :root override win in either import order. */
 :where(:root) {

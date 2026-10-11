@@ -7,6 +7,7 @@ import { settings } from "@/config/settings";
 import { SidebarResizerInit } from "@takazudo/zudo-doc/sidebar-resizer";
 import { PageLoadingOverlay } from "@takazudo/zudo-doc/page-loading";
 import { AFTER_NAVIGATE_EVENT, BEFORE_NAVIGATE_EVENT } from "@takazudo/zudo-doc/transitions";
+import { TRANSITION_BEFORE_SWAP } from "@takazudo/zfb-runtime/client-router";
 
 // #113: adopt the package enlarge/ai-chat islands directly (the former
 // src/components/{image-enlarge,mermaid-enlarge,ai-chat-modal} forks were
@@ -32,17 +33,36 @@ import { previewTokenPanelCaptureScript } from "@takazudo/zudo-sg/token-tweak";
  */
 const DEFAULT_AI_CHAT_BODY_LABEL = "Ask a question about the documentation.";
 
-const SIDEBAR_SCROLL_RESTORE_SCRIPT = `(${function sidebarScrollRestore(
-  beforeEvent: string,
-  afterEvent: string,
-) {
-  const w = window as Window & { __zdSidebarScrollRestoreInstalled?: boolean };
+// Keep inline source literal: serialized compiled functions can capture esbuild helpers.
+const SIDEBAR_SCROLL_RESTORE_SCRIPT = `(function sidebarScrollRestore(beforeEvent, afterEvent) {
+  const w = window;
   if (w.__zdSidebarScrollRestoreInstalled) return;
   w.__zdSidebarScrollRestoreInstalled = true;
 
   let savedScrollTop = 0;
-  let restoreTimer: ReturnType<typeof setTimeout> | undefined;
-  const sidebar = () => document.querySelector<HTMLElement>("#desktop-sidebar");
+  let restoreTimer;
+  const sidebar = () => document.querySelector("#desktop-sidebar");
+
+  // zudo-doc 6 checks live/SSR structure before retaining a boundary. Its
+  // resizer appends a live-only child; normalize just that known difference.
+  document.addEventListener(${JSON.stringify(TRANSITION_BEFORE_SWAP)}, (event) => {
+    const live = sidebar();
+    const incoming = event.newDocument?.querySelector("#desktop-sidebar");
+    if (!live || !incoming || !live.getAttribute("data-zfb-transition-persist") ||
+        live.getAttribute("data-zfb-transition-persist") !== incoming.getAttribute("data-zfb-transition-persist")) return;
+    const handles = [...live.children].filter((child) => child.hasAttribute("data-sidebar-resizer"));
+    if (handles.length !== 1 || incoming.querySelector("[data-sidebar-resizer]")) return;
+    const handle = handles[0];
+    const placeholder = incoming.ownerDocument.createElement(handle.localName);
+    if (handle.id) placeholder.id = handle.id;
+    placeholder.setAttribute("data-sg-sidebar-resizer-shape", "");
+    incoming.insertBefore(placeholder, incoming.children[[...live.children].indexOf(handle)] ?? null);
+    queueMicrotask(() => placeholder.remove());
+  });
+  // A legitimate replacement still gets a real, wired resizer from the package.
+  document.addEventListener(afterEvent, () => {
+    document.querySelectorAll("[data-sg-sidebar-resizer-shape]").forEach((node) => node.remove());
+  }, true);
 
   document.addEventListener(beforeEvent, () => {
     if (restoreTimer !== undefined) {
@@ -59,7 +79,7 @@ const SIDEBAR_SCROLL_RESTORE_SCRIPT = `(${function sidebarScrollRestore(
       if (aside) aside.scrollTop = savedScrollTop;
     }, 50);
   });
-}.toString()})(${JSON.stringify(BEFORE_NAVIGATE_EVENT)},${JSON.stringify(AFTER_NAVIGATE_EVENT)});`;
+})(${JSON.stringify(BEFORE_NAVIGATE_EVENT)},${JSON.stringify(AFTER_NAVIGATE_EVENT)});`;
 
 /** Props for {@link BodyEndIslands}. */
 export interface BodyEndIslandsProps {

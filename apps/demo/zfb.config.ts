@@ -36,6 +36,8 @@ export default defineConfig({
     dark: false,
     utilities: { placement: "before-authored" },
     sources: {
+      // This workspace owns its vocabulary; the root catalog has separate chrome tokens.
+      rootPackage: false,
       roots: [
         "pages",
         "components",

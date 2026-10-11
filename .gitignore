@@ -3,6 +3,8 @@ node_modules
 dist
 .zfb
 .zfb-build
+# Independent preview compiler configs may survive an interrupted process.
+.zudo-sg-preview-*.config.ts
 # zudo-doc package-owned route sources copied here during builds.
 .zudo-doc/
 # @takazudo/zudo-sg build artifacts (tsup onSuccess): route entrypoint sources
