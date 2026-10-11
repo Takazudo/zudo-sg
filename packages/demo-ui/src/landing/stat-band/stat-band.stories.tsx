@@ -24,7 +24,7 @@ const STATS: BandStat[] = [
 export const Default: Story<StatBandProps> = {
   name: "Default",
   render: () => (
-    <div style={{ maxWidth: "900px" }}>
+    <div style={{ "max-width": "900px" }}>
       <StatBand stats={STATS} />
     </div>
   ),
@@ -33,7 +33,7 @@ export const Default: Story<StatBandProps> = {
 export const CustomStats: Story<StatBandProps> = {
   name: "Custom stats",
   render: () => (
-    <div style={{ maxWidth: "900px" }}>
+    <div style={{ "max-width": "900px" }}>
       <StatBand
         stats={[
           { value: "70", unit: "years", label: "In business" },
@@ -48,7 +48,7 @@ export const CustomStats: Story<StatBandProps> = {
 export const Narrow: Story<StatBandProps> = {
   name: "Narrow (mobile-width wrap)",
   render: () => (
-    <div style={{ maxWidth: "360px" }}>
+    <div style={{ "max-width": "360px" }}>
       <StatBand stats={STATS} />
     </div>
   ),

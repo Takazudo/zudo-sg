@@ -19,7 +19,7 @@ export function LocationList({ groups, class: cls }: LocationListProps) {
     <div class={cx("flex flex-col gap-y-vsp-lg", cls)}>
       {groups.map((group) => (
         <section key={group.heading} aria-label={group.heading}>
-          <h3 class="border-s-2 border-accent ps-hsp-sm text-title font-semibold text-fg">
+          <h3 class="zc-location-group-heading border-accent text-title font-semibold text-fg">
             {group.heading}
           </h3>
           <AutoGrid as="ul" min="13rem" fill gap="sm" class="mt-vsp-sm">

@@ -3,6 +3,9 @@
 // hydration enters zudo-doc's bootstrap once without importing zdtp, drains
 // the SSR pre-hydration toggle on its own channel, keeps owner console helpers
 // lazy, and handles a failed zdtp import without an unhandled rejection.
+import "../../__tests__/dom-test-setup.js";
+import { h } from "@takazudo/zfb/zudo-react";
+import { renderIsland, renderSsr } from "../../__tests__/helpers/zudo-react.js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { assertValidPanelConfig } from "@takazudo/zdtp/testing";
 
@@ -57,7 +60,7 @@ type PrehydrateScript = HTMLScriptElement & { __zdtpPrehydrateListener?: EventLi
 
 async function hydrate(): Promise<void> {
   const module = await import("../preview-token-panel-bootstrap.js");
-  module.default();
+  renderIsland(module.default, {});
 }
 
 beforeEach(() => {
@@ -77,6 +80,15 @@ beforeEach(() => {
 afterEach(() => vi.restoreAllMocks());
 
 describe("PreviewTokenPanelBootstrap island", () => {
+  it("keeps bootstrap work out of SSR and waits for activation", async () => {
+    const module = await import("../preview-token-panel-bootstrap.js");
+    renderSsr(h(module.default, {}));
+    expect(mocks.nativeBootstrap).not.toHaveBeenCalled();
+    renderIsland(module.default, {}, { beforeActivate() {
+      expect(mocks.nativeBootstrap).not.toHaveBeenCalled();
+    } });
+    expect(mocks.nativeBootstrap).toHaveBeenCalledTimes(1);
+  });
   it("registers one native lazy bootstrap with the virtual module's data and does not import zdtp", async () => {
     await hydrate();
     await hydrate();

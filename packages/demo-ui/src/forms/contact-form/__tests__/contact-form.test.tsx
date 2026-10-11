@@ -1,22 +1,26 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/preact";
+import { renderIsland, getByRole, getByText, fire } from "../../../test-utils/zudo-react";
 import { describe, expect, it, vi } from "vitest";
 import { ContactForm } from "../contact-form";
 import ContactFormEnhancer from "../contact-form-enhancer";
 
 describe("ContactForm", () => {
   it("renders only the input panel's fields as visible (confirm/complete stay hidden)", () => {
-    render(<ContactForm />);
-    expect(screen.getByRole("textbox", { name: /Name/ })).toBeInTheDocument();
-    expect(screen.getByRole("combobox", { name: /Inquiry type/ })).toBeInTheDocument();
-    const confirmHeading = screen.getByText("Confirm your entry");
+    const { container } = renderIsland(function Fixture() {
+      return <ContactForm />;
+    }, {});
+    expect(getByRole(container, "textbox", { name: /Name/ })).toBeInTheDocument();
+    expect(getByRole(container, "combobox", { name: /Inquiry type/ })).toBeInTheDocument();
+    const confirmHeading = getByText(container, "Confirm your entry");
     expect(confirmHeading.closest("[data-contact-panel]")).toHaveAttribute("hidden");
-    const completeHeading = screen.getByText("Your inquiry has been received");
+    const completeHeading = getByText(container, "Your inquiry has been received");
     expect(completeHeading.closest("[data-contact-panel]")).toHaveAttribute("hidden");
   });
 
   it("has no action on the <form> (static fallback: no real navigation without the enhancer)", () => {
-    render(<ContactForm />);
-    const form = document.querySelector("[data-contact-form-el]");
+    const { container } = renderIsland(function Fixture() {
+      return <ContactForm />;
+    }, {});
+    const form = container.querySelector("[data-contact-form-el]");
     expect(form).not.toHaveAttribute("action");
   });
 });
@@ -24,41 +28,40 @@ describe("ContactForm", () => {
 /** Fills every required input-panel field so native validation passes. Targeted
  * by id (not label text) — the label's accessible name also picks up the
  * adjacent Required/Optional badge text, so an id lookup is the robust match. */
-function fillRequiredFields() {
-  fireEvent.input(document.getElementById("contact-name") as HTMLInputElement, {
-    target: { value: "Ada Lovelace" },
-  });
-  fireEvent.input(document.getElementById("contact-email") as HTMLInputElement, {
-    target: { value: "ada@example.com" },
-  });
-  fireEvent.input(document.getElementById("contact-message") as HTMLTextAreaElement, {
-    target: { value: "Hello there" },
-  });
+function fillRequiredFields(container: Element) {
+  (container.querySelector("#contact-name") as HTMLInputElement).value = "Ada Lovelace";
+  fire(container.querySelector("#contact-name") as HTMLInputElement, "input");
+  (container.querySelector("#contact-email") as HTMLInputElement).value = "ada@example.com";
+  fire(container.querySelector("#contact-email") as HTMLInputElement, "input");
+  (container.querySelector("#contact-message") as HTMLTextAreaElement).value = "Hello there";
+  fire(container.querySelector("#contact-message") as HTMLTextAreaElement, "input");
 }
 
 describe("ContactForm + ContactFormEnhancer (real ported markup, mounted together)", () => {
   it("advances input -> confirm -> complete with no adapter (default, no network)", async () => {
-    render(
-      <div>
-        <ContactForm />
-        <ContactFormEnhancer />
-      </div>,
-    );
+    const { container } = renderIsland(function Fixture() {
+      return (
+        <div>
+          <ContactForm />
+          <ContactFormEnhancer />
+        </div>
+      );
+    }, {});
 
-    fillRequiredFields();
-    fireEvent.submit(document.querySelector("[data-contact-form-el]") as HTMLFormElement);
+    fillRequiredFields(container);
+    fire(container.querySelector("[data-contact-form-el]") as HTMLFormElement, "submit");
 
-    await waitFor(() =>
-      expect(screen.getByText("Confirm your entry").closest("[data-contact-panel]")).not.toHaveAttribute(
+    await vi.waitFor(() =>
+      expect(getByText(container, "Confirm your entry").closest("[data-contact-panel]")).not.toHaveAttribute(
         "hidden",
       ),
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Send this" }));
+    fire(getByRole(container, "button", { name: "Send this" }), "click");
 
-    await waitFor(() =>
+    await vi.waitFor(() =>
       expect(
-        screen.getByText("Your inquiry has been received").closest("[data-contact-panel]"),
+        getByText(container, "Your inquiry has been received").closest("[data-contact-panel]"),
       ).not.toHaveAttribute("hidden"),
     );
   });
@@ -69,41 +72,57 @@ describe("ContactForm + ContactFormEnhancer (real ported markup, mounted togethe
       .mockRejectedValueOnce(new Error("Server rejected the request"))
       .mockResolvedValueOnce(undefined);
 
-    render(
-      <div>
-        <ContactForm />
-        <ContactFormEnhancer onSubmit={onSubmit} />
-      </div>,
-    );
+    const { container } = renderIsland(function Fixture() {
+      return (
+        <div>
+          <ContactForm />
+          <ContactFormEnhancer onSubmit={onSubmit} />
+        </div>
+      );
+    }, {});
 
-    fillRequiredFields();
-    fireEvent.submit(document.querySelector("[data-contact-form-el]") as HTMLFormElement);
-    await waitFor(() =>
-      expect(screen.getByText("Confirm your entry").closest("[data-contact-panel]")).not.toHaveAttribute(
+    fillRequiredFields(container);
+    fire(container.querySelector("[data-contact-form-el]") as HTMLFormElement, "submit");
+    await vi.waitFor(() =>
+      expect(getByText(container, "Confirm your entry").closest("[data-contact-panel]")).not.toHaveAttribute(
         "hidden",
       ),
     );
 
-    const sendButton = screen.getByRole("button", { name: "Send this" });
-    fireEvent.click(sendButton);
+    const sendButton = getByRole(container, "button", { name: "Send this" });
+    fire(sendButton, "click");
 
-    const alert = await screen.findByRole("alert");
+    const alert = getByRole(container, "alert");
+    await vi.waitFor(() => expect(alert).toHaveTextContent("Server rejected the request"));
     expect(alert).toHaveTextContent("Server rejected the request");
-    expect(screen.getByText("Confirm your entry").closest("[data-contact-panel]")).not.toHaveAttribute(
+    expect(getByText(container, "Confirm your entry").closest("[data-contact-panel]")).not.toHaveAttribute(
       "hidden",
     );
     expect(
-      screen.getByText("Your inquiry has been received").closest("[data-contact-panel]"),
+      getByText(container, "Your inquiry has been received").closest("[data-contact-panel]"),
     ).toHaveAttribute("hidden");
 
     // Retry succeeds.
-    await waitFor(() => expect(sendButton).not.toBeDisabled());
-    fireEvent.click(sendButton);
-    await waitFor(() =>
+    await vi.waitFor(() => expect(sendButton).not.toBeDisabled());
+    fire(sendButton, "click");
+    await vi.waitFor(() =>
       expect(
-        screen.getByText("Your inquiry has been received").closest("[data-contact-panel]"),
+        getByText(container, "Your inquiry has been received").closest("[data-contact-panel]"),
       ).not.toHaveAttribute("hidden"),
     );
     expect(onSubmit).toHaveBeenCalledTimes(2);
   });
+  it("removes enhancer listeners when its scope is disposed", () => {
+    const result = renderIsland(function CleanupFixture() {
+      return <div><ContactForm /><ContactFormEnhancer /></div>;
+    }, {});
+    const form = result.container.querySelector("[data-contact-form-el]")!;
+    const confirm = result.container.querySelector('[data-contact-panel="confirm"]')!;
+    result.dispose();
+    // Keep the detached DOM reference: an orphaned listener would still cancel
+    // this event even after its owning scope disappeared.
+    expect(fire(form, "submit", { cancelable: true })).toBe(true);
+    expect(confirm).toHaveAttribute("hidden");
+  });
+
 });

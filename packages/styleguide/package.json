@@ -2,7 +2,7 @@
   "name": "@takazudo/zudo-sg",
   "version": "0.4.1",
   "type": "module",
-  "description": "zudo-sg styleguide engine — story registry, catalog routes and preview machinery for zfb + zudo-doc hosts.",
+  "description": "zudo-sg styleguide engine \u2014 story registry, catalog routes and preview machinery for zfb + zudo-doc hosts.",
   "license": "MIT",
   "author": "Takeshi Takatsudo",
   "repository": {
@@ -110,8 +110,8 @@
       "default": "./dist/plugins/preview-css.js"
     },
     "./styles.css": "./styles.css",
-    "./safelist.css": "./dist/safelist.css",
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./wind.json": "./dist/wind.json"
   },
   "bin": {
     "zudo-sg": "./bin/zudo-sg.js"
@@ -139,11 +139,10 @@
     "check:package-shape": "node scripts/check-package-shape.mjs",
     "check:routes-src": "node scripts/check-routes-src.mjs",
     "check:virtual-modules": "node scripts/check-virtual-modules.mjs",
-    "check:package-safelist": "node scripts/check-package-safelist.mjs",
-    "check": "pnpm run check:no-host-alias && pnpm run check:chrome-tokens && pnpm run typecheck && pnpm run build && pnpm run check:package-shape && pnpm run check:routes-src && pnpm run check:virtual-modules && pnpm run check:package-safelist && pnpm run test"
+    "check": "pnpm run check:no-host-alias && pnpm run check:chrome-tokens && pnpm run typecheck && pnpm run build && pnpm run check:package-shape && pnpm run check:routes-src && pnpm run check:virtual-modules && pnpm run check:package-wind-manifest && pnpm run test",
+    "check:package-wind-manifest": "node scripts/check-package-wind-manifest.mjs"
   },
   "dependencies": {
-    "preact-render-to-string": "^6.6.6",
     "@codemirror/commands": "^6.0.0",
     "@codemirror/lang-css": "^6.0.0",
     "@codemirror/lang-javascript": "^6.0.0",
@@ -152,28 +151,25 @@
     "@codemirror/view": "^6.0.0",
     "@lezer/highlight": "^1.0.0",
     "postcss": "^8.5.28",
-    "@tailwindcss/node": "^4.3.3",
-    "@tailwindcss/oxide": "^4.3.3"
+    "preact": "^10.29.1"
   },
   "peerDependencies": {
-    "@takazudo/zfb": "^2.20.3",
-    "@takazudo/zdtp": "^0.8.5",
-    "@takazudo/zudo-doc": "^5.27.0",
-    "preact": "^10.29.8"
+    "@takazudo/zfb": "^4.3.1",
+    "@takazudo/zdtp": "^0.8.6",
+    "@takazudo/zudo-doc": "^6.0.0"
   },
   "devDependencies": {
-    "@takazudo/zdtp": "0.8.5",
-    "@takazudo/zfb": "2.21.1",
-    "@takazudo/zudo-doc": "5.28.0",
+    "@takazudo/zdtp": "0.8.6",
+    "@takazudo/zfb": "4.3.1",
+    "@takazudo/zudo-doc": "6.0.0",
     "@testing-library/jest-dom": "^6.9.1",
-    "@testing-library/preact": "^3.2.4",
     "@types/culori": "^4.0.1",
     "@types/node": "^22.0.0",
     "culori": "^4.0.2",
     "happy-dom": "^16.8.1",
-    "preact": "^10.29.8",
     "tsup": "^8.5.0",
     "typescript": "^5.9.0",
-    "vitest": "^4.1.9"
+    "vite": "7.3.5",
+    "vitest": "4.1.11"
   }
 }

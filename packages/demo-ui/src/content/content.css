@@ -1,0 +1,9 @@
+/* Unlayered authored content components (zc-*). */
+.zc-prose-blockquote p {
+  margin-bottom: var(--spacing-vsp-xs);
+}
+
+.zc-prose-li > :is(ul, ol) {
+  margin-top: var(--spacing-vsp-xs);
+  margin-bottom: 0;
+}

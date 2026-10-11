@@ -1,4 +1,4 @@
-import type { JSX } from "preact";
+import type { JSX } from "@takazudo/zfb/zudo-react/jsx-runtime";
 import { cx } from "../../lib/cx";
 
 type BadgeTone = "accent" | "neutral";
@@ -7,12 +7,12 @@ type BadgeTone = "accent" | "neutral";
 // tokens (no raw hex) so both tones stay correct in light and dark.
 const TONE_STYLE: Record<BadgeTone, JSX.CSSProperties> = {
   accent: {
-    backgroundColor: "color-mix(in srgb, var(--color-accent) 12%, var(--color-bg))",
-    borderColor: "color-mix(in srgb, var(--color-accent) 35%, var(--color-bg))",
+    "background-color": "color-mix(in srgb, var(--color-accent) 12%, var(--color-bg))",
+    "border-color": "color-mix(in srgb, var(--color-accent) 35%, var(--color-bg))",
   },
   neutral: {
-    backgroundColor: "var(--color-surface)",
-    borderColor: "var(--color-border)",
+    "background-color": "var(--color-surface)",
+    "border-color": "var(--color-border)",
   },
 };
 

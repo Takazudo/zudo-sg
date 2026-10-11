@@ -1,5 +1,3 @@
-/** @jsxRuntime automatic */
-/** @jsxImportSource preact */
 // Locale-aware Footer wrapper for the zfb doc pages.
 //
 // Footer data-prep utilities — reads settings.footer, localizes link
@@ -21,7 +19,7 @@
 //   toRouteSlug                — derives route slug from collection id
 //   loadDocs / filterDrafts    — synchronous zfb collection helpers (ADR-004)
 
-import type { VNode } from "preact";
+import type { Description } from "@takazudo/zfb/zudo-react";
 import { settings } from "@/config/settings";
 import { Footer } from "@takazudo/zudo-doc/footer";
 import type { FooterLinkColumn, FooterTagColumn } from "@takazudo/zudo-doc/footer";
@@ -85,7 +83,7 @@ interface FooterWithDefaultsProps {
  */
 export function FooterWithDefaults({
   lang = defaultLocale,
-}: FooterWithDefaultsProps): VNode {
+}: FooterWithDefaultsProps): Description {
   const footer = settings.footer;
 
   // Locale-keyed persist key: same-locale navigations preserve DOM identity;

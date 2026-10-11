@@ -1,0 +1,18 @@
+/* Unlayered authored landing components (zc-*). */
+
+.zc-product-category-item::before {
+  content: "—";
+}
+
+.zc-metric-unit-offset {
+  margin-inline-start: var(--spacing-hsp-2xs);
+}
+
+.zc-location-group-heading {
+  border-inline-start: 2px solid var(--color-accent);
+  padding-inline-start: var(--spacing-hsp-sm);
+}
+
+.zc-history-entry-event {
+  padding-inline-start: var(--spacing-hsp-2xs);
+}

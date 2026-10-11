@@ -1,5 +1,3 @@
-/** @jsxRuntime automatic */
-/** @jsxImportSource preact */
 // Locale-/version-aware Header wrapper for the zfb doc pages.
 //
 // Header data-prep utilities — builds the resolved header config from user
@@ -37,7 +35,8 @@
 //   - Header only renders the slot when settings.locales has > 1 entry, so
 //     single-locale projects are unaffected.
 
-import type { VNode, JSX } from "preact";
+import type { Description } from "@takazudo/zfb/zudo-react";
+import type { JSX } from "@takazudo/zfb/zudo-react/jsx-runtime";
 import { Island } from "@takazudo/zfb";
 import { Header } from "@takazudo/zudo-doc/header";
 import {
@@ -167,7 +166,7 @@ export function HeaderWithDefaults(
   // Best achievable downstream: when="visible" + all SidebarToggle children
   // are lg:hidden, so on desktop the Island wrapper div has zero rendered
   // dimensions.  IntersectionObserver fires isIntersecting=false on desktop
-  // (zero-size element) → Preact hydrate() is never called.  On mobile (and
+  // (zero-size element) → island activation is never called.  On mobile (and
   // on desktop→mobile resize) the children become visible, the element gains
   // size, IO fires isIntersecting=true, and hydration completes normally.
   //
@@ -175,9 +174,8 @@ export function HeaderWithDefaults(
   // every page regardless of viewport, because it is serialised at build time
   // and not gated by media. Eliminating it requires a zfb "media" hydration
   // strategy — tracked in Takazudo/zudo-front-builder#969.
-  const sidebarToggle = Island({
-    when: "visible",
-    children: (
+  const sidebarToggle = (
+    <Island when="visible">
       <SidebarToggle
         nodes={sidebarNodes}
         currentSlug={currentSlug}
@@ -186,16 +184,12 @@ export function HeaderWithDefaults(
         localeLinks={localeLinks}
         themeDefaultMode={themeDefaultMode}
       />
-    ),
-  }) as unknown as VNode;
+    </Island>
+  );
 
-  // Wrap the bare ThemeToggle in Island({when:"load"}) so the SSG
-  // output emits a data-zfb-island="ThemeToggle" marker the hydration
-  // runtime can find — matching the documented header contract.
-  const themeToggle = Island({
-    when: "load",
-    children: <ThemeToggle defaultMode={themeDefaultMode} />,
-  }) as unknown as VNode;
+  const themeToggle = (
+    <Island when="load"><ThemeToggle defaultMode={themeDefaultMode} /></Island>
+  );
 
   // Locale-aware search widget. Renders the full dialog markup in SSR
   // so the placeholder text ("Type to search..." / 「検索したい単語を入力」)
@@ -220,7 +214,7 @@ export function HeaderWithDefaults(
   // Gate: only render when settings.versions is a non-empty array. When
   // versioning is disabled (settings.versions === false) the slot is
   // undefined and the Header renders nothing for the version-switcher item.
-  let versionSwitcher: VNode | undefined;
+  let versionSwitcher: Description | undefined;
 
   if (settings.versions && settings.versions.length > 0) {
     const isNonDefaultLocale = lang !== defaultLocale;
@@ -266,7 +260,7 @@ export function HeaderWithDefaults(
         labels={labels}
         idSuffix="header"
       />
-    ) as unknown as VNode;
+    );
   }
 
   // Build locale-switcher for the header right-items row (refs #1453).
@@ -277,8 +271,9 @@ export function HeaderWithDefaults(
     localeLinks != null ? (
       <LanguageSwitcher
         links={localeLinks}
+        accessibleLabel={t("language.switcher.label", lang)}
       />
-    ) as unknown as VNode : undefined;
+    ) : undefined;
 
   // Locale-keyed persist key: same-locale navigations preserve the header's
   // DOM-node identity; cross-locale navigations use a different key so the

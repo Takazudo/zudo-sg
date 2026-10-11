@@ -1,5 +1,3 @@
-/** @jsxRuntime automatic */
-/** @jsxImportSource preact */
 // Page module for the default-locale versions index route.
 //
 // Default-locale documentation versions page. Static route — no paths()
@@ -10,7 +8,7 @@
 // pages/lib/_versions-page.tsx (#2010).
 
 import { defaultLocale } from "@/config/i18n";
-import type { JSX } from "preact";
+import type { JSX } from "@takazudo/zfb/zudo-react/jsx-runtime";
 import { VersionsPageView } from "../lib/_versions-page";
 
 export const frontmatter = { title: "Versions" };

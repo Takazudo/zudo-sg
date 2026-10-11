@@ -1,8 +1,8 @@
-import type { JSX } from "preact";
+import type { JSX } from "@takazudo/zfb/zudo-react/jsx-runtime";
 import { cx } from "../../lib/cx";
 import { CONTROL_BASE } from "../lib/control-style";
 
-export type TextareaProps = JSX.TextareaHTMLAttributes<HTMLTextAreaElement> & {
+export type TextareaProps = JSX.IntrinsicElements["textarea"] & {
   class?: string;
 };
 

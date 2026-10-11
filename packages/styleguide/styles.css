@@ -6,17 +6,11 @@
  * package-root `files` entry and exported as `@takazudo/zudo-sg/styles.css`
  * (a host imports the package specifier, never this relative path).
  *
- * CONSUMER CSS (ADR decisions 10 and 14): keep this stylesheet unlayered
- * alongside Tailwind utilities, after zudo-doc's feature styles. Also import
- * @takazudo/zudo-sg/safelist.css (generated `@source inline(...)` from
- * `dist/**\/*.js`) for the engine's utility classes, e.g.
- * `bg-[var(--sg-accent)]`, `px-hsp-md`.
- * Chrome colors use raw --sg-* defaults and do not depend on the order of
- * zudo-doc/theme.css or the host's color tokens. The host's OWN @theme color
- * tokens still need to follow zudo-doc's color reset.
- * The host keeps its OWN `@source` directives for its own component package
- * (e.g. `@source "../../packages/demo-ui/src/**"`) — the engine's safelist only
- * covers the engine package's compiled output, never consumer code.
+ * CONSUMER CSS: keep this stylesheet unlayered, after zudo-doc feature
+ * styles. withZudoSg() registers wind.json and merges the engine's utility
+ * tokens automatically. Host wind.sources cover consumer component code.
+ * Chrome colors use raw --sg-* defaults; override them with ordinary :root
+ * declarations. Utilities are placed before authored CSS by the wind policy.
  *
  * Combines what used to be two host files:
  *   - src/features/styleguide/styles.css   (#sg-code-panel layout / sticky /
@@ -28,6 +22,14 @@
  * kept in the same relative order so the cascade is unchanged from before the
  * move.
  * ========================================================================== */
+
+/* Engine visibility hooks must beat utility display rules in every host. */
+[data-sg-tile][hidden],
+[data-sg-section][hidden],
+[data-sg-empty][hidden],
+#sg-preview-tokens-trigger[hidden] {
+  display: none;
+}
 
 /* #797: plain properties survive the framework color reset; zero specificity
  * lets an unlayered host :root override win in either import order. */
@@ -332,6 +334,10 @@
 /* One page-level toolbar owns theme / viewport / layout / code-panel /
  * preview-tokens for every stage below it (see preview/detail-workbench.tsx).
  */
+.sg-workbench-toolbar-actions {
+  margin-inline-start: auto;
+}
+
 .sg-workbench-toolbar {
   display: flex;
   flex-wrap: wrap;

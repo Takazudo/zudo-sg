@@ -1,4 +1,4 @@
-@theme {
+:root {
   --brand-100: oklch(0.94 0.08 45);
   --brand-500: oklch(0.56 0.18 45);
   --signal-calm: oklch(0.7 0.12 205);

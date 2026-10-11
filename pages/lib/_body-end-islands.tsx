@@ -1,39 +1,13 @@
-/** @jsxRuntime automatic */
-/** @jsxImportSource preact */
-// Host-side body-end islands helper.
-//
-// Wave 8 (Path A — super-epic #1333 / child epic #1355) drops the local
-// SSR-skip wrapper functions in `@takazudo/zudo-doc/ssr-skip` and uses
-// zfb's native `<Island ssrFallback={...}>` API directly with the real
-// component constructors imported by the host.
-//
-// The previous indirection (page → wrapper → placeholder div) created an
-// orphan-component bug: the real components were `"use client"` modules
-// that no page module ever imported transitively, so zfb's island scanner
-// never walked page → real-component, the manifest never bound the marker
-// to the real constructor, and the bundle never contained the real
-// component body. PR #150 to zfb fixed the marker-name alignment but the
-// orphan problem stayed — see issue zudolab/zudo-doc#1355 Wave 7 report.
-//
-// This helper is the page → real-component import chain the scanner
-// needs. Each island below is composed with zfb's `<Island>` wrapper,
-// which emits `<div data-zfb-island-skip-ssr="<ComponentName>">…</div>`
-// at SSR (zfb's `captureComponentName` derives the marker from
-// `child.displayName ?? child.name`). Because the page imports this
-// file, and this file imports the real components, the scanner walks
-// page → helper → real component and registers the constructor under
-// the SSR marker name.
-//
-// Pattern mirrors `_header-with-defaults.tsx`: the JSX-shim widens
-// `Island`'s return type to `unknown`, so call-sites cast through
-// `as unknown as VNode` at the boundary.
+// Static server boundary: real client imports keep every Island target visible
+// to zfb's scanner, including the engine preview panel on package-owned routes.
 
-import type { VNode, JSX } from "preact";
+import type { JSX } from "@takazudo/zfb/zudo-react/jsx-runtime";
 import { Island } from "@takazudo/zfb";
 import { settings } from "@/config/settings";
 import { SidebarResizerInit } from "@takazudo/zudo-doc/sidebar-resizer";
 import { PageLoadingOverlay } from "@takazudo/zudo-doc/page-loading";
 import { AFTER_NAVIGATE_EVENT, BEFORE_NAVIGATE_EVENT } from "@takazudo/zudo-doc/transitions";
+import { TRANSITION_BEFORE_SWAP } from "@takazudo/zfb-runtime/client-router";
 
 // #113: adopt the package enlarge/ai-chat islands directly (the former
 // src/components/{image-enlarge,mermaid-enlarge,ai-chat-modal} forks were
@@ -49,17 +23,6 @@ import ClientRouterBootstrap from "@/components/client-router-bootstrap";
 import PreviewTokenPanelBootstrap from "@takazudo/zudo-sg/token-tweak/preview-token-panel-bootstrap";
 import { previewTokenPanelCaptureScript } from "@takazudo/zudo-sg/token-tweak";
 
-// Set explicit `displayName` on each host-defined island so zfb's
-// `captureComponentName` produces a stable marker even after the SSR
-// pipeline runs the components through a function-name-rewriting layer.
-// The marker must match the third-arg literal that zfb's scanner records
-// for the same source-level identifier (zfb PR #150). esbuild preserves
-// function names by default, but the explicit assignment is a
-// belt-and-braces guard for production minification regressions.
-(PreviewTokenPanelBootstrap as { displayName?: string }).displayName = "PreviewTokenPanelBootstrap";
-(ClientRouterBootstrap as { displayName?: string }).displayName =
-  "ClientRouterBootstrap";
-
 /**
  * Default sr-only label rendered as the AiChatModal SSR fallback. This
  * mirrors the body-label string the deleted `AiChatModalIsland` wrapper
@@ -70,17 +33,36 @@ import { previewTokenPanelCaptureScript } from "@takazudo/zudo-sg/token-tweak";
  */
 const DEFAULT_AI_CHAT_BODY_LABEL = "Ask a question about the documentation.";
 
-const SIDEBAR_SCROLL_RESTORE_SCRIPT = `(${function sidebarScrollRestore(
-  beforeEvent: string,
-  afterEvent: string,
-) {
-  const w = window as Window & { __zdSidebarScrollRestoreInstalled?: boolean };
+// Keep inline source literal: serialized compiled functions can capture esbuild helpers.
+const SIDEBAR_SCROLL_RESTORE_SCRIPT = `(function sidebarScrollRestore(beforeEvent, afterEvent) {
+  const w = window;
   if (w.__zdSidebarScrollRestoreInstalled) return;
   w.__zdSidebarScrollRestoreInstalled = true;
 
   let savedScrollTop = 0;
-  let restoreTimer: ReturnType<typeof setTimeout> | undefined;
-  const sidebar = () => document.querySelector<HTMLElement>("#desktop-sidebar");
+  let restoreTimer;
+  const sidebar = () => document.querySelector("#desktop-sidebar");
+
+  // zudo-doc 6 checks live/SSR structure before retaining a boundary. Its
+  // resizer appends a live-only child; normalize just that known difference.
+  document.addEventListener(${JSON.stringify(TRANSITION_BEFORE_SWAP)}, (event) => {
+    const live = sidebar();
+    const incoming = event.newDocument?.querySelector("#desktop-sidebar");
+    if (!live || !incoming || !live.getAttribute("data-zfb-transition-persist") ||
+        live.getAttribute("data-zfb-transition-persist") !== incoming.getAttribute("data-zfb-transition-persist")) return;
+    const handles = [...live.children].filter((child) => child.hasAttribute("data-sidebar-resizer"));
+    if (handles.length !== 1 || incoming.querySelector("[data-sidebar-resizer]")) return;
+    const handle = handles[0];
+    const placeholder = incoming.ownerDocument.createElement(handle.localName);
+    if (handle.id) placeholder.id = handle.id;
+    placeholder.setAttribute("data-sg-sidebar-resizer-shape", "");
+    incoming.insertBefore(placeholder, incoming.children[[...live.children].indexOf(handle)] ?? null);
+    queueMicrotask(() => placeholder.remove());
+  });
+  // A legitimate replacement still gets a real, wired resizer from the package.
+  document.addEventListener(afterEvent, () => {
+    document.querySelectorAll("[data-sg-sidebar-resizer-shape]").forEach((node) => node.remove());
+  }, true);
 
   document.addEventListener(beforeEvent, () => {
     if (restoreTimer !== undefined) {
@@ -97,12 +79,14 @@ const SIDEBAR_SCROLL_RESTORE_SCRIPT = `(${function sidebarScrollRestore(
       if (aside) aside.scrollTop = savedScrollTop;
     }, 50);
   });
-}.toString()})(${JSON.stringify(BEFORE_NAVIGATE_EVENT)},${JSON.stringify(AFTER_NAVIGATE_EVENT)});`;
+})(${JSON.stringify(BEFORE_NAVIGATE_EVENT)},${JSON.stringify(AFTER_NAVIGATE_EVENT)});`;
 
 /** Props for {@link BodyEndIslands}. */
 export interface BodyEndIslandsProps {
   /** Base path the AI chat modal uses to construct API URLs. */
   basePath: string;
+  /** Asset image pages must mount enlarge even when the site setting is off. */
+  forceImageEnlarge?: boolean;
   /**
    * Sr-only label rendered as the AiChatModal SSR fallback. Defaults to
    * the English string. Pass a locale-translated string for non-default
@@ -138,6 +122,7 @@ export interface BodyEndIslandsProps {
  */
 export function BodyEndIslands({
   basePath,
+  forceImageEnlarge = false,
   aiChatBodyLabel = DEFAULT_AI_CHAT_BODY_LABEL,
 }: BodyEndIslandsProps): JSX.Element {
   // Gated on `settings.aiAssistant` (zudolab/zudo-doc#2058): when the AI
@@ -160,12 +145,9 @@ export function BodyEndIslands({
           readers can discover the chat section landmark before JS
           hydration. */}
       <h2 class="sr-only">AI Assistant</h2>
-      {
-        Island({
-          ssrFallback: <p class="sr-only">{aiChatBodyLabel}</p>,
-          children: <AiChatModal basePath={basePath} />,
-        }) as unknown as VNode
-      }
+      <Island when="load" ssrFallback={<p class="sr-only">{aiChatBodyLabel}</p>}>
+        <AiChatModal basePath={basePath} />
+      </Island>
     </>
   ) : null;
 
@@ -179,12 +161,8 @@ export function BodyEndIslands({
   // zd-enlarge-dialog element" assertion sees zero (skip-ssr placeholders are
   // empty divs) and the no-JS path has no dialog at all. Hydration replaces
   // this shell with the real ImageEnlarge component when the page goes idle.
-  const imageEnlarge = settings.imageEnlarge
-    ? (Island({
-        when: "idle",
-        ssrFallback: <ImageEnlargeSsrFallback />,
-        children: <ImageEnlarge />,
-      }) as unknown as VNode)
+  const imageEnlarge = settings.imageEnlarge || forceImageEnlarge
+    ? (<Island when="idle" ssrFallback={<ImageEnlargeSsrFallback />}><ImageEnlarge /></Island>)
     : null;
 
   // Gated on `settings.mermaid`. Mirrors the imageEnlarge block: the SSR
@@ -194,11 +172,7 @@ export function BodyEndIslands({
   // override), mermaid renders client-side, so this island injects the enlarge
   // button into each rendered diagram container itself.
   const mermaidEnlarge = settings.mermaid
-    ? (Island({
-        when: "idle",
-        ssrFallback: <MermaidEnlargeSsrFallback />,
-        children: <MermaidEnlarge />,
-      }) as unknown as VNode)
+    ? (<Island when="idle" ssrFallback={<MermaidEnlargeSsrFallback />}><MermaidEnlarge /></Island>)
     : null;
 
   return (
@@ -206,13 +180,8 @@ export function BodyEndIslands({
       {settings.dynamicPageTransition ? (
         <>
           <PageLoadingOverlay />
-          <script dangerouslySetInnerHTML={{ __html: SIDEBAR_SCROLL_RESTORE_SCRIPT }} />
-          {
-            Island({
-              when: "load",
-              children: <ClientRouterBootstrap />,
-            }) as unknown as VNode
-          }
+          <script rawHtml={SIDEBAR_SCROLL_RESTORE_SCRIPT} />
+          <Island when="load"><ClientRouterBootstrap /></Island>
         </>
       ) : null}
       {aiAssistant}
@@ -222,12 +191,9 @@ export function BodyEndIslands({
       {/* Package-owned capture is also installed by the public header trigger.
           This mount covers host-supplied triggers and runs before the island. */}
       <script
-        dangerouslySetInnerHTML={{ __html: previewTokenPanelCaptureScript() }}
+        rawHtml={previewTokenPanelCaptureScript()}
       />
-      {Island({
-        when: "load",
-        children: <PreviewTokenPanelBootstrap />,
-      }) as unknown as VNode}
+      <Island when="load"><PreviewTokenPanelBootstrap /></Island>
 
       {/* SidebarResizerInit: attach drag handle to #desktop-sidebar on load.
           Idempotent — safe on every page, including styleguide routes that

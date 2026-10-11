@@ -27,6 +27,21 @@
   line-height: var(--leading-relaxed);
 }
 
+/* MDX table cells remain intrinsic for zudo-react's table parser context. */
+.zd-content > table > :is(thead, tbody, tfoot) > tr > :is(th, td) {
+  text-align: left;
+  padding: var(--spacing-vsp-xs) var(--spacing-hsp-md);
+  border-bottom: 1px solid var(--color-border);
+  overflow-wrap: anywhere;
+}
+
+.zd-content > table > :is(thead, tbody, tfoot) > tr > th {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-fg);
+  background-color: var(--color-surface);
+  border-bottom-width: 2px;
+}
+
 /* Vertical rhythm between direct children; each element tunes --flow-space. */
 .zd-content > :where(* + *) {
   margin-top: var(--flow-space, var(--spacing-vsp-md));
@@ -99,3 +114,8 @@
   max-width: 100%;
   height: auto;
 }
+
+/* Keep the main content flexible while preserving its intrinsic basis. */
+.zc-demo-main { flex: 1 0 auto; }
+
+.zc-demo-skip-link { inset-inline-start: var(--spacing-hsp-md); }

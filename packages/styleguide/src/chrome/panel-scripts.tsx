@@ -1,5 +1,3 @@
-/** @jsxRuntime automatic */
-/** @jsxImportSource preact */
 // Inline blocking scripts for the styleguide panel chrome:
 //
 //   PanelStateHeadScript — runs in <head> BEFORE first paint. Restores the
@@ -21,13 +19,13 @@
 // it can be unit-tested and can import panel-contract.ts's constants). This
 // file is just the thin JSX wrapper.
 
-import type { JSX } from "preact";
+import type { JSX } from "@takazudo/zfb/zudo-react/jsx-runtime";
 import { RESIZER_SCRIPT, RESTORE_SCRIPT } from "./panel-scripts-source";
 
 export function PanelStateHeadScript(): JSX.Element {
-  return <script dangerouslySetInnerHTML={{ __html: RESTORE_SCRIPT }} />;
+  return <script rawHtml={RESTORE_SCRIPT} />;
 }
 
 export function PanelResizersInitScript(): JSX.Element {
-  return <script dangerouslySetInnerHTML={{ __html: RESIZER_SCRIPT }} />;
+  return <script rawHtml={RESIZER_SCRIPT} />;
 }

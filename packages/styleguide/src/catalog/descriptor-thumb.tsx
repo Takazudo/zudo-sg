@@ -1,5 +1,3 @@
-/** @jsxRuntime automatic */
-/** @jsxImportSource preact */
 // Descriptor-mode catalog thumbnails (epic #879, E3). A descriptor-mode
 // registry has no story to render server-side (its stories may come from a
 // foreign framework), so a tile here is built from the `ThumbnailDescriptor`
@@ -7,13 +5,13 @@
 // or, when the host gave nothing at all, a labelled "missing" note. Never a
 // blank tile.
 //
-// This module deliberately imports NOTHING from `preact-render-to-string` (or
+// This module deliberately imports NOTHING from `@takazudo/zfb/zudo-react/server` (or
 // anything that pulls it in). That keeps the split from `component-thumb.tsx`
 // visible in the file graph, not just in a runtime `if`: the module-mode SSR
 // renderer lives in one file, the descriptor branch in another, and only
 // `catalog-thumb.tsx` ever imports both.
 
-import type { JSX } from "preact";
+import type { JSX } from "@takazudo/zfb/zudo-react/jsx-runtime";
 import type { DescriptorCatalogEntry } from "../registry/catalog.js";
 
 /** Note shown when a descriptor declares no `thumbnail` at all. */
@@ -71,5 +69,3 @@ export function DescriptorThumb({ entry, base = "" }: DescriptorThumbProps): JSX
     </div>
   );
 }
-
-DescriptorThumb.displayName = "DescriptorThumb";

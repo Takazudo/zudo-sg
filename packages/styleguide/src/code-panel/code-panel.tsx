@@ -13,8 +13,7 @@
 // Props are JSON-serializable strings (island boundary), so the panel takes the
 // pre-resolved source strings, not the Story objects.
 
-import type { JSX } from "preact";
-import { useId, useRef, useState } from "preact/hooks";
+import { computed, For, getScope, signal } from "@takazudo/zfb/zudo-react";
 import SourceEditor from "./source-editor.js";
 import CopyButton from "./copy-button.js";
 import { injectCssToAllPreviews } from "./css-injection.js";
@@ -35,8 +34,7 @@ export interface CodePanelProps {
   /**
    * Story slug, used to build stable variant-tab/tabpanel ids that match
    * SSR output (mirrors `DetailWorkbench`'s `tabsId`). Falls back to
-   * `useId()` when the host doesn't pass one — still unique per page, just
-   * not stable across an SSR/hydration boundary.
+   * a deterministic title-derived id when the host does not pass one.
    */
   slug?: string;
 }
@@ -51,24 +49,23 @@ export default function CodePanel({
   variants,
   previewUrl,
   slug,
-}: CodePanelProps): JSX.Element {
-  const [activeVariant, setActiveVariant] = useState(
-    variants[0]?.exportName ?? "",
-  );
-  const debounceRef = useRef<number | undefined>(undefined);
-  const reactId = useId();
-  const tabsId = `sg-code-panel-${slug ?? reactId}`;
-
-  const foundIndex = variants.findIndex((v) => v.exportName === activeVariant);
-  const activeIndex = foundIndex >= 0 ? foundIndex : 0;
-  const active = variants[activeIndex];
+}: CodePanelProps) {
+  const activeVariant = signal(variants[0]?.exportName ?? "");
+  const activeIndex = computed(() => Math.max(0, variants.findIndex((v) => v.exportName === activeVariant.value)));
+  const active = computed(() => variants[activeIndex.value]);
+  const activeItems = computed(() => active.value ? [active.value] : []);
+  let debounce: number | undefined;
+  getScope().onActivate(() => () => window.clearTimeout(debounce));
+  // Deterministic fallback agrees between SSR and hydration; hosts should pass
+  // a unique slug when rendering multiple panels for the same story title.
+  const tabsId = `sg-code-panel-${slug ?? encodeURIComponent(storyTitle)}`;
 
   const tabId = (index: number): string => `${tabsId}-tab-${index}`;
   const panelId = `${tabsId}-panel`;
 
   function handleCssChange(css: string): void {
-    window.clearTimeout(debounceRef.current);
-    debounceRef.current = window.setTimeout(() => {
+    window.clearTimeout(debounce);
+    debounce = window.setTimeout(() => {
       injectCssToAllPreviews("live", css, previewUrl);
     }, 250);
   }
@@ -80,7 +77,7 @@ export default function CodePanel({
       variants.length,
       (next) => {
         const target = variants[next];
-        if (target) setActiveVariant(target.exportName);
+        if (target) activeVariant.value = target.exportName;
       },
       (next) => {
         const tablist = (e.currentTarget as HTMLElement).parentElement;
@@ -93,36 +90,37 @@ export default function CodePanel({
     <div class="flex h-full flex-col gap-vsp-md p-hsp-md">
       <div>
         <div class="flex items-center justify-between gap-hsp-sm">
-          <h2 class="text-small font-semibold uppercase tracking-wide text-[color:var(--sg-muted)]">
+          <h2 class="text-small font-semibold uppercase tracking-wide text-sg-muted">
             Source
           </h2>
-          {active && <CopyButton text={active.source} label="Copy source" />}
+          <For each={activeItems} by={(v) => v.exportName}>{(v) => (
+            <CopyButton text={v.value.source} label="Copy source" />
+          )}</For>
         </div>
         {variants.length > 1 && (
           <div
             role="tablist"
             aria-label="Source variant"
-            class="mt-vsp-2xs flex flex-wrap gap-hsp-3xs"
+            class="mt-vsp-2xs flex flex-wrap gap-hsp-2xs"
           >
             {variants.map((v, index) => {
-              const selected = index === activeIndex;
+              const selected = computed(() => index === activeIndex.value);
               return (
                 <button
-                  key={v.exportName}
                   id={tabId(index)}
                   type="button"
                   role="tab"
                   aria-selected={selected}
                   aria-controls={panelId}
-                  tabIndex={selected ? 0 : -1}
-                  onClick={() => setActiveVariant(v.exportName)}
-                  onKeyDown={(e) => onTabKeyDown(e, index)}
-                  class={
+                  tabindex={computed(() => selected.value ? 0 : -1)}
+                  on:click={() => { activeVariant.value = v.exportName; }}
+                  on:keydown={(e) => onTabKeyDown(e, index)}
+                  class={computed(() =>
                     "px-hsp-xs py-vsp-3xs text-xs rounded-sm border transition-colors " +
-                    (selected
-                      ? "border-[color:var(--sg-accent)] bg-[var(--sg-accent)] text-[color:var(--sg-on-accent)]"
-                      : "border-[color:var(--sg-border)] text-[color:var(--sg-muted)] hover:text-[color:var(--sg-fg)]")
-                  }
+                    (selected.value
+                      ? "border-sg-accent bg-sg-accent text-sg-on-accent"
+                      : "border-sg-border text-sg-muted hover:text-sg-fg")
+                  )}
                 >
                   {v.name}
                 </button>
@@ -130,7 +128,7 @@ export default function CodePanel({
             })}
           </div>
         )}
-        {active && (
+        {variants.length > 0 && (
           <div
             class="sg-code-source mt-vsp-xs"
             data-sg-code-region="source"
@@ -138,32 +136,27 @@ export default function CodePanel({
               ? {
                   id: panelId,
                   role: "tabpanel",
-                  "aria-labelledby": tabId(activeIndex),
+                  "aria-labelledby": computed(() => tabId(activeIndex.value)),
                 }
               : {})}
           >
-            {/* key remounts SourceEditor per variant: it creates its CodeMirror
-                view once and never diffs `value` (see source-editor.tsx), so
-                without a key switching tabs kept showing the first variant's
-                source (#105). This wrapper's own id/role/aria-labelledby stay
-                on the OUTER div, outside the key, so they don't reset when the
-                keyed child remounts (#900). */}
-            <SourceEditor
-              key={active.exportName}
-              value={active.source}
-              language="tsx"
-              editable={false}
-              label={`Source code for ${storyTitle}: ${active.name}`}
-            />
+            <For each={activeItems} by={(v) => v.exportName}>{(v) => (
+              <SourceEditor
+                value={v.value.source}
+                language="tsx"
+                editable={false}
+                label={`Source code for ${storyTitle}: ${v.value.name}`}
+              />
+            )}</For>
           </div>
         )}
       </div>
 
       <div class="sg-code-live-css flex min-h-0 flex-1 flex-col" data-sg-code-region="live-css">
-        <h2 class="text-small font-semibold uppercase tracking-wide text-[color:var(--sg-muted)]">
+        <h2 class="text-small font-semibold uppercase tracking-wide text-sg-muted">
           Live CSS
         </h2>
-        <p class="mt-vsp-3xs text-xs text-[color:var(--sg-muted)]">
+        <p class="mt-vsp-3xs text-xs text-sg-muted">
           Injected into the previews above. {storyTitle}
         </p>
         <div class="mt-vsp-xs min-h-0 flex-1">
@@ -179,7 +172,3 @@ export default function CodePanel({
     </div>
   );
 }
-
-// Pin the hydration name explicitly (matches every other island in this
-// feature) rather than relying on the minifier preserving `fn.name`.
-CodePanel.displayName = "CodePanel";

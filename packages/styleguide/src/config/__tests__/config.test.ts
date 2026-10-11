@@ -78,7 +78,7 @@ describe("zudoSg()", () => {
       },
       {
         name: PREVIEW_CSS_PLUGIN_NAME,
-        options: { previewStyles: "./src/styles/preview-entry.css", previewCssUrl: "/_zudo-sg/preview.css" },
+        options: { previewStyles: "./src/styles/preview-entry.css", previewCssUrl: "/_zudo-sg/preview.css", componentsRoots: OPTIONS.componentsRoots },
       },
       {
         name: ZDTP_APPLY_PROXY_PLUGIN_NAME,
@@ -99,7 +99,7 @@ describe("zudoSg()", () => {
   it("threads a custom previewCssUrl and routes into both consumers", () => {
     const { plugins } = zudoSg({ ...OPTIONS, previewCssUrl: "/x/preview.css", routes: { tokens: "/design" } });
     expect(plugins[0]?.options).toMatchObject({ previewCssUrl: "/x/preview.css", routes: { tokens: "/design" } });
-    expect(plugins[1]?.options).toEqual({
+    expect(plugins[1]?.options).toMatchObject({
       previewStyles: "./src/styles/preview-entry.css",
       previewCssUrl: "/x/preview.css",
     });
@@ -589,5 +589,20 @@ describe("config module purity", () => {
     const source = readFileSync(resolve(HERE, "../index.ts"), "utf8");
     expect(source).not.toMatch(/from\s+["']node:/);
     expect(source).not.toMatch(/import\s*\(\s*["']node:/);
+  });
+});
+
+
+describe("wind composition", () => {
+  it("merges categories with host values last and registers engine manifest automatically", () => {
+    const host = { plugins: [] as { name: string; options?: Record<string, unknown> }[], wind: { tokens: { colors: { "sg-accent": "hotpink", brand: "red" }, spacing: { host: "2rem" } }, sources: { roots: ["ui"] }, manifests: { host: { path: "./host.json" } } } };
+    const merged = withZudoSg(host, OPTIONS);
+    const wind = merged.wind as typeof host.wind;
+    expect(wind.tokens.colors).toMatchObject({ "sg-accent": "hotpink", "sg-bg": "var(--sg-bg)", brand: "red" });
+    expect(wind.tokens.spacing).toMatchObject({ host: "2rem", "hsp-md": "var(--spacing-hsp-md)" });
+    expect(wind.sources).toEqual(host.wind.sources);
+    expect(wind.manifests).toMatchObject({ host: { path: "./host.json" }, "zudo-sg": { path: "@takazudo/zudo-sg/wind.json" } });
+    expect(merged.plugins.find(p => p.name === PREVIEW_CSS_PLUGIN_NAME)?.options).toMatchObject({ wind: merged.wind, componentsRoots: OPTIONS.componentsRoots });
+    expect(host.wind.tokens.colors).toEqual({ "sg-accent": "hotpink", brand: "red" });
   });
 });

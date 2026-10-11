@@ -20,7 +20,7 @@ import { ProseUl } from "../prose-ul/prose-ul";
 import { ProseOl } from "../prose-ol/prose-ol";
 import { ProseLi } from "../prose-li/prose-li";
 import { ProseBlockquote } from "../prose-blockquote/prose-blockquote";
-import { ProseTable, ProseTh, ProseTd } from "../prose-table/prose-table";
+import { ProseTable } from "../prose-table/prose-table";
 import { ProseDl, ProseDt, ProseDd } from "../prose-dl/prose-dl";
 
 const meta: StoryMeta = {
@@ -39,7 +39,7 @@ export default meta;
 export const AllElements: Story = {
   name: "All elements",
   render: () => (
-    <div style={{ maxWidth: "760px" }}>
+    <div style={{ "max-width": "760px" }}>
       <ProseH2>Heading 2 — section</ProseH2>
       <ProseP>
         This is body copy (p). The Prose* components format MDX's general
@@ -92,26 +92,86 @@ export const AllElements: Story = {
       <ProseTable>
         <thead>
           <tr>
-            <ProseTh>Token</ProseTh>
-            <ProseTh>Purpose</ProseTh>
-            <ProseTh>Value</ProseTh>
+            <th
+              class="font-semibold text-fg bg-surface text-left py-vsp-xs px-hsp-md border-b-2 border-b-border"
+              style={{ "overflow-wrap": "anywhere" }}
+            >
+              Token
+            </th>
+            <th
+              class="font-semibold text-fg bg-surface text-left py-vsp-xs px-hsp-md border-b-2 border-b-border"
+              style={{ "overflow-wrap": "anywhere" }}
+            >
+              Purpose
+            </th>
+            <th
+              class="font-semibold text-fg bg-surface text-left py-vsp-xs px-hsp-md border-b-2 border-b-border"
+              style={{ "overflow-wrap": "anywhere" }}
+            >
+              Value
+            </th>
           </tr>
         </thead>
         <tbody>
           <tr>
-            <ProseTd>color-bg</ProseTd>
-            <ProseTd>Page background</ProseTd>
-            <ProseTd>white</ProseTd>
+            <td
+              class="text-left py-vsp-xs px-hsp-md border-b border-b-border"
+              style={{ "overflow-wrap": "anywhere" }}
+            >
+              color-bg
+            </td>
+            <td
+              class="text-left py-vsp-xs px-hsp-md border-b border-b-border"
+              style={{ "overflow-wrap": "anywhere" }}
+            >
+              Page background
+            </td>
+            <td
+              class="text-left py-vsp-xs px-hsp-md border-b border-b-border"
+              style={{ "overflow-wrap": "anywhere" }}
+            >
+              white
+            </td>
           </tr>
           <tr>
-            <ProseTd>color-surface</ProseTd>
-            <ProseTd>Card surface</ProseTd>
-            <ProseTd>light-grey</ProseTd>
+            <td
+              class="text-left py-vsp-xs px-hsp-md border-b border-b-border"
+              style={{ "overflow-wrap": "anywhere" }}
+            >
+              color-surface
+            </td>
+            <td
+              class="text-left py-vsp-xs px-hsp-md border-b border-b-border"
+              style={{ "overflow-wrap": "anywhere" }}
+            >
+              Card surface
+            </td>
+            <td
+              class="text-left py-vsp-xs px-hsp-md border-b border-b-border"
+              style={{ "overflow-wrap": "anywhere" }}
+            >
+              light-grey
+            </td>
           </tr>
           <tr>
-            <ProseTd>color-accent</ProseTd>
-            <ProseTd>Accent</ProseTd>
-            <ProseTd>blue</ProseTd>
+            <td
+              class="text-left py-vsp-xs px-hsp-md border-b border-b-border"
+              style={{ "overflow-wrap": "anywhere" }}
+            >
+              color-accent
+            </td>
+            <td
+              class="text-left py-vsp-xs px-hsp-md border-b border-b-border"
+              style={{ "overflow-wrap": "anywhere" }}
+            >
+              Accent
+            </td>
+            <td
+              class="text-left py-vsp-xs px-hsp-md border-b border-b-border"
+              style={{ "overflow-wrap": "anywhere" }}
+            >
+              blue
+            </td>
           </tr>
         </tbody>
       </ProseTable>
@@ -130,7 +190,7 @@ export const AllElements: Story = {
 export const Headings: Story = {
   name: "Headings (h2-h6 scale)",
   render: () => (
-    <div style={{ maxWidth: "760px" }}>
+    <div style={{ "max-width": "760px" }}>
       <ProseH2>h2 heading — section title</ProseH2>
       <ProseH3>h3 heading — subsection</ProseH3>
       <ProseH4>h4 heading — detail</ProseH4>
@@ -143,7 +203,7 @@ export const Headings: Story = {
 export const TextFormatting: Story = {
   name: "Text formatting",
   render: () => (
-    <div style={{ maxWidth: "760px" }}>
+    <div style={{ "max-width": "760px" }}>
       <ProseP>Regular paragraph text. Line-height holds up across wraps.</ProseP>
       <ProseP>
         <ProseStrong>strong</ProseStrong> is bold, <ProseEm>em</ProseEm> is
@@ -163,7 +223,7 @@ export const TextFormatting: Story = {
 export const Lists: Story = {
   name: "Lists (ul / ol / nested)",
   render: () => (
-    <div style={{ maxWidth: "760px" }}>
+    <div style={{ "max-width": "760px" }}>
       <ProseH3>Unordered</ProseH3>
       <ProseUl>
         <ProseLi>Item one</ProseLi>
@@ -187,25 +247,70 @@ export const Lists: Story = {
 export const Table: Story = {
   name: "Table",
   render: () => (
-    <div style={{ maxWidth: "760px" }}>
+    <div style={{ "max-width": "760px" }}>
       <ProseTable>
         <thead>
           <tr>
-            <ProseTh>Column A</ProseTh>
-            <ProseTh>Column B</ProseTh>
-            <ProseTh>Column C</ProseTh>
+            <th
+              class="font-semibold text-fg bg-surface text-left py-vsp-xs px-hsp-md border-b-2 border-b-border"
+              style={{ "overflow-wrap": "anywhere" }}
+            >
+              Column A
+            </th>
+            <th
+              class="font-semibold text-fg bg-surface text-left py-vsp-xs px-hsp-md border-b-2 border-b-border"
+              style={{ "overflow-wrap": "anywhere" }}
+            >
+              Column B
+            </th>
+            <th
+              class="font-semibold text-fg bg-surface text-left py-vsp-xs px-hsp-md border-b-2 border-b-border"
+              style={{ "overflow-wrap": "anywhere" }}
+            >
+              Column C
+            </th>
           </tr>
         </thead>
         <tbody>
           <tr>
-            <ProseTd>1</ProseTd>
-            <ProseTd>2</ProseTd>
-            <ProseTd>3</ProseTd>
+            <td
+              class="text-left py-vsp-xs px-hsp-md border-b border-b-border"
+              style={{ "overflow-wrap": "anywhere" }}
+            >
+              1
+            </td>
+            <td
+              class="text-left py-vsp-xs px-hsp-md border-b border-b-border"
+              style={{ "overflow-wrap": "anywhere" }}
+            >
+              2
+            </td>
+            <td
+              class="text-left py-vsp-xs px-hsp-md border-b border-b-border"
+              style={{ "overflow-wrap": "anywhere" }}
+            >
+              3
+            </td>
           </tr>
           <tr>
-            <ProseTd>4</ProseTd>
-            <ProseTd>5</ProseTd>
-            <ProseTd>6</ProseTd>
+            <td
+              class="text-left py-vsp-xs px-hsp-md border-b border-b-border"
+              style={{ "overflow-wrap": "anywhere" }}
+            >
+              4
+            </td>
+            <td
+              class="text-left py-vsp-xs px-hsp-md border-b border-b-border"
+              style={{ "overflow-wrap": "anywhere" }}
+            >
+              5
+            </td>
+            <td
+              class="text-left py-vsp-xs px-hsp-md border-b border-b-border"
+              style={{ "overflow-wrap": "anywhere" }}
+            >
+              6
+            </td>
           </tr>
         </tbody>
       </ProseTable>
@@ -216,7 +321,7 @@ export const Table: Story = {
 export const QuoteAndDefinitionList: Story = {
   name: "Blockquote and definition list",
   render: () => (
-    <div style={{ maxWidth: "760px" }}>
+    <div style={{ "max-width": "760px" }}>
       <ProseBlockquote>
         <ProseP>A blockquote is set apart with a left rule and muted text.</ProseP>
       </ProseBlockquote>

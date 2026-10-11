@@ -1,4 +1,4 @@
-import type { ComponentChildren } from "preact";
+import type { Child } from "@takazudo/zfb/zudo-react";
 import type { StoryMeta, Story } from "../../stories/types";
 import type { NavSection } from "../site-nav/site-nav";
 import { SiteHeader } from "../site-header/site-header";
@@ -33,11 +33,11 @@ const SECTIONS: NavSection[] = [
   },
 ];
 
-function HeaderFrame({ children }: { children: ComponentChildren }) {
+function HeaderFrame({ children }: { children: Child }) {
   return (
-    <div style={{ position: "relative", minHeight: "20rem", border: "1px solid var(--color-border)", borderRadius: "var(--radius-md)", overflow: "hidden" }}>
+    <div style={{ position: "relative", "min-height": "20rem", border: "1px solid var(--color-border)", "border-radius": "var(--radius-md)", overflow: "hidden" }}>
       {children}
-      <p style={{ margin: "var(--spacing-vsp-sm) var(--spacing-hsp-xl)", fontSize: "var(--text-caption)", color: "var(--color-muted)" }}>
+      <p style={{ margin: "var(--spacing-vsp-sm) var(--spacing-hsp-xl)", "font-size": "var(--text-caption)", color: "var(--color-muted)" }}>
         Click Browse to pin the category walk open, click outside (or press Escape) to close.
       </p>
     </div>

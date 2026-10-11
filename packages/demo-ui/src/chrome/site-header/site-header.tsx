@@ -1,11 +1,11 @@
-import type { ComponentChildren } from "preact";
+import type { Child } from "@takazudo/zfb/zudo-react";
 import { cx } from "../../lib/cx";
 import type { NavSection } from "../site-nav/site-nav";
 
 /**
  * Disclosure a11y-hook contract shared with `context-switcher-enhancer` and
  * `search-toggle-enhancer` (packages/demo-ui/src/chrome/*-enhancer). Both panels
- * open with pure CSS (`group-hover`/`focus-within` below) — the enhancers only
+ * open with pure CSS (`.zc-context-switcher` hover/focus-within selectors below) — the enhancers only
  * layer on `aria-expanded` sync, click-to-pin, and Escape/outside-click close.
  * Renaming any `data-ctx-*` / `data-search-*` attribute here must be mirrored
  * in the matching enhancer's `document.querySelector`.
@@ -25,7 +25,7 @@ export type SiteHeaderProps = {
   /** The current `getSiteTree(line).sections` data, shared with SiteNav. */
   sections?: NavSection[];
   /** Client-island control supplied by the host; SiteHeader stays framework-neutral. */
-  desktopThemeControl?: ComponentChildren;
+  desktopThemeControl?: Child;
   class?: string;
 };
 
@@ -78,7 +78,7 @@ export function SiteHeader({
         <span class="flex-auto" aria-hidden="true" />
 
         <nav class="flex items-center gap-hsp-md text-small" aria-label="Utility">
-          <div class="group/search flex items-center">
+          <div class="zc-header-search flex items-center">
             <form role="search" action="/search" method="get" data-search-form class="flex items-center">
               <button
                 type="button"
@@ -97,7 +97,7 @@ export function SiteHeader({
                 data-search-input
                 placeholder="Search the site"
                 aria-label="Search keywords"
-                class="ml-0 w-0 origin-left overflow-hidden border-0 bg-transparent p-0 text-small text-rail-fg opacity-0 outline-none transition-[width,opacity,margin] placeholder:text-rail-muted focus-visible:outline-none group-focus-within/search:ml-hsp-xs group-focus-within/search:w-[12rem] group-focus-within/search:opacity-100"
+                class="zc-header-search-input ml-0 w-0 overflow-hidden border-0 bg-transparent p-0 text-small text-rail-fg opacity-0 outline-none transition-[width,opacity,margin] placeholder:text-rail-muted focus-visible:outline-none"
               />
               <button type="submit" class="sr-only">
                 Search
@@ -138,7 +138,7 @@ export function SiteHeader({
  */
 function BrowseDisclosure({ sections }: { sections: NavSection[] }) {
   return (
-    <div class="group/ctx flex h-[4rem] items-center">
+    <div class="zc-context-switcher flex h-[4rem] items-center">
       <button
         type="button"
         data-ctx-trigger
@@ -149,7 +149,7 @@ function BrowseDisclosure({ sections }: { sections: NavSection[] }) {
       >
         Browse
         <span
-          class="text-caption text-rail-muted transition-transform group-hover/ctx:rotate-180 group-focus-within/ctx:rotate-180"
+          class="zc-context-switcher-arrow text-caption text-rail-muted transition-transform"
           aria-hidden="true"
         >
           ▾
@@ -159,12 +159,10 @@ function BrowseDisclosure({ sections }: { sections: NavSection[] }) {
       <nav
         id={CTX_PANEL_ID}
         data-ctx-panel
-        class="invisible pointer-events-none absolute left-1/2 top-full z-ui-dropdown w-[min(calc(100vw-2rem),72rem)] -translate-x-1/2 -translate-y-[6px] border border-rail-border bg-rail-bg-strong opacity-0 shadow-[0_24px_48px_-24px_color-mix(in_srgb,var(--color-fg)_60%,transparent)] transition-[opacity,transform,visibility]
-          group-hover/ctx:visible group-hover/ctx:pointer-events-auto group-hover/ctx:translate-y-0 group-hover/ctx:opacity-100
-          group-focus-within/ctx:visible group-focus-within/ctx:pointer-events-auto group-focus-within/ctx:translate-y-0 group-focus-within/ctx:opacity-100"
+        class="invisible pointer-events-none absolute left-1/2 top-full z-ui-dropdown w-[min(calc(100vw_-_2rem),72rem)] border border-rail-border bg-rail-bg-strong opacity-0 shadow-[0_24px_48px_-24px_color-mix(in_srgb,var(--color-fg)_60%,transparent)] transition-[opacity,translate,visibility]"
         aria-label="Browse site sections"
       >
-        <div class="max-h-[min(32rem,calc(100dvh-4rem))] overflow-y-auto p-hsp-lg">
+        <div class="max-h-[min(32rem,calc(100dvh_-_4rem))] overflow-y-auto p-hsp-lg">
           <div class="grid grid-cols-[repeat(auto-fit,minmax(min(100%,16rem),1fr))] gap-x-hsp-xl gap-y-vsp-lg">
             {sections.map((section, index) => (
               <BrowseCategory key={`${section.label}-${index}`} section={section} index={index} />
@@ -188,7 +186,7 @@ function BrowseCategory({ section, index }: { section: NavSection; index: number
       <h2 id={labelId} class="mb-vsp-xs text-body font-bold text-rail-fg">
         {categoryHref ? (
           <a
-            class="rounded text-inherit no-underline underline-offset-4 hover:text-accent hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rail-fg"
+            class="zc-link-inherit rounded no-underline underline-offset-4 hover:text-accent hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rail-fg"
             href={categoryHref}
           >
             {section.label}

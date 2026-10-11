@@ -34,7 +34,7 @@ export type { FrontmatterCellRendererProps as FrontmatterRendererProps };
  * Add entries here to override how specific frontmatter fields are displayed.
  * Keys must match frontmatter field names exactly (case-sensitive).
  *
- * Each renderer is a function `(props: FrontmatterCellRendererProps) => ComponentChildren`.
+ * Each renderer is a function `(props: FrontmatterCellRendererProps) => Child`.
  * Return `null` or `undefined` to fall through to the built-in `renderValue()`
  * plain-text path.
  *

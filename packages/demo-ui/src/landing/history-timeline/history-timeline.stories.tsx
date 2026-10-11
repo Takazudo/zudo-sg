@@ -26,7 +26,7 @@ const ENTRIES: HistoryEntry[] = [
 export const Default: Story<HistoryTimelineProps> = {
   name: "Default",
   render: () => (
-    <div style={{ maxWidth: "560px" }}>
+    <div style={{ "max-width": "560px" }}>
       <HistoryTimeline entries={ENTRIES} />
     </div>
   ),
@@ -35,7 +35,7 @@ export const Default: Story<HistoryTimelineProps> = {
 export const RecentOnly: Story<HistoryTimelineProps> = {
   name: "Recent only (short list)",
   render: () => (
-    <div style={{ maxWidth: "560px" }}>
+    <div style={{ "max-width": "560px" }}>
       <HistoryTimeline
         entries={[
           { year: "2018", event: "Company founded." },

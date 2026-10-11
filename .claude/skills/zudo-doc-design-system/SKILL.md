@@ -1,13 +1,13 @@
 ---
 name: zudo-doc-design-system
-description: "Project-specific CSS and component rules for the zudo-sg styleguide: accent budget (≤2-3 accent elements per viewport, hover neutral by default), border ladder, 14px functional-text floor, component-first strategy, design tokens, three-tier color architecture, and palette index convention. Must be consulted before writing or editing CSS, Tailwind classes, color tokens, or component markup in this project. Triggered by 'design system', 'zudo-doc-design-system', 'zudo-doc-css-wisdom' (old name), 'accent budget'."
+description: "Project-specific CSS and component rules for the zudo-sg styleguide: accent budget (≤2-3 accent elements per viewport, hover neutral by default), border ladder, 14px functional-text floor, component-first strategy, design tokens, three-tier color architecture, and palette index convention. Must be consulted before writing or editing CSS, zudo-wind utilities, color tokens, or component markup in this project. Triggered by 'design system', 'zudo-doc-design-system', 'zudo-doc-css-wisdom' (old name), 'accent budget'."
 user-invocable: true
 argument-hint: "[topic: tokens, colors, component-first, palette, accent-budget]"
 ---
 
 # zudo-doc CSS & Component Rules
 
-**IMPORTANT**: These rules are mandatory for all code changes in this project that touch CSS, Tailwind classes, color tokens, or component markup. Read the relevant section before making changes.
+**IMPORTANT**: These rules are mandatory for all code changes in this project that touch CSS, zudo-wind utilities, color tokens, or component markup. Read the relevant section before making changes.
 
 ## Non-Negotiables (read first)
 
@@ -27,7 +27,7 @@ touching (see "Two Worlds" below for which is which):
 
 | Topic | File |
 |-------|------|
-| Doc-chrome tokens (root host: `--zd-*` palette, `text-fg`/`bg-surface`/etc., border ladder), Tailwind `@theme` | `src/styles/global.css` |
+| Doc-chrome tokens (root host: `--zd-*` palette, semantic utilities, border ladder) | `src/styles/global.css`, `zfb.config.ts` |
 | Shared spacing (`hsp-*`/`vsp-*`) + typography (Tier 1/2 `--text-*`) tokens | `packages/demo-ui/styles/tokens.css` |
 | `@zudo-sg/demo-ui` semantic colors (ink/paper/surface/line/brand/state), three-tier color system, consumption model | `packages/demo-ui/styles/colors.css`, `packages/demo-ui/STORIES.md` (§1 "How the package is consumed", §"Three-tier color system") |
 | Component-first / server-rendered-by-default methodology | root `CLAUDE.md` ("Components" section) |
@@ -36,18 +36,35 @@ Read ONLY the file(s) relevant to your task. Apply their rules strictly. (There 
 `src/content/docs/reference/` directory in this repo — those files don't exist; the rules
 below plus the source files above are the source of truth.)
 
+## CSS pipeline
+
+- zfb 4 composes the zudo-wind configuration from zudo-doc, the host's top-level
+  `wind` settings, and the engine's tokens. The root host's token mapping lives
+  in `zfb.config.ts`; CSS files provide the corresponding `:root` values.
+- `src/styles/global.css` declares `@layer zw-reset, zd-flow` and imports the
+  shared component tokens/styles, zudo-doc content styles, the dashboard styles,
+  and the engine stylesheet in the documented order.
+- `withZudoSg()` registers the engine's public `wind.json` manifest. Configure
+  host scans with `wind.sources`; use the independent `previewStyles` entry for
+  preview documents, compiled by the host's installed `zfb css` command.
+- Keep token overrides in the existing `:root` rules and utility mappings in
+  `wind.tokens`. Do not add a duplicate reset, a separate utility stylesheet,
+  or another theme path to work around the old color-reset behavior.
+
 ## Quick Rules (always apply)
 
-### Component First (no custom CSS classes)
+### Component first
 
-- **NEVER** create CSS module files, custom class names, or separate stylesheets
-- **ALWAYS** use Tailwind utility classes directly in component markup
-- The component itself is the abstraction — `.card`, `.btn-primary` are forbidden
-- Use props for variants, not CSS modifiers
+- Prefer configured zudo-wind utilities and reusable components over one-off
+  classes.
+- Use props for component variants where a component owns the behavior.
+- When a used utility form is unsupported, add a scoped, unlayered `zc-*` rule
+  in the category stylesheet, following `packages/demo-ui/STORIES.md`.
 
 ### Design Tokens (no arbitrary values)
 
-- **NEVER** use Tailwind default colors (`bg-gray-500`, `text-blue-600`) — they are reset to `initial`
+- Use only configured semantic colors; a utility is available only when it is
+  part of the composed wind token map or manifest.
 - **NEVER** use arbitrary values (`text-[0.875rem]`, `p-[1.2rem]`) when a token exists
 - **NEVER** use hardcoded hex values in components
 - Spacing (shared everywhere — root, `packages/demo-ui`, `apps/demo`): `hsp-*` (horizontal),
@@ -63,9 +80,12 @@ token file above. Know which world the file you're editing belongs to:
 
 - **Doc-chrome world** (root-only: `src/**`, `pages/**` — the styleguide host's own header,
   sidebar, search, doc prose, panels): colors come from `src/styles/global.css`'s `--zd-*` →
-  `--color-*` mapping. Utilities: `text-fg`, `bg-surface`, `border-border`, `text-accent`, plus the
-  raw `p0`–`p15` palette. Doc prose (`.zd-content`) consumes the Tier-2 typography aliases
-  (`text-body`, `text-caption`, ...) via `@takazudo/zudo-doc`'s `content.css`.
+  `--color-*` values, with the utility-name mapping in `zfb.config.ts`'s
+  `wind.tokens`. Use configured roles such as `text-fg`, `bg-surface`,
+  `border-border`, and `text-accent`. The raw `--palette-*` values are CSS
+  properties, not utility names. Doc prose (`.zd-content`) consumes the
+  Tier-2 typography aliases (`text-body`, `text-caption`, ...) from
+  `@takazudo/zudo-doc`'s `content.css`.
 - **UI-component world** (`packages/demo-ui/src/**`, also consumed by `apps/demo` and by the root's
   `/components/*` catalog): colors come from `packages/demo-ui/styles/colors.css`'s semantic tokens —
   `bg`, `surface`/`surface-2`, `border`, `fg`/`muted`, `accent`/`accent-hover`, `on-accent`,
@@ -79,24 +99,22 @@ token file above. Know which world the file you're editing belongs to:
   `packages/demo-ui/styles/tokens.css`'s header comment for the two-tier rationale.
 - Ten token **names** exist in both worlds (`bg`, `fg`, `surface`, `muted`, `accent`,
   `accent-hover`, `success`, `danger`, `warning`, `info` — widened from an original four when
-  the UI palette adopted these names). On root-host pages the doc-chrome `@theme` block in
-  `global.css` re-asserts all ten to the `--zd-*` values (source order wins), so a root-rendered
-  `@zudo-sg/demo-ui` component still matches the docs palette. In `apps/demo` (no re-assertion), the
-  same ten names resolve to `@zudo-sg/demo-ui`'s own values. The remaining UI-only names
-  (`surface-2`, `focus`, `on-accent`, `loading-scrim`, the `rail-*` family) are NOT re-asserted —
-  doc-chrome consumes none of them. **`border` is the one exception**:
-  doc-chrome now defines its own `--color-border` / `--color-border-strong` as LOCAL `@theme`
-  tokens in `global.css` — not a re-assertion of the UI package's value (that was an accidental
-  leak via import order, now closed off), but a deliberate first-class border-ladder addition
-  consumed by the `/components` styleguide catalog (regular docs pages still don't use it — see
-  the border ladder section below). Never assume a color utility means the
-  same thing in both worlds — check which file you're in.
+  the UI palette adopted these names). On root-host pages `global.css` declares these ten
+  `--color-*` properties after the shared colors stylesheet and points them at `--zd-*`, so
+  root-rendered `@zudo-sg/demo-ui` components match the docs palette. The root `wind.tokens`
+  map resolves their utility names through those live properties. In `apps/demo` (without those
+  declarations), the same ten names resolve to `@zudo-sg/demo-ui`'s own values. The remaining
+  UI-only names (`surface-2`, `focus`, `on-accent`, `loading-scrim`, the `rail-*` family) stay
+  with the component library. **`border` is the one exception**: root `global.css` declares
+  its own `--color-border` and `--color-border-strong` for the border ladder, which the root
+  wind map exposes to the catalog. Never assume a color utility means the same thing in both
+  worlds — check which host config and stylesheet provide it.
 - The chrome-free `/components/preview` iframe document (`<html data-sg-preview-doc>`) has no
   `--zd-*` injected, so it links a standalone preview stylesheet: `src/styles/preview-entry.css`
   (`previewStyles`), compiled by `@takazudo/zudo-sg/plugins/preview-css` and served/emitted at
   `/_zudo-sg/preview.css`. Its token roots are rescoped to `:root[data-sg-preview-doc]`, which
-  outranks the `:root` the host `@theme` re-assertion emits in the injected global bundle, so the
-  previewed components get `@zudo-sg/demo-ui`'s own palette while regular doc-chrome pages are untouched.
+  has greater specificity than the host's plain `:root` token rules, so the previewed components
+  get `@zudo-sg/demo-ui`'s own palette while regular doc-chrome pages are untouched.
 
 ### Color Tokens (three-tier system)
 
@@ -104,17 +122,16 @@ Both worlds follow the same three-tier shape (palette → semantic → component
 different concrete tokens:
 
 - **Doc-chrome** (`src/styles/global.css`):
-  - **Tier 1** (palette): `p0`–`p15` — raw colors, use only when no semantic token fits
-  - **Tier 2** (semantic): `text-fg`, `bg-surface`, `border-border`, `border-border-strong`, `text-accent` — prefer these
-  - Palette index convention (consistent across all schemes, see `src/config/color-schemes.ts`):
-    - p1=danger, p2=success, p3=warning, p4=info, p5=accent
-    - p8=muted, p9=background, p10=surface, p11=text primary
+  - **Tier 1** (palette): raw `--palette-*` custom properties supplied by the
+    zudo-doc color-scheme provider; they are values beneath the semantic roles.
+  - **Tier 2** (semantic): `text-fg`, `bg-surface`, `border-border`,
+    `border-border-strong`, `text-accent` — prefer these configured utilities.
 - **UI-component** (`packages/demo-ui/styles/colors.css`):
   - **Tier 1** (`--palette-{group}-{n}`): raw oklch values, GROUPED by role family —
-    `base` (warm-neutral grayscale ramp), `accent` (amber action ramp), `state`
+    `base` (warm-neutral ramp), `accent` (amber action ramp), `state`
     (danger/success/warning/info), and a `line-*` ramp per business line. Plain
-    `:root` vars (not `@theme`, so no `bg-palette-*` utility is ever generated) —
-    **never** referenced by components directly
+    `:root` variables. The wind token map exposes semantic roles, not palette
+    utility names, so components use Tier 2 tokens.
   - **Tier 2** (`--color-*`): semantic roles, each a `light-dark()` pair of Tier-1 refs — this is
     what components bind to (`bg-accent`, `text-fg`, ...)
   - Full contract + rationale: `packages/demo-ui/STORIES.md` §"Three-tier color system"
@@ -166,9 +183,9 @@ Precedents to copy the pattern from: `pages/lib/_search-widget-script.ts` (searc
 
 See also: `/css-wisdom` for light-mode / dark-mode contrast rules and the broader three-tier token strategy.
 
-### Server-rendered Preact vs client islands
+### Server-rendered zudo-react components and client islands
 
-- Default to **server-rendered Preact `.tsx`** — emits zero JS. See root `CLAUDE.md`'s
+- Default to **server-rendered zudo-react `.tsx`** with no island activation — emits zero JS. See root `CLAUDE.md`'s
   "Components" section for the canonical rule.
 - Promote to a **client island** only when interactivity is needed: mark the module
   `"use client"` and mount it via zfb's `<Island>` wrapper (see `pages/lib/_body-end-islands.tsx`)

@@ -41,11 +41,12 @@ Categories are plain strings, not a fixed enum: a host lists the categories it w
 
 This is the concept-level shape only. The full authoring contract — control types, source-display rules, the live preview-props channel, and the scaffolding CLI — is the package's own documentation, not this site (see [Relationship to zudo-doc](./relationship-to-zudo-doc) for why the root site and the package docs stay two separate places).
 
-## A second story source for non-Preact hosts
+## A second story source for hosts outside zudo-react module mode
 
 Everything above describes **module mode** — stories as `*.stories.tsx`
-files with real `render` functions, the engine's own default. A host that
-cannot run Preact stories directly instead switches to **descriptor mode**
+files with real `render` functions that use zfb's zudo-react runtime. A host
+using another framework, or no component framework, switches to
+**descriptor mode**
 (`registry: { mode: "descriptor" }`): stories become plain-data
 `StoryDescriptor`s with no `render` function, and the host serves its own
 preview document at `externalPreview.url` instead of relying on the engine's
@@ -67,4 +68,8 @@ One consequence of the routes travelling through virtual modules used to be wort
 
 The engine's own islands (the component detail workbench, the code panel, the catalog filter, the preview design-token button and panel) are collected into one side-effect module, `@takazudo/zudo-sg/islands`, that statically imports every one of them. A host may import that module once from an actual `pages/` file — in this project, a one-line shim (`pages/lib/_zudo-sg-islands.ts`) imported by `pages/index.tsx` — and doing so is harmless, but it does not do anything the engine's peer floor doesn't already do on its own.
 
-Before zfb 2.18.0 the dev server scanned only a host's own `pages/` tree for islands, never the routes a package injects, so the seed was required for the engine islands to hydrate under `zfb dev`. zfb 2.18.0 seeds the dev scanner from injected package routes (and its CSS content globs too), so on the engine's peer floor the seed is a no-op kept for API stability.
+The scanner limitation that once required this seed was fixed in zfb 2.18.0.
+The engine's current zfb peer floor, 4.3.1, includes that behavior: the dev
+scanner reads injected package routes, and package wind manifests supply the
+engine's utility candidates. The seed is therefore a no-op kept for API
+compatibility.

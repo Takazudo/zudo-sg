@@ -1,3 +1,4 @@
+import { demoUiWindTokens, demoUiWindBreakpoints } from "@zudo-sg/demo-ui/styles/wind-tokens.mjs";
 import { defineConfig } from "@takazudo/zfb/config";
 import { zudoDocPreset } from "@takazudo/zudo-doc/preset";
 import { withZudoSg } from "@takazudo/zudo-sg/config";
@@ -43,14 +44,12 @@ const preset = zudoDocPreset({
 });
 
 export default defineConfig({
-  framework: "preact",
   // Pin the dev/preview port — zfb defaults to 3000, but the generated
   // CLAUDE.md and the Tauri dev wrappers assume 4321.
   port: 4321,
-  tailwind: { enabled: true },
   base: settings.base,
   strictContentBridge: true,
-  // zfb 2.14 guard: fail builds when JS/TS imports plain CSS bytes it cannot emit.
+  // Retained public zfb guard: reject plain CSS imports that cannot be emitted.
   strictPlainCssImports: true,
   // #215: msw's core resolves through path-to-regexp@6, a CJS-main/module-only
   // package (no `exports` map). esbuild's `--platform=neutral` page/SSR pass
@@ -101,6 +100,107 @@ export default defineConfig({
           name: "./pages/lib/_doc-history-meta.mjs",
         },
       ],
+      wind: {
+        reset: "owned-v1",
+        tokens: {
+          ...demoUiWindTokens,
+          colors: {
+            ...demoUiWindTokens.colors,
+            "bg": "var(--color-bg)",
+            "fg": "var(--color-fg)",
+            "sel-bg": "var(--color-sel-bg)",
+            "sel-fg": "var(--color-sel-fg)",
+            "surface": "var(--color-surface)",
+            "muted": "var(--color-muted)",
+            "accent": "var(--color-accent)",
+            "accent-hover": "var(--color-accent-hover)",
+            "code-bg": "var(--color-code-bg)",
+            "code-fg": "var(--color-code-fg)",
+            "success": "var(--color-success)",
+            "danger": "var(--color-danger)",
+            "warning": "var(--color-warning)",
+            "info": "var(--color-info)",
+            "overlay": "var(--color-overlay)",
+            "image-overlay-bg": "var(--color-image-overlay-bg)",
+            "image-overlay-fg": "var(--color-image-overlay-fg)",
+            "mermaid-node-bg": "var(--color-mermaid-node-bg)",
+            "mermaid-text": "var(--color-mermaid-text)",
+            "mermaid-line": "var(--color-mermaid-line)",
+            "mermaid-label-bg": "var(--color-mermaid-label-bg)",
+            "mermaid-note-bg": "var(--color-mermaid-note-bg)",
+            "matched-keyword-bg": "var(--color-matched-keyword-bg)",
+            "matched-keyword-fg": "var(--color-matched-keyword-fg)",
+            "border": "var(--color-border)",
+            "border-strong": "var(--color-border-strong)",
+          },
+          spacing: {
+            ...demoUiWindTokens.spacing,
+            "icon-xs": "var(--spacing-icon-xs)",
+            "icon-sm": "var(--spacing-icon-sm)",
+            "icon-md": "var(--spacing-icon-md)",
+            "icon-lg": "var(--spacing-icon-lg)",
+            "image-overlay-inset": "var(--spacing-image-overlay-inset)",
+          },
+          shadows: {
+            ...demoUiWindTokens.shadows,
+            "lg": "var(--shadow-lg)",
+          },
+          letterSpacings: {
+            ...demoUiWindTokens.letterSpacings,
+            "tight": "var(--tracking-tight)",
+            "normal": "var(--tracking-normal)",
+            "wide": "var(--tracking-wide)",
+            "wider": "var(--tracking-wider)",
+          },
+          lineHeights: {
+            ...demoUiWindTokens.lineHeights,
+            "snug": "var(--leading-snug)",
+          },
+          radii: {
+            ...demoUiWindTokens.radii,
+            "lg": "var(--radius-lg)",
+            "default": "var(--radius-DEFAULT)",
+            "sm": "var(--radius-sm)",
+            "md": "var(--radius-md)",
+          },
+          zIndices: {
+            ...demoUiWindTokens.zIndices,
+            "toolbar": "var(--z-index-toolbar)",
+            "content": "var(--z-index-content)",
+            "local-1": "var(--z-index-local-1)",
+            "local-2": "var(--z-index-local-2)",
+            "local-3": "var(--z-index-local-3)",
+            "sidebar": "var(--z-index-sidebar)",
+            "dropdown": "var(--z-index-dropdown)",
+            "popover": "var(--z-index-popover)",
+            "modal-backdrop": "var(--z-index-modal-backdrop)",
+            "modal": "var(--z-index-modal)",
+            "toast": "var(--z-index-toast)",
+            "tooltip": "var(--z-index-tooltip)",
+            "drag": "var(--z-index-drag)",
+          },
+        },
+        // Search results are assembled by the inline script, outside JSX scanning.
+        safelist: {
+          "search-widget": [
+            "-mx-hsp-lg", "border-b", "border-muted", "group", "block",
+            "px-hsp-lg", "py-vsp-sm", "focus-visible:outline-2",
+            "focus-visible:outline-offset-2", "focus-visible:outline-accent",
+            "font-semibold", "text-fg", "group-hover:text-accent",
+            "group-hover:underline", "group-focus-visible:underline",
+            "mt-vsp-2xs", "text-caption", "text-muted", "leading-relaxed",
+            "decoration-muted",
+          ],
+        },
+        breakpoints: demoUiWindBreakpoints,
+        strict: true,
+        dark: false,
+        utilities: { placement: "before-authored" },
+        sources: {
+          roots: ["pages", "src", "packages/demo-ui/src"],
+          classHelpers: ["cx", "cn"],
+        },
+      },
     },
     {
       ...zudoSgConfig,

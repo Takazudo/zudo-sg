@@ -1,117 +1,63 @@
 // @vitest-environment node
-import { mkdtemp, mkdir, realpath, rm, writeFile } from "node:fs/promises";
+import { mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { compilePreviewCss, scopeTokensToPreviewDoc } from "../compile.js";
-import type { CompilePreviewCssResult } from "../compile.js";
-
-const REPO_ROOT = resolve(import.meta.dirname, "../../../../..");
-const HOST_ENTRY = join(REPO_ROOT, "src/styles/preview-entry.css");
-const fwd = (p: string) => p.replaceAll("\\", "/");
-
-// A `:root {` / `:root, :host {` block that was NOT rescoped (minified or not).
-const BARE_ROOT_BLOCK = /(^|[\s,{};])(:root)\s*(,\s*:host\s*)?\{/;
-
-describe("scopeTokensToPreviewDoc", () => {
-  it("rescopes the Tailwind theme root and plain :root blocks", () => {
-    const input = ":root, :host {\n  --a: 1;\n}\n:root {\n  --b: 2;\n}\n";
-    expect(scopeTokensToPreviewDoc(input)).toBe(
-      ":root[data-sg-preview-doc], :host {\n  --a: 1;\n}\n:root[data-sg-preview-doc] {\n  --b: 2;\n}\n",
-    );
+import { afterEach, describe, expect, it } from "vitest";
+import { compilePreviewCss, scopeTokensToPreviewDoc, snapshotWind, sourceInputs } from "../compile.js";
+const { generateWindManifest } = await import(new URL("../../../scripts/gen-wind-manifest.mjs", import.meta.url).href);
+const { validateWindManifest } = await import(new URL("../../../scripts/check-package-wind-manifest.mjs", import.meta.url).href);
+let root: string;
+afterEach(() => { if (root) rmSync(root, { recursive: true, force: true }); });
+function fixture() {
+  root = mkdtempSync(join(tmpdir(), "sg-wind-"));
+  symlinkSync(resolve(import.meta.dirname, "../../../../../node_modules"), join(root, "node_modules"), "dir");
+  mkdirSync(join(root, "components"));
+  writeFileSync(join(root, "tokens.css"), ':root { --brand: #0a5; }');
+  writeFileSync(join(root, "entry.css"), '@import "./tokens.css"; .authored { color: var(--brand); }');
+  writeFileSync(
+    join(root, "components/card.tsx"),
+    readFileSync(join(import.meta.dirname, "../../../test-fixtures/preview-css/components/card.tsx"), "utf8"),
+  );
+}
+describe("preview compiler", () => {
+  it("scopes selector roots, preserves comments/strings/values and is idempotent", () => {
+    const input = '/* :root */ :root,:root[data-theme="dark"],:not(:root),[title=":root"] { --x: ":root"; }';
+    const result = scopeTokensToPreviewDoc(input);
+    expect(result).toContain('/* :root */ :root[data-sg-preview-doc],:root[data-sg-preview-doc][data-theme="dark"],:not(:root[data-sg-preview-doc]),[title=":root"]');
+    expect(result).toContain('--x: ":root"');
+    expect(scopeTokensToPreviewDoc(result)).toBe(result);
   });
-
-  it("leaves compound :root selectors alone", () => {
-    const input = ':root[data-theme="dark"] {\n  --a: 1;\n}\n:root:not(.x) {\n  --b: 2;\n}\n';
-    expect(scopeTokensToPreviewDoc(input)).toBe(input);
+  it("rejects non-data wind snapshots", () => {
+    expect(() => snapshotWind({ plugin: () => 1 })).toThrow(/plain serializable/);
   });
-});
-
-describe("compilePreviewCss — self-contained fixture", () => {
-  let dir: string;
-  let result: CompilePreviewCssResult;
-
-  beforeAll(async () => {
-    // macOS: os.tmpdir() returns the /var/folders/... symlink, but the
-    // Tailwind oxide scanner (Rust) reports realpath'd /private/var/folders/...
-    // paths for dependencies/sourceFiles. Canonicalize here so path
-    // comparisons below match what the compiler actually returns.
-    dir = await realpath(await mkdtemp(join(tmpdir(), "zudo-sg-preview-css-")));
-    await mkdir(join(dir, "content"));
-    await writeFile(join(dir, "content/card.html"), '<div class="bg-brand"></div>');
-    await writeFile(join(dir, "tokens.css"), ":root {\n  --palette-brand: #0a5;\n}\n");
-    await writeFile(
-      join(dir, "entry.css"),
-      [
-        '@import "./tokens.css";',
-        "@theme { --color-brand: var(--palette-brand); }",
-        "@tailwind utilities;",
-        '@source "./content";',
-      ].join("\n"),
-    );
-    result = await compilePreviewCss(join(dir, "entry.css"));
-  });
-
-  afterAll(async () => {
-    await rm(dir, { recursive: true, force: true });
-  });
-
-  it("builds the scanned utility and rescopes both token roots", () => {
-    expect(result.css).toMatch(/\.bg-brand\s*\{/);
+  it("compiles with host CLI, preserves token precedence and cleans temporary files", async () => {
+    fixture();
+    const result = await compilePreviewCss(join(root, "entry.css"), { projectRoot: root, wind: { tokens: { colors: { brand: "var(--brand)" } }, strict: true }, sources: ["components"] });
+    expect(result.css).toContain(".bg-brand");
     expect(result.css).toContain(":root[data-sg-preview-doc]");
-    expect(result.css).not.toMatch(BARE_ROOT_BLOCK);
-    expect(result.candidateCount).toBeGreaterThan(0);
+    expect(result.dependencies).toContain(join(root, "tokens.css"));
+    expect(result.sourceFiles).toContain(join(root, "components/card.tsx"));
+    expect(readdirSync(root).some(p => p.startsWith(".zudo-sg-preview-"))).toBe(false);
+    writeFileSync(join(root, "entry.css"), '@import "./missing.css";');
+    await expect(compilePreviewCss(join(root, "entry.css"), { projectRoot: root })).rejects.toThrow(/zfb css failed/);
+    expect(readdirSync(root).some(p => p.startsWith(".zudo-sg-preview-"))).toBe(false);
   });
-
-  it("reports the entry, its imports and the scanned content files", () => {
-    expect(result.dependencies[0]).toBe(fwd(join(dir, "entry.css")));
-    expect(result.dependencies).toContain(fwd(join(dir, "tokens.css")));
-    expect(result.sourceFiles).toContain(fwd(join(dir, "content/card.html")));
+  it("supports zero component roots and explicit host wind sources", async () => {
+    fixture();
+    const result = await compilePreviewCss(join(root, "entry.css"), { projectRoot: root, wind: { tokens: { colors: { brand: "var(--brand)" } }, sources: { roots: ["components"] } } });
+    expect(result.css).toContain(".bg-brand");
   });
-
-  it("emits unminified output on request", async () => {
-    const pretty = await compilePreviewCss(join(dir, "entry.css"), { minify: false });
-    expect(pretty.css.split("\n").length).toBeGreaterThan(result.css.split("\n").length);
+  it("matches source globs without including unrelated file contents", () => {
+    fixture();
+    expect(sourceInputs(root, ["components/**/*.tsx"])).toContain(join(root, "components/card.tsx"));
   });
-
-  it("rejects a missing entry", async () => {
-    await expect(compilePreviewCss(join(dir, "missing.css"))).rejects.toThrow();
-  });
-});
-
-describe("compilePreviewCss — root host src/styles/preview-entry.css", () => {
-  let result: CompilePreviewCssResult;
-
-  beforeAll(async () => {
-    result = await compilePreviewCss(HOST_ENTRY, { minify: false });
-  }, 60_000);
-
-  it("carries the UI token declarations under :root[data-sg-preview-doc] only", () => {
-    const scopedBlocks = result.css.match(/:root\[data-sg-preview-doc\](, :host)? \{[^}]*\}/g) ?? [];
-    const scoped = scopedBlocks.join("\n");
-    expect(scoped).toMatch(/--color-accent\s*:/);
-    expect(scoped).toMatch(/--spacing-hsp-[\w-]+\s*:/);
-    expect(scoped).toMatch(/--palette-[\w-]+\s*:/);
-    expect(result.css).not.toMatch(BARE_ROOT_BLOCK);
-  });
-
-  it("contains utilities used by stories", () => {
-    expect(result.css).toMatch(/\.bg-accent\s*\{/);
-    expect(result.css).toMatch(/\.px-hsp-[\w-]+\s*\{/);
-  });
-
-  it("contains no host --zd-* declaration", () => {
-    expect(result.css).not.toMatch(/--zd-[\w-]+\s*:/);
-  });
-
-  it("lists the entry and the UI token files as dependencies", () => {
-    expect(result.dependencies[0]).toBe(fwd(HOST_ENTRY));
-    expect(result.dependencies).toContain(fwd(join(REPO_ROOT, "packages/demo-ui/styles/tokens.css")));
-    expect(result.dependencies).toContain(fwd(join(REPO_ROOT, "packages/demo-ui/styles/colors.css")));
-  });
-
-  it("scans the UI package sources", () => {
-    const uiSrc = fwd(join(REPO_ROOT, "packages/demo-ui/src/"));
-    expect(result.sourceFiles.some((file) => file.startsWith(uiSrc))).toBe(true);
+  it("generates the real manifest schema from bounded compiled fixture JS", () => {
+    fixture();
+    mkdirSync(join(root, "dist"));
+    writeFileSync(join(root, "dist/card.js"), 'export const card = () => jsx("div", { class: "flex border-sg-border text-sg-muted bg-sg-surface-2" });');
+    writeFileSync(join(root, "wind.config.ts"), 'export default { outDir: ".output", wind: { tokens: { colors: { "sg-border": "var(--sg-border)", "sg-muted": "var(--sg-muted)", "sg-surface-2": "var(--sg-surface-2)" } } } };');
+    const manifest = generateWindManifest({ projectRoot: root, config: "wind.config.ts", sources: ["dist/**/*.js"] });
+    expect(validateWindManifest(manifest).candidates).toContain("flex");
+    expect(JSON.parse(readFileSync(join(root, "dist/wind.json"), "utf8"))).toEqual(manifest);
   });
 });

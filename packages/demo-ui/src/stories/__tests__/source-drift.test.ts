@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { renderToString } from "preact-render-to-string";
-import type { VNode } from "preact";
+import { renderSsr } from "../../test-utils/zudo-react";
 import type { Story } from "../types";
 import { STORY_MODULES } from "./story-modules";
 
@@ -34,10 +33,7 @@ describe("story source vs. render drift", () => {
       if (!story.source) continue;
 
       it(`${path} → ${exportName} (${story.name})`, () => {
-        // Every story's `render` produces an actual node — `ComponentChildren`
-        // is wider than renderToString's `VNode` param only because it also
-        // covers primitives/`undefined`, which no story here returns.
-        const html = renderToString(story.render(defaultArgs(story)) as VNode);
+        const html = renderSsr(story.render(defaultArgs(story)));
         // Snapshot `source` alongside `html`: snapshotting html alone would
         // miss drift introduced by editing `source` without touching render.
         expect({ source: story.source, html }).toMatchSnapshot();

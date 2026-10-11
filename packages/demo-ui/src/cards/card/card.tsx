@@ -1,4 +1,4 @@
-import type { ComponentChildren } from "preact";
+import type { Child } from "@takazudo/zfb/zudo-react";
 import { cx } from "../../lib/cx";
 
 export type CardVariant = "default" | "accent" | "muted";
@@ -10,7 +10,7 @@ export type CardProps = {
   variant?: CardVariant;
   padding?: CardPadding;
   class?: string;
-  children?: ComponentChildren;
+  children?: Child;
 };
 
 const PADDING_CLASS: Record<CardPadding, string> = {
@@ -50,7 +50,7 @@ export function Card({
 
 export type CardTitleProps = {
   class?: string;
-  children?: ComponentChildren;
+  children?: Child;
 };
 
 /** Heading row inside a Card. Also what the `title` prop renders through. */

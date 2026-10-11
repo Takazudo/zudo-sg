@@ -1,61 +1,9 @@
 /*
- * @zudo-sg/demo-ui — grouped three-tier color system (light + dark)
- *
- * This is the COLOR contract the @zudo-sg/demo-ui components depend on. Components
- * reference these semantic Tailwind color utilities only (bg-surface, text-fg,
- * bg-accent, border-border, text-rail-fg, …) — never raw oklch literals, never
- * numeric Tailwind shades (`bg-gray-500` is a build error under the tight-token
- * strategy), and never the raw Tier-1 palette directly.
- *
- * Three-tier color strategy (zudo-css-wisdom: styling/color/
- * three-tier-color-strategy, "Palette grouping"):
- *   Tier 1  Palette   — raw oklch values, GROUPED by role family
- *                       (--palette-{group}-{n}, the :root block below)
- *   Tier 2  Semantic  — roles → palette (the --color-* @theme block below)
- *   Tier 3  Component — scoped overrides (rare under Tailwind utilities)
- * Most Tier-2 --color-* values are light-dark() pairs of var(--palette-…) refs.
- * A few AA-tuned OKLCH literals appear only where a shared ramp rung cannot hit
- * the required contrast (each carries a `why` comment).
- *
- * Palette values are keyed off THIS site's own warm color scheme — four locked
- * warm-neutral stops plus separate accent, state, and per-line groups. The
- * neutral stop names are stable handles, not component-facing roles.
- *
- * The Tier-1 palette is inlined at the TOP of this file (a plain :root block)
- * rather than a sibling file: the single-consumer contract requires every
- * consumer to do exactly one `@import "@zudo-sg/demo-ui/styles/colors.css"`, and the
- * consumer Tailwind/Lightning pipeline inlines that import's CONTENTS but leaves
- * a nested relative `@import "./palette.css"` as a literal the browser then
- * ignores — dropping the palette entirely. Inlining keeps both tiers in the one
- * bundled file.
- *
- * RULE: the --palette-* values are raw and MUST NOT be referenced by
- * components. Components bind only to the semantic utilities generated from the
- * --color-* tokens here — that is what makes a palette swap or redesign a
- * one-file change.
- *
- * Dark mode strategy (zudo-css-wisdom: dark-mode-strategies):
- *   - Every scheme-varying token is declared with light-dark(<light>, <dark>)
- *     so a single declaration carries both schemes; the two sides reference
- *     different palette rungs — dark mode is just a different Tier-2 mapping.
- *   - `color-scheme: light dark` is set on :root so light-dark() resolves and
- *     UA-styled controls (inputs, scrollbars) follow the active scheme.
- *   - The `rail` role (persistent dark nav surface) is intentionally NOT a
- *     light-dark() pair: it stays a dark warm panel in BOTH schemes, using the
- *     locked neutral-3 stop rather than an inverted per-component style.
- *   - Dark values are NOT naive inversions: surfaces are warm dark gray (not
- *     pure black), fg is off-white (not pure white), and accent/state hues gain
- *     lightness + lose a touch of chroma so they don't vibrate on dark.
- *
- * NOTE: this file does NOT @import "tailwindcss" — import it AFTER the
- * preflight + utilities imports in the consumer's global.css, alongside
- * ./tokens.css, so Tailwind generates bg-* / text-* / border-* utilities from it.
- * The Tier-1 palette below is a plain :root block (NOT @theme) on purpose, so
- * Tailwind generates NO bg-palette-* / text-palette-* utilities — that would let
- * a component bind a raw color and bypass the semantic layer. Plain :root vars
- * still resolve through var() inside the @theme block (custom-property
- * resolution is lazy + order-independent), so the semantic tokens read them
- * fine while no palette utility class is ever emitted.
+ * @zudo-sg/demo-ui — shared colors.
+ * Plain :root custom properties are the stable consumer API.
+ * Utilities are registered explicitly by styles/wind-tokens.mjs; palette
+ * properties remain private to semantic color declarations.
+ * Keep variable names and values stable for live token-panel edits.
  */
 
 /* ========================================
@@ -63,7 +11,7 @@
  *
  * The raw material of the color system: every concrete oklch value, named by
  * group + index (base/accent) or role (state/line). Plain :root custom
- * properties (NOT @theme) so NO bg-palette-* / text-palette-* utility is
+ * properties are absent from wind-tokens.mjs, so no palette utilities are
  * generated. Only the Tier-2 --color-* declarations further down read these;
  * components NEVER do.
  *
@@ -138,7 +86,7 @@
   color-scheme: light dark;
 }
 
-@theme {
+:root {
   /* ========================================
    * Tier 2 — canonical semantic color tokens.
    *
@@ -184,6 +132,8 @@
      black veil), so it follows the active scheme's surface color. The indicator
      reuses --color-accent; no dedicated token. */
   --color-loading-scrim: color-mix(in srgb, var(--color-bg) 40%, transparent);
+
+  --color-overlay: #000; /* Theme-independent backdrop. */
 
   /* ── State — danger/success/warning/info, light + dark rung per role. ── */
   --color-success: light-dark(var(--palette-state-success), var(--palette-state-success-dark));

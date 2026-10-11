@@ -1,9 +1,8 @@
-/** @jsxRuntime automatic */
-/** @jsxImportSource preact */
 import type { TabConfig } from "@takazudo/zdtp";
-import { TokenDashboard } from "@takazudo/zdtp/dashboard";
-import type { JSX } from "preact";
-import { buildDashboardPreviewOverrides, UI_DASHBOARD_PREVIEW_TEXT } from "./ui-token-tabs.js";
+import { Island } from "@takazudo/zfb";
+import type { CSSProperties } from "@takazudo/zfb/zudo-react";
+import { TokenDashboardMount } from "./token-dashboard-mount.js";
+import { UI_DASHBOARD_PREVIEW_TEXT } from "./ui-token-tabs.js";
 import type { UiDesignTokensManifest } from "./ui-token-tabs.js";
 
 export interface CreateTokenDashboardsOptions {
@@ -14,7 +13,7 @@ export interface CreateTokenDashboardsOptions {
    * host-specific (site theme config), so this package never computes it
    * itself; omit to render without a chrome color override.
    */
-  chromeStyle?: JSX.CSSProperties;
+  chromeStyle?: CSSProperties | string;
 }
 
 /**
@@ -29,16 +28,15 @@ export function createTokenDashboards(
   manifest: UiDesignTokensManifest,
   tabs: readonly TabConfig[],
   options: CreateTokenDashboardsOptions = {},
-): JSX.Element {
-  const dashboardPreviewOverrides = buildDashboardPreviewOverrides(manifest);
+) {
   const previewText = manifest.groups
     ? "Design tokens give an interface a shared rhythm across pages and themes. Compare the declared values, scale, color, and shape in these samples."
     : UI_DASHBOARD_PREVIEW_TEXT;
   return (
     <section class="mb-vsp-xl flex flex-col gap-vsp-lg" style={options.chromeStyle}>
       <div class="max-w-[56rem]">
-        <h2 class="mb-vsp-2xs text-xl font-semibold text-[color:var(--sg-fg)]">Declared defaults</h2>
-        <p class="text-[color:var(--sg-muted)]">
+        <h2 class="mb-vsp-2xs text-xl font-semibold text-sg-fg">Declared defaults</h2>
+        <p class="text-sg-muted">
           These are the declared defaults of the design-token manifest,
           shown as light, dark, and shared token references. The light and
           dark frames show only tokens whose declared value differs by mode
@@ -48,35 +46,15 @@ export function createTokenDashboards(
           in them. Nothing here is clickable or editable.
         </p>
       </div>
-      <TokenDashboard
-        id="ui-defaults-light"
-        mode="light"
-        chrome="light"
-        include="mode-dependent"
-        title="UI tokens — mode-dependent defaults (light)"
-        tabs={tabs}
-        previewOverrides={dashboardPreviewOverrides}
-        previewText={previewText}
-      />
-      <TokenDashboard
-        id="ui-defaults-dark"
-        mode="dark"
-        chrome="dark"
-        include="mode-dependent"
-        title="UI tokens — mode-dependent defaults (dark)"
-        tabs={tabs}
-        previewOverrides={dashboardPreviewOverrides}
-        previewText={previewText}
-      />
-      <TokenDashboard
-        id="ui-defaults-shared"
-        chrome="host"
-        include="mode-independent"
-        title="UI tokens — shared defaults (mode-independent)"
-        tabs={tabs}
-        previewOverrides={dashboardPreviewOverrides}
-        previewText={previewText}
-      />
+      {([
+        { id: "ui-defaults-light", mode: "light", chrome: "light", include: "mode-dependent", title: "UI tokens — mode-dependent defaults (light)" },
+        { id: "ui-defaults-dark", mode: "dark", chrome: "dark", include: "mode-dependent", title: "UI tokens — mode-dependent defaults (dark)" },
+        { id: "ui-defaults-shared", chrome: "host", include: "mode-independent", title: "UI tokens — shared defaults (mode-independent)" },
+      ] as const).map((dashboard) => (
+        <Island when="load" ssrFallback={<div><h2>{dashboard.title}</h2><p>Loading declared defaults…</p></div>}>
+          <TokenDashboardMount {...dashboard} tabs={tabs} manifest={manifest} previewText={previewText} />
+        </Island>
+      ))}
     </section>
   );
 }

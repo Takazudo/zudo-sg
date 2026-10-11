@@ -1,10 +1,20 @@
-import { render, screen } from "@testing-library/preact";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
+import { renderIsland, disposeAll, getByText } from "../../../test-utils/zudo-react";
+import { getHeading, queryHeading } from "../../test-utils";
+import type { Child } from "@takazudo/zfb/zudo-react";
 import { InitiativeGrid } from "../initiative-grid";
+
+afterEach(disposeAll);
+
+function render(node: Child) {
+  return renderIsland(function Fixture() {
+    return node;
+  }, {});
+}
 
 describe("InitiativeGrid", () => {
   it("renders each initiative numbered, with title and body", () => {
-    render(
+    const { container } = render(
       <InitiativeGrid
         heading="Our initiatives"
         initiatives={[
@@ -13,14 +23,14 @@ describe("InitiativeGrid", () => {
         ]}
       />,
     );
-    expect(screen.getByRole("heading", { name: "Our initiatives" })).toBeInTheDocument();
-    expect(screen.getByText("01")).toBeInTheDocument();
-    expect(screen.getByText("02")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Solar Farm A" })).toBeInTheDocument();
+    expect(getHeading(container, "Our initiatives")).toBeInTheDocument();
+    expect(getByText(container, "01")).toBeInTheDocument();
+    expect(getByText(container, "02")).toBeInTheDocument();
+    expect(getHeading(container, "Solar Farm A")).toBeInTheDocument();
   });
 
   it("omits the heading in bare mode", () => {
-    render(<InitiativeGrid heading="Our initiatives" initiatives={[{ title: "A", body: "B" }]} bare />);
-    expect(screen.queryByRole("heading", { name: "Our initiatives" })).not.toBeInTheDocument();
+    const { container } = render(<InitiativeGrid heading="Our initiatives" initiatives={[{ title: "A", body: "B" }]} bare />);
+    expect(queryHeading(container, "Our initiatives")).not.toBeInTheDocument();
   });
 });

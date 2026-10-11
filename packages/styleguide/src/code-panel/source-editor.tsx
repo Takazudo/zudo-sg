@@ -5,8 +5,7 @@
 // never drags CodeMirror onto zfb's neutral SSR platform. Renders a plain <pre>
 // fallback until the editor mounts.
 
-import type { JSX } from "preact";
-import { useEffect, useRef, useState } from "preact/hooks";
+import { computed, getScope, signal, Show } from "@takazudo/zfb/zudo-react";
 import type { EditorView } from "@codemirror/view";
 import type { Extension } from "@codemirror/state";
 
@@ -34,52 +33,43 @@ export default function SourceEditor({
   label,
   onChange,
   extensions,
-}: SourceEditorProps): JSX.Element {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const viewRef = useRef<EditorView | null>(null);
-  const [loaded, setLoaded] = useState(false);
-  const onChangeRef = useRef(onChange);
-  onChangeRef.current = onChange;
+}: SourceEditorProps) {
+  const containerRef = { current: null as HTMLDivElement | null };
+  let view: EditorView | null = null;
+  const loaded = signal(false);
+  const scope = getScope();
 
-  useEffect(() => {
+  scope.onActivate(() => {
     let disposed = false;
     void import("./editor-setup.js").then(({ createEditorView }) => {
       if (disposed || !containerRef.current) return;
-      viewRef.current = createEditorView(value, containerRef.current, {
+      view = createEditorView(value, containerRef.current, {
         language,
         editable,
         label,
-        onChange: (v) => onChangeRef.current?.(v),
+        onChange: (v) => onChange?.(v),
         extensions,
       });
-      setLoaded(true);
+      loaded.value = true;
     });
     return () => {
       disposed = true;
-      viewRef.current?.destroy();
-      viewRef.current = null;
+      view?.destroy();
+      view = null;
     };
-    // Editor is created once; `value`, `language`, `editable`, `label`, and
-    // `extensions` are read as initial config only. They are omitted from
-    // the deps — the editor owns its buffer thereafter, and re-running this
-    // effect would destroy/recreate the CodeMirror view (losing cursor/scroll)
-    // on every prop change. Callers that swap to an unrelated `value` (e.g.
-    // the code panel's per-variant source view) must pass a `key` that
-    // changes with the identity, so Preact remounts this component instead
-    // of leaving stale content displayed (#105).
-  }, []);
+  });
 
   return (
     <div class="relative text-small">
-      {!loaded && (
+      <Show when={computed(() => !loaded.value)}>{() => (
         <pre
-          class="m-0 overflow-auto rounded-md bg-[var(--sg-surface-2)] p-hsp-sm text-xs text-[color:var(--sg-muted)]"
+          class="m-0 overflow-auto rounded-md bg-sg-surface-2 p-hsp-sm text-xs text-sg-muted"
           aria-label={label}
         >
           <code>{value}</code>
         </pre>
-      )}
-      <div ref={containerRef} class={loaded ? "" : "hidden"} />
+      )}</Show>
+      <div ref={containerRef} class={computed(() => loaded.value ? "" : "hidden")} />
     </div>
   );
 }

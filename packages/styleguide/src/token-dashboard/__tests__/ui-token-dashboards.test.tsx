@@ -1,6 +1,8 @@
 // @vitest-environment happy-dom
-import { render } from "preact-render-to-string";
-import { describe, expect, it } from "vitest";
+import "../../__tests__/dom-test-setup.js";
+import { renderIsland, renderSsr } from "../../__tests__/helpers/zudo-react.js";
+import { TokenDashboardMount } from "../token-dashboard-mount.js";
+import { describe, expect, it, vi } from "vitest";
 import { splitLightDark } from "@takazudo/zdtp/dashboard";
 import { buildUiTokenTabs, UI_DASHBOARD_PREVIEW_TEXT } from "../ui-token-tabs.js";
 import type { UiDesignTokensManifest } from "../ui-token-tabs.js";
@@ -104,17 +106,25 @@ const FIXTURE_TOKEN_COUNT = 10;
 const FIXTURE_MODE_DEPENDENT_COUNT = 2;
 const FIXTURE_MODE_INDEPENDENT_COUNT = 8;
 
-function renderDashboards() {
+function PopulatedDashboards() {
   const tabs = buildUiTokenTabs(FIXTURE_MANIFEST);
-  const html = render(createTokenDashboards(FIXTURE_MANIFEST, tabs));
-  const container = document.createElement("div");
-  container.innerHTML = html;
-  return { html, container };
+  return <>
+    <TokenDashboardMount id="ui-defaults-light" title="Light defaults" mode="light" chrome="light" include="mode-dependent" tabs={tabs} manifest={FIXTURE_MANIFEST} previewText={UI_DASHBOARD_PREVIEW_TEXT} />
+    <TokenDashboardMount id="ui-defaults-dark" title="Dark defaults" mode="dark" chrome="dark" include="mode-dependent" tabs={tabs} manifest={FIXTURE_MANIFEST} previewText={UI_DASHBOARD_PREVIEW_TEXT} />
+    <TokenDashboardMount id="ui-defaults-shared" title="Shared defaults" chrome="host" include="mode-independent" tabs={tabs} manifest={FIXTURE_MANIFEST} previewText={UI_DASHBOARD_PREVIEW_TEXT} />
+  </>;
+}
+
+async function renderDashboards() {
+  const island = renderIsland(PopulatedDashboards, {});
+  await vi.waitFor(() => expect(island.container.querySelectorAll("[data-css-var]")).toHaveLength(2 * FIXTURE_MODE_DEPENDENT_COUNT + FIXTURE_MODE_INDEPENDENT_COUNT));
+  await island.flush();
+  return { ...island, html: island.container.innerHTML };
 }
 
 describe("createTokenDashboards", () => {
-  it("renders filtered mode-dependent and shared inventories", () => {
-    const { container } = renderDashboards();
+  it("renders filtered mode-dependent and shared inventories", async () => {
+    const { container } = await renderDashboards();
     const dashboards = container.querySelectorAll(".zdtp-dashboard");
     expect(dashboards).toHaveLength(3);
 
@@ -178,14 +188,16 @@ describe("createTokenDashboards", () => {
     ).not.toBeNull();
     expect(light.querySelector('[data-css-var="--spacing-hsp-md"]')).toBeNull();
     expect(dark.querySelector('[data-css-var="--spacing-hsp-md"]')).toBeNull();
+    expect(shared.querySelector('[data-css-var="--spacing-hsp-md"] .zdtp-dashboard__value')?.textContent).toBe("1rem");
+    expect(shared.querySelector('[data-css-var="--radius-md"] .zdtp-dashboard__value')?.textContent).toBe("0.5rem");
     expect(shared.textContent).toContain(UI_DASHBOARD_PREVIEW_TEXT);
     expect(shared.textContent).toContain(
       "デザイントークンは、画面のリズムと読みやすさを支えます。",
     );
   });
 
-  it("emits static samples without diagnostics, global styles, or copy targets", () => {
-    const { html, container } = renderDashboards();
+  it("emits static samples without diagnostics, global styles, or copy targets", async () => {
+    const { html, container } = await renderDashboards();
     expect(container.querySelectorAll(".zdtp-dashboard")).toHaveLength(3);
     for (const dashboard of container.querySelectorAll(".zdtp-dashboard")) {
       expect(dashboard.querySelector("[data-diagnostic]")).toBeNull();
@@ -198,13 +210,37 @@ describe("createTokenDashboards", () => {
     expect(container.querySelector("button, input, textarea, select")).toBeNull();
   });
 
+  it("unmounts the real populated widgets before clearing their hosts", async () => {
+    const island = await renderDashboards();
+    const hosts = [...island.container.querySelectorAll("[data-sg-token-dashboard]")];
+    expect(hosts).toHaveLength(3);
+    island.dispose();
+    for (const host of hosts) expect(host.childNodes).toHaveLength(0);
+  });
+
   it("applies the chromeStyle option to the wrapping section", () => {
     const tabs = buildUiTokenTabs(FIXTURE_MANIFEST);
-    const html = render(
+    const html = renderSsr(
       createTokenDashboards(FIXTURE_MANIFEST, tabs, {
         chromeStyle: { "--zdtp-dashboard-light-bg": "oklch(1 0 0)" },
       }),
+      { components: [TokenDashboardMount] },
     );
     expect(html).toContain("--zdtp-dashboard-light-bg");
+    expect(html).toContain("Loading declared defaults");
+    expect(html).toContain("UI tokens — shared defaults");
+    expect(html).not.toContain("data-css-var");
+    expect(html).not.toContain("zdtp-dashboard__");
+    const shell = document.createElement("div");
+    shell.innerHTML = html;
+    const boundaries = [...shell.querySelectorAll('[data-zfb-island-skip-ssr="TokenDashboardMount"]')];
+    expect(boundaries).toHaveLength(3);
+    const props = boundaries.map((boundary) => JSON.parse(boundary.getAttribute("data-props")!));
+    expect(props.map(({ id }) => id)).toEqual(["ui-defaults-light", "ui-defaults-dark", "ui-defaults-shared"]);
+    expect(props.map(({ include }) => include)).toEqual(["mode-dependent", "mode-dependent", "mode-independent"]);
+    expect(props.map(({ chrome }) => chrome)).toEqual(["light", "dark", "host"]);
+    expect(props[0].tabs).toEqual(tabs);
+    expect(props[0].manifest).toEqual(FIXTURE_MANIFEST);
+    expect(props[2]).not.toHaveProperty("mode");
   });
 });

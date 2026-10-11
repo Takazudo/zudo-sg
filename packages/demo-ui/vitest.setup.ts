@@ -1,8 +1,8 @@
 import "@testing-library/jest-dom/vitest";
-import { cleanup } from "@testing-library/preact";
 import { afterEach, beforeEach } from "vitest";
+import { disposeAll } from "./src/test-utils/zudo-react.js";
 
-afterEach(cleanup);
+afterEach(disposeAll);
 
 beforeEach(() => {
   const happy = (

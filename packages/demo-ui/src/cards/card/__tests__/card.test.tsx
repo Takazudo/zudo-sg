@@ -1,40 +1,52 @@
-import { render, screen } from "@testing-library/preact";
+import { renderIsland, getByText } from "../../../test-utils/zudo-react";
 import { describe, expect, it } from "vitest";
 import { Card } from "../card";
 
 describe("Card", () => {
   it("renders its children", () => {
-    render(<Card>Content</Card>);
-    expect(screen.getByText("Content")).toBeInTheDocument();
+    const { container } = renderIsland(function Fixture() {
+      return <Card>Content</Card>;
+    }, {});
+    expect(getByText(container, "Content")).toBeInTheDocument();
   });
 
   it("renders the title prop through Card.Title", () => {
-    render(<Card title="Heading">Content</Card>);
-    const heading = screen.getByRole("heading", { level: 3 });
+    const { container } = renderIsland(function Fixture() {
+      return <Card title="Heading">Content</Card>;
+    }, {});
+    const heading = container.querySelector("h3");
     expect(heading).toHaveTextContent("Heading");
   });
 
   it("defaults to the default variant", () => {
-    render(<Card>Content</Card>);
-    expect(screen.getByText("Content").parentElement!.className).toContain("bg-bg");
+    const { container } = renderIsland(function Fixture() {
+      return <Card>Content</Card>;
+    }, {});
+    expect(getByText(container, "Content").parentElement!.classList.contains("bg-bg")).toBe(true);
   });
 
   it("maps the accent variant to a top accent rule", () => {
-    render(<Card variant="accent">Content</Card>);
-    expect(screen.getByText("Content").parentElement!.className).toContain("border-t-accent");
+    const { container } = renderIsland(function Fixture() {
+      return <Card variant="accent">Content</Card>;
+    }, {});
+    expect(getByText(container, "Content").parentElement!.classList.contains("border-t-accent")).toBe(true);
   });
 
   it("maps the muted variant to the surface tint", () => {
-    render(<Card variant="muted">Content</Card>);
-    expect(screen.getByText("Content").parentElement!.className).toContain("bg-surface");
+    const { container } = renderIsland(function Fixture() {
+      return <Card variant="muted">Content</Card>;
+    }, {});
+    expect(getByText(container, "Content").parentElement!.classList.contains("bg-surface")).toBe(true);
   });
 
   it("exposes Card.Title as a standalone export", () => {
-    render(
-      <Card>
-        <Card.Title>Explicit title</Card.Title>
-      </Card>,
-    );
-    expect(screen.getByRole("heading", { level: 3 })).toHaveTextContent("Explicit title");
+    const { container } = renderIsland(function Fixture() {
+      return (
+        <Card>
+          <Card.Title>Explicit title</Card.Title>
+        </Card>
+      );
+    }, {});
+    expect(container.querySelector("h3")).toHaveTextContent("Explicit title");
   });
 });

@@ -35,10 +35,16 @@
 // panel or preview token panel to drive, and a dead control is the bug (#872).
 // The engine's own detail route opts both back in.
 
-import type { JSX } from "preact";
-import { useEffect, useState } from "preact/hooks";
+import {
+  signal,
+  computed,
+  getScope,
+  Show,
+  type Description,
+} from "@takazudo/zfb/zudo-react";
 import type { StoryControl } from "../stories/index.js";
-import VariantFrame, {
+import VariantFrame from "./variant-frame.js";
+import {
   DEFAULT_THEME_MODE,
   DEFAULT_VIEWPORT_ID,
   THEME_OPTIONS,
@@ -46,7 +52,7 @@ import VariantFrame, {
   type FrameThemeMode,
   type ThemeMode,
   type ViewportId,
-} from "./variant-frame.js";
+} from "./variant-frame-config.js";
 import {
   ATTR_CODE_PANEL_HIDDEN,
   isCodePanelHidden,
@@ -70,26 +76,24 @@ const LAYOUT_OPTIONS: LayoutOption[] = [
 // Full class literals (never composed from fragments at runtime) so Tailwind
 // v4's source scanner emits every utility used here.
 const TRACK_CLASS =
-  "flex flex-wrap items-center gap-hsp-2xs rounded-md border border-[color:var(--sg-border)] bg-[var(--sg-surface-2)] p-hsp-2xs";
+  "flex flex-wrap items-center gap-hsp-2xs rounded-md border border-sg-border bg-sg-surface-2 p-hsp-2xs";
 const SEGMENT_BASE_CLASS =
   "rounded-sm border px-hsp-sm py-vsp-3xs text-caption leading-normal transition-colors cursor-pointer ";
 // Selection is carried by the border ladder + a raised surface, not by a
 // filled accent: three segmented groups plus the code panel's own variant tabs
 // would blow the one-filled-accent-per-viewport budget on a single page.
-const SEGMENT_ON_CLASS =
-  "border-[color:var(--sg-border-strong)] bg-[var(--sg-surface)] text-[color:var(--sg-fg)]";
-const SEGMENT_OFF_CLASS =
-  "border-transparent text-[color:var(--sg-muted)] hover:text-[color:var(--sg-fg)]";
+const SEGMENT_ON_CLASS = "border-sg-border-strong bg-sg-surface text-sg-fg";
+const SEGMENT_OFF_CLASS = "border-transparent text-sg-muted hover:text-sg-fg";
 const PILL_BASE_CLASS =
   "inline-flex items-center gap-hsp-2xs rounded-md border px-hsp-sm py-vsp-3xs text-caption leading-normal transition-colors cursor-pointer ";
-const PILL_ON_CLASS =
-  "border-[color:var(--sg-border-strong)] bg-[var(--sg-surface-2)] text-[color:var(--sg-fg)]";
+const PILL_ON_CLASS = "border-sg-border-strong bg-sg-surface-2 text-sg-fg";
 const PILL_OFF_CLASS =
-  "border-[color:var(--sg-border)] bg-[var(--sg-surface)] text-[color:var(--sg-muted)] hover:text-[color:var(--sg-fg)]";
+  "border-sg-border bg-sg-surface text-sg-muted hover:text-sg-fg";
 
 // `items-start` keeps every stage at its natural height: a variant with a
 // controls panel must not stretch its neighbour's preview area into dead space.
-const STACKED_GRID_CLASS = "grid items-start gap-x-hsp-xl gap-y-vsp-xl grid-cols-1";
+const STACKED_GRID_CLASS =
+  "grid items-start gap-x-hsp-xl gap-y-vsp-xl grid-cols-1";
 // auto-fit against the real column width rather than a page media query: the
 // preview column is the code panel's width narrower than the page, so a
 // breakpoint would be wrong half the time. The 18rem floor is what makes Grid
@@ -132,7 +136,9 @@ export type WorkbenchTheme = { mode: "toolbar" } | { mode: "host" };
  * `auto` (default) sizes each frame from its `sg:height` reports. `fixed`
  * pins every frame to `height` px and ignores `sg:height`.
  */
-export type WorkbenchSizing = { mode: "auto" } | { mode: "fixed"; height: number };
+export type WorkbenchSizing =
+  | { mode: "auto" }
+  | { mode: "fixed"; height: number };
 
 /**
  * Per-group toolbar flags. A false group does not render at all; with every
@@ -174,17 +180,15 @@ export interface DetailWorkbenchProps {
 }
 
 const TABLIST_CLASS =
-  "flex flex-wrap items-center gap-hsp-2xs border-b border-[color:var(--sg-border)]";
+  "flex flex-wrap items-center gap-hsp-2xs border-b border-sg-border";
 const TAB_BASE_CLASS =
   "-mb-px rounded-t-sm border-b-2 px-hsp-sm py-vsp-2xs text-caption leading-normal transition-colors cursor-pointer ";
-const TAB_ON_CLASS = "border-[color:var(--sg-border-strong)] text-[color:var(--sg-fg)]";
-const TAB_OFF_CLASS =
-  "border-transparent text-[color:var(--sg-muted)] hover:text-[color:var(--sg-fg)]";
+const TAB_ON_CLASS = "border-sg-border-strong text-sg-fg";
+const TAB_OFF_CLASS = "border-transparent text-sg-muted hover:text-sg-fg";
 
 function segmentClass(selected: boolean): string {
   return SEGMENT_BASE_CLASS + (selected ? SEGMENT_ON_CLASS : SEGMENT_OFF_CLASS);
 }
-
 
 function tabClass(selected: boolean): string {
   return TAB_BASE_CLASS + (selected ? TAB_ON_CLASS : TAB_OFF_CLASS);
@@ -201,14 +205,13 @@ export default function DetailWorkbench({
   previewParams,
   sizing = { mode: "auto" },
   toolbar = {},
-}: DetailWorkbenchProps): JSX.Element {
-  const [themeMode, setThemeMode] = useState<ThemeMode>(DEFAULT_THEME_MODE);
-  const [viewportId, setViewportId] = useState<ViewportId>(DEFAULT_VIEWPORT_ID);
-  const [layout, setLayout] = useState<StageLayout>("stacked");
-  const [codePanelShown, setCodePanelShown] = useState(true);
-  const [internalActive, setInternalActive] = useState<string | undefined>(
-    undefined,
-  );
+}: DetailWorkbenchProps): Description {
+  const scope = getScope();
+  const themeMode = signal<ThemeMode>(DEFAULT_THEME_MODE);
+  const viewportId = signal<ViewportId>(DEFAULT_VIEWPORT_ID);
+  const layout = signal<StageLayout>("stacked");
+  const codePanelShown = signal(true);
+  const internalActive = signal<string | undefined>(undefined);
   // Derived from the slug, not `useId`, so the ids an island hydrates against
   // match its SSR output without depending on render-tree position.
   const tabsId = `sg-workbench-${slug}`;
@@ -221,16 +224,20 @@ export default function DetailWorkbench({
   const showToolbar =
     showTheme || showViewport || showLayout || showCodePanel || showTokenPanel;
 
-  const frameThemeMode: FrameThemeMode = showTheme ? themeMode : "none";
+  const frameThemeMode = computed<FrameThemeMode>(() =>
+    showTheme ? themeMode.value : "none",
+  );
   const fixedHeight = sizing.mode === "fixed" ? sizing.height : undefined;
 
   // The panel's hidden state is restored onto <html> by the blocking head
   // script before first paint, and survives SPA swaps, so read it after mount
   // rather than guessing during SSR. Observing the attribute keeps
   // `aria-pressed` honest no matter who flipped it.
-  useEffect(() => {
+  scope.onActivate(() => {
     if (!showCodePanel) return;
-    const sync = (): void => setCodePanelShown(!isCodePanelHidden());
+    const sync = (): void => {
+      codePanelShown.value = !isCodePanelHidden();
+    };
     sync();
     const observer = new MutationObserver(sync);
     observer.observe(document.documentElement, {
@@ -238,7 +245,7 @@ export default function DetailWorkbench({
       attributeFilter: [ATTR_CODE_PANEL_HIDDEN],
     });
     return () => observer.disconnect();
-  }, [showCodePanel]);
+  });
 
   function openPreviewTokenPanel(): void {
     window.dispatchEvent(new CustomEvent("toggle-preview-token-panel"));
@@ -247,14 +254,17 @@ export default function DetailWorkbench({
   // Single mode: a controlled `active` wins; otherwise internal state. Either
   // falls back to the first variant when it names no current variant.
   const single = selection.mode === "single";
-  const requested = single ? (selection.active ?? internalActive) : undefined;
-  const activeVariant = single
-    ? (variants.find((v) => v.exportName === requested) ?? variants[0])
-    : undefined;
+  const activeVariant = computed(() => {
+    const requested =
+      selection.mode === "single"
+        ? (selection.active ?? internalActive.value)
+        : undefined;
+    return variants.find((v) => v.exportName === requested) ?? variants[0];
+  });
 
   function selectVariant(exportName: string): void {
     if (selection.mode !== "single") return;
-    if (selection.active === undefined) setInternalActive(exportName);
+    if (selection.active === undefined) internalActive.value = exportName;
     selection.onChange?.(exportName);
   }
 
@@ -274,10 +284,9 @@ export default function DetailWorkbench({
     );
   }
 
-  function renderStage(variant: WorkbenchVariant, key?: string): JSX.Element {
+  function renderStage(variant: WorkbenchVariant): Description {
     return (
       <VariantFrame
-        key={key ?? variant.exportName}
         slug={slug}
         exportName={variant.exportName}
         name={variant.name}
@@ -295,7 +304,9 @@ export default function DetailWorkbench({
 
   const tabId = (index: number): string => `${tabsId}-tab-${index}`;
   const panelId = `${tabsId}-panel`;
-  const activeIndex = activeVariant ? variants.indexOf(activeVariant) : -1;
+  const activeIndex = computed(() =>
+    activeVariant.value ? variants.indexOf(activeVariant.value) : -1,
+  );
 
   return (
     <div>
@@ -305,11 +316,14 @@ export default function DetailWorkbench({
             <div role="group" aria-label="Preview theme" class={TRACK_CLASS}>
               {THEME_OPTIONS.map((option) => (
                 <button
-                  key={option.id}
                   type="button"
-                  onClick={() => setThemeMode(option.id)}
-                  aria-pressed={themeMode === option.id}
-                  class={segmentClass(themeMode === option.id)}
+                  on:click={() => {
+                    themeMode.value = option.id;
+                  }}
+                  aria-pressed={computed(() => themeMode.value === option.id)}
+                  class={computed(() =>
+                    segmentClass(themeMode.value === option.id),
+                  )}
                 >
                   {option.label}
                 </button>
@@ -321,11 +335,14 @@ export default function DetailWorkbench({
             <div role="group" aria-label="Preview viewport" class={TRACK_CLASS}>
               {VIEWPORTS.map((preset) => (
                 <button
-                  key={preset.id}
                   type="button"
-                  onClick={() => setViewportId(preset.id)}
-                  aria-pressed={viewportId === preset.id}
-                  class={segmentClass(viewportId === preset.id)}
+                  on:click={() => {
+                    viewportId.value = preset.id;
+                  }}
+                  aria-pressed={computed(() => viewportId.value === preset.id)}
+                  class={computed(() =>
+                    segmentClass(viewportId.value === preset.id),
+                  )}
                 >
                   {preset.label}
                 </button>
@@ -337,11 +354,14 @@ export default function DetailWorkbench({
             <div role="group" aria-label="Preview layout" class={TRACK_CLASS}>
               {LAYOUT_OPTIONS.map((option) => (
                 <button
-                  key={option.id}
                   type="button"
-                  onClick={() => setLayout(option.id)}
-                  aria-pressed={layout === option.id}
-                  class={segmentClass(layout === option.id)}
+                  on:click={() => {
+                    layout.value = option.id;
+                  }}
+                  aria-pressed={computed(() => layout.value === option.id)}
+                  class={computed(() =>
+                    segmentClass(layout.value === option.id),
+                  )}
                 >
                   {option.label}
                 </button>
@@ -350,17 +370,18 @@ export default function DetailWorkbench({
           )}
 
           {(showCodePanel || showTokenPanel) && (
-            <div class="ms-auto flex flex-wrap items-center gap-hsp-sm">
+            <div class="sg-workbench-toolbar-actions flex flex-wrap items-center gap-hsp-sm">
               {showCodePanel && (
                 <button
                   type="button"
-                  onClick={() => toggleCodePanel()}
+                  on:click={() => toggleCodePanel()}
                   aria-pressed={codePanelShown}
                   title="Toggle code panel"
-                  class={
-                    PILL_BASE_CLASS +
-                    (codePanelShown ? PILL_ON_CLASS : PILL_OFF_CLASS)
-                  }
+                  class={computed(
+                    () =>
+                      PILL_BASE_CLASS +
+                      (codePanelShown.value ? PILL_ON_CLASS : PILL_OFF_CLASS),
+                  )}
                 >
                   {/* Code/brackets glyph — feather `<>` style, matched to the chrome
                       icon set (20×20 viewBox, stroke-width 2). */}
@@ -385,7 +406,7 @@ export default function DetailWorkbench({
               {showTokenPanel && (
                 <button
                   type="button"
-                  onClick={openPreviewTokenPanel}
+                  on:click={openPreviewTokenPanel}
                   title="Edit the design tokens used inside the preview iframes"
                   class={PILL_BASE_CLASS + PILL_OFF_CLASS}
                 >
@@ -419,19 +440,18 @@ export default function DetailWorkbench({
       {single && (
         <div role="tablist" aria-label="Variants" class={TABLIST_CLASS}>
           {variants.map((variant, index) => {
-            const selected = index === activeIndex;
+            const selected = computed(() => index === activeIndex.value);
             return (
               <button
-                key={variant.exportName}
                 id={tabId(index)}
                 type="button"
                 role="tab"
                 aria-selected={selected}
                 aria-controls={panelId}
-                tabIndex={selected ? 0 : -1}
-                onClick={() => selectVariant(variant.exportName)}
-                onKeyDown={(e) => onTabKeyDown(e, index)}
-                class={tabClass(selected)}
+                tabindex={computed(() => (selected.value ? 0 : -1))}
+                on:click={() => selectVariant(variant.exportName)}
+                on:keydown={(e) => onTabKeyDown(e, index)}
+                class={computed(() => tabClass(selected.value))}
               >
                 {variant.name}
               </button>
@@ -442,24 +462,41 @@ export default function DetailWorkbench({
 
       <div
         data-sg-stage-grid={layout}
-        class={layout === "grid" ? COLUMNS_GRID_CLASS : STACKED_GRID_CLASS}
+        class={computed(() =>
+          layout.value === "grid" ? COLUMNS_GRID_CLASS : STACKED_GRID_CLASS,
+        )}
         {...(single
           ? {
               id: panelId,
               role: "tabpanel",
-              "aria-labelledby": activeIndex >= 0 ? tabId(activeIndex) : undefined,
+              "aria-labelledby": computed(() =>
+                activeIndex.value >= 0 ? tabId(activeIndex.value) : undefined,
+              ),
             }
           : {})}
       >
-        {single
-          ? // One constant key: switching tabs changes the stage's props, and
-            // VariantFrame resets readiness/height on the new `src` (#880)
-            // instead of remounting the iframe.
-            activeVariant && renderStage(activeVariant, "sg-single-stage")
-          : variants.map((variant) => renderStage(variant))}
+        {single ? (
+          <Show when={computed(() => !!activeVariant.value)}>
+            {() => (
+              <VariantFrame
+                slug={slug}
+                exportName={computed(() => activeVariant.value!.exportName)}
+                name={computed(() => activeVariant.value!.name)}
+                controls={computed(() => activeVariant.value?.controls)}
+                themeMode={frameThemeMode}
+                viewportId={viewportId}
+                previewUrl={previewUrl}
+                frameSandbox={frameSandbox}
+                frameAllow={frameAllow}
+                previewParams={previewParams}
+                fixedHeight={fixedHeight}
+              />
+            )}
+          </Show>
+        ) : (
+          variants.map((variant) => renderStage(variant))
+        )}
       </div>
     </div>
   );
 }
-
-DetailWorkbench.displayName = "DetailWorkbench";

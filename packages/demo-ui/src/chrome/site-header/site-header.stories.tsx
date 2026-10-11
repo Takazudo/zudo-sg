@@ -1,4 +1,4 @@
-import type { ComponentChildren } from "preact";
+import type { Child } from "@takazudo/zfb/zudo-react";
 import type { StoryMeta, Story } from "../../stories/types";
 import { ThemeControl } from "../../shared/theme-control/theme-control";
 import type { NavSection } from "../site-nav/site-nav";
@@ -45,11 +45,11 @@ const SECTIONS: NavSection[] = [
 ];
 
 /** The header's panel drops below it, so stories use a tall bordered frame. */
-function HeaderFrame({ children }: { children: ComponentChildren }) {
+function HeaderFrame({ children }: { children: Child }) {
   return (
-    <div style={{ position: "relative", minHeight: "22rem", border: "1px solid var(--color-border)", borderRadius: "var(--radius-md)", overflow: "hidden" }}>
+    <div style={{ position: "relative", "min-height": "22rem", border: "1px solid var(--color-border)", "border-radius": "var(--radius-md)", overflow: "hidden" }}>
       {children}
-      <p style={{ margin: "var(--spacing-vsp-sm) var(--spacing-hsp-xl)", fontSize: "var(--text-caption)", color: "var(--color-muted)" }}>
+      <p style={{ margin: "var(--spacing-vsp-sm) var(--spacing-hsp-xl)", "font-size": "var(--text-caption)", color: "var(--color-muted)" }}>
         Hover the Browse button, or Tab from it through the section destinations, to open the no-JavaScript category walk.
       </p>
     </div>

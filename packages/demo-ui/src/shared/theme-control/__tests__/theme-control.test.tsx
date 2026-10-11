@@ -1,5 +1,5 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/preact";
-import { afterEach, describe, expect, it } from "vitest";
+import { disposeAll, fire, renderIsland, flushAll, getByRole, queryAllByRole, renderSsr } from "../../../test-utils/zudo-react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { ThemeControl } from "../theme-control";
 import {
   applyStoredTheme,
@@ -34,7 +34,7 @@ const throwingStorage = {
 };
 
 afterEach(() => {
-  cleanup();
+  disposeAll();
   document.documentElement.removeAttribute("data-theme");
   window.localStorage.clear();
 });
@@ -89,37 +89,39 @@ describe("theme state", () => {
 describe("ThemeControl", () => {
   it("uses a native button with the next-action name, pressed state, and semantic focus treatment", () => {
     document.documentElement.dataset.theme = "light";
-    render(<ThemeControl />);
-    const button = screen.getByRole("button", { name: "Switch to dark theme" });
+    const { container } = renderIsland(ThemeControl, {});
+    const button = getByRole(container, "button", { name: "Switch to dark theme" });
 
     expect(button).toHaveAttribute("type", "button");
     expect(button).toHaveAttribute("aria-pressed", "false");
-    expect(button.className).toContain("min-h-[44px]");
-    expect(button.className).toContain("min-w-[44px]");
-    expect(button.className).toContain("focus-visible:outline-focus");
+    expect(button.classList.contains("min-h-[44px]")).toBe(true);
+    expect(button.classList.contains("min-w-[44px]")).toBe(true);
+    expect(button.classList.contains("focus-visible:outline-focus")).toBe(true);
     expect(button.querySelector("[aria-hidden=true]")).not.toBeNull();
   });
 
-  it("flips root state and persists the selected value without navigation", () => {
+  it("flips root state and persists the selected value without navigation", async () => {
     document.documentElement.dataset.theme = "light";
-    render(<ThemeControl />);
-    fireEvent.click(screen.getByRole("button", { name: "Switch to dark theme" }));
+    const { container } = renderIsland(ThemeControl, {});
+    fire(getByRole(container, "button", { name: "Switch to dark theme" }), "click");
+    await flushAll();
 
     expect(document.documentElement.dataset.theme).toBe("dark");
     expect(window.localStorage.getItem(THEME_STORAGE_KEY)).toBe("dark");
-    expect(screen.getByRole("button", { name: "Switch to light theme" })).toHaveAttribute(
+    expect(getByRole(container, "button", { name: "Switch to light theme" })).toHaveAttribute(
       "aria-pressed",
       "true",
     );
   });
 
-  it("activates from the keyboard", () => {
+  it("activates from the keyboard", async () => {
     document.documentElement.dataset.theme = "light";
-    render(<ThemeControl />);
-    fireEvent.keyDown(screen.getByRole("button"), { key: "Enter" });
+    const { container } = renderIsland(ThemeControl, {});
+    fire(getByRole(container, "button"), "keydown", { key: "Enter" });
+    await flushAll();
 
     expect(document.documentElement.dataset.theme).toBe("dark");
-    expect(screen.getByRole("button", { name: "Switch to light theme" })).toHaveAttribute(
+    expect(getByRole(container, "button", { name: "Switch to light theme" })).toHaveAttribute(
       "aria-pressed",
       "true",
     );
@@ -127,16 +129,20 @@ describe("ThemeControl", () => {
 
   it("keeps separately mounted controls synchronized through the root attribute", async () => {
     document.documentElement.dataset.theme = "light";
-    render(
-      <>
-        <ThemeControl />
-        <ThemeControl />
-      </>,
-    );
-    const [first, second] = screen.getAllByRole("button");
+    const { container } = renderIsland(function Fixture() {
+      return (
+        <>
+          <ThemeControl />
+          <ThemeControl />
+        </>
+      );
+    }, {});
+    const [first, second] = queryAllByRole(container, "button");
 
-    fireEvent.click(first!);
-    await waitFor(() => {
+    fire(first!, "click");
+    await flushAll();
+    await vi.waitFor(async () => {
+      await flushAll();
       expect(second).toHaveAttribute("aria-pressed", "true");
       expect(second).toHaveAccessibleName("Switch to light theme");
     });
@@ -144,13 +150,61 @@ describe("ThemeControl", () => {
 
   it("syncs controls when an external root update changes the theme", async () => {
     document.documentElement.dataset.theme = "light";
-    render(<ThemeControl />);
-    const control = screen.getByRole("button");
+    const { container } = renderIsland(ThemeControl, {});
+    const control = getByRole(container, "button");
 
     document.documentElement.dataset.theme = "dark";
-    await waitFor(() => {
+    await vi.waitFor(async () => {
+      await flushAll();
       expect(control).toHaveAttribute("aria-pressed", "true");
       expect(control).toHaveAccessibleName("Switch to light theme");
     });
   });
+
+  it("hydrates the stable SSR fallback before syncing a prepainted dark root", async () => {
+    document.documentElement.dataset.theme = "dark";
+    const html = renderSsr(<ThemeControl />);
+    expect(html).toContain('aria-pressed="false"');
+    const fixture = renderIsland(ThemeControl, {});
+    await fixture.flush();
+    expect(getByRole(fixture.container, "button", { name: "Switch to light theme" }))
+      .toHaveAttribute("aria-pressed", "true");
+    expect(fixture.diagnostics).toEqual([]);
+  });
+
+  it("disconnects its observer and removes activation handlers on disposal", async () => {
+    const disconnect = vi.spyOn(MutationObserver.prototype, "disconnect");
+    const onThemeChange = vi.fn();
+    try {
+      const fixture = renderIsland(function Fixture() {
+        return <ThemeControl onThemeChange={onThemeChange} />;
+      }, {});
+      const button = getByRole(fixture.container, "button");
+      fixture.dispose();
+      expect(disconnect).toHaveBeenCalledOnce();
+      fire(button, "click");
+      fire(button, "keydown", { key: "Enter" });
+      document.documentElement.dataset.theme = "dark";
+      await flushAll();
+      expect(onThemeChange).not.toHaveBeenCalled();
+    } finally {
+      disconnect.mockRestore();
+    }
+  });
+
+  it("handles Space once and ignores repeated or unrelated keys", async () => {
+    const onThemeChange = vi.fn();
+    const { container } = renderIsland(function Fixture() {
+        return <ThemeControl onThemeChange={onThemeChange} />;
+      }, {});
+    const button = getByRole(container, "button");
+    fire(button, "keydown", { key: " ", repeat: true });
+    fire(button, "keydown", { key: "Escape" });
+    expect(onThemeChange).not.toHaveBeenCalled();
+    fire(button, "keydown", { key: " " });
+    await flushAll();
+    expect(onThemeChange).toHaveBeenCalledExactlyOnceWith("dark");
+    expect(button).toHaveAttribute("aria-pressed", "true");
+  });
+
 });

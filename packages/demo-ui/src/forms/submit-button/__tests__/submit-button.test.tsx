@@ -1,20 +1,26 @@
-import { render, screen } from "@testing-library/preact";
+import { renderIsland, getByRole } from "../../../test-utils/zudo-react";
 import { describe, expect, it } from "vitest";
 import { SubmitButton } from "../submit-button";
 
 describe("SubmitButton", () => {
   it("defaults to type=submit", () => {
-    render(<SubmitButton>Send</SubmitButton>);
-    expect(screen.getByRole("button", { name: "Send" })).toHaveAttribute("type", "submit");
+    const { container } = renderIsland(function Fixture() {
+      return <SubmitButton>Send</SubmitButton>;
+    }, {});
+    expect(getByRole(container, "button", { name: "Send" })).toHaveAttribute("type", "submit");
   });
 
   it("forwards an explicit type", () => {
-    render(<SubmitButton type="button">Send</SubmitButton>);
-    expect(screen.getByRole("button", { name: "Send" })).toHaveAttribute("type", "button");
+    const { container } = renderIsland(function Fixture() {
+      return <SubmitButton type="button">Send</SubmitButton>;
+    }, {});
+    expect(getByRole(container, "button", { name: "Send" })).toHaveAttribute("type", "button");
   });
 
   it("can be disabled", () => {
-    render(<SubmitButton disabled>Send</SubmitButton>);
-    expect(screen.getByRole("button", { name: "Send" })).toBeDisabled();
+    const { container } = renderIsland(function Fixture() {
+      return <SubmitButton disabled>Send</SubmitButton>;
+    }, {});
+    expect(getByRole(container, "button", { name: "Send" })).toBeDisabled();
   });
 });

@@ -1,32 +1,19 @@
 // @vitest-environment happy-dom
-import type { ComponentChildren, JSX } from "preact";
-import { render } from "preact-render-to-string";
+import type { Child } from "@takazudo/zfb/zudo-react";
+import type { JSX } from "@takazudo/zfb/zudo-react/jsx-runtime";
+import { renderSsr as render } from "../../__tests__/helpers/zudo-react.js";
 import { describe, expect, it, vi } from "vitest";
 import type { NavNode } from "../../registry/nav-nodes.js";
 
-// `@takazudo/zudo-doc/doclayout`'s real DocLayoutWithDefaults pulls in
-// `@takazudo/zfb-runtime`'s ClientRouter, which itself imports the bare
-// "react" specifier — a package this project never installs (Preact-only,
-// with `react` aliased to `preact/compat` at the Vite level only). That
-// alias doesn't reach a node_modules-to-node_modules import (zudo-doc ->
-// zfb-runtime), so rendering the real component tree under vitest fails
-// with "Cannot find package 'react'" regardless of this seam. The fake
-// below stands in for DocLayoutWithDefaults, forwarding its documented
-// slots and mapping `contentWide` to `data-zd-wide` on the content band,
-// verified against the real package source at
-// `node_modules/@takazudo/zudo-doc/dist/doclayout/doc-layout.js` (#538).
-// This test's job is to prove StyleguideLayout forwards `contentWide` to
-// DocLayoutWithDefaults under that exact prop name; `pnpm --filter
-// @takazudo/zudo-sg check` (tsc) separately proves the prop type lines up
-// with the real package's `DocLayoutProps`.
+// Keep this forwarding test focused on the documented zudo-doc layout slots.
 vi.mock("@takazudo/zudo-doc/doclayout", () => ({
   DocLayoutWithDefaults: (props: {
     contentWide?: boolean;
-    head?: ComponentChildren;
-    headerOverride?: ComponentChildren;
-    sidebarOverride?: ComponentChildren;
-    afterSidebar?: ComponentChildren;
-    children?: ComponentChildren;
+    head?: Child;
+    headerOverride?: Child;
+    sidebarOverride?: Child;
+    afterSidebar?: Child;
+    children?: Child;
   }) => (
     <html>
       <head>{props.head}</head>
@@ -130,7 +117,7 @@ describe("StyleguideLayout header slot (#541)", () => {
       <header data-header="">framework chrome</header>,
     );
 
-    expect(html).toContain("<header data-header>framework chrome</header>");
+    expect(html).toContain("<header data-header=\"\">framework chrome</header>");
     expect(html).not.toContain("sg-header-region");
     expect(html).not.toContain("sg-header-toggles");
   });

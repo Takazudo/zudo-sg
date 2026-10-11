@@ -59,11 +59,11 @@ export const OrderedRightChildren: Story<SplitLayoutProps> = {
 
 export const Narrow: Story<SplitLayoutProps> = {
   name: "Narrow (stacked below md)",
-  source: `<div style={{ maxWidth: "320px" }}>
+  source: `<div style={{ "max-width": "320px" }}>
   <SplitLayout left={<div>Left pane</div>} right={<div>Right pane</div>} />
 </div>`,
   render: () => (
-    <div style={{ maxWidth: "320px" }}>
+    <div style={{ "max-width": "320px" }}>
       <SplitLayout left={<Pane label="Left pane" />} right={<Pane label="Right pane" />} />
     </div>
   ),

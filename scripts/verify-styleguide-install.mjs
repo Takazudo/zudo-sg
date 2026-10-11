@@ -10,17 +10,19 @@
 // builds both the empty and configured /tokens modes, and asserts the
 // four injected routes + the standalone preview stylesheet exist under the
 // fixture's non-root `base` ("/styleguide/") and the production host CSS
-// contains the catalog and responsive sidebar selectors. Then strips the
-// islands seed (`pages/lib/_zudo-sg-islands.ts` + its import) and engine CSS
-// safelist from the temp copy and boots `zfb dev` once, asserting
+// contains wind-emitted catalog and responsive sidebar selectors. It also
+// proves an engine manifest candidate is present without host source or
+// safelist coverage. It strips the islands seed
+// (`pages/lib/_zudo-sg-islands.ts` + its import) from the temp copy and boots
+// `zfb dev` once, asserting
 // `ConfiguredPreviewApp` (reached through the
 // injected route entrypoint) AND the fixture's `Counter` island (reached only
 // through `virtual:zudo-sg-registry`) both register in
-// `/styleguide/assets/islands.js`, and that the dev CSS content globs seeded
-// from the injected routes reach `/styleguide/assets/styles.css` — the
-// regression guard for zfb 2.18.0's dev-scanner and CSS-glob seeding (ADR
-// finding 4 amendment). The build phases above run on the as-shipped fixture
-// (seed present), so they still prove the seed is a harmless no-op.
+// `/styleguide/assets/islands.js`. The dev proof checks a host-source wind
+// candidate and confirms the standalone preview CSS refreshes after an
+// imported CSS edit and a component source edit. The build phases above run
+// on the as-shipped fixture (seed present), so they still prove the seed is
+// a harmless no-op.
 // Before that dev-only mutation, the browser verifier serves the configured
 // packed output and checks the post-swap early-click gap, panel toggles,
 // return/direct navigation, and actual rendered story identities in preview
@@ -34,11 +36,12 @@
 
 import { spawn } from "node:child_process";
 import { createServer } from "node:net";
+import { createRequire } from "node:module";
 import { cp, mkdir, mkdtemp, readFile, readdir, realpath, rm, writeFile } from "node:fs/promises";
 import { existsSync, statSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { PACKED_HOST_SCENARIOS } from "./verify-styleguide-install-browser.mjs";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
@@ -163,6 +166,25 @@ export async function waitForOk(url, timeoutMs, child, log) {
   fail(`zfb dev did not answer ${url} within ${timeoutMs}ms:\n${log()}`);
 }
 
+async function waitForBody(url, timeoutMs, child, log, predicate) {
+  const deadline = Date.now() + timeoutMs;
+  let latest = "";
+  while (Date.now() < deadline) {
+    if (child.exitCode !== null) fail(`zfb dev exited (${child.exitCode}) before ${url} emitted the expected CSS:\n${log()}`);
+    try {
+      const res = await fetch(url);
+      if (res.ok) {
+        latest = await res.text();
+        if (predicate(latest)) return latest;
+      }
+    } catch {
+      // A dev rebuild may briefly replace its CSS middleware response.
+    }
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
+  fail(`zfb dev did not emit the expected CSS from ${url} within ${timeoutMs}ms. Last body:\n${latest}\n${log()}`);
+}
+
 export function stopDevServer(child) {
   if (!child || child.exitCode !== null || child.signalCode !== null || child.pid === undefined) return;
   try {
@@ -276,6 +298,14 @@ export function parseDocumentedInstall(readme, fixtureManifest, packageManifest)
   for (const name of Object.keys(fixtureManifest.dependencies ?? {})) {
     assert(names.includes(name), `README pnpm add is missing fixture dependency ${name}`);
   }
+  for (const name of ["@takazudo/zfb", "@takazudo/zfb-md-wasm", "@takazudo/zfb-runtime", "@takazudo/zudo-doc", "@takazudo/zdtp"]) {
+    const documentedSpec = specs[names.indexOf(name)];
+    assert(documentedSpec === `${name}@^${fixtureManifest.dependencies[name]}`,
+      `README pnpm add must track the verified fixture version for ${name}`);
+  }
+  for (const name of ["preact", "preact-render-to-string", "tailwindcss"]) {
+    assert(!names.includes(name), `README host install must not declare engine-owned dependency ${name}`);
+  }
   return { command: commands[0][0], specs, names, prerequisites };
 }
 
@@ -283,6 +313,87 @@ export async function assertForeignPackage(hostDir) {
   const installed = await realpath(path.join(hostDir, "node_modules/@takazudo/zudo-sg"));
   const modules = path.join(await realpath(hostDir), "node_modules") + path.sep;
   assert(installed.startsWith(modules), `installed engine resolves outside the scratch node_modules: ${installed}`);
+}
+
+export async function assertSharedPreact(hostDir) {
+  const manifest = JSON.parse(await read(hostDir, "package.json"));
+  const directDependencies = {
+    ...manifest.dependencies,
+    ...manifest.devDependencies,
+    ...manifest.peerDependencies,
+  };
+  assert(!Object.hasOwn(directDependencies, "preact"), "fixture host declares a direct preact dependency");
+
+  const engineDir = await realpath(path.join(hostDir, "node_modules/@takazudo/zudo-sg"));
+  const adapterPath = path.join(engineDir, "dist/token-dashboard/token-dashboard-adapter.js");
+  assert(existsSync(adapterPath), "packed engine is missing its Preact dashboard adapter");
+  const adapterPreact = await realpath(createRequire(adapterPath).resolve("preact"));
+  const hostRequire = createRequire(path.join(hostDir, "package.json"));
+  const dashboardEntry = hostRequire.resolve("@takazudo/zdtp/dashboard");
+  const dashboardPreact = await realpath(createRequire(dashboardEntry).resolve("preact"));
+  assert(
+    adapterPreact === dashboardPreact,
+    `engine adapter and zdtp resolve different Preact copies: ${adapterPreact} vs ${dashboardPreact}`,
+  );
+
+  const lockfile = await read(hostDir, "pnpm-lock.yaml");
+  const lockVersions = new Set(
+    [...lockfile.matchAll(/^\s{2}preact@([^:\r\n]+):/gmu)].map((match) => match[1]),
+  );
+  assert(
+    lockVersions.size === 1,
+    `packed fixture lockfile has ${lockVersions.size} Preact resolutions: ${[...lockVersions].join(", ")}`,
+  );
+  console.log(`OK — engine adapter and zdtp resolve one Preact package (${adapterPreact}) and the lockfile has one resolution.`);
+  return { adapterPath };
+}
+
+export async function assertSingleBundledRenderer(hostDir, adapterPath) {
+  const probePath = path.join(hostDir, ".f1-preact-renderer-graph.mjs");
+  const probeSource = [
+    'import { mountDashboard } from "./node_modules/@takazudo/zudo-sg/dist/token-dashboard/token-dashboard-adapter.js";',
+    'import { TokenDashboard } from "@takazudo/zdtp/dashboard";',
+    "export { mountDashboard, TokenDashboard };",
+    "",
+  ].join("\n");
+  await writeFile(probePath, probeSource);
+  try {
+    const hostRequire = createRequire(path.join(hostDir, "package.json"));
+    const zfbEntry = hostRequire.resolve("@takazudo/zfb");
+    const esbuildPath = createRequire(zfbEntry).resolve("esbuild");
+    const { build } = await import(pathToFileURL(esbuildPath).href);
+    const result = await build({
+      absWorkingDir: hostDir,
+      entryPoints: [probePath],
+      bundle: true,
+      write: false,
+      metafile: true,
+      platform: "browser",
+      format: "esm",
+      target: "es2022",
+    });
+    const rendererInputs = Object.keys(result.metafile.inputs).filter((input) => {
+      const parts = input.replaceAll("\\", "/").split("/");
+      return (
+        parts.includes("preact") &&
+        parts.at(-2) === "dist" &&
+        ["preact.js", "preact.module.js", "preact.mjs"].includes(parts.at(-1))
+      );
+    });
+    assert(
+      rendererInputs.length === 1,
+      `packed adapter/zdtp bundle contains ${rendererInputs.length} Preact renderer inputs: ${rendererInputs.join(", ")}`,
+    );
+    const emittedRenderer = await realpath(path.resolve(hostDir, rendererInputs[0]));
+    const packageRenderer = await realpath(createRequire(adapterPath).resolve("preact"));
+    assert(
+      emittedRenderer.startsWith(path.dirname(packageRenderer)),
+      `bundled renderer input ${emittedRenderer} is outside the adapter's installed Preact package ${packageRenderer}`,
+    );
+    console.log(`OK — packed adapter/zdtp bundle emits one Preact renderer input (${rendererInputs[0]}).`);
+  } finally {
+    await rm(probePath, { force: true });
+  }
 }
 
 async function verifyDocumentedInstall(tarballPath, packageManifest) {
@@ -454,6 +565,31 @@ export async function assertHeadAssets(hostDir) {
   );
 }
 
+// D1: packed HTML proves the server boundary and serialized declared data;
+// the opaque Preact widget is mounted only after client activation.
+export function assertDashboardFallbacks(document) {
+  const shells = [...document.querySelectorAll('[data-zfb-island-skip-ssr="TokenDashboardMount"]')];
+  assert(shells.length === 3, "configured /tokens must render three TokenDashboardMount loading shells");
+  assert(!document.querySelector(".zdtp-dashboard, [data-css-var], [data-sg-token-dashboard]"), "server /tokens fabricated client dashboard markup");
+  const definitions = [
+    { id: "ui-defaults-light", mode: "light", chrome: "light", include: "mode-dependent", title: "UI tokens — mode-dependent defaults (light)" },
+    { id: "ui-defaults-dark", mode: "dark", chrome: "dark", include: "mode-dependent", title: "UI tokens — mode-dependent defaults (dark)" },
+    { id: "ui-defaults-shared", chrome: "host", include: "mode-independent", title: "UI tokens — shared defaults (mode-independent)" },
+  ];
+  return shells.map((shell, index) => {
+    const expected = definitions[index];
+    assert(shell.getAttribute("data-when") === "load", `${expected.id} does not activate on load`);
+    assert(shell.querySelector("h2")?.textContent === expected.title, `${expected.id} lacks its truthful fallback heading`);
+    assert(shell.querySelector("p")?.textContent === "Loading declared defaults…", `${expected.id} lacks loading text`);
+    const props = JSON.parse(shell.getAttribute("data-props") ?? "null");
+    assert(props && Array.isArray(props.tabs) && props.manifest, `${expected.id} lacks serialized token data`);
+    for (const key of ["id", "mode", "chrome", "include", "title"]) {
+      assert(props[key] === expected[key], `${expected.id} changed its serialized ${key}`);
+    }
+    return props;
+  });
+}
+
 async function assertTokensRoute(hostDir, empty) {
   // Parse rendered elements, not CSS/JS strings; zfb may minify attribute quotes.
   const { JSDOM } = await import("jsdom");
@@ -466,17 +602,17 @@ async function assertTokensRoute(hostDir, empty) {
   const emptyState = document.querySelector("[data-zudo-sg-tokens-empty]");
   if (empty) {
     assert(emptyState, "dist/tokens/index.html lacks the no-manifest empty state");
-    assert(!document.querySelector(".zdtp-dashboard"), "empty /tokens mode unexpectedly rendered a dashboard");
+    assert(!document.querySelector('.zdtp-dashboard, [data-zfb-island-skip-ssr="TokenDashboardMount"]'), "empty /tokens mode unexpectedly rendered a dashboard boundary");
     console.log("OK — /tokens empty state: [data-zudo-sg-tokens-empty].");
     return;
   }
   assert(!emptyState, "configured /tokens unexpectedly rendered the empty state");
-  const dashboard = document.querySelector("#ui-defaults-shared.zdtp-dashboard");
-  assert(dashboard, "dist/tokens/index.html lacks #ui-defaults-shared.zdtp-dashboard");
-  const token = dashboard.querySelector('.zdtp-dashboard__token[data-css-var="--spacing-hsp-md"]');
-  assert(token, 'shared dashboard lacks .zdtp-dashboard__token[data-css-var="--spacing-hsp-md"]');
-  assert(token.querySelector(".zdtp-dashboard__value")?.textContent === "1rem", "shared dashboard lacks the fixture's declared spacing value");
-  console.log('OK — /tokens renders #ui-defaults-shared.zdtp-dashboard .zdtp-dashboard__token[data-css-var="--spacing-hsp-md"] with value 1rem.');
+  const dashboards = assertDashboardFallbacks(document);
+  const shared = dashboards[2];
+  const token = shared.tabs.flatMap((tab) => tab.tiers.flatMap((tier) => tier.items))
+    .find((item) => item.cssVar === "--spacing-hsp-md");
+  assert(token?.default === "1rem", "shared dashboard payload lacks the fixture's declared spacing value");
+  console.log("OK — /tokens renders three truthful dashboard loading shells and serializes the declared spacing value 1rem.");
 }
 
 export async function assertProductionCss(hostDir) {
@@ -492,11 +628,74 @@ export async function assertProductionCss(hostDir) {
   postcss.parse(buildCss).walkRules((rule) => {
     for (const selector of rule.selectors) selectors.add(selector);
   });
-  // Match whole selectors: .lg\:flex-1 must not stand in for .lg\:flex.
-  for (const selector of [".sg-grid", ".sticky", ".lg\\:hidden", ".lg\\:flex"]) {
+  // Match whole wind selectors: responsive candidates must not be inferred
+  // from a similarly named selector or a generated safelist.
+  for (const selector of [".grid", ".sticky", ".lg\\:hidden", ".lg\\:flex"]) {
     assert(selectors.has(selector), `dist/assets/styles-*.css is missing ${selector}`);
   }
-  console.log("OK — production host CSS contains the catalog grid, sticky sidebar, and responsive visibility selectors.");
+  const engineManifest = JSON.parse(await read(hostDir, "node_modules/@takazudo/zudo-sg/dist/wind.json"));
+  const engineCandidate = "text-sg-muted";
+  assert(
+    engineManifest.schemaVersion === 1 &&
+      engineManifest.producer === "zudo-sg" &&
+      engineManifest.candidates.includes(engineCandidate),
+    `packed wind.json does not provide ${engineCandidate}`,
+  );
+  const fixtureSource = await readFixtureSourceText(hostDir);
+  assert(!fixtureSource.includes(engineCandidate), `fixture source accidentally covers manifest candidate ${engineCandidate}`);
+  const hostConfig = await read(hostDir, "zfb.config.ts");
+  assert(!/safelist/iu.test(hostConfig), "fixture zfb.config.ts contains a safelist");
+  assert(!/safelist/iu.test(fixtureSource), "fixture source contains a safelist import or declaration");
+  assert(!/@source\b/u.test(fixtureSource), "fixture CSS or source contains an @source directive");
+  assert(selectors.has(`.${engineCandidate}`), `production CSS is missing engine-manifest candidate .${engineCandidate}`);
+  console.log("OK — production host CSS contains wind catalog selectors and text-sg-muted from the packed engine manifest.");
+}
+
+async function readFixtureSourceText(hostDir) {
+  const chunks = [];
+  async function visit(directory) {
+    for (const entry of await readdir(directory, { withFileTypes: true })) {
+      const filePath = path.join(directory, entry.name);
+      if (entry.isDirectory()) {
+        await visit(filePath);
+      } else if (/\.(?:css|md|mdx|mjs|js|ts|tsx|jsx)$/u.test(entry.name)) {
+        chunks.push(await readFile(filePath, "utf8"));
+      }
+    }
+  }
+  for (const directory of ["pages", "src", "ui"]) {
+    const sourceRoot = path.join(hostDir, directory);
+    if (existsSync(sourceRoot)) await visit(sourceRoot);
+  }
+  return chunks.join("\n");
+}
+
+export async function assertBuiltPreviewCss(hostDir, previewHtml) {
+  const css = await read(hostDir, "dist/_zudo-sg/preview.css");
+  const { default: postcss } = await import("postcss");
+  const selectors = new Set();
+  let scopedAccentToken = false;
+  postcss.parse(css).walkRules((rule) => {
+    for (const selector of rule.selectors) selectors.add(selector);
+    if (rule.selectors.includes(":root[data-sg-preview-doc]")) {
+      scopedAccentToken ||= rule.nodes.some(
+        (node) => node.type === "decl" && node.prop === "--color-accent",
+      );
+    }
+  });
+  assert(selectors.has(":root[data-sg-preview-doc]"), "dist/_zudo-sg/preview.css has no scoped preview token root");
+  assert(scopedAccentToken, "dist/_zudo-sg/preview.css has no scoped host accent token");
+  assert(selectors.has(".bg-accent"), "dist/_zudo-sg/preview.css is missing the fixture's bg-accent wind candidate");
+  const { JSDOM } = await import("jsdom");
+  const previewDom = new JSDOM(previewHtml);
+  const previewLinks = [...previewDom.window.document.querySelectorAll('link[href*="_zudo-sg/preview.css"]')]
+    .map((link) => link.getAttribute("href") ?? "");
+  previewDom.window.close();
+  assert(
+    previewLinks.length === 1 && new URL(previewLinks[0], "https://fixture.invalid").pathname === "/styleguide/_zudo-sg/preview.css",
+    `preview CSS URL is not base-prefixed exactly once: ${previewLinks.join(", ") || "no link"}`,
+  );
+  console.log("OK — standalone preview CSS has scoped host tokens, a real utility, and one /styleguide/ URL prefix.");
 }
 
 /** Assert the actual files emitted by a route scenario, including each detail page's iframe target. */
@@ -576,6 +775,7 @@ async function main() {
     console.log("Installing (tarball + exact @takazudo/zfb / @takazudo/zudo-doc pins)");
     await run("corepack", ["pnpm", "install"], hostDir);
     await assertForeignPackage(hostDir);
+    const preactProof = await assertSharedPreact(hostDir);
 
     console.log("Removing the fixture registry before zudo-sg gen-registry (bootstrap proof)");
     await rm(path.join(hostDir, "src/styleguide/sg-registry.ts"), { force: true });
@@ -680,9 +880,11 @@ async function main() {
     assert(existsSync(path.join(hostDir, "dist/tokens/index.html")), "missing dist/tokens/index.html");
     await assertTokensRoute(hostDir, false);
     assert(existsSync(path.join(hostDir, "dist/_zudo-sg/preview.css")), "missing dist/_zudo-sg/preview.css (base-unnested, ADR decision 4)");
+    await assertBuiltPreviewCss(hostDir, previewHtml);
     await assertHeadAssets(hostDir);
 
     await assertProductionCss(hostDir);
+    await assertSingleBundledRenderer(hostDir, preactProof.adapterPath);
 
     const buildIslandsManifestFiles = (await readdir(path.join(hostDir, "dist/assets"))).filter((f) => /^islands-.*\.js$/.test(f));
     assert(buildIslandsManifestFiles.length > 0, "no dist/assets/islands-*.js manifest found");
@@ -698,9 +900,9 @@ async function main() {
     // reported public topology: the same island mounts on host and engine.
     const wrapperPath = path.join(hostDir, "pages/lib/_engine-route-preview-token-panel-bootstrap.tsx");
     const wrapperSource = await readFile(wrapperPath, "utf8");
-    const engineOnlyGuard = 'if (typeof document === "undefined" || !document.querySelector("[data-sg-engine-route]")) return null;';
+    const engineOnlyGuard = 'active.value = Boolean(document.querySelector("[data-sg-engine-route]"));';
     assert(wrapperSource.includes(engineOnlyGuard), "fixture engine-only bootstrap guard moved");
-    await writeFile(wrapperPath, wrapperSource.replace(engineOnlyGuard, 'if (typeof document === "undefined") return null;'));
+    await writeFile(wrapperPath, wrapperSource.replace(engineOnlyGuard, 'active.value = true;'));
     for (const output of ["dist", ".zfb-build"]) {
       await rm(path.join(hostDir, output), { recursive: true, force: true });
     }
@@ -742,13 +944,6 @@ async function main() {
       indexSource.split("\n").filter((line) => line.trim() !== seedImportLine).join("\n"),
     );
 
-    // Production above uses the shipped safelist. Remove only its import in
-    // this scratch dev run so it cannot mask broken injected-route CSS scans.
-    const globalCssSource = await read(hostDir, "src/styles/global.css");
-    const engineSafelistImport = '@import "@takazudo/zudo-sg/safelist.css";';
-    assert(globalCssSource.includes(engineSafelistImport), "expected engine safelist import in src/styles/global.css");
-    await writeFile(path.join(hostDir, "src/styles/global.css"), globalCssSource.replace(engineSafelistImport, ""));
-
     console.log("zfb dev (seedless: injected routes + virtual registry islands, dev CSS globs — ADR finding 4 amendment)");
     const port = await freePort();
     let log = "";
@@ -765,22 +960,63 @@ async function main() {
     const islandsRes = await waitForOk(`${origin}/styleguide/assets/islands.js`, 300_000, devServer, () => log);
     const islandsBundle = await islandsRes.text();
     assert(islandsBundle.includes("ConfiguredPreviewApp"), "/styleguide/assets/islands.js does not contain ConfiguredPreviewApp");
-    // Half (b): Counter is reached only through `virtual:zudo-sg-registry` —
-    // the fixture host's pages/ imports nothing else, which is the isolation.
+    // Half (b): Counter is reached only through `virtual:zudo-sg-registry`.
+    // In zudo-react it is a nested component owned by ConfiguredPreviewApp,
+    // rather than a separately registered Island boundary.
     assert(
-      /__zfb_register\([^)]*"Counter",\s*"[^"]*\/ui\/counter\/counter\.tsx"\)/u.test(islandsBundle),
-      "/styleguide/assets/islands.js does not register Counter from ui/counter/counter.tsx (half b, virtual registry)",
+      islandsBundle.includes("ui/counter/counter.tsx") && /function Counter\(/u.test(islandsBundle),
+      "/styleguide/assets/islands.js does not include Counter from ui/counter/counter.tsx (half b, virtual registry)",
     );
     assert(!/has no matching registry entry/u.test(log), "zfb dev logged an unregistered island marker");
     assert(!/no "use client" islands found/u.test(log), 'zfb dev logged no "use client" islands found');
 
-    // A utility class used only by the injected components-index.tsx /
-    // tokens.tsx headers (`max-w-[56rem]`): the scratch host has no engine
-    // safelist or `@source`, so it reaches the dev stylesheet only through the
-    // injected-route content globs zfb 2.18.0 seeds (absent on 2.17.0).
+    // A wind-valid arbitrary width candidate used by this fixture's homepage
+    // must appear in dev CSS from the host source roots.
     const cssRes = await waitForOk(`${origin}/styleguide/assets/styles.css`, 300_000, devServer, () => log);
     const cssBody = await cssRes.text();
-    assert(cssBody.includes(".max-w-\\[56rem\\]"), "/styleguide/assets/styles.css is missing .max-w-\\[56rem\\] (dev CSS content-glob seeding, ADR finding 4 amendment)");
+    assert(cssBody.includes(".max-w-\\[48rem\\]"), "/styleguide/assets/styles.css is missing the fixture's .max-w-\\[48rem\\] candidate");
+
+    const previewCssUrl = `${origin}/styleguide/_zudo-sg/preview.css`;
+    const firstPreviewResponse = await waitForOk(previewCssUrl, 300_000, devServer, () => log);
+    const firstPreviewCss = await firstPreviewResponse.text();
+    assert(firstPreviewCss.includes(":root[data-sg-preview-doc]"), "dev preview CSS is missing scoped preview roots");
+    assert(firstPreviewCss.includes(".bg-accent"), "dev preview CSS is missing the fixture's bg-accent candidate");
+    // Cold-lazy dev can expose the shared asset bundle before this injected
+    // document's first render has completed. Wait for the document, not just JS.
+    await waitForOk(`${origin}/styleguide/components/preview?slug=counter&variant=Basic`, 300_000, devServer, () => log);
+    await runStreamed(process.execPath, [path.join(root, "scripts/verify-styleguide-install-browser.mjs"), "--dev-counter-origin", origin], root);
+
+    const componentsCssPath = path.join(hostDir, "src/styles/components.css");
+    const componentsCssBefore = await readFile(componentsCssPath, "utf8");
+    await writeFile(
+      componentsCssPath,
+      `${componentsCssBefore}\n.zc-preview-import-proof { --f1-import-proof: imported; }\n`,
+    );
+    const importedPreviewCss = await waitForBody(
+      previewCssUrl,
+      60_000,
+      devServer,
+      () => log,
+      (body) => body.includes(".zc-preview-import-proof"),
+    );
+    assert(importedPreviewCss.includes(".zc-preview-import-proof"), "preview CSS did not recompile after an imported stylesheet edit");
+
+    const cardPath = path.join(hostDir, "ui/card/card.tsx");
+    const cardBefore = await readFile(cardPath, "utf8");
+    const cardAfter = cardBefore.replace(
+      'class="zc-fixture-card border',
+      'class="zc-fixture-card max-w-[37rem] border',
+    );
+    assert(cardAfter !== cardBefore, "failed to add the preview source-edit candidate to Card");
+    await writeFile(cardPath, cardAfter);
+    const sourceEditedPreviewCss = await waitForBody(
+      previewCssUrl,
+      60_000,
+      devServer,
+      () => log,
+      (body) => body.includes(".max-w-\\[37rem\\]"),
+    );
+    assert(sourceEditedPreviewCss.includes(".max-w-\\[37rem\\]"), "preview CSS did not recompile after a component source edit");
 
     {
       await stopDevServerAndWait(devServer);
@@ -803,13 +1039,16 @@ async function main() {
       const { JSDOM } = await import("jsdom");
       const dom = new JSDOM(await read(hostDir, "dist/tokens/index.html"));
       const page = dom.window.document;
-      for (const name of ["--brand-100", "--brand-500", "--signal-calm", "--status-alert", "--space-inline", "--type-body", "--type-leading", "--type-weight", "--corner-card"]) {
-        assert(page.querySelector(`[data-css-var="${name}"]`), `foreign dashboard lost ${name}`);
+      const dashboards = assertDashboardFallbacks(page);
+      const rows = dashboards[2].tabs.flatMap((tab) => tab.tiers.flatMap((tier) => tier.items));
+      const names = new Set(rows.map((item) => item.cssVar));
+      for (const name of ["--brand-100", "--brand-500", "--signal-calm", "--status-alert", "--space-inline", "--type-body", "--type-leading", "--type-weight", "--corner-card", "--surface-canvas"]) {
+        assert(names.has(name), `foreign dashboard payload lost ${name}`);
       }
-      assert(!page.querySelector('[data-css-var^="--palette-"]'), "foreign dashboard introduced demo palette variables");
-      assert(page.querySelector('[data-css-var="--surface-canvas"]'), "foreign dashboard lost light-dark color");
+      assert(![...names].some((name) => name.startsWith("--palette-")), "foreign dashboard payload introduced demo palette variables");
+      assert(rows.find((item) => item.cssVar === "--surface-canvas")?.default === "light-dark(var(--brand-100), var(--brand-500))", "foreign dashboard payload lost its declared light-dark value");
       dom.window.close();
-      console.log("OK — packed foreign host typechecks and renders every category on /tokens.");
+      console.log("OK — packed foreign host typechecks and serializes every category behind truthful /tokens loading shells.");
     }
 
     console.log("OK — packed @takazudo/zudo-sg installs and builds outside the workspace, under base \"/styleguide/\".");

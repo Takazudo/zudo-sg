@@ -23,7 +23,7 @@ const INITIATIVES: SdgsInitiative[] = [
 export const Default: Story<SdgsHighlightProps> = {
   name: "Default",
   render: () => (
-    <div style={{ maxWidth: "960px" }}>
+    <div style={{ "max-width": "960px" }}>
       <SdgsHighlight
         eyebrow="Sustainability"
         heading="Working toward a sustainable future"
@@ -38,7 +38,7 @@ export const Default: Story<SdgsHighlightProps> = {
 export const Narrow: Story<SdgsHighlightProps> = {
   name: "Narrow (card wrap)",
   render: () => (
-    <div style={{ maxWidth: "380px" }}>
+    <div style={{ "max-width": "380px" }}>
       <SdgsHighlight heading="Working toward a sustainable future" initiatives={INITIATIVES} href="/sustainability/sdgs" />
     </div>
   ),

@@ -1,6 +1,6 @@
 # zudo-sg Docs
 
-This workspace is the contributor documentation site built with zudo-doc 5.28.0, zfb 2.21.1, MDX, Tailwind CSS v4, and Preact.
+This workspace is the contributor documentation site built with zudo-doc 6.0.0, zfb 4.3.1, MDX, zudo-wind, and zudo-react.
 
 ## Commands
 
@@ -19,7 +19,9 @@ Run commands from `doc/`, or use the `@zudo-sg/doc` workspace filter from the re
 - Package exports own doc chrome, route context, navigation, schemas, translations, color schemes, content components, and feature islands. Do not recreate a local `pages/lib` chain.
 - Keep doc-history metadata hacks out of this workspace: there is no prebuild or precheck hook.
 - `src/styles/global.css` starts with the canonical 5.2 scaffold imports. Add only intentional project-specific token or content overrides after them.
-- `src/content/docs/` contains the 12 authored articles. Generated Claude-resource directories under `src/content/docs/claude*` are not hand-authored.
+- `src/content/docs/` contains getting-started, architecture, development,
+  reference, and changelog content. Generated Claude-resource
+  directories under `src/content/docs/claude*` are not hand-authored.
 
 ## Content conventions
 
@@ -27,8 +29,9 @@ Run commands from `doc/`, or use the `@zudo-sg/doc` workspace filter from the re
 - Do not add an h1 in the body; the frontmatter title renders it. Start sections at h2.
 - Use relative `.md`/`.mdx` links for authored documentation.
 - Directive admonitions such as `:::note` are available without imports.
-- Prefer server-rendered JSX. Add a Preact island only for required client behavior and keep its page import chain statically discoverable.
+- Prefer server-rendered JSX. Add a zudo-react island only for required client behavior and keep its page import chain statically discoverable.
 
 ## Enabled behavior
 
-Search, image enlargement, dynamic page transitions, `llms.txt`, and repository-root Claude resources are enabled. AI chat, history, design-token panels, local versioning, tags, changelogs, sidebar resizing/toggling, and HTML preview are disabled.
+Search, image enlargement, dynamic page transitions, `llms.txt`, repository-root
+Claude resources, and changelog generation for `@takazudo/zudo-sg` are enabled.

@@ -13,7 +13,7 @@
  * search box (`SiteHeader`, mounted in every page's chrome) submits a plain
  * GET to `/search?q=...`, which lands here.
  */
-import { Island, type IslandProps } from "@takazudo/zfb";
+import { Island } from "@takazudo/zfb";
 import DefaultLayout from "../layouts/default";
 import { Container } from "@zudo-sg/demo-ui/src/shared/container/container.tsx";
 import { SearchResults } from "@zudo-sg/demo-ui/src/search/search-results/search-results.tsx";
@@ -46,8 +46,8 @@ export default function SearchPage() {
       {/* @zudo-sg/demo-ui's SearchResults deliberately does not mount its own
           enhancer (see that component's module doc) — this is the consumer
           wiring it, exactly per its documented example. */}
-      <Island when="visible" ssrFallback={null}>
-        {(<SearchResultsEnhancer />) as unknown as IslandProps["children"]}
+      <Island when="load" ssrFallback={null}>
+        <SearchResultsEnhancer />
       </Island>
     </DefaultLayout>
   );

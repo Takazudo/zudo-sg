@@ -1,5 +1,3 @@
-/** @jsxRuntime automatic */
-/** @jsxImportSource preact */
 // Injected at `sgContext.routes.componentsPreview` — the isolated variant
 // preview document loaded as the `src` of every VariantFrame iframe.
 //
@@ -20,7 +18,7 @@
 // implies `componentsPreview` disabled — the route plugin never injects this
 // entrypoint there, so it needs no descriptor-mode branch of its own.
 
-import type { JSX, VNode } from "preact";
+import type { JSX } from "@takazudo/zfb/zudo-react/jsx-runtime";
 import { Island } from "@takazudo/zfb";
 import ConfiguredPreviewApp from "./_preview-app.js";
 import { ctx, withBase } from "./_context.js";
@@ -38,11 +36,7 @@ const LIVERELOAD_STUB =
 export default function ComponentsPreviewRoute(): JSX.Element {
   // SSR-skip island: the variant depends on `location.search`, so nothing
   // renders server-side and the runtime mounts ConfiguredPreviewApp on load.
-  const app = Island({
-    when: "load",
-    ssrFallback: <div data-sg-preview-loading />,
-    children: <ConfiguredPreviewApp />,
-  }) as unknown as VNode;
+  const app = <Island when="load" ssrFallback={<div data-sg-preview-loading />}><ConfiguredPreviewApp /></Island>;
 
   return (
     // Chrome-free document (no header, no client router), so the persisted-vs-
@@ -55,7 +49,7 @@ export default function ComponentsPreviewRoute(): JSX.Element {
         <meta name="robots" content="noindex" />
         <title>Preview</title>
         <link rel="stylesheet" href={withBase(ctx.previewCssUrl)} data-sg-preview-css />
-        <script dangerouslySetInnerHTML={{ __html: LIVERELOAD_STUB }} />
+        <script rawHtml={LIVERELOAD_STUB} />
       </head>
       {/* The preview canvas follows host preview tokens, not engine chrome tokens. */}
       <body class="bg-bg">{app}</body>

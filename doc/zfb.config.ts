@@ -11,6 +11,9 @@ export default defineConfig(
     // the route was emitted unconditionally and this deployed site shipped one.
     sitemap: true,
     base: "/",
+    // Keep zudo-wind scoped to this docs workspace. The repo root is also a
+    // pnpm workspace package, but its sources belong to the root site's scan.
+    wind: { sources: { rootPackage: false } },
     entryDocSlug: "getting-started",
     llmsTxt: true,
     imageEnlarge: true,

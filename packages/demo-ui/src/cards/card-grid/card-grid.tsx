@@ -1,17 +1,16 @@
-import type { ComponentChildren } from "preact";
+import type { Child } from "@takazudo/zfb/zudo-react";
 import { cx } from "../../lib/cx";
 
 export type CardGridProps = {
   class?: string;
-  children?: ComponentChildren;
+  children?: Child;
 };
 
 /**
  * Wraps a run of Cards in a responsive auto-fit grid for MDX/content bodies.
  * Horizontal and vertical gaps are set separately (hsp columns, vsp rows) —
  * a different rhythm than a single `gap-hsp-md` would give. The 18rem
- * minmax track is a literal Tailwind v4 class (not composed dynamically —
- * v4 only scans literal class strings in source).
+ * minmax track is a complete literal so wind can extract it.
  */
 export function CardGrid({ class: cls, children }: CardGridProps) {
   return (

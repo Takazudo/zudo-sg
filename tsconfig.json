@@ -1,5 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
+  "extends": "@takazudo/zudo-doc/tsconfig.base.json",
   "compilerOptions": {
     "target": "ESNext",
     "module": "ESNext",
@@ -13,8 +14,6 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "allowJs": true,
-    "jsx": "react-jsx",
-    "jsxImportSource": "preact",
     "strict": true,
     "noImplicitAny": true,
     "strictNullChecks": true,

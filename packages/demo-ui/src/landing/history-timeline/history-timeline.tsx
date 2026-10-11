@@ -29,7 +29,7 @@ export function HistoryTimeline({ entries, class: cls }: HistoryTimelineProps) {
               <span class="absolute top-vsp-2xs size-[10px] rounded-full border-2 border-bg bg-accent" />
             </span>
 
-            <span class="pb-vsp-md ps-hsp-2xs text-small leading-relaxed text-fg">{entry.event}</span>
+            <span class="zc-history-entry-event pb-vsp-md text-small leading-relaxed text-fg">{entry.event}</span>
           </li>
         );
       })}

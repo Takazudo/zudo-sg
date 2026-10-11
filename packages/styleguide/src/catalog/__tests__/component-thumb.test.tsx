@@ -1,5 +1,3 @@
-/** @jsxRuntime automatic */
-/** @jsxImportSource preact */
 // @vitest-environment happy-dom
 // Catalogue gallery contracts (#540, moved into the engine package by #653).
 //
@@ -15,10 +13,11 @@
 // `ComponentThumb` is responsible for its own "every tile shows something"
 // regression coverage against its actual story set.
 
+import { getScope, signal } from "@takazudo/zfb/zudo-react";
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { render } from "preact-render-to-string";
+import { renderSsr as render } from "../../__tests__/helpers/zudo-react.js";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Story, StoryModule } from "../../stories/types.js";
 import { createRegistry } from "../../registry/registry.js";
@@ -237,6 +236,23 @@ describe("ComponentThumb rendering", () => {
       return [...html.matchAll(/\sid="([^"]*)"/g)].map((match) => match[1]);
     });
     expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it("renders story setup in its own scope and memoizes the snapshot", () => {
+    const setup = vi.fn(() => {
+      const scope = getScope();
+      const label = signal("scoped story");
+      scope.onActivate(() => { throw new Error("SSR must not activate"); });
+      return <button>{label}</button>;
+    });
+    const entry = fixtureRegistry({
+      "./scoped.stories.tsx": storyModule("Scoped Snapshot", "Actions", {
+        Primary: story("Primary", setup),
+      }),
+    }).storyEntries[0]!;
+    expect(render(<ComponentThumb entry={entry} />)).toContain("scoped story");
+    expect(render(<ComponentThumb entry={entry} />)).toContain("scoped story");
+    expect(setup).toHaveBeenCalledTimes(1);
   });
 
   it("honors a declared opt-out without ever calling render", () => {

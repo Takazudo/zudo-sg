@@ -1,35 +1,43 @@
-import { render, screen } from "@testing-library/preact";
-import { describe, expect, it } from "vitest";
+import { renderIsland, disposeAll, getByText } from "../../../test-utils/zudo-react";
+import { afterEach, describe, expect, it } from "vitest";
 import { Container } from "../container";
+
+afterEach(disposeAll);
 
 describe("Container", () => {
   it("renders a <div> with its children by default", () => {
-    render(
-      <Container>
-        <span>Content</span>
-      </Container>,
-    );
-    const el = screen.getByText("Content").parentElement!;
+    const { container } = renderIsland(function Fixture() {
+      return (
+        <Container>
+          <span>Content</span>
+        </Container>
+      );
+    }, {});
+    const el = getByText(container, "Content").parentElement!;
     expect(el.tagName).toBe("DIV");
-    expect(el.className).toContain("max-w-[88rem]");
+    expect(el.classList.contains("max-w-[88rem]")).toBe(true);
   });
 
   it("renders the given `as` tag", () => {
-    render(
-      <Container as="section">
-        <span>Content</span>
-      </Container>,
-    );
-    expect(screen.getByText("Content").parentElement!.tagName).toBe("SECTION");
+    const { container } = renderIsland(function Fixture() {
+      return (
+        <Container as="section">
+          <span>Content</span>
+        </Container>
+      );
+    }, {});
+    expect(getByText(container, "Content").parentElement!.tagName).toBe("SECTION");
   });
 
-  it("centers via inline marginInline:auto", () => {
-    render(
-      <Container>
-        <span>Content</span>
-      </Container>,
-    );
-    const el = screen.getByText("Content").parentElement as HTMLElement;
-    expect(el.style.marginInline).toBe("auto");
+  it("centers via inline margin-inline:auto", () => {
+    const { container } = renderIsland(function Fixture() {
+      return (
+        <Container>
+          <span>Content</span>
+        </Container>
+      );
+    }, {});
+    const el = getByText(container, "Content").parentElement as HTMLElement;
+    expect(el.style.getPropertyValue("margin-inline")).toBe("auto");
   });
 });

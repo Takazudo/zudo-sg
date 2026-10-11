@@ -22,7 +22,7 @@ const CERTS: Cert[] = [
 export const Default: Story<CertListProps> = {
   name: "Default (2 certifications)",
   render: () => (
-    <div style={{ maxWidth: "880px" }}>
+    <div style={{ "max-width": "880px" }}>
       <CertList heading="Certifications" certs={CERTS} />
     </div>
   ),
@@ -31,7 +31,7 @@ export const Default: Story<CertListProps> = {
 export const Single: Story<CertListProps> = {
   name: "Single certification",
   render: () => (
-    <div style={{ maxWidth: "880px" }}>
+    <div style={{ "max-width": "880px" }}>
       <CertList
         heading="Environmental certification"
         certs={[
@@ -45,7 +45,7 @@ export const Single: Story<CertListProps> = {
 export const Narrow: Story<CertListProps> = {
   name: "Narrow (card wrap)",
   render: () => (
-    <div style={{ maxWidth: "360px" }}>
+    <div style={{ "max-width": "360px" }}>
       <CertList heading="Certifications" certs={CERTS} />
     </div>
   ),

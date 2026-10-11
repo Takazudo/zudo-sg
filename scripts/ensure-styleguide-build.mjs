@@ -44,7 +44,9 @@ const BUILD_SCRIPT_FILES = [
   "scripts/copy-routes-src.mjs",
   "scripts/copy-virtual-modules.mjs",
   "scripts/emit-islands-dts.mjs",
-  "scripts/gen-safelist.mjs",
+  "scripts/gen-wind-manifest.mjs",
+  "scripts/wind-manifest.config.ts",
+  "scripts/check-package-wind-manifest.mjs",
 ];
 
 /** Every literal `./dist/**` path the package's exports map declares. */

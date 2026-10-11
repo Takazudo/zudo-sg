@@ -67,7 +67,7 @@ import { ProseUl } from "@zudo-sg/demo-ui/src/content/prose-ul/prose-ul.tsx";
 import { ProseOl } from "@zudo-sg/demo-ui/src/content/prose-ol/prose-ol.tsx";
 import { ProseLi } from "@zudo-sg/demo-ui/src/content/prose-li/prose-li.tsx";
 import { ProseBlockquote } from "@zudo-sg/demo-ui/src/content/prose-blockquote/prose-blockquote.tsx";
-import { ProseTable, ProseTh, ProseTd } from "@zudo-sg/demo-ui/src/content/prose-table/prose-table.tsx";
+import { ProseTable } from "@zudo-sg/demo-ui/src/content/prose-table/prose-table.tsx";
 import { ProseDl, ProseDt, ProseDd } from "@zudo-sg/demo-ui/src/content/prose-dl/prose-dl.tsx";
 import { MdxImage } from "./_mdx-image";
 
@@ -114,8 +114,8 @@ export const mdxComponents: MdxComponents = {
   li: ProseLi,
   blockquote: ProseBlockquote,
   table: ProseTable,
-  th: ProseTh,
-  td: ProseTd,
+  // Keep cells intrinsic under tr; zudo-react validates HTML parser context
+  // before resolving component children. Equivalent cell styles live in content.css.
   dl: ProseDl,
   dt: ProseDt,
   dd: ProseDd,

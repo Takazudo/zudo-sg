@@ -1,4 +1,4 @@
-import type { JSX } from "preact";
+import type { JSX } from "@takazudo/zfb/zudo-react/jsx-runtime";
 import {
   TRANSITION_BEFORE_PREPARATION,
   TRANSITION_AFTER_SWAP,
@@ -66,6 +66,8 @@ document.addEventListener(${aborted},onEnd);
 })();`;
 }
 
+const BOOTSTRAP_SCRIPT = buildBootstrap(PAGE_LOADING_OVERLAY_ID);
+
 /** Overlay markup + self-wiring script. No island needed (pure SSR). */
 export default function PageLoadingOverlay(): JSX.Element {
   return (
@@ -74,10 +76,7 @@ export default function PageLoadingOverlay(): JSX.Element {
         <span class="page-loading-bar" />
         <span class="page-loading-spinner" />
       </div>
-      <script
-        // eslint-disable-next-line react/no-danger -- zero-hydration self-wiring script
-        dangerouslySetInnerHTML={{ __html: buildBootstrap(PAGE_LOADING_OVERLAY_ID) }}
-      />
+      <script rawHtml={BOOTSTRAP_SCRIPT} />
     </>
   );
 }

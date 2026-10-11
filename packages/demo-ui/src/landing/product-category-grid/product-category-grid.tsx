@@ -37,7 +37,7 @@ export function ProductCategoryGrid({ heading, intro, categories, bare = false, 
               <p class="text-small leading-relaxed text-fg">{cat.tagline}</p>
               <ul class="mt-vsp-sm flex flex-col gap-vsp-2xs">
                 {cat.items.map((item) => (
-                  <li key={item} class="text-caption leading-snug text-muted before:mr-hsp-2xs before:text-accent before:content-['—']">
+                  <li key={item} class="zc-product-category-item text-caption leading-snug text-muted before:mr-hsp-2xs before:text-accent">
                     {item}
                   </li>
                 ))}

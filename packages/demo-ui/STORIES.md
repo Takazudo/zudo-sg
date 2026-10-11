@@ -31,7 +31,9 @@ file in sync.
 "exports": {
   ".": "./src/index.ts",
   "./styles/tokens.css": "./styles/tokens.css",
-  "./styles/colors.css": "./styles/colors.css"
+  "./styles/colors.css": "./styles/colors.css",
+  "./styles/components.css": "./styles/components.css",
+  "./styles/wind-tokens.mjs": "./styles/wind-tokens.mjs"
 }
 ```
 
@@ -40,28 +42,25 @@ source and let **their own** Vite/zfb pipeline transpile it. There is nothing to
 compile or publish before consuming. Two consequences for the catalog:
 
 1. The catalog imports components and stories as source — no `dist/` lookup.
-2. The catalog's own Tailwind build must **scan this package's source** so the
-   utility classes the components emit are generated. Add a content source:
-
-   ```css
-   @source "../../packages/demo-ui/src/**/*.{tsx,ts,jsx,js}";
-   ```
-
-   (Adjust the relative prefix to the catalog's CSS location. The demo does
-   exactly this in `apps/demo/styles/global.css`.)
+2. The host's wind compiler must scan this package's source. In zfb config,
+   use `wind.sources.packageRoots: ["@zudo-sg/demo-ui"]` for the workspace
+   package and retain the host's own source roots. Import the semantic token
+   map and breakpoints from `@zudo-sg/demo-ui/styles/wind-tokens.mjs`.
+   Use strict mode, `dark: false`, `reset: "owned-v1"`, and
+   `utilities: { placement: "before-authored" }`.
 
 ### Required style imports
 
 Components reference **semantic token utilities only** (`bg-accent`, `text-fg`,
 `border-border`, `bg-surface-2`, `shadow-card`, `gap-vsp-md`, …). Those
-utilities exist only if the consumer imports both shared token files **after**
-Tailwind's preflight + utilities, in this order:
+utilities use the wind token map; the consumer also imports all three shared
+stylesheets, in this order:
 
 ```css
-@import "tailwindcss/preflight";
-@import "tailwindcss/utilities";
+@layer zw-reset;
 @import "@zudo-sg/demo-ui/styles/tokens.css";   /* spacing, type, radius, shadow */
 @import "@zudo-sg/demo-ui/styles/colors.css";   /* semantic colors, light + dark  */
+@import "@zudo-sg/demo-ui/styles/components.css"; /* authored category rules */
 ```
 
 `colors.css` sets `color-scheme: light dark` on `:root` and declares every color
@@ -86,28 +85,14 @@ roles:
 | Tier | What | Where |
 |---|---|---|
 | **1 — Palette** | Raw oklch values, named `--palette-{group}-{step-or-role}` (the locked four-stop `neutral` group plus `accent`, `state`, and `line-*` groups) | `styles/colors.css` (top `:root` block) |
-| **2 — Semantic** | Roles → palette: `--color-*` tokens are semantic values backed by palette refs, with a few zudo-doc-style AA-tuned light-mode literals | `styles/colors.css` (`@theme`) |
-| **3 — Component** | Scoped overrides — rarely needed under Tailwind utilities | per-component |
+| **2 — Semantic** | Roles → palette: `--color-*` tokens backed by palette refs, with a few AA-tuned light-mode literals | `styles/colors.css` (plain `:root`) + `styles/wind-tokens.mjs` |
+| **3 — Component** | Scoped semantic overrides and unsupported utility replacements | category CSS aggregated by `styles/components.css` |
 
-**The palette is raw and is NEVER referenced directly by components.** Components
-bind only to the semantic `--color-*` Tailwind utilities (`bg-accent`,
-`text-fg`, `border-border`, …). The palette lives in a plain `:root` block (**not
-`@theme`**) on purpose: a `@theme` entry would make Tailwind emit
-`bg-palette-*`/`text-palette-*` utilities, letting a component bypass the
-semantic layer — plain `:root` vars still resolve through `var()` inside the
-`@theme` semantic declarations, so no palette utility is ever generated.
-
-Both tiers live in **`colors.css`** — the Tier-1 palette is inlined at the top
-of that file, the Tier-2 `@theme` block follows. It is deliberately **not** split
-into a sibling `palette.css`: the **single consumer import contract** requires
-every consumer to do exactly one `@import "@zudo-sg/demo-ui/styles/colors.css"`, and
-the consumer Tailwind/Lightning pipeline inlines that package import's contents
-but leaves a *nested* relative `@import "./palette.css"` as a literal, misplaced
-`@import` that the browser then ignores — silently dropping the palette. Inlining
-keeps both tiers in the one bundled file. There is no separate `palette.css`
-export, and consumers must not add one. Changing the brand color, or swapping the
-whole palette, is a one-file edit in `colors.css` (the palette block, or a remap
-of the Tier-2 pointers) — component CSS never changes.
+Components bind only to semantic utilities (`bg-accent`, `text-fg`,
+`border-border`, …). Palette variables remain private implementation values:
+the wind map exposes semantic roles, so palette utilities are not generated.
+Both palette and semantic variables live in `colors.css`, preserving the single
+color-sheet import. Brand changes update that file without component edits.
 
 [`TOKEN-MAP.md`](./TOKEN-MAP.md) is a separate, narrower document: a mechanical
 utility-by-utility mapping table used while porting components into this
@@ -119,26 +104,19 @@ See also `.claude/skills/zudo-doc-design-system/SKILL.md` for the accent-budget
 rules (≤2–3 accent elements per viewport, hover always neutral) that govern how
 components spend the `accent` token at runtime.
 
-### Component-scoped CSS (rare exception)
+### Component CSS and wind candidates
 
-Almost every component styles itself entirely with Tailwind utility classes —
-no component-owned CSS file, on top of the two required imports above, is
-normally needed. `ProseMd` (#373) is the first exception: it mounts an opaque,
-runtime-rendered HTML fragment (arbitrary markdown → `<h2>/<p>/<ul>/...`) that
-no `Prose*` per-element override can reach, so it ships its own scoped
-stylesheet, co-located at `@zudo-sg/demo-ui/src/content/prose-md/prose-md.css`
-(exposed via the package's `./src/*` export, like any other source file).
+Use complete literal wind candidates; dynamically concatenated candidates are
+not extracted. Preserve supported variants, including `md:` (768px), `xl:`
+(1280px), and `max-sm:` (below 640px). Check uncertain candidates with
+`pnpm exec zfb wind explain <candidate>`.
 
-**A consumer that renders `ProseMd` must import that file too**, in addition
-to `tokens.css` + `colors.css` above — omitting it does not break anything,
-it just leaves `ProseMd` rendering unstyled native HTML (the two required
-imports alone are not sufficient for this one component). This repo's root
-app wires it into its single bundled stylesheet via
-`src/styles/global.css`'s `@import "@zudo-sg/demo-ui/src/content/prose-md/prose-md.css"`
-— see that import's comment for why, and `prose-md.css`'s own header for what
-it does and does not style. A future consumer outside this repo (e.g. a
-sibling workspace's own CSS graph) needs the equivalent import wired in
-manually; it is not part of the two-import baseline contract.
+Unsupported forms become unlayered `zc-*` rules in `src/<category>/<category>.css`,
+aggregated by `styles/components.css`. They must not start with a utility root
+or be hidden with `authoredClasses`. At equal specificity, unlayered rules emitted after
+wind's unlayered utilities retain precedence. `ProseMd` additionally
+requires `@zudo-sg/demo-ui/src/content/prose-md/prose-md.css` for its opaque
+markdown fragment; import it in the host stylesheet too.
 
 ---
 
@@ -252,7 +230,7 @@ rendered markup is not a one-liner. Most stories in this package follow this
 ## 6. Browser-only / MSW / data rules
 
 The catalog renders stories during a **static build** (zfb): `render` must be
-pure, synchronous, and self-contained (no `useEffect`, no top-level `await`,
+pure, synchronous, and self-contained (no browser activation work, no top-level `await`,
 no network calls, no MSW, no reliance on ambient page chrome) — see the
 [Story Spec → Browser-only / MSW rules](https://zudo-sg-doc.takazudomodular.com/docs/reference/story-spec#browser-only-msw-rules)
 for the full rules and the `previewRoute` escape hatch (a real page route for
@@ -426,3 +404,39 @@ engine or consumed by another product; the standalone
 coupling to this package. Authoring a new component stops at the checklist in
 §7 (component + story, optionally an MDX doc per §9) — there is no further
 sidecar or handoff step.
+
+Components use zudo-react `Child`/`Component` types, `class`, CSS-spelled style
+keys, and native `on:*` events. Setup runs once: state belongs in signals;
+browser listeners and observers belong in `scope.onActivate` with cleanup.
+A `"use client"` module exports only island components and erased types.
+`ThemeControl` keeps that unique function name as its scanner marker; a host
+wrapper stays server-only and imports it statically. Island props must be
+serializable: `onThemeChange` callbacks are available inside a client scope,
+not as server boundary props.
+
+### Field accessibility contract
+
+`Field.children` is a render prop receiving `{ id, describedBy }`. Forward both
+to the control; a hint yields `${id}-hint`, and no hint yields undefined.
+
+```tsx
+<Field id="email" label="Email" hint="Use your work address">
+  {({ id, describedBy }) => (
+    <Input id={id} aria-describedby={describedBy} type="email" />
+  )}
+</Field>
+```
+
+### Package test helpers
+
+Use `src/test-utils/zudo-react.ts`: `renderSsr(node, context?)` returns HTML;
+`renderIsland(Component, props, options?)` hydrates by default (or uses
+`mode: "mount"`) and returns `{ container, html, diagnostics, flush, dispose }`.
+Queries (`getByText`, `getByRole`, `queryByText`, `queryAllByRole`) take an explicit
+root. Native heading levels and other unsupported query details use DOM selectors.
+Dispatch with `fire(element, "click")`, then await `flushAll()` or the fixture's
+`flush()`. Use bounded `vi.waitFor` for arbitrary imports. Hydration diagnostics
+fail activation, flush, and disposal; `allowDiagnostics` is for negative tests.
+Register `afterEach(disposeAll)`; new props require disposing and remounting.
+Enhancer fixtures contain both SSR markup and their enhancer. Assert individual
+classes with `classList.contains`; U6 owns source-drift snapshot updates.

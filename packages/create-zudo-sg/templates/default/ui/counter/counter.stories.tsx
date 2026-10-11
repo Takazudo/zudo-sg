@@ -1,5 +1,4 @@
-/** @jsxRuntime automatic */
-/** @jsxImportSource preact */
+import type { Child } from "@takazudo/zfb/zudo-react";
 import type { Story, StoryMeta } from "@takazudo/zudo-sg/stories";
 import Counter from "./counter.tsx";
 
@@ -13,5 +12,5 @@ export default meta;
 
 export const Basic: Story = {
   name: "Basic",
-  render: () => <Counter start={3} />,
+  render: (): Child => <Counter start={3} />,
 };

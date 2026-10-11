@@ -23,7 +23,7 @@ const COMPANIES: GroupCompany[] = [
 export const Default: Story<GroupCompanyGridProps> = {
   name: "Default",
   render: () => (
-    <div style={{ maxWidth: "820px" }}>
+    <div style={{ "max-width": "820px" }}>
       <GroupCompanyGrid heading="Group companies" companies={COMPANIES} />
     </div>
   ),
@@ -32,7 +32,7 @@ export const Default: Story<GroupCompanyGridProps> = {
 export const ManyCards: Story<GroupCompanyGridProps> = {
   name: "Many cards (wrap)",
   render: () => (
-    <div style={{ maxWidth: "820px" }}>
+    <div style={{ "max-width": "820px" }}>
       <GroupCompanyGrid
         heading="Group companies"
         companies={[
@@ -47,7 +47,7 @@ export const ManyCards: Story<GroupCompanyGridProps> = {
 export const Bare: Story<GroupCompanyGridProps> = {
   name: "Bare (no heading, for MDX body embedding)",
   render: () => (
-    <div style={{ maxWidth: "820px" }}>
+    <div style={{ "max-width": "820px" }}>
       <GroupCompanyGrid companies={COMPANIES} bare />
     </div>
   ),

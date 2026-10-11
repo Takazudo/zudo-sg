@@ -1,16 +1,14 @@
 "use client";
-/** @jsxRuntime automatic */
-/** @jsxImportSource preact */
 
 // Real `"use client"` island reached through the generated registry. It is
 // intentionally not statically imported by a host `pages/` file.
 
-import { useState } from "preact/hooks";
+import { signal } from "@takazudo/zfb/zudo-react";
 
 export default function Counter(props: { start?: number }) {
-  const [count, setCount] = useState(props.start ?? 0);
+  const count = signal(props.start ?? 0);
   return (
-    <button type="button" data-counter onClick={() => setCount((c) => c + 1)}>
+    <button type="button" data-counter on:click={() => { count.value += 1; }}>
       count: {count}
     </button>
   );

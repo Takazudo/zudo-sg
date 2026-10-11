@@ -1,9 +1,11 @@
 // @vitest-environment happy-dom
-import { render } from "preact-render-to-string";
-import { assertValidPanelConfig, configurePanel, showDesignTokenPanel } from "@takazudo/zdtp";
+import "../../__tests__/dom-test-setup.js";
+import { renderIsland } from "../../__tests__/helpers/zudo-react.js";
+import { TokenDashboardMount } from "../token-dashboard-mount.js";
+import { configurePanel, showDesignTokenPanel } from "@takazudo/zdtp";
+import { assertValidPanelConfig } from "@takazudo/zdtp/testing";
 import { describe, expect, it, vi } from "vitest";
 import { buildUiTokenTabs } from "../ui-token-tabs.js";
-import { createTokenDashboards } from "../create-token-dashboards.js";
 import { createPreviewTokenPanelConfig } from "../../token-tweak/preview-token-panel-config.js";
 import type { UiDesignTokensManifest } from "../ui-token-tabs.js";
 
@@ -47,14 +49,17 @@ describe("foreign host token consumers", () => {
     expect([...document.querySelectorAll("select option")].map((option) => option.textContent)).toEqual(expect.arrayContaining(["350", "550", "750"]));
   });
 
-  it("validates panel tabs and renders only host rows in the dashboard", () => {
+  it("validates panel tabs and renders only host rows in the dashboard", async () => {
     const tabs = buildUiTokenTabs(host);
     expect(() => assertValidPanelConfig(createPreviewTokenPanelConfig({ tabs }))).not.toThrow();
     expect(tabs[1]?.tiers.map((tier) => tier.label)).toEqual(["Brand", "Signals"]);
     expect(tabs[2]?.tiers[0]?.items[0]?.type).toEqual({ kind: "length", step: 0.125, unit: "rem", units: ["rem", "px"] });
     expect(tabs[3]?.tiers[1]?.items[0]?.type.kind).toBe("number");
     expect(tabs[3]?.tiers[2]?.items[0]?.type).toEqual({ kind: "select", options: ["350", "550", "750"] });
-    const html = render(createTokenDashboards(host, tabs));
+    const island = renderIsland(TokenDashboardMount, { manifest: host, tabs });
+    await vi.waitFor(() => expect(island.container.querySelectorAll("[data-css-var]")).toHaveLength(10));
+    await island.flush();
+    const html = island.container.innerHTML;
     for (const cssVar of ["--brand-100", "--brand-500", "--signal-calm", "--status-alert", "--surface-canvas", "--space-inline", "--type-body", "--type-leading", "--type-weight", "--corner-card"]) {
       expect(html).toContain(`data-css-var="${cssVar}"`);
     }

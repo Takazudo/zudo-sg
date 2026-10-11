@@ -1,5 +1,3 @@
-/** @jsxRuntime automatic */
-/** @jsxImportSource preact */
 // Injected at `sgContext.routes.componentsIndex` — the component catalog
 // landing: category-grouped tiles, each carrying its component rendered
 // INLINE server-side (no preview iframes), filtered client-side by the
@@ -7,7 +5,7 @@
 // Reads the mode-neutral `CatalogEntry` fields, so module and descriptor
 // registries render through the same markup.
 
-import type { JSX, VNode } from "preact";
+import type { JSX } from "@takazudo/zfb/zudo-react/jsx-runtime";
 import { Island } from "@takazudo/zfb";
 import { CatalogThumb, TILE_SIZE_RESTORE_SCRIPT } from "../catalog/index.js";
 import { StyleguideLayout } from "../chrome/index.js";
@@ -25,10 +23,7 @@ export default function ComponentsIndexRoute(): JSX.Element {
   const total = groups.reduce((n, g) => n + g.stories.length, 0);
   const categories = groups.map((g) => g.category);
 
-  const filterIsland = Island({
-    when: "load",
-    children: <CatalogFilter categories={categories} total={total} />,
-  }) as unknown as VNode;
+  const filterIsland = <Island when="load"><CatalogFilter categories={categories} total={total} /></Island>;
 
   return (
     <StyleguideLayout
@@ -37,7 +32,7 @@ export default function ComponentsIndexRoute(): JSX.Element {
         path: ctx.routes.componentsIndex,
         // Restore the persisted tile size before first paint so the grid does
         // not re-flow when the island mounts.
-        extraHead: <script dangerouslySetInnerHTML={{ __html: TILE_SIZE_RESTORE_SCRIPT }} />,
+        extraHead: <script rawHtml={TILE_SIZE_RESTORE_SCRIPT} />,
         activeSlug: OVERVIEW_SLUG,
       })}
       activeSlug={OVERVIEW_SLUG}
@@ -45,7 +40,7 @@ export default function ComponentsIndexRoute(): JSX.Element {
     >
       <header class="mb-vsp-lg max-w-[56rem]">
         <h1 class="text-heading font-bold mb-vsp-2xs">{ctx.catalog.title}</h1>
-        <p class="text-[color:var(--sg-muted)] text-small" data-sg-catalog-intro>
+        <p class="text-sg-muted text-small" data-sg-catalog-intro>
           {ctx.catalog.intro ?? (ctx.registryMode === "descriptor" ? (
             <>
               {total} components{ctx.uiPackageName ? <> from <code>{ctx.uiPackageName}</code></> : null}, listed from
@@ -93,7 +88,7 @@ export default function ComponentsIndexRoute(): JSX.Element {
             </div>
           </section>
         ))}
-        <p class="text-[color:var(--sg-muted)] text-small" data-sg-empty hidden>
+        <p class="text-sg-muted text-small" data-sg-empty hidden>
           No components match your search.
         </p>
       </div>

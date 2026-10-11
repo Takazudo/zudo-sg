@@ -24,7 +24,7 @@ const SEGMENTS: BusinessSegment[] = [
 export const Default: Story<BusinessSegmentsProps> = {
   name: "Default",
   render: () => (
-    <div style={{ maxWidth: "960px" }}>
+    <div style={{ "max-width": "960px" }}>
       <BusinessSegments
         heading="Our business segments"
         intro="Four segments, one company — a quick look at what we do."
@@ -37,7 +37,7 @@ export const Default: Story<BusinessSegmentsProps> = {
 export const Narrow: Story<BusinessSegmentsProps> = {
   name: "Narrow (card wrap)",
   render: () => (
-    <div style={{ maxWidth: "380px" }}>
+    <div style={{ "max-width": "380px" }}>
       <BusinessSegments heading="Our business segments" segments={SEGMENTS} />
     </div>
   ),

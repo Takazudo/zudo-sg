@@ -26,7 +26,7 @@ export const Default: Story<CardProps> = {
   <p>Body copy.</p>
 </Card>`,
   render: () => (
-    <div style={{ maxWidth: "420px" }}>
+    <div style={{ "max-width": "420px" }}>
       <Card title="Card heading">
         <Lorem />
       </Card>
@@ -40,7 +40,7 @@ export const Variants: Story<CardProps> = {
 <Card variant="muted" title="muted — surface tint">…</Card>
 <Card variant="accent" title="accent — top accent rule">…</Card>`,
   render: () => (
-    <div class="flex flex-col gap-y-vsp-md" style={{ maxWidth: "420px" }}>
+    <div class="flex flex-col gap-y-vsp-md" style={{ "max-width": "420px" }}>
       <Card title="default — bg + border" variant="default">
         <Lorem />
       </Card>
@@ -60,7 +60,7 @@ export const Paddings: Story<CardProps> = {
 <Card padding="md" title="padding = md">…</Card>
 <Card padding="lg" title="padding = lg">…</Card>`,
   render: () => (
-    <div class="flex flex-col gap-y-vsp-md" style={{ maxWidth: "420px" }}>
+    <div class="flex flex-col gap-y-vsp-md" style={{ "max-width": "420px" }}>
       <Card title="padding = sm" padding="sm">
         <Lorem />
       </Card>
@@ -81,7 +81,7 @@ export const BodyOnly: Story<CardProps> = {
   <p>Body copy.</p>
 </Card>`,
   render: () => (
-    <div style={{ maxWidth: "420px" }}>
+    <div style={{ "max-width": "420px" }}>
       <Card>
         <Card.Title>Explicit Card.Title</Card.Title>
         <Lorem />

@@ -1,5 +1,3 @@
-/** @jsxRuntime automatic */
-/** @jsxImportSource preact */
 // Page module for the site index route.
 //
 // Default-locale (EN) site index. Static route — no paths() export needed.
@@ -24,8 +22,7 @@ import { AutoLogo } from "@takazudo/zudo-doc/auto-logo";
 import { DocLayoutWithDefaults } from "@takazudo/zudo-doc/doclayout";
 import { CompactProse } from "@takazudo/zudo-doc/home-intro";
 import type { SidebarNavNode } from "@takazudo/zudo-doc/sidebar";
-import type { JSX } from "preact";
-import type { VNode } from "preact";
+import type { JSX } from "@takazudo/zfb/zudo-react/jsx-runtime";
 import { Island } from "@takazudo/zfb";
 import { SiteTreeNav } from "@takazudo/zudo-doc/site-tree-nav-island";
 import { routeContext } from "virtual:zudo-doc-route-context";
@@ -203,15 +200,12 @@ export default function IndexPage(): JSX.Element {
 
       <hr class="zd-home-rule" data-home-rule="lower" />
       <section class="zd-home-sitemap">
-        {Island({
-          when: "idle",
-          children: (
-            <SiteTreeNav
-              tree={tree}
-              initiallyCollapsedCategorySlugs={["overview", "components"]}
-            />
-          ),
-        }) as unknown as VNode}
+        <Island when="idle">
+          <SiteTreeNav
+            tree={tree}
+            initiallyCollapsedCategorySlugs={["overview", "components"]}
+          />
+        </Island>
       </section>
 
       {settings.docTags && tagCount > 0 && (

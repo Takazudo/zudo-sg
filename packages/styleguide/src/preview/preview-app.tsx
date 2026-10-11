@@ -20,8 +20,14 @@
 // (`installIframeReceiver`, token-tweak/iframe-css-vars-bridge.ts) so the
 // design-token tweaker live-updates this preview.
 
-import type { JSX } from "preact";
-import { useEffect, useMemo, useState } from "preact/hooks";
+import {
+  signal,
+  computed,
+  getScope,
+  For,
+  type Child,
+  type Description,
+} from "@takazudo/zfb/zudo-react";
 import type { Registry } from "../registry/index.js";
 import type { StoryControl } from "../stories/index.js";
 import {
@@ -94,100 +100,106 @@ export interface PreviewAppProps {
   registry: Pick<Registry, "getStoryBySlug">;
 }
 
-function PreviewApp({ registry }: PreviewAppProps): JSX.Element {
-  const [identity] = useState(readParams);
-  const { slug, variant } = identity;
-  // Live prop overrides pushed from the parent's controls panel. Read on every
-  // render and merged into the story's render args (see `merged` below).
-  const [overrides, setOverrides] = useState<Record<string, unknown>>({});
+/** Invoke a story only inside its own disposable setup scope. */
+function PreviewStory({
+  render,
+  args,
+}: {
+  render: (args: Record<string, unknown>) => Child;
+  args: Record<string, unknown>;
+}): Child {
+  return render(args);
+}
 
-  const entry = useMemo(() => registry.getStoryBySlug(slug), [registry, slug]);
-  const variantEntry = useMemo(
-    () => entry?.variants.find((v) => v.exportName === variant),
-    [entry, variant],
+function PreviewApp({ registry }: PreviewAppProps): Description {
+  const scope = getScope();
+  const initial = readParams();
+  const slug = signal(initial.slug);
+  const variant = signal(initial.variant);
+  const overrides = signal<Record<string, unknown>>({});
+  const version = signal(0);
+  const identity = (): FrameIdentity => ({
+    slug: slug.value,
+    variant: variant.value,
+  });
+  const entry = computed(() => registry.getStoryBySlug(slug.value));
+  const variantEntry = computed(() =>
+    entry.value?.variants.find((v) => v.exportName === variant.value),
   );
+  const merged = computed(() => ({
+    ...defaultsFromControls(variantEntry.value?.story.controls),
+    ...overrides.value,
+  }));
 
-  // Accept live prop and resolved-theme updates from the parent.
-  //
-  // Trust model: this preview iframe is same-origin with its parent
-  // (`sandbox="allow-same-origin allow-scripts allow-forms"`), so
-  // `window.parent` is a same-origin window we can compare against. Accept ONLY
-  // messages from our own origin whose source is the parent and whose payload
-  // is a well-formed props or theme envelope; ignore everything else. Announce
-  // readiness only after installing this listener, so the parent can safely
-  // respond without losing a message.
-  useEffect(() => {
+  scope.onActivate(() => {
+    const report = (): void => reportHeight(identity());
     function onMessage(e: MessageEvent): void {
-      if (e.origin !== window.location.origin) return;
-      if (e.source !== window.parent) return;
+      if (e.origin !== window.location.origin || e.source !== window.parent)
+        return;
       if (isRequestReadyMessage(e.data)) {
-        // The parent installs its message listener from a client-side effect,
-        // while this island also mounts on load. Re-answer a readiness probe
-        // so a one-shot `sg:ready` sent just before the parent listener was
-        // attached cannot leave this frame permanently unsynchronized. A
-        // late-attaching listener (e.g. `Island when="visible"` on a
-        // below-the-fold frame) also misses the mount/100ms/500ms height
-        // reports below, with no other recovery path, so re-post the current
-        // height alongside readiness (#537).
-        announceReady(identity);
-        reportHeight(identity);
-        return;
-      }
-      if (isUpdatePropsMessage(e.data)) {
-        setOverrides((prev) => ({ ...prev, ...e.data.props }));
-        return;
-      }
-      if (isSetThemeMessage(e.data)) {
+        announceReady(identity());
+        report();
+      } else if (isUpdatePropsMessage(e.data)) {
+        overrides.value = { ...overrides.value, ...e.data.props };
+        version.value++;
+      } else if (isSetThemeMessage(e.data)) {
         document.documentElement.dataset.theme = e.data.theme;
       }
     }
+    // SPA query navigation changes identity without installing another receiver.
+    function onLocationChange(): void {
+      const next = readParams();
+      if (next.slug === slug.value && next.variant === variant.value) return;
+      slug.value = next.slug;
+      variant.value = next.variant;
+      overrides.value = {};
+      version.value++;
+      announceReady(identity());
+      report();
+    }
     window.addEventListener("message", onMessage);
-    // Hydration marker read by the dev/e2e acceptance checks (ADR proof table).
+    window.addEventListener("popstate", onLocationChange);
     document.documentElement.dataset.sgPreviewHydrated = "1";
-    announceReady(identity);
-    return () => window.removeEventListener("message", onMessage);
-  }, []);
-
-  // Report content height to the parent so it can size the iframe.
-  useEffect(() => {
-    const report = (): void => reportHeight(identity);
+    announceReady(identity());
     report();
     const t1 = window.setTimeout(report, 100);
     const t2 = window.setTimeout(report, 500);
-    const ro = new ResizeObserver(report);
-    ro.observe(document.body);
+    const observer = new ResizeObserver(report);
+    observer.observe(document.body);
     return () => {
+      window.removeEventListener("message", onMessage);
+      window.removeEventListener("popstate", onLocationChange);
       window.clearTimeout(t1);
       window.clearTimeout(t2);
-      ro.disconnect();
+      observer.disconnect();
+      delete document.documentElement.dataset.sgPreviewHydrated;
     };
-  }, []);
-
-  if (!entry || !variantEntry) {
-    return (
-      <div class="p-hsp-md text-[color:var(--sg-muted)] text-small">
-        Unknown preview: slug=<code>{slug}</code> variant=<code>{variant}</code>
-      </div>
-    );
-  }
-
-  // Explicit precedence: control defaults < the variant's own static args <
-  // live overrides from the controls panel. (Starter variants declare no
-  // static args, so `variantArgs` is empty for now — kept in the merge so a
-  // variant CAN pin args that the panel overlays.)
-  const variantArgs: Record<string, unknown> = {};
-  const merged = {
-    ...defaultsFromControls(variantEntry.story.controls),
-    ...variantArgs,
-    ...overrides,
-  };
+  });
 
   return (
-    <div class="p-hsp-md" data-sg-variant-root>
-      {variantEntry.story.render(merged)}
-    </div>
+    <For each={computed(() => [version.value])} by={(key) => key}>
+      {() => {
+        const current = variantEntry.value;
+        if (!current)
+          return (
+            <div class="p-hsp-md text-sg-muted text-small">
+              Unknown preview: slug=<code>{slug.value}</code> variant=
+              <code>{variant.value}</code>
+            </div>
+          );
+        return (
+          <div class="p-hsp-md" data-sg-variant-root>
+            <PreviewStory
+              render={
+                current.story.render as (args: Record<string, unknown>) => Child
+              }
+              args={merged.value}
+            />
+          </div>
+        );
+      }}
+    </For>
   );
 }
 
-PreviewApp.displayName = "PreviewApp";
 export default PreviewApp;

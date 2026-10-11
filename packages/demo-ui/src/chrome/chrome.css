@@ -1,0 +1,95 @@
+/* Unlayered authored chrome components (zc-*). */
+
+.zc-breadcrumb-item:not(:first-child)::before {
+  content: "/";
+  color: var(--color-border);
+}
+
+.zc-context-switcher > #zui-ctx-panel[data-ctx-panel] {
+  translate: -50% -6px;
+}
+
+.zc-context-switcher:is(:hover, :focus-within) .zc-context-switcher-arrow {
+  rotate: 180deg;
+}
+
+.zc-context-switcher:is(:hover, :focus-within) > [data-ctx-panel] {
+  visibility: visible;
+  pointer-events: auto;
+  opacity: 1;
+  translate: -50% 0;
+}
+
+.zc-header-search:focus-within [data-search-input] {
+  margin-left: var(--spacing-hsp-xs);
+  width: 12rem;
+  opacity: 1;
+}
+
+.zc-nav-toggle-icon::before,
+.zc-nav-toggle-icon::after {
+  content: "";
+}
+
+.zc-nav-hit-area {
+  margin-inline-end: calc(0px - var(--spacing-hsp-xs));
+}
+
+.zc-nav-drawer {
+  border-inline-end-width: 1px;
+  border-inline-end-style: solid;
+  inset-inline-start: 0;
+  top: 4rem;
+}
+
+/* Keep the authored rule aligned with max-sm:top-0, which remains on the nav. */
+@media (width < 640px) {
+  .zc-nav-drawer {
+    top: 0;
+  }
+
+  /* Wind peers use :where(); own the checked state above the mobile offset. */
+  [data-nav-toggle]:checked ~ .zc-nav-drawer {
+    translate: 0 0;
+  }
+}
+
+.zc-nav-submenu {
+  padding-inline-start: var(--spacing-hsp-lg);
+}
+
+.zc-nav-summary {
+  border-inline-start-width: 3px;
+  border-inline-start-style: solid;
+  border-inline-start-color: transparent;
+}
+
+.zc-nav-summary:hover {
+  border-inline-start-color: var(--color-accent);
+}
+
+.zc-header-search-input {
+  transform-origin: left;
+}
+
+.zc-link-inherit {
+  color: inherit;
+}
+
+.zc-nav-story-frame nav[aria-label="Global navigation"] {
+  position: absolute;
+}
+
+details[data-nav-item]:is([data-current="true"], [open]) > .zc-nav-summary {
+  border-inline-start-color: var(--color-accent);
+  background-color: var(--color-rail-hover-bg);
+  color: var(--color-rail-fg);
+}
+
+details[data-nav-item]:is([data-current="true"], [open]) > .zc-nav-summary .zc-nav-chevron {
+  color: var(--color-rail-fg);
+}
+
+details[data-nav-item][open] > .zc-nav-summary .zc-nav-chevron {
+  rotate: 90deg;
+}

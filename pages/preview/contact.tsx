@@ -1,5 +1,3 @@
-/** @jsxRuntime automatic */
-/** @jsxImportSource preact */
 // Live demo page for the ContactForm component's `previewRoute`
 // (packages/demo-ui/STORIES.md §6) — reachable directly at `/preview/contact`,
 // surfaced from the catalog detail page as a plain "Live demo" link. This is
@@ -27,7 +25,7 @@
 
 import "../../src/styles/global.css";
 
-import type { JSX, VNode } from "preact";
+import type { JSX } from "@takazudo/zfb/zudo-react/jsx-runtime";
 import { Island } from "@takazudo/zfb";
 import ContactFormDemo from "@/features/styleguide/preview-demos/contact-form-demo";
 import { withBase } from "@/utils/base";
@@ -36,11 +34,11 @@ import { DEFAULT_PREVIEW_CSS_URL } from "@takazudo/zudo-sg/sg-context";
 export const frontmatter = { title: "Contact Form Preview" };
 
 export default function ContactPreviewRoute(): JSX.Element {
-  const app = Island({
-    when: "load",
-    ssrFallback: <p data-sg-preview-demo-loading>Loading demo…</p>,
-    children: <ContactFormDemo />,
-  }) as unknown as VNode;
+  const app = (
+    <Island when="load" ssrFallback={<p data-sg-preview-demo-loading>Loading demo…</p>}>
+      <ContactFormDemo />
+    </Island>
+  );
 
   return (
     <html lang="en" data-sg-preview-doc>

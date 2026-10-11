@@ -80,7 +80,7 @@ describe("renderMarkdown — markdown constructs", () => {
     expect(html).not.toContain('id="child-1"');
   });
 
-  it("accepts a bare HTML void element with the 2.10 parser", async () => {
+  it("accepts a bare HTML void element with the 4.3.1 parser", async () => {
     const { html, diagnostics } = await renderMarkdown('<img src="x">\n');
     expect(html).toBe('<img src="x">');
     expect(diagnostics).toEqual([]);

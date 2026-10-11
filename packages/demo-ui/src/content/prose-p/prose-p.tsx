@@ -1,6 +1,7 @@
-import type { ComponentChildren, JSX } from "preact";
+import type { Child } from "@takazudo/zfb/zudo-react";
+import type { JSX } from "@takazudo/zfb/zudo-react/jsx-runtime";
 
-export type ProsePProps = { children?: ComponentChildren; class?: string } & Omit<
+export type ProsePProps = { children?: Child; class?: string } & Omit<
   JSX.IntrinsicElements["p"],
   "class"
 >;

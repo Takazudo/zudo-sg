@@ -1,10 +1,20 @@
-import { render, screen } from "@testing-library/preact";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
+import { renderIsland, disposeAll, getByText } from "../../../test-utils/zudo-react";
+import { getHeading, queryHeading } from "../../test-utils";
+import type { Child } from "@takazudo/zfb/zudo-react";
 import { ValuePillars } from "../value-pillars";
+
+afterEach(disposeAll);
+
+function render(node: Child) {
+  return renderIsland(function Fixture() {
+    return node;
+  }, {});
+}
 
 describe("ValuePillars", () => {
   it("renders each pillar's numbered badge, title, and body", () => {
-    render(
+    const { container } = render(
       <ValuePillars
         heading="Where we create value"
         pillars={[
@@ -13,14 +23,14 @@ describe("ValuePillars", () => {
         ]}
       />,
     );
-    expect(screen.getByRole("heading", { name: "Where we create value" })).toBeInTheDocument();
-    expect(screen.getByText("1")).toBeInTheDocument();
-    expect(screen.getByText("2")).toBeInTheDocument();
-    expect(screen.getByText("Trading network")).toBeInTheDocument();
+    expect(getHeading(container, "Where we create value")).toBeInTheDocument();
+    expect(getByText(container, "1")).toBeInTheDocument();
+    expect(getByText(container, "2")).toBeInTheDocument();
+    expect(getByText(container, "Trading network")).toBeInTheDocument();
   });
 
   it("omits the heading in bare mode", () => {
-    render(<ValuePillars heading="Where we create value" pillars={[{ title: "A", body: "B" }]} bare />);
-    expect(screen.queryByRole("heading", { name: "Where we create value" })).not.toBeInTheDocument();
+    const { container } = render(<ValuePillars heading="Where we create value" pillars={[{ title: "A", body: "B" }]} bare />);
+    expect(queryHeading(container, "Where we create value")).not.toBeInTheDocument();
   });
 });

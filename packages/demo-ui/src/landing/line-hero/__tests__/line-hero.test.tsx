@@ -1,10 +1,20 @@
-import { render, screen } from "@testing-library/preact";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
+import { renderIsland, disposeAll, getByText, queryAllByRole } from "../../../test-utils/zudo-react";
+import { getHeading } from "../../test-utils";
+import type { Child } from "@takazudo/zfb/zudo-react";
 import { LineHero } from "../line-hero";
+
+afterEach(disposeAll);
+
+function render(node: Child) {
+  return renderIsland(function Fixture() {
+    return node;
+  }, {});
+}
 
 describe("LineHero", () => {
   it("renders the eyebrow, heading, lead, and actions", () => {
-    render(
+    const { container } = render(
       <LineHero
         eyebrow="Vacuum Solutions"
         heading="Reliable vacuum equipment"
@@ -12,17 +22,14 @@ describe("LineHero", () => {
         actions={[{ label: "View lineup", href: "/lines/vacuum/products", variant: "primary" }]}
       />,
     );
-    expect(screen.getByText("Vacuum Solutions")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Reliable vacuum equipment" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "View lineup" })).toHaveAttribute(
-      "href",
-      "/lines/vacuum/products",
-    );
+    expect(getByText(container, "Vacuum Solutions")).toBeInTheDocument();
+    expect(getHeading(container, "Reliable vacuum equipment")).toBeInTheDocument();
+    expect(container.querySelector('a[href="/lines/vacuum/products"]')).toBeInTheDocument();
   });
 
   it("renders with no actions", () => {
-    render(<LineHero heading="Minimal hero" />);
-    expect(screen.getByRole("heading", { name: "Minimal hero" })).toBeInTheDocument();
-    expect(screen.queryByRole("link")).not.toBeInTheDocument();
+    const { container } = render(<LineHero heading="Minimal hero" />);
+    expect(getHeading(container, "Minimal hero")).toBeInTheDocument();
+    expect(queryAllByRole(container, "link")).toHaveLength(0);
   });
 });

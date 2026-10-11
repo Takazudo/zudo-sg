@@ -1,17 +1,6 @@
-/*
- * Preview-iframe stylesheet entry (`previewStyles` in zudo-sg.config.mjs).
- *
- * Compiled standalone by @takazudo/zudo-sg's preview-css compiler — NOT part
- * of zfb's single global bundle (src/styles/global.css) — and served/emitted
- * at the engine's `previewCssUrl` (docs/adr/styleguide-engine.md decision 4).
- * The compiler rescopes every `:root` token block to `:root[data-sg-preview-doc]`
- * so these @zudo-sg/demo-ui tokens beat the host bundle's colliding `--color-*`.
- * `@source` is relative to this file: src/styles → repo root → packages/demo-ui/src.
- */
-
-@import "tailwindcss/preflight";
-@import "tailwindcss/utilities";
+/* Independent preview entry; the engine scopes token roots to
+ * :root[data-sg-preview-doc] and compiles with the composed host wind map. */
+@layer zw-reset;
 @import "@zudo-sg/demo-ui/styles/tokens.css";
 @import "@zudo-sg/demo-ui/styles/colors.css";
-
-@source "../../packages/demo-ui/src";
+@import "@zudo-sg/demo-ui/styles/components.css";

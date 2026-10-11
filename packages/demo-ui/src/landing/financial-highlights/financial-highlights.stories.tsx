@@ -26,7 +26,7 @@ const PENDING_METRICS: FinancialMetric[] = [
 export const Default: Story<FinancialHighlightsProps> = {
   name: "Default (values not yet published)",
   render: () => (
-    <div style={{ maxWidth: "880px" }}>
+    <div style={{ "max-width": "880px" }}>
       <FinancialHighlights heading="Financial highlights" metrics={PENDING_METRICS} />
     </div>
   ),
@@ -35,7 +35,7 @@ export const Default: Story<FinancialHighlightsProps> = {
 export const WithValues: Story<FinancialHighlightsProps> = {
   name: "With values",
   render: () => (
-    <div style={{ maxWidth: "880px" }}>
+    <div style={{ "max-width": "880px" }}>
       <FinancialHighlights
         heading="Financial highlights"
         metrics={[
@@ -52,7 +52,7 @@ export const WithValues: Story<FinancialHighlightsProps> = {
 export const Narrow: Story<FinancialHighlightsProps> = {
   name: "Narrow (cell wrap)",
   render: () => (
-    <div style={{ maxWidth: "360px" }}>
+    <div style={{ "max-width": "360px" }}>
       <FinancialHighlights heading="Financial highlights" metrics={PENDING_METRICS} />
     </div>
   ),

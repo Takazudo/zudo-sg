@@ -3,15 +3,15 @@
 /**
  * ContactFormEnhancer — client island driving ContactForm's input -> confirm
  * -> complete flow (see contact-form.tsx's header comment for the full DOM
- * contract and the "consumer mounts the island" note — @zudo-sg/demo-ui takes no
- * zfb dependency, so this file is NOT wrapped in `<Island>` itself).
+ * contract and the "consumer mounts the island" note — the app owns the
+ * `<Island>` boundary, so this module exports only the enhancer).
  *
  * Renders nothing (`null`) — it only attaches behavior to the SSR markup
  * ContactForm already produced. Delegates the actual DOM wiring to the shared
  * `createFormEnhancer` factory (see its header comment for the click/submit
  * contract and the submit-adapter behavior).
  */
-import { useEffect } from "preact/hooks";
+import { getScope } from "@takazudo/zfb/zudo-react";
 import { createFormEnhancer, type FormSubmitAdapter } from "../lib/create-form-enhancer";
 import { PURPOSE_LABELS } from "../lib/form-options";
 
@@ -32,9 +32,10 @@ export type ContactFormEnhancerProps = {
 };
 
 export default function ContactFormEnhancer({ onSubmit }: ContactFormEnhancerProps = {}) {
-  useEffect(() => {
+  const scope = getScope();
+  scope.onActivate(() => {
     const dispose = enhance(onSubmit);
     return dispose;
-  }, [onSubmit]);
+  });
   return null;
 }

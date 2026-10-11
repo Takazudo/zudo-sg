@@ -49,7 +49,7 @@
   --palette-line-beauty-hover-dark: #dbeafe;
 }
 
-@theme {
+:root {
   --color-accent: #2563eb;
   --color-fg: #0f172a;
   --color-bg: #ffffff;

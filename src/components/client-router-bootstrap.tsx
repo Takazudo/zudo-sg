@@ -7,12 +7,10 @@
 // island makes sure the client-router module is present in the client bundle.
 import "@takazudo/zfb-runtime/client-router";
 
-import type { JSX } from "preact";
+import type { JSX } from "@takazudo/zfb/zudo-react/jsx-runtime";
 
 function ClientRouterBootstrap(): JSX.Element | null {
   return null;
 }
-
-ClientRouterBootstrap.displayName = "ClientRouterBootstrap";
 
 export default ClientRouterBootstrap;

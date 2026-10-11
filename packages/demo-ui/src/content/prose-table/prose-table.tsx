@@ -1,17 +1,18 @@
-import type { ComponentChildren, JSX } from "preact";
+import type { Child } from "@takazudo/zfb/zudo-react";
+import type { JSX } from "@takazudo/zfb/zudo-react/jsx-runtime";
 import { cx } from "../../lib/cx";
 
-export type ProseTableProps = { children?: ComponentChildren; class?: string } & Omit<
+export type ProseTableProps = { children?: Child; class?: string } & Omit<
   JSX.IntrinsicElements["table"],
   "class"
 >;
-export type ProseThProps = { children?: ComponentChildren; class?: string } & Omit<
+export type ProseThProps = { children?: Child; class?: string; style?: JSX.CSSProperties } & Omit<
   JSX.IntrinsicElements["th"],
-  "class"
+  "class" | "style"
 >;
-export type ProseTdProps = { children?: ComponentChildren; class?: string } & Omit<
+export type ProseTdProps = { children?: Child; class?: string; style?: JSX.CSSProperties } & Omit<
   JSX.IntrinsicElements["td"],
-  "class"
+  "class" | "style"
 >;
 
 /** MDX `table` element override. */
@@ -28,7 +29,7 @@ export function ProseTh({ children, class: cls, style, ...rest }: ProseThProps) 
   return (
     <th
       class={cx("font-semibold text-fg bg-surface text-left py-vsp-xs px-hsp-md border-b-2 border-b-border", cls)}
-      style={{ overflowWrap: "anywhere", ...(typeof style === "object" ? style : {}) }}
+      style={{ "overflow-wrap": "anywhere", ...style }}
       {...rest}
     >
       {children}
@@ -41,7 +42,7 @@ export function ProseTd({ children, class: cls, style, ...rest }: ProseTdProps) 
   return (
     <td
       class={cx("text-left py-vsp-xs px-hsp-md border-b border-b-border", cls)}
-      style={{ overflowWrap: "anywhere", ...(typeof style === "object" ? style : {}) }}
+      style={{ "overflow-wrap": "anywhere", ...style }}
       {...rest}
     >
       {children}

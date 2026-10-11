@@ -1,67 +1,81 @@
-import { render, screen } from "@testing-library/preact";
-import { describe, expect, it } from "vitest";
+import { renderIsland, disposeAll, getByText } from "../../../test-utils/zudo-react";
+import { afterEach, describe, expect, it } from "vitest";
 import { Stack } from "../stack";
+
+afterEach(disposeAll);
 
 describe("Stack", () => {
   it("renders a <div> with its children, stacked vertically by default", () => {
-    render(
-      <Stack>
-        <span>First</span>
-        <span>Second</span>
-      </Stack>,
-    );
-    const el = screen.getByText("First").parentElement!;
+    const { container } = renderIsland(function Fixture() {
+      return (
+        <Stack>
+          <span>First</span>
+          <span>Second</span>
+        </Stack>
+      );
+    }, {});
+    const el = getByText(container, "First").parentElement!;
     expect(el.tagName).toBe("DIV");
-    expect(el.className).toContain("flex-col");
-    expect(screen.getByText("Second")).toBeInTheDocument();
+    expect(el.classList.contains("flex-col")).toBe(true);
+    expect(getByText(container, "Second")).toBeInTheDocument();
   });
 
   it("switches to a horizontal row that wraps (never forces overflow)", () => {
-    render(
-      <Stack direction="horizontal">
-        <span>A</span>
-      </Stack>,
-    );
-    const el = screen.getByText("A").parentElement!;
-    expect(el.className).toContain("flex-row");
-    expect(el.className).toContain("flex-wrap");
+    const { container } = renderIsland(function Fixture() {
+      return (
+        <Stack direction="horizontal">
+          <span>A</span>
+        </Stack>
+      );
+    }, {});
+    const el = getByText(container, "A").parentElement!;
+    expect(el.classList.contains("flex-row")).toBe(true);
+    expect(el.classList.contains("flex-wrap")).toBe(true);
   });
 
   it("applies the vertical gap class by default", () => {
-    render(
-      <Stack gap="lg">
-        <span>Item</span>
-      </Stack>,
-    );
-    expect(screen.getByText("Item").parentElement!.className).toContain("gap-y-vsp-lg");
+    const { container } = renderIsland(function Fixture() {
+      return (
+        <Stack gap="lg">
+          <span>Item</span>
+        </Stack>
+      );
+    }, {});
+    expect(getByText(container, "Item").parentElement!.classList.contains("gap-y-vsp-lg")).toBe(true);
   });
 
   it("applies the horizontal gap class when direction=horizontal", () => {
-    render(
-      <Stack direction="horizontal" gap="lg">
-        <span>Item</span>
-      </Stack>,
-    );
-    expect(screen.getByText("Item").parentElement!.className).toContain("gap-x-hsp-lg");
+    const { container } = renderIsland(function Fixture() {
+      return (
+        <Stack direction="horizontal" gap="lg">
+          <span>Item</span>
+        </Stack>
+      );
+    }, {});
+    expect(getByText(container, "Item").parentElement!.classList.contains("gap-x-hsp-lg")).toBe(true);
   });
 
   it("applies align/justify classes", () => {
-    render(
-      <Stack align="center" justify="between">
-        <span>Item</span>
-      </Stack>,
-    );
-    const el = screen.getByText("Item").parentElement!;
-    expect(el.className).toContain("items-center");
-    expect(el.className).toContain("justify-between");
+    const { container } = renderIsland(function Fixture() {
+      return (
+        <Stack align="center" justify="between">
+          <span>Item</span>
+        </Stack>
+      );
+    }, {});
+    const el = getByText(container, "Item").parentElement!;
+    expect(el.classList.contains("items-center")).toBe(true);
+    expect(el.classList.contains("justify-between")).toBe(true);
   });
 
   it("renders the given `as` tag", () => {
-    render(
-      <Stack as="section">
-        <span>Item</span>
-      </Stack>,
-    );
-    expect(screen.getByText("Item").parentElement!.tagName).toBe("SECTION");
+    const { container } = renderIsland(function Fixture() {
+      return (
+        <Stack as="section">
+          <span>Item</span>
+        </Stack>
+      );
+    }, {});
+    expect(getByText(container, "Item").parentElement!.tagName).toBe("SECTION");
   });
 });

@@ -1,5 +1,3 @@
-/** @jsxRuntime automatic */
-/** @jsxImportSource preact */
 // Real Preact bindings for the admonition MDX tags (Note/Tip/Info/Warning/
 // Danger/Caution/Important). Replaces the former literal-VNode
 // `makeAdmonitionStub` in pages/_mdx-components.ts with a proper typed
@@ -20,7 +18,7 @@
 // src/styles/global.css) and the e2e smoke spec (e2e/smoke-admonitions.spec.ts)
 // target. The per-variant color + icon live in CSS keyed off `data-admonition`,
 // so this component stays presentation-agnostic.
-import type { ComponentChildren, VNode } from "preact";
+import type { Child, Description } from "@takazudo/zfb/zudo-react";
 
 export type AdmonitionVariant =
   | "note"
@@ -34,7 +32,7 @@ export type AdmonitionVariant =
 export interface AdmonitionProps {
   /** Custom title; falls back to the capitalized variant name (e.g. "Note"). */
   title?: string;
-  children?: ComponentChildren;
+  children?: Child;
 }
 
 /**
@@ -44,7 +42,7 @@ export interface AdmonitionProps {
  */
 export function makeAdmonition(variant: AdmonitionVariant) {
   const defaultTitle = variant.charAt(0).toUpperCase() + variant.slice(1);
-  return function Admonition({ title, children }: AdmonitionProps): VNode {
+  return function Admonition({ title, children }: AdmonitionProps): Description {
     const heading = title && title.length > 0 ? title : defaultTitle;
     return (
       <div data-admonition={variant} class={`admonition admonition-${variant}`}>

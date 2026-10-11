@@ -1,3 +1,4 @@
+import { demoUiWindTokens, demoUiWindBreakpoints } from "@zudo-sg/demo-ui/styles/wind-tokens.mjs";
 import { z } from "zod";
 import { defineConfig } from "@takazudo/zfb/config";
 import { buildContentSchema } from "./lib/content-schema";
@@ -6,12 +7,10 @@ const contentSchema = buildContentSchema();
 const contentSchemaJson = z.toJSONSchema(contentSchema) as Record<string, unknown>;
 
 /**
- * apps/demo — a static Preact demo site for zudo-sg.
+ * apps/demo — a static zudo-react demo site for zudo-sg.
  *
- * - `framework: "preact"` — pages are Preact components.
  * - `base: "/"` — deployed at its own subdomain.
- * - `tailwind: { enabled: true }` — wires @tailwindcss/vite into the
- *   build so `@import "tailwindcss"` + `@theme` blocks are processed.
+ * - `wind` — scans local source plus the installed demo-ui package.
  * - `collections` — the single `content` collection (see content/), whose
  *   JSON schema `zfb check` validates. The site-tree and search boundaries
  *   parse with the same Zod schema as an additional typed build-time guard.
@@ -28,9 +27,30 @@ const contentSchemaJson = z.toJSONSchema(contentSchema) as Record<string, unknow
  * explicitly out of scope for this public demo (see the epic notes).
  */
 export default defineConfig({
-  framework: "preact",
   base: "/",
-  tailwind: { enabled: true },
+  wind: {
+    reset: "owned-v1",
+    tokens: demoUiWindTokens,
+    breakpoints: demoUiWindBreakpoints,
+    strict: true,
+    dark: false,
+    utilities: { placement: "before-authored" },
+    sources: {
+      // This workspace owns its vocabulary; the root catalog has separate chrome tokens.
+      rootPackage: false,
+      roots: [
+        "pages",
+        "components",
+        "layouts",
+        "lib",
+        "config",
+        "styles",
+        "content",
+      ],
+      packageRoots: ["@zudo-sg/demo-ui"],
+      classHelpers: ["cx", "cn"],
+    },
+  },
   // zfb 2.14 guard: fail builds when JS/TS imports plain CSS bytes it cannot emit.
   strictPlainCssImports: true,
   collections: [

@@ -1,4 +1,4 @@
-import type { ComponentChildren } from "preact";
+import type { Child } from "@takazudo/zfb/zudo-react";
 import { cx } from "../../lib/cx";
 
 /**
@@ -36,7 +36,7 @@ export type SiteNavProps = {
   /** Current page slug — drives active-section highlighting + default-open accordion. */
   currentSlug?: string;
   /** Client-island control supplied by the host; SiteNav stays framework-neutral. */
-  mobileThemeControl?: ComponentChildren;
+  mobileThemeControl?: Child;
   class?: string;
 };
 
@@ -112,12 +112,12 @@ export function SiteNav({
             </div>
           )}
           <label
-            class="-me-hsp-xs inline-flex h-[2.5rem] w-[2.5rem] cursor-pointer items-center justify-center rounded text-rail-fg hover:text-rail-muted focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-rail-fg"
+            class="zc-nav-hit-area inline-flex h-[2.5rem] w-[2.5rem] cursor-pointer items-center justify-center rounded text-rail-fg hover:text-rail-muted focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-rail-fg"
             for={NAV_TOGGLE_ID}
             data-nav-hamburger
             aria-hidden="true"
           >
-            <span class="relative block h-[2px] w-[1.25rem] bg-rail-fg before:absolute before:inset-x-0 before:-top-[6px] before:block before:h-[2px] before:bg-rail-fg before:content-[''] after:absolute after:inset-x-0 after:top-[6px] after:block after:h-[2px] after:bg-rail-fg after:content-['']" aria-hidden="true" />
+            <span class="zc-nav-toggle-icon relative block h-[2px] w-[1.25rem] bg-rail-fg before:absolute before:inset-x-0 before:-top-[6px] before:block before:h-[2px] before:bg-rail-fg after:absolute after:inset-x-0 after:top-[6px] after:block after:h-[2px] after:bg-rail-fg" aria-hidden="true" />
           </label>
         </div>
       </div>
@@ -133,7 +133,7 @@ export function SiteNav({
       <nav
         id={NAV_DRAWER_ID}
         class={cx(
-          "fixed bottom-0 start-0 z-ui-sticky flex w-[13rem] flex-col overflow-y-auto border-e border-rail-border bg-rail-bg [top:4rem]",
+          "zc-nav-drawer fixed bottom-0 z-ui-sticky flex w-[13rem] flex-col overflow-y-auto border-rail-border bg-rail-bg",
           "max-sm:invisible max-sm:top-0 max-sm:z-ui-modal max-sm:w-[17rem] max-sm:max-w-[85vw] max-sm:-translate-x-full max-sm:shadow-[0_8px_24px_color-mix(in_srgb,var(--color-fg)_18%,transparent)] max-sm:transition-transform peer-checked:translate-x-0 max-sm:peer-checked:visible",
           cls,
         )}
@@ -145,11 +145,11 @@ export function SiteNav({
         <div class="hidden items-center justify-between border-b border-rail-border bg-rail-bg-strong px-hsp-md py-vsp-xs max-sm:flex">
           <span class="text-title font-bold text-rail-fg">{brand}</span>
           <label
-            class="-me-hsp-xs inline-flex h-[2.5rem] w-[2.5rem] cursor-pointer items-center justify-center rounded text-rail-fg hover:text-rail-muted focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-rail-fg"
+            class="zc-nav-hit-area inline-flex h-[2.5rem] w-[2.5rem] cursor-pointer items-center justify-center rounded text-rail-fg hover:text-rail-muted focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-rail-fg"
             for={NAV_TOGGLE_ID}
             data-nav-close
             role="button"
-            tabIndex={0}
+            tabindex={0}
             aria-label="Close menu"
           >
             <span class="text-heading leading-none" aria-hidden="true">
@@ -174,7 +174,7 @@ export function SiteNav({
                   <SectionSummary section={section} hasChildren={hasChildren} current={current} />
 
                   {hasChildren && (
-                    <div class="pb-vsp-2xs ps-hsp-lg" role="group" aria-label={section.label}>
+                    <div class="zc-nav-submenu pb-vsp-2xs" role="group" aria-label={section.label}>
                       <ul class="flex list-none flex-col gap-vsp-2xs">
                         {section.href && (
                           <li key="__section-top">
@@ -207,11 +207,9 @@ const LEAF_LINK_CLASS =
   "block rounded px-hsp-xs py-vsp-2xs text-small text-rail-fg no-underline transition-colors hover:bg-rail-hover-bg hover:text-rail-fg focus-visible:bg-rail-hover-bg focus-visible:text-rail-fg focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-rail-fg";
 
 const SUMMARY_CLASS =
-  "flex w-full cursor-pointer list-none items-center justify-between gap-hsp-xs border-s-[3px] border-s-transparent px-hsp-md py-vsp-xs text-start text-small font-medium text-rail-fg transition-colors" +
-  " hover:border-s-accent hover:bg-rail-hover-bg hover:text-rail-fg" +
-  " focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-rail-fg" +
-  " group-data-[current=true]:border-s-accent group-data-[current=true]:bg-rail-hover-bg group-data-[current=true]:text-rail-fg" +
-  " group-open:border-s-accent group-open:bg-rail-hover-bg group-open:text-rail-fg";
+  "flex w-full cursor-pointer list-none items-center justify-between gap-hsp-xs px-hsp-md py-vsp-xs text-start text-small font-medium text-rail-fg transition-colors" +
+  " hover:bg-rail-hover-bg hover:text-rail-fg" +
+  " focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-rail-fg zc-nav-summary";
 
 /**
  * A section's `<summary>` (the accordion toggle). Never a link itself — that
@@ -221,7 +219,7 @@ const SUMMARY_CLASS =
  */
 function SectionSummary({ section, hasChildren, current }: { section: NavSection; hasChildren: boolean; current: boolean }) {
   const chevron = hasChildren ? (
-    <span class="flex-none text-rail-muted transition-transform group-open:rotate-90 group-data-[current=true]:text-rail-fg group-open:text-rail-fg" aria-hidden="true">
+    <span class="zc-nav-chevron flex-none text-rail-muted transition-transform" aria-hidden="true">
       ›
     </span>
   ) : null;

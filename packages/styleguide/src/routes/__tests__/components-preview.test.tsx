@@ -7,7 +7,7 @@
 // acceptance criteria, so this pins it directly on the document's `<html>`
 // element alongside the existing `data-sg-preview-doc` marker.
 import { describe, expect, it, vi } from "vitest";
-import { render } from "preact-render-to-string";
+import { renderSsr as render } from "../../__tests__/helpers/zudo-react.js";
 
 vi.mock("@takazudo/zfb", () => ({
   Island: () => null,

@@ -1,5 +1,3 @@
-/** @jsxRuntime automatic */
-/** @jsxImportSource preact */
 // og:title / og:description / color-scheme head injection for the zfb doc pages.
 //
 // Why this wrapper exists: the package `<DocLayout>` shell exposes a `head` slot
@@ -18,7 +16,7 @@
 // (#1355 wave 13 — ColorSchemeProvider mount restored after the retirement of
 // the zfb cutover's initial setup.)
 
-import type { JSX } from "preact";
+import type { JSX } from "@takazudo/zfb/zudo-react/jsx-runtime";
 import { OgTags, TwitterCard } from "@takazudo/zudo-doc/head";
 import { SIDEBAR_RESIZER_RESTORE_SCRIPT } from "@takazudo/zudo-doc/sidebar-resizer";
 // Import ColorSchemeProvider from the dedicated
@@ -136,7 +134,7 @@ export function HeadWithDefaults({
           drag-resizing the sidebar doesn't snap back to the CSS default
           clamp() width. Mirrors the sibling sidebar-toggle restore
           script emitted from the page's afterSidebar slot. */}
-      {settings.sidebarResizer && <script dangerouslySetInnerHTML={{ __html: SIDEBAR_RESIZER_RESTORE_SCRIPT }} />}
+      {settings.sidebarResizer && <script rawHtml={SIDEBAR_RESIZER_RESTORE_SCRIPT} />}
       {/* favicon set — withBase() handles the configured base path prefix.
           SVG first (modern browsers pick it and scale crisply); the .ico + PNG
           entries are legacy fallbacks. The package-owned routes' head

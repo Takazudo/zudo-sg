@@ -240,6 +240,9 @@ async function panelDiagnostics(page) {
       roots: roots.map((root) => ({ id: root.id, connected: root.isConnected, children: root.childElementCount, htmlStart: root.innerHTML.slice(0, 120) })),
       bodyConnected: document.body?.isConnected,
       readyState: document.readyState,
+      scripts: [...document.scripts].map((script) => ({ src: script.src, type: script.type })),
+      islands: [...document.querySelectorAll("[data-zfb-island], [data-zfb-island-skip-ssr]")]
+        .map((island) => ({ attributes: Object.fromEntries([...island.attributes].filter(({ name }) => name !== "data-props").map(({ name, value }) => [name, value])), propsBytes: island.getAttribute("data-props")?.length ?? 0, children: island.childElementCount })),
       previewStorage: Object.fromEntries(Object.keys(localStorage)
         .filter((key) => key.startsWith("sg-preview-tweak"))
         .map((key) => [key, localStorage.getItem(key)])),
@@ -287,7 +290,11 @@ async function proveEarlyClick(page, origin) {
   check(!(await trigger.isVisible()), "the preview trigger should be hidden on the host docs route");
   const persistentHeader = page.locator("header[data-zfb-transition-persist]");
   check(await persistentHeader.count() === 1, "host docs route does not render one persistent header");
-  await page.waitForFunction(() => Boolean(window.__sgPreviewTokenPanelCapture), null, { timeout: 15_000 });
+  try {
+    await page.waitForFunction(() => Boolean(window.__sgPreviewTokenPanelCapture), null, { timeout: 15_000 });
+  } catch (error) {
+    fail(`host route capture was not installed: ${JSON.stringify(await panelDiagnostics(page))}; browser errors: ${errors.join(" | ")}; failed requests: ${badResponses.join(" | ")}; ${error}`);
+  }
   const initialCapture = await page.evaluate(() => window.__sgPreviewTokenPanelCapture ?? null);
   check(initialCapture && initialCapture.ready === false, `host route did not install an unready public trigger capture: ${JSON.stringify(initialCapture)}`);
 
@@ -322,7 +329,11 @@ async function proveEarlyClick(page, origin) {
   check(proof.headerPersisted, "the host header was replaced during the SPA transition");
   check(proof.readyBeforeClick === false && proof.readyAfterClick === false, "bootstrap readiness was not delayed through the early click");
   check(proof.pendingBeforeClick === 0 && proof.pendingAfterClick === 1, "the capture did not observe exactly one click before listener readiness");
-  await page.waitForFunction(() => window.__sgPreviewTokenPanelCapture?.ready === true, null, { timeout: 15_000 });
+  try {
+    await page.waitForFunction(() => window.__sgPreviewTokenPanelCapture?.ready === true, null, { timeout: 15_000 });
+  } catch (error) {
+    fail(`early-click bootstrap did not become ready: ${JSON.stringify(await panelDiagnostics(page))}; browser errors: ${errors.join(" | ")}; failed requests: ${badResponses.join(" | ")}; ${error}`);
+  }
   try {
     await assertPanelState(page, true);
   } catch (error) {
@@ -347,7 +358,11 @@ async function proveEarlyClick(page, origin) {
   await page.evaluate(() => localStorage.clear());
   await page.goto(`${origin}${BASE}components`, { waitUntil: "domcontentloaded" });
   await trigger.waitFor({ state: "visible", timeout: 15_000 });
-  await page.waitForFunction(() => window.__sgPreviewTokenPanelCapture?.ready === true, null, { timeout: 15_000 });
+  try {
+    await page.waitForFunction(() => window.__sgPreviewTokenPanelCapture?.ready === true, null, { timeout: 15_000 });
+  } catch (error) {
+    fail(`direct engine bootstrap did not become ready: ${JSON.stringify(await panelDiagnostics(page))}; browser errors: ${errors.join(" | ")}; failed requests: ${badResponses.join(" | ")}; ${error}`);
+  }
   await assertPanelState(page, false);
   await trigger.click();
   await assertPanelState(page, true);
@@ -607,6 +622,33 @@ async function proveStoryRoutes(page, origin, scenario) {
 
 async function main() {
   const args = process.argv.slice(2);
+  const devCounterIndex = args.indexOf("--dev-counter-origin");
+  if (devCounterIndex >= 0) {
+    const origin = new URL(args[devCounterIndex + 1]).origin;
+    const { chromium } = await import("@playwright/test");
+    const browser = await launchChromium(chromium);
+    try {
+      const page = await browser.newPage();
+      const errors = [];
+      const badResponses = [];
+      page.on("pageerror", (error) => errors.push(error.message));
+      page.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });
+      page.on("response", (response) => {
+        if (response.status() >= 400) badResponses.push(`${response.status()} ${response.url()}`);
+      });
+      await page.goto(`${origin}${BASE}components/preview?slug=counter&variant=Basic`, { waitUntil: "domcontentloaded" });
+      const counter = page.locator("[data-counter]");
+      await counter.waitFor({ state: "visible", timeout: 15_000 });
+      check((await counter.textContent())?.trim() === "count: 3", "seedless dev Counter lost its declared initial state");
+      await counter.click();
+      await page.waitForFunction(() => document.querySelector("[data-counter]")?.textContent?.trim() === "count: 4", null, { timeout: 15_000 });
+      check(errors.length === 0 && badResponses.length === 0, `seedless dev Counter browser errors: ${errors.join(" | ")}; failed responses: ${badResponses.join(" | ")}`);
+      console.log("OK — seedless dev virtual registry rendered Counter and its real click updated count: 3 → count: 4.");
+    } finally {
+      await browser.close();
+    }
+    return;
+  }
   const hostIndex = args.indexOf("--host");
   const scenarioIndex = args.indexOf("--scenario");
   check(hostIndex >= 0 && args[hostIndex + 1], "usage: node scripts/verify-styleguide-install-browser.mjs --host <packed-host-dir> --scenario <default|custom-collision|outside-namespace> [--early-click|--ready-host-bootstrap]");

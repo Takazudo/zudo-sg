@@ -1,5 +1,3 @@
-/** @jsxRuntime automatic */
-/** @jsxImportSource preact */
 // Injected at `sgContext.routes.componentsSlug` — the component detail page.
 // zfb extracts `paths()` from this `.tsx` source by AST (one route per story).
 //
@@ -14,7 +12,8 @@
 // island, no component doc and no live-demo link — only the header and the
 // workbench, built from the mode-neutral `CatalogEntry` fields.
 
-import type { JSX, VNode } from "preact";
+import type { Description } from "@takazudo/zfb/zudo-react";
+import type { JSX } from "@takazudo/zfb/zudo-react/jsx-runtime";
 import { Island } from "@takazudo/zfb";
 import { getEntry } from "@takazudo/zfb/content";
 import { makeAdmonition } from "@takazudo/zudo-doc/content-admonition";
@@ -64,31 +63,30 @@ export default function ComponentsSlugRoute(props: SlugProps & { params: { slug:
   if (!entry) {
     return (
       <StyleguideLayout {...chrome} activeSlug={slug} codePanel={null}>
-        <p class="text-[color:var(--sg-muted)]">Story not found: {slug}</p>
+        <p class="text-sg-muted">Story not found: {slug}</p>
       </StyleguideLayout>
     );
   }
 
   const storyEntry = entry.source === "module" ? entry.storyEntry : undefined;
 
-  let codePanel: VNode | null = null;
+  let codePanel: Description | null = null;
   if (storyEntry) {
     const panelVariants: CodePanelVariant[] = storyEntry.variants.map((v) => ({
       exportName: v.exportName,
       name: v.name,
       source: v.story.source ?? storyEntry.meta.usage,
     }));
-    const codePanelIsland = Island({
-      when: "load",
-      children: (
+    const codePanelIsland = (
+      <Island when="load">
         <CodePanel
           storyTitle={entry.title}
           variants={panelVariants}
           previewUrl={previewUrl}
           slug={slug}
         />
-      ),
-    }) as unknown as VNode;
+      </Island>
+    );
     codePanel = (
       <aside id="sg-code-panel" class="sg-code-panel" aria-label="Code panel">
         <div
@@ -101,7 +99,7 @@ export default function ComponentsSlugRoute(props: SlugProps & { params: { slug:
         />
         {codePanelIsland}
       </aside>
-    ) as unknown as VNode;
+    );
   }
 
   // The collection of the components root this story's registry key belongs to
@@ -121,41 +119,40 @@ export default function ComponentsSlugRoute(props: SlugProps & { params: { slug:
   // rather than dead when no `zdtpApplyProxy.tabsModule` is wired.
   // `selection`/`theme` are passed at their pre-#883 defaults, unconditionally,
   // to keep this route's behavior spelled out rather than implicit.
-  const workbench = Island({
-    when: "load",
-    children: (
+  const workbench = (
+    <Island when="load">
       <DetailWorkbench
         slug={slug}
         previewUrl={previewUrl}
         variants={entry.variants.map((v) => ({
           exportName: v.exportName,
           name: v.name,
-          controls: v.controls,
+          ...(v.controls ? { controls: v.controls } : {}),
         }))}
         selection={{ mode: "all" }}
         theme={{ mode: "toolbar" }}
         toolbar={{ codePanel: Boolean(storyEntry), tokenPanel: ctx.previewTokenPanel }}
       />
-    ),
-  }) as unknown as VNode;
+    </Island>
+  );
 
   return (
     <StyleguideLayout {...chrome} activeSlug={slug} codePanel={codePanel} contentWide>
       <div>
         <header class="mb-vsp-lg max-w-[56rem]">
-          <h1 class="text-2xl font-bold text-[color:var(--sg-fg)]">{entry.title}</h1>
-          <p class="mt-vsp-xs text-[color:var(--sg-muted)]">{entry.description}</p>
-          <span class="mt-vsp-xs inline-block rounded-full border border-[color:var(--sg-border)] px-hsp-sm py-vsp-3xs text-caption leading-normal text-[color:var(--sg-muted)]">
+          <h1 class="text-2xl font-bold text-sg-fg">{entry.title}</h1>
+          <p class="mt-vsp-xs text-sg-muted">{entry.description}</p>
+          <span class="mt-vsp-xs inline-block rounded-full border border-sg-border px-hsp-sm py-vsp-3xs text-caption leading-normal text-sg-muted">
             {entry.category}
           </span>
         </header>
 
         {previewRoute && (
-          <section class="mb-vsp-xl max-w-[56rem] rounded-md border border-[color:var(--sg-border)] bg-[var(--sg-surface-2)] p-hsp-md">
-            <h2 class="mb-vsp-2xs text-small font-semibold uppercase tracking-wide text-[color:var(--sg-muted)]">Live demo</h2>
+          <section class="mb-vsp-xl max-w-[56rem] rounded-md border border-sg-border bg-sg-surface-2 p-hsp-md">
+            <h2 class="mb-vsp-2xs text-small font-semibold uppercase tracking-wide text-sg-muted">Live demo</h2>
             <a
               href={withBase(previewRoute)}
-              class="text-sm font-medium text-[color:var(--sg-accent)] underline underline-offset-2"
+              class="text-sm font-medium text-sg-accent underline underline-offset-2"
             >
               Open live demo →
             </a>
@@ -165,7 +162,7 @@ export default function ComponentsSlugRoute(props: SlugProps & { params: { slug:
         {workbench}
 
         {doc && (
-          <section class="mt-vsp-xl border-t border-[color:var(--sg-border)] pt-vsp-xl">
+          <section class="mt-vsp-xl border-t border-sg-border pt-vsp-xl">
             <div class="zd-content max-w-[56rem]">
               <doc.Content components={componentDocMdxComponents} />
             </div>

@@ -1,10 +1,11 @@
-import type { ComponentChildren, JSX } from "preact";
+import type { Child } from "@takazudo/zfb/zudo-react";
+import { jsx, type JSX } from "@takazudo/zfb/zudo-react/jsx-runtime";
 import { cx } from "../../lib/cx";
 
 export type SplitLayoutRatio = "50/50" | "40/60" | "60/40" | "33/67" | "67/33";
 export type SplitLayoutGap = "sm" | "md" | "lg";
 
-// Tailwind v4 only generates utilities for literal class strings found in
+// Wind only generates utilities for literal class strings found in
 // source, so each ratio's pair is spelled out rather than composed from a
 // template string (mirrors AutoGrid's FIT_COLS/FILL_COLS maps).
 //
@@ -15,10 +16,10 @@ export type SplitLayoutGap = "sm" | "md" | "lg";
 // so it has no such overflow failure mode.
 const RATIO_CLASS: Record<SplitLayoutRatio, { left: string; right: string }> = {
   "50/50": { left: "md:flex-1", right: "md:flex-1" },
-  "40/60": { left: "md:flex-[2_1_0%]", right: "md:flex-[3_1_0%]" },
-  "60/40": { left: "md:flex-[3_1_0%]", right: "md:flex-[2_1_0%]" },
-  "33/67": { left: "md:flex-[1_1_0%]", right: "md:flex-[2_1_0%]" },
-  "67/33": { left: "md:flex-[2_1_0%]", right: "md:flex-[1_1_0%]" },
+  "40/60": { left: "zc-split-grow-2", right: "zc-split-grow-3" },
+  "60/40": { left: "zc-split-grow-3", right: "zc-split-grow-2" },
+  "33/67": { left: "zc-split-grow-1", right: "zc-split-grow-2" },
+  "67/33": { left: "zc-split-grow-2", right: "zc-split-grow-1" },
 };
 
 const GAP_X_CLASS: Record<SplitLayoutGap, string> = {
@@ -35,9 +36,9 @@ const GAP_Y_CLASS: Record<SplitLayoutGap, string> = {
 
 export type SplitLayoutProps = {
   /** Content for the left pane. */
-  left?: ComponentChildren;
+  left?: Child;
   /** Content for the right pane — pass multiple children for an ordered list. */
-  right?: ComponentChildren;
+  right?: Child;
   /** Left:right width ratio once panes sit side by side (at the `md` breakpoint). Defaults to 50/50. */
   ratio?: SplitLayoutRatio;
   /** Gap between panes. Defaults to md. */
@@ -62,10 +63,13 @@ export function SplitLayout({
   class: cls,
 }: SplitLayoutProps) {
   const ratioClass = RATIO_CLASS[ratio];
-  return (
-    <Tag class={cx("flex flex-col items-stretch md:flex-row", GAP_X_CLASS[gap], GAP_Y_CLASS[gap], cls)}>
-      <div class={cx("min-w-0", ratioClass.left)}>{left}</div>
-      <div class={cx("min-w-0", ratioClass.right)}>{right}</div>
-    </Tag>
-  );
+  return jsx(Tag, {
+    class: cx("flex flex-col items-stretch md:flex-row", GAP_X_CLASS[gap], GAP_Y_CLASS[gap], cls),
+    children: (
+      <>
+        <div class={cx("min-w-0", ratioClass.left)}>{left}</div>
+        <div class={cx("min-w-0", ratioClass.right)}>{right}</div>
+      </>
+    ),
+  });
 }

@@ -1,7 +1,7 @@
-import { render, screen } from "@testing-library/preact";
 import { describe, expect, it } from "vitest";
-import { SiteFooter } from "../site-footer";
+import { getByRole, getByText, queryAllByRole, renderIsland } from "../../../test-utils/zudo-react.js";
 import type { NavSection } from "../../site-nav/site-nav";
+import { SiteFooter } from "../site-footer";
 
 const SECTIONS: NavSection[] = [
   {
@@ -19,35 +19,44 @@ const SECTIONS: NavSection[] = [
 
 describe("SiteFooter", () => {
   it("renders one sitemap column per section, with children as links", () => {
-    render(<SiteFooter sections={SECTIONS} />);
-    expect(screen.getAllByRole("group")).toHaveLength(2);
-    expect(screen.getByRole("link", { name: "About" })).toHaveAttribute("href", "/company/about");
+    const app = renderIsland(SiteFooter, { sections: SECTIONS });
+
+    expect(queryAllByRole(app.container, "group")).toHaveLength(2);
+    expect(getByRole(app.container, "link", { name: "About" }).getAttribute("href")).toBe("/company/about");
   });
 
   it("links a section's column label when it has a top link", () => {
-    render(<SiteFooter sections={SECTIONS} />);
-    expect(screen.getByRole("link", { name: "Company" })).toHaveAttribute("href", "/company");
+    const app = renderIsland(SiteFooter, { sections: SECTIONS });
+
+    expect(getByRole(app.container, "link", { name: "Company" }).getAttribute("href")).toBe("/company");
   });
 
   it("renders a section's label as plain text when it has no top link", () => {
-    render(<SiteFooter sections={SECTIONS} />);
-    expect(screen.queryByRole("link", { name: "Products" })).not.toBeInTheDocument();
-    expect(screen.getByText("Products")).toBeInTheDocument();
+    const app = renderIsland(SiteFooter, { sections: SECTIONS });
+
+    expect(queryAllByRole(app.container, "link", { name: "Products" })).toHaveLength(0);
+    expect(getByText(app.container, "Products")).toBeTruthy();
   });
 
   it("renders the copyright line with the given brand and current year", () => {
-    render(<SiteFooter sections={SECTIONS} brand="Acme Corp." />);
+    const app = renderIsland(SiteFooter, { sections: SECTIONS, brand: "Acme Corp." });
     const year = new Date().getFullYear();
-    expect(screen.getByText(new RegExp(`Copyright.*${year}.*Acme Corp\\.`))).toBeInTheDocument();
+
+    expect(getByText(app.container, new RegExp(`Copyright.*${year}.*Acme Corp\\.`))).toBeTruthy();
   });
 
   it("omits the policy-links nav when none are given", () => {
-    render(<SiteFooter sections={SECTIONS} />);
-    expect(screen.queryByRole("navigation", { name: "Policy links" })).not.toBeInTheDocument();
+    const app = renderIsland(SiteFooter, { sections: SECTIONS });
+
+    expect(queryAllByRole(app.container, "navigation", { name: "Policy links" })).toHaveLength(0);
   });
 
   it("renders policy links when given", () => {
-    render(<SiteFooter sections={SECTIONS} policyLinks={[{ label: "Privacy policy", href: "/privacy" }]} />);
-    expect(screen.getByRole("link", { name: "Privacy policy" })).toHaveAttribute("href", "/privacy");
+    const app = renderIsland(SiteFooter, {
+      sections: SECTIONS,
+      policyLinks: [{ label: "Privacy policy", href: "/privacy" }],
+    });
+
+    expect(getByRole(app.container, "link", { name: "Privacy policy" }).getAttribute("href")).toBe("/privacy");
   });
 });

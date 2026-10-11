@@ -71,16 +71,14 @@ saved state. To retheme that chrome, add an unlayered host override such as:
 
 The engine declares its defaults under `:where(:root)`, so this override wins before or
 after `@takazudo/zudo-sg/styles.css`. It is independent of the component library's own
-`@theme` color tokens. If an older host used bare `--color-border` as the engine-chrome
+wind tokens. If an older host used bare `--color-border` as the engine-chrome
 hook, replace it with `--sg-border`; bare `--color-border` now belongs to the host's own
 component-token world.
 
-The host component token world still follows zudo-doc's namespace contract. Importing a
-host `@theme` color block before `@takazudo/zudo-doc/theme.css` can fail silently because
-that stylesheet applies `--color-*: initial`. Import the zudo-doc theme before the host
-tokens, or choose `@takazudo/zudo-doc/theme-no-reset.css` when consumer-only colors must
-remain declared earlier. This import-order caveat affects host tokens, not the raw
-`--sg-*` override hook.
+The host component token world has its own `:root` custom properties and wind token map.
+zudo-doc 6's `theme.css` supplies package defaults without resetting host color values;
+import it before host token styles, then define deliberate host overrides afterward.
+This import order affects host component tokens, not the raw `--sg-*` override hook.
 
 ## Declared defaults on the tokens page
 
@@ -99,7 +97,7 @@ This works for every tab in the panel — **Color**, **Palette**, **Spacing**, *
 <Warning title="Apply routes every panel tab now; a few internal prefixes still 400">
   The apply endpoint routes eight prefixes — `palette`, `color`, `spacing`, `text`, `font`, `leading`, `radius`, `shadow` — covering every tab the preview panel exposes: **Color** and **Palette** write into `packages/demo-ui/styles/colors.css`; **Spacing**, **Font**, and **Size** (radius + shadow) write into `packages/demo-ui/styles/tokens.css`. Apply sends **every currently-tweaked token across every tab in one request**. The pinned zdtp (>=0.4.7) groups that complete request by resolved target file, so it computes at most one rewrite per affected target file and returns one result row per affected file. Downgrading below 0.4.7 would reintroduce the historical same-file clobber hazard; this grouping does not make disk writes fully transactional.
 
-  The failure window is narrowed, not eliminated: any CSS var whose prefix isn't in the routing map — e.g. `--breakpoint-*`, `--default-transition-*` (Tailwind plumbing, deliberately left out of every tab) — still fails the whole request with "Unsupported cssVar prefix" (400) if it ever reaches the endpoint. None of the tokens the preview panel currently exposes fall into that category, so hitting this 400 through normal panel use shouldn't happen today — but a future token family added to a tab without a matching routing entry would trip it again.
+  The failure window is narrowed, not eliminated: any CSS var whose prefix isn't in the routing map — e.g. `--breakpoint-*` or `--default-transition-*` (zudo-wind compiler variables, deliberately left out of every tab) — still fails the whole request with "Unsupported cssVar prefix" (400) if it ever reaches the endpoint. None of the tokens the preview panel currently exposes fall into that category, so hitting this 400 through normal panel use shouldn't happen today — but a future token family added to a tab without a matching routing entry would trip it again.
 </Warning>
 
 How it's wired, for anyone extending this: the `@takazudo/zudo-sg/plugins/zdtp-apply-proxy` engine plugin registers a same-origin `zfb dev` `devMiddleware` handler (no separate process, no port, no CORS) at `/__zdtp/apply`, backed by `@takazudo/zdtp/server`'s `createApplyHandler`. The prefix → file routing map lives in `zdtp-panel-routing.json` at the repo root, and the endpoint/routing values are injected into the engine's preview panel config (`createPreviewTokenPanelConfig`) via a `virtual:zudo-sg-preview-token-panel` module that resolves to `undefined` outside of `zfb dev` — a production build never sees the endpoint path or the routing map.

@@ -17,14 +17,14 @@ set -euo pipefail
 #      Node — @takazudo/zfb type-only imports erase at build time, so
 #      config/registry/stories/plugins/* have no runtime peer dependency and
 #      import cleanly. `./preview/messages` is here too: it is the
-#      framework-free protocol module (#880), and importing it with no
-#      `preact` installed is the proof that it stays framework-free.
+#      framework-free protocol module (#880); its import graph stays separate
+#      from the engine-owned Preact renderer dependency.
 #      NOT imported here: `./chrome`, `./chrome/panel-contract`,
 #      `./islands`, `./catalog`, `./preview`, `./token-tweak*`, `./search`,
 #      `./code-panel`, `./token-dashboard` and the `./routes-src/*` sources —
-#      these render Preact JSX or reach a zfb `Island` helper at module scope,
-#      so importing them under plain Node without the `preact`/`@takazudo/zfb`
-#      peers installed would fail for reasons that have nothing to do with the
+#      these render JSX or reach a zfb `Island` helper at module scope, so
+#      importing them under plain Node without their `@takazudo/zfb` host peer
+#      installed would fail for reasons that have nothing to do with the
 #      packed artifact being correct. Their presence in the tarball is still
 #      checked by step 2 above.
 #   5. runs the `zudo-sg` CLI bin and asserts it responds.
@@ -130,7 +130,7 @@ cat >"$SCRATCH_DIR/package.json" <<'EOF'
   "type": "module"
 }
 EOF
-# --legacy-peer-deps: the peers (@takazudo/zfb, @takazudo/zudo-doc, preact,
+# --legacy-peer-deps: the peers (@takazudo/zfb, @takazudo/zudo-doc,
 # @takazudo/zdtp) are erased type-only imports in every subpath this script
 # imports (see the header comment) — installing them isn't needed to prove
 # the artifact, so skip npm's peer auto-install instead of hitting the
@@ -161,7 +161,7 @@ for (const subpath of subpaths) {
 ")
 
 echo "==> Checking CSS subpaths are present on disk"
-for rel in "styles.css" "dist/safelist.css"; do
+for rel in "styles.css" "dist/wind.json"; do
   if [ ! -f "$INSTALLED_DIR/$rel" ]; then
     echo "check-pack: installed package is missing $rel" >&2
     exit 1

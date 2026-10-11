@@ -1,10 +1,20 @@
-import { render, screen } from "@testing-library/preact";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
+import { renderIsland, disposeAll, getByText } from "../../../test-utils/zudo-react";
+import { getHeading } from "../../test-utils";
+import type { Child } from "@takazudo/zfb/zudo-react";
 import { LandingHero } from "../landing-hero";
+
+afterEach(disposeAll);
+
+function render(node: Child) {
+  return renderIsland(function Fixture() {
+    return node;
+  }, {});
+}
 
 describe("LandingHero", () => {
   it("renders the heading, lead, and actions", () => {
-    render(
+    const { container } = render(
       <LandingHero
         eyebrow="Sample Tagline"
         heading="Two industries, one company"
@@ -12,8 +22,8 @@ describe("LandingHero", () => {
         actions={[{ label: "View products", href: "/products", variant: "primary" }]}
       />,
     );
-    expect(screen.getByRole("heading", { name: "Two industries, one company" })).toBeInTheDocument();
-    expect(screen.getByText("A demo positioning statement.")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "View products" })).toHaveAttribute("href", "/products");
+    expect(getHeading(container, "Two industries, one company")).toBeInTheDocument();
+    expect(getByText(container, "A demo positioning statement.")).toBeInTheDocument();
+    expect(container.querySelector('a[href="/products"]')).toBeInTheDocument();
   });
 });

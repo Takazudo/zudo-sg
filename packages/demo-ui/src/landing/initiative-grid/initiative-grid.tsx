@@ -27,7 +27,7 @@ export function InitiativeGrid({ heading, intro, initiatives, bare = false, clas
           <li key={item.title} class="rounded-md border border-border border-t-2 border-t-accent bg-bg px-hsp-lg py-vsp-md">
             <p class="text-title font-bold text-accent">{String(i + 1).padStart(2, "0")}</p>
             <h3 class="mt-vsp-2xs text-title font-semibold text-fg">{item.title}</h3>
-            <p class="mt-vsp-xs text-small leading-relaxed text-fg" style={{ textWrap: "pretty" }}>
+            <p class="mt-vsp-xs text-small leading-relaxed text-fg" style={{ "text-wrap": "pretty" }}>
               {item.body}
             </p>
           </li>

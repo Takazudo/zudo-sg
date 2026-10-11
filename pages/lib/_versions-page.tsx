@@ -1,5 +1,3 @@
-/** @jsxRuntime automatic */
-/** @jsxImportSource preact */
 // Shared renderer for the documentation-versions pages (#2010).
 //
 // Collapses the per-locale page pair:
@@ -14,7 +12,7 @@ import { withBase } from "@/utils/base";
 import { DocLayoutWithDefaults } from "@takazudo/zudo-doc/doclayout";
 import { VersionsPageContent } from "@takazudo/zudo-doc/nav-indexing";
 import type { VersionPageEntry, VersionsPageLabels } from "@takazudo/zudo-doc/nav-indexing";
-import type { JSX } from "preact";
+import type { JSX } from "@takazudo/zfb/zudo-react/jsx-runtime";
 import { FooterWithDefaults } from "./_footer-with-defaults";
 import { HeaderWithDefaults } from "./_header-with-defaults";
 import { HeadWithDefaults } from "./_head-with-defaults";

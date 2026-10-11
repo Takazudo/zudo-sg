@@ -1,43 +1,55 @@
-import { render, screen } from "@testing-library/preact";
+import { renderIsland, getByRole, getByText, queryByText } from "../../../test-utils/zudo-react";
 import { describe, expect, it } from "vitest";
 import { Callout, Note } from "../callout";
 
 describe("Callout", () => {
   it("renders its children with role=note", () => {
-    render(<Callout>Content</Callout>);
-    expect(screen.getByRole("note")).toHaveTextContent("Content");
+    const { container } = renderIsland(function Fixture() {
+      return <Callout>Content</Callout>;
+    }, {});
+    expect(getByRole(container, "note")).toHaveTextContent("Content");
   });
 
   it("renders the title when provided", () => {
-    render(<Callout title="Heads up">Content</Callout>);
-    expect(screen.getByText("Heads up")).toBeInTheDocument();
+    const { container } = renderIsland(function Fixture() {
+      return <Callout title="Heads up">Content</Callout>;
+    }, {});
+    expect(getByText(container, "Heads up")).toBeInTheDocument();
   });
 
   it("omits the title row when not provided", () => {
-    render(<Callout>Content</Callout>);
-    expect(screen.queryByText("Heads up")).not.toBeInTheDocument();
+    const { container } = renderIsland(function Fixture() {
+      return <Callout>Content</Callout>;
+    }, {});
+    expect(queryByText(container, "Heads up")).not.toBeInTheDocument();
   });
 
   it("defaults to the note tone", () => {
-    render(<Callout title="Heads up">Content</Callout>);
-    expect(screen.getByText("Heads up").className).toContain("text-accent");
+    const { container } = renderIsland(function Fixture() {
+      return <Callout title="Heads up">Content</Callout>;
+    }, {});
+    expect(getByText(container, "Heads up").classList.contains("text-accent")).toBe(true);
   });
 
   it("applies the muted tone's title class", () => {
-    render(
-      <Callout tone="muted" title="Heads up">
-        Content
-      </Callout>,
-    );
-    expect(screen.getByText("Heads up").className).toContain("text-fg");
+    const { container } = renderIsland(function Fixture() {
+      return (
+        <Callout tone="muted" title="Heads up">
+          Content
+        </Callout>
+      );
+    }, {});
+    expect(getByText(container, "Heads up").classList.contains("text-fg")).toBe(true);
   });
 });
 
 describe("Note", () => {
   it("is a tone=note alias of Callout", () => {
-    render(<Note title="Heads up">Content</Note>);
-    const note = screen.getByRole("note");
+    const { container } = renderIsland(function Fixture() {
+      return <Note title="Heads up">Content</Note>;
+    }, {});
+    const note = getByRole(container, "note");
     expect(note).toHaveTextContent("Content");
-    expect(screen.getByText("Heads up").className).toContain("text-accent");
+    expect(getByText(container, "Heads up").classList.contains("text-accent")).toBe(true);
   });
 });

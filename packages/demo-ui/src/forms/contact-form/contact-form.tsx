@@ -20,7 +20,7 @@ export type ContactFormProps = {
  * unenhanced submit is a no-op (static fallback). The paired
  * `ContactFormEnhancer` island (same directory) is what drives the actual
  * input -> confirm -> complete flow and the optional async submit-adapter
- * error path — @zudo-sg/demo-ui ships no zfb dependency, so mounting that island
+ * error path. Mounting that island
  * (`<Island when="visible" ssrFallback={null}><ContactFormEnhancer /></Island>`)
  * is the consuming app's job, not this component's. It only needs to be
  * present somewhere in the same document; it finds this form via
@@ -57,26 +57,26 @@ export function ContactForm({ class: cls }: ContactFormProps) {
           class="flex flex-col gap-y-vsp-md rounded-md border border-border bg-surface px-hsp-lg py-vsp-md"
           novalidate
         >
-          <Field id="contact-purpose" label="Inquiry type" required>
-            <Select id="contact-purpose" name="purpose" options={PURPOSE_OPTIONS} required />
-          </Field>
+          <Field id="contact-purpose" label="Inquiry type" required>{({ id, describedBy }) => (
+            <Select id={id} aria-describedby={describedBy} name="purpose" options={PURPOSE_OPTIONS} required />
+          )}</Field>
 
           <div class="grid grid-cols-1 gap-hsp-md sm:grid-cols-2">
-            <Field id="contact-name" label="Name" required>
-              <Input id="contact-name" name="name" autocomplete="name" required />
-            </Field>
-            <Field id="contact-company" label="Company / organization" hint="Leave blank for individual inquiries.">
-              <Input id="contact-company" name="company" autocomplete="organization" />
-            </Field>
+            <Field id="contact-name" label="Name" required>{({ id, describedBy }) => (
+              <Input id={id} aria-describedby={describedBy} name="name" autocomplete="name" required />
+            )}</Field>
+            <Field id="contact-company" label="Company / organization" hint="Leave blank for individual inquiries.">{({ id, describedBy }) => (
+              <Input id={id} aria-describedby={describedBy} name="company" autocomplete="organization" />
+            )}</Field>
           </div>
 
-          <Field id="contact-email" label="Email" required hint="Used to reply to your inquiry.">
-            <Input id="contact-email" name="email" type="email" autocomplete="email" required />
-          </Field>
+          <Field id="contact-email" label="Email" required hint="Used to reply to your inquiry.">{({ id, describedBy }) => (
+            <Input id={id} aria-describedby={describedBy} name="email" type="email" autocomplete="email" required />
+          )}</Field>
 
-          <Field id="contact-message" label="Message" required>
-            <Textarea id="contact-message" name="message" rows={7} required />
-          </Field>
+          <Field id="contact-message" label="Message" required>{({ id, describedBy }) => (
+            <Textarea id={id} aria-describedby={describedBy} name="message" rows={7} required />
+          )}</Field>
 
           <div class="flex flex-col gap-y-vsp-xs">
             <p class="text-micro leading-snug text-muted">
@@ -124,8 +124,8 @@ export function ContactForm({ class: cls }: ContactFormProps) {
         <div
           class="flex flex-col gap-y-vsp-sm rounded-md border border-border border-l-4 px-hsp-lg py-vsp-md"
           style={{
-            borderLeftColor: "var(--color-accent)",
-            backgroundColor: "color-mix(in srgb, var(--color-accent) 8%, var(--color-bg))",
+            "border-left-color": "var(--color-accent)",
+            "background-color": "color-mix(in srgb, var(--color-accent) 8%, var(--color-bg))",
           }}
           role="status"
         >

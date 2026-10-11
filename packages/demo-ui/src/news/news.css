@@ -1,0 +1,7 @@
+/* Unlayered authored news components (zc-*). */
+
+[data-news-filter-btn][aria-pressed="true"] {
+  border-color: var(--color-accent);
+  background-color: var(--color-accent);
+  color: var(--color-bg);
+}

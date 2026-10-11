@@ -1,5 +1,5 @@
-import type { ComponentChildren } from "preact";
-import { Island, type IslandProps } from "@takazudo/zfb";
+import type { Child } from "@takazudo/zfb/zudo-react";
+import { Island } from "@takazudo/zfb";
 import { ClientRouter } from "@takazudo/zfb-runtime";
 
 import "../styles/global.css";
@@ -39,7 +39,7 @@ type Props = {
   line?: string;
   /** Adds `<meta name="robots" content="noindex">` (e.g. the 404 page). */
   noindex?: boolean;
-  children: ComponentChildren;
+  children: Child;
 };
 
 // Same value as siteMeta.siteName so composeMetaTitle() doesn't append a
@@ -104,8 +104,8 @@ export default function DefaultLayout({
       <head>
         {/* Restores only the valid persisted theme before the first visible paint.
             Its own exception handling leaves the light SSR baseline in place. */}
-        <script data-theme-prepaint dangerouslySetInnerHTML={{ __html: THEME_PREPAINT_SCRIPT }} />
-        <meta charSet="utf-8" />
+        <script data-theme-prepaint rawHtml={THEME_PREPAINT_SCRIPT} />
+        <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="description" content={description} />
         {noindex && <meta name="robots" content="noindex" />}
@@ -131,7 +131,7 @@ export default function DefaultLayout({
       <body>
         {/* Skip link (a11y) — visible only when focused. */}
         <a
-          class="absolute start-hsp-md top-vsp-xs z-ui-toast -translate-y-[200%] rounded bg-accent px-hsp-md py-vsp-2xs text-bg transition-transform focus:translate-y-0"
+          class="zc-demo-skip-link absolute top-vsp-xs z-ui-toast -translate-y-[200%] rounded bg-accent px-hsp-md py-vsp-2xs text-bg transition-transform focus:translate-y-0"
           href="#main"
         >
           Skip to content
@@ -143,9 +143,7 @@ export default function DefaultLayout({
             brand={brand}
             brandHref="/"
             desktopThemeControl={
-              <Island when="load" ssrFallback={null}>
-                {(<ThemeControlIsland />) as unknown as IslandProps["children"]}
-              </Island>
+              <ThemeControlIsland />
             }
           />
         </div>
@@ -158,16 +156,14 @@ export default function DefaultLayout({
               brandHref="/"
               currentSlug={slug}
               mobileThemeControl={
-                <Island when="load" ssrFallback={null}>
-                  {(<ThemeControlIsland />) as unknown as IslandProps["children"]}
-                </Island>
+                <ThemeControlIsland />
               }
             />
           </div>
 
           <div class="col-start-2 flex min-h-screen min-w-0 flex-col max-sm:col-start-1 max-sm:pt-[3.25rem]">
             <Breadcrumbs crumbs={crumbs} />
-            <main id="main" class="flex-[1_0_auto]">
+            <main id="main" class="zc-demo-main">
               {children}
             </main>
             <SiteFooter sections={tree.sections} brand={brand} />
@@ -177,25 +173,29 @@ export default function DefaultLayout({
         {/* a11y-enhancer islands — each layers ARIA sync / focus handling
             on top of an SSR baseline (CSS `:hover`/`:focus-within`/checkbox
             hack / `<details>`) that already works without JS. ssrFallback={null}
-            is required: evaluating these islands during SSR throws. */}
-        <Island when="visible" ssrFallback={null}>
-          {(<NavEnhancer />) as unknown as IslandProps["children"]}
+            is required: evaluating these islands during SSR throws. Render-null
+            placeholders can sit below the fold, so activate on load rather
+            than waiting for their placeholder to enter the viewport. */}
+        <Island when="load" ssrFallback={null}>
+          <NavEnhancer />
         </Island>
-        <Island when="visible" ssrFallback={null}>
-          {(<MobileNavEnhancer />) as unknown as IslandProps["children"]}
+        <Island when="load" ssrFallback={null}>
+          <MobileNavEnhancer />
         </Island>
-        <Island when="visible" ssrFallback={null}>
-          {(<ContextSwitcherEnhancer />) as unknown as IslandProps["children"]}
+        {/* Browse is visible in the header immediately. Its render-null enhancer
+            must activate on load: this body-end placeholder can be offscreen. */}
+        <Island when="load" ssrFallback={null}>
+          <ContextSwitcherEnhancer />
         </Island>
-        <Island when="visible" ssrFallback={null}>
-          {(<SearchToggleEnhancer />) as unknown as IslandProps["children"]}
+        <Island when="load" ssrFallback={null}>
+          <SearchToggleEnhancer />
         </Island>
 
         {/* Registers the router's click/form-submit intercept. when="load" so
             it's active before the first click; ssrFallback={null} for the
             same SSR-evaluation reason as the enhancers above. */}
         <Island when="load" ssrFallback={null}>
-          {(<ClientRouterBootstrap />) as unknown as IslandProps["children"]}
+          <ClientRouterBootstrap />
         </Island>
 
         {/* Zero-hydration SSR markup + self-wiring script — not an island. */}

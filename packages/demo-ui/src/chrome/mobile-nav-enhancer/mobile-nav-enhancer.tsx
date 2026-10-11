@@ -21,10 +21,10 @@
  *   - close button:    `[data-nav-close]`
  *
  * Render-null enhancer: mount via the consumer's own
- * `<Island when="visible" ssrFallback={null}>` (required — evaluating this
+ * `<Island when="load" ssrFallback={null}>` (required — evaluating this
  * island during SSR throws). It draws no DOM of its own.
  */
-import { useEffect } from "preact/hooks";
+import { getScope } from "@takazudo/zfb/zudo-react";
 
 const TOGGLE_ID = "zui-nav-toggle";
 const DRAWER_ID = "zui-nav-drawer";
@@ -138,9 +138,6 @@ function enhance(): () => void {
 }
 
 export default function MobileNavEnhancer() {
-  useEffect(() => {
-    const dispose = enhance();
-    return dispose;
-  }, []);
+  getScope().onActivate(() => enhance());
   return null;
 }

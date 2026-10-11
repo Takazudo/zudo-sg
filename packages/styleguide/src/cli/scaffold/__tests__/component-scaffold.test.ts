@@ -1,3 +1,4 @@
+// @vitest-environment happy-dom
 // Ported from the host's former scripts/__tests__/component-scaffold.test.ts.
 // Exercises validation, name conversion, template shape, and the
 // barrel-insertion algorithm directly (no fs, no child process). The former
@@ -6,9 +7,10 @@
 // `zudo-sg.config.mjs` at the CLI orchestration layer) — this fixture
 // declares its own equivalents.
 
+import { createIslandTest } from "@takazudo/zfb/zudo-react/testing";
 import { describe, expect, it, vi } from "vitest";
-import { render } from "preact-render-to-string";
-import { jsx as jsxRuntime } from "preact/jsx-runtime";
+import { renderSsr as render } from "../../../__tests__/helpers/zudo-react.js";
+import { jsx as jsxRuntime } from "@takazudo/zfb/zudo-react/jsx-runtime";
 import * as ts from "typescript";
 import {
   assertUnusedName,
@@ -183,12 +185,12 @@ describe("componentTemplate", () => {
         compilerOptions: {
           module: ts.ModuleKind.ESNext,
           jsx: ts.JsxEmit.ReactJSX,
-          jsxImportSource: "preact",
+          jsxImportSource: "@takazudo/zfb/zudo-react",
         },
       },
     );
     const executable = outputText
-      .replace('import { jsx as _jsx } from "preact/jsx-runtime";', "const _jsx = jsxRuntime;")
+      .replace('import { jsx as _jsx } from "@takazudo/zfb/zudo-react/jsx-runtime";', "const _jsx = jsxRuntime;")
       .replace("export function DemoWidget(", "function DemoWidget(");
     expect(executable).not.toBe(outputText);
     return new Function("jsxRuntime", `${executable}\nreturn DemoWidget;`)(jsxRuntime) as (
@@ -270,9 +272,31 @@ describe("storiesTemplate", () => {
 describe("testTemplate", () => {
   it("emits a starter render + class-map test suite", () => {
     const src = testTemplate({ pascalName: "DemoWidget", kebabName: "demo-widget" });
-    expect(src).toContain(`import { DemoWidget } from "../demo-widget";`);
+    expect(src).toContain(`import { DemoWidget, type DemoWidgetProps } from "../demo-widget";`);
     expect(src).toContain('describe("DemoWidget", () => {');
     expect(src).toContain("renders its children");
+  });
+
+  it("executes the generated public API tests without hydration diagnostics", async () => {
+    const source = componentTemplate({ pascalName: "DemoWidget", kebabName: "demo-widget" }) +
+      testTemplate({ pascalName: "DemoWidget", kebabName: "demo-widget" });
+    const { outputText } = ts.transpileModule(source, {
+      compilerOptions: {
+        module: ts.ModuleKind.ESNext,
+        jsx: ts.JsxEmit.ReactJSX,
+        jsxImportSource: "@takazudo/zfb/zudo-react",
+      },
+    });
+    const executable = outputText.replace(/^import .*;$/gm, "")
+      .replace("export function DemoWidget(", "function DemoWidget(");
+    const cases: Array<() => void | Promise<void>> = [];
+    new Function("_jsx", "renderToString", "createIslandTest", "describe", "expect", "it", executable)(
+      jsxRuntime, render, createIslandTest,
+      (_name: string, suite: () => void) => suite(), expect,
+      (_name: string, run: () => void | Promise<void>) => cases.push(run),
+    );
+    expect(cases).toHaveLength(3);
+    for (const run of cases) await run();
   });
 });
 

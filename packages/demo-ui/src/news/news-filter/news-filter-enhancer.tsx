@@ -11,7 +11,7 @@
  * SSR output already shows every row, so that's a fully-functional static
  * fallback, not a broken one.
  */
-import { useEffect } from "preact/hooks";
+import { getScope } from "@takazudo/zfb/zudo-react";
 
 function enhance(): () => void {
   const roots = Array.from(document.querySelectorAll<HTMLElement>("[data-news-filter]"));
@@ -51,9 +51,6 @@ function enhance(): () => void {
 }
 
 export default function NewsFilterEnhancer() {
-  useEffect(() => {
-    const dispose = enhance();
-    return dispose;
-  }, []);
+  getScope().onActivate(() => enhance());
   return null;
 }

@@ -22,13 +22,6 @@
 // back. The iframe is registered with the token-tweak registry so design-token
 // tweaks live-update it.
 
-import type { JSX } from "preact";
-import {
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "preact/hooks";
 import { onAfterNavigate } from "@takazudo/zudo-doc/transitions";
 import type { StoryControl } from "../stories/index.js";
 import {
@@ -48,121 +41,50 @@ import {
   unregisterPreviewIframe,
 } from "../token-tweak/preview-iframe-registry.js";
 
-// The preset tables live here, beside the stage that consumes them, and are
-// imported by the toolbar that drives them — the toolbar imports the stage
-// already, so the reverse direction would be a cycle.
+// Presets and pure URL helpers stay outside this client-only module so its
+// runtime exports are island components only.
 
-export type ViewportId = "mobile" | "tablet" | "desktop" | "full";
+import {
+  buildPreviewSrc,
+  DEFAULT_FRAME_SANDBOX,
+  INITIAL_FRAME_HEIGHT,
+  viewportWidth,
+  readCatalogTheme,
+  type FrameThemeMode,
+  type ViewportId,
+} from "./variant-frame-config.js";
+import {
+  computed,
+  signal,
+  getScope,
+  Show,
+  For,
+  type ReadonlySignal,
+  type Description,
+} from "@takazudo/zfb/zudo-react";
 
-export interface Viewport {
-  id: ViewportId;
-  label: string;
-  width: string;
+type Live<T> = T | ReadonlySignal<T>;
+function read<T>(value: Live<T>): T {
+  return typeof value === "object" && value !== null && "value" in value
+    ? (value as ReadonlySignal<T>).value
+    : (value as T);
 }
-
-// Mobile is the narrowest, listed first; Full remains last so the fixed-width
-// presets progress from narrowest to widest before the fluid option.
-export const VIEWPORTS: Viewport[] = [
-  { id: "mobile", label: "Mobile", width: "320px" },
-  { id: "tablet", label: "Tablet", width: "768px" },
-  { id: "desktop", label: "Desktop", width: "1280px" },
-  { id: "full", label: "Full", width: "100%" },
-];
-
-/** Fluid width — the fixed presets are opt-in. */
-export const DEFAULT_VIEWPORT_ID: ViewportId = "full";
-
-export type ThemeMode = "follow" | PreviewTheme;
-
-export interface ThemeOption {
-  id: ThemeMode;
-  label: string;
-}
-
-export const THEME_OPTIONS: ThemeOption[] = [
-  { id: "follow", label: "Follow catalog" },
-  { id: "light", label: "Light" },
-  { id: "dark", label: "Dark" },
-];
-
-export const DEFAULT_THEME_MODE: ThemeMode = "follow";
-
-/**
- * What a stage does about theme. `"none"` hands theme to the host (#883): the
- * stage never posts `sg:setTheme`, so a preview document that picks its own
- * theme (e.g. from a `previewParams` entry) is never overridden.
- */
-export type FrameThemeMode = ThemeMode | "none";
-
-/** Query keys the stage owns; `previewParams` entries using them are ignored. */
-export const RESERVED_PREVIEW_PARAMS: readonly string[] = ["slug", "variant"];
-
-/**
- * The preview document URL for one variant: `slug` and `variant` first, then
- * every `previewParams` entry URL-encoded in insertion order. A reserved key
- * in `previewParams` is dropped rather than thrown on — the identity pair must
- * stay authoritative, and throwing from an island would blank the whole page.
- */
-export function buildPreviewSrc(
-  previewUrl: string,
-  slug: string,
-  exportName: string,
-  previewParams?: Readonly<Record<string, string>>,
-): string {
-  let src = `${previewUrl}?slug=${encodeURIComponent(slug)}&variant=${encodeURIComponent(exportName)}`;
-  if (previewParams) {
-    for (const [key, value] of Object.entries(previewParams)) {
-      if (RESERVED_PREVIEW_PARAMS.includes(key)) continue;
-      src += `&${encodeURIComponent(key)}=${encodeURIComponent(value)}`;
-    }
-  }
-  return src;
-}
-
-function viewportWidth(id: ViewportId): string {
-  const preset = VIEWPORTS.find((v) => v.id === id) ?? VIEWPORTS.at(-1);
-  return preset?.width ?? "100%";
-}
-
-function readCatalogTheme(): PreviewTheme | null {
-  const theme = document.documentElement.getAttribute("data-theme");
-  return theme === "light" || theme === "dark" ? theme : null;
-}
-
-/** Initial iframe height (px) before the frame reports its own, and after a variant change. */
-const INITIAL_FRAME_HEIGHT = 180;
-
-/**
- * `allow-forms` is required by `packages/demo-ui/src/forms/` stories: #499 saw
- * Chromium block submission without it (the submit listener did not fire and
- * the frame did not navigate), while with it the listener fired and the frame
- * navigated to the real action. The catalog form stories omit their enhancer
- * islands, so `contact-form.stories.tsx` cannot show this: it renders
- * `<ContactForm />` alone; `ContactFormEnhancer` lives at previewRoute
- * `/preview/contact`, which the detail page links out to instead of rendering
- * in a preview iframe.
- */
-export const DEFAULT_FRAME_SANDBOX: readonly string[] = [
-  "allow-same-origin",
-  "allow-scripts",
-  "allow-forms",
-];
 
 export interface VariantFrameProps {
   slug: string;
   /** Story export name (e.g. "Variants"). */
-  exportName: string;
+  exportName: Live<string>;
   /** Human label shown above the preview. */
-  name: string;
+  name: Live<string>;
   /** Declarative control descriptors (metadata only). */
-  controls?: StoryControl[];
+  controls?: Live<StoryControl[] | undefined>;
   /**
    * Toolbar-owned theme mode. "follow" tracks the catalog's `data-theme`;
    * "none" never posts `sg:setTheme` (host-controlled theme).
    */
-  themeMode: FrameThemeMode;
+  themeMode: Live<FrameThemeMode>;
   /** Toolbar-owned viewport preset. */
-  viewportId: ViewportId;
+  viewportId: Live<ViewportId>;
   /**
    * Base-prefixed URL of the preview route (the host's `withBase` applied to
    * `routes.componentsPreview`). Defaults to the unprefixed PREVIEW_ROUTE_PATH.
@@ -189,7 +111,7 @@ export interface VariantFrameProps {
   fixedHeight?: number;
 }
 
-function VariantFrame(props: VariantFrameProps): JSX.Element {
+function VariantFrame(props: VariantFrameProps): Description {
   const {
     slug,
     exportName,
@@ -203,27 +125,21 @@ function VariantFrame(props: VariantFrameProps): JSX.Element {
     previewParams,
     fixedHeight,
   } = props;
-  const iframeRef = useRef<HTMLIFrameElement>(null);
-  const readyRef = useRef(false);
-  // Mirror the prop into a ref so the `[]`-deps listeners below (message,
-  // MutationObserver, after-navigate) read the CURRENT mode without being torn
-  // down and re-installed on every toolbar change.
-  const themeModeRef = useRef<FrameThemeMode>(themeMode);
-  themeModeRef.current = themeMode;
-  // The frame's current identity, read by the `[]`-deps message listener to
-  // drop reports from a document that no longer belongs to this stage.
-  const identityRef = useRef({ slug, variant: exportName });
-  identityRef.current = { slug, variant: exportName };
-  const fixedHeightRef = useRef(fixedHeight);
-  fixedHeightRef.current = fixedHeight;
-  const [height, setHeight] = useState(INITIAL_FRAME_HEIGHT);
-
-  // `previewUrl` is shared with css-injection.ts's iframe selector (the code
-  // panel receives the same value) — keep them in agreement by passing one
-  // value, not by re-typing the literal (#48, #105). A plain string (no memo):
-  // a fresh-but-equal `previewParams` object yields the same `src`, so it
-  // never triggers the document reset below.
-  const src = buildPreviewSrc(previewUrl, slug, exportName, previewParams);
+  const scope = getScope();
+  const iframeRef = { current: null as HTMLIFrameElement | null };
+  let ready = false;
+  const height = signal(INITIAL_FRAME_HEIGHT);
+  const src = computed(() =>
+    buildPreviewSrc(previewUrl, slug, read(exportName), previewParams),
+  );
+  let committedSrc = src.value;
+  scope.effect(() => {
+    const next = src.value;
+    if (next === committedSrc) return;
+    committedSrc = next;
+    ready = false;
+    height.value = INITIAL_FRAME_HEIGHT;
+  });
 
   // Same-origin frame: target our own origin, never "*", so a frame that
   // navigated elsewhere cannot receive props or theme (#880). An opaque
@@ -238,21 +154,9 @@ function VariantFrame(props: VariantFrameProps): JSX.Element {
     post({ type: MSG_SET_THEME, v: PROTOCOL_VERSION, theme });
   }
 
-  // A new `src` is a new document: forget the old one's readiness and height
-  // so the stage works without a keyed remount. A layout effect runs
-  // synchronously after the commit that swapped `src`, so no message event
-  // can land between the swap and this reset.
-  const committedSrcRef = useRef(src);
-  useLayoutEffect(() => {
-    if (committedSrcRef.current === src) return;
-    committedSrcRef.current = src;
-    readyRef.current = false;
-    setHeight(INITIAL_FRAME_HEIGHT);
-  }, [src]);
-
   function syncTheme(): void {
-    if (!readyRef.current) return;
-    const mode = themeModeRef.current;
+    if (!ready) return;
+    const mode = read(themeMode);
     if (mode === "none") return;
     const theme = mode === "follow" ? readCatalogTheme() : mode;
     if (theme) sendTheme(theme);
@@ -261,20 +165,26 @@ function VariantFrame(props: VariantFrameProps): JSX.Element {
   // Receive readiness and height reports from this variant's iframe only.
   // Readiness gates every theme message so the iframe cannot miss its initial
   // resolved theme while its listener is still being installed.
-  useEffect(() => {
+  scope.onActivate(() => {
     function onMessage(e: MessageEvent): void {
       if (e.origin !== window.location.origin) return;
       if (e.source !== iframeRef.current?.contentWindow) return;
       if (isReadyMessage(e.data)) {
-        if (!matchesPreviewIdentity(e.data, identityRef.current)) return;
-        readyRef.current = true;
+        if (
+          !matchesPreviewIdentity(e.data, { slug, variant: read(exportName) })
+        )
+          return;
+        ready = true;
         syncTheme();
         return;
       }
       if (isHeightMessage(e.data)) {
-        if (!matchesPreviewIdentity(e.data, identityRef.current)) return;
-        if (fixedHeightRef.current !== undefined) return;
-        setHeight(Math.max(80, Math.ceil(e.data.height)));
+        if (
+          !matchesPreviewIdentity(e.data, { slug, variant: read(exportName) })
+        )
+          return;
+        if (fixedHeight !== undefined) return;
+        height.value = Math.max(80, Math.ceil(e.data.height));
       }
     }
     window.addEventListener("message", onMessage);
@@ -283,24 +193,28 @@ function VariantFrame(props: VariantFrameProps): JSX.Element {
     // already-mounted frame to answer now that this listener is active.
     post({ type: MSG_REQUEST_READY, v: PROTOCOL_VERSION });
     return () => window.removeEventListener("message", onMessage);
-  }, []);
+  });
 
   // Adopt the toolbar's theme on every change. On mount this is a no-op
-  // (`readyRef` is still false) and the ready handler above sends the first
+  // (`ready` is still false) and the ready handler above sends the first
   // value instead — which is exactly what makes a late-mounting stage land on
   // the current mode rather than the default.
-  useEffect(() => {
+  let previousThemeMode = read(themeMode);
+  scope.effect(() => {
+    const next = read(themeMode);
+    if (next === previousThemeMode) return;
+    previousThemeMode = next;
     syncTheme();
-  }, [themeMode]);
+  });
 
   // Follow is active synchronization, not native iframe inheritance. Observe
   // the concrete catalog data-theme and also re-push it after SPA swaps (the
   // package provider re-applies its theme on that lifecycle event).
-  useEffect(() => {
+  scope.onActivate(() => {
     const observer = new MutationObserver((records) => {
       if (
         records.some((record) => record.attributeName === "data-theme") &&
-        themeModeRef.current === "follow"
+        read(themeMode) === "follow"
       ) {
         syncTheme();
       }
@@ -310,21 +224,21 @@ function VariantFrame(props: VariantFrameProps): JSX.Element {
       attributeFilter: ["data-theme"],
     });
     const unsubscribeAfterNavigate = onAfterNavigate(() => {
-      if (themeModeRef.current === "follow") syncTheme();
+      if (read(themeMode) === "follow") syncTheme();
     });
     return () => {
       observer.disconnect();
       unsubscribeAfterNavigate();
     };
-  }, []);
+  });
 
   // Register/unregister with the token-tweak registry.
-  useEffect(() => {
+  scope.onActivate(() => {
     const iframe = iframeRef.current;
     if (!iframe) return;
     registerPreviewIframe(iframe);
     return () => unregisterPreviewIframe(iframe);
-  }, []);
+  });
 
   // Push live control values to the iframe.
   function sendProps(props: Record<string, unknown>): void {
@@ -332,43 +246,57 @@ function VariantFrame(props: VariantFrameProps): JSX.Element {
   }
 
   return (
-    <section class="border border-[color:var(--sg-border)] rounded-md overflow-hidden bg-[var(--sg-surface)]">
-      <div class="px-hsp-md py-vsp-2xs border-b border-[color:var(--sg-border)] bg-[var(--sg-surface-2)]">
-        <span class="text-caption leading-normal font-medium text-[color:var(--sg-fg)]">{name}</span>
+    <section class="border border-sg-border rounded-md overflow-hidden bg-sg-surface">
+      <div class="px-hsp-md py-vsp-2xs border-b border-sg-border bg-sg-surface-2">
+        <span class="text-caption leading-normal font-medium text-sg-fg">
+          {computed(() => read(name))}
+        </span>
       </div>
       <div
         role="region"
         aria-label="Preview viewport canvas"
-        tabIndex={0}
-        class="flex overflow-x-auto bg-[var(--sg-bg)] p-hsp-md focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[color:var(--sg-focus)]"
+        tabindex={0}
+        class="flex overflow-x-auto bg-sg-bg p-hsp-md focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-sg-focus"
       >
-        <div class="mx-auto shrink-0" style={{ width: viewportWidth(viewportId) }}>
+        <div
+          class="mx-auto shrink-0"
+          style={computed(() => ({ width: viewportWidth(read(viewportId)) }))}
+        >
           <iframe
             ref={iframeRef}
             src={src}
-            title={`${slug} — ${name}`}
+            title={computed(() => `${slug} — ${read(name)}`)}
             loading="lazy"
             sandbox={frameSandbox.join(" ")}
             allow={frameAllow ? frameAllow.join("; ") : undefined}
-            style={{
+            style={computed(() => ({
               width: "100%",
-              height: `${fixedHeight ?? height}px`,
+              height: `${fixedHeight ?? height.value}px`,
               // An iframe's layout viewport is its content box. Keep the
               // border at zero so a 1280px preset reaches the 1280px
               // breakpoint; a visible border belongs on the wrapper.
               border: "0",
               display: "block",
-            }}
+            }))}
           />
         </div>
       </div>
-      {controls && controls.length > 0 && (
-        <div class="border-t border-[color:var(--sg-border)] px-hsp-md py-vsp-xs">
-          {/* Keyed by `src`: a new variant document starts from its defaults,
+      <Show when={computed(() => (read(controls) ?? []).length > 0)}>
+        {() => (
+          <div class="border-t border-sg-border px-hsp-md py-vsp-xs">
+            {/* Keyed by `src`: a new variant document starts from its defaults,
               so the panel must too. */}
-          <ControlsPanel key={src} controls={controls} onChange={sendProps} />
-        </div>
-      )}
+            <For each={computed(() => [src.value])} by={(value) => value}>
+              {() => (
+                <ControlsPanel
+                  controls={read(controls) ?? []}
+                  onChange={sendProps}
+                />
+              )}
+            </For>
+          </div>
+        )}
+      </Show>
     </section>
   );
 }
@@ -412,19 +340,43 @@ function ControlsPanel({
 }: {
   controls: StoryControl[];
   onChange: (props: Record<string, unknown>) => void;
-}): JSX.Element {
-  const [values, setValues] = useState<Record<string, unknown>>(() =>
-    seedState(controls),
+}): Description {
+  const values = signal(seedState(controls));
+  const open = signal(true);
+  const fields = Object.fromEntries(
+    controls.map((control) => [
+      control.prop,
+      signal(String(control.defaultValue)),
+    ]),
   );
-  const [open, setOpen] = useState(true);
+  // zudo-react 4.3.1 models text/select/checkbox inputs; number, range and
+  // color use native input events plus owned refs to reflect clamps and Reset.
+  const fieldRefs = Object.fromEntries(
+    controls.map((control) => [
+      control.prop,
+      { current: null as HTMLInputElement | null },
+    ]),
+  );
+  const checks = Object.fromEntries(
+    controls.map((control) => [
+      control.prop,
+      signal(Boolean(control.defaultValue)),
+    ]),
+  );
 
   function apply(next: Record<string, unknown>): void {
-    setValues(next);
+    values.value = next;
+    for (const control of controls) {
+      fields[control.prop]!.value = String(next[control.prop]);
+      checks[control.prop]!.value = Boolean(next[control.prop]);
+      const field = fieldRefs[control.prop]!.current;
+      if (field) field.value = String(next[control.prop]);
+    }
     onChange(next);
   }
 
   function set(prop: string, value: unknown): void {
-    apply({ ...values, [prop]: value });
+    apply({ ...values.value, [prop]: value });
   }
 
   // Reset restores the panel state AND posts the full default prop set so the
@@ -438,119 +390,147 @@ function ControlsPanel({
       <div class="flex items-center justify-between gap-hsp-md">
         <button
           type="button"
-          onClick={() => setOpen((o) => !o)}
+          on:click={() => {
+            open.value = !open.value;
+          }}
           aria-expanded={open}
-          class="flex items-center gap-hsp-2xs text-caption leading-normal uppercase tracking-wide text-[color:var(--sg-muted)] hover:text-[color:var(--sg-fg)] cursor-pointer"
+          class="flex items-center gap-hsp-2xs text-caption leading-normal uppercase tracking-wide text-sg-muted hover:text-sg-fg cursor-pointer"
         >
-          <span aria-hidden="true">{open ? "▼" : "▶"}</span>
+          <span aria-hidden="true">
+            {computed(() => (open.value ? "▼" : "▶"))}
+          </span>
           Controls
         </button>
-        {open && (
-          <button
-            type="button"
-            onClick={reset}
-            class="text-caption leading-normal rounded-sm border border-[color:var(--sg-border)] px-hsp-xs py-vsp-3xs text-[color:var(--sg-muted)] hover:text-[color:var(--sg-fg)] transition-colors cursor-pointer"
-          >
-            Reset
-          </button>
-        )}
+        <Show when={open}>
+          {() => (
+            <button
+              type="button"
+              on:click={reset}
+              class="text-caption leading-normal rounded-sm border border-sg-border px-hsp-xs py-vsp-3xs text-sg-muted hover:text-sg-fg transition-colors cursor-pointer"
+            >
+              Reset
+            </button>
+          )}
+        </Show>
       </div>
 
-      {open && (
-        <div class="flex flex-wrap gap-hsp-md">
-          {controls.map((control) => (
-            <label class="flex items-center gap-hsp-2xs text-small text-[color:var(--sg-fg)]">
-              <span class="text-[color:var(--sg-muted)]">{control.label}</span>
+      <Show when={open}>
+        {() => (
+          <div class="flex flex-wrap gap-hsp-md">
+            {controls.map((control) => (
+              <label class="flex items-center gap-hsp-2xs text-small text-sg-fg">
+                <span class="text-sg-muted">{control.label}</span>
 
-              {control.type === "select" && (
-                <select
-                  class="border border-[color:var(--sg-border)] rounded-sm bg-[var(--sg-surface)] px-hsp-2xs py-vsp-3xs text-small"
-                  value={values[control.prop] as string}
-                  onChange={(e) =>
-                    set(control.prop, (e.target as HTMLSelectElement).value)
-                  }
-                >
-                  {control.options.map((opt) => (
-                    <option value={opt}>{opt}</option>
-                  ))}
-                </select>
-              )}
+                {control.type === "select" && (
+                  <select
+                    class="border border-sg-border rounded-sm bg-sg-surface px-hsp-2xs py-vsp-3xs text-small"
+                    modelValue={fields[control.prop]!}
+                    on:change={(e) => set(control.prop, e.currentTarget.value)}
+                  >
+                    {control.options.map((opt) => (
+                      <option value={opt}>{opt}</option>
+                    ))}
+                  </select>
+                )}
 
-              {control.type === "boolean" && (
-                <input
-                  type="checkbox"
-                  checked={values[control.prop] as boolean}
-                  onChange={(e) =>
-                    set(control.prop, (e.target as HTMLInputElement).checked)
-                  }
-                />
-              )}
-
-              {control.type === "text" && (
-                <input
-                  type="text"
-                  value={values[control.prop] as string}
-                  class="border border-[color:var(--sg-border)] rounded-sm bg-[var(--sg-surface)] px-hsp-2xs py-vsp-3xs text-small"
-                  onInput={(e) =>
-                    set(control.prop, (e.target as HTMLInputElement).value)
-                  }
-                />
-              )}
-
-              {control.type === "number" &&
-                (control.ui === "input" ? (
+                {control.type === "boolean" && (
                   <input
-                    type="number"
-                    value={values[control.prop] as number}
-                    min={control.min}
-                    max={control.max}
-                    step={control.step}
-                    class="w-[5rem] border border-[color:var(--sg-border)] rounded-sm bg-[var(--sg-surface)] px-hsp-2xs py-vsp-3xs text-small"
-                    onInput={(e) =>
-                      set(
-                        control.prop,
-                        coerceNumber((e.target as HTMLInputElement).value, control),
-                      )
+                    type="checkbox"
+                    modelChecked={checks[control.prop]!}
+                    on:change={(e) =>
+                      set(control.prop, e.currentTarget.checked)
                     }
                   />
-                ) : (
-                  <span class="flex items-center gap-hsp-2xs">
+                )}
+
+                {control.type === "text" && (
+                  <input
+                    type="text"
+                    modelValue={fields[control.prop]!}
+                    class="border border-sg-border rounded-sm bg-sg-surface px-hsp-2xs py-vsp-3xs text-small"
+                    on:input={(e) => set(control.prop, e.currentTarget.value)}
+                  />
+                )}
+
+                {control.type === "number" &&
+                  (control.ui === "input" ? (
                     <input
-                      type="range"
-                      value={values[control.prop] as number}
-                      min={control.min}
-                      max={control.max}
-                      step={control.step}
-                      onInput={(e) =>
+                      type="number"
+                      ref={fieldRefs[control.prop]!}
+                      value={String(values.value[control.prop])}
+                      min={
+                        control.min === undefined
+                          ? undefined
+                          : String(control.min)
+                      }
+                      max={
+                        control.max === undefined
+                          ? undefined
+                          : String(control.max)
+                      }
+                      step={
+                        control.step === undefined
+                          ? undefined
+                          : String(control.step)
+                      }
+                      class="w-[5rem] border border-sg-border rounded-sm bg-sg-surface px-hsp-2xs py-vsp-3xs text-small"
+                      on:input={(e) =>
                         set(
                           control.prop,
-                          coerceNumber((e.target as HTMLInputElement).value, control),
+                          coerceNumber(e.currentTarget.value, control),
                         )
                       }
                     />
-                    <span class="text-[color:var(--sg-muted)] tabular-nums w-[2.5rem] text-right">
-                      {String(values[control.prop])}
+                  ) : (
+                    <span class="flex items-center gap-hsp-2xs">
+                      <input
+                        type="range"
+                        ref={fieldRefs[control.prop]!}
+                        value={String(values.value[control.prop])}
+                        min={
+                          control.min === undefined
+                            ? undefined
+                            : String(control.min)
+                        }
+                        max={
+                          control.max === undefined
+                            ? undefined
+                            : String(control.max)
+                        }
+                        step={
+                          control.step === undefined
+                            ? undefined
+                            : String(control.step)
+                        }
+                        on:input={(e) =>
+                          set(
+                            control.prop,
+                            coerceNumber(e.currentTarget.value, control),
+                          )
+                        }
+                      />
+                      <span class="text-sg-muted tabular-nums w-[2.5rem] text-right">
+                        {computed(() => String(values.value[control.prop]))}
+                      </span>
                     </span>
-                  </span>
-                ))}
+                  ))}
 
-              {control.type === "color" && (
-                <input
-                  type="color"
-                  value={values[control.prop] as string}
-                  class="h-[1.5rem] w-[2.5rem] border border-[color:var(--sg-border)] rounded-sm bg-[var(--sg-surface)]"
-                  onInput={(e) =>
-                    set(control.prop, (e.target as HTMLInputElement).value)
-                  }
-                />
-              )}
-            </label>
-          ))}
-        </div>
-      )}
+                {control.type === "color" && (
+                  <input
+                    type="color"
+                    ref={fieldRefs[control.prop]!}
+                    value={String(values.value[control.prop])}
+                    class="h-[1.5rem] w-[2.5rem] border border-sg-border rounded-sm bg-sg-surface"
+                    on:input={(e) => set(control.prop, e.currentTarget.value)}
+                  />
+                )}
+              </label>
+            ))}
+          </div>
+        )}
+      </Show>
     </div>
   );
 }
 
-VariantFrame.displayName = "VariantFrame";
 export default VariantFrame;

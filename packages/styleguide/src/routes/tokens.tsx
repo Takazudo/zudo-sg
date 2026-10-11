@@ -1,11 +1,9 @@
-/** @jsxRuntime automatic */
-/** @jsxImportSource preact */
 // Injected at `sgContext.routes.tokens` — the declared-defaults design-token
 // dashboards. The manifest arrives through `virtual:zudo-sg-tokens` (routes
 // plugin `tokensManifestModule` = `zudo-sg.config.mjs` `tokens.manifestOut`);
 // without one (no `tokens` config) the page renders its header and an empty-state note.
 
-import type { JSX, VNode } from "preact";
+import type { JSX } from "@takazudo/zfb/zudo-react/jsx-runtime";
 import { Island } from "@takazudo/zfb";
 import { resolveRampRef } from "@takazudo/zudo-doc/color-scheme-utils";
 import { tokensManifest } from "virtual:zudo-sg-tokens";
@@ -43,10 +41,7 @@ export default function TokensRoute(): JSX.Element {
   // wired, `PreviewTokenPanelBootstrap` no-ops and this button would dispatch to
   // nothing.
   const previewTokensButton = ctx.previewTokenPanel
-    ? (Island({
-        when: "load",
-        children: <PreviewTokensButton />,
-      }) as unknown as VNode)
+    ? <Island when="load"><PreviewTokensButton /></Island>
     : null;
 
   return (
@@ -58,7 +53,7 @@ export default function TokensRoute(): JSX.Element {
       <div>
         <header class="mb-vsp-lg max-w-[56rem]">
           <h1 class="text-heading font-bold mb-vsp-2xs">Design tokens</h1>
-          <p class="mt-vsp-xs mb-vsp-sm text-[color:var(--sg-muted)]">
+          <p class="mt-vsp-xs mb-vsp-sm text-sg-muted">
             Declared defaults{ctx.uiPackageName ? <> for <code>{ctx.uiPackageName}</code></> : null}, shown as
             light, dark, and shared token references. Open Preview tokens to edit the component previews; these
             reference dashboards stay unchanged.
@@ -70,7 +65,7 @@ export default function TokensRoute(): JSX.Element {
               chromeStyle: buildDashboardChromeStyle(),
             })
           : (
-            <p class="text-[color:var(--sg-muted)]" data-zudo-sg-tokens-empty>
+            <p class="text-sg-muted" data-zudo-sg-tokens-empty>
               No design-token manifest is configured. Add <code>tokens</code> to <code>zudo-sg.config.mjs</code> and
               run <code>zudo-sg gen-token-manifest</code> to render the dashboards here.
             </p>

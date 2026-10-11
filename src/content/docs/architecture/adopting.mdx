@@ -13,7 +13,7 @@ sidebar_position: 4
 ## Quick start
 
 For a new host, the initializer provides the shortest path to a working
-Preact + zfb styleguide:
+zudo-react + zfb styleguide:
 
 ```sh
 pnpm create zudo-sg@latest my-styleguide
@@ -32,21 +32,27 @@ composition steps that follow.
 
 ## Prerequisites
 
-The engine is a zfb plugin package built for **Preact + zfb hosts only**. It depends on a `@takazudo/zudo-doc`-based host already having its own package-owned routes turned on (`packageOwnedRoutes: true`) — the engine's own route entrypoints call zudo-doc's chrome factories and reuse zudo-doc's virtual modules to render. A React host is an explicit non-goal for this release; see the note on scope at the end of this page.
+Module mode targets **zudo-react + zfb hosts** and requires a
+`@takazudo/zudo-doc`-based host with package-owned routes enabled
+(`packageOwnedRoutes: true`). The engine's route entrypoints call zudo-doc's
+chrome factories and use its virtual modules. Descriptor mode remains
+framework-independent; see the scope section below.
 
-The host must keep `@takazudo/zdtp`, `diff`, and `katex`: zdtp is imported by
-the injected `/tokens` dashboard, while diff and katex are inherited
-zudo-doc route dependencies. Keep `tokens: { cssFiles, manifestOut }` in
-`zudo-sg.config.mjs`; the initializer's configuration typing treats that block
-as required, and the generated token manifest depends on it.
+The host must keep `@takazudo/zdtp`, `diff`, and `katex`: zdtp powers the
+always-injected `/tokens` route, while `diff` and `katex` are inherited
+zudo-doc route dependencies. The engine mounts zdtp's dashboard through an
+opaque, dynamically loaded Preact adapter inside a zudo-react island; Preact
+is an engine dependency, not a host peer. Keep `tokens: { cssFiles,
+manifestOut }` in `zudo-sg.config.mjs`; the initializer types that block as
+required, and the generated token manifest feeds the dashboards.
 
 ## Install steps
 
 1. **Add the package.** Install `@takazudo/zudo-sg` alongside the engine's
-   required peers: `@takazudo/zfb ^2.20.3`, `@takazudo/zudo-doc ^5.27.0`,
-   `@takazudo/zdtp ^0.8.5`, and `preact ^10.29.8`. zudo-doc also requires its
-   inherited host prerequisites (`@takazudo/zfb-md-wasm`,
-   `@takazudo/zfb-runtime`, `diff`, `katex`, and `zod`); see the package
+   required peers: `@takazudo/zfb ^4.3.1`, `@takazudo/zudo-doc ^6.0.0`, and
+   `@takazudo/zdtp ^0.8.6`. The host also needs the matching zfb runtime and
+   Markdown WASM packages plus zudo-doc's inherited prerequisites (`diff`,
+   `katex`, and `zod`); see the package
    README's [copy-paste install line](https://github.com/Takazudo/zudo-sg/tree/main/packages/styleguide#installation)
    for the complete fixture-equivalent command.
 
@@ -77,18 +83,33 @@ as required, and the generated token manifest depends on it.
 
 4. **Generate the registry.** Run the engine's `gen-registry` CLI command (wired here as `pnpm gen:sg-registry`) to discover every `*.stories.tsx` file under the configured `componentsRoots` and write the explicit-import registry file `registryOut` points at. Commit the generated file — it is read at both build and dev time, and a `--check` mode (`gen-registry --check`) is meant to run in CI so a stale registry fails the build instead of silently drifting.
 
-5. **Add the preview stylesheet.** Point `previewStyles` at a real CSS entry file that imports the component library's own tokens (and Tailwind's base layers, if the library is Tailwind-based). The engine's preview-CSS plugin compiles it standalone and serves/writes it under its own URL — see the next page for why this has to stay a separate compile from the host's own stylesheet.
+5. **Add the preview stylesheet.** Point `previewStyles` at a real CSS entry
+   file that imports the component library's tokens and authored component
+   styles. For example, place `@layer zw-reset;` before the imports listed in
+   `packages/demo-ui/STORIES.md` under “Required style imports”.
+   The preview plugin invokes zfb's `css` command with the host's wind config
+   and component sources, then serves the scoped output at its own URL. This
+   separate compile keeps host chrome out of the preview document.
 
-6. **Add `@source` for the component package**, in whatever Tailwind entry the host already maintains for its own utilities, so the host's own bundle keeps scanning the component sources it needs classes generated from — this is unrelated to the engine's preview stylesheet, which does its own independent scan.
+6. **Configure the host's wind sources** in `zfb.config.ts`. Use
+   `wind.sources.roots` for directories inside the project, or
+   `wind.sources.packageRoots` for installed packages outside the project
+   root. This controls the host stylesheet scan; the preview compile scans
+   its configured component roots independently.
 
-7. **(Optional) Import the islands seed.** `@takazudo/zudo-sg/islands` is a one-line side-effect import that pulls every engine island into the host's island graph. On zfb ≥ 2.18.0 (the engine's peer floor) it is not needed — the dev server seeds its scanner from the injected routes — and it is harmless if present; it exists for hosts that adopted the engine on zfb 2.17.0. See [The engine package](./engine-package).
+7. **(Optional) Import the islands seed.** `@takazudo/zudo-sg/islands` is a
+   one-line side-effect import that pulls every engine island into the host's
+   island graph. With the engine's zfb 4.3.1 peer floor, the scanner includes
+   injected routes in dev and build, so this import is not required. It stays
+   exported for API compatibility and is harmless if present. See
+   [The engine package](./engine-package).
 
-## Scope: Preact/zfb only, with one exception
+## Scope: zudo-react module mode, descriptor mode for other hosts
 
-React hosts are an explicit non-goal of this release for the default,
-module-mode install path above. There is one exception: a host can adopt the
-catalog, category nav, search, and detail-page chrome from **any** framework
-(or none) by switching the story source to **descriptor mode**
+The default module-mode install path uses zfb's zudo-react runtime for its
+story components. A host using another framework, or no component framework,
+can adopt the catalog, category nav, search, and detail-page chrome by
+switching the story source to **descriptor mode**
 (`registry: { mode: "descriptor" }`) and serving its own preview document at
 `externalPreview.url` — the engine renders everything except the preview
 document itself, and the two sides talk over a small, versioned,
@@ -102,4 +123,4 @@ the postMessage protocol, and a minimal framework-free preview-frame example —
 lives in the [`doc/` workspace reference](https://zudo-sg-doc.takazudomodular.com/docs/reference/descriptor-mode)
 (see [Relationship to zudo-doc](./relationship-to-zudo-doc) for why that split
 exists). Adopting the default, module-mode path today still means adopting
-the engine into a Preact/zfb host.
+the engine into a zudo-react/zfb host.
