@@ -200,13 +200,59 @@ async function renderedAlpha(page: Page, color: string): Promise<number> {
   }, color);
 }
 
-test("JS-off desktop renders the declared dashboards and their reference geometry", async ({
+// D1 deliberately renders truthful loading shells for the opaque client widget.
+// Keep the populated reference geometry tests below with JavaScript enabled.
+for (const viewport of [{ width: 1280, height: 900 }, { width: 360, height: 740 }]) {
+  test(`JS-off ${viewport.width}px keeps declared-default loading shells readable and reachable`, async ({
+    browser,
+    baseURL,
+  }) => {
+    const context = await browser.newContext({ baseURL, javaScriptEnabled: false, viewport });
+    const page = await context.newPage();
+    try {
+      const response = await page.goto(TOKENS_PATH);
+      expect(response?.status()).toBe(200);
+      if (viewport.width === 1280) await expectStandaloneTokensLayout(page);
+      await expect(page.getByRole("heading", { name: "Declared defaults", exact: true })).toBeVisible();
+      const shells = page.locator('[data-zfb-island-skip-ssr="TokenDashboardMount"]');
+      await expect(shells).toHaveCount(3);
+      const titles = [
+        "UI tokens — mode-dependent defaults (light)",
+        "UI tokens — mode-dependent defaults (dark)",
+        "UI tokens — shared defaults (mode-independent)",
+      ];
+      for (const [index, title] of titles.entries()) {
+        const shell = shells.nth(index);
+        await expect(shell).toHaveAttribute("data-when", "load");
+        await expect(shell.getByRole("heading", { name: title, exact: true })).toBeVisible();
+        await expect(shell.getByText("Loading declared defaults…", { exact: true })).toBeVisible();
+        await shell.scrollIntoViewIfNeeded();
+        await expect(shell).toBeInViewport();
+        const box = await shell.boundingBox();
+        expect(box).not.toBeNull();
+        expect(box!.width).toBeGreaterThan(0);
+        expect(box!.height).toBeGreaterThan(0);
+        expect(box!.x).toBeGreaterThanOrEqual(0);
+        expect(box!.x + box!.width).toBeLessThanOrEqual(viewport.width);
+      }
+      // The server must not fabricate widget rows or previews before activation.
+      await expect(page.locator(".zdtp-dashboard, [data-css-var], [data-sg-token-dashboard]")).toHaveCount(0);
+      expect(await page.evaluate(
+        () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+      )).toBe(true);
+    } finally {
+      await context.close();
+    }
+  });
+}
+
+test("client desktop renders the declared dashboards and their reference geometry", async ({
   browser,
   baseURL,
 }) => {
   const context = await browser.newContext({
     baseURL,
-    javaScriptEnabled: false,
+    javaScriptEnabled: true,
     viewport: { width: 1280, height: 900 },
   });
   const page = await context.newPage();
@@ -280,13 +326,13 @@ test("JS-off desktop renders the declared dashboards and their reference geometr
   }
 });
 
-test("JS-off 360px keeps the dashboards in bounds and exposes a keyboard-scrollable strip", async ({
+test("client 360px keeps the dashboards in bounds and exposes a keyboard-scrollable strip", async ({
   browser,
   baseURL,
 }) => {
   const context = await browser.newContext({
     baseURL,
-    javaScriptEnabled: false,
+    javaScriptEnabled: true,
     viewport: { width: 360, height: 740 },
   });
   const page = await context.newPage();

@@ -557,6 +557,31 @@ export async function assertHeadAssets(hostDir) {
   );
 }
 
+// D1: packed HTML proves the server boundary and serialized declared data;
+// the opaque Preact widget is mounted only after client activation.
+export function assertDashboardFallbacks(document) {
+  const shells = [...document.querySelectorAll('[data-zfb-island-skip-ssr="TokenDashboardMount"]')];
+  assert(shells.length === 3, "configured /tokens must render three TokenDashboardMount loading shells");
+  assert(!document.querySelector(".zdtp-dashboard, [data-css-var], [data-sg-token-dashboard]"), "server /tokens fabricated client dashboard markup");
+  const definitions = [
+    { id: "ui-defaults-light", mode: "light", chrome: "light", include: "mode-dependent", title: "UI tokens — mode-dependent defaults (light)" },
+    { id: "ui-defaults-dark", mode: "dark", chrome: "dark", include: "mode-dependent", title: "UI tokens — mode-dependent defaults (dark)" },
+    { id: "ui-defaults-shared", chrome: "host", include: "mode-independent", title: "UI tokens — shared defaults (mode-independent)" },
+  ];
+  return shells.map((shell, index) => {
+    const expected = definitions[index];
+    assert(shell.getAttribute("data-when") === "load", `${expected.id} does not activate on load`);
+    assert(shell.querySelector("h2")?.textContent === expected.title, `${expected.id} lacks its truthful fallback heading`);
+    assert(shell.querySelector("p")?.textContent === "Loading declared defaults…", `${expected.id} lacks loading text`);
+    const props = JSON.parse(shell.getAttribute("data-props") ?? "null");
+    assert(props && Array.isArray(props.tabs) && props.manifest, `${expected.id} lacks serialized token data`);
+    for (const key of ["id", "mode", "chrome", "include", "title"]) {
+      assert(props[key] === expected[key], `${expected.id} changed its serialized ${key}`);
+    }
+    return props;
+  });
+}
+
 async function assertTokensRoute(hostDir, empty) {
   // Parse rendered elements, not CSS/JS strings; zfb may minify attribute quotes.
   const { JSDOM } = await import("jsdom");
@@ -569,17 +594,17 @@ async function assertTokensRoute(hostDir, empty) {
   const emptyState = document.querySelector("[data-zudo-sg-tokens-empty]");
   if (empty) {
     assert(emptyState, "dist/tokens/index.html lacks the no-manifest empty state");
-    assert(!document.querySelector(".zdtp-dashboard"), "empty /tokens mode unexpectedly rendered a dashboard");
+    assert(!document.querySelector('.zdtp-dashboard, [data-zfb-island-skip-ssr="TokenDashboardMount"]'), "empty /tokens mode unexpectedly rendered a dashboard boundary");
     console.log("OK — /tokens empty state: [data-zudo-sg-tokens-empty].");
     return;
   }
   assert(!emptyState, "configured /tokens unexpectedly rendered the empty state");
-  const dashboard = document.querySelector("#ui-defaults-shared.zdtp-dashboard");
-  assert(dashboard, "dist/tokens/index.html lacks #ui-defaults-shared.zdtp-dashboard");
-  const token = dashboard.querySelector('.zdtp-dashboard__token[data-css-var="--spacing-hsp-md"]');
-  assert(token, 'shared dashboard lacks .zdtp-dashboard__token[data-css-var="--spacing-hsp-md"]');
-  assert(token.querySelector(".zdtp-dashboard__value")?.textContent === "1rem", "shared dashboard lacks the fixture's declared spacing value");
-  console.log('OK — /tokens renders #ui-defaults-shared.zdtp-dashboard .zdtp-dashboard__token[data-css-var="--spacing-hsp-md"] with value 1rem.');
+  const dashboards = assertDashboardFallbacks(document);
+  const shared = dashboards[2];
+  const token = shared.tabs.flatMap((tab) => tab.tiers.flatMap((tier) => tier.items))
+    .find((item) => item.cssVar === "--spacing-hsp-md");
+  assert(token?.default === "1rem", "shared dashboard payload lacks the fixture's declared spacing value");
+  console.log("OK — /tokens renders three truthful dashboard loading shells and serializes the declared spacing value 1rem.");
 }
 
 export async function assertProductionCss(hostDir) {
@@ -1001,13 +1026,16 @@ async function main() {
       const { JSDOM } = await import("jsdom");
       const dom = new JSDOM(await read(hostDir, "dist/tokens/index.html"));
       const page = dom.window.document;
-      for (const name of ["--brand-100", "--brand-500", "--signal-calm", "--status-alert", "--space-inline", "--type-body", "--type-leading", "--type-weight", "--corner-card"]) {
-        assert(page.querySelector(`[data-css-var="${name}"]`), `foreign dashboard lost ${name}`);
+      const dashboards = assertDashboardFallbacks(page);
+      const rows = dashboards[2].tabs.flatMap((tab) => tab.tiers.flatMap((tier) => tier.items));
+      const names = new Set(rows.map((item) => item.cssVar));
+      for (const name of ["--brand-100", "--brand-500", "--signal-calm", "--status-alert", "--space-inline", "--type-body", "--type-leading", "--type-weight", "--corner-card", "--surface-canvas"]) {
+        assert(names.has(name), `foreign dashboard payload lost ${name}`);
       }
-      assert(!page.querySelector('[data-css-var^="--palette-"]'), "foreign dashboard introduced demo palette variables");
-      assert(page.querySelector('[data-css-var="--surface-canvas"]'), "foreign dashboard lost light-dark color");
+      assert(![...names].some((name) => name.startsWith("--palette-")), "foreign dashboard payload introduced demo palette variables");
+      assert(rows.find((item) => item.cssVar === "--surface-canvas")?.default === "light-dark(var(--brand-100), var(--brand-500))", "foreign dashboard payload lost its declared light-dark value");
       dom.window.close();
-      console.log("OK — packed foreign host typechecks and renders every category on /tokens.");
+      console.log("OK — packed foreign host typechecks and serializes every category behind truthful /tokens loading shells.");
     }
 
     console.log("OK — packed @takazudo/zudo-sg installs and builds outside the workspace, under base \"/styleguide/\".");
