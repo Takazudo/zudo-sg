@@ -17,7 +17,7 @@ import "@takazudo/zfb-runtime/client-router";
 // Re-syncs the persistent nav rail's active-section state after a soft nav.
 import "./nav-sync";
 
-import type { JSX } from "preact";
+import type { JSX } from "@takazudo/zfb/zudo-react/jsx-runtime";
 
 /**
  * Renders nothing — this component exists only as an island marker so zfb's

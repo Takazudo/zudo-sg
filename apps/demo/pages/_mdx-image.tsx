@@ -1,4 +1,4 @@
-import type { JSX } from "preact";
+import type { JSX } from "@takazudo/zfb/zudo-react/jsx-runtime";
 
 import { resolveDummyImage } from "../lib/dummy-image";
 
@@ -30,7 +30,7 @@ export function MdxImage({ alt, src, class: className, ...rest }: MdxImageProps)
       class={["my-vsp-md block h-auto w-full rounded-md border border-border bg-surface", className]
         .filter(Boolean)
         .join(" ")}
-      style={{ aspectRatio: "16 / 10", objectFit: "cover" } satisfies JSX.CSSProperties}
+      style={{ "aspect-ratio": "16 / 10", "object-fit": "cover" } satisfies JSX.CSSProperties}
     />
   );
 }

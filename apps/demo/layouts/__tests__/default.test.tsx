@@ -1,4 +1,4 @@
-import { render } from "preact-render-to-string";
+import { renderSsr } from "@zudo-sg/demo-ui/src/test-utils/zudo-react.ts";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@takazudo/zfb", () => ({
@@ -25,7 +25,7 @@ import DefaultLayout from "../default";
 
 describe("DefaultLayout theme baseline", () => {
   it("emits a light SSR root and the guarded theme prepaint script in head", () => {
-    const html = render(
+    const html = renderSsr(
       <DefaultLayout title="Example" description="Example description">
         <p>Page content</p>
       </DefaultLayout>,

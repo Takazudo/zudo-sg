@@ -1,12 +1,11 @@
-"use client";
-
+import { Island } from "@takazudo/zfb";
 import { ThemeControl } from "@zudo-sg/demo-ui/src/shared/theme-control/theme-control.tsx";
 
-/**
- * Scanner-visible client wrapper around the shared Preact-hook control.
- * DefaultLayout's `<Island ssrFallback={null}>` owns the server skip boundary;
- * this component is what zfb registers and mounts after load.
- */
+/** Server boundary around demo-ui's uniquely registered client island. */
 export function ThemeControlIsland() {
-  return <ThemeControl />;
+  return (
+    <Island when="load" ssrFallback={null}>
+      <ThemeControl />
+    </Island>
+  );
 }
