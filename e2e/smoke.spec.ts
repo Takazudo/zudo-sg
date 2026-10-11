@@ -340,12 +340,15 @@ test("styleguide sidebar preserves DOM identity and scroll across page transitio
   });
   await page.evaluate(() => {
     const oldAside = document.querySelector("#desktop-sidebar");
-    const phases: Array<{ event: string; same: boolean; connected: boolean; key: string | null }> = [];
+    const phases: Array<{ event: string; same: boolean; connected: boolean; key: string | null; incomingKey?: string | null; incomingKeys?: string[] }> = [];
     (window as Window & { __sidebarSwapPhases?: typeof phases }).__sidebarSwapPhases = phases;
     for (const event of ["zfb:before-swap", "zfb:after-swap", "zfb:page-load"]) {
-      document.addEventListener(event, () => {
+      document.addEventListener(event, (eventObject) => {
         const current = document.querySelector("#desktop-sidebar");
-        phases.push({ event, same: current === oldAside, connected: !!oldAside?.isConnected, key: current?.getAttribute("data-zfb-transition-persist") ?? null });
+        const incoming = (eventObject as Event & { newDocument?: Document }).newDocument;
+        phases.push({ event, same: current === oldAside, connected: !!oldAside?.isConnected, key: current?.getAttribute("data-zfb-transition-persist") ?? null,
+          ...(incoming ? { incomingKey: incoming.querySelector("#desktop-sidebar")?.getAttribute("data-zfb-transition-persist") ?? null, incomingKeys: [...incoming.querySelectorAll("[data-zfb-transition-persist]")].map((node) => node.getAttribute("data-zfb-transition-persist")!) } : {}),
+        });
       });
     }
   });

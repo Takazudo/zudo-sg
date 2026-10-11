@@ -622,6 +622,29 @@ async function proveStoryRoutes(page, origin, scenario) {
 
 async function main() {
   const args = process.argv.slice(2);
+  const devCounterIndex = args.indexOf("--dev-counter-origin");
+  if (devCounterIndex >= 0) {
+    const origin = new URL(args[devCounterIndex + 1]).origin;
+    const { chromium } = await import("@playwright/test");
+    const browser = await launchChromium(chromium);
+    try {
+      const page = await browser.newPage();
+      const errors = [];
+      page.on("pageerror", (error) => errors.push(error.message));
+      page.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });
+      await page.goto(`${origin}${BASE}components/preview?slug=counter&variant=Basic`, { waitUntil: "domcontentloaded" });
+      const counter = page.locator("[data-counter]");
+      await counter.waitFor({ state: "visible", timeout: 15_000 });
+      check((await counter.textContent())?.trim() === "count: 3", "seedless dev Counter lost its declared initial state");
+      await counter.click();
+      await page.waitForFunction(() => document.querySelector("[data-counter]")?.textContent?.trim() === "count: 4", null, { timeout: 15_000 });
+      check(errors.length === 0, `seedless dev Counter browser errors: ${errors.join(" | ")}`);
+      console.log("OK — seedless dev virtual registry rendered Counter and its real click updated count: 3 → count: 4.");
+    } finally {
+      await browser.close();
+    }
+    return;
+  }
   const hostIndex = args.indexOf("--host");
   const scenarioIndex = args.indexOf("--scenario");
   check(hostIndex >= 0 && args[hostIndex + 1], "usage: node scripts/verify-styleguide-install-browser.mjs --host <packed-host-dir> --scenario <default|custom-collision|outside-namespace> [--early-click|--ready-host-bootstrap]");

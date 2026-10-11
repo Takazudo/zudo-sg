@@ -960,12 +960,14 @@ async function main() {
     const islandsRes = await waitForOk(`${origin}/styleguide/assets/islands.js`, 300_000, devServer, () => log);
     const islandsBundle = await islandsRes.text();
     assert(islandsBundle.includes("ConfiguredPreviewApp"), "/styleguide/assets/islands.js does not contain ConfiguredPreviewApp");
-    // Half (b): Counter is reached only through `virtual:zudo-sg-registry` —
-    // the fixture host's pages/ imports nothing else, which is the isolation.
+    // Half (b): Counter is reached only through `virtual:zudo-sg-registry`.
+    // In zudo-react it is a nested component owned by ConfiguredPreviewApp,
+    // rather than a separately registered Island boundary.
     assert(
-      /__zfb_register\([^)]*"Counter",\s*"[^"]*\/ui\/counter\/counter\.tsx"\)/u.test(islandsBundle),
-      "/styleguide/assets/islands.js does not register Counter from ui/counter/counter.tsx (half b, virtual registry)",
+      islandsBundle.includes("ui/counter/counter.tsx") && /function Counter\(/u.test(islandsBundle),
+      "/styleguide/assets/islands.js does not include Counter from ui/counter/counter.tsx (half b, virtual registry)",
     );
+    await runStreamed(process.execPath, [path.join(root, "scripts/verify-styleguide-install-browser.mjs"), "--dev-counter-origin", origin], root);
     assert(!/has no matching registry entry/u.test(log), "zfb dev logged an unregistered island marker");
     assert(!/no "use client" islands found/u.test(log), 'zfb dev logged no "use client" islands found');
 

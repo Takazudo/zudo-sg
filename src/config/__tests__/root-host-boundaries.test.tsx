@@ -8,6 +8,9 @@ import ClientRouterBootstrap from "../../components/client-router-bootstrap";
 import { BodyEndIslands } from "../../../pages/lib/_body-end-islands";
 import { settings } from "../settings";
 import { runInNewContext } from "node:vm";
+import { ensureNestedIslandPropsRefresh } from "@takazudo/zudo-doc/transitions";
+import { swapFunctions } from "@takazudo/zfb-runtime/client-router";
+import { SIDEBAR_RESIZER_INIT_SCRIPT } from "@takazudo/zudo-doc/sidebar-resizer";
 
 const originalImageEnlarge = settings.imageEnlarge;
 afterEach(() => { settings.imageEnlarge = originalImageEnlarge; });
@@ -32,7 +35,43 @@ describe("root body-end server boundary", () => {
       window: {},
       document: { addEventListener: (event: string) => listeners.push(event) },
     })).not.toThrow();
-    expect(listeners).toEqual(["zfb:before-preparation", "zfb:after-swap"]);
+    expect(listeners).toEqual(["zfb:before-swap", "zfb:after-swap", "zfb:before-preparation", "zfb:after-swap"]);
+  });
+
+  it("retains the real resizer and sidebar through the package's structure guard", async () => {
+    const html = renderSsr(<BodyEndIslands basePath="/" />, context);
+    const script = [...html.matchAll(/<script[^>]*>([\s\S]*?)<\/script>/g)]
+      .map((match) => match[1]).find((source) => source.includes("__zdSidebarScrollRestoreInstalled"))!;
+    for (const incompatible of [false, true]) {
+      const live = document.implementation.createHTMLDocument();
+      const incoming = document.implementation.createHTMLDocument();
+      live.body.innerHTML = incoming.body.innerHTML = '<aside id="desktop-sidebar" style="position:fixed" data-zfb-transition-persist="sidebar-en-components"><div data-zfb-island="SidebarTree"></div></aside>';
+      const aside = live.querySelector("aside")!;
+      const handle = live.createElement("div");
+      handle.setAttribute("data-sidebar-resizer", "");
+      aside.append(handle);
+      if (incompatible) aside.append(live.createElement("section"));
+      runInNewContext(script, { window: {}, document: live, queueMicrotask, setTimeout, clearTimeout });
+      runInNewContext(SIDEBAR_RESIZER_INIT_SCRIPT, { document: live, getComputedStyle });
+      ensureNestedIslandPropsRefresh({ document: live });
+      const event = new Event("zfb:before-swap");
+      Object.assign(event, { newDocument: incoming, swap: () => {} });
+      live.dispatchEvent(event);
+      expect(incoming.querySelector("aside")!.getAttribute("data-zfb-transition-persist"))
+        .toBe(incompatible ? null : "sidebar-en-components");
+      swapFunctions.swapBodyElement(incoming.body, live.body);
+      live.dispatchEvent(new Event("zfb:after-swap"));
+      expect(live.querySelectorAll("[data-sidebar-resizer]")).toHaveLength(1);
+      if (!incompatible) {
+        expect(live.querySelector("aside")).toBe(aside);
+        expect(aside.querySelector("[data-sidebar-resizer]")).toBe(handle);
+      } else {
+        expect(live.querySelector("[data-sidebar-resizer]")).not.toBe(handle);
+        expect(live.querySelector("[data-sidebar-resizer]")!.getAttribute("role")).toBe("separator");
+      }
+      await Promise.resolve();
+      expect(incoming.querySelector("[data-sg-sidebar-resizer-shape]")).toBeNull();
+    }
   });
 
   it("honors the asset route forceImageEnlarge contract when the site feature is off", () => {
