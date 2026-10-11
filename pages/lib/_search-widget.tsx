@@ -1,5 +1,3 @@
-/** @jsxRuntime automatic */
-/** @jsxImportSource preact */
 // SSR-friendly search widget for the zfb host header.
 //
 // SSR search widget for the zfb host header. The key SSR requirement is that

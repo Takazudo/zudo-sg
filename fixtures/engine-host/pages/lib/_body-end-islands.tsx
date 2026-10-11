@@ -1,5 +1,3 @@
-/** @jsxRuntime automatic */
-/** @jsxImportSource preact */
 // Host-side body-end islands helper.
 //
 // Mirrors the sibling zudo-doc showcase's pages/lib/_body-end-islands.tsx,

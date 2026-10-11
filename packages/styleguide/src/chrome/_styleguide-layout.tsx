@@ -1,5 +1,3 @@
-/** @jsxRuntime automatic */
-/** @jsxImportSource preact */
 // The styleguide section's page shell — a THIN wrapper over
 // `@takazudo/zudo-doc`'s `DocLayoutWithDefaults`, reusing the docs chrome
 // instead of vendoring its own header/footer/sidebar. The whole point of this

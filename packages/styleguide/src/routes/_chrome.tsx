@@ -1,5 +1,3 @@
-/** @jsxRuntime automatic */
-/** @jsxImportSource preact */
 // zudo-doc chrome reconstruction for the engine routes (ADR
 // docs/adr/styleguide-engine.md decision 10). Model: zudo-doc's
 // routes/_chrome.tsx. Sole importer of `virtual:zudo-doc-route-context` and

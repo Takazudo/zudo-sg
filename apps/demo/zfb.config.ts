@@ -6,12 +6,10 @@ const contentSchema = buildContentSchema();
 const contentSchemaJson = z.toJSONSchema(contentSchema) as Record<string, unknown>;
 
 /**
- * apps/demo — a static Preact demo site for zudo-sg.
+ * apps/demo — a static zudo-react demo site for zudo-sg.
  *
- * - `framework: "preact"` — pages are Preact components.
  * - `base: "/"` — deployed at its own subdomain.
- * - `tailwind: { enabled: true }` — wires @tailwindcss/vite into the
- *   build so `@import "tailwindcss"` + `@theme` blocks are processed.
+ * - `wind` — scans local source plus the installed demo-ui package.
  * - `collections` — the single `content` collection (see content/), whose
  *   JSON schema `zfb check` validates. The site-tree and search boundaries
  *   parse with the same Zod schema as an additional typed build-time guard.
@@ -28,9 +26,32 @@ const contentSchemaJson = z.toJSONSchema(contentSchema) as Record<string, unknow
  * explicitly out of scope for this public demo (see the epic notes).
  */
 export default defineConfig({
-  framework: "preact",
   base: "/",
-  tailwind: { enabled: true },
+  wind: {
+    reset: "owned-v1",
+    tokens: {}, // filled by S3b
+    breakpoints: {
+      sm: { minWidthPx: 640 },
+      md: { minWidthPx: 768 },
+      lg: { minWidthPx: 1024 },
+      xl: { minWidthPx: 1280 },
+    },
+    strict: true,
+    dark: false,
+    utilities: { placement: "before-authored" },
+    sources: {
+      roots: [
+        "pages",
+        "components",
+        "layouts",
+        "lib",
+        "config",
+        "styles",
+        "content",
+      ],
+      packageRoots: ["@zudo-sg/demo-ui"],
+    },
+  },
   // zfb 2.14 guard: fail builds when JS/TS imports plain CSS bytes it cannot emit.
   strictPlainCssImports: true,
   collections: [

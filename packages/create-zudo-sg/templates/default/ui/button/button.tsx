@@ -1,5 +1,3 @@
-/** @jsxRuntime automatic */
-/** @jsxImportSource preact */
 import type { ComponentChildren, JSX } from "preact";
 
 export function Button(props: { children: ComponentChildren; tone?: "accent" | "plain" }): JSX.Element {

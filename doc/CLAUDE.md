@@ -1,6 +1,6 @@
 # zudo-sg Docs
 
-This workspace is the contributor documentation site built with zudo-doc 5.28.0, zfb 2.21.1, MDX, Tailwind CSS v4, and Preact.
+This workspace is the contributor documentation site built with zudo-doc 6.0.0, zfb 4.3.1, MDX, zudo-wind, and zudo-react.
 
 ## Commands
 
@@ -27,7 +27,7 @@ Run commands from `doc/`, or use the `@zudo-sg/doc` workspace filter from the re
 - Do not add an h1 in the body; the frontmatter title renders it. Start sections at h2.
 - Use relative `.md`/`.mdx` links for authored documentation.
 - Directive admonitions such as `:::note` are available without imports.
-- Prefer server-rendered JSX. Add a Preact island only for required client behavior and keep its page import chain statically discoverable.
+- Prefer server-rendered JSX. Add a zudo-react island only for required client behavior and keep its page import chain statically discoverable.
 
 ## Enabled behavior
 

@@ -1,5 +1,3 @@
-/** @jsxRuntime automatic */
-/** @jsxImportSource preact */
 import type { ComponentChildren, JSX } from "preact";
 
 export function Card(props: { title: string; children: ComponentChildren }): JSX.Element {

@@ -1,5 +1,3 @@
-/** @jsxRuntime automatic */
-/** @jsxImportSource preact */
 // Inline blocking scripts for the styleguide panel chrome:
 //
 //   PanelStateHeadScript — runs in <head> BEFORE first paint. Restores the

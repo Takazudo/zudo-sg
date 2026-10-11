@@ -1,5 +1,3 @@
-/** @jsxRuntime automatic */
-/** @jsxImportSource preact */
 // Mode-neutral catalog thumbnail contracts (epic #879, E3). `CatalogThumb`
 // branches on `entry.source` before touching anything story-shaped, so a
 // descriptor entry must never reach the module-mode SSR renderer

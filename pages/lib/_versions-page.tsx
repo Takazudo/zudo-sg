@@ -1,5 +1,3 @@
-/** @jsxRuntime automatic */
-/** @jsxImportSource preact */
 // Shared renderer for the documentation-versions pages (#2010).
 //
 // Collapses the per-locale page pair:

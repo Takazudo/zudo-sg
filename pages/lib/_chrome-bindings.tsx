@@ -1,5 +1,3 @@
-/** @jsxRuntime automatic */
-/** @jsxImportSource preact */
 // Host-callables channel for the package-owned routes (#113).
 //
 // `settings.chromeBindingsModule` points the zudo-doc routes plugin at this

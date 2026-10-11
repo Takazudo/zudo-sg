@@ -1,6 +1,4 @@
 "use client";
-/** @jsxRuntime automatic */
-/** @jsxImportSource preact */
 // No-props island wrapper for the engine's preview app (ADR
 // docs/adr/styleguide-engine.md decision 10 "Preview island").
 //

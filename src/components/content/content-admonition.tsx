@@ -1,5 +1,3 @@
-/** @jsxRuntime automatic */
-/** @jsxImportSource preact */
 // Real Preact bindings for the admonition MDX tags (Note/Tip/Info/Warning/
 // Danger/Caution/Important). Replaces the former literal-VNode
 // `makeAdmonitionStub` in pages/_mdx-components.ts with a proper typed

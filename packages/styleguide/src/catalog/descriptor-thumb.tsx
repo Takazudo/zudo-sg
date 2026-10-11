@@ -1,5 +1,3 @@
-/** @jsxRuntime automatic */
-/** @jsxImportSource preact */
 // Descriptor-mode catalog thumbnails (epic #879, E3). A descriptor-mode
 // registry has no story to render server-side (its stories may come from a
 // foreign framework), so a tile here is built from the `ThumbnailDescriptor`

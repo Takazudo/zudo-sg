@@ -1,14 +1,8 @@
 // Vitest global setup.
 //
 // - @testing-library/jest-dom adds DOM matchers (toBeInTheDocument, toHaveAttribute…).
-// - @testing-library/preact's cleanup runs after each test to unmount renders.
 import "@testing-library/jest-dom/vitest";
-import { afterEach, beforeEach } from "vitest";
-import { cleanup } from "@testing-library/preact";
-
-afterEach(() => {
-  cleanup();
-});
+import { beforeEach } from "vitest";
 
 // #357: Happy DOM starts an async iframe navigation for real-src preview frames and dumps
 // AsyncTaskManager abort traces at teardown. Disabling child-frame navigation stops the task

@@ -1,8 +1,5 @@
 import "@testing-library/jest-dom/vitest";
-import { cleanup } from "@testing-library/preact";
-import { afterEach, beforeEach } from "vitest";
-
-afterEach(cleanup);
+import { beforeEach } from "vitest";
 
 beforeEach(() => {
   const happy = (

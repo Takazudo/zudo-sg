@@ -1,5 +1,3 @@
-/** @jsxRuntime automatic */
-/** @jsxImportSource preact */
 // Page module for the default-locale versions index route.
 //
 // Default-locale documentation versions page. Static route — no paths()

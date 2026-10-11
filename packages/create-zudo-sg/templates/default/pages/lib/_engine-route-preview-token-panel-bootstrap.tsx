@@ -1,7 +1,5 @@
 "use client";
 
-/** @jsxRuntime automatic */
-/** @jsxImportSource preact */
 import PreviewTokenPanelBootstrap from "@takazudo/zudo-sg/token-tweak/preview-token-panel-bootstrap";
 
 export default function EngineRoutePreviewTokenPanelBootstrap() {

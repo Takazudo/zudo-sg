@@ -1,5 +1,3 @@
-/** @jsxRuntime automatic */
-/** @jsxImportSource preact */
 // Locale-aware Footer wrapper for the zfb doc pages.
 //
 // Footer data-prep utilities — reads settings.footer, localizes link

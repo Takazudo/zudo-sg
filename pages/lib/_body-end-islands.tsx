@@ -1,5 +1,3 @@
-/** @jsxRuntime automatic */
-/** @jsxImportSource preact */
 // Host-side body-end islands helper.
 //
 // Wave 8 (Path A — super-epic #1333 / child epic #1355) drops the local

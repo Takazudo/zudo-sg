@@ -1,5 +1,3 @@
-/** @jsxRuntime automatic */
-/** @jsxImportSource preact */
 // Host-owned root page — descriptor-host fixture (epic #879, S7). No zdtp
 // token panel wiring: this fixture ships no `tokens` block, so the
 // preview-tokens trigger stays off by default (issue #872).

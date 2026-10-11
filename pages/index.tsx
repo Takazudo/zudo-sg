@@ -1,5 +1,3 @@
-/** @jsxRuntime automatic */
-/** @jsxImportSource preact */
 // Page module for the site index route.
 //
 // Default-locale (EN) site index. Static route — no paths() export needed.
