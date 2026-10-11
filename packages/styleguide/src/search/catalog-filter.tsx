@@ -24,8 +24,13 @@
 // catalogue's head script), so the control is a thin writer over
 // catalog/tile-size.ts rather than a second source of truth.
 
-import type { JSX } from "preact";
-import { useEffect, useMemo, useRef, useState } from "preact/hooks";
+import {
+  signal,
+  computed,
+  getScope,
+  Show,
+  type Description,
+} from "@takazudo/zfb/zudo-react";
 import {
   ATTR_TILE_SIZE,
   DEFAULT_TILE_SIZE,
@@ -60,24 +65,23 @@ function tileOf(card: HTMLElement): HTMLElement {
 export default function CatalogFilter({
   categories,
   total,
-}: CatalogFilterProps): JSX.Element {
-  const [query, setQuery] = useState("");
-  const [activeCategory, setActiveCategory] = useState<string | null>(null);
-  const [visibleCount, setVisibleCount] = useState(total);
-  // Seeded from the attribute the head script already wrote, so mounting never
-  // re-lays the grid out; `readTileSize` is the fallback when that script did
-  // not run (storage unavailable, or the island mounted standalone).
-  const [tileSize, setTileSize] = useState<TileSize>(DEFAULT_TILE_SIZE);
-  const inputRef = useRef<HTMLInputElement>(null);
+}: CatalogFilterProps): Description {
+  const scope = getScope();
+  const query = signal("");
+  const activeCategory = signal<string | null>(null);
+  const visibleCount = signal(total);
+  const tileSize = signal<TileSize>(DEFAULT_TILE_SIZE);
+  const inputRef = { current: null as HTMLInputElement | null };
 
-  useEffect(() => {
+  scope.onActivate(() => {
     const current = document.documentElement.getAttribute(ATTR_TILE_SIZE);
-    setTileSize(isTileSize(current) ? current : readTileSize());
-  }, []);
+    tileSize.value = isTileSize(current) ? current : readTileSize();
+  });
 
   // Apply the filter against the SSR-rendered DOM whenever query/category change.
-  useEffect(() => {
-    const q = normalize(query);
+  scope.effect(() => {
+    const q = normalize(query.value);
+    const categoryFilter = activeCategory.value;
     const root = document.querySelector<HTMLElement>("[data-sg-catalog]");
     if (!root) return;
 
@@ -90,7 +94,7 @@ export default function CatalogFilter({
       const keywords = card.dataset.keywords ?? "";
       const matchesQuery = q === "" || name.includes(q) || keywords.includes(q);
       const matchesCategory =
-        activeCategory === null || category === activeCategory;
+        categoryFilter === null || category === categoryFilter;
       const visible = matchesQuery && matchesCategory;
       tileOf(card).hidden = !visible;
       if (visible) shown++;
@@ -111,11 +115,11 @@ export default function CatalogFilter({
     const empty = root.querySelector<HTMLElement>("[data-sg-empty]");
     if (empty) empty.hidden = shown !== 0;
 
-    setVisibleCount(shown);
-  }, [query, activeCategory]);
+    visibleCount.value = shown;
+  });
 
   // Keyboard shortcut: "/" focuses the search box (unless already typing).
-  useEffect(() => {
+  scope.onActivate(() => {
     function onKey(e: KeyboardEvent): void {
       if (e.key !== "/" || e.metaKey || e.ctrlKey || e.altKey) return;
       const target = e.target as HTMLElement | null;
@@ -128,14 +132,14 @@ export default function CatalogFilter({
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  });
 
-  const summary = useMemo(() => {
-    if (query === "" && activeCategory === null) {
+  const summary = computed(() => {
+    if (query.value === "" && activeCategory.value === null) {
       return `${total} component${total === 1 ? "" : "s"}`;
     }
-    return `${visibleCount} of ${total} shown`;
-  }, [query, activeCategory, visibleCount, total]);
+    return `${visibleCount.value} of ${total} shown`;
+  });
 
   return (
     <div class="sg-filter">
@@ -151,7 +155,7 @@ export default function CatalogFilter({
             stroke-linecap="round"
             stroke-linejoin="round"
             aria-hidden="true"
-            class="text-[color:var(--sg-muted)]"
+            class="text-sg-muted"
           >
             <circle cx="11" cy="11" r="8" />
             <path d="m21 21-4.3-4.3" />
@@ -159,10 +163,10 @@ export default function CatalogFilter({
           <input
             ref={inputRef}
             type="search"
-            value={query}
-            onInput={(e) => {
+            modelValue={query}
+            on:input={(e) => {
               if (!(e.target instanceof HTMLInputElement)) return;
-              setQuery(e.target.value);
+              query.value = e.target.value;
             }}
             placeholder="Search components…  ( / )"
             aria-label="Search components by name"
@@ -170,32 +174,33 @@ export default function CatalogFilter({
             autocomplete="off"
             spellcheck={false}
           />
-          {query !== "" && (
-            <button
-              type="button"
-              class="sg-search-clear"
-              onClick={() => {
-                setQuery("");
-                inputRef.current?.focus();
-              }}
-              aria-label="Clear search"
-            >
-              ×
-            </button>
-          )}
+          <Show when={computed(() => query.value !== "")}>
+            {() => (
+              <button
+                type="button"
+                class="sg-search-clear"
+                on:click={() => {
+                  query.value = "";
+                  inputRef.current?.focus();
+                }}
+                aria-label="Clear search"
+              >
+                ×
+              </button>
+            )}
+          </Show>
         </div>
-        <span class="text-xs text-[color:var(--sg-muted)]" aria-live="polite">
+        <span class="text-xs text-sg-muted" aria-live="polite">
           {summary}
         </span>
         <div class="sg-seg" role="group" aria-label="Tile size">
           {TILE_SIZES.map((option) => (
             <button
-              key={option.id}
               type="button"
               class="sg-seg-btn"
-              aria-pressed={tileSize === option.id}
-              onClick={() => {
-                setTileSize(option.id);
+              aria-pressed={computed(() => tileSize.value === option.id)}
+              on:click={() => {
+                tileSize.value = option.id;
                 applyTileSize(option.id);
               }}
             >
@@ -209,20 +214,21 @@ export default function CatalogFilter({
         <button
           type="button"
           class="sg-chip"
-          aria-pressed={activeCategory === null}
-          onClick={() => setActiveCategory(null)}
+          aria-pressed={computed(() => activeCategory.value === null)}
+          on:click={() => {
+            activeCategory.value = null;
+          }}
         >
           All
         </button>
         {categories.map((cat) => (
           <button
-            key={cat}
             type="button"
             class="sg-chip"
-            aria-pressed={activeCategory === cat}
-            onClick={() =>
-              setActiveCategory((prev) => (prev === cat ? null : cat))
-            }
+            aria-pressed={computed(() => activeCategory.value === cat)}
+            on:click={() => {
+              activeCategory.value = activeCategory.value === cat ? null : cat;
+            }}
           >
             {cat}
           </button>
@@ -231,5 +237,3 @@ export default function CatalogFilter({
     </div>
   );
 }
-
-CatalogFilter.displayName = "CatalogFilter";

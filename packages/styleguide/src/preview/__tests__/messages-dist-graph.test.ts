@@ -1,5 +1,6 @@
 // @vitest-environment node
-import { existsSync } from "node:fs";
+import { existsSync, mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
@@ -16,22 +17,48 @@ const { collectImportGraph, frameworkFreeViolations } = await import(
 
 describe("dist/preview/messages.js import graph (#880)", () => {
   it("exists after the package build", () => {
-    expect(existsSync(ENTRY), `${ENTRY} is missing — build the package first`).toBe(true);
+    expect(
+      existsSync(ENTRY),
+      `${ENTRY} is missing — build the package first`,
+    ).toBe(true);
   });
 
   it("resolves to neither preact nor preview/index", () => {
     const graph = collectImportGraph(ENTRY);
     expect(graph.missing).toEqual([]);
-    expect(graph.bare.filter((s: string) => s === "preact" || s.startsWith("preact/"))).toEqual([]);
-    expect(graph.files.filter((f: string) => /[\\/]preview[\\/]index\.js$/.test(f))).toEqual([]);
+    expect(
+      graph.bare.filter(
+        (s: string) => s === "preact" || s.startsWith("preact/"),
+      ),
+    ).toEqual([]);
+    expect(
+      graph.bare.filter(
+        (s: string) => s === "@takazudo/zfb" || s.includes("zudo-react"),
+      ),
+    ).toEqual([]);
+    expect(
+      graph.files.filter((f: string) => /[\\/]preview[\\/]index\.js$/.test(f)),
+    ).toEqual([]);
     expect(frameworkFreeViolations(ENTRY)).toEqual([]);
   });
 
-  it("detects a preact import and a path into preview/index when one exists", () => {
-    // Guard against a walker that silently finds nothing: the Preact-based
-    // preview barrel must trip both rules.
-    const violations = frameworkFreeViolations(resolve(PKG_ROOT, "dist/preview/index.js"));
-    expect(violations.some((v: string) => v.includes('"preact'))).toBe(true);
-    expect(violations.some((v: string) => /preview[\\/]index\.js/.test(v))).toBe(true);
+  it("detects a framework import and a path into preview/index when one exists", () => {
+    const barrel = resolve(PKG_ROOT, "dist/preview/index.js");
+    expect(collectImportGraph(barrel).bare).toContain(
+      "@takazudo/zfb/zudo-react",
+    );
+    expect(
+      frameworkFreeViolations(barrel).some((v: string) =>
+        /preview[\\/]index\.js/.test(v),
+      ),
+    ).toBe(true);
+    const temporary = mkdtempSync(resolve(tmpdir(), "sg-graph-"));
+    try {
+      const fixture = resolve(temporary, "framework.js");
+      writeFileSync(fixture, 'import "preact";');
+      expect(frameworkFreeViolations(fixture)).toContain('imports "preact"');
+    } finally {
+      rmSync(temporary, { recursive: true, force: true });
+    }
   });
 });

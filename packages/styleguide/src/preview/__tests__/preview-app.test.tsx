@@ -1,8 +1,8 @@
 // @vitest-environment happy-dom
 import "../../__tests__/dom-test-setup.js";
-import { h } from "preact";
-import { act, render } from "@testing-library/preact";
+import { getScope, signal, type Child } from "@takazudo/zfb/zudo-react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { renderIsland, fire } from "../../__tests__/helpers/zudo-react.js";
 import PreviewApp, { type PreviewAppProps } from "../preview-app.js";
 import {
   MSG_HEIGHT,
@@ -10,309 +10,218 @@ import {
   MSG_REQUEST_READY,
   MSG_SET_THEME,
   MSG_UPDATE_PROPS,
-  PROTOCOL_VERSION,
 } from "../messages.js";
 
-const IDENTITY = { slug: "fixture", variant: "Fixture" } as const;
-const READY = { type: MSG_READY, v: PROTOCOL_VERSION, ...IDENTITY };
-const height = (value: number) => ({
-  type: MSG_HEIGHT,
-  v: PROTOCOL_VERSION,
-  height: value,
-  ...IDENTITY,
-});
-
-// PreviewApp receives the registry as a prop (never island props — see the
-// component header); a structural fixture stands in for createRegistry().
+let observer: ResizeObserverCallback;
+const disconnect = vi.fn();
+const observe = vi.fn();
+let setups: string[];
+let cleanups: string[];
+let lifecycle: string[];
+let bottom: number;
 const registry = {
-  getStoryBySlug: () =>
-    ({
-      variants: [
-        {
-          exportName: "Fixture",
-          story: {
-            controls: [],
-            render: () => h("div", { style: { height: "100.25px" } }),
-          },
-        },
-      ],
-    }) as unknown as ReturnType<PreviewAppProps["registry"]["getStoryBySlug"]>,
-};
-
-const FRACTIONAL_FIXTURE_CONTENT_BOTTOM = 100.25;
-const FRACTIONAL_FIXTURE_SCROLL_Y = 24;
-const FRACTIONAL_FIXTURE_DOCUMENT_BOTTOM =
-  FRACTIONAL_FIXTURE_CONTENT_BOTTOM + FRACTIONAL_FIXTURE_SCROLL_Y;
-const FRACTIONAL_FIXTURE_SCROLL_HEIGHT = 124;
-
-let bodyBottom = FRACTIONAL_FIXTURE_CONTENT_BOTTOM;
-let resizeCallback: ResizeObserverCallback | undefined;
-
-class TestResizeObserver {
-  constructor(callback: ResizeObserverCallback) {
-    resizeCallback = callback;
-  }
-
-  observe = vi.fn();
-  disconnect = vi.fn();
+  getStoryBySlug: (slug: string) =>
+    slug === "fixture"
+      ? {
+          variants: ["First", "Second"].map((name) => ({
+            exportName: name,
+            story: {
+              controls: [
+                { type: "text", prop: "label", defaultValue: "default" },
+              ],
+              render(args: Record<string, unknown>): Child {
+                // This callback itself uses the story's setup scope.
+                const count = signal(0);
+                getScope().onActivate(() => {
+                  setups.push(name);
+                  lifecycle.push(`setup:${name}`);
+                  return () => {
+                    cleanups.push(name);
+                    lifecycle.push(`cleanup:${name}`);
+                  };
+                });
+                return (
+                  <button
+                    on:click={() => {
+                      count.value++;
+                    }}
+                  >
+                    {name}:{String(args.label)}:{count}
+                  </button>
+                );
+              },
+            },
+          })),
+        }
+      : undefined,
+} as unknown as PreviewAppProps["registry"];
+function FixturePreview() {
+  return <PreviewApp registry={registry} />;
 }
-
+function send(data: unknown, init: MessageEventInit = {}): void {
+  window.dispatchEvent(
+    new MessageEvent("message", {
+      origin: window.location.origin,
+      source: window.parent,
+      data,
+      ...init,
+    }),
+  );
+}
 beforeEach(() => {
   vi.useFakeTimers();
-  bodyBottom = FRACTIONAL_FIXTURE_CONTENT_BOTTOM;
-  resizeCallback = undefined;
-  vi.stubGlobal("ResizeObserver", TestResizeObserver);
+  setups = [];
+  cleanups = [];
+  lifecycle = [];
+  bottom = 100.25;
+  disconnect.mockClear();
+  observe.mockClear();
+  vi.stubGlobal(
+    "ResizeObserver",
+    class {
+      constructor(callback: ResizeObserverCallback) {
+        observer = callback;
+      }
+      observe = observe;
+      disconnect = disconnect;
+    },
+  );
   window.history.replaceState(
     {},
     "",
-    "/components/preview?slug=fixture&variant=Fixture",
+    "/components/preview?slug=fixture&variant=First",
   );
-
   vi.spyOn(document.body, "getBoundingClientRect").mockImplementation(
-    () => ({ bottom: bodyBottom }) as DOMRect,
+    () => ({ bottom }) as DOMRect,
   );
-  Object.defineProperty(document.body, "scrollHeight", {
-    configurable: true,
-    value: FRACTIONAL_FIXTURE_SCROLL_HEIGHT,
-  });
-  Object.defineProperty(window, "scrollY", {
-    configurable: true,
-    value: FRACTIONAL_FIXTURE_SCROLL_Y,
-  });
+  vi.spyOn(window, "scrollY", "get").mockReturnValue(24);
 });
-
 afterEach(() => {
-  document.body.innerHTML = "";
-  document.documentElement.removeAttribute("data-theme");
-  document.documentElement.removeAttribute("data-sg-preview-hydrated");
+  delete document.documentElement.dataset.theme;
   vi.useRealTimers();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });
-
-describe("PreviewApp parent messaging", () => {
-  it("installs its listener before signaling readiness and preserves theme across prop updates", () => {
-    const postMessage = vi
-      .spyOn(window.parent, "postMessage")
-      .mockImplementation((message) => {
-        if (
-          typeof message === "object" &&
-          message !== null &&
-          (message as { type?: unknown }).type === MSG_READY
-        ) {
-          // Model the parent's immediate response to readiness. Because
-          // postMessage is mocked synchronously, this reaches the frame only
-          // if its listener was installed before the handshake was sent.
-          window.dispatchEvent(
-            new MessageEvent("message", {
-              origin: window.location.origin,
-              data: { type: MSG_SET_THEME, theme: "dark" },
-              source: window.parent,
-            }),
-          );
-        }
-      });
-
-    render(<PreviewApp registry={registry} />);
-
-    expect(postMessage).toHaveBeenCalledWith(READY, window.location.origin);
-    expect(document.documentElement.dataset.theme).toBe("dark");
-
-    act(() => {
-      window.dispatchEvent(
-        new MessageEvent("message", {
-          origin: window.location.origin,
-          data: { type: MSG_SET_THEME, theme: "light" },
-          source: null,
-        }),
-      );
-      window.dispatchEvent(
-        new MessageEvent("message", {
-          origin: window.location.origin,
-          data: { type: MSG_UPDATE_PROPS, props: { label: "Updated" } },
-          source: window.parent,
-        }),
-      );
-    });
-
-    expect(document.documentElement.dataset.theme).toBe("dark");
-  });
-
-  it("replies to a readiness probe after its one-shot ready signal", () => {
-    const postMessage = vi
-      .spyOn(window.parent, "postMessage")
-      .mockImplementation(() => undefined);
-
-    render(<PreviewApp registry={registry} />);
-    expect(postMessage).toHaveBeenCalledWith(READY, window.location.origin);
-
-    act(() => {
-      window.dispatchEvent(
-        new MessageEvent("message", {
-          origin: window.location.origin,
-          data: { type: MSG_REQUEST_READY },
-          source: window.parent,
-        }),
-      );
-    });
-
-    const readyMessages = postMessage.mock.calls.filter(
-      ([message]) =>
-        typeof message === "object" &&
-        message !== null &&
-        (message as { type?: unknown }).type === MSG_READY,
-    );
-    expect(readyMessages).toHaveLength(2);
-  });
-
-  it("re-reports height alongside readiness, so a listener that attaches after every mount/timer/resize report has already fired can still recover it (#537)", () => {
-    const postMessage = vi
-      .spyOn(window.parent, "postMessage")
-      .mockImplementation(() => undefined);
-
-    render(<PreviewApp registry={registry} />);
-
-    // Drop every call recorded during mount (the ready signal plus the
-    // immediate/100ms/500ms height reports) so the assertions below can only
-    // pass if the probe response below re-posts both on its own.
-    postMessage.mockClear();
-
-    act(() => {
-      window.dispatchEvent(
-        new MessageEvent("message", {
-          origin: window.location.origin,
-          data: { type: MSG_REQUEST_READY },
-          source: window.parent,
-        }),
-      );
-    });
-
-    expect(postMessage).toHaveBeenCalledWith(READY, window.location.origin);
-    expect(postMessage).toHaveBeenCalledWith(
-      height(125),
-      window.location.origin,
-    );
-  });
-});
-
-describe("PreviewApp height reporting", () => {
-  it("reports the fractional content bottom and shrinks after content shrinks", () => {
-    const postMessage = vi
-      .spyOn(window.parent, "postMessage")
-      .mockImplementation(() => undefined);
-
-    render(<PreviewApp registry={registry} />);
-
-    const heightMessageCount = (): number =>
-      postMessage.mock.calls.filter(
-        ([message]) =>
-          typeof message === "object" &&
-          message !== null &&
-          (message as { type?: unknown }).type === MSG_HEIGHT,
-      ).length;
-
-    const fixtureRoot = document.querySelector("[data-sg-variant-root]");
-    const fixtureContent = fixtureRoot?.firstElementChild as HTMLElement | null;
-    expect(fixtureContent?.style.height).toBe("100.25px");
-    if (!fixtureContent) throw new Error("fixture content did not render");
-
-    // The locked #500 fixture distinguishes the rounded scrollHeight (124)
-    // from the document-coordinate content bottom (100.25 + 24 = 124.25),
-    // which must be rounded up to 125.
-    expect(document.body.scrollHeight).toBe(FRACTIONAL_FIXTURE_SCROLL_HEIGHT);
-    expect(
-      document.body.getBoundingClientRect().bottom + window.scrollY,
-    ).toBe(FRACTIONAL_FIXTURE_DOCUMENT_BOTTOM);
-    expect(postMessage).toHaveBeenCalledWith(
-      height(125),
-      window.location.origin,
-    );
-
-    // Preserve the reporter's immediate, 100ms, and 500ms calls.
-    expect(heightMessageCount()).toBe(1);
-    vi.advanceTimersByTime(100);
-    expect(heightMessageCount()).toBe(2);
-    vi.advanceTimersByTime(400);
-    expect(heightMessageCount()).toBe(3);
-
-    // A fresh measurement on resize must be allowed to shrink; no max-height
-    // accumulator may make the frame ratchet taller.
-    fixtureContent.style.height = "60.25px";
-    bodyBottom = 60.25;
-    resizeCallback?.([] as ResizeObserverEntry[], {} as ResizeObserver);
-
-    expect(postMessage).toHaveBeenLastCalledWith(
-      height(85),
-      window.location.origin,
-    );
-  });
-});
-
-describe("PreviewApp hydration marker", () => {
-  it("sets html[data-sg-preview-hydrated=\"1\"] once mounted", () => {
-    expect(document.documentElement.hasAttribute("data-sg-preview-hydrated")).toBe(false);
-    render(<PreviewApp registry={registry} />);
-    expect(document.documentElement.getAttribute("data-sg-preview-hydrated")).toBe("1");
-  });
-});
-
-describe("PreviewApp protocol v1 (#880)", () => {
-  function send(data: unknown, init: { origin?: string; source?: Window | null } = {}): void {
-    act(() => {
-      window.dispatchEvent(
-        new MessageEvent("message", {
-          origin: init.origin ?? window.location.origin,
-          source: "source" in init ? init.source : window.parent,
-          data,
-        }),
-      );
-    });
-  }
-
-  it("announces sg:ready with v and the frame's identity from location.search", () => {
-    const postMessage = vi
-      .spyOn(window.parent, "postMessage")
-      .mockImplementation(() => undefined);
-
-    render(<PreviewApp registry={registry} />);
-
-    expect(postMessage).toHaveBeenCalledWith(
-      { type: MSG_READY, v: 1, slug: "fixture", variant: "Fixture" },
-      window.location.origin,
-    );
-    for (const [message, target] of postMessage.mock.calls) {
-      expect(target).toBe(window.location.origin);
-      expect((message as { v?: unknown }).v).toBe(PROTOCOL_VERSION);
+describe("PreviewApp", () => {
+  it("hydrates, remounts two prop updates and variant changes, and preserves theme-only state", async () => {
+    const add = vi.spyOn(window, "addEventListener");
+    const remove = vi.spyOn(window, "removeEventListener");
+    const app = renderIsland(FixturePreview, {});
+    expect(app.html).toContain("First:default:");
+    expect(app.container.textContent).toBe("First:default:0");
+    expect(setups).toEqual(["First"]);
+    fire(app.container.querySelector("button")!, "click");
+    await app.flush();
+    expect(app.container.textContent).toBe("First:default:1");
+    for (const label of ["one", "two"]) {
+      send({ type: MSG_UPDATE_PROPS, v: 1, props: { label } });
+      await app.flush();
+      expect(app.container.textContent).toBe(`First:${label}:0`);
+      fire(app.container.querySelector("button")!, "click");
+      await app.flush();
     }
-  });
-
-  it("ignores a cross-origin message even when its source is the parent", () => {
-    vi.spyOn(window.parent, "postMessage").mockImplementation(() => undefined);
-    render(<PreviewApp registry={registry} />);
-
-    send({ type: MSG_SET_THEME, theme: "dark" }, { origin: "https://evil.example" });
-    expect(document.documentElement.dataset.theme).toBeUndefined();
-
-    send({ type: MSG_SET_THEME, theme: "dark" });
+    send({ type: MSG_SET_THEME, v: 1, theme: "dark" });
+    await app.flush();
+    expect(app.container.textContent).toBe("First:two:1");
     expect(document.documentElement.dataset.theme).toBe("dark");
+    expect(setups).toHaveLength(3);
+    expect(cleanups).toHaveLength(2);
+    window.history.replaceState({}, "", "?slug=fixture&variant=Second");
+    window.dispatchEvent(new PopStateEvent("popstate"));
+    await app.flush();
+    expect(app.container.textContent).toBe("Second:default:0");
+    expect(setups).toEqual(["First", "First", "First", "Second"]);
+    expect(cleanups).toEqual(["First", "First", "First"]);
+    expect(observe).toHaveBeenCalledTimes(1);
+    expect(add.mock.calls.filter(([type]) => type === "message")).toHaveLength(
+      1,
+    );
+    expect(vi.getTimerCount()).toBe(2);
+    app.dispose();
+    expect(cleanups).toEqual(["First", "First", "First", "Second"]);
+    expect(lifecycle).toEqual([
+      "setup:First",
+      "cleanup:First",
+      "setup:First",
+      "cleanup:First",
+      "setup:First",
+      "cleanup:First",
+      "setup:Second",
+      "cleanup:Second",
+    ]);
+    expect(disconnect).toHaveBeenCalledTimes(1);
+    expect(
+      remove.mock.calls.filter(([type]) => type === "message"),
+    ).toHaveLength(1);
+    expect(vi.getTimerCount()).toBe(0);
+    expect(document.documentElement.dataset.sgPreviewHydrated).toBeUndefined();
   });
-
-  it("ignores a same-origin message whose source is not the parent", () => {
-    vi.spyOn(window.parent, "postMessage").mockImplementation(() => undefined);
-    render(<PreviewApp registry={registry} />);
-
-    send({ type: MSG_SET_THEME, theme: "dark" }, { source: null });
-    expect(document.documentElement.dataset.theme).toBeUndefined();
-  });
-
-  it("accepts a legacy parent message without v and rejects v: 2", () => {
-    vi.spyOn(window.parent, "postMessage").mockImplementation(() => undefined);
-    render(<PreviewApp registry={registry} />);
-
-    send({ type: MSG_SET_THEME, v: 2, theme: "light" });
-    expect(document.documentElement.dataset.theme).toBeUndefined();
-
-    send({ type: MSG_SET_THEME, theme: "light" });
+  it("installs the receiver before ready, reports fractional bottom, shrinks, and recovers late readiness", async () => {
+    const post = vi
+      .spyOn(window.parent, "postMessage")
+      .mockImplementation((data) => {
+        if (data.type === MSG_READY)
+          send({ type: MSG_SET_THEME, theme: "light" });
+      });
+    const app = renderIsland(FixturePreview, {});
+    expect(document.documentElement.dataset.sgPreviewHydrated).toBe("1");
     expect(document.documentElement.dataset.theme).toBe("light");
+    expect(post).toHaveBeenCalledWith(
+      { type: MSG_READY, v: 1, slug: "fixture", variant: "First" },
+      window.location.origin,
+    );
+    expect(post).toHaveBeenCalledWith(
+      {
+        type: MSG_HEIGHT,
+        v: 1,
+        slug: "fixture",
+        variant: "First",
+        height: 125,
+      },
+      window.location.origin,
+    );
+    vi.advanceTimersByTime(500);
+    bottom = 50.1;
+    observer([], {} as ResizeObserver);
+    expect(post).toHaveBeenLastCalledWith(
+      expect.objectContaining({ type: MSG_HEIGHT, height: 75 }),
+      window.location.origin,
+    );
+    post.mockClear();
+    send({ type: MSG_REQUEST_READY });
+    expect(post.mock.calls.map(([data]) => data.type)).toEqual([
+      MSG_READY,
+      MSG_HEIGHT,
+    ]);
+    app.dispose();
+    post.mockClear();
+    send({ type: MSG_REQUEST_READY });
+    expect(post).not.toHaveBeenCalled();
+  });
+  it.each([
+    { origin: "https://untrusted.example" },
+    { source: null },
+    { data: { type: MSG_UPDATE_PROPS, v: 2, props: { label: "bad" } } },
+  ])("rejects untrusted/unsupported envelopes %j", async (change) => {
+    const app = renderIsland(FixturePreview, {});
+    send({ type: MSG_UPDATE_PROPS, props: { label: "bad" } }, change);
+    await app.flush();
+    expect(app.container.textContent).toBe("First:default:0");
+    send({ type: MSG_UPDATE_PROPS, props: { label: "legacy" } });
+    await app.flush();
+    expect(app.container.textContent).toBe("First:legacy:0");
+  });
+  it("shows unknown identities and remounts an actual slug change only once", async () => {
+    const app = renderIsland(FixturePreview, {});
+    window.history.replaceState({}, "", "?slug=unknown&variant=First");
+    window.dispatchEvent(new PopStateEvent("popstate"));
+    await app.flush();
+    expect(app.container.textContent).toContain(
+      "Unknown preview: slug=unknown variant=First",
+    );
+    expect(cleanups).toEqual(["First"]);
+    window.dispatchEvent(new PopStateEvent("popstate"));
+    await app.flush();
+    expect(cleanups).toHaveLength(1);
   });
 });
