@@ -85,8 +85,8 @@ required, and the generated token manifest feeds the dashboards.
 
 5. **Add the preview stylesheet.** Point `previewStyles` at a real CSS entry
    file that imports the component library's tokens and authored component
-   styles. For example, place `@layer zw-reset;` before the imports shown in
-   [STORIES.md](../../../packages/demo-ui/STORIES.md#required-style-imports).
+   styles. For example, place `@layer zw-reset;` before the imports listed in
+   `packages/demo-ui/STORIES.md` under “Required style imports”.
    The preview plugin invokes zfb's `css` command with the host's wind config
    and component sources, then serves the scoped output at its own URL. This
    separate compile keeps host chrome out of the preview document.
