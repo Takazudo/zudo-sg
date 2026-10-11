@@ -240,6 +240,9 @@ async function panelDiagnostics(page) {
       roots: roots.map((root) => ({ id: root.id, connected: root.isConnected, children: root.childElementCount, htmlStart: root.innerHTML.slice(0, 120) })),
       bodyConnected: document.body?.isConnected,
       readyState: document.readyState,
+      scripts: [...document.scripts].map((script) => ({ src: script.src, type: script.type })),
+      islands: [...document.querySelectorAll("[data-zfb-island], [data-zfb-island-skip-ssr]")]
+        .map((island) => ({ attributes: Object.fromEntries([...island.attributes].map(({ name, value }) => [name, value])), children: island.childElementCount })),
       previewStorage: Object.fromEntries(Object.keys(localStorage)
         .filter((key) => key.startsWith("sg-preview-tweak"))
         .map((key) => [key, localStorage.getItem(key)])),
@@ -287,7 +290,11 @@ async function proveEarlyClick(page, origin) {
   check(!(await trigger.isVisible()), "the preview trigger should be hidden on the host docs route");
   const persistentHeader = page.locator("header[data-zfb-transition-persist]");
   check(await persistentHeader.count() === 1, "host docs route does not render one persistent header");
-  await page.waitForFunction(() => Boolean(window.__sgPreviewTokenPanelCapture), null, { timeout: 15_000 });
+  try {
+    await page.waitForFunction(() => Boolean(window.__sgPreviewTokenPanelCapture), null, { timeout: 15_000 });
+  } catch (error) {
+    fail(`host route capture was not installed: ${JSON.stringify(await panelDiagnostics(page))}; browser errors: ${errors.join(" | ")}; failed requests: ${badResponses.join(" | ")}; ${error}`);
+  }
   const initialCapture = await page.evaluate(() => window.__sgPreviewTokenPanelCapture ?? null);
   check(initialCapture && initialCapture.ready === false, `host route did not install an unready public trigger capture: ${JSON.stringify(initialCapture)}`);
 
@@ -322,7 +329,11 @@ async function proveEarlyClick(page, origin) {
   check(proof.headerPersisted, "the host header was replaced during the SPA transition");
   check(proof.readyBeforeClick === false && proof.readyAfterClick === false, "bootstrap readiness was not delayed through the early click");
   check(proof.pendingBeforeClick === 0 && proof.pendingAfterClick === 1, "the capture did not observe exactly one click before listener readiness");
-  await page.waitForFunction(() => window.__sgPreviewTokenPanelCapture?.ready === true, null, { timeout: 15_000 });
+  try {
+    await page.waitForFunction(() => window.__sgPreviewTokenPanelCapture?.ready === true, null, { timeout: 15_000 });
+  } catch (error) {
+    fail(`early-click bootstrap did not become ready: ${JSON.stringify(await panelDiagnostics(page))}; browser errors: ${errors.join(" | ")}; failed requests: ${badResponses.join(" | ")}; ${error}`);
+  }
   try {
     await assertPanelState(page, true);
   } catch (error) {
@@ -347,7 +358,11 @@ async function proveEarlyClick(page, origin) {
   await page.evaluate(() => localStorage.clear());
   await page.goto(`${origin}${BASE}components`, { waitUntil: "domcontentloaded" });
   await trigger.waitFor({ state: "visible", timeout: 15_000 });
-  await page.waitForFunction(() => window.__sgPreviewTokenPanelCapture?.ready === true, null, { timeout: 15_000 });
+  try {
+    await page.waitForFunction(() => window.__sgPreviewTokenPanelCapture?.ready === true, null, { timeout: 15_000 });
+  } catch (error) {
+    fail(`direct engine bootstrap did not become ready: ${JSON.stringify(await panelDiagnostics(page))}; browser errors: ${errors.join(" | ")}; failed requests: ${badResponses.join(" | ")}; ${error}`);
+  }
   await assertPanelState(page, false);
   await trigger.click();
   await assertPanelState(page, true);
