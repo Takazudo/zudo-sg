@@ -1,4 +1,5 @@
-import type { ComponentChildren, JSX } from "preact";
+import type { Child } from "@takazudo/zfb/zudo-react";
+import type { JSX } from "@takazudo/zfb/zudo-react/jsx-runtime";
 import { cx } from "../../lib/cx";
 
 export type CalloutTone = "note" | "muted";
@@ -7,19 +8,19 @@ export type CalloutProps = {
   tone?: CalloutTone;
   title?: string;
   class?: string;
-  children?: ComponentChildren;
+  children?: Child;
 };
 
 // Tint + rule color are derived via color-mix from tokens (never a raw hex),
 // so both tones stay correct in light and dark.
-const TONE_STYLE: Record<CalloutTone, JSX.CSSProperties> = {
+const TONE_STYLE: Record<CalloutTone, JSX.IntrinsicElements["div"]["style"]> = {
   note: {
-    borderLeftColor: "var(--color-accent)",
-    backgroundColor: "color-mix(in srgb, var(--color-accent) 8%, var(--color-bg))",
+    "border-left-color": "var(--color-accent)",
+    "background-color": "color-mix(in srgb, var(--color-accent) 8%, var(--color-bg))",
   },
   muted: {
-    borderLeftColor: "var(--color-border)",
-    backgroundColor: "var(--color-surface)",
+    "border-left-color": "var(--color-border)",
+    "background-color": "var(--color-surface)",
   },
 };
 

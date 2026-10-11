@@ -26,7 +26,7 @@ export const Default: Story<CardGridProps> = {
   <Card title="Product D">…</Card>
 </CardGrid>`,
   render: () => (
-    <div style={{ maxWidth: "720px" }}>
+    <div style={{ "max-width": "720px" }}>
       <CardGrid>
         <Card title="Product A">Description text.</Card>
         <Card title="Product B" variant="muted">

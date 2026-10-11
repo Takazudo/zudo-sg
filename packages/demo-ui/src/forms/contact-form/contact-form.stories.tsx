@@ -23,7 +23,7 @@ export default meta;
 export const Default: Story = {
   name: "Default (input panel)",
   render: () => (
-    <div style={{ maxWidth: "760px" }}>
+    <div style={{ "max-width": "760px" }}>
       <ContactForm />
     </div>
   ),

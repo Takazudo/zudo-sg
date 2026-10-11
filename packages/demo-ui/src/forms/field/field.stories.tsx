@@ -9,9 +9,9 @@ const meta: StoryMeta = {
     "Labeled form row: label + required/optional badge + optional hint, wrapping a control (Input/Textarea/Select).",
   usage: `import { Field, Input } from "@zudo-sg/demo-ui";
 
-<Field id="name" label="Name" required>
-  <Input id="name" name="name" />
-</Field>`,
+<Field id="name" label="Name" required>{({ id, describedBy }) => (
+  <Input id={id} aria-describedby={describedBy} name="name" />
+)}</Field>`,
   order: 1,
 };
 
@@ -19,28 +19,28 @@ export default meta;
 
 export const Required: Story = {
   name: "Required",
-  source: `<Field id="sg-name" label="Name" required>
-  <Input id="sg-name" name="name" />
-</Field>`,
+  source: `<Field id="sg-name" label="Name" required>{({ id, describedBy }) => (
+  <Input id={id} aria-describedby={describedBy} name="name" />
+)}</Field>`,
   render: () => (
     <div class="max-w-[24rem]">
-      <Field id="sg-name" label="Name" required>
-        <Input id="sg-name" name="name" />
-      </Field>
+      <Field id="sg-name" label="Name" required>{({ id, describedBy }) => (
+        <Input id={id} aria-describedby={describedBy} name="name" />
+      )}</Field>
     </div>
   ),
 };
 
 export const Optional: Story = {
   name: "Optional, with hint",
-  source: `<Field id="sg-company" label="Company / organization" hint="Leave blank for individual inquiries.">
-  <Input id="sg-company" name="company" />
-</Field>`,
+  source: `<Field id="sg-company" label="Company / organization" hint="Leave blank for individual inquiries.">{({ id, describedBy }) => (
+  <Input id={id} aria-describedby={describedBy} name="company" />
+)}</Field>`,
   render: () => (
     <div class="max-w-[24rem]">
-      <Field id="sg-company" label="Company / organization" hint="Leave blank for individual inquiries.">
-        <Input id="sg-company" name="company" />
-      </Field>
+      <Field id="sg-company" label="Company / organization" hint="Leave blank for individual inquiries.">{({ id, describedBy }) => (
+        <Input id={id} aria-describedby={describedBy} name="company" />
+      )}</Field>
     </div>
   ),
 };

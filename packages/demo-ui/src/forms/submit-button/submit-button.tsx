@@ -1,9 +1,10 @@
-import type { ComponentChildren, JSX } from "preact";
+import type { Child } from "@takazudo/zfb/zudo-react";
+import type { JSX } from "@takazudo/zfb/zudo-react/jsx-runtime";
 import { cx } from "../../lib/cx";
 
-export type SubmitButtonProps = JSX.ButtonHTMLAttributes<HTMLButtonElement> & {
+export type SubmitButtonProps = JSX.IntrinsicElements["button"] & {
   class?: string;
-  children?: ComponentChildren;
+  children?: Child;
 };
 
 /** Accent-filled primary form action. Defaults to `type="submit"`. */
