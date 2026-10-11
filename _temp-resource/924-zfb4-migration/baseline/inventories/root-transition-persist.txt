@@ -1,0 +1,7 @@
+desktop-sidebar-toggle
+desktop-toc-toggle
+footer-en
+header-en
+sidebar-en-architecture
+sidebar-en-components
+sidebar-en-overview
