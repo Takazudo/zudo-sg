@@ -11,11 +11,14 @@ import { describe, expect, it } from "vitest";
 const PKG_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
 const ENTRY = resolve(PKG_ROOT, "dist/preview/messages.js");
 
-const { collectImportGraph, frameworkFreeViolations } = await import(
+const { collectImportGraph, frameworkFreeViolations, importSpecifiers } = await import(
   resolve(PKG_ROOT, "scripts/import-graph.mjs")
 );
 
 describe("dist/preview/messages.js import graph (#880)", () => {
+  it("parses real module syntax without treating error-code strings as imports", () => {
+    expect(importSpecifiers('const codes = ["import", "render"]; // import "not-real"\nimport "real"; export { x } from "other"; import("dynamic");')).toEqual(["real", "other", "dynamic"]);
+  });
   it("exists after the package build", () => {
     expect(
       existsSync(ENTRY),
@@ -60,5 +63,19 @@ describe("dist/preview/messages.js import graph (#880)", () => {
     } finally {
       rmSync(temporary, { recursive: true, force: true });
     }
+  });
+});
+
+describe.each(["preview/external-runtime", "registry/external-catalog"])("public %s contract", (subpath) => {
+  const entry = resolve(PKG_ROOT, `dist/${subpath}.js`);
+  it("ships declarations and a framework-free compiled graph", () => {
+    expect(existsSync(resolve(PKG_ROOT, `dist/${subpath}.d.ts`))).toBe(true);
+    expect(frameworkFreeViolations(entry)).toEqual([]);
+    expect(collectImportGraph(entry).bare).toEqual([]);
+  });
+  it("imports without a browser, renderer, or fixture module", async () => {
+    expect(typeof globalThis.window).toBe("undefined");
+    const contract = await import(entry);
+    expect(typeof (contract.isSerializableProps ?? contract.validateExternalCatalogManifest)).toBe("function");
   });
 });

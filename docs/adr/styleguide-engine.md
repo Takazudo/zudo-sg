@@ -605,6 +605,27 @@ must do the same.
 
 ### 16. Preview postMessage protocol v1
 
+**Addendum (#957, external-runtime contract):** protocol v1 and its import-free
+`preview/messages` leaf remain compatible. The opt-in
+`preview/external-runtime` leaf defines `runtimeVersion: 1`, strict
+slug/variant/session/document/generation identity, ordered messages, full reset
+and runtime errors. Strict mode must be selected before first readiness and
+never falls back to identity-less messages. `sg:ready` means committed mount;
+an initialization failure reports an identity-bound error, not successful
+readiness. The public package README's “External runtime contracts” section
+specifies the handshake, ownership, separate token/direct-DOM CSS channels,
+cleanup and reset semantics; #958 owns executable controller/workbench wiring.
+
+`registry/external-catalog` defines a canonical tuple key shared by descriptor
+source, external loader metadata and capture disposition. Optional
+`VariantDescriptor.source` is plain text keyed to its exact slug/variant;
+existing source-less descriptors and thumbnails stay valid. Canonical image
+metadata is a promise, not capture evidence. #959 owns source rendering, exact
+generated-output agreement and real runtime/emitted-asset checks, while #960
+owns the independent packed React consumer proof. Neither contract imports
+React or changes module-story remount-on-args semantics. The intentional
+opaque Preact/zdtp adapter remains independent.
+
 **Accepted (2026-09-26, epic #879).** The parent catalog page and a variant
 preview iframe (in-engine or, since decision 8's amendment, an
 `externalPreview` host document) speak a small, versioned, framework-free

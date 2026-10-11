@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "compilerVersion": "4.3.1",
-  "windConfigSha256": "15dcccd6d5d9283cf3e23c733a536950f2af55e23d61b455839b45b0dbbe6f7c",
+  "windConfigSha256": "c481fa783d40d3c26898bdf53fa9dbaf5c8aae3edb2ce5422c6c519ccf571bbd",
   "candidateSetSha256": "478478942a02c3aded0a7136427019391d5362c1808c095091ccbb46f33cfd2a",
   "candidates": [
     "-translate-y-1/2",

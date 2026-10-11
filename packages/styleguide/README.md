@@ -283,6 +283,143 @@ source changes refresh without a restart. Host config or imported token-config
 changes require zfb config reload/restart so the snapshot contains fresh data.
 This token precedence rule does not isolate every host stylesheet selector.
 
+## External runtime contracts
+
+The public leaf modules `@takazudo/zudo-sg/preview/external-runtime` and
+`@takazudo/zudo-sg/registry/external-catalog` contain renderer-free types and
+validators. They can be imported in Node/SSR without a browser. React,
+ReactDOM, fixture loaders and component closures belong only in the host's
+separately built same-origin preview document. The engine shell and catalog
+stay zudo-react; the opaque Preact/zdtp adapter remains independent.
+
+These contracts are additive. `preview/messages` remains import-free and
+continues accepting legacy messages with no `v` and current `v: 1` messages.
+The strict extension uses **both** `v: 1` and `runtimeVersion: 1`; it does not
+reinterpret legacy messages. `ExternalRuntimeMode` is `"legacy" |
+"external-v1"`. Select strict mode at the parent boundary before the first
+message: a strict frame must never fall back to an identity-less legacy ready,
+including during startup. `hasExternalRuntimeMarker()` also lets a legacy
+receiver identify and reject malformed extension traffic instead of treating
+it as legacy. Built-in configuration/controller wiring follows this contract
+in #958; this contract addition alone does not enable strict workbench mode.
+
+### Identity, readiness and ordering
+
+The parent sends `sg:requestReady` with `slug`, `variant`, and a fresh
+`sessionId` challenge, plus the two version fields. Create a new unpredictable
+session on iframe load and variant navigation, invalidate previous readiness,
+height, document binding and errors, and retain the latest host state. A
+same-URL reload requires this transition too: `contentWindow` can retain the
+same WindowProxy after its document changes.
+
+The document creates its own unpredictable `documentId`. Its committed
+`sg:ready` echoes the challenge and adds `generation: 0`, `sequence`, and
+`capabilities: { fullReset: boolean }`. A ready means the fixture mounted and
+committed successfully, not merely that message listeners exist. A repeated
+request re-announces the same committed document without remounting it. A
+mount/import failure sends `sg:runtimeError` instead of successful ready.
+
+All document-bound messages carry the exact
+`{slug, variant, sessionId, documentId, generation}` identity and a
+nonnegative safe-integer `sequence`. Sequence counters are independent per
+sender and per session/generation. Validate the complete message, exact
+same-origin and source window, current identity, and then monotonically
+increasing sequence **before** mutating state or advancing the receive
+watermark. `isExternalRuntimeMessageEvent()`,
+`matchesExternalRuntimeIdentity()` and `isNewExternalRuntimeSequence()` are
+separate pure checks; none maintains hidden state. Initialize a receive
+watermark to `-1`. Reject opaque `"null"` origins and unknown/null sources.
+
+A parent may initially bind a document from a valid ready or error answering
+its current challenge and expected generation. Once bound, another document
+cannot replace it without a new host session. Only an acknowledged full
+reset can advance generation. A stale ready/error/height or malformed
+high-sequence message must not affect the active document or its watermark.
+Duplicate readiness may replay current snapshots, but cannot reset a fixture.
+
+### Updates, resets, errors and resource ownership
+
+`sg:updateProps` contains a complete `SerializableProps` snapshot that replaces
+previous control overrides. `isSerializableProps()` accepts finite JSON values,
+rejecting callbacks/elements, undefined, cycles, accessors, symbols, prototype
+keys, sparse arrays, and nesting beyond 32 object/array levels. Merge fixture
+base props, declared control defaults and this current snapshot in that order.
+Ordinary prop edits and the controls' **Reset** update the existing renderer
+root and preserve hooks, focus and editor state. Existing module stories
+continue their deliberate remount-on-args behavior.
+
+Only runtimes advertising `fullReset: true` receive `sg:resetFixture`. It
+targets the current identity and supplies `nextGeneration: generation + 1`.
+The runtime disposes the current fixture, advances generation, clears its
+per-generation sequence counters and mounts a fresh fixture with the retained
+props. Ready/error then identifies the new generation. Reset replay is rejected
+by identity/sequence checks. The parent retains controls, resolved theme,
+token overrides and live CSS; it replays current state after accepted ready.
+Changing variant seeds that variant's controls; reloading the same variant
+retains its edited values.
+
+`ExternalFixtureMount(context)` resolves only after a committed mount and
+returns an `ExternalFixtureInstance` with `update(props)` and `dispose()`.
+Its optional `whenStable()` is a fixture-specific capture barrier after
+commit, for fonts, editor initialization or other async resources. The mount
+context supplies current identity/props, an abort signal and `reportError()`.
+Abort on reset/disposal; check identity after every awaited operation and
+dispose any late instance rather than installing it. Serialize asynchronous
+updates and resets so an older update cannot overwrite newer props.
+
+The renderer owns its roots, hooks, portals, editors, workers and fixture
+subscriptions. The runtime owns its message listeners, observers and timers;
+final disposal removes them deterministically. Full fixture reset must not
+erase host-owned theme, token overrides or the live-CSS style element.
+
+Errors use `sg:runtimeError` and `{code, message, recoverable}`. Codes are
+`unknown-fixture`, `import`, `render`, and `asset`; display messages as text,
+never HTML or an empty successful tile. React error boundaries must report
+render failures. An initial failure can bind the current document without
+claiming readiness; show a reload/retry action. A successful recovery clears
+only errors for its accepted identity, never another document's error.
+
+Tokens retain their separate `zudo-sg-token-tweak-bridge` apply/clear/ready
+envelopes, with exact parent/source and validated custom-property payloads.
+Live CSS retains direct same-origin `contentDocument` injection into
+`style[data-sg-injected-css]`. They are not new runtime message types. Keep
+their snapshots at the parent, retain edits before readiness, replay on
+reload/reset and tear down listeners/styles when their owning scope ends.
+
+### Source and canonical capture metadata
+
+Descriptors may opt into `variant.source = { key, code }`. Obtain `key` from
+`externalCatalogKey(slug, exportName)`; it encodes a JSON tuple, avoiding
+delimiter collisions. `code` is verbatim text, including JSX or characters
+that resemble HTML; never evaluate or inject it as markup. Existing
+descriptors without source remain valid. The Source panel integration follows
+in #959; `sourcePath` remains informational.
+
+`validateExternalCatalogManifest(input)` validates and normalizes an array of
+`ExternalCatalogEntry` rows, each containing `slug`, `variant`,
+`loader: {key, module, exportName}`, `source: {key, code}`, and `capture`.
+Loader modules are project-root-relative paths; generated loader functions
+stay in the external bundle. All three keys must equal the canonical tuple
+key, and row identities and captured asset ownership must be unique.
+
+A capture is either `{kind: "image", key, fixture: {module, exportName}, src,
+width, height}` matching the loader, or `{kind: "placeholder" | "failed", key,
+note}` with an explicit nonempty explanation. Image paths are root-absolute
+emitted URLs before adding the site base, with positive integer pixel
+dimensions. Existing descriptor image/placeholder/no-thumbnail behavior is
+unchanged unless the host opts into this canonical manifest.
+
+This validator checks data, not files or screenshots. An image declaration
+promises a real capture of the named external runtime: capture after committed
+readiness and its stability barrier, then verify the emitted file, actual
+dimensions and fixture/source/loader key agreement before claiming success.
+Missing or invalid promised images fail the build/capture check; explicit
+failed dispositions remain visibly labelled. Compare exact generated key sets,
+source contents and loader references, including extra entries, before build.
+The Node/capture integration follows in #959 and the packed React proof in
+#960. Never substitute engine React SSR, decorative fake screenshots, or a
+host route shadow for this boundary.
+
 ## Release scheme
 
 Stable only. `v*.*.*` tags publish to the npm `latest` dist-tag — there is no

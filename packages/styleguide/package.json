@@ -63,6 +63,14 @@
       "types": "./dist/preview/messages.d.ts",
       "default": "./dist/preview/messages.js"
     },
+    "./preview/external-runtime": {
+      "types": "./dist/preview/external-runtime.d.ts",
+      "default": "./dist/preview/external-runtime.js"
+    },
+    "./registry/external-catalog": {
+      "types": "./dist/registry/external-catalog.d.ts",
+      "default": "./dist/registry/external-catalog.js"
+    },
     "./code-panel": {
       "types": "./dist/code-panel/index.d.ts",
       "default": "./dist/code-panel/index.js"
