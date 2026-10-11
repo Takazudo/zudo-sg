@@ -180,7 +180,9 @@ export default function DefaultLayout({
         <Island when="visible" ssrFallback={null}>
           <MobileNavEnhancer />
         </Island>
-        <Island when="visible" ssrFallback={null}>
+        {/* Browse is visible in the header immediately. Its render-null enhancer
+            must activate on load: this body-end placeholder can be offscreen. */}
+        <Island when="load" ssrFallback={null}>
           <ContextSwitcherEnhancer />
         </Island>
         <Island when="visible" ssrFallback={null}>

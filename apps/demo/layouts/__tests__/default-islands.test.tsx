@@ -21,8 +21,11 @@ it("registers real page Island boundaries while preserving the chrome persistenc
   });
   expect(html.match(/data-zfb-island-skip-ssr="ThemeControl"/g)).toHaveLength(2);
   expect(html.match(/data-zfb-island-skip-ssr=/g)).toHaveLength(7);
-  expect(html.match(/data-when="load"/g)).toHaveLength(3);
-  expect(html.match(/data-when="visible"/g)).toHaveLength(4);
+  expect(html.match(/data-when="load"/g)).toHaveLength(4);
+  expect(html.match(/data-when="visible"/g)).toHaveLength(3);
+  // A body-end render-null placeholder is not the header's visibility target.
+  // Browse must bind before interaction without requiring a scroll to this island.
+  expect(html).toMatch(/data-zfb-island-skip-ssr="ContextSwitcherEnhancer" data-when="load"/);
   expect(html).toContain('data-zfb-transition-persist="header-energy"');
   expect(html).toContain('data-zfb-transition-persist="sidebar-energy"');
   expect(html).toContain('id="zui-nav-toggle"');
