@@ -32,17 +32,15 @@ import { previewTokenPanelCaptureScript } from "@takazudo/zudo-sg/token-tweak";
  */
 const DEFAULT_AI_CHAT_BODY_LABEL = "Ask a question about the documentation.";
 
-const SIDEBAR_SCROLL_RESTORE_SCRIPT = `(${function sidebarScrollRestore(
-  beforeEvent: string,
-  afterEvent: string,
-) {
-  const w = window as Window & { __zdSidebarScrollRestoreInstalled?: boolean };
+// Keep inline source literal: serialized compiled functions can capture esbuild helpers.
+const SIDEBAR_SCROLL_RESTORE_SCRIPT = `(function sidebarScrollRestore(beforeEvent, afterEvent) {
+  const w = window;
   if (w.__zdSidebarScrollRestoreInstalled) return;
   w.__zdSidebarScrollRestoreInstalled = true;
 
   let savedScrollTop = 0;
-  let restoreTimer: ReturnType<typeof setTimeout> | undefined;
-  const sidebar = () => document.querySelector<HTMLElement>("#desktop-sidebar");
+  let restoreTimer;
+  const sidebar = () => document.querySelector("#desktop-sidebar");
 
   document.addEventListener(beforeEvent, () => {
     if (restoreTimer !== undefined) {
@@ -59,7 +57,7 @@ const SIDEBAR_SCROLL_RESTORE_SCRIPT = `(${function sidebarScrollRestore(
       if (aside) aside.scrollTop = savedScrollTop;
     }, 50);
   });
-}.toString()})(${JSON.stringify(BEFORE_NAVIGATE_EVENT)},${JSON.stringify(AFTER_NAVIGATE_EVENT)});`;
+})(${JSON.stringify(BEFORE_NAVIGATE_EVENT)},${JSON.stringify(AFTER_NAVIGATE_EVENT)});`;
 
 /** Props for {@link BodyEndIslands}. */
 export interface BodyEndIslandsProps {

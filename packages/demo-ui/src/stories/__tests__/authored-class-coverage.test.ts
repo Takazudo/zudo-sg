@@ -64,7 +64,7 @@ describe("demo-ui authored class coverage", () => {
       "--json",
       "--stdin",
       "--project-root",
-      REPO_ROOT,
+      ".",
     ]);
     expect(fixture.windExplain.explanations.map((item) => item.candidate)).toEqual(candidates);
     expect([...configuredReservations].sort()).toEqual([...RESERVED_AUTHORED_CLASSES.keys()].sort());

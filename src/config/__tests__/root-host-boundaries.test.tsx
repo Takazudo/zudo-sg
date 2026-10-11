@@ -7,6 +7,7 @@ import PreviewTokenPanelBootstrap from "@takazudo/zudo-sg/token-tweak/preview-to
 import ClientRouterBootstrap from "../../components/client-router-bootstrap";
 import { BodyEndIslands } from "../../../pages/lib/_body-end-islands";
 import { settings } from "../settings";
+import { runInNewContext } from "node:vm";
 
 const originalImageEnlarge = settings.imageEnlarge;
 afterEach(() => { settings.imageEnlarge = originalImageEnlarge; });
@@ -24,6 +25,14 @@ describe("root body-end server boundary", () => {
     expect(html).toContain("__zdSidebarScrollRestoreInstalled");
     expect(html).toContain("toggle-preview-token-panel");
     expect(html).not.toContain("&quot;");
+    const script = [...html.matchAll(/<script[^>]*>([\s\S]*?)<\/script>/g)]
+      .map((match) => match[1]).find((source) => source.includes("__zdSidebarScrollRestoreInstalled"))!;
+    const listeners: string[] = [];
+    expect(() => runInNewContext(script, {
+      window: {},
+      document: { addEventListener: (event: string) => listeners.push(event) },
+    })).not.toThrow();
+    expect(listeners).toEqual(["zfb:before-preparation", "zfb:after-swap"]);
   });
 
   it("honors the asset route forceImageEnlarge contract when the site feature is off", () => {

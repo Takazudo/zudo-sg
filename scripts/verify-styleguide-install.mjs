@@ -298,6 +298,14 @@ export function parseDocumentedInstall(readme, fixtureManifest, packageManifest)
   for (const name of Object.keys(fixtureManifest.dependencies ?? {})) {
     assert(names.includes(name), `README pnpm add is missing fixture dependency ${name}`);
   }
+  for (const name of ["@takazudo/zfb", "@takazudo/zfb-md-wasm", "@takazudo/zfb-runtime", "@takazudo/zudo-doc", "@takazudo/zdtp"]) {
+    const documentedSpec = specs[names.indexOf(name)];
+    assert(documentedSpec === `${name}@^${fixtureManifest.dependencies[name]}`,
+      `README pnpm add must track the verified fixture version for ${name}`);
+  }
+  for (const name of ["preact", "preact-render-to-string", "tailwindcss"]) {
+    assert(!names.includes(name), `README host install must not declare engine-owned dependency ${name}`);
+  }
   return { command: commands[0][0], specs, names, prerequisites };
 }
 

@@ -121,7 +121,8 @@ Do NOT use h1 (`#`) in doc content — the page title from frontmatter is render
   scaffold CLI, and it is not consumed by any other product; `zudo-composer`
   (Composer/Sitemapper) is a separate repository with no coupling to this one.
 - **Route invariant** — the styleguide-only root build emits 88 HTML routes
-  (zfb reports 89 pages, the 89th being `/robots.txt`). The four catalog routes
+  (zfb reports 89 pages, the 89th being `/robots.txt`). The zfb 4.3.1 migration
+  retains the S1 baseline count: no HTML route delta. The four catalog routes
   are injected by `@takazudo/zudo-sg` (`dist/__zfb/routes.json` lists them as
   `pages/components.tsx`, `pages/components/[slug].tsx`,
   `pages/components/preview.tsx`, `pages/tokens.tsx` overlay sources) and none
