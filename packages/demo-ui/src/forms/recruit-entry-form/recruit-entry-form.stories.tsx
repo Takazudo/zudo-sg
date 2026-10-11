@@ -18,7 +18,7 @@ export const NewGraduate: Story<RecruitEntryFormProps> = {
   name: "New graduate (default category)",
   source: `<RecruitEntryForm defaultCategory="new-graduate" />`,
   render: () => (
-    <div style={{ maxWidth: "760px" }}>
+    <div style={{ "max-width": "760px" }}>
       <RecruitEntryForm defaultCategory="new-graduate" />
     </div>
   ),
@@ -28,7 +28,7 @@ export const Career: Story<RecruitEntryFormProps> = {
   name: "Career (default category)",
   source: `<RecruitEntryForm defaultCategory="career" />`,
   render: () => (
-    <div style={{ maxWidth: "760px" }}>
+    <div style={{ "max-width": "760px" }}>
       <RecruitEntryForm defaultCategory="career" />
     </div>
   ),

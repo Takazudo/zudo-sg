@@ -5,13 +5,13 @@
  * confirm -> complete flow. Same shape as ContactFormEnhancer (see its header
  * comment) — renders nothing, delegates DOM wiring to the shared
  * `createFormEnhancer` factory, and is mounted by the consuming app (not
- * wrapped in `<Island>` here — @zudo-sg/demo-ui takes no zfb dependency).
+ * wrapped in `<Island>` here — the app owns that boundary).
  *
  * No submit-adapter prop: unlike ContactFormEnhancer, this form has no async
  * variant in this batch — "Submit this entry" always transitions straight to
  * the complete panel (the factory's default, no-network behavior).
  */
-import { useEffect } from "preact/hooks";
+import { getScope } from "@takazudo/zfb/zudo-react";
 import { createFormEnhancer } from "../lib/create-form-enhancer";
 import { CATEGORY_LABELS, JOB_LABELS } from "../lib/form-options";
 
@@ -21,9 +21,10 @@ const enhance = createFormEnhancer("recruit", {
 });
 
 export default function RecruitFormEnhancer() {
-  useEffect(() => {
+  const scope = getScope();
+  scope.onActivate(() => {
     const dispose = enhance();
     return dispose;
-  }, []);
+  });
   return null;
 }

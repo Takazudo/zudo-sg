@@ -18,8 +18,7 @@ export type RecruitEntryFormProps = {
  * -> complete), SSR-rendered as plain markup with no runtime behavior of its
  * own. Same progressive-enhancement shape as ContactForm (see its header
  * comment) — the paired `RecruitFormEnhancer` island (same directory) drives
- * the actual flow; @zudo-sg/demo-ui ships no zfb dependency, so mounting that
- * island is the consuming app's job.
+ * the actual flow; mounting that island is the consuming app's job.
  *
  * DOM hooks the paired enhancer relies on:
  *   root              [data-recruit-form]
@@ -50,53 +49,53 @@ export function RecruitEntryForm({ defaultCategory, class: cls }: RecruitEntryFo
           class="flex flex-col gap-y-vsp-md rounded-md border border-border bg-surface px-hsp-lg py-vsp-md"
           novalidate
         >
-          <Field id="recruit-category" label="Recruiting category" required>
+          <Field id="recruit-category" label="Recruiting category" required>{({ id, describedBy }) => (
             <Select
-              id="recruit-category"
+              id={id} aria-describedby={describedBy}
               name="category"
               options={CATEGORY_OPTIONS}
               value={defaultCategory}
               required
             />
-          </Field>
+          )}</Field>
 
           <div class="grid grid-cols-1 gap-hsp-md sm:grid-cols-2">
-            <Field id="recruit-name" label="Name" required>
-              <Input id="recruit-name" name="name" autocomplete="name" required />
-            </Field>
-            <Field id="recruit-kana" label="Name (phonetic)" required>
-              <Input id="recruit-kana" name="kana" required />
-            </Field>
+            <Field id="recruit-name" label="Name" required>{({ id, describedBy }) => (
+              <Input id={id} aria-describedby={describedBy} name="name" autocomplete="name" required />
+            )}</Field>
+            <Field id="recruit-kana" label="Name (phonetic)" required>{({ id, describedBy }) => (
+              <Input id={id} aria-describedby={describedBy} name="kana" required />
+            )}</Field>
           </div>
 
           <div class="grid grid-cols-1 gap-hsp-md sm:grid-cols-2">
-            <Field id="recruit-email" label="Email" required hint="Used for interview/next-step scheduling.">
-              <Input id="recruit-email" name="email" type="email" autocomplete="email" required />
-            </Field>
-            <Field id="recruit-phone" label="Phone number" required hint="A number you can be reached at during business hours.">
-              <Input id="recruit-phone" name="phone" type="tel" autocomplete="tel" required />
-            </Field>
+            <Field id="recruit-email" label="Email" required hint="Used for interview/next-step scheduling.">{({ id, describedBy }) => (
+              <Input id={id} aria-describedby={describedBy} name="email" type="email" autocomplete="email" required />
+            )}</Field>
+            <Field id="recruit-phone" label="Phone number" required hint="A number you can be reached at during business hours.">{({ id, describedBy }) => (
+              <Input id={id} aria-describedby={describedBy} name="phone" type="tel" autocomplete="tel" required />
+            )}</Field>
           </div>
 
           <Field
             id="recruit-affiliation"
             label="Affiliation (school / current employer)"
             hint="New graduates: school and department. Career: current employer."
-          >
-            <Input id="recruit-affiliation" name="affiliation" autocomplete="organization" />
-          </Field>
+          >{({ id, describedBy }) => (
+            <Input id={id} aria-describedby={describedBy} name="affiliation" autocomplete="organization" />
+          )}</Field>
 
-          <Field id="recruit-job" label="Desired role" required>
-            <Select id="recruit-job" name="job" options={JOB_OPTIONS} required />
-          </Field>
+          <Field id="recruit-job" label="Desired role" required>{({ id, describedBy }) => (
+            <Select id={id} aria-describedby={describedBy} name="job" options={JOB_OPTIONS} required />
+          )}</Field>
 
           <Field
             id="recruit-message"
             label="Self-introduction / questions"
             hint="Feel free to share your motivation, experience, or any questions."
-          >
-            <Textarea id="recruit-message" name="message" rows={6} />
-          </Field>
+          >{({ id, describedBy }) => (
+            <Textarea id={id} aria-describedby={describedBy} name="message" rows={6} />
+          )}</Field>
 
           <div class="flex flex-col gap-y-vsp-xs">
             <p class="text-micro leading-snug text-muted">
@@ -146,8 +145,8 @@ export function RecruitEntryForm({ defaultCategory, class: cls }: RecruitEntryFo
         <div
           class="flex flex-col gap-y-vsp-sm rounded-md border border-border border-l-4 px-hsp-lg py-vsp-md"
           style={{
-            borderLeftColor: "var(--color-accent)",
-            backgroundColor: "color-mix(in srgb, var(--color-accent) 8%, var(--color-bg))",
+            "border-left-color": "var(--color-accent)",
+            "background-color": "color-mix(in srgb, var(--color-accent) 8%, var(--color-bg))",
           }}
           role="status"
         >

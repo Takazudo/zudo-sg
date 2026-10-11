@@ -1,1 +1,12 @@
 /* Unlayered authored forms components (zc-*). */
+.zc-field-badge {
+  margin-inline-start: var(--spacing-hsp-2xs);
+}
+
+.zc-select-control {
+  padding-inline-end: var(--spacing-hsp-xl);
+}
+
+.zc-select-arrow {
+  inset-inline-end: var(--spacing-hsp-md);
+}

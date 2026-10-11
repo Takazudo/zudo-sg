@@ -1,5 +1,5 @@
 import type { StoryMeta, Story } from "../../stories/types";
-import { Input, type InputProps } from "./input";
+import { Input } from "./input";
 
 const meta: StoryMeta = {
   title: "Input",
@@ -13,7 +13,7 @@ const meta: StoryMeta = {
 
 export default meta;
 
-export const Playground: Story<InputProps> = {
+export const Playground: Story<{ type?: "text" | "email" | "tel"; disabled?: boolean; required?: boolean }> = {
   name: "Playground",
   source: `<Input name="name" />`,
   controls: [
