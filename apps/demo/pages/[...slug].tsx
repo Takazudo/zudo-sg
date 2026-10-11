@@ -10,8 +10,8 @@
  * empty array and the build simply emits no routes from this file — that's
  * expected, not an error.
  */
-import type { FunctionComponent } from "preact";
-import { Island, type IslandProps } from "@takazudo/zfb";
+import type { Component } from "@takazudo/zfb/zudo-react";
+import { Island } from "@takazudo/zfb";
 import DefaultLayout from "../layouts/default";
 import { Container } from "@zudo-sg/demo-ui/src/shared/container/container.tsx";
 import { mdxComponents } from "./_mdx-components";
@@ -30,7 +30,7 @@ import RecruitFormEnhancer from "@zudo-sg/demo-ui/src/forms/recruit-entry-form/r
 type ContentEntry = {
   slug: string;
   data: ContentData;
-  Content: FunctionComponent<{ components?: Record<string, unknown> }>;
+  Content: Component<{ components?: Record<string, unknown> }>;
 };
 
 export async function paths() {
@@ -76,10 +76,10 @@ export default function ContentPage({ entry, slug }: Props) {
       </Container>
 
       <Island when="visible" ssrFallback={null}>
-        {(<ContactFormEnhancer />) as unknown as IslandProps["children"]}
+        <ContactFormEnhancer />
       </Island>
       <Island when="visible" ssrFallback={null}>
-        {(<RecruitFormEnhancer />) as unknown as IslandProps["children"]}
+        <RecruitFormEnhancer />
       </Island>
     </DefaultLayout>
   );

@@ -99,3 +99,8 @@
   max-width: 100%;
   height: auto;
 }
+
+/* Keep the main content flexible while preserving its intrinsic basis. */
+.zc-demo-main { flex: 1 0 auto; }
+
+.zc-demo-skip-link { inset-inline-start: var(--spacing-hsp-md); }

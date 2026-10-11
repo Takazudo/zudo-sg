@@ -8,6 +8,7 @@
     "jsxImportSource": "@takazudo/zfb/zudo-react",
     "strict": true,
     "allowSyntheticDefaultImports": true,
+    "allowJs": true,
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": false,
     "resolveJsonModule": true,
