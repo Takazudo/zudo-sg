@@ -32,6 +32,6 @@
   "devDependencies": {
     "typescript": "^5.9.0",
     "@types/node": "^22.0.0",
-    "html-validate": "^10.0.0"
+    "html-validate": "^11.16.2"
   }
 }
