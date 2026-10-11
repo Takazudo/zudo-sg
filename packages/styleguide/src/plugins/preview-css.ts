@@ -7,7 +7,7 @@
 //   - setup:             resolves `previewStyles` through the host-path contract
 //                        so a bad path fails the boot, not the first request.
 //   - devMiddleware /    serve `${stripTrailingSlash(base)}${previewCssUrl}`
-//     previewMiddleware: (zfb matches the FULL URL, base included), compiling
+//     previewMiddleware: (zfb mounts unprefixed registrations under base), compiling
 //                        lazily and recompiling when any compile input's content
 //                        changed since the cached compile. zfb does not reuse a
 //                        dev registration for preview, hence both hooks.
@@ -180,7 +180,7 @@ const CSS_HEADERS = {
 } as const;
 
 export interface PreviewCssHandlerOptions {
-  /** Full URL (base included) — see `previewCssRoute`. */
+  /** Unprefixed middleware URL; zfb strips the mount base before dispatch. */
   route: string;
   cache: PreviewCssCache;
   logger?: Logger;
@@ -267,7 +267,8 @@ export function createPreviewCssPlugin({ compile = compilePreviewCss }: CreatePr
     register(path: string, handler: ZfbDevMiddlewareHandler): void;
   }) => {
     const resolved = resolvePreviewCssPluginOptions(ctx.projectRoot, ctx.options);
-    const route = previewCssRoute(ctx.config.base, resolved.previewCssUrl);
+    // zfb mounts the registration under config.base and passes unprefixed URLs.
+    const route = resolved.previewCssUrl;
     ctx.register(
       route,
       createPreviewCssHandler({ route, cache: cacheFor(resolved.previewStyles, ctx.logger, compilerOptions(ctx)), logger: ctx.logger }),

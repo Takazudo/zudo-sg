@@ -967,7 +967,6 @@ async function main() {
       islandsBundle.includes("ui/counter/counter.tsx") && /function Counter\(/u.test(islandsBundle),
       "/styleguide/assets/islands.js does not include Counter from ui/counter/counter.tsx (half b, virtual registry)",
     );
-    await runStreamed(process.execPath, [path.join(root, "scripts/verify-styleguide-install-browser.mjs"), "--dev-counter-origin", origin], root);
     assert(!/has no matching registry entry/u.test(log), "zfb dev logged an unregistered island marker");
     assert(!/no "use client" islands found/u.test(log), 'zfb dev logged no "use client" islands found');
 
@@ -982,6 +981,10 @@ async function main() {
     const firstPreviewCss = await firstPreviewResponse.text();
     assert(firstPreviewCss.includes(":root[data-sg-preview-doc]"), "dev preview CSS is missing scoped preview roots");
     assert(firstPreviewCss.includes(".bg-accent"), "dev preview CSS is missing the fixture's bg-accent candidate");
+    // Cold-lazy dev can expose the shared asset bundle before this injected
+    // document's first render has completed. Wait for the document, not just JS.
+    await waitForOk(`${origin}/styleguide/components/preview?slug=counter&variant=Basic`, 300_000, devServer, () => log);
+    await runStreamed(process.execPath, [path.join(root, "scripts/verify-styleguide-install-browser.mjs"), "--dev-counter-origin", origin], root);
 
     const componentsCssPath = path.join(hostDir, "src/styles/components.css");
     const componentsCssBefore = await readFile(componentsCssPath, "utf8");

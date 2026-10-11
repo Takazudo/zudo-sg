@@ -104,9 +104,9 @@ describe("registered URL respects base", () => {
 
   for (const [hook, base, expected] of [
     ["devMiddleware", "/", "/_zudo-sg/preview.css"],
-    ["devMiddleware", "/spike/", "/spike/_zudo-sg/preview.css"],
+    ["devMiddleware", "/spike/", "/_zudo-sg/preview.css"],
     ["previewMiddleware", "/", "/_zudo-sg/preview.css"],
-    ["previewMiddleware", "/spike/", "/spike/_zudo-sg/preview.css"],
+    ["previewMiddleware", "/spike/", "/_zudo-sg/preview.css"],
   ] as const) {
     it(`${hook} registers ${expected} for base ${base}`, async () => {
       const compile = fakeCompiler(() => ".served{}");
@@ -130,7 +130,7 @@ describe("registered URL respects base", () => {
         body: ".served{}",
       });
       if (base !== "/") {
-        expect(await handler({ method: "GET", url: "/_zudo-sg/preview.css", headers: {} })).toBeUndefined();
+        expect(await handler({ method: "GET", url: previewCssRoute(base, DEFAULT_PREVIEW_CSS_URL), headers: {} })).toBeUndefined();
       }
     });
   }
