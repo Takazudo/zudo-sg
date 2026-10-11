@@ -67,6 +67,19 @@ describe("installIframeReceiver", () => {
     expect(root().style.getPropertyValue("--color-accent")).toBe("");
   });
 
+  it.each([false, true])("supports zdtp mixed color-scheme/token apply and Reset batches (strict: %s)", (strict) => {
+    teardown();
+    const identity = { slug: "button", variant: "Default", sessionId: "s", documentId: "d", generation: 0 };
+    teardown = installIframeReceiver(window, strict ? { identity: () => identity } : {});
+    const fields = strict ? { identity, sequence: 0 } : {};
+    dispatchMessage({ source: BRIDGE_SOURCE, ...fields, type: "apply-css-vars", vars: [["--radius-md", "20rem"], ["color-scheme", "light dark"]] });
+    expect(root().style.getPropertyValue("--radius-md")).toBe("20rem");
+    expect(root().style.getPropertyValue("color-scheme")).toBe("light dark");
+    dispatchMessage({ source: BRIDGE_SOURCE, ...fields, ...(strict ? { sequence: 1 } : {}), type: "clear-css-vars", names: ["color-scheme", "--radius-md"] });
+    expect(root().style.getPropertyValue("--radius-md")).toBe("");
+    expect(root().style.getPropertyValue("color-scheme")).toBe("");
+  });
+
   it("ignores cross-origin, foreign and malformed messages", () => {
     dispatchMessage(
       { source: BRIDGE_SOURCE, type: "apply-css-vars", vars: [["--x", "1"]] },

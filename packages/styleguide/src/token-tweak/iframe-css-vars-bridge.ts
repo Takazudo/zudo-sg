@@ -58,7 +58,7 @@ export function isBridgeMessage(value: unknown): value is BridgeMessage {
     case "apply-css-vars":
       return Array.isArray(v.vars) && v.vars.every(isCssVarPair);
     case "clear-css-vars":
-      return Array.isArray(v.names) && v.names.every(isCssVarName);
+      return Array.isArray(v.names) && v.names.every(isBridgeCssProperty);
     case "ready":
       return true;
     default:
@@ -70,13 +70,15 @@ function isCssVarPair(value: unknown): value is CssVarPair {
   return (
     Array.isArray(value) &&
     value.length === 2 &&
-    isCssVarName(value[0]) &&
+    isBridgeCssProperty(value[0]) &&
     typeof value[1] === "string"
   );
 }
 
-function isCssVarName(value: unknown): value is string {
-  return typeof value === "string" && /^--(?:[A-Za-z0-9_-]|[^\u0000-\u007f])+$/u.test(value);
+function isBridgeCssProperty(value: unknown): value is string {
+  // zdtp's sink owns color-scheme alongside custom properties so light-dark()
+  // values resolve correctly. Its Reset clears these in one mixed batch.
+  return value === "color-scheme" || (typeof value === "string" && /^--(?:[A-Za-z0-9_-]|[^\u0000-\u007f])+$/u.test(value));
 }
 
 /** Send `apply-css-vars` to the iframe. No-op when the iframe has not loaded. */
