@@ -1,0 +1,10 @@
+# Separate deployment-only workspace: never install the application workspace.
+packages:
+  - "."
+allowBuilds:
+  esbuild: true
+  workerd: true
+  # Miniflare image bindings use Sharp and its platform-specific native binaries.
+  sharp: true
+  # Optional macOS watcher; deployment does not use filesystem watching.
+  fsevents: false

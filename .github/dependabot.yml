@@ -9,6 +9,7 @@ updates:
       - "/"
       - "/packages/*"
       - "/apps/*"
+      - "/tools/deploy"
     schedule:
       interval: "weekly"
     ignore:
