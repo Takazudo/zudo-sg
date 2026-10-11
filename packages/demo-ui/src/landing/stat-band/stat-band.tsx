@@ -19,7 +19,7 @@ export function StatBand({ stats, class: cls }: StatBandProps) {
           <div key={stat.label} class="flex flex-col gap-y-vsp-2xs bg-bg px-hsp-lg py-vsp-md">
             <dd class="order-1 text-heading font-bold leading-tight text-fg">
               {stat.value}
-              {stat.unit && <span class="ms-hsp-2xs text-small font-semibold text-muted">{stat.unit}</span>}
+              {stat.unit && <span class="zc-metric-unit-offset text-small font-semibold text-muted">{stat.unit}</span>}
             </dd>
             <dt class="order-2 text-caption text-muted">{stat.label}</dt>
           </div>
