@@ -1,0 +1,8 @@
+@import "../node_modules/monaco-editor/esm/vs/base/browser/ui/codicons/codicon/codicon.css";
+:root { --fixture-accent: rgb(20, 80, 150); font-family: system-ui; color-scheme: light; }
+body { margin: 0; background: white; color: #18202a; }
+main { padding: 20px; }
+h1 { color: var(--fixture-accent); }
+button { margin: 8px; padding: 8px; }
+[data-fixture-portal] [role=dialog] { position: fixed; inset: 40px; padding: 20px; background: #eef; border: 2px solid blue; z-index: 100; }
+[data-theme=dark] body { background: #18202a; color: white; }
