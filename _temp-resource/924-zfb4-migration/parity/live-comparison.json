@@ -1,0 +1,184 @@
+[
+  {
+    "pair": "demo/business-line-vacuum-1280-light",
+    "styleSelectorsChanged": [],
+    "pixelChangePercent": 0.0,
+    "baselineSize": [
+      1280,
+      900
+    ],
+    "liveSize": [
+      1280,
+      900
+    ]
+  },
+  {
+    "pair": "demo/contact-form-1280-light",
+    "styleSelectorsChanged": [],
+    "pixelChangePercent": 0.0,
+    "baselineSize": [
+      1280,
+      2334
+    ],
+    "liveSize": [
+      1280,
+      2334
+    ]
+  },
+  {
+    "pair": "demo/home-1280-light",
+    "styleSelectorsChanged": [],
+    "pixelChangePercent": 0.0,
+    "baselineSize": [
+      1280,
+      900
+    ],
+    "liveSize": [
+      1280,
+      900
+    ]
+  },
+  {
+    "pair": "demo/mobile-nav-open-1280-light",
+    "styleSelectorsChanged": [],
+    "pixelChangePercent": 0.0,
+    "baselineSize": [
+      1280,
+      900
+    ],
+    "liveSize": [
+      1280,
+      900
+    ]
+  },
+  {
+    "pair": "demo/search-product-1280-light",
+    "styleSelectorsChanged": [],
+    "pixelChangePercent": 0.0,
+    "baselineSize": [
+      1280,
+      900
+    ],
+    "liveSize": [
+      1280,
+      900
+    ]
+  },
+  {
+    "pair": "doc/docs-getting-started-1280-light",
+    "styleSelectorsChanged": [],
+    "pixelChangePercent": 0.0,
+    "baselineSize": [
+      1280,
+      900
+    ],
+    "liveSize": [
+      1280,
+      900
+    ]
+  },
+  {
+    "pair": "doc/home-1280-light",
+    "styleSelectorsChanged": [],
+    "pixelChangePercent": 0.0,
+    "baselineSize": [
+      1280,
+      1136
+    ],
+    "liveSize": [
+      1280,
+      1136
+    ]
+  },
+  {
+    "pair": "root/components-1280-light",
+    "styleSelectorsChanged": [],
+    "pixelChangePercent": 0.0,
+    "baselineSize": [
+      1280,
+      900
+    ],
+    "liveSize": [
+      1280,
+      900
+    ]
+  },
+  {
+    "pair": "root/components-cta-button-1280-light",
+    "styleSelectorsChanged": [],
+    "pixelChangePercent": 0.0,
+    "baselineSize": [
+      1280,
+      1107
+    ],
+    "liveSize": [
+      1280,
+      1107
+    ]
+  },
+  {
+    "pair": "root/docs-architecture-1280-light",
+    "styleSelectorsChanged": [],
+    "pixelChangePercent": 0.0,
+    "baselineSize": [
+      1280,
+      900
+    ],
+    "liveSize": [
+      1280,
+      900
+    ]
+  },
+  {
+    "pair": "root/docs-overview-1280-light",
+    "styleSelectorsChanged": [],
+    "pixelChangePercent": 0.0,
+    "baselineSize": [
+      1280,
+      1035
+    ],
+    "liveSize": [
+      1280,
+      1035
+    ]
+  },
+  {
+    "pair": "root/home-1280-light",
+    "styleSelectorsChanged": [],
+    "pixelChangePercent": 0.0,
+    "baselineSize": [
+      1280,
+      1035
+    ],
+    "liveSize": [
+      1280,
+      1035
+    ]
+  },
+  {
+    "pair": "root/preview-cta-button-playground-1280-light",
+    "styleSelectorsChanged": [],
+    "pixelChangePercent": 0.0,
+    "baselineSize": [
+      1280,
+      900
+    ],
+    "liveSize": [
+      1280,
+      900
+    ]
+  },
+  {
+    "pair": "root/tokens-1280-light",
+    "styleSelectorsChanged": [],
+    "pixelChangePercent": 0.0,
+    "baselineSize": [
+      1280,
+      900
+    ],
+    "liveSize": [
+      1280,
+      900
+    ]
+  }
+]

@@ -1,0 +1,140 @@
+{
+  "baselineMinifiedText": "Design tokens give an interface a shared rhythm across pages and themes. This specimen keeps the declared values visible while you compare scale, color, and shape (102 entries). デザイントークンは、画面のリズムと読みやすさを支えます。 The light and dark views are isolated from panel edits, so saved tweaks never change this reference. 数字の 0、1、2、3、4 も宣言された値の一部として確認できます。",
+  "unchangedDeclaredText": "Design tokens give an interface a shared rhythm across pages and themes. This specimen keeps the declared values visible while you compare scale, color, and shape (102 entries). デザイントークンは、画面のリズムと読みやすさを支えます。\n\nThe light and dark views are isolated from panel edits, so saved tweaks never change this reference. 数字の 0、1、2、3、4 も宣言された値の一部として確認できます。",
+  "sameWhenWhitespaceCollapsed": true,
+  "cardHeightDeltas": [
+    {
+      "token": "--text-xs",
+      "before": 99.5625,
+      "after": 137.9375,
+      "delta": 38.375
+    },
+    {
+      "token": "--text-sm",
+      "before": 131.5625,
+      "after": 153.953125,
+      "delta": 22.390625
+    },
+    {
+      "token": "--text-base",
+      "before": 144.375,
+      "after": 195.5625,
+      "delta": 51.1875
+    },
+    {
+      "token": "--text-lg",
+      "before": 202,
+      "after": 234,
+      "delta": 32
+    },
+    {
+      "token": "--text-xl",
+      "before": 355.578125,
+      "after": 400.375,
+      "delta": 44.796875
+    },
+    {
+      "token": "--text-2xl",
+      "before": 682,
+      "after": 746,
+      "delta": 64
+    },
+    {
+      "token": "--text-xs--line-height",
+      "before": 138,
+      "after": 186,
+      "delta": 48
+    },
+    {
+      "token": "--text-sm--line-height",
+      "before": 138,
+      "after": 186,
+      "delta": 48
+    },
+    {
+      "token": "--text-base--line-height",
+      "before": 154,
+      "after": 210,
+      "delta": 56
+    },
+    {
+      "token": "--text-lg--line-height",
+      "before": 138,
+      "after": 186,
+      "delta": 48
+    },
+    {
+      "token": "--text-xl--line-height",
+      "before": 122,
+      "after": 162,
+      "delta": 40
+    },
+    {
+      "token": "--text-2xl--line-height",
+      "before": 112.375,
+      "after": 147.5625,
+      "delta": 35.1875
+    },
+    {
+      "token": "--font-weight-normal",
+      "before": 157.1875,
+      "after": 214.78125,
+      "delta": 57.59375
+    },
+    {
+      "token": "--font-weight-medium",
+      "before": 157.1875,
+      "after": 214.78125,
+      "delta": 57.59375
+    },
+    {
+      "token": "--font-weight-semibold",
+      "before": 185.984375,
+      "after": 214.78125,
+      "delta": 28.796875
+    },
+    {
+      "token": "--font-weight-bold",
+      "before": 185.984375,
+      "after": 214.78125,
+      "delta": 28.796875
+    },
+    {
+      "token": "--leading-tight",
+      "before": 122,
+      "after": 162,
+      "delta": 40
+    },
+    {
+      "token": "--leading-snug",
+      "before": 131.5625,
+      "after": 176.34375,
+      "delta": 44.78125
+    },
+    {
+      "token": "--leading-normal",
+      "before": 138,
+      "after": 186,
+      "delta": 48
+    },
+    {
+      "token": "--leading-relaxed",
+      "before": 154,
+      "after": 210,
+      "delta": 56
+    },
+    {
+      "token": "--font-sans",
+      "before": 157.1875,
+      "after": 214.78125,
+      "delta": 57.59375
+    },
+    {
+      "token": "--font-mono",
+      "before": 185.984375,
+      "after": 214.78125,
+      "delta": 28.796875
+    }
+  ],
+  "sumCardHeightDeltas": 975.890625
+}

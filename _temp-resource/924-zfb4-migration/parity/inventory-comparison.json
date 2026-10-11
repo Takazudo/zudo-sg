@@ -1,0 +1,99 @@
+{
+  "root": {
+    "baseline": [
+      "CatalogFilter",
+      "ClientRouterBootstrap",
+      "CodePanel",
+      "ConfiguredPreviewApp",
+      "ContactFormDemo",
+      "DesktopSidebarToggle",
+      "DesktopTocToggle",
+      "DetailWorkbench",
+      "ImageEnlarge",
+      "MermaidEnlarge",
+      "MobileToc",
+      "PreviewTokenPanelBootstrap",
+      "PreviewTokensButton",
+      "SidebarToggle",
+      "SidebarTree",
+      "SiteTreeNav",
+      "ThemeToggle",
+      "Toc"
+    ],
+    "actual": [
+      "CatalogFilter",
+      "ClientRouterBootstrap",
+      "CodePanel",
+      "ConfiguredPreviewApp",
+      "ContactFormDemo",
+      "DesktopSidebarToggle",
+      "DesktopTocToggle",
+      "DetailWorkbench",
+      "ImageEnlarge",
+      "MermaidEnlarge",
+      "MobileToc",
+      "PreviewTokenPanelBootstrap",
+      "PreviewTokensButton",
+      "SidebarToggle",
+      "SidebarTree",
+      "SiteTreeNav",
+      "ThemeToggle",
+      "Toc",
+      "TokenDashboardMount"
+    ],
+    "missing": [],
+    "added": [
+      "TokenDashboardMount"
+    ]
+  },
+  "demo": {
+    "baseline": [
+      "ClientRouterBootstrap",
+      "ContactFormEnhancer",
+      "ContextSwitcherEnhancer",
+      "MobileNavEnhancer",
+      "NavEnhancer",
+      "RecruitFormEnhancer",
+      "SearchResultsEnhancer",
+      "SearchToggleEnhancer",
+      "ThemeControlIsland"
+    ],
+    "actual": [],
+    "missing": [
+      "ClientRouterBootstrap",
+      "ContactFormEnhancer",
+      "ContextSwitcherEnhancer",
+      "MobileNavEnhancer",
+      "NavEnhancer",
+      "RecruitFormEnhancer",
+      "SearchResultsEnhancer",
+      "SearchToggleEnhancer",
+      "ThemeControlIsland"
+    ],
+    "added": []
+  },
+  "doc": {
+    "baseline": [
+      "ImageEnlarge",
+      "MermaidEnlarge",
+      "MobileToc",
+      "SidebarToggle",
+      "SidebarTree",
+      "SiteTreeNav",
+      "ThemeToggle",
+      "Toc"
+    ],
+    "actual": [
+      "ImageEnlarge",
+      "MermaidEnlarge",
+      "MobileToc",
+      "SidebarToggle",
+      "SidebarTree",
+      "SiteTreeNav",
+      "ThemeToggle",
+      "Toc"
+    ],
+    "missing": [],
+    "added": []
+  }
+}

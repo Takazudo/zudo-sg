@@ -173,11 +173,13 @@ export default function DefaultLayout({
         {/* a11y-enhancer islands — each layers ARIA sync / focus handling
             on top of an SSR baseline (CSS `:hover`/`:focus-within`/checkbox
             hack / `<details>`) that already works without JS. ssrFallback={null}
-            is required: evaluating these islands during SSR throws. */}
-        <Island when="visible" ssrFallback={null}>
+            is required: evaluating these islands during SSR throws. Render-null
+            placeholders can sit below the fold, so activate on load rather
+            than waiting for their placeholder to enter the viewport. */}
+        <Island when="load" ssrFallback={null}>
           <NavEnhancer />
         </Island>
-        <Island when="visible" ssrFallback={null}>
+        <Island when="load" ssrFallback={null}>
           <MobileNavEnhancer />
         </Island>
         {/* Browse is visible in the header immediately. Its render-null enhancer
@@ -185,7 +187,7 @@ export default function DefaultLayout({
         <Island when="load" ssrFallback={null}>
           <ContextSwitcherEnhancer />
         </Island>
-        <Island when="visible" ssrFallback={null}>
+        <Island when="load" ssrFallback={null}>
           <SearchToggleEnhancer />
         </Island>
 

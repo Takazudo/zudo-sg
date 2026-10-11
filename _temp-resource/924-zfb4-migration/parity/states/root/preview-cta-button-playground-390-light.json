@@ -1,0 +1,28 @@
+{
+  "site": "root",
+  "state": "preview-cta-button-playground",
+  "path": "/components/preview?slug=cta-button&variant=Playground",
+  "url": "http://localhost:4700/components/preview/?slug=cta-button&variant=Playground",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "theme": "light",
+  "themeMethod": "document-attribute",
+  "screenshot": "full-page",
+  "actions": {
+    "preview-ready": "ready"
+  },
+  "styles": {
+    "h1": null,
+    "header": null,
+    "#desktop-sidebar": null,
+    ".zd-doc-content-band": null,
+    "[data-sg-card]": null,
+    ".sg-workbench-toolbar": null,
+    "[data-nav-item]": null,
+    "#zd-page-loading-overlay": null,
+    "main button, main a": null,
+    "first-main-control": null
+  }
+}

@@ -46,7 +46,7 @@ export default function SearchPage() {
       {/* @zudo-sg/demo-ui's SearchResults deliberately does not mount its own
           enhancer (see that component's module doc) — this is the consumer
           wiring it, exactly per its documented example. */}
-      <Island when="visible" ssrFallback={null}>
+      <Island when="load" ssrFallback={null}>
         <SearchResultsEnhancer />
       </Island>
     </DefaultLayout>
