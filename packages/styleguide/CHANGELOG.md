@@ -12,6 +12,9 @@ The format is based on Keep a Changelog, and release notes are generated from th
   JSON props, ordered messages, full-reset generations and visible error payloads.
 - Optional descriptor source data and canonical external-catalog manifest validation,
   retaining legacy protocol v1 and existing descriptor thumbnail behavior.
+- An opt-in external preview controller and strict workbench configuration, with
+  retained controls/theme/token/live-CSS replay, separate full fixture reset,
+  visible errors, async cleanup and a committed fixture stability barrier.
 
 ## [0.5.0] - 2026-10-12
 

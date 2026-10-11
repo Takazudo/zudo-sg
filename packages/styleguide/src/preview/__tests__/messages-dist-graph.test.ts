@@ -66,7 +66,7 @@ describe("dist/preview/messages.js import graph (#880)", () => {
   });
 });
 
-describe.each(["preview/external-runtime", "registry/external-catalog"])("public %s contract", (subpath) => {
+describe.each(["preview/external-runtime", "preview/runtime-controller", "registry/external-catalog"])("public %s contract", (subpath) => {
   const entry = resolve(PKG_ROOT, `dist/${subpath}.js`);
   it("ships declarations and a framework-free compiled graph", () => {
     expect(existsSync(resolve(PKG_ROOT, `dist/${subpath}.d.ts`))).toBe(true);
@@ -76,6 +76,6 @@ describe.each(["preview/external-runtime", "registry/external-catalog"])("public
   it("imports without a browser, renderer, or fixture module", async () => {
     expect(typeof globalThis.window).toBe("undefined");
     const contract = await import(entry);
-    expect(typeof (contract.isSerializableProps ?? contract.validateExternalCatalogManifest)).toBe("function");
+    expect(typeof (contract.isSerializableProps ?? contract.validateExternalCatalogManifest ?? contract.createExternalPreviewRuntime)).toBe("function");
   });
 });

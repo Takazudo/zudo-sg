@@ -614,7 +614,14 @@ never falls back to identity-less messages. `sg:ready` means committed mount;
 an initialization failure reports an identity-bound error, not successful
 readiness. The public package README's “External runtime contracts” section
 specifies the handshake, ownership, separate token/direct-DOM CSS channels,
-cleanup and reset semantics; #958 owns executable controller/workbench wiring.
+cleanup and reset semantics. #958 implements `preview/runtime`'s
+`createExternalPreviewRuntime`, configured with `externalPreview.runtime:
+"external-v1"` (or the standalone workbench/frame `runtime` prop). Controls
+retain their current snapshot at the frame boundary. Reload establishes a new
+host challenge, full reset advances fixture generation, and async lifecycle
+work is serialized/cancelled before resource disposal. The controller exposes
+`getSnapshot` and `whenStable` for host-owned capture adapters; the stability
+barrier never substitutes listener initialization for a committed fixture.
 
 `registry/external-catalog` defines a canonical tuple key shared by descriptor
 source, external loader metadata and capture disposition. Optional

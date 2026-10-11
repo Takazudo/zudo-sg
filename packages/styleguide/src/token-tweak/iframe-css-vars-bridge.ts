@@ -15,24 +15,31 @@
 //   parent → iframe : apply-css-vars / clear-css-vars (see preview-iframe-registry.ts)
 //   iframe → parent : ready                            (`onIframeReady` below)
 
+import { isExternalRuntimeIdentity, isNewExternalRuntimeSequence, isSerializableProps, matchesExternalRuntimeIdentity, type ExternalRuntimeIdentity } from "../preview/external-runtime.js";
+
+interface StrictBridgeFields {
+  identity?: ExternalRuntimeIdentity;
+  sequence?: number;
+}
+
 /** Envelope `source` tag. Part of the wire contract (e2e/preview-token-panel.spec.ts mirrors it). */
 export const BRIDGE_SOURCE = "zudo-sg-token-tweak-bridge" as const;
 
 export type CssVarPair = readonly [name: string, value: string];
 
-export interface ApplyCssVarsMessage {
+export interface ApplyCssVarsMessage extends StrictBridgeFields {
   source: typeof BRIDGE_SOURCE;
   type: "apply-css-vars";
   vars: ReadonlyArray<CssVarPair>;
 }
 
-export interface ClearCssVarsMessage {
+export interface ClearCssVarsMessage extends StrictBridgeFields {
   source: typeof BRIDGE_SOURCE;
   type: "clear-css-vars";
   names: ReadonlyArray<string>;
 }
 
-export interface ReadyMessage {
+export interface ReadyMessage extends StrictBridgeFields {
   source: typeof BRIDGE_SOURCE;
   type: "ready";
 }
@@ -41,14 +48,17 @@ export type BridgeMessage = ApplyCssVarsMessage | ClearCssVarsMessage | ReadyMes
 
 /** Type guard. Accepts any postMessage payload and confirms it is a bridge envelope. */
 export function isBridgeMessage(value: unknown): value is BridgeMessage {
-  if (!value || typeof value !== "object") return false;
+  if (!isSerializableProps(value)) return false;
   const v = value as { source?: unknown; type?: unknown; vars?: unknown; names?: unknown };
   if (v.source !== BRIDGE_SOURCE) return false;
+  const strict = value as StrictBridgeFields;
+  if ((strict.identity !== undefined || strict.sequence !== undefined) &&
+    (!isExternalRuntimeIdentity(strict.identity) || !isNewExternalRuntimeSequence(strict.sequence, -1))) return false;
   switch (v.type) {
     case "apply-css-vars":
       return Array.isArray(v.vars) && v.vars.every(isCssVarPair);
     case "clear-css-vars":
-      return Array.isArray(v.names) && v.names.every((name) => typeof name === "string");
+      return Array.isArray(v.names) && v.names.every(isCssVarName);
     case "ready":
       return true;
     default:
@@ -60,19 +70,24 @@ function isCssVarPair(value: unknown): value is CssVarPair {
   return (
     Array.isArray(value) &&
     value.length === 2 &&
-    typeof value[0] === "string" &&
+    isCssVarName(value[0]) &&
     typeof value[1] === "string"
   );
+}
+
+function isCssVarName(value: unknown): value is string {
+  return typeof value === "string" && /^--(?:[A-Za-z0-9_-]|[^\u0000-\u007f])+$/u.test(value);
 }
 
 /** Send `apply-css-vars` to the iframe. No-op when the iframe has not loaded. */
 export function sendApplyCssVars(
   iframe: HTMLIFrameElement | null,
   vars: ReadonlyArray<CssVarPair>,
+  strict?: Required<StrictBridgeFields>,
 ): void {
   const win = iframe?.contentWindow;
-  if (!win) return;
-  const message: ApplyCssVarsMessage = { source: BRIDGE_SOURCE, type: "apply-css-vars", vars };
+  if (!win || window.location.origin === "null") return;
+  const message: ApplyCssVarsMessage = { source: BRIDGE_SOURCE, type: "apply-css-vars", vars, ...strict };
   win.postMessage(message, window.location.origin);
 }
 
@@ -80,10 +95,11 @@ export function sendApplyCssVars(
 export function sendClearCssVars(
   iframe: HTMLIFrameElement | null,
   names: ReadonlyArray<string>,
+  strict?: Required<StrictBridgeFields>,
 ): void {
   const win = iframe?.contentWindow;
-  if (!win) return;
-  const message: ClearCssVarsMessage = { source: BRIDGE_SOURCE, type: "clear-css-vars", names };
+  if (!win || window.location.origin === "null") return;
+  const message: ClearCssVarsMessage = { source: BRIDGE_SOURCE, type: "clear-css-vars", names, ...strict };
   win.postMessage(message, window.location.origin);
 }
 
@@ -92,29 +108,46 @@ export function sendClearCssVars(
  * any incoming CSS-var batches onto `documentElement.style`. Returns a
  * teardown function. Intended to be called once at iframe boot.
  */
-export function installIframeReceiver(target: Window = window): () => void {
+export function installIframeReceiver(target: Window = window, options: { identity?: () => ExternalRuntimeIdentity | null } = {}): () => void {
+  let lastSequence = -1;
+  let acceptedIdentity = "";
+  const applied = new Set<string>();
   function handler(event: MessageEvent): void {
-    if (event.origin !== target.location.origin) return;
+    if (target.location.origin === "null" || event.origin !== target.location.origin || event.source !== target.parent) return;
     const data = event.data;
     if (!isBridgeMessage(data)) return;
+    if (data.type === "ready") return;
+    if (options.identity) {
+      const identity = options.identity();
+      if (!identity || !data.identity || !matchesExternalRuntimeIdentity(data.identity, identity)) return;
+      const key = JSON.stringify(identity);
+      const previous = key === acceptedIdentity ? lastSequence : -1;
+      if (!isNewExternalRuntimeSequence(data.sequence, previous)) return;
+      acceptedIdentity = key;
+      lastSequence = data.sequence;
+    }
     if (data.type === "apply-css-vars") {
       const root = target.document.documentElement;
-      for (const [name, value] of data.vars) root.style.setProperty(name, value);
+      for (const [name, value] of data.vars) { root.style.setProperty(name, value); applied.add(name); }
       return;
     }
     if (data.type === "clear-css-vars") {
       const root = target.document.documentElement;
-      for (const name of data.names) root.style.removeProperty(name);
+      for (const name of data.names) { root.style.removeProperty(name); applied.delete(name); }
       return;
     }
   }
   target.addEventListener("message", handler);
   const parent = target.parent;
-  if (parent && parent !== target) {
+  if (!options.identity && parent && parent !== target && target.location.origin !== "null") {
     const ready: ReadyMessage = { source: BRIDGE_SOURCE, type: "ready" };
     parent.postMessage(ready, target.location.origin);
   }
-  return () => target.removeEventListener("message", handler);
+  return () => {
+    target.removeEventListener("message", handler);
+    for (const name of applied) target.document.documentElement.style.removeProperty(name);
+    applied.clear();
+  };
 }
 
 /**
@@ -123,8 +156,8 @@ export function installIframeReceiver(target: Window = window): () => void {
  */
 export function onIframeReady(expectedSource: Window | null, callback: () => void): () => void {
   function handler(event: MessageEvent): void {
-    if (event.origin !== window.location.origin) return;
-    if (expectedSource && event.source !== expectedSource) return;
+    if (window.location.origin === "null" || event.origin !== window.location.origin) return;
+    if (!expectedSource || event.source !== expectedSource) return;
     if (!isBridgeMessage(event.data)) return;
     if (event.data.type === "ready") callback();
   }

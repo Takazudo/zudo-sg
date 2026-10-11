@@ -139,6 +139,27 @@ describe("clearPreviewVars", () => {
 });
 
 describe("replay on onIframeReady", () => {
+  it("gates strict replay until accepted identity and replays clears made during reset", () => {
+    const frame = makeIframe("strict");
+    const identity = { slug: "button", variant: "Default", sessionId: "s", documentId: "d", generation: 0 };
+    let ready = false;
+    registry.registerPreviewIframe(frame, { identity: () => ready ? identity : null });
+    registry.applyPreviewVars([["--active", "red"]]);
+    expect(applyCalls).toHaveLength(0);
+    ready = true;
+    registry.replayPreviewVars(frame);
+    expect(applyCalls).toEqual([{ iframe: frame, vars: [["--active", "red"]] }]);
+    ready = false;
+    registry.clearPreviewVars(["--active"]);
+    expect(clearCalls).toHaveLength(0);
+    identity.generation++;
+    ready = true;
+    registry.replayPreviewVars(frame);
+    expect(clearCalls).toEqual([{ iframe: frame, names: ["--active"] }]);
+    registry.unregisterPreviewIframe(frame);
+    registry.applyPreviewVars([["--active", "blue"]]);
+    expect(applyCalls).toHaveLength(1);
+  });
   it("replays current overrides to an iframe registered AFTER applyPreviewVars", () => {
     registry.applyPreviewVars([
       ["--zd-space", "8px"],

@@ -300,8 +300,36 @@ reinterpret legacy messages. `ExternalRuntimeMode` is `"legacy" |
 message: a strict frame must never fall back to an identity-less legacy ready,
 including during startup. `hasExternalRuntimeMarker()` also lets a legacy
 receiver identify and reject malformed extension traffic instead of treating
-it as legacy. Built-in configuration/controller wiring follows this contract
-in #958; this contract addition alone does not enable strict workbench mode.
+it as legacy. Configure `externalPreview: { url: "/frame/", runtime:
+"external-v1" }` to select strict mode in the injected detail route. Direct
+`VariantFrame` and `DetailWorkbench` users pass `runtime="external-v1"`.
+Omitting it preserves legacy module/vanilla behavior.
+
+Import `createExternalPreviewRuntime` from `@takazudo/zudo-sg/preview/runtime`
+inside your external document's entrypoint. Pass `mount` (the renderer-owned
+`ExternalFixtureMount`), optional `initialProps`, and `fullReset: true` when
+that fixture supports disposal/remount. Optional `target`, `identity`,
+`onTheme` and `measureHeight` customize the document, query identity, host
+theme side effects and height measurement. The function installs the strict
+receiver and token receiver, mounts the fixture, and returns a controller;
+importing the module alone installs nothing.
+
+`controller.getSnapshot()` returns copied `{identity, ready, error}` state.
+`controller.whenStable()` waits for the committed mount, queued prop updates
+and optional fixture stability barrier, then returns the actual runtime
+identity. It rejects errors, disposal/reset or props changes during the wait;
+capture adapters can retry a changed fixture explicitly. Standalone top-level
+capture documents receive a local session identity and emit no parent
+messages. A host may expose its controller to its own capture adapter; the
+engine installs no global capture object. `reportError`, `reportHeight` and
+idempotent asynchronous `dispose` complete the controller API.
+Explicit `dispose()` rejects if fixture cleanup fails. Cleanup failures also
+reach the optional `onCleanupError` callback (default: `console.error`),
+including late cancelled mounts and page unload; they never replace a newer
+fixture's error state. Page unload consumes the already reported rejection.
+Returning to a disposed document from the browser back/forward cache reloads
+that document once to create fresh resources and identity. Explicit disposal
+removes this restoration listener as well.
 
 ### Identity, readiness and ordering
 

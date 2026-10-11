@@ -124,6 +124,7 @@ export default function ComponentsSlugRoute(props: SlugProps & { params: { slug:
       <DetailWorkbench
         slug={slug}
         previewUrl={previewUrl}
+        runtime={ctx.externalPreviewRuntime ?? "legacy"}
         variants={entry.variants.map((v) => ({
           exportName: v.exportName,
           name: v.name,

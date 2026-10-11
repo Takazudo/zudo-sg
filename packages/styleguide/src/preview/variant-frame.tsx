@@ -26,6 +26,8 @@ import { onAfterNavigate } from "@takazudo/zudo-doc/transitions";
 import type { StoryControl } from "../stories/index.js";
 import {
   MSG_REQUEST_READY,
+  MSG_READY,
+  MSG_HEIGHT,
   MSG_SET_THEME,
   MSG_UPDATE_PROPS,
   PROTOCOL_VERSION,
@@ -39,7 +41,15 @@ import { PREVIEW_ROUTE_PATH } from "./route.js";
 import {
   registerPreviewIframe,
   unregisterPreviewIframe,
+  replayPreviewVars,
 } from "../token-tweak/preview-iframe-registry.js";
+import { registerCssPreview, replayCssToPreview } from "../code-panel/css-injection.js";
+import {
+  EXTERNAL_RUNTIME_VERSION, MSG_RESET_FIXTURE, MSG_RUNTIME_ERROR,
+  hasExternalRuntimeMarker, isExternalRuntimeMessageEvent, isNewExternalRuntimeSequence,
+  isSerializableProps, matchesExternalRuntimeIdentity,
+  type ExternalRuntimeIdentity, type ExternalRuntimeMode, type ExternalParentMessage,
+} from "./external-runtime.js";
 
 // Presets and pure URL helpers stay outside this client-only module so its
 // runtime exports are island components only.
@@ -90,6 +100,8 @@ export interface VariantFrameProps {
    * `routes.componentsPreview`). Defaults to the unprefixed PREVIEW_ROUTE_PATH.
    */
   previewUrl?: string;
+  /** Explicit strict mode; never negotiate down to legacy identity-less traffic. */
+  runtime?: ExternalRuntimeMode;
   /**
    * Iframe `sandbox` tokens. Defaults to DEFAULT_FRAME_SANDBOX. Dropping
    * `allow-same-origin` gives the frame an opaque origin, which the protocol's
@@ -120,6 +132,7 @@ function VariantFrame(props: VariantFrameProps): Description {
     themeMode,
     viewportId,
     previewUrl = PREVIEW_ROUTE_PATH,
+    runtime = "legacy",
     frameSandbox = DEFAULT_FRAME_SANDBOX,
     frameAllow,
     previewParams,
@@ -128,6 +141,16 @@ function VariantFrame(props: VariantFrameProps): Description {
   const scope = getScope();
   const iframeRef = { current: null as HTMLIFrameElement | null };
   let ready = false;
+  let readyDocument: Document | null = null;
+  const values = signal(seedState(read(controls) ?? []));
+  const canResetFixture = signal(false);
+  const previewError = signal<string | null>(null);
+  let sessionId = "";
+  let identity: ExternalRuntimeIdentity | null = null;
+  let expectedGeneration = 0;
+  let incoming = -1;
+  let outgoing = -1;
+  let lastProps = "";
   const height = signal(INITIAL_FRAME_HEIGHT);
   const src = computed(() =>
     buildPreviewSrc(previewUrl, slug, read(exportName), previewParams),
@@ -137,21 +160,81 @@ function VariantFrame(props: VariantFrameProps): Description {
     const next = src.value;
     if (next === committedSrc) return;
     committedSrc = next;
-    ready = false;
-    height.value = INITIAL_FRAME_HEIGHT;
+    values.value = seedState(read(controls) ?? []);
+    resetDocument();
+    requestReady();
   });
 
   // Same-origin frame: target our own origin, never "*", so a frame that
   // navigated elsewhere cannot receive props or theme (#880). An opaque
   // "null" origin is not a valid target; skip rather than throw.
-  function post(message: ParentToPreviewMessage): void {
+  function post(message: ParentToPreviewMessage | ExternalParentMessage): void {
     const origin = window.location.origin;
     if (origin === "null") return;
     iframeRef.current?.contentWindow?.postMessage(message, origin);
   }
 
   function sendTheme(theme: PreviewTheme): void {
-    post({ type: MSG_SET_THEME, v: PROTOCOL_VERSION, theme });
+    if (runtime === "external-v1") {
+      if (identity) post({ type: MSG_SET_THEME, v: PROTOCOL_VERSION, runtimeVersion: EXTERNAL_RUNTIME_VERSION, ...identity, sequence: ++outgoing, theme });
+    } else post({ type: MSG_SET_THEME, v: PROTOCOL_VERSION, theme });
+  }
+
+  function resetDocument(): void {
+    ready = false;
+    readyDocument = null;
+    identity = null;
+    expectedGeneration = 0;
+    sessionId = runtime === "external-v1" ? window.crypto.randomUUID() : "";
+    incoming = -1;
+    outgoing = -1;
+    lastProps = "";
+    height.value = INITIAL_FRAME_HEIGHT;
+    canResetFixture.value = false;
+    previewError.value = null;
+  }
+
+  function requestReady(): void {
+    if (runtime === "external-v1") {
+      post({ type: MSG_REQUEST_READY, v: PROTOCOL_VERSION, runtimeVersion: EXTERNAL_RUNTIME_VERSION, slug, variant: read(exportName), sessionId });
+    } else post({ type: MSG_REQUEST_READY, v: PROTOCOL_VERSION });
+  }
+
+  function syncProps(force = false): void {
+    if (!ready || (!(read(controls)?.length) && Object.keys(values.value).length === 0)) return;
+    const serialized = JSON.stringify(values.value);
+    if (!force && serialized === lastProps) return;
+    if (runtime === "external-v1") {
+      if (!identity || !isSerializableProps(values.value)) return;
+      post({ type: MSG_UPDATE_PROPS, v: PROTOCOL_VERSION, runtimeVersion: EXTERNAL_RUNTIME_VERSION, ...identity, sequence: ++outgoing, props: values.value });
+    } else post({ type: MSG_UPDATE_PROPS, v: PROTOCOL_VERSION, props: values.value });
+    lastProps = serialized;
+  }
+
+  function replay(): void {
+    syncProps();
+    syncTheme();
+    const iframe = iframeRef.current;
+    if (iframe) { replayPreviewVars(iframe); replayCssToPreview(iframe); }
+  }
+
+  function resetFixture(): void {
+    if (!identity || !canResetFixture.value) return;
+    const message: ExternalParentMessage = { type: MSG_RESET_FIXTURE, v: PROTOCOL_VERSION, runtimeVersion: EXTERNAL_RUNTIME_VERSION, ...identity, sequence: ++outgoing, nextGeneration: identity.generation + 1 };
+    identity = { ...identity, generation: message.nextGeneration };
+    incoming = -1;
+    outgoing = -1;
+    ready = false;
+    lastProps = "";
+    previewError.value = null;
+    height.value = INITIAL_FRAME_HEIGHT;
+    post(message);
+  }
+
+  function reloadFixture(): void {
+    resetDocument();
+    const iframe = iframeRef.current;
+    if (iframe) iframe.src = src.value;
   }
 
   function syncTheme(): void {
@@ -169,13 +252,39 @@ function VariantFrame(props: VariantFrameProps): Description {
     function onMessage(e: MessageEvent): void {
       if (e.origin !== window.location.origin) return;
       if (e.source !== iframeRef.current?.contentWindow) return;
+      if (runtime === "external-v1") {
+        if (!isExternalRuntimeMessageEvent(e, { origin: window.location.origin, source: iframeRef.current?.contentWindow })) return;
+        const data = e.data;
+        if (data.type !== MSG_READY && data.type !== MSG_HEIGHT && data.type !== MSG_RUNTIME_ERROR) return;
+        if (data.slug !== slug || data.variant !== read(exportName) || data.sessionId !== sessionId) return;
+        if (!identity) {
+          if ((data.type !== MSG_READY && data.type !== MSG_RUNTIME_ERROR) || data.generation !== expectedGeneration) return;
+        } else if (!matchesExternalRuntimeIdentity(data, identity)) return;
+        if (data.type === MSG_HEIGHT && !ready) return;
+        if (!isNewExternalRuntimeSequence(data.sequence, incoming)) return;
+        identity = { slug, variant: read(exportName), sessionId, documentId: data.documentId, generation: data.generation };
+        readyDocument = iframeRef.current?.contentDocument ?? null;
+        incoming = data.sequence;
+        if (data.type === MSG_READY) {
+          ready = true;
+          canResetFixture.value = data.capabilities.fullReset;
+          previewError.value = null;
+          replay();
+        } else if (data.type === MSG_RUNTIME_ERROR) {
+          ready = false;
+          previewError.value = data.error.message;
+        } else if (fixedHeight === undefined) height.value = Math.max(80, Math.ceil(data.height));
+        return;
+      }
+      if (hasExternalRuntimeMarker(e.data)) return;
       if (isReadyMessage(e.data)) {
         if (
           !matchesPreviewIdentity(e.data, { slug, variant: read(exportName) })
         )
           return;
         ready = true;
-        syncTheme();
+        readyDocument = iframeRef.current?.contentDocument ?? null;
+        replay();
         return;
       }
       if (isHeightMessage(e.data)) {
@@ -183,16 +292,32 @@ function VariantFrame(props: VariantFrameProps): Description {
           !matchesPreviewIdentity(e.data, { slug, variant: read(exportName) })
         )
           return;
-        if (fixedHeight !== undefined) return;
+        if (fixedHeight !== undefined || !Number.isFinite(e.data.height) || e.data.height < 0) return;
         height.value = Math.max(80, Math.ceil(e.data.height));
       }
     }
     window.addEventListener("message", onMessage);
+    const iframe = iframeRef.current;
+    const onLoad = () => {
+      // Legacy readiness can arrive before the same document's load event.
+      // Preserve it only when the actual same-origin Document still agrees;
+      // a reload creates a new Document even though WindowProxy is retained.
+      if (runtime === "legacy" && ready && readyDocument === iframe?.contentDocument) return;
+      const generation = readyDocument === iframe?.contentDocument ? identity?.generation ?? 0 : 0;
+      resetDocument();
+      expectedGeneration = generation;
+      requestReady();
+    };
+    iframe?.addEventListener("load", onLoad);
     // `PreviewApp` sends `sg:ready` once from a `when="load"` island. If
     // that signal raced this effect during parent/iframe startup, ask the
     // already-mounted frame to answer now that this listener is active.
-    post({ type: MSG_REQUEST_READY, v: PROTOCOL_VERSION });
-    return () => window.removeEventListener("message", onMessage);
+    resetDocument();
+    requestReady();
+    return () => {
+      window.removeEventListener("message", onMessage);
+      iframe?.removeEventListener("load", onLoad);
+    };
   });
 
   // Adopt the toolbar's theme on every change. On mount this is a no-op
@@ -236,13 +361,16 @@ function VariantFrame(props: VariantFrameProps): Description {
   scope.onActivate(() => {
     const iframe = iframeRef.current;
     if (!iframe) return;
-    registerPreviewIframe(iframe);
-    return () => unregisterPreviewIframe(iframe);
+    registerPreviewIframe(iframe, runtime === "external-v1" ? { identity: () => ready ? identity : null } : {});
+    const removeCss = registerCssPreview(iframe);
+    if (ready) { replayPreviewVars(iframe); replayCssToPreview(iframe); }
+    return () => { unregisterPreviewIframe(iframe); removeCss(); };
   });
 
   // Push live control values to the iframe.
   function sendProps(props: Record<string, unknown>): void {
-    post({ type: MSG_UPDATE_PROPS, v: PROTOCOL_VERSION, props });
+    values.value = props;
+    syncProps(runtime === "legacy");
   }
 
   return (
@@ -251,7 +379,16 @@ function VariantFrame(props: VariantFrameProps): Description {
         <span class="text-caption leading-normal font-medium text-sg-fg">
           {computed(() => read(name))}
         </span>
+        <Show when={canResetFixture}>
+          {() => <button type="button" on:click={resetFixture} aria-label={`Reset fixture ${slug}`} class="text-small">Reset fixture</button>}
+        </Show>
       </div>
+      <Show when={computed(() => previewError.value !== null)}>
+        {() => <div role="alert" class="p-hsp-md text-small">
+          <p>{computed(() => `Preview failed: ${previewError.value ?? ""}`)}</p>
+          <button type="button" on:click={reloadFixture}>Reload preview</button>
+        </div>}
+      </Show>
       <div
         role="region"
         aria-label="Preview viewport canvas"
@@ -290,6 +427,7 @@ function VariantFrame(props: VariantFrameProps): Description {
               {() => (
                 <ControlsPanel
                   controls={read(controls) ?? []}
+                  values={values}
                   onChange={sendProps}
                 />
               )}
@@ -318,7 +456,7 @@ function coerceNumber(
   control: Extract<StoryControl, { type: "number" }>,
 ): number {
   const n = Number(raw);
-  if (Number.isNaN(n)) return control.defaultValue;
+  if (!Number.isFinite(n)) return control.defaultValue;
   let v = n;
   if (control.min !== undefined) v = Math.max(control.min, v);
   if (control.max !== undefined) v = Math.min(control.max, v);
@@ -336,12 +474,13 @@ function coerceNumber(
  */
 function ControlsPanel({
   controls,
+  values,
   onChange,
 }: {
   controls: StoryControl[];
+  values: { value: Record<string, unknown> };
   onChange: (props: Record<string, unknown>) => void;
 }): Description {
-  const values = signal(seedState(controls));
   const open = signal(true);
   const fields = Object.fromEntries(
     controls.map((control) => [

@@ -100,7 +100,7 @@ export interface RoutesPluginOptions {
    * Required in descriptor mode: descriptors carry no render functions, so
    * the engine has nothing to render at an in-engine preview route.
    */
-  externalPreview?: { url: string; trailingSlash?: "never" | "always" };
+  externalPreview?: { url: string; trailingSlash?: "never" | "always"; runtime?: "legacy" | "external-v1" };
   categoryOrder?: string[];
   uiPackageName?: string;
   previewCssUrl?: string;
@@ -139,6 +139,7 @@ export interface ResolvedRoutesPluginOptions {
   disabledRoutes: Array<keyof SgRoutes>;
   /** Root-absolute URL of the host preview document, or `null` — see `RoutesPluginOptions.externalPreview`. */
   externalPreviewUrl: string | null;
+  externalPreviewRuntime: "legacy" | "external-v1";
   categoryOrder: string[];
   uiPackageName: string | null;
   previewCssUrl: string;
@@ -241,12 +242,12 @@ function isRootAbsoluteUrl(value: string): boolean {
   return /^\/(?!\/)/.test(value);
 }
 
-function normalizeExternalPreview(value: unknown): { url: string } | null {
+function normalizeExternalPreview(value: unknown): { url: string; runtime: "legacy" | "external-v1" } | null {
   if (value === undefined || value === null) return null;
   if (!isPlainObject(value)) fail(`option "externalPreview" must be an object ({ url, trailingSlash? })`);
   for (const key of Object.keys(value)) {
-    if (key !== "url" && key !== "trailingSlash") {
-      fail(`option "externalPreview.${key}" is not supported (expected url, trailingSlash)`);
+    if (key !== "url" && key !== "trailingSlash" && key !== "runtime") {
+      fail(`option "externalPreview.${key}" is not supported (expected url, trailingSlash, runtime)`);
     }
   }
   const rawUrl = value.url;
@@ -255,13 +256,15 @@ function normalizeExternalPreview(value: unknown): { url: string } | null {
     fail(`option "externalPreview.url" = "${rawUrl}" must be a root-absolute path starting with a single "/" (no scheme, no "//")`);
   }
   const trailingSlash = value.trailingSlash;
+  const runtime = value.runtime ?? "legacy";
+  if (runtime !== "legacy" && runtime !== "external-v1") fail('option "externalPreview.runtime" must be "legacy" or "external-v1"');
   if (trailingSlash !== undefined && trailingSlash !== "never" && trailingSlash !== "always") {
     fail(`option "externalPreview.trailingSlash" must be "never" or "always"`);
   }
   let url = rawUrl;
   if (trailingSlash === "never") url = url.length > 1 ? url.replace(/\/+$/, "") : url;
   if (trailingSlash === "always" && !url.endsWith("/")) url = `${url}/`;
-  return { url };
+  return { url, runtime };
 }
 
 function normalizeCategoryOrder(value: unknown): string[] {
@@ -403,6 +406,7 @@ export function resolveRoutesPluginOptions(
     routes,
     disabledRoutes: [...disabledRoutes],
     externalPreviewUrl: externalPreview?.url ?? null,
+    externalPreviewRuntime: externalPreview?.runtime ?? "legacy",
     categoryOrder: normalizeCategoryOrder(options.categoryOrder),
     uiPackageName: optionalString("uiPackageName", options.uiPackageName) ?? null,
     previewCssUrl: previewCssUrl === undefined ? DEFAULT_PREVIEW_CSS_URL : urlPath("previewCssUrl", previewCssUrl),
@@ -438,6 +442,7 @@ export function buildSgContext(base: string | undefined, resolved: ResolvedRoute
     componentDocs: resolved.componentDocs,
     disabledRoutes: resolved.disabledRoutes,
     externalPreviewUrl: resolved.externalPreviewUrl,
+    externalPreviewRuntime: resolved.externalPreviewRuntime,
     previewTokenPanel: resolved.previewTokenPanel,
   };
 }

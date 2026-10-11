@@ -26,6 +26,7 @@ const REQUIRED_FILES = ["dist", "bin", "routes-src", "virtual-modules.d.ts", "st
 const FRAMEWORK_FREE_EXPORTS = {
   "./preview/messages": "./dist/preview/messages.js",
   "./preview/external-runtime": "./dist/preview/external-runtime.js",
+  "./preview/runtime": "./dist/preview/runtime-controller.js",
   "./registry/external-catalog": "./dist/registry/external-catalog.js",
 };
 

@@ -67,6 +67,10 @@
       "types": "./dist/preview/external-runtime.d.ts",
       "default": "./dist/preview/external-runtime.js"
     },
+    "./preview/runtime": {
+      "types": "./dist/preview/runtime-controller.d.ts",
+      "default": "./dist/preview/runtime-controller.js"
+    },
     "./registry/external-catalog": {
       "types": "./dist/registry/external-catalog.d.ts",
       "default": "./dist/registry/external-catalog.js"

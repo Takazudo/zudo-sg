@@ -10,6 +10,12 @@ import {
 } from "../iframe-css-vars-bridge.js";
 
 describe("isBridgeMessage", () => {
+  it("rejects sparse payloads and accepts Unicode custom properties", () => {
+    expect(isBridgeMessage({ source: BRIDGE_SOURCE, type: "apply-css-vars", vars: new Array(1) })).toBe(false);
+    expect(isBridgeMessage({ source: BRIDGE_SOURCE, type: "clear-css-vars", names: new Array(1) })).toBe(false);
+    expect(isBridgeMessage({ source: BRIDGE_SOURCE, type: "apply-css-vars", vars: [["color", "red"]] })).toBe(false);
+    expect(isBridgeMessage({ source: BRIDGE_SOURCE, type: "apply-css-vars", vars: [["--色", "red"]] })).toBe(true);
+  });
   it("accepts the three well-formed envelopes", () => {
     expect(isBridgeMessage({ source: BRIDGE_SOURCE, type: "ready" })).toBe(true);
     expect(
@@ -38,7 +44,7 @@ describe("isBridgeMessage", () => {
   });
 });
 
-function dispatchMessage(data: unknown, origin = window.location.origin, source: unknown = null): void {
+function dispatchMessage(data: unknown, origin = window.location.origin, source: unknown = window.parent): void {
   window.dispatchEvent(new MessageEvent("message", { data, origin, source: source as Window | null }));
 }
 
@@ -67,6 +73,8 @@ describe("installIframeReceiver", () => {
       "https://evil.example",
     );
     dispatchMessage({ source: "other", type: "apply-css-vars", vars: [["--x", "2"]] });
+    dispatchMessage({ source: BRIDGE_SOURCE, type: "apply-css-vars", vars: [["--x", "sibling"]] }, window.location.origin, {});
+    dispatchMessage({ source: BRIDGE_SOURCE, type: "apply-css-vars", vars: [["--x", "null"]] }, window.location.origin, null);
     expect(() =>
       dispatchMessage({ source: BRIDGE_SOURCE, type: "apply-css-vars", vars: 7 }),
     ).not.toThrow();
@@ -81,7 +89,31 @@ describe("installIframeReceiver", () => {
   });
 });
 
+describe("strict token identity and direction", () => {
+  it("rejects stale identity and reverse-direction high sequence without poisoning later apply", () => {
+    const identity = { slug: "button", variant: "Default", sessionId: "s", documentId: "d", generation: 0 };
+    const off = installIframeReceiver(window, { identity: () => identity });
+    const base = { source: BRIDGE_SOURCE, identity, sequence: 100 };
+    dispatchMessage({ ...base, type: "ready" });
+    dispatchMessage({ ...base, type: "apply-css-vars", vars: new Array(1) });
+    dispatchMessage({ ...base, identity: { ...identity, documentId: "old" }, type: "apply-css-vars", vars: [["--strict", "old"]] });
+    dispatchMessage({ ...base, sequence: 0, type: "apply-css-vars", vars: [["--strict", "valid"]] });
+    expect(document.documentElement.style.getPropertyValue("--strict")).toBe("valid");
+    dispatchMessage({ ...base, sequence: 0, type: "clear-css-vars", names: ["--strict"] });
+    expect(document.documentElement.style.getPropertyValue("--strict")).toBe("valid");
+    off();
+    expect(document.documentElement.style.getPropertyValue("--strict")).toBe("");
+  });
+});
+
 describe("onIframeReady", () => {
+  it("never treats a null expected window as a wildcard", () => {
+    const callback = vi.fn();
+    const off = onIframeReady(null, callback);
+    dispatchMessage({ source: BRIDGE_SOURCE, type: "ready" });
+    expect(callback).not.toHaveBeenCalled();
+    off();
+  });
   it("fires only for a same-origin ready envelope from the expected window", () => {
     const expected = {} as Window;
     const callback = vi.fn();
