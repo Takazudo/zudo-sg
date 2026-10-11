@@ -1,3 +1,4 @@
+import { demoUiWindTokens, demoUiWindBreakpoints } from "@zudo-sg/demo-ui/styles/wind-tokens.mjs";
 import { z } from "zod";
 import { defineConfig } from "@takazudo/zfb/config";
 import { buildContentSchema } from "./lib/content-schema";
@@ -29,13 +30,8 @@ export default defineConfig({
   base: "/",
   wind: {
     reset: "owned-v1",
-    tokens: {}, // filled by S3b
-    breakpoints: {
-      sm: { minWidthPx: 640 },
-      md: { minWidthPx: 768 },
-      lg: { minWidthPx: 1024 },
-      xl: { minWidthPx: 1280 },
-    },
+    tokens: demoUiWindTokens,
+    breakpoints: demoUiWindBreakpoints,
     strict: true,
     dark: false,
     utilities: { placement: "before-authored" },
@@ -50,6 +46,7 @@ export default defineConfig({
         "content",
       ],
       packageRoots: ["@zudo-sg/demo-ui"],
+      classHelpers: ["cx", "cn"],
     },
   },
   // zfb 2.14 guard: fail builds when JS/TS imports plain CSS bytes it cannot emit.

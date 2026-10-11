@@ -1,23 +1,13 @@
-/* Cascade-layer order for the flow-space fix (zudolab/zudo-doc#2082 / #2109):
- *   zd-preflight  — Tailwind's preflight reset (incl. `* { margin: 0 }`)
- *   zd-flow       — the .zd-content flow-space margin-top rule (below)
- *   (unlayered)   — `tailwindcss/utilities` (mt-* etc.) — highest priority
- * Unlayered always beats any layer, so `mt-*` utilities win over the flow
- * rule; the flow rule (zd-flow) sits above zd-preflight so it still beats the
- * preflight `margin: 0` reset and the .zd-content vertical rhythm is preserved.
- * Preflight is the de-facto lowest-priority origin already, so moving it into
- * the lowest layer is observably inert for every other author rule (which stay
- * unlayered and continue to outrank it). */
-@layer zd-preflight, zd-flow;
-@import "tailwindcss/preflight" layer(zd-preflight);
-@import "tailwindcss/utilities";
+/* Flow rhythm sits above the owned reset. Unlayered utilities and authored
+ * component rules override both layers; wind places utilities before authored CSS. */
+@layer zw-reset, zd-flow;
 
 /* Shared tight-token set — spacing (hsp/vsp), font-sizes (xs–2xl),
    font-weights, line-heights (--leading-*), font-families (--font-sans/mono),
    radius (--radius-sm/md/lg/full), shadows (card/raised/overlay),
    breakpoints, and transition defaults.
    Single source of truth for the monorepo; any root-specific overrides
-   (radius values, --leading-snug, shadow-lg) are re-defined in @theme below. */
+   (radius values, --leading-snug, shadow-lg) are re-defined in :root below. */
 @import "@zudo-sg/demo-ui/styles/tokens.css";
 
 /* Shared SEMANTIC COLOR tokens from @zudo-sg/demo-ui — the grouped three-tier
@@ -27,7 +17,7 @@
    light-dark(). Adds UI-only utilities WITHOUT changing the docs theme.
 
    COLLISION SET — every name @zudo-sg/demo-ui defines that ALSO exists in the host
-   `@theme` below is RE-ASSERTED there to `var(--zd-*)`, which wins by source
+   `:root` below is RE-ASSERTED there to `var(--zd-*)`, which wins by source
    order (this import precedes that block), so host/demo-ui components keep the
    doc-chrome palette:
        bg, fg, surface, muted, accent, accent-hover, success, danger,
@@ -56,36 +46,13 @@
 
    See packages/demo-ui/STORIES.md §1 "Required style imports". */
 @import "@zudo-sg/demo-ui/styles/colors.css";
-
-/* ========================================
- * @takazudo/zudo-doc package safelist
- *
- * The package ships a build-generated safelist at `dist/safelist.css`
- * (zudolab/zudo-doc#1993). Importing it via the module resolver is
- * reliable across all consumer environments — the same module-resolver
- * code path used for any feature stylesheet injected at the
- * `@slot:global-css:feature-styles` anchor below.
- *
- * Why not @source the package dist/ glob? The old approach
- * (`@source "../../node_modules/@takazudo/zudo-doc/dist/**"`) was
- * unreliable: pnpm stores packages in a content-addressable store and
- * surfaces them to node_modules via symlinks. Tailwind v4's file
- * scanner does not reliably traverse those symlinks, so arbitrary-value
- * candidates (e.g. `w-[var(--zd-sidebar-w)]`, `h-[calc(100vh-3.5rem)]`)
- * were intermittently dropped across rebuilds (zudolab/zudo-doc#1971,
- * #1989). The package-generated `@source inline()` in dist/safelist.css
- * contains the full set, extracted at package build time — no drift, no
- * symlink traversal, auto-syncs on package upgrade (zudolab/zudo-doc#1994).
- * ======================================== */
-
-@import "@takazudo/zudo-doc/safelist.css";
+@import "@zudo-sg/demo-ui/styles/components.css";
 
 /* Content typography (`.zd-content` rules + admonitions + mermaid layout).
    Shipped by @takazudo/zudo-doc as the single source of truth — do not inline
    these rules here (they used to live here and drifted; see
    zudolab/zudo-doc#2188). The @layer zd-flow order it relies on is declared
-   above (line 11); the safelist import above generates the component utilities
-   its headings/links/etc. depend on. */
+   above; the zudo-doc wind preset supplies its utility vocabulary. */
 @import "@takazudo/zudo-doc/content.css";
 /* Non-island feature CSS (code block buttons, the hi-* syntax-token bridge,
    .zd-html-preview-code, KaTeX, sidebar toggle geometry, view-transition chrome,
@@ -99,102 +66,30 @@
 
 /* Static dashboard CSS is separate from the panel stylesheet, which zdtp
    self-injects at mount. Scoped to .zdtp-dashboard; kept after host content
-   CSS so its rules win ties against descendant prose styling. Tailwind v4
+   CSS so its rules win ties against descendant prose styling. zfb
    delivers it in the single styles-<hash>.css bundle in dev and static builds,
    with no base-URL handling. Copying to public/ plus a <link> was rejected:
    that would need a copy step for both dev/build and base-aware asset URLs. */
 @import "@takazudo/zdtp/dashboard/styles.css";
 
-/* ========================================
- * @takazudo/zudo-sg catalog + chrome + search CSS (#122, #167, #540, moved
- * to the engine package by #653)
- *
- * Grouped with the other @imports because CSS requires @import to precede
- * all non-import rules — it used to sit after every rule at the bottom of
- * this file, which is invalid (tolerated only because zfb/Lightning inlines
- * @imports at build time regardless of source position; see #167 for the fix).
- *
- * Deliberately kept UNLAYERED, not wrapped in e.g. `layer(sg-feature)`:
- * `tailwindcss/utilities` above MUST stay unlayered too — that's required by
- * @takazudo/zudo-doc/content.css's own "Consumer contract" (its flow-space
- * fix needs unlayered `mt-*` utilities to beat the zd-flow layer; see the
- * file header comment and zudolab/zudo-doc#2082/#2109). An unlayered rule
- * always beats a layered one regardless of specificity, so layering this
- * import would make it permanently lose to `tailwindcss/utilities` — flipping
- * the framework override `.zd-doc-content-band:has(#sg-code-panel)` (gap, vs.
- * the content band's `gap-[clamp(...)]` utility). It used to be one of two —
- * #541 deleted the styleguide header overlay and the `[data-header]`
- * padding reservation that went with it. That feature selector carries higher
- * specificity than the single-class utility it overrides (the
- * `:has(#sg-code-panel)` ID argument), and this import still comes after
- * `tailwindcss/utilities` in source order — moved up INTO the top import
- * block, not above it — so the override holds either way. This file's own body
- * rules below share no selector+property pair with the package CSS (the only
- * shared class, `.zd-doc-content-band`, is touched for different properties
- * there — max-width transition vs. flex-direction/gap here), so relocating
- * the import above them changes nothing.
- *
- * Imported via the package's `@takazudo/zudo-sg/styles.css` export (#661) —
- * combines what used to be two separate host imports (the chrome/search
- * feature CSS and the catalogue gallery CSS) into the one file the package
- * ships at its root. The generated `@takazudo/zudo-sg/safelist.css` import
- * right below it covers the Tailwind utility classes referenced by this file
- * and by the package's `.tsx` sources (extracted from `dist/**\/*.js` at
- * package build time) for hosts that fall back to explicit @source scanning. */
+/* Engine catalog, chrome and search styles; wind manifests come from withZudoSg(). */
 @import "@takazudo/zudo-sg/styles.css";
-@import "@takazudo/zudo-sg/safelist.css";
 
 /* Portable syntax paint + ProseMd typography. The provider owns these rules
  * directly; zudo-doc's feature stylesheet is not part of the component package
  * boundary and its earlier bridge is intentionally superseded here. */
 @import "../../packages/demo-ui/styles/syntax-highlight.css";
 
-/* ProseMd (#373) — scoped typography for the client-rendered markdown blob
- * (`packages/demo-ui/src/content/prose-md/prose-md.tsx`). Ships from @zudo-sg/demo-ui
- * (portable, Tier-2-token-bound only) rather than root, but this IS the one
- * CSS graph zfb actually bundles, so it's wired in here — same reasoning as
- * the two feature imports above. Kept unlayered for the same reason they are:
- * plain descendant selectors off `.zc-prose-md` share no selector+property
- * pair with any Tailwind utility, so layering it would gain nothing and only
- * risk losing to `tailwindcss/utilities` if that ever changed. See the file's
- * own header for what it does and does not style. */
-@import "@zudo-sg/demo-ui/src/content/prose-md/prose-md.css";
-
-/* ========================================
- * Tailwind v4 content sources
- *
- * Without a `.git` directory in the project root Tailwind v4's content
- * scanner falls back to explicit @source directives for class detection.
- * Builds that run outside a git checkout (E2E fixtures, CI containers
- * that copy the source tree without history, etc.) hit this fallback,
- * and zfb's default content roots only cover `pages/`. Components live
- * outside pages/, so these directives ensure the consumer's own code is
- * always scanned for utility classes. The package's utilities are now
- * covered by the @import above — these directives cover consumer code only.
- * ======================================== */
-
-@source "src/components/**/*.{tsx,ts,jsx,js,mdx,md}";
-@source "src/content/**/*.{mdx,md}";
-@source "src/hooks/**/*.{tsx,ts,jsx,js}";
-@source "src/utils/**/*.{tsx,ts,jsx,js}";
-@source "pages/**/*.{tsx,ts,jsx,js}";
-/* The @zudo-sg/demo-ui component library lives outside this app's tree; scan its
-   source so Tailwind generates the utility classes the components emit. */
-@source "../../packages/demo-ui/src/**/*.{tsx,ts,jsx,js}";
-/* Host-owned live-demo islands (pages/preview/*). The catalog chrome's classes
- * come from @takazudo/zudo-sg/safelist.css, not from host @source globs. */
-@source "src/features/styleguide/preview-demos/**/*.{tsx,ts,jsx,js}";
 /* ========================================
  * Design Token System
  *
- * Tight token strategy: import preflight + utilities only (no default theme).
- * Only project-specific tokens are available.
+ * Explicit utility roles are registered in zfb.config.ts; CSS owns their values.
  *
  * ColorSchemeProvider injects ramp-native --palette-* values plus semantic
- * --zd-* roles. Tailwind tokens are registered below via @theme.
+ * --zd-* roles. The plain :root aliases below preserve the consumer contract.
  * ======================================== */
 
-@theme {
+:root {
   /* ========================================
    * Colors — Three-tier token system (root-specific, referencing semantic --zd-* roles)
    *
@@ -244,7 +139,7 @@
    * .965 / .705 / .480 / .300 / .185), per-mode via light-dark(). `color-scheme`
    * is set by @zudo-sg/demo-ui/styles/colors.css and pinned by [data-theme], so
    * light-dark() resolves to the active mode on every route. These are LOCAL
-   * @theme tokens, NOT --zd-* roles: the upstream SemanticKey set is closed, so
+   * :root tokens, NOT --zd-* roles: the upstream SemanticKey set is closed, so
    * no --zd-border/--zd-focus can be emitted — do NOT add border/focus roles to
    * src/config/color-schemes.ts.
    *
@@ -271,7 +166,7 @@
 
   /* ========================================
    * Elevation — shadow-lg for header/dropdown panels.
-   * Uses Tailwind v4's default shadow-lg value; black is intentionally
+   * Retains the existing shadow-lg value; black is intentionally
    * theme-independent (absence of light, not a themed color).
    * ======================================== */
   --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
@@ -299,7 +194,7 @@
    * Border radius — root-specific values (override shared sm/md/lg/full)
    *
    * Root uses compact 4px/8px radii for documentation UI density.
-   * --radius-DEFAULT maps to Tailwind's `rounded` utility.
+   * The wind `default` radius maps `rounded` to --radius-DEFAULT.
    * Note: shared file defines --radius-lg: 1rem (16px) — overridden here
    * to 0.5rem (8px) for the denser documentation context.
    * ======================================== */
@@ -324,23 +219,35 @@
   --color-danger: light-dark(var(--palette-state-danger), var(--palette-state-danger-dark));
   --color-warning: light-dark(var(--palette-state-warning), var(--palette-state-warning-dark));
   --color-info: light-dark(var(--palette-state-info), var(--palette-state-info-dark));
+  /* Recompute wind aliases here: inherited custom properties were resolved
+   * against the host root before these thumbnail-local overrides. */
+  --zw-color-bg: var(--color-bg);
+  --zw-color-surface: var(--color-surface);
+  --zw-color-fg: var(--color-fg);
+  --zw-color-muted: var(--color-muted);
+  --zw-color-accent: var(--color-accent);
+  --zw-color-accent-hover: var(--color-accent-hover);
+  --zw-color-border: var(--color-border);
+  --zw-color-success: var(--color-success);
+  --zw-color-danger: var(--color-danger);
+  --zw-color-warning: var(--color-warning);
+  --zw-color-info: var(--color-info);
 }
 
 /* ========================================
  * Z-index tiers — semantic, single-namespace scale.
  *
- * The @theme block below is GENERATED from src/config/z-index-tokens.ts
- * (the single source of truth) by `pnpm gen:z-index`. Tailwind v4 reads the
- * --z-index-<name> theme key and generates a `z-<name>` utility, so e.g.
- * --z-index-toolbar: 20 produces `.z-toolbar { z-index: 20 }`; raw CSS can
+ * The :root block below is GENERATED from src/config/z-index-tokens.ts
+ * (the single source of truth) by `pnpm gen:z-index`. zfb.config.ts maps
+ * these variables to named wind z-index utilities; raw CSS can
  * also reference `z-index: var(--z-index-<name>)`. `pnpm check:z-index` fails
  * on drift. Do NOT hand-edit between the BEGIN/END markers.
  * ======================================== */
   /* GENERATED:Z_INDEX_BEGIN
    * GENERATED:Z_INDEX — do not hand-edit; run pnpm gen:z-index.
-   * Source of truth: src/config/z-index-tokens.ts. Tailwind v4 reads the
-   * --z-index-<name> theme key and generates a z-<name> utility. */
-  @theme {
+   * Source of truth: src/config/z-index-tokens.ts. Wind maps the
+   * --z-index-<name> variable to a z-<name> utility. */
+  :root {
     --z-index-content: 0;
     --z-index-local-1: 1;
     --z-index-local-2: 2;
@@ -696,7 +603,7 @@ body {
    * applies justify-content: center) instead of leaving a dead gap where
    * the sidebar was. 80rem must match the `max-w-[80rem]` hide_sidebar
    * branch in doc-layout.tsx. These rules are unlayered, so they win over
-   * the Tailwind `max-w-[clamp(...)]` utility (utilities layer). (#2002) */
+   * the `max-w-[clamp(...)]` utility through selector specificity. (#2002) */
   .zd-doc-content-band {
     transition: max-width 200ms ease-in-out;
   }

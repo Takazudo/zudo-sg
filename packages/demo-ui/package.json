@@ -8,6 +8,8 @@
     ".": "./src/index.ts",
     "./styles/tokens.css": "./styles/tokens.css",
     "./styles/colors.css": "./styles/colors.css",
+    "./styles/components.css": "./styles/components.css",
+    "./styles/wind-tokens.mjs": "./styles/wind-tokens.mjs",
     "./src/*": "./src/*"
   },
   "scripts": {

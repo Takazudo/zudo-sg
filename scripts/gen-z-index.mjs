@@ -5,9 +5,9 @@
 // src/styles/global.css from the single source of truth in
 // src/config/z-index-tokens.ts.
 //
-// The block is a Tailwind v4 `@theme { --z-index-<name>: <value>; }` for every
-// tier, so Tailwind generates `z-<name>` utilities (e.g. `--z-index-toolbar: 20`
-// → `.z-toolbar { z-index: 20 }`) and raw CSS can reference the same var via
+// The block is plain `:root { --z-index-<name>: <value>; }` for every tier.
+// zfb.config.ts registers each variable as a named wind z-index token.
+// Raw CSS can reference the same variable via
 // `z-index: var(--z-index-<name>)`.
 //
 // Pure Node (fs only — NO npm deps). Idempotent: running twice produces no diff.
@@ -121,7 +121,7 @@ function parseTiers(src) {
 
 /**
  * Build the full generated block (markers included). Two leading spaces of
- * indentation match the surrounding `@theme` style in global.css.
+ * indentation match the surrounding `:root` style in global.css.
  */
 function buildBlock(tiers) {
   const lines = [];
@@ -130,12 +130,12 @@ function buildBlock(tiers) {
     `   * GENERATED:Z_INDEX — do not hand-edit; run pnpm gen:z-index.`,
   );
   lines.push(
-    `   * Source of truth: src/config/z-index-tokens.ts. Tailwind v4 reads the`,
+    `   * Source of truth: src/config/z-index-tokens.ts. Wind maps the`,
   );
   lines.push(
-    `   * --z-index-<name> theme key and generates a z-<name> utility. */`,
+    `   * --z-index-<name> variable to a z-<name> utility. */`,
   );
-  lines.push(`  @theme {`);
+  lines.push(`  :root {`);
   for (const tier of tiers) {
     lines.push(`    --z-index-${tier.name}: ${tier.value};`);
   }
@@ -184,20 +184,20 @@ function main() {
       return 1;
     }
     console.log(
-      `OK — z-index @theme block is up to date (${tiers.length} tiers).`,
+      `OK — z-index :root block is up to date (${tiers.length} tiers).`,
     );
     return 0;
   }
 
   if (next === css) {
     console.log(
-      `z-index @theme block already up to date (${tiers.length} tiers); no change.`,
+      `z-index :root block already up to date (${tiers.length} tiers); no change.`,
     );
     return 0;
   }
   writeFileSync(CSS_PATH, next);
   console.log(
-    `Wrote z-index @theme block to src/styles/global.css (${tiers.length} tiers).`,
+    `Wrote z-index :root block to src/styles/global.css (${tiers.length} tiers).`,
   );
   return 0;
 }

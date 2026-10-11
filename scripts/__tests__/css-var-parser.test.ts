@@ -28,9 +28,9 @@ describe("parseCssCustomProperties", () => {
     expect(vars.get("--palette-base-4")).toBe("oklch(.185 .005 65)");
   });
 
-  it("keeps a light-dark() pair intact — commas inside parens are not split", () => {
+  it.each([":root", "@theme"])("keeps a light-dark() pair intact in %s", (selector) => {
     const css = `
-      @theme {
+      ${selector} {
         --color-fg: light-dark(var(--palette-base-4), var(--palette-base-0));
       }
     `;

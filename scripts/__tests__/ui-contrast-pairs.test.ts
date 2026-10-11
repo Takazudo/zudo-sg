@@ -1,3 +1,9 @@
+import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import { parse as parseCss } from "postcss";
+import { demoUiWindTokens } from "../../packages/demo-ui/styles/wind-tokens.mjs";
+import { parseCssCustomProperties } from "../lib/css-var-parser.mjs";
 import { describe, expect, it } from "vitest";
 import { contrastRatio } from "../../src/config/contrast-utils";
 import { colorSchemes } from "../../src/config/color-schemes";
@@ -112,4 +118,33 @@ describe("contrast matrix syntax fence coverage", () => {
     expect(darkReport.pairs.find((pair) => pair.key === "syntax-deleted-painted-vs-preview-fence")?.ratio).toBeCloseTo(4.65, 2);
   });
 
+});
+
+// Root-generated wind aliases resolve before inheritance. A thumbnail must
+// redeclare its utility-facing aliases at the same scope as its semantic colors.
+describe("thumbnail wind color contract", () => {
+  it("keeps every thumbnail color override reachable through its utility token", () => {
+    const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
+    const css = parseCss(readFileSync(resolve(repoRoot, "src/styles/global.css"), "utf8"));
+    const sharedVars = parseCssCustomProperties(readFileSync(
+      resolve(repoRoot, "packages/demo-ui/styles/colors.css"), "utf8",
+    ));
+    const scopedVars = new Map<string, string>();
+    css.walkRules(".sg-thumb[data-sg-preview-scope]", (rule) => {
+      rule.walkDecls((decl) => { scopedVars.set(decl.prop, decl.value); });
+    });
+    const overrides = [...scopedVars.keys()].filter((name) => name.startsWith("--color-"));
+    expect(overrides.length).toBeGreaterThan(0);
+    for (const name of overrides) {
+      const role = name.slice("--color-".length);
+      const utilityValue = demoUiWindTokens.colors[role as keyof typeof demoUiWindTokens.colors];
+      expect(scopedVars.get(`--zw-color-${role}`)).toBe(utilityValue);
+      const vars = new Map([...sharedVars, ...scopedVars]);
+      for (const mode of ["light", "dark"] as const) {
+        expect(resolveRef(`var(--zw-color-${role})`, vars, mode)).toBe(
+          resolveRef(`var(${name})`, sharedVars, mode),
+        );
+      }
+    }
+  });
 });

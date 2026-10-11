@@ -1,55 +1,14 @@
-/*
- * apps/demo — global styles + Tailwind v4 theme.
- *
- * Token strategy: Tailwind v4 Approach B — import preflight + utilities only
- * (never @import "tailwindcss", which pulls in the full default theme).
- * After these imports, only project-defined tokens exist; `p-4` or `bg-gray-500`
- * cause build errors at the CSS level.
- *
- * Shared tokens (spacing, typography, radius, shadows, breakpoints, and the
- * `--z-index-ui-*` semantic scale) AND the semantic color set come from
- * @zudo-sg/demo-ui — the single source of truth for the whole monorepo. This file
- * adds only site-specific CSS: the content-prose contract and the SPA
- * transition/loading-overlay wiring.
- */
-
-@import "tailwindcss/preflight";
-@import "tailwindcss/utilities";
-
-/* Shared tight-token set — spacing (hsp/vsp), font-sizes, font-weights,
-   line-heights, font-families, radius, shadows, breakpoints, z-index.
-   Single source of truth for the monorepo; do NOT duplicate these here. */
+/* Demo defaults share the owned reset layer; utility classes can override them. */
+@layer zw-reset;
 @import "@zudo-sg/demo-ui/styles/tokens.css";
-
-/* Shared semantic color tokens (bg/surface/border/fg/muted/accent/rail family)
-   with light + dark values via light-dark(). This is the color
-   contract @zudo-sg/demo-ui components depend on — importing it keeps the demo
-   dark-correct and palette-consistent with the rest of the monorepo. Do NOT
-   redefine these names here. */
 @import "@zudo-sg/demo-ui/styles/colors.css";
-
-/* Per-line theming (`[data-line="<key>"]` → --color-accent overrides).
-   Imported right after colors.css so its overrides win. */
+@import "@zudo-sg/demo-ui/styles/components.css";
 @import "./lines.css";
-
-/* markdown/MDX prose flow contract (.zd-content). Imported after the token
-   declarations above so its var(--color-*) / var(--spacing-*) / var(--text-*)
-   references resolve. */
 @import "./content.css";
-
-/* SPA navigation loading-overlay + transition wiring. */
 @import "./transitions.css";
 
-/* ── Content source declarations ─────────────────────────────────────── */
-@source "pages/**/*.{tsx,ts,jsx,js}";
-@source "layouts/**/*.{tsx,ts,jsx,js}";
-@source "components/**/*.{tsx,ts,jsx,js}";
-/* The component library lives outside this app's tree; scan it so Tailwind
-   picks up the utility classes the components emit. */
-@source "../../packages/demo-ui/src/**/*.{tsx,ts,jsx,js}";
-
 /* ── Base styles ─────────────────────────────────────────────────────── */
-@layer base {
+@layer zw-reset {
   *,
   *::before,
   *::after {

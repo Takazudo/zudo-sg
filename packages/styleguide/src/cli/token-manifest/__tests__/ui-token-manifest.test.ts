@@ -20,7 +20,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, "../../../../../..");
 
 const FIXTURE_SIZE_CSS = `
-  @theme {
+  :root {
     --radius-DEFAULT: 0.25rem;
     --radius-sm: 0.25rem;
     --radius-md: 0.5rem;
