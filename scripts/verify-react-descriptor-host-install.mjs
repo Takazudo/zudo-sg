@@ -157,9 +157,14 @@ async function browserProof(browser, base) {
     await page.route(workerUrl, route => route.fulfill({ status: 404, contentType: 'text/javascript', body: '' }), { times: 1 });
     await section.getByRole('button', { name: 'Reset fixture react-laboratory', exact: true }).click();
     await section.getByRole('alert').filter({ hasText: 'JSON worker asset failed to load' }).waitFor();
-    await label.fill('Retained after full reset');
+    // Use a distinct value so VariantFrame cannot deduplicate this update.
+    await label.fill('Edited while worker is unavailable');
+    await frame.locator('[data-fixture-label]').filter({ hasText: /^Edited while worker is unavailable$/ }).waitFor();
     await section.getByRole('alert').filter({ hasText: 'JSON worker asset failed to load' }).waitFor();
-    assert(!(await frame.evaluate(() => window.fixture.runtime.getSnapshot().ready)), 'Ordinary prop update hid broken worker');
+    const brokenWorker = await frame.evaluate(() => window.fixture.runtime.getSnapshot());
+    assert(!brokenWorker.ready && brokenWorker.error?.code === 'asset', 'Consumed prop update hid broken worker');
+    await label.fill('Retained after full reset');
+    await frame.locator('[data-fixture-label]').filter({ hasText: /^Retained after full reset$/ }).waitFor();
     await section.getByRole('button', { name: 'Reset fixture react-laboratory', exact: true }).click();
     await waitReady(frame);
     assert(await frame.evaluate(() => window.fixture.editor.setValue('{"assetRecovered": }')) > 0, 'Worker asset recovery did not execute actual JSON validation');
