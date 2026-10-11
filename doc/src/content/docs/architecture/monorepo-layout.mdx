@@ -18,7 +18,7 @@ zudo-sg is a pnpm workspace. The root package is the styleguide host, `packages/
 `-- doc/
 ```
 
-The root host is built with zfb, zudo-doc, MDX, Tailwind CSS v4, and Preact. It owns its own site-identity pages such as `/` and `/docs/versions`; package-injected zudo-doc routes own the general docs chrome, 404, and robots behavior (plus the sitemap when `settings.sitemap` is enabled, which the root host leaves off); package-injected `@takazudo/zudo-sg` routes own the component catalog (`/components`, `/components/[slug]`, `/components/preview`, `/tokens`). See [Component Catalog Pipeline](./component-catalog-pipeline.mdx) for how the engine is composed into the host build.
+The root host is built with zfb, zudo-doc, MDX, zudo-wind utility CSS, and zudo-react. It owns its own site-identity pages such as `/` and `/docs/versions`; package-injected zudo-doc routes own the general docs chrome, 404, and robots behavior (plus the sitemap when `settings.sitemap` is enabled, which the root host leaves off); package-injected `@takazudo/zudo-sg` routes own the component catalog (`/components`, `/components/[slug]`, `/components/preview`, `/tokens`). See [Component Catalog Pipeline](./component-catalog-pipeline.mdx) for how the engine is composed into the host build.
 
 ## The styleguide engine (`packages/styleguide`)
 
@@ -33,9 +33,9 @@ The root host is deployed as `zudo-sg` at `https://zudo-sg.takazudomodular.com/`
 - `src/config/`: settings, color schemes, token manifests, and navigation config.
 - `src/styleguide/`: the generated story registry (`sg-registry.ts`) plus the thin `registry.ts`/`nav-nodes.ts` instances built with the engine's `@takazudo/zudo-sg/registry`.
 - `zudo-sg.config.mjs`: the host-level config the `zudo-sg` CLI and the `withZudoSg()` plugin composition both read (components roots, category order, token CSS files, the preview stylesheet entry).
-- `src/styles/global.css`: root design tokens and Tailwind configuration.
+- `src/styles/global.css`: root design tokens and authored styles; the wind token map and package manifests live in `zfb.config.ts`.
 
-Use server-rendered JSX by default in this host. Add Preact islands only when a feature needs client-side behavior, reached through a static import chain from a host `pages/` file — `pages/index.tsx` also keeps a small `pages/lib/_zudo-sg-islands.ts` shim (`import "@takazudo/zudo-sg/islands";`); since zfb 2.18.0 the dev server seeds its island scanner from the injected routes itself, so the shim is a no-op kept for the subpath's API stability.
+Use server-rendered JSX by default in this host. Add zudo-react islands only when a feature needs client-side behavior, reached through a static import chain from a host `pages/` file — `pages/index.tsx` also keeps a small `pages/lib/_zudo-sg-islands.ts` shim (`import "@takazudo/zudo-sg/islands";`); since zfb 2.18.0 the dev server seeds its island scanner from the injected routes itself, so the shim is a no-op kept for the subpath's API stability.
 
 ## Shared UI package
 
@@ -44,7 +44,7 @@ Use server-rendered JSX by default in this host. Add Preact islands only when a 
 That source-consumption contract has two important consequences:
 
 - There is no `dist/` output to compile before using UI components.
-- Consumers must scan `packages/demo-ui/src` in Tailwind so component utility classes are emitted.
+- Consumers must register the package's wind manifest (and token map from `@zudo-sg/demo-ui/styles/wind-tokens.mjs`) so zfb's CSS pipeline emits the component utility classes.
 
 The package also exports `@zudo-sg/demo-ui/styles/tokens.css` and `@zudo-sg/demo-ui/styles/colors.css`. Those CSS files are the shared token contract for consumers.
 

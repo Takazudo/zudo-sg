@@ -78,12 +78,17 @@ and absent TSX/CSS highlighting while the six old editor tests still passed.
 Two new regression tests fail there and pass on this tuple. A real browser test
 also edits and clears Live CSS, checks iframe computed styles and host isolation,
 and retains console/page error assertions. No production editor workaround was added.
+`module-identity.test.ts` additionally pins this repository's graph to one
+resolved instance each of `@lezer/common`, `@lezer/highlight`,
+`@codemirror/language` and `@codemirror/state` across their consumers.
 
 #916 updates retained tsx 4.23.13 → 4.23.15, replacing its esbuild 0.28.1/platform
 family with 0.28.2. It does not introduce a third family. #917 updates DOMPurify
 3.4.15 → 3.4.16. #920 remains the already-closed duplicate. #922's setup-node
 7.1.0 pin now covers the shared action and both publish workflows, plus the new
-deployment setup action. #923's download-artifact 8.0.2 pin covers all six sites;
+deployment setup action; Dependabot's github-actions entry scans
+`.github/actions/*` as well as the workflows, so composite-action pins are not
+missed again. #923's download-artifact 8.0.2 pin covers all six sites;
 artifact names, tar extraction, destinations and authorization conditions remain.
 Source PRs stay open until their verified replacement reaches main. This register
 does not itself authorize closing #908 or any incomplete parent.
