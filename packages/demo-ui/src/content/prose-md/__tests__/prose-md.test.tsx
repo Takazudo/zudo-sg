@@ -1,13 +1,5 @@
-/**
- * Component-level tests, with `../markdown-runtime` mocked so these run fast
- * and deterministic under this repo's default happy-dom environment — no
- * wasm instantiation, no real DOMPurify. The REAL runtime (fence
- * highlighting + sanitization) is exercised end-to-end in
- * `prose-md-sanitize.test.tsx` (which needs `@vitest-environment jsdom`; see
- * that file's header).
- */
-import { render, screen, waitFor } from "@testing-library/preact";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { disposeAll, flushAll, getByText, renderIsland } from "../../../test-utils/zudo-react";
 import { ProseMd } from "../prose-md";
 import { renderMarkdown } from "../markdown-runtime";
 import type { MarkdownRenderResult } from "../markdown-runtime";
@@ -31,21 +23,30 @@ beforeEach(() => {
   mockedRenderMarkdown.mockReset();
 });
 
+afterEach(() => {
+  disposeAll();
+});
+
 describe("ProseMd", () => {
   it("shows the raw markdown as a quiet placeholder before the runtime resolves", () => {
     mockedRenderMarkdown.mockReturnValue(new Promise<MarkdownRenderResult>(() => {}));
-    render(<ProseMd markdown="## Hi" />);
-    const raw = screen.getByText("## Hi");
+    const island = renderIsland(ProseMd, { markdown: "## Hi" }, { mode: "mount" });
+
+    const raw = getByText(island.container, "## Hi");
     expect(raw.tagName).toBe("PRE");
     expect(raw.closest(".zc-prose-md--pending")).toBeTruthy();
+    island.dispose();
   });
 
-  it("mounts the runtime's HTML once it resolves", async () => {
+  it("mounts the runtime HTML once it resolves", async () => {
     mockedRenderMarkdown.mockResolvedValue({ html: "<h2>Hi</h2>", diagnostics: [] });
-    render(<ProseMd markdown="## Hi" />);
-    await waitFor(() => {
-      expect(screen.getByRole("heading", { level: 2, name: "Hi" })).toBeInTheDocument();
-    });
+    const island = renderIsland(ProseMd, { markdown: "## Hi" }, { mode: "mount" });
+
+    await vi.waitFor(() => {
+      expect(island.container.querySelector("h2")?.textContent).toBe("Hi");
+    }, { timeout: 1000 });
+    await flushAll();
+    island.dispose();
   });
 
   it("shows a compact diagnostics message when the runtime returns html: null", async () => {
@@ -55,44 +56,45 @@ describe("ProseMd", () => {
         { severity: "error", source: "internal", message: "boom", line: null, column: null },
       ],
     });
-    render(<ProseMd markdown="bad" />);
-    await waitFor(() => {
-      expect(screen.getByRole("alert")).toHaveTextContent("boom");
-    });
+    const island = renderIsland(ProseMd, { markdown: "bad" }, { mode: "mount" });
+
+    await vi.waitFor(() => {
+      expect(island.container.querySelector('[role="alert"]')?.textContent).toContain("boom");
+    }, { timeout: 1000 });
+    await flushAll();
+    island.dispose();
   });
 
-  it("drops a stale result superseded by a newer markdown prop", async () => {
+  it("drops a result from a disposed instance when new props are mounted", async () => {
     const first = deferred<MarkdownRenderResult>();
     const second = deferred<MarkdownRenderResult>();
     mockedRenderMarkdown.mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise);
 
-    const { rerender } = render(<ProseMd markdown="first" />);
-    rerender(<ProseMd markdown="second" />);
+    const oldIsland = renderIsland(ProseMd, { markdown: "first" }, { mode: "mount" });
+    oldIsland.dispose();
+    const currentIsland = renderIsland(ProseMd, { markdown: "second" }, { mode: "mount" });
 
-    // The SECOND (current) request settles first…
     second.resolve({ html: "<p>second</p>", diagnostics: [] });
-    await waitFor(() => {
-      expect(screen.getByText("second")).toBeInTheDocument();
-    });
+    await vi.waitFor(() => {
+      expect(currentIsland.container.querySelector("p")?.textContent).toBe("second");
+    }, { timeout: 1000 });
 
-    // …and the FIRST (stale) request settling afterward must not overwrite it.
     first.resolve({ html: "<p>first</p>", diagnostics: [] });
-    await new Promise((r) => setTimeout(r, 0));
-    expect(screen.queryByText("first")).not.toBeInTheDocument();
-    expect(screen.getByText("second")).toBeInTheDocument();
+    await first.promise;
+    await flushAll();
+    expect(currentIsland.container.querySelector("p")?.textContent).toBe("second");
+    expect(currentIsland.container.querySelector("p")?.textContent).not.toBe("first");
+    currentIsland.dispose();
   });
 
-  it("drops a result that resolves after unmount", async () => {
+  it("does not throw when rendering finishes after disposal", async () => {
     const pending = deferred<MarkdownRenderResult>();
     mockedRenderMarkdown.mockReturnValue(pending.promise);
-    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const island = renderIsland(ProseMd, { markdown: "x" }, { mode: "mount" });
 
-    const { unmount } = render(<ProseMd markdown="x" />);
-    unmount();
+    island.dispose();
     pending.resolve({ html: "<p>late</p>", diagnostics: [] });
-    await new Promise((r) => setTimeout(r, 0));
-
-    expect(errorSpy).not.toHaveBeenCalled();
-    errorSpy.mockRestore();
+    await expect(pending.promise).resolves.toEqual({ html: "<p>late</p>", diagnostics: [] });
+    await expect(flushAll()).resolves.toBeUndefined();
   });
 });

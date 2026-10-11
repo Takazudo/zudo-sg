@@ -1,4 +1,4 @@
-import type { JSX } from "preact";
+import type { JSX } from "@takazudo/zfb/zudo-react/jsx-runtime";
 import { cx } from "../../lib/cx";
 
 export type PlaceholderBoxSize = "sm" | "md" | "lg";
@@ -15,8 +15,10 @@ export type PlaceholderBoxProps = {
   /** Size preset. Only affects the min-height fallback used when `aspect` is unset. */
   size?: PlaceholderBoxSize;
   class?: string;
-  [key: string]: unknown;
-};
+} & Omit<
+  JSX.IntrinsicElements["span"],
+  "aria-label" | "children" | "class" | "role" | "style"
+>;
 
 const SIZE_MIN_HEIGHT: Record<PlaceholderBoxSize, string> = {
   sm: "var(--spacing-vsp-lg)",
@@ -41,8 +43,8 @@ export function PlaceholderBox({
 }: PlaceholderBoxProps) {
   const displayLabel = label ?? alt ?? src ?? "image";
   const style: JSX.CSSProperties = aspect
-    ? { aspectRatio: aspect }
-    : { minHeight: SIZE_MIN_HEIGHT[size] };
+    ? { "aspect-ratio": aspect }
+    : { "min-height": SIZE_MIN_HEIGHT[size] };
 
   return (
     <span

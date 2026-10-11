@@ -1,7 +1,8 @@
-import type { ComponentChildren, JSX } from "preact";
+import type { Child } from "@takazudo/zfb/zudo-react";
+import type { JSX } from "@takazudo/zfb/zudo-react/jsx-runtime";
 import { cx } from "../../lib/cx";
 
-export type ProseH6Props = { children?: ComponentChildren; class?: string } & Omit<
+export type ProseH6Props = { children?: Child; class?: string } & Omit<
   JSX.IntrinsicElements["h6"],
   "class"
 >;

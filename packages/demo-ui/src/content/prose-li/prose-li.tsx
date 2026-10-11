@@ -1,7 +1,8 @@
-import type { ComponentChildren, JSX } from "preact";
+import type { Child } from "@takazudo/zfb/zudo-react";
+import type { JSX } from "@takazudo/zfb/zudo-react/jsx-runtime";
 import { cx } from "../../lib/cx";
 
-export type ProseLiProps = { children?: ComponentChildren; class?: string } & Omit<
+export type ProseLiProps = { children?: Child; class?: string } & Omit<
   JSX.IntrinsicElements["li"],
   "class"
 >;
@@ -11,8 +12,7 @@ export function ProseLi({ children, class: cls, ...rest }: ProseLiProps) {
   return (
     <li
       class={cx(
-        "marker:text-muted mb-vsp-xs",
-        "[&>ul]:mt-vsp-xs [&>ul]:mb-0 [&>ol]:mt-vsp-xs [&>ol]:mb-0",
+        "marker:text-muted mb-vsp-xs zc-prose-li",
         cls,
       )}
       {...rest}

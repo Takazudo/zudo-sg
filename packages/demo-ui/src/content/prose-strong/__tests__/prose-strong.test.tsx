@@ -1,12 +1,13 @@
-import { render, screen } from "@testing-library/preact";
 import { describe, expect, it } from "vitest";
+import { getByText } from "../../../test-utils/zudo-react";
+import { renderStatic } from "../../__tests__/render-static";
 import { ProseStrong } from "../prose-strong";
 
 describe("ProseStrong", () => {
   it("renders a bold strong element", () => {
-    render(<ProseStrong>important</ProseStrong>);
-    const el = screen.getByText("important");
+    const root = renderStatic(<ProseStrong>important</ProseStrong>);
+    const el = getByText(root, "important");
     expect(el.tagName).toBe("STRONG");
-    expect(el.className).toContain("font-bold");
+    expect(el.classList.contains("font-bold")).toBe(true);
   });
 });
