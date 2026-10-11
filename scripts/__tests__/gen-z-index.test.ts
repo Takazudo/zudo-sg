@@ -29,9 +29,9 @@ const UP_TO_DATE_CSS = `:root {
 
   /* GENERATED:Z_INDEX_BEGIN
    * GENERATED:Z_INDEX — do not hand-edit; run pnpm gen:z-index.
-   * Source of truth: src/config/z-index-tokens.ts. Tailwind v4 reads the
-   * --z-index-<name> theme key and generates a z-<name> utility. */
-  @theme {
+   * Source of truth: src/config/z-index-tokens.ts. Wind maps the
+   * --z-index-<name> variable to a z-<name> utility. */
+  :root {
     --z-index-base: 0;
     --z-index-toolbar: 20;
     --z-index-modal: 40;
@@ -104,9 +104,11 @@ describe("gen-z-index.mjs", () => {
 
     const result = run();
     expect(result.status).toBe(0);
-    expect(result.stdout).toContain("Wrote z-index @theme block");
+    expect(result.stdout).toContain("Wrote z-index :root block");
 
     const css = readCss();
+    expect(css).not.toContain("@theme");
+    expect(css).toContain(":root {");
     expect(css).toContain("--z-index-base: 0;");
     expect(css).toContain("--z-index-toolbar: 20;");
     expect(css).toContain("--z-index-modal: 40;");
@@ -133,7 +135,7 @@ describe("gen-z-index.mjs", () => {
 
     const result = run(["--check"]);
     expect(result.status).toBe(0);
-    expect(result.stdout).toContain("OK — z-index @theme block is up to date");
+    expect(result.stdout).toContain("OK — z-index :root block is up to date");
     // --check must not write.
     expect(readCss()).toBe(UP_TO_DATE_CSS);
   });
