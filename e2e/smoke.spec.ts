@@ -329,6 +329,27 @@ test("styleguide sidebar preserves DOM identity and scroll across page transitio
   const targetSelector = '#desktop-sidebar a[href="/components/cta-button"]';
   await expect(page.locator(targetSelector)).toBeAttached();
 
+  const navigationErrors: string[] = [];
+  const documentRequests: string[] = [];
+  page.on("pageerror", (error) => navigationErrors.push(error.message));
+  page.on("console", (message) => {
+    if (message.type() === "error") navigationErrors.push(message.text());
+  });
+  page.on("request", (request) => {
+    if (request.resourceType() === "document") documentRequests.push(request.url());
+  });
+  await page.evaluate(() => {
+    const oldAside = document.querySelector("#desktop-sidebar");
+    const phases: Array<{ event: string; same: boolean; connected: boolean; key: string | null }> = [];
+    (window as Window & { __sidebarSwapPhases?: typeof phases }).__sidebarSwapPhases = phases;
+    for (const event of ["zfb:before-swap", "zfb:after-swap", "zfb:page-load"]) {
+      document.addEventListener(event, () => {
+        const current = document.querySelector("#desktop-sidebar");
+        phases.push({ event, same: current === oldAside, connected: !!oldAside?.isConnected, key: current?.getAttribute("data-zfb-transition-persist") ?? null });
+      });
+    }
+  });
+
   const swapFired = await clickAndWaitForSwap(page, targetSelector);
   expect(swapFired, "zfb:after-swap should fire for /components navigation").toBe(true);
 
@@ -346,10 +367,11 @@ test("styleguide sidebar preserves DOM identity and scroll across page transitio
         ?.__sidebarPersistMarker__,
       persistKey: aside?.getAttribute("data-zfb-transition-persist") ?? null,
       active: active?.getAttribute("aria-current") ?? null,
+      phases: (window as Window & { __sidebarSwapPhases?: unknown }).__sidebarSwapPhases,
     };
   });
 
-  expect(postSwap.marker, "sidebar DOM node should survive the SPA swap").toBe(
+  expect(postSwap.marker, `sidebar DOM node should survive the SPA swap: ${JSON.stringify({ phases: postSwap.phases, documentRequests, navigationErrors })}`).toBe(
     "styleguide-sidebar",
   );
   expect(postSwap.persistKey).toBe("sidebar-en-components");
