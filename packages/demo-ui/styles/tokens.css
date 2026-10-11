@@ -100,6 +100,9 @@
   --leading-normal:  1.5;
   --leading-relaxed: 1.75;
 
+  /* Letter spacing shared by hero labels and section navigation. */
+  --tracking-wide: 0.05em;
+
   /* Font families — wind-tokens.mjs registers font-sans and font-mono.
      Used both as wind utilities (font-sans, font-mono) and as raw CSS vars
      (var(--font-sans), var(--font-mono)) in component styles. */

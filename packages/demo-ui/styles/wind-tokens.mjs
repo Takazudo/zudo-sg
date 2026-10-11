@@ -108,7 +108,9 @@ export const demoUiWindTokens = {
     "normal": "var(--leading-normal)",
     "relaxed": "var(--leading-relaxed)"
   },
-  "letterSpacings": {},
+  "letterSpacings": {
+    "wide": "var(--tracking-wide)"
+  },
   "radii": {
     "default": "var(--radius-DEFAULT)",
     "sm": "var(--radius-sm)",
