@@ -135,7 +135,7 @@ output as drift and never writes it.
 pnpm add @takazudo/zudo-sg@latest @takazudo/zfb@^4.3.3 @takazudo/zfb-md-wasm@^4.3.3 @takazudo/zfb-runtime@^4.3.3 @takazudo/zudo-doc@^6.1.1 @takazudo/zdtp@^0.8.6 diff@^8.0.4 katex@^0.16.38 zod@^4.3.6
 ```
 
-The engine peers are `@takazudo/zfb ^4.3.3`, `@takazudo/zudo-doc ^6.0.0`,
+The engine peers are `@takazudo/zfb ^4.3.3`, `@takazudo/zudo-doc ^6.1.1`,
 and `@takazudo/zdtp ^0.8.6`. `@takazudo/zdtp` is required:
 the injected `/tokens` route loads its dashboard through the engine-owned
 opaque Preact adapter. Preact is a regular engine dependency, not a host peer. The

@@ -5,7 +5,7 @@ framework-migration amendments recorded below. Model: zudo-doc's package-owned
 route seam (`$HOME/repos/myoss/zudo-doc/packages/zudo-doc/docs/adr/route-injection-seam.md`).
 Current toolchain pins: `@takazudo/zfb` **4.3.3**, `@takazudo/zudo-doc`
 **6.1.1**, `@takazudo/zdtp` **0.8.6**, pnpm 11.5.2, Node 24. The engine's
-peer floors are `^4.3.3` / `^6.0.0` / `^0.8.6`; Preact is a regular engine
+peer floors are `^4.3.3` / `^6.1.1` / `^0.8.6`; Preact is a regular engine
 dependency for the opaque zdtp dashboard adapter, not a host peer.
 
 The original sections and spike report retain the implementation history from
@@ -403,7 +403,7 @@ run from `main` after the epic merges.
 
 **Migration amendment (2026-10-11, zfb 4 migration S3a/E3).** Current
 required engine peers are `@takazudo/zfb ^4.3.3`, `@takazudo/zudo-doc
-^6.0.0`, and `@takazudo/zdtp ^0.8.6`. The engine has no Preact peer. It
+^6.1.1`, and `@takazudo/zdtp ^0.8.6`. The engine has no Preact peer. It
 declares `preact ^10.29.1` as a regular dependency solely for the opaque
 dashboard adapter that mounts zdtp inside the always-injected `/tokens`
 route; zdtp's compatible range resolves to the same runtime. Hosts render
@@ -411,6 +411,18 @@ components and stories with zudo-react and do not install a renderer directly.
 The host also retains zfb's matching runtime and Markdown WASM packages, plus
 `diff`, `katex`, and `zod` required by the published zudo-doc/zfb route graph;
 the package README records the fixture-equivalent install command.
+
+**Policy amendment (2026-10-13): peer floors follow latest.** This replaces
+the "a floor is raised only when an upstream peer forces it" rule below, and
+the correctness-only exceptions that extended it. Every first-party
+`@takazudo/*` peer floor, in the engine and in `@zudo-sg/demo-ui`, now tracks
+the newest published release of that package at each dependency-bump round.
+The `/dev-bump-zudo-deps` resolver's peer-floor rows are applied, not
+skipped. The workspace already installs exactly those versions, so the floor
+is the tested version and not an older, untested minimum. The cost is that
+adopters must upgrade the toolchain together with the engine. Under this
+policy the floors are zfb `^4.3.3`, zudo-doc `^6.1.1` (was `^6.0.0`), and
+zdtp `^0.8.6`. The amendments below are historical.
 
 **Amendment (2026-09-15, #696 / #671):** reverse the original optional-peer
 treatment of `@takazudo/zdtp`. It is now a required peer at `^0.8.0`: the

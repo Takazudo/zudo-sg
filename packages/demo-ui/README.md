@@ -39,7 +39,7 @@ consumers immediately; there is no dist step to run.
 
 ## Runtime and styles
 
-The sole peer is `@takazudo/zfb ^4.3.1`; markdown uses
+The sole peer is `@takazudo/zfb ^4.3.3`; markdown uses
 `@takazudo/zfb-md-wasm 4.3.3`. Components use `class`, native `on:*` events,
 and setup-once zudo-react scopes. `ThemeControl` is the unique client island;
 server wrappers import it statically and use the host's Island boundary.
