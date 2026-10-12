@@ -30,7 +30,7 @@
     "diff": "^8.0.3"
   },
   "devDependencies": {
-    "typescript": "^5.9.0",
+    "typescript": "^7.0.2",
     "@types/node": "^22.20.5",
     "html-validate": "^11.16.2"
   }
