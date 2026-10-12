@@ -133,6 +133,7 @@ preview runtime contracts, packaging, or initializer behavior:
 
 ```bash
 pnpm verify:styleguide-install
+pnpm verify:retained-lezer-lock
 pnpm verify:descriptor-host-install
 pnpm verify:react-descriptor-host-install
 pnpm verify:create-zudo-sg
@@ -153,6 +154,17 @@ application and deployment-tool audits do not cover it.
 proofs before `check-pack` and package publication. Running any verifier locally
 does not publish a package or deploy a site. Full local packed/browser runs use
 the machine-wide heavy guard, like other browser suites.
+
+### Retained Lezer lock diagnostic
+
+`pnpm verify:retained-lezer-lock` uses a real packed engine outside the workspace.
+It separates a clean-install control from an intentionally split, valid consumer
+lock. Frozen and ordinary installations must preserve the split; lost TSX/CSS
+highlighting and the known plugin error are expected diagnostic results, followed
+by consumer dedupe and fresh-build browser recovery. The dedicated PR job gates
+this proof; the diagnostic lock never enters the generated starter template.
+Run through the heavy/browser guards locally. `--keep` preserves stage evidence
+for inspection. This proves recovery, not a universal package-side fix for #963.
 
 ### Worktree E2E isolation
 

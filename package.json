@@ -24,6 +24,7 @@
     "sync:create-template": "node scripts/sync-create-zudo-sg-template.mjs",
     "check:create-template": "node scripts/sync-create-zudo-sg-template.mjs --check",
     "verify:styleguide-install": "node scripts/ensure-styleguide-build.mjs && node scripts/verify-styleguide-install.mjs",
+    "verify:retained-lezer-lock": "node scripts/ensure-styleguide-build.mjs && node scripts/verify-retained-lezer-lock.mjs",
     "verify:descriptor-host-install": "node scripts/ensure-styleguide-build.mjs && node scripts/verify-descriptor-host-install.mjs",
     "verify:react-descriptor-host-install": "node scripts/ensure-styleguide-build.mjs && node scripts/verify-react-descriptor-host-install.mjs",
     "verify:create-zudo-sg": "node scripts/verify-create-zudo-sg.mjs",

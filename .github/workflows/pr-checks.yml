@@ -153,6 +153,23 @@ jobs:
       - name: Verify foreign install
         run: pnpm verify:styleguide-install
 
+  retained-lezer-lock:
+    name: Retained Lezer Lock Recovery
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v5
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: Install Chromium
+        run: pnpm exec playwright install chromium --with-deps
+
+      - name: Verify retained-lock diagnostic and recovery
+        run: pnpm verify:retained-lezer-lock
+
   # ---------------------------------------------------------------------------
   # Job: descriptor-host consumer foreign-install proof (#887, epic #879 confirm)
   # Packs @takazudo/zudo-sg, installs it into fixtures/descriptor-host outside
