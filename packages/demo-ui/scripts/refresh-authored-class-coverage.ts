@@ -11,6 +11,15 @@ import {
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
 const fixturePath = resolve(repoRoot, "packages/demo-ui/src/stories/__tests__/authored-class-coverage.wind-explain.json");
+const ensure = spawnSync(process.execPath, ["scripts/ensure-styleguide-build.mjs"], {
+  cwd: repoRoot,
+  stdio: "inherit",
+});
+if (ensure.error) throw ensure.error;
+if (ensure.status !== 0) {
+  throw new Error(`ensure:styleguide-build failed (${ensure.status ?? "signal"})`);
+}
+
 const scan = scanDemoUiClasses(repoRoot);
 if (scan.dynamicConstructions.length > 0) {
   throw new Error(`Dynamic class construction found:\n${scan.dynamicConstructions.join("\n")}`);
@@ -18,6 +27,7 @@ if (scan.dynamicConstructions.length > 0) {
 
 const candidates = scan.classes.map(({ token }) => token);
 const compilerVersion = getWindCompilerVersion(repoRoot);
+const windConfigSha256 = await getWindConfigHash(repoRoot, compilerVersion);
 // The command runs from repoRoot, so keep its recorded provenance checkout-independent.
 const command = ["pnpm", "exec", "zfb", "wind", "explain", "--json", "--stdin", "--project-root", "."];
 const result = spawnSync(command[0], command.slice(1), {
@@ -48,7 +58,7 @@ if (windExplain.explanations.length !== candidates.length) {
 const fixture = {
   schemaVersion: 1,
   compilerVersion,
-  windConfigSha256: getWindConfigHash(repoRoot, compilerVersion),
+  windConfigSha256,
   candidateSetSha256: getCandidateSetHash(candidates),
   candidates,
   command,

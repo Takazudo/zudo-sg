@@ -24,9 +24,8 @@
 #   build-doc            — pnpm --filter @zudo-sg/doc check, pnpm build:doc,
 #                          then pnpm check:links:doc against doc/dist.
 #                          Root pnpm check stays separate from doc/.
-#   smoke-e2e            — pnpm test:e2e:ci (Playwright: styleguide smoke,
-#                          preview-token-panel, and demo-smoke;
-#                          needs build + build-demo)
+#   smoke-e2e            — pnpm test:e2e:ci (every project in
+#                          playwright.config.ts; needs build + build-demo)
 #   dist-checks          — pnpm check:links + pnpm check:html against dist/
 #                          (needs build job; merged into one job since both
 #                          only need the same dist/ cache restore)
@@ -323,9 +322,11 @@ jobs:
 
   # ---------------------------------------------------------------------------
   # Job: Playwright smoke e2e (T1)
-  # Runs the full default playwright.config.ts gate: styleguide smoke,
-  # preview-token-panel, and demo-smoke. The config declares one
-  # webServer per dist (styleguide + demo), so this job needs both build jobs.
+  # Runs every project in playwright.config.ts. Both preview servers start
+  # for every project, so this job needs both build jobs. test:e2e:ci must
+  # not pass --reporter; the config writes list, HTML, and JSON under
+  # playwright-report/. The test step keeps the assertion. This upload runs
+  # only after failure or cancellation and does not replace that result.
   # ---------------------------------------------------------------------------
   smoke-e2e:
     name: Smoke E2E
@@ -360,12 +361,13 @@ jobs:
         run: pnpm test:e2e:ci
 
       - name: Upload Playwright report
-        if: always()
-        uses: actions/upload-artifact@v7
+        if: failure() || cancelled()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: playwright-report
           path: playwright-report/
           retention-days: 7
+          if-no-files-found: error
 
   # ---------------------------------------------------------------------------
   # Job: Dist checks (link check + HTML validation)

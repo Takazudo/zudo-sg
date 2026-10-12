@@ -15,6 +15,7 @@ packages/styleguide/virtual-modules.d.ts
 # Playwright artifacts
 test-results/
 playwright-report/
+e2e-evidence/
 
 # contrast:audit output (JSON report, not committed — see issue #116)
 contrast-audit-out/

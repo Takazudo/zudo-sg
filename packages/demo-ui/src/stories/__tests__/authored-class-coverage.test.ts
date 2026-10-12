@@ -39,7 +39,7 @@ const TEST_FIXTURE_CLASSES = new Map([
 const RESERVED_AUTHORED_CLASSES = new Map<string, string>();
 
 describe("demo-ui authored class coverage", () => {
-  it("accounts for every static class token in demo-ui TSX", () => {
+  it("accounts for every static class token in demo-ui TSX", async () => {
     const scan = scanDemoUiClasses(REPO_ROOT);
     const candidates = scan.classes.map(({ token }) => token);
     const cssClasses = readAuthoredCssClasses(REPO_ROOT);
@@ -48,9 +48,9 @@ describe("demo-ui authored class coverage", () => {
 
     expect(scan.dynamicConstructions, "class values must use literal unions, not dynamic concatenation").toEqual([]);
     expect(fixture.schemaVersion).toBe(1);
-    expect(fixture.compilerVersion).toBe("4.3.1");
+    expect(fixture.compilerVersion).toBe("4.3.3");
     expect(getWindCompilerVersion(REPO_ROOT)).toBe(fixture.compilerVersion);
-    expect(fixture.windConfigSha256).toBe(getWindConfigHash(REPO_ROOT, fixture.compilerVersion));
+    expect(fixture.windConfigSha256).toBe(await getWindConfigHash(REPO_ROOT, fixture.compilerVersion));
     expect(fixture.candidateSetSha256).toBe(getCandidateSetHash(candidates));
     expect(fixture.candidates).toEqual(candidates);
     expect(fixture.windExplain.schemaVersion).toBe(1);

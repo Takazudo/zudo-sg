@@ -69,7 +69,7 @@ One consequence of the routes travelling through virtual modules used to be wort
 The engine's own islands (the component detail workbench, the code panel, the catalog filter, the preview design-token button and panel) are collected into one side-effect module, `@takazudo/zudo-sg/islands`, that statically imports every one of them. A host may import that module once from an actual `pages/` file — in this project, a one-line shim (`pages/lib/_zudo-sg-islands.ts`) imported by `pages/index.tsx` — and doing so is harmless, but it does not do anything the engine's peer floor doesn't already do on its own.
 
 The scanner limitation that once required this seed was fixed in zfb 2.18.0.
-The engine's current zfb peer floor, 4.3.1, includes that behavior: the dev
+The engine's current zfb peer floor, 4.3.3, includes that behavior: the dev
 scanner reads injected package routes, and package wind manifests supply the
 engine's utility candidates. The seed is therefore a no-op kept for API
 compatibility.

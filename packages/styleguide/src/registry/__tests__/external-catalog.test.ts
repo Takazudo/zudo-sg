@@ -54,12 +54,16 @@ describe("canonical external catalog manifest", () => {
     expect(() => validateExternalCatalogManifest([input])).toThrow(/differs from loader/);
     expect(() => validateExternalCatalogManifest([{ ...entry(), callback() {} }])).toThrow(/serializable/);
   });
-  it.each(["/../outside.png", "//other.test/a.png", "/thumbs/%2e%2e/a.png", "/thumbs/a.png?v=1", "/thumbs/a.png#x", "relative.png"])(
+  it.each(["/../outside.png", "//other.test/a.png", "/thumbs/%2e%2e/a.png", "/thumbs/a.png?v=1", "/thumbs/a.png#x", "relative.png", "/", "/.", "/captures/.."])(
     "rejects a nonportable captured asset path %s", (src) => {
       const input = entry(); input.capture.src = src;
       expect(() => validateExternalCatalogManifest([input])).toThrow(/asset path/);
     },
   );
+  it("accepts a file name that only begins with the parent-segment spelling", () => {
+    const input = entry(); input.capture.src = "/..safe/file.png";
+    expect(validateExternalCatalogManifest([input])[0]?.capture).toMatchObject({ src: "/..safe/file.png" });
+  });
   it("rejects invalid dimensions and escaping loader paths", () => {
     for (const width of [0, -1, 2.5, Infinity]) {
       const input = entry(); input.capture.width = width;

@@ -1,7 +1,8 @@
 // Node-only prebuild/capture API. Never import from zfb.config or browser code.
 import { createHash } from "node:crypto";
-import { lstatSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
+import { lstatSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
+import { basename, dirname, isAbsolute, relative, resolve, sep } from "node:path";
+import { absoluteComponents } from "./catalog-path.js";
 import { inflateSync } from "node:zlib";
 import { isExternalRuntimeIdentity, isJsonValue, matchesExternalRuntimeIdentity, type ExternalRuntimeIdentity } from "../preview/external-runtime.js";
 import type { ExternalRuntimeSnapshot } from "../preview/runtime-controller.js";
@@ -80,21 +81,69 @@ export function validateExternalCatalogOutputs(input: ExternalCatalogOutputs): E
   return manifest;
 }
 
-/** Reject symlinks in every existing component BEFORE creating directories/files. */
-function containedPath(root: string, path: string, createParents = false): string {
-  const boundary = resolve(root);
+function errno(error: unknown): string | undefined {
+  return (error as NodeJS.ErrnoException).code;
+}
+
+/** Canonical directory, after ancestor aliases are resolved. ENOENT is the only swallowed failure. */
+function canonicalDirectory(path: string): string {
+  let canonical: string;
+  try { canonical = realpathSync(path); }
+  catch (error) { if (errno(error) !== "ENOENT") throw error; return fail(`catalog root is not a directory: ${path}`); }
+  try {
+    const listed = lstatSync(canonical);
+    if (!listed.isSymbolicLink() && listed.isDirectory()) return canonical;
+  } catch (error) { if (errno(error) !== "ENOENT") throw error; }
+  return fail(`catalog root is not a directory: ${path}`);
+}
+
+/**
+ * One canonical boundary for a capture or validation. A symlink at the
+ * configured root is rejected before realpath, including a dangling root.
+ * Ancestor aliases above that root may resolve. A missing root keeps its
+ * missing suffix and is not created here.
+ */
+function resolveCatalogRoot(root: string): string {
+  const absolute = resolve(root);
+  try {
+    const listed = lstatSync(absolute);
+    if (listed.isSymbolicLink()) fail(`symlink is not allowed: ${absolute}`);
+    if (!listed.isDirectory()) fail(`catalog root is not a directory: ${absolute}`);
+    return canonicalDirectory(absolute);
+  } catch (error) {
+    if (errno(error) !== "ENOENT") throw error;
+  }
+  const missing: string[] = [];
+  let cursor = absolute;
+  for (;;) {
+    const parent = dirname(cursor);
+    if (parent === cursor) fail(`catalog root has no existing ancestor: ${absolute}`);
+    missing.unshift(basename(cursor));
+    cursor = parent;
+    try {
+      const listed = lstatSync(cursor);
+      if (listed.isSymbolicLink()) {
+        let target: string;
+        try { target = realpathSync(cursor); }
+        catch (error) { if (errno(error) !== "ENOENT") throw error; return fail(`symlink is not allowed: ${cursor}`); }
+        return resolve(canonicalDirectory(target), ...missing);
+      }
+      if (!listed.isDirectory()) fail(`catalog root is not a directory: ${cursor}`);
+      return resolve(canonicalDirectory(cursor), ...missing);
+    } catch (error) { if (errno(error) !== "ENOENT") throw error; }
+  }
+}
+
+/** Segment containment against an already canonical boundary. Does not realpath the candidate or the boundary. */
+function containedPath(boundary: string, path: string, createParents = false): string {
   const candidate = resolve(boundary, path);
   const rel = relative(boundary, candidate);
   if (!rel || isAbsolute(rel) || rel === ".." || rel.startsWith(`..${sep}`)) fail(`path escapes asset/project root: ${path}`);
-  // Check ancestors of the configured root too; a symlinked assetRoot must
-  // not redirect writes before the first path component is examined.
-  let cursor = boundary;
-  const ancestors: string[] = [];
-  for (;;) { ancestors.unshift(cursor); const parent = dirname(cursor); if (parent === cursor) break; cursor = parent; }
-  const paths = [...ancestors, ...rel.split(sep).map((_, i, parts) => resolve(boundary, ...parts.slice(0, i + 1)))];
-  for (const part of paths) {
-    try { if (lstatSync(part).isSymbolicLink()) fail(`symlink is not allowed: ${part}`); }
-    catch (error) { if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error; }
+  // lstat each component, including one that replaced the canonical root during capture.
+  // Stop at the first absent component; do not create it yet.
+  for (const cursor of absoluteComponents(candidate)) {
+    try { if (lstatSync(cursor).isSymbolicLink()) fail(`symlink is not allowed: ${cursor}`); }
+    catch (error) { if (errno(error) !== "ENOENT") throw error; break; }
   }
   if (createParents) mkdirSync(dirname(candidate), { recursive: true });
   return candidate;
@@ -168,25 +217,29 @@ export interface ExternalCatalogAssetsOptions {
   captures: readonly ExternalCaptureReceipt[];
 }
 
-export function validateExternalCatalogAssets(options: ExternalCatalogAssetsOptions): void {
+function validateResolvedCatalogAssets(options: ExternalCatalogAssetsOptions, projectRoot: string, assetRoot: string): void {
   const manifest = validateExternalCatalogManifest(options.manifest);
   const receipts = keyed(options.captures, "capture receipts");
   sameKeys(manifest.filter((row) => row.capture.kind === "image").map((row) => row.loader.key), receipts, "capture receipts");
   for (const row of manifest) {
     thumbnailFromExternalCapture(row.capture);
-    const currentLoaderHash = loaderHash(options.projectRoot, row);
+    const currentLoaderHash = loaderHash(projectRoot, row);
     if (row.capture.kind !== "image") continue;
     const capture = row.capture, receipt = receipts.get(capture.key)!;
     if (!isExternalRuntimeIdentity(receipt.runtime) || receipt.runtime.slug !== row.slug || receipt.runtime.variant !== row.variant ||
       receipt.stability !== "runtime.whenStable" || receipt.fixture?.module !== row.loader.module || receipt.fixture.exportName !== row.loader.exportName ||
       receipt.src !== capture.src || receipt.width !== capture.width || receipt.height !== capture.height ||
       receipt.loaderSha256 !== currentLoaderHash || receipt.sourceSha256 !== hash(row.source.code)) fail(`stale/mismatched capture receipt for ${capture.key}`);
-    const path = containedPath(options.assetRoot, `.${capture.src}`);
+    const path = containedPath(assetRoot, `.${capture.src}`);
     let image: Buffer;
     try { image = readFileSync(path); } catch { return fail(`promised image is missing: ${capture.src}`); }
     const dimensions = pngDimensions(image);
     if (dimensions.width !== capture.width || dimensions.height !== capture.height || hash(image) !== receipt.imageSha256) fail(`image bytes/dimensions differ for ${capture.key}`);
   }
+}
+
+export function validateExternalCatalogAssets(options: ExternalCatalogAssetsOptions): void {
+  validateResolvedCatalogAssets(options, resolveCatalogRoot(options.projectRoot), resolveCatalogRoot(options.assetRoot));
 }
 
 /** Wrap a caller-owned browser page and its fixture-exposed runtime controller. */
@@ -211,6 +264,10 @@ export interface CaptureExternalCatalogOptions {
 /** Capture the actual external document; this never renders a fixture in Node. */
 export async function captureExternalCatalogImages(options: CaptureExternalCatalogOptions): Promise<ExternalCaptureReceipt[]> {
   const manifest = validateExternalCatalogManifest(options.manifest);
+  // Resolve once. Later checks reuse these paths so an ancestor alias retargeted
+  // during browser awaits cannot move the write.
+  const projectRoot = resolveCatalogRoot(options.projectRoot);
+  const assetRoot = resolveCatalogRoot(options.assetRoot);
   const origin = new URL(options.origin);
   if (!["http:", "https:"].includes(origin.protocol) || origin.origin !== options.origin || origin.username || origin.password) fail("origin must be an HTTP(S) origin without path or credentials");
   const base = options.base ?? "/";
@@ -219,13 +276,13 @@ export async function captureExternalCatalogImages(options: CaptureExternalCatal
   const receipts: ExternalCaptureReceipt[] = [];
   // Validate every path and failed disposition before any browser work/write.
   for (const row of manifest) {
-    thumbnailFromExternalCapture(row.capture); loaderHash(options.projectRoot, row);
-    if (row.capture.kind === "image") containedPath(options.assetRoot, `.${row.capture.src}`);
+    thumbnailFromExternalCapture(row.capture); loaderHash(projectRoot, row);
+    if (row.capture.kind === "image") containedPath(assetRoot, `.${row.capture.src}`);
   }
   for (const row of manifest) {
     const capture = row.capture;
     if (capture.kind !== "image") continue;
-    const initialLoaderHash = loaderHash(options.projectRoot, row);
+    const initialLoaderHash = loaderHash(projectRoot, row);
     const url = new URL(base.replace(/\/$/, "") + options.previewUrl, origin);
     url.searchParams.set("slug", row.slug); url.searchParams.set("variant", row.variant);
     await options.page.setViewportSize({ width: capture.width, height: capture.height });
@@ -241,15 +298,15 @@ export async function captureExternalCatalogImages(options: CaptureExternalCatal
     await check();
     const dimensions = pngDimensions(image);
     if (dimensions.width !== capture.width || dimensions.height !== capture.height) fail(`capture dimensions differ for ${capture.key}`);
-    if (loaderHash(options.projectRoot, row) !== initialLoaderHash) fail(`loader changed during capture: ${capture.key}`);
-    const path = containedPath(options.assetRoot, `.${capture.src}`, true);
-    // Recheck after mkdir and before writing; never follow a symlinked parent.
-    containedPath(options.assetRoot, `.${capture.src}`);
+    if (loaderHash(projectRoot, row) !== initialLoaderHash) fail(`loader changed during capture: ${capture.key}`);
+    const path = containedPath(assetRoot, `.${capture.src}`, true);
+    // A missing root replaced by a symlink during the browser await must still reject.
+    containedPath(assetRoot, `.${capture.src}`);
     writeFileSync(path, image, { flag: "w" });
     receipts.push({ key: capture.key, fixture: { ...capture.fixture }, src: capture.src, ...dimensions,
       imageSha256: hash(image), loaderSha256: initialLoaderHash, sourceSha256: hash(row.source.code),
       runtime: { ...runtime }, stability: "runtime.whenStable" });
   }
-  validateExternalCatalogAssets({ ...options, captures: receipts });
+  validateResolvedCatalogAssets({ ...options, captures: receipts }, projectRoot, assetRoot);
   return receipts;
 }
