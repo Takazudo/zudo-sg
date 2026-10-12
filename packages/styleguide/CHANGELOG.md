@@ -4,6 +4,28 @@ All notable changes to `@takazudo/zudo-sg` are documented in this file.
 
 The format is based on Keep a Changelog, and release notes are generated from the changelog MDX pages.
 
+## [0.5.3] - 2026-10-13
+
+This maintenance release fixes catalog-root resolution beneath a symlinked
+directory and raises the first-party peer floors to the versions the engine is
+built and tested against. The public API is unchanged.
+
+### Bug Fixes
+
+- A configured catalog root can now sit beneath a symlinked ancestor directory,
+  such as a checkout reached through a symlink. A symlink at the root itself,
+  including a dangling one, and any symlink below the root are still rejected.
+  Missing output directories are created only after a successful capture, and
+  component walks use the platform path root so a Windows drive prefix is not
+  skipped.
+
+### Other Changes
+
+- Peer floors now follow the newest first-party releases: `@takazudo/zfb`
+  ^4.3.3 (was ^4.3.1) and `@takazudo/zudo-doc` ^6.1.1 (was ^6.0.0).
+  `@takazudo/zdtp` stays at ^0.8.6. Hosts on older zfb or zudo-doc versions
+  need to upgrade those together with the engine.
+
 ## [0.5.2] - 2026-10-12
 
 This maintenance release raises the minimum versions of the engine's CodeMirror
