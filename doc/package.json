@@ -25,7 +25,7 @@
     "@takazudo/zfb-runtime": "4.3.1",
     "@takazudo/zfb-md-wasm": "4.3.1",
     "@takazudo/zudo-doc": "6.0.0",
-    "zod": "^4.3.6",
+    "zod": "^4.6.5",
     "katex": "^0.16.38",
     "diff": "^8.0.3"
   },

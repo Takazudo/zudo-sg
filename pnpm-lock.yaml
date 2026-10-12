@@ -22,7 +22,7 @@ importers:
         version: 4.3.1(@takazudo/zfb@4.3.1)
       '@takazudo/zudo-doc':
         specifier: 6.0.0
-        version: 6.0.0(@takazudo/zdtp@0.8.6(preact-render-to-string@6.7.0))(@takazudo/zfb-md-wasm@4.3.1)(@takazudo/zfb-runtime@4.3.1(@takazudo/zfb@4.3.1))(@takazudo/zfb@4.3.1)(@takazudo/zudo-doc-history-server@6.0.0)(@types/node@22.19.21)(diff@8.0.4)(katex@0.16.47)(zod@4.4.3)
+        version: 6.0.0(@takazudo/zdtp@0.8.6(preact-render-to-string@6.7.0))(@takazudo/zfb-md-wasm@4.3.1)(@takazudo/zfb-runtime@4.3.1(@takazudo/zfb@4.3.1))(@takazudo/zfb@4.3.1)(@takazudo/zudo-doc-history-server@6.0.0)(@types/node@22.19.21)(diff@8.0.4)(katex@0.16.47)(zod@4.6.5)
       '@takazudo/zudo-doc-history-server':
         specifier: 6.0.0
         version: 6.0.0
@@ -39,8 +39,8 @@ importers:
         specifier: ^0.16.38
         version: 0.16.47
       zod:
-        specifier: ^4.0.0
-        version: 4.4.3
+        specifier: ^4.6.5
+        version: 4.6.5
     devDependencies:
       '@playwright/test':
         specifier: ^1.63.0
@@ -106,8 +106,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/demo-ui
       zod:
-        specifier: ^4.0.0
-        version: 4.4.3
+        specifier: ^4.6.5
+        version: 4.6.5
     devDependencies:
       '@types/node':
         specifier: ^22.0.0
@@ -135,7 +135,7 @@ importers:
         version: 4.3.1(@takazudo/zfb@4.3.1)
       '@takazudo/zudo-doc':
         specifier: 6.0.0
-        version: 6.0.0(@takazudo/zdtp@0.8.6(preact-render-to-string@6.7.0))(@takazudo/zfb-md-wasm@4.3.1)(@takazudo/zfb-runtime@4.3.1(@takazudo/zfb@4.3.1))(@takazudo/zfb@4.3.1)(@takazudo/zudo-doc-history-server@6.0.0)(@types/node@22.19.21)(diff@8.0.4)(katex@0.16.47)(zod@4.4.3)
+        version: 6.0.0(@takazudo/zdtp@0.8.6(preact-render-to-string@6.7.0))(@takazudo/zfb-md-wasm@4.3.1)(@takazudo/zfb-runtime@4.3.1(@takazudo/zfb@4.3.1))(@takazudo/zfb@4.3.1)(@takazudo/zudo-doc-history-server@6.0.0)(@types/node@22.19.21)(diff@8.0.4)(katex@0.16.47)(zod@4.6.5)
       diff:
         specifier: ^8.0.3
         version: 8.0.4
@@ -143,8 +143,8 @@ importers:
         specifier: ^0.16.38
         version: 0.16.47
       zod:
-        specifier: ^4.3.6
-        version: 4.4.3
+        specifier: ^4.6.5
+        version: 4.6.5
     devDependencies:
       '@types/node':
         specifier: ^22.0.0
@@ -249,7 +249,7 @@ importers:
         version: 4.3.1
       '@takazudo/zudo-doc':
         specifier: 6.0.0
-        version: 6.0.0(@takazudo/zdtp@0.8.6(preact-render-to-string@6.7.0))(@takazudo/zfb-md-wasm@4.3.1)(@takazudo/zfb-runtime@4.3.1(@takazudo/zfb@4.3.1))(@takazudo/zfb@4.3.1)(@takazudo/zudo-doc-history-server@6.0.0)(@types/node@22.19.21)(diff@8.0.4)(katex@0.16.47)(zod@4.4.3)
+        version: 6.0.0(@takazudo/zdtp@0.8.6(preact-render-to-string@6.7.0))(@takazudo/zfb-md-wasm@4.3.1)(@takazudo/zfb-runtime@4.3.1(@takazudo/zfb@4.3.1))(@takazudo/zfb@4.3.1)(@takazudo/zudo-doc-history-server@6.0.0)(@types/node@22.19.21)(diff@8.0.4)(katex@0.16.47)(zod@4.6.5)
       '@testing-library/jest-dom':
         specifier: ^6.9.1
         version: 6.9.1
@@ -2348,8 +2348,8 @@ packages:
     resolution: {integrity: sha512-GZtjxm/J/4TSxuL3FNYjCmLktBTnIw/rVmKSIyKeYAZpmJB2ig9VauCC5xsa82GNKVKDAqpOn3KVzNt0zmrU0g==}
     engines: {node: '>=12'}
 
-  zod@4.4.3:
-    resolution: {integrity: sha512-ytENFjIJFl2UwYglde2jchW2Hwm4GJFLDiSXWdTrJQBIN9Fcyp7n4DhxJEiWNAJMV1/BqWfW/kkg71UDcHJyTQ==}
+  zod@4.6.5:
+    resolution: {integrity: sha512-v5l/aFXZQeai4awLbOpSoHecE9UiMrnfx75tEXLjNonXVARxQ5mOeipTjROUchszUNCqnE+hqAMujRsRHsut2Q==}
 
   zwitch@2.0.4:
     resolution: {integrity: sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A==}
@@ -2970,7 +2970,7 @@ snapshots:
 
   '@takazudo/zudo-doc-history-server@6.0.0': {}
 
-  '@takazudo/zudo-doc@6.0.0(@takazudo/zdtp@0.8.6(preact-render-to-string@6.7.0))(@takazudo/zfb-md-wasm@4.3.1)(@takazudo/zfb-runtime@4.3.1(@takazudo/zfb@4.3.1))(@takazudo/zfb@4.3.1)(@takazudo/zudo-doc-history-server@6.0.0)(@types/node@22.19.21)(diff@8.0.4)(katex@0.16.47)(zod@4.4.3)':
+  '@takazudo/zudo-doc@6.0.0(@takazudo/zdtp@0.8.6(preact-render-to-string@6.7.0))(@takazudo/zfb-md-wasm@4.3.1)(@takazudo/zfb-runtime@4.3.1(@takazudo/zfb@4.3.1))(@takazudo/zfb@4.3.1)(@takazudo/zudo-doc-history-server@6.0.0)(@types/node@22.19.21)(diff@8.0.4)(katex@0.16.47)(zod@4.6.5)':
     dependencies:
       '@inquirer/prompts': 8.5.2(@types/node@22.19.21)
       '@takazudo/zfb': 4.3.1
@@ -2984,7 +2984,7 @@ snapshots:
       smol-toml: 1.9.1
       tsx: 4.23.15
       yaml: 2.9.0
-      zod: 4.4.3
+      zod: 4.6.5
     optionalDependencies:
       '@takazudo/zdtp': 0.8.6(preact-render-to-string@6.7.0)
       '@takazudo/zfb-md-wasm': 4.3.1
@@ -4266,6 +4266,6 @@ snapshots:
       y18n: 5.0.8
       yargs-parser: 21.1.1
 
-  zod@4.4.3: {}
+  zod@4.6.5: {}
 
   zwitch@2.0.4: {}
