@@ -4,6 +4,16 @@ All notable changes to `create-zudo-sg` are documented in this file.
 
 The format is based on Keep a Changelog.
 
+## [0.2.1] - 2026-10-12
+
+### Changed
+
+- Update the starter engine range to `@takazudo/zudo-sg ^0.5.2`, which raises
+  the engine's CodeMirror and Lezer dependency minimums.
+- Development tooling only: type checks run on the native TypeScript 7
+  compiler through the TypeScript 6 API, and the publish workflow uses
+  `actions/setup-node` v7.1.0.
+
 ## [0.2.0] - 2026-10-12
 
 This release moves the generated starter to the zfb 4 and zudo-doc 6 stack and
