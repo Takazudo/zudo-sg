@@ -43,7 +43,7 @@ router) is covered by T0 unit tests today, with L4 E2E coverage added in T1.
 ### T0 — Inner loop (run constantly while implementing)
 
 ```bash
-pnpm check                         # workspace typecheck, excluding doc/
+pnpm check                         # peer-floor gate + workspace typecheck, excluding doc/
 pnpm --filter @zudo-sg/doc check   # doc/ typecheck; not part of pnpm check
 pnpm test:unit                     # vitest unit tests
 ```
@@ -60,7 +60,7 @@ Steps in `scripts/run-b4push.sh`:
    `pnpm exec mdx-formatter --check '**/*.md' '**/*.mdx' '.claude/**/*.md'`
 2. Design token lint — `pnpm lint:tokens`
 3. Codegen drift checks — all `check:*` generators
-4. Type checking — `pnpm check` (engine, initializer, root, demo-ui, and demo; not `doc/`)
+4. Peer-floor gate and type checking — `pnpm check` (`check:peer-floors` first, then engine, initializer, root, demo-ui, and demo; not `doc/`)
 5. Unit tests — `pnpm test:unit`
 6. Root build — `pnpm build`
 7. Demo build — `pnpm --filter @zudo-sg/demo build`
@@ -92,7 +92,7 @@ independent packed consumer proofs:
 - **lint-tokens** — `pnpm lint:tokens`
 - **codegen-drift** — z-index, story registry/category, and UI/root
   token-manifest drift checks
-- **typecheck** — `pnpm check` (does not include `doc/`)
+- **typecheck** — `pnpm check` (peer-floor gate, then typecheck; does not include `doc/`)
 - **unit** — `pnpm test:unit`
 - **styleguide-install** — `pnpm verify:styleguide-install`: packed module-mode
   consumer outside the workspace, non-root base, browser and dev-hydration proof
@@ -118,7 +118,8 @@ independent packed consumer proofs:
 ### Individual checks
 
 ```bash
-pnpm check                         # workspace typecheck, excluding doc/
+pnpm check                         # peer-floor gate + workspace typecheck, excluding doc/
+pnpm check:peer-floors             # first-party peer floors equal the root pins (ADR §13)
 pnpm --filter @zudo-sg/doc check   # doc/ typecheck
 pnpm test:unit                     # unit tests (vitest)
 pnpm build              # build site → dist/
