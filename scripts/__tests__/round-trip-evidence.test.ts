@@ -55,6 +55,14 @@ describe("round-trip evidence record", () => {
     });
   });
 
+  it("strips terminal color codes from recorded errors", async () => {
+    const { evidence } = setup();
+    await observe(evidence, "x", async () => {
+      throw new Error("\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m");
+    });
+    expect(evidence.observations.x.lastError?.message).toBe("Error: expect(received");
+  });
+
   it("keeps raw export bytes even when they do not parse", () => {
     const { evidence } = setup();
     recordExport(evidence, '{"tabs": ');

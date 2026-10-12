@@ -60,9 +60,12 @@ const CI_IDENTITY_KEYS = [
 
 const now = () => new Date().toISOString();
 
+// Playwright assertion messages carry terminal color codes.
+const ANSI_ESCAPE = /\u001b\[[0-9;]*m/g;
+
 export function errorMessage(error: unknown): string {
-  if (error instanceof Error) return `${error.name}: ${error.message}`;
-  return String(error);
+  const message = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+  return message.replace(ANSI_ESCAPE, "");
 }
 
 export function createRoundTripEvidence(
