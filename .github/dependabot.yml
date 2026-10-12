@@ -7,14 +7,14 @@ updates:
   - package-ecosystem: "npm"
     directories:
       - "/"
-      - "/packages/*"
-      - "/apps/*"
       - "/tools/deploy"
       - "/fixtures/react-descriptor-host"
     schedule:
       interval: "weekly"
     ignore:
       - dependency-name: "@takazudo/*"
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
 
   # "/" only scans .github/workflows; the composite actions under
   # .github/actions/* carry their own setup-node / action-setup pins.

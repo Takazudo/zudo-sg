@@ -124,3 +124,36 @@ lives in the [`doc/` workspace reference](https://zudo-sg-doc.takazudomodular.co
 (see [Relationship to zudo-doc](./relationship-to-zudo-doc) for why that split
 exists). Adopting the default, module-mode path today still means adopting
 the engine into a zudo-react/zfb host.
+
+## Recover highlighting in an existing consumer lock
+
+An existing lock can retain two `@lezer/common` module identities even after
+installing compatible engine/editor versions. The visible symptom is missing
+TSX or editable CSS highlighting with a CodeMirror plugin error
+`tags is not iterable` (the variable name can differ in a minified bundle);
+successful editor construction or typing does not
+establish that highlighting works.
+
+From the affected host, diagnose and deduplicate its own graph:
+
+```sh
+pnpm dedupe --check
+pnpm dedupe --ignore-scripts
+pnpm install --frozen-lockfile
+```
+
+The first command is diagnostic and exits nonzero when deduplication is needed.
+Review the resulting lock diff. Rebuild the host's generated output from scratch
+(the packed proof removes only `dist` and `.zfb-build` before `pnpm exec zfb build`),
+then verify TSX source tokens, editable CSS tokens, Live CSS application and
+clearing, preview isolation, and absence of plugin/browser errors.
+An ordinary or frozen install alone can preserve the split.
+
+This recovery is scoped to pnpm **11.5.2**; other package managers need their own
+resolution proof. It is consumer remediation, not a universal package-side fix.
+Published compatible Lezer ranges still admit older common modules; direct
+floors or a root-workspace dedupe check do not guarantee every retained consumer
+lock. The separate packed diagnostic `pnpm verify:retained-lezer-lock` in the
+engine repository preserves a clean control and treats the pre-recovery failure
+as expected evidence. Track the remaining compatibility requirement in
+[zudo-sg#963](https://github.com/Takazudo/zudo-sg/issues/963).

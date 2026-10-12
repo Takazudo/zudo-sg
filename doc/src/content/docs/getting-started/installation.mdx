@@ -26,7 +26,11 @@ the root site's [Adopting the engine](https://zudo-sg.takazudomodular.com/docs/a
 
 ## Requirements
 
-- Node.js 22.12.0 or later.
+- Published consumer runtime: Node.js 22.12.0 or later.
+- Repository development/CI: Node.js 24. html-validate 11.16.2 requires
+  `^22.22.0 || >=24.8.0`; retained jsdom dependencies additionally require
+  `^22.22.2 || ^24.15.0 || >=26.0.0`. These tool minima do not raise
+  the engine consumer floor.
 - pnpm 11.5.2, matching the workspace `packageManager` field.
 - Git access to the repository.
 
@@ -87,3 +91,15 @@ The directories you will touch most often are:
 - `doc/`: this documentation site.
 
 Read [Monorepo Layout](../architecture/monorepo-layout.mdx) for the ownership model behind those directories.
+
+## Existing consumer highlighting failures
+
+A retained pnpm lock can preserve duplicate Lezer module identities, causing
+missing TSX/CSS syntax tokens and `tags is not iterable` plugin errors.
+Use the engine README's
+[consumer lock recovery](https://github.com/Takazudo/zudo-sg/tree/main/packages/styleguide#recover-highlighting-in-an-existing-consumer-lock)
+from the affected host: diagnose with `pnpm dedupe --check`, recover with
+`pnpm dedupe --ignore-scripts`, verify a frozen install, then rebuild and inspect
+actual highlighting and Live CSS behavior. This pnpm 11.5.2 recovery is separate
+from the still-open package-side compatibility requirement in
+[#963](https://github.com/Takazudo/zudo-sg/issues/963).

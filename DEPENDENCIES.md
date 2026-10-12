@@ -1,5 +1,132 @@
 # Dependency audit register
 
+## Lock health follow-up — 2026-10-12, #977 / #978 / #979 / #980
+
+Implementation: #981, based on main `b2c7cb8186d063516f4fddb68f291fb5480025b6`.
+The original #963 remains open: compatible direct floors and a healthy root lock
+are not a package-side guarantee for retained consumer locks.
+
+### Consolidated updates and toolchain
+
+Selected source changes: #965 jsdom **30.1.2** (root and demo-ui), #966
+CodeMirror view **6.43.14**, #967 Lezer highlight **1.2.5**, and #968
+html-validate **11.16.2** (root and doc). Source PRs remain open until verified
+replacement integration. Node 22 consumer/type support, Node 24 CI, pnpm
+**11.5.2**, first-party pins, Vite/Vitest, Happy DOM, Preact and esbuild/KaTeX
+holds remain unchanged.
+
+The initial install retained view 6.43.1 beside 6.43.14 and exposed incompatible
+private EditorView types. Compatible pnpm dedupe normalizes the shared graph;
+frozen installation and nonmutating dedupe now pass. The graph has **437
+package/snapshot records** versus 438 on main; this is graph normalization and
+upgraded dependency closures, not a package removal.
+
+Registry metadata for html-validate 11.16.2 requires Node
+`^22.22.0 || >=24.8.0`; its optional Vitest/@vitest/expect peers accept
+`^3.2.0 || ^4.0.1 || ^5.0.0`, including retained Vitest 4.1.11.
+These are development-tool requirements, not changed published consumer floors.
+Local Node **24.19.0** passes root/doc types, fresh root/doc builds and both HTML
+validations with their unchanged `element-permitted-content` rules.
+The real zfb 4.3.1 Wind generator retains all **343 candidates** and every
+explanation: **310 resolved utilities, 31 ordinary classes, two markers**.
+Only generated input provenance changes. The 34 focused coverage, module identity,
+highlighting and jsdom sanitizer checks pass; final integration evidence belongs
+on #981 rather than substituting historical source-PR checks.
+
+### Dependabot graph ownership and dispositions
+
+| Graph | Before | After |
+| --- | --- | --- |
+| Shared root lock: root, apps/demo, doc, packages/create-zudo-sg, packages/demo-ui, packages/styleguide | `/` plus overlapping `/packages/*` and `/apps/*` | `/` owns all six importers, including doc |
+| Independent deployment tools | `/tools/deploy` | `/tools/deploy` retained |
+| Independent React proof | `/fixtures/react-descriptor-host` | `/fixtures/react-descriptor-host` retained |
+| Workflow actions | `/` | `/` retained |
+| Composite actions | `/.github/actions/*` | `/.github/actions/*` retained |
+
+All npm directories retain `@takazudo/*` exclusions and ignore only
+`@types/node` `version-update:semver-major`. Same-major Node 22 updates and
+unrelated majors remain available. YAML/options validate against SchemaStore's
+Dependabot v2 schema; all six actual lock importers were inspected. No hosted
+updater preview is available here; schema parsing does not prove future updater
+execution. #969's complete workspace proposal is the existing ownership evidence.
+
+State refreshed before implementation: #969/#970/#971/#972/#973/#975 are closed
+unmerged under Node 22 policy; #971 was green and was not closed for CI failure.
+#974 is closed unmerged as the exact duplicate of #965. No duplicate closure
+comments were posted. #965–#968 remain open pending #981 integration.
+
+### Packed retained-lock browser evidence
+
+`pnpm verify:retained-lezer-lock --keep` passes all seven stages with the real
+packed engine **0.5.1**, outside the workspace, on Node **24.19.0**, pnpm
+**11.5.2** and system Chromium **154.0.8037.57**. A separate clean-install
+control precedes the intentionally valid retained lock; diagnostic assets are
+created in temporary storage and never copied into the initializer template.
+`--keep` retains stage reports, command logs, actual resolution graphs,
+before/after locks and browser evidence; CI runs the same command without it.
+
+Frozen and ordinary installations preserve the seeded lock byte-for-byte:
+highlight resolves common **1.5.2** while language/parser paths resolve
+**1.5.3**. Fresh Node processes inspect real package paths at every stage to
+avoid cached resolutions across reinstalls. Both TSX source and editable CSS
+lose syntax spans and emit two CodeMirror highlighter plugin errors. The packed
+minifier renames `tags` to `s`, yielding `TypeError: s is not iterable` with
+`HighlightStyle.style`, `highlightTags`, `HighlightBuilder.highlightRange`,
+`highlightTree` and `TreeHighlighter.buildDeco` in the captured stack. The
+negative assertion requires that specific failure path and rejects other errors.
+
+| Browser stage | TSX spans | Edited CSS spans | Errors | Live CSS apply / clear | Host isolation |
+| --- | --- | --- | --- | --- | --- |
+| Clean packed control | 5 | 8 | 0 | pass / pass | pass |
+| Retained split diagnostic | 0 | 0 | 2 expected highlighter failures | pass / pass | pass |
+| After consumer dedupe | 5 | 8 | 0 | pass / pass | pass |
+
+Every stage has zero failed asset requests. `pnpm dedupe --check` exits **1**
+and names the common 1.5.2 → 1.5.3 repair without mutating the split lock.
+`pnpm dedupe --ignore-scripts` recovers one real common identity; another frozen
+install and nonmutating dedupe check pass. Removing generated `dist` and
+`.zfb-build` before rebuilding prevents stale bundles from substituting for
+recovery. The same browser assertions then verify actual syntax, CSS and errors.
+
+Final local integration also passes 1,572 root unit tests, 740 engine tests,
+82 existing browser cases, root/doc types, all three builds/link checks,
+root/doc HTML validation, template checks, descriptor/React/initializer packed
+proofs and actual Node **22.23.3** packed imports/types/build. Root audit retains
+only the two low holds; deployment remains zero and React retains one low KaTeX
+finding. Required final-head CI and independent review are recorded on #981.
+
+Local pinned Playwright installation is blocked by destination policy; local
+browser evidence uses the available system Chromium. The existing packed
+styleguide proof passes static stages but its direct dev Counter probe logs an
+implicit `/favicon.ico` 404 under that browser (CDP confirmed the URL while
+Counter updates 3 → 4). Its assertions are unchanged; this local command is
+reported as failed, not passed. CI's pinned-browser styleguide check passed on
+the first implementation head, and the final combined head requires its own
+complete gate. No local error was filtered out or starter template changed.
+
+### Retained-lock remedy assessment
+
+Current primary upstream guidance was inspected on 2026-10-12. CodeMirror author
+Marijn Haverbeke recommends inspecting installed dependencies and avoiding
+separate CodeMirror/Lezer copies, including private dependencies behind symlinks:
+[upstream discussion](https://discuss.codemirror.net/t/help-resolving-dependency-conflicts-between-lezer-and-codemirror/9315).
+[pnpm dedupe documentation](https://pnpm.io/cli/dedupe) describes compatible
+lock normalization and the nonmutating, nonzero diagnostic `--check` result.
+The documented recovery is verified specifically with pnpm 11.5.2; current
+online documentation also describes later pnpm behavior, which is not claimed
+as tested here.
+
+Fresh primary npm metadata still permits common 1.5.2: highlight **1.2.5** uses
+`^1.3.0`, lr **1.4.11** uses `^1.0.0`, language **6.13.1** uses `^1.5.0`,
+CSS **1.3.9** and JavaScript **1.5.6** use `^1.2.0`; latest common is **1.5.3**.
+The common 1.5.2 published source allocates NodeProp IDs within its own module,
+so two compatible copies can interpret property IDs differently.
+No supported compatible package-side remedy was established by the bounded
+metadata/source/guidance investigation. No speculative pins, overrides,
+editor replacement or release was added. #963 retains its original delivery
+requirement; consumer deduplication and the bounded diagnostic child do not
+redefine it as documentation-only.
+
 ## Current audit — 2026-10-11, sweep #950 / maintenance #951 / React proof #952
 
 This section supersedes the historical decisions below. The zfb migration is
