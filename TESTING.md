@@ -64,10 +64,10 @@ Steps in `scripts/run-b4push.sh`:
 5. Unit tests — `pnpm test:unit`
 6. Root build — `pnpm build`
 7. Demo build — `pnpm --filter @zudo-sg/demo build`
-8. Documentation typecheck and build — `pnpm --filter @zudo-sg/doc check`, then `pnpm build:doc`
-9. Link checks — root, demo, and documentation output
-10. HTML validation — `pnpm check:html`
-11. Playwright smoke e2e — `pnpm test:e2e` (`smoke`, `preview-token-panel`, and `demo-smoke`)
+8. Link checks — root and demo output (`pnpm check:links` and `pnpm check:links:demo`)
+9. HTML validation — `pnpm check:html`
+10. Playwright smoke e2e — `pnpm test:e2e` (`smoke`, `preview-token-panel`, and `demo-smoke`)
+11. Documentation typecheck, build, and link check — `pnpm --filter @zudo-sg/doc check`, `pnpm build:doc`, and `pnpm check:links:doc` (`B4PUSH_SKIP_DOC=1` skips this step)
 12. Manual interactive smoke (operator-driven)
 
 The five expensive steps — unit tests, root build, demo build, documentation
