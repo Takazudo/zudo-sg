@@ -178,7 +178,7 @@
     "@takazudo/zdtp": "0.8.6",
     "@takazudo/zfb": "4.3.1",
     "@takazudo/zudo-doc": "6.0.0",
-    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/jest-dom": "^7.0.1",
     "@types/culori": "^4.0.1",
     "@types/node": "^22.0.0",
     "culori": "^4.0.2",

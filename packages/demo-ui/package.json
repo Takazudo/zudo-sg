@@ -26,7 +26,7 @@
     "@takazudo/zfb": "^4.3.1"
   },
   "devDependencies": {
-    "@testing-library/jest-dom": "6.9.1",
+    "@testing-library/jest-dom": "7.0.1",
     "@takazudo/zfb": "4.3.1",
     "@types/node": "^22.0.0",
     "happy-dom": "20.14.6",
