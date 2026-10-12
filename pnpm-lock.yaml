@@ -22,7 +22,7 @@ importers:
         version: 4.3.1(@takazudo/zfb@4.3.1)
       '@takazudo/zudo-doc':
         specifier: 6.0.0
-        version: 6.0.0(@takazudo/zdtp@0.8.6(preact-render-to-string@6.7.0))(@takazudo/zfb-md-wasm@4.3.1)(@takazudo/zfb-runtime@4.3.1(@takazudo/zfb@4.3.1))(@takazudo/zfb@4.3.1)(@takazudo/zudo-doc-history-server@6.0.0)(@types/node@22.19.21)(diff@8.0.4)(katex@0.16.47)(zod@4.4.3)
+        version: 6.0.0(@takazudo/zdtp@0.8.6(preact-render-to-string@6.7.0))(@takazudo/zfb-md-wasm@4.3.1)(@takazudo/zfb-runtime@4.3.1(@takazudo/zfb@4.3.1))(@takazudo/zfb@4.3.1)(@takazudo/zudo-doc-history-server@6.0.0)(@types/node@22.20.5)(diff@8.0.4)(katex@0.16.47)(zod@4.4.3)
       '@takazudo/zudo-doc-history-server':
         specifier: 6.0.0
         version: 6.0.0
@@ -58,8 +58,8 @@ importers:
         specifier: ^4.0.1
         version: 4.0.1
       '@types/node':
-        specifier: ^22.0.0
-        version: 22.19.21
+        specifier: ^22.20.5
+        version: 22.20.5
       culori:
         specifier: ^4.0.2
         version: 4.0.2
@@ -68,7 +68,7 @@ importers:
         version: 20.14.6
       html-validate:
         specifier: ^11.16.2
-        version: 11.16.2(@vitest/expect@4.1.11)(vitest@4.1.11(@types/node@22.19.21)(happy-dom@20.14.6)(jsdom@30.1.2)(msw@2.15.0(@types/node@22.19.21)(typescript@5.9.3))(vite@7.3.5(@types/node@22.19.21)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.15)(yaml@2.9.0)))
+        version: 11.16.2(@vitest/expect@4.1.11)(vitest@4.1.11(@types/node@22.20.5)(happy-dom@20.14.6)(jsdom@30.1.2)(msw@2.15.0(@types/node@22.20.5)(typescript@5.9.3))(vite@7.3.5(@types/node@22.20.5)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.15)(yaml@2.9.0)))
       jsdom:
         specifier: ^30.1.2
         version: 30.1.2
@@ -77,7 +77,7 @@ importers:
         version: 2.1.14
       msw:
         specifier: ^2.15.0
-        version: 2.15.0(@types/node@22.19.21)(typescript@5.9.3)
+        version: 2.15.0(@types/node@22.20.5)(typescript@5.9.3)
       postcss:
         specifier: ^8.5.28
         version: 8.5.29
@@ -89,10 +89,10 @@ importers:
         version: 5.9.3
       vite:
         specifier: 7.3.5
-        version: 7.3.5(@types/node@22.19.21)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.15)(yaml@2.9.0)
+        version: 7.3.5(@types/node@22.20.5)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.15)(yaml@2.9.0)
       vitest:
         specifier: 4.1.11
-        version: 4.1.11(@types/node@22.19.21)(happy-dom@20.14.6)(jsdom@30.1.2)(msw@2.15.0(@types/node@22.19.21)(typescript@5.9.3))(vite@7.3.5(@types/node@22.19.21)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.15)(yaml@2.9.0))
+        version: 4.1.11(@types/node@22.20.5)(happy-dom@20.14.6)(jsdom@30.1.2)(msw@2.15.0(@types/node@22.20.5)(typescript@5.9.3))(vite@7.3.5(@types/node@22.20.5)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.15)(yaml@2.9.0))
 
   apps/demo:
     dependencies:
@@ -110,17 +110,17 @@ importers:
         version: 4.4.3
     devDependencies:
       '@types/node':
-        specifier: ^22.0.0
-        version: 22.19.21
+        specifier: ^22.20.5
+        version: 22.20.5
       typescript:
         specifier: ^5.9.0
         version: 5.9.3
       vite:
         specifier: 7.3.5
-        version: 7.3.5(@types/node@22.19.21)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.15)(yaml@2.9.0)
+        version: 7.3.5(@types/node@22.20.5)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.15)(yaml@2.9.0)
       vitest:
         specifier: 4.1.11
-        version: 4.1.11(@types/node@22.19.21)(happy-dom@20.14.6)(jsdom@30.1.2)(msw@2.15.0(@types/node@22.19.21)(typescript@5.9.3))(vite@7.3.5(@types/node@22.19.21)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.15)(yaml@2.9.0))
+        version: 4.1.11(@types/node@22.20.5)(happy-dom@20.14.6)(jsdom@30.1.2)(msw@2.15.0(@types/node@22.20.5)(typescript@5.9.3))(vite@7.3.5(@types/node@22.20.5)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.15)(yaml@2.9.0))
 
   doc:
     dependencies:
@@ -135,7 +135,7 @@ importers:
         version: 4.3.1(@takazudo/zfb@4.3.1)
       '@takazudo/zudo-doc':
         specifier: 6.0.0
-        version: 6.0.0(@takazudo/zdtp@0.8.6(preact-render-to-string@6.7.0))(@takazudo/zfb-md-wasm@4.3.1)(@takazudo/zfb-runtime@4.3.1(@takazudo/zfb@4.3.1))(@takazudo/zfb@4.3.1)(@takazudo/zudo-doc-history-server@6.0.0)(@types/node@22.19.21)(diff@8.0.4)(katex@0.16.47)(zod@4.4.3)
+        version: 6.0.0(@takazudo/zdtp@0.8.6(preact-render-to-string@6.7.0))(@takazudo/zfb-md-wasm@4.3.1)(@takazudo/zfb-runtime@4.3.1(@takazudo/zfb@4.3.1))(@takazudo/zfb@4.3.1)(@takazudo/zudo-doc-history-server@6.0.0)(@types/node@22.20.5)(diff@8.0.4)(katex@0.16.47)(zod@4.4.3)
       diff:
         specifier: ^8.0.3
         version: 8.0.4
@@ -147,11 +147,11 @@ importers:
         version: 4.4.3
     devDependencies:
       '@types/node':
-        specifier: ^22.0.0
-        version: 22.19.21
+        specifier: ^22.20.5
+        version: 22.20.5
       html-validate:
         specifier: ^11.16.2
-        version: 11.16.2(@vitest/expect@4.1.11)(vitest@4.1.11(@types/node@22.19.21)(happy-dom@20.14.6)(jsdom@30.1.2)(msw@2.15.0(@types/node@22.19.21)(typescript@5.9.3))(vite@7.3.5(@types/node@22.19.21)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.15)(yaml@2.9.0)))
+        version: 11.16.2(@vitest/expect@4.1.11)(vitest@4.1.11(@types/node@22.20.5)(happy-dom@20.14.6)(jsdom@30.1.2)(msw@2.15.0(@types/node@22.20.5)(typescript@5.9.3))(vite@7.3.5(@types/node@22.20.5)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.15)(yaml@2.9.0)))
       typescript:
         specifier: ^5.9.0
         version: 5.9.3
@@ -159,17 +159,17 @@ importers:
   packages/create-zudo-sg:
     devDependencies:
       '@types/node':
-        specifier: ^22.0.0
-        version: 22.19.21
+        specifier: ^22.20.5
+        version: 22.20.5
       typescript:
         specifier: ^5.9.0
         version: 5.9.3
       vite:
         specifier: 7.3.5
-        version: 7.3.5(@types/node@22.19.21)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.15)(yaml@2.9.0)
+        version: 7.3.5(@types/node@22.20.5)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.15)(yaml@2.9.0)
       vitest:
         specifier: 4.1.11
-        version: 4.1.11(@types/node@22.19.21)(happy-dom@20.14.6)(jsdom@30.1.2)(msw@2.15.0(@types/node@22.19.21)(typescript@5.9.3))(vite@7.3.5(@types/node@22.19.21)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.15)(yaml@2.9.0))
+        version: 4.1.11(@types/node@22.20.5)(happy-dom@20.14.6)(jsdom@30.1.2)(msw@2.15.0(@types/node@22.20.5)(typescript@5.9.3))(vite@7.3.5(@types/node@22.20.5)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.15)(yaml@2.9.0))
 
   packages/demo-ui:
     dependencies:
@@ -190,8 +190,8 @@ importers:
         specifier: 6.9.1
         version: 6.9.1
       '@types/node':
-        specifier: ^22.0.0
-        version: 22.19.21
+        specifier: ^22.20.5
+        version: 22.20.5
       happy-dom:
         specifier: 20.14.6
         version: 20.14.6
@@ -206,10 +206,10 @@ importers:
         version: 5.9.3
       vite:
         specifier: 7.3.5
-        version: 7.3.5(@types/node@22.19.21)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.15)(yaml@2.9.0)
+        version: 7.3.5(@types/node@22.20.5)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.15)(yaml@2.9.0)
       vitest:
         specifier: 4.1.11
-        version: 4.1.11(@types/node@22.19.21)(happy-dom@20.14.6)(jsdom@30.1.2)(msw@2.15.0(@types/node@22.19.21)(typescript@5.9.3))(vite@7.3.5(@types/node@22.19.21)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.15)(yaml@2.9.0))
+        version: 4.1.11(@types/node@22.20.5)(happy-dom@20.14.6)(jsdom@30.1.2)(msw@2.15.0(@types/node@22.20.5)(typescript@5.9.3))(vite@7.3.5(@types/node@22.20.5)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.15)(yaml@2.9.0))
 
   packages/styleguide:
     dependencies:
@@ -249,7 +249,7 @@ importers:
         version: 4.3.1
       '@takazudo/zudo-doc':
         specifier: 6.0.0
-        version: 6.0.0(@takazudo/zdtp@0.8.6(preact-render-to-string@6.7.0))(@takazudo/zfb-md-wasm@4.3.1)(@takazudo/zfb-runtime@4.3.1(@takazudo/zfb@4.3.1))(@takazudo/zfb@4.3.1)(@takazudo/zudo-doc-history-server@6.0.0)(@types/node@22.19.21)(diff@8.0.4)(katex@0.16.47)(zod@4.4.3)
+        version: 6.0.0(@takazudo/zdtp@0.8.6(preact-render-to-string@6.7.0))(@takazudo/zfb-md-wasm@4.3.1)(@takazudo/zfb-runtime@4.3.1(@takazudo/zfb@4.3.1))(@takazudo/zfb@4.3.1)(@takazudo/zudo-doc-history-server@6.0.0)(@types/node@22.20.5)(diff@8.0.4)(katex@0.16.47)(zod@4.4.3)
       '@testing-library/jest-dom':
         specifier: ^6.9.1
         version: 6.9.1
@@ -257,8 +257,8 @@ importers:
         specifier: ^4.0.1
         version: 4.0.1
       '@types/node':
-        specifier: ^22.0.0
-        version: 22.19.21
+        specifier: ^22.20.5
+        version: 22.20.5
       culori:
         specifier: ^4.0.2
         version: 4.0.2
@@ -273,10 +273,10 @@ importers:
         version: 5.9.3
       vite:
         specifier: 7.3.5
-        version: 7.3.5(@types/node@22.19.21)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.15)(yaml@2.9.0)
+        version: 7.3.5(@types/node@22.20.5)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.15)(yaml@2.9.0)
       vitest:
         specifier: 4.1.11
-        version: 4.1.11(@types/node@22.19.21)(happy-dom@20.14.6)(jsdom@30.1.2)(msw@2.15.0(@types/node@22.19.21)(typescript@5.9.3))(vite@7.3.5(@types/node@22.19.21)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.15)(yaml@2.9.0))
+        version: 4.1.11(@types/node@22.20.5)(happy-dom@20.14.6)(jsdom@30.1.2)(msw@2.15.0(@types/node@22.20.5)(typescript@5.9.3))(vite@7.3.5(@types/node@22.20.5)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.15)(yaml@2.9.0))
 
 packages:
 
@@ -1167,8 +1167,8 @@ packages:
   '@types/ms@2.1.0':
     resolution: {integrity: sha512-GsCCIZDE/p3i96vtEqx+7dBUGXrc7zeSK3wwPHIaRThS+9OhWIXRqzs4d6k1SVU8g91DrNRWxWUGhp5KXQb2VA==}
 
-  '@types/node@22.19.21':
-    resolution: {integrity: sha512-VMeFBSCKQKmm2swI2kW51SFusDqekC6q9trBCvJ/JliDchFSuoYYKN7yVNjPthP1HKZcx3U1gI/wTcEBjEFKTA==}
+  '@types/node@22.20.5':
+    resolution: {integrity: sha512-U2+DNr+wSjpsTS/wZGYHq7GcwfuSmKiKvoPvK22zwTlRhU91yOniN4qRR5KhIjvif7ysw/dz/hKmfDH0Ris4aA==}
 
   '@types/set-cookie-parser@2.4.10':
     resolution: {integrity: sha512-GGmQVGpQWUe5qglJozEjZV/5dyxbOOZ0LHe/lqyWssB88Y4svNfst0uqBVscdDeIKl5Jy5+aPSvy7mI9tYRguw==}
@@ -2624,122 +2624,122 @@ snapshots:
 
   '@inquirer/ansi@2.0.7': {}
 
-  '@inquirer/checkbox@5.2.1(@types/node@22.19.21)':
+  '@inquirer/checkbox@5.2.1(@types/node@22.20.5)':
     dependencies:
       '@inquirer/ansi': 2.0.7
-      '@inquirer/core': 11.2.1(@types/node@22.19.21)
+      '@inquirer/core': 11.2.1(@types/node@22.20.5)
       '@inquirer/figures': 2.0.7
-      '@inquirer/type': 4.0.7(@types/node@22.19.21)
+      '@inquirer/type': 4.0.7(@types/node@22.20.5)
     optionalDependencies:
-      '@types/node': 22.19.21
+      '@types/node': 22.20.5
 
-  '@inquirer/confirm@6.1.1(@types/node@22.19.21)':
+  '@inquirer/confirm@6.1.1(@types/node@22.20.5)':
     dependencies:
-      '@inquirer/core': 11.2.1(@types/node@22.19.21)
-      '@inquirer/type': 4.0.7(@types/node@22.19.21)
+      '@inquirer/core': 11.2.1(@types/node@22.20.5)
+      '@inquirer/type': 4.0.7(@types/node@22.20.5)
     optionalDependencies:
-      '@types/node': 22.19.21
+      '@types/node': 22.20.5
 
-  '@inquirer/core@11.2.1(@types/node@22.19.21)':
+  '@inquirer/core@11.2.1(@types/node@22.20.5)':
     dependencies:
       '@inquirer/ansi': 2.0.7
       '@inquirer/figures': 2.0.7
-      '@inquirer/type': 4.0.7(@types/node@22.19.21)
+      '@inquirer/type': 4.0.7(@types/node@22.20.5)
       cli-width: 4.1.0
       fast-wrap-ansi: 0.2.2
       mute-stream: 3.0.0
       signal-exit: 4.1.0
     optionalDependencies:
-      '@types/node': 22.19.21
+      '@types/node': 22.20.5
 
-  '@inquirer/editor@5.2.2(@types/node@22.19.21)':
+  '@inquirer/editor@5.2.2(@types/node@22.20.5)':
     dependencies:
-      '@inquirer/core': 11.2.1(@types/node@22.19.21)
-      '@inquirer/external-editor': 3.0.3(@types/node@22.19.21)
-      '@inquirer/type': 4.0.7(@types/node@22.19.21)
+      '@inquirer/core': 11.2.1(@types/node@22.20.5)
+      '@inquirer/external-editor': 3.0.3(@types/node@22.20.5)
+      '@inquirer/type': 4.0.7(@types/node@22.20.5)
     optionalDependencies:
-      '@types/node': 22.19.21
+      '@types/node': 22.20.5
 
-  '@inquirer/expand@5.1.1(@types/node@22.19.21)':
+  '@inquirer/expand@5.1.1(@types/node@22.20.5)':
     dependencies:
-      '@inquirer/core': 11.2.1(@types/node@22.19.21)
-      '@inquirer/type': 4.0.7(@types/node@22.19.21)
+      '@inquirer/core': 11.2.1(@types/node@22.20.5)
+      '@inquirer/type': 4.0.7(@types/node@22.20.5)
     optionalDependencies:
-      '@types/node': 22.19.21
+      '@types/node': 22.20.5
 
-  '@inquirer/external-editor@3.0.3(@types/node@22.19.21)':
+  '@inquirer/external-editor@3.0.3(@types/node@22.20.5)':
     dependencies:
       chardet: 2.2.0
       iconv-lite: 0.7.3
     optionalDependencies:
-      '@types/node': 22.19.21
+      '@types/node': 22.20.5
 
   '@inquirer/figures@2.0.7': {}
 
-  '@inquirer/input@5.1.2(@types/node@22.19.21)':
+  '@inquirer/input@5.1.2(@types/node@22.20.5)':
     dependencies:
-      '@inquirer/core': 11.2.1(@types/node@22.19.21)
-      '@inquirer/type': 4.0.7(@types/node@22.19.21)
+      '@inquirer/core': 11.2.1(@types/node@22.20.5)
+      '@inquirer/type': 4.0.7(@types/node@22.20.5)
     optionalDependencies:
-      '@types/node': 22.19.21
+      '@types/node': 22.20.5
 
-  '@inquirer/number@4.1.1(@types/node@22.19.21)':
+  '@inquirer/number@4.1.1(@types/node@22.20.5)':
     dependencies:
-      '@inquirer/core': 11.2.1(@types/node@22.19.21)
-      '@inquirer/type': 4.0.7(@types/node@22.19.21)
+      '@inquirer/core': 11.2.1(@types/node@22.20.5)
+      '@inquirer/type': 4.0.7(@types/node@22.20.5)
     optionalDependencies:
-      '@types/node': 22.19.21
+      '@types/node': 22.20.5
 
-  '@inquirer/password@5.1.1(@types/node@22.19.21)':
-    dependencies:
-      '@inquirer/ansi': 2.0.7
-      '@inquirer/core': 11.2.1(@types/node@22.19.21)
-      '@inquirer/type': 4.0.7(@types/node@22.19.21)
-    optionalDependencies:
-      '@types/node': 22.19.21
-
-  '@inquirer/prompts@8.5.2(@types/node@22.19.21)':
-    dependencies:
-      '@inquirer/checkbox': 5.2.1(@types/node@22.19.21)
-      '@inquirer/confirm': 6.1.1(@types/node@22.19.21)
-      '@inquirer/editor': 5.2.2(@types/node@22.19.21)
-      '@inquirer/expand': 5.1.1(@types/node@22.19.21)
-      '@inquirer/input': 5.1.2(@types/node@22.19.21)
-      '@inquirer/number': 4.1.1(@types/node@22.19.21)
-      '@inquirer/password': 5.1.1(@types/node@22.19.21)
-      '@inquirer/rawlist': 5.3.1(@types/node@22.19.21)
-      '@inquirer/search': 4.2.1(@types/node@22.19.21)
-      '@inquirer/select': 5.2.1(@types/node@22.19.21)
-    optionalDependencies:
-      '@types/node': 22.19.21
-
-  '@inquirer/rawlist@5.3.1(@types/node@22.19.21)':
-    dependencies:
-      '@inquirer/core': 11.2.1(@types/node@22.19.21)
-      '@inquirer/type': 4.0.7(@types/node@22.19.21)
-    optionalDependencies:
-      '@types/node': 22.19.21
-
-  '@inquirer/search@4.2.1(@types/node@22.19.21)':
-    dependencies:
-      '@inquirer/core': 11.2.1(@types/node@22.19.21)
-      '@inquirer/figures': 2.0.7
-      '@inquirer/type': 4.0.7(@types/node@22.19.21)
-    optionalDependencies:
-      '@types/node': 22.19.21
-
-  '@inquirer/select@5.2.1(@types/node@22.19.21)':
+  '@inquirer/password@5.1.1(@types/node@22.20.5)':
     dependencies:
       '@inquirer/ansi': 2.0.7
-      '@inquirer/core': 11.2.1(@types/node@22.19.21)
-      '@inquirer/figures': 2.0.7
-      '@inquirer/type': 4.0.7(@types/node@22.19.21)
+      '@inquirer/core': 11.2.1(@types/node@22.20.5)
+      '@inquirer/type': 4.0.7(@types/node@22.20.5)
     optionalDependencies:
-      '@types/node': 22.19.21
+      '@types/node': 22.20.5
 
-  '@inquirer/type@4.0.7(@types/node@22.19.21)':
+  '@inquirer/prompts@8.5.2(@types/node@22.20.5)':
+    dependencies:
+      '@inquirer/checkbox': 5.2.1(@types/node@22.20.5)
+      '@inquirer/confirm': 6.1.1(@types/node@22.20.5)
+      '@inquirer/editor': 5.2.2(@types/node@22.20.5)
+      '@inquirer/expand': 5.1.1(@types/node@22.20.5)
+      '@inquirer/input': 5.1.2(@types/node@22.20.5)
+      '@inquirer/number': 4.1.1(@types/node@22.20.5)
+      '@inquirer/password': 5.1.1(@types/node@22.20.5)
+      '@inquirer/rawlist': 5.3.1(@types/node@22.20.5)
+      '@inquirer/search': 4.2.1(@types/node@22.20.5)
+      '@inquirer/select': 5.2.1(@types/node@22.20.5)
     optionalDependencies:
-      '@types/node': 22.19.21
+      '@types/node': 22.20.5
+
+  '@inquirer/rawlist@5.3.1(@types/node@22.20.5)':
+    dependencies:
+      '@inquirer/core': 11.2.1(@types/node@22.20.5)
+      '@inquirer/type': 4.0.7(@types/node@22.20.5)
+    optionalDependencies:
+      '@types/node': 22.20.5
+
+  '@inquirer/search@4.2.1(@types/node@22.20.5)':
+    dependencies:
+      '@inquirer/core': 11.2.1(@types/node@22.20.5)
+      '@inquirer/figures': 2.0.7
+      '@inquirer/type': 4.0.7(@types/node@22.20.5)
+    optionalDependencies:
+      '@types/node': 22.20.5
+
+  '@inquirer/select@5.2.1(@types/node@22.20.5)':
+    dependencies:
+      '@inquirer/ansi': 2.0.7
+      '@inquirer/core': 11.2.1(@types/node@22.20.5)
+      '@inquirer/figures': 2.0.7
+      '@inquirer/type': 4.0.7(@types/node@22.20.5)
+    optionalDependencies:
+      '@types/node': 22.20.5
+
+  '@inquirer/type@4.0.7(@types/node@22.20.5)':
+    optionalDependencies:
+      '@types/node': 22.20.5
 
   '@jridgewell/gen-mapping@0.3.13':
     dependencies:
@@ -2970,9 +2970,9 @@ snapshots:
 
   '@takazudo/zudo-doc-history-server@6.0.0': {}
 
-  '@takazudo/zudo-doc@6.0.0(@takazudo/zdtp@0.8.6(preact-render-to-string@6.7.0))(@takazudo/zfb-md-wasm@4.3.1)(@takazudo/zfb-runtime@4.3.1(@takazudo/zfb@4.3.1))(@takazudo/zfb@4.3.1)(@takazudo/zudo-doc-history-server@6.0.0)(@types/node@22.19.21)(diff@8.0.4)(katex@0.16.47)(zod@4.4.3)':
+  '@takazudo/zudo-doc@6.0.0(@takazudo/zdtp@0.8.6(preact-render-to-string@6.7.0))(@takazudo/zfb-md-wasm@4.3.1)(@takazudo/zfb-runtime@4.3.1(@takazudo/zfb@4.3.1))(@takazudo/zfb@4.3.1)(@takazudo/zudo-doc-history-server@6.0.0)(@types/node@22.20.5)(diff@8.0.4)(katex@0.16.47)(zod@4.4.3)':
     dependencies:
-      '@inquirer/prompts': 8.5.2(@types/node@22.19.21)
+      '@inquirer/prompts': 8.5.2(@types/node@22.20.5)
       '@takazudo/zfb': 4.3.1
       '@takazudo/zfb-runtime': 4.3.1(@takazudo/zfb@4.3.1)
       esbuild: 0.28.2
@@ -3032,13 +3032,13 @@ snapshots:
 
   '@types/ms@2.1.0': {}
 
-  '@types/node@22.19.21':
+  '@types/node@22.20.5':
     dependencies:
       undici-types: 6.21.0
 
   '@types/set-cookie-parser@2.4.10':
     dependencies:
-      '@types/node': 22.19.21
+      '@types/node': 22.20.5
 
   '@types/statuses@2.0.6': {}
 
@@ -3053,7 +3053,7 @@ snapshots:
 
   '@types/ws@8.18.2':
     dependencies:
-      '@types/node': 22.19.21
+      '@types/node': 22.20.5
 
   '@vitest/expect@4.1.11':
     dependencies:
@@ -3064,14 +3064,14 @@ snapshots:
       chai: 6.2.2
       tinyrainbow: 3.1.0
 
-  '@vitest/mocker@4.1.11(msw@2.15.0(@types/node@22.19.21)(typescript@5.9.3))(vite@7.3.5(@types/node@22.19.21)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.15)(yaml@2.9.0))':
+  '@vitest/mocker@4.1.11(msw@2.15.0(@types/node@22.20.5)(typescript@5.9.3))(vite@7.3.5(@types/node@22.20.5)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.15)(yaml@2.9.0))':
     dependencies:
       '@vitest/spy': 4.1.11
       estree-walker: 3.0.3
       magic-string: 0.30.21
     optionalDependencies:
-      msw: 2.15.0(@types/node@22.19.21)(typescript@5.9.3)
-      vite: 7.3.5(@types/node@22.19.21)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.15)(yaml@2.9.0)
+      msw: 2.15.0(@types/node@22.20.5)(typescript@5.9.3)
+      vite: 7.3.5(@types/node@22.20.5)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.15)(yaml@2.9.0)
 
   '@vitest/pretty-format@4.1.11':
     dependencies:
@@ -3132,7 +3132,7 @@ snapshots:
 
   buffer-image-size@0.6.4:
     dependencies:
-      '@types/node': 22.19.21
+      '@types/node': 22.20.5
 
   bundle-require@5.1.0(esbuild@0.27.7):
     dependencies:
@@ -3355,7 +3355,7 @@ snapshots:
 
   happy-dom@20.14.6:
     dependencies:
-      '@types/node': 22.19.21
+      '@types/node': 22.20.5
       '@types/whatwg-mimetype': 3.0.2
       '@types/ws': 8.18.2
       buffer-image-size: 0.6.4
@@ -3379,7 +3379,7 @@ snapshots:
     transitivePeerDependencies:
       - '@noble/hashes'
 
-  html-validate@11.16.2(@vitest/expect@4.1.11)(vitest@4.1.11(@types/node@22.19.21)(happy-dom@20.14.6)(jsdom@30.1.2)(msw@2.15.0(@types/node@22.19.21)(typescript@5.9.3))(vite@7.3.5(@types/node@22.19.21)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.15)(yaml@2.9.0))):
+  html-validate@11.16.2(@vitest/expect@4.1.11)(vitest@4.1.11(@types/node@22.20.5)(happy-dom@20.14.6)(jsdom@30.1.2)(msw@2.15.0(@types/node@22.20.5)(typescript@5.9.3))(vite@7.3.5(@types/node@22.20.5)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.15)(yaml@2.9.0))):
     dependencies:
       '@html-validate/stylish': 6.1.0
       '@sidvind/better-ajv-errors': 7.0.0(ajv@8.20.0)
@@ -3389,7 +3389,7 @@ snapshots:
       semver: 7.8.4
     optionalDependencies:
       '@vitest/expect': 4.1.11
-      vitest: 4.1.11(@types/node@22.19.21)(happy-dom@20.14.6)(jsdom@30.1.2)(msw@2.15.0(@types/node@22.19.21)(typescript@5.9.3))(vite@7.3.5(@types/node@22.19.21)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.15)(yaml@2.9.0))
+      vitest: 4.1.11(@types/node@22.20.5)(happy-dom@20.14.6)(jsdom@30.1.2)(msw@2.15.0(@types/node@22.20.5)(typescript@5.9.3))(vite@7.3.5(@types/node@22.20.5)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.15)(yaml@2.9.0))
 
   iconv-lite@0.7.3:
     dependencies:
@@ -3828,9 +3828,9 @@ snapshots:
 
   ms@2.1.3: {}
 
-  msw@2.15.0(@types/node@22.19.21)(typescript@5.9.3):
+  msw@2.15.0(@types/node@22.20.5)(typescript@5.9.3):
     dependencies:
-      '@inquirer/confirm': 6.1.1(@types/node@22.19.21)
+      '@inquirer/confirm': 6.1.1(@types/node@22.20.5)
       '@mswjs/interceptors': 0.41.9
       '@open-draft/deferred-promise': 3.0.0
       '@types/statuses': 2.0.6
@@ -4168,7 +4168,7 @@ snapshots:
       '@types/unist': 3.0.3
       unist-util-stringify-position: 4.0.0
 
-  vite@7.3.5(@types/node@22.19.21)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.15)(yaml@2.9.0):
+  vite@7.3.5(@types/node@22.20.5)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.15)(yaml@2.9.0):
     dependencies:
       esbuild: 0.27.7
       fdir: 6.5.0(picomatch@4.0.4)
@@ -4177,17 +4177,17 @@ snapshots:
       rollup: 4.63.2
       tinyglobby: 0.2.17
     optionalDependencies:
-      '@types/node': 22.19.21
+      '@types/node': 22.20.5
       fsevents: 2.3.3
       jiti: 2.7.0
       lightningcss: 1.32.0
       tsx: 4.23.15
       yaml: 2.9.0
 
-  vitest@4.1.11(@types/node@22.19.21)(happy-dom@20.14.6)(jsdom@30.1.2)(msw@2.15.0(@types/node@22.19.21)(typescript@5.9.3))(vite@7.3.5(@types/node@22.19.21)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.15)(yaml@2.9.0)):
+  vitest@4.1.11(@types/node@22.20.5)(happy-dom@20.14.6)(jsdom@30.1.2)(msw@2.15.0(@types/node@22.20.5)(typescript@5.9.3))(vite@7.3.5(@types/node@22.20.5)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.15)(yaml@2.9.0)):
     dependencies:
       '@vitest/expect': 4.1.11
-      '@vitest/mocker': 4.1.11(msw@2.15.0(@types/node@22.19.21)(typescript@5.9.3))(vite@7.3.5(@types/node@22.19.21)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.15)(yaml@2.9.0))
+      '@vitest/mocker': 4.1.11(msw@2.15.0(@types/node@22.20.5)(typescript@5.9.3))(vite@7.3.5(@types/node@22.20.5)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.15)(yaml@2.9.0))
       '@vitest/pretty-format': 4.1.11
       '@vitest/runner': 4.1.11
       '@vitest/snapshot': 4.1.11
@@ -4204,10 +4204,10 @@ snapshots:
       tinyexec: 1.3.1
       tinyglobby: 0.2.17
       tinyrainbow: 3.1.0
-      vite: 7.3.5(@types/node@22.19.21)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.15)(yaml@2.9.0)
+      vite: 7.3.5(@types/node@22.20.5)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.15)(yaml@2.9.0)
       why-is-node-running: 2.3.0
     optionalDependencies:
-      '@types/node': 22.19.21
+      '@types/node': 22.20.5
       happy-dom: 20.14.6
       jsdom: 30.1.2
     transitivePeerDependencies:
