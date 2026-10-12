@@ -12,10 +12,12 @@ stable correction was present. `@takazudo/zdtp` stays **0.8.6**.
 | `@takazudo/zfb`, `@takazudo/zfb-runtime`, `@takazudo/zfb-md-wasm` | **4.3.3** |
 | `@takazudo/zdtp` | **0.8.6** |
 
-Engine peer floors are zfb `^4.3.3`, zudo-doc `^6.0.0`, zdtp `^0.8.6`.
-The fixture install line uses doc `^6.1.1` and zfb `^4.3.3`, matching the
-exact fixture pins. `@zudo-sg/demo-ui` keeps its zfb peer at `^4.3.1` and
-pins md-wasm and its zfb devDependency to 4.3.3. Published zudo-doc 6.1.1
+Engine peer floors are zfb `^4.3.3`, zudo-doc `^6.1.1`, zdtp `^0.8.6`.
+First-party peer floors follow the newest published release at every bump
+round (ADR §13, 2026-10-13 amendment). The fixture install line uses doc
+`^6.1.1` and zfb `^4.3.3`, matching the exact fixture pins.
+`@zudo-sg/demo-ui` peers zfb `^4.3.3` and pins md-wasm and its zfb
+devDependency to 4.3.3. Published zudo-doc 6.1.1
 peers zfb `^4.3.3` and zod `^4.3.6`; the workspace zod range `^4.6.5`
 already satisfies that peer. `tools/deploy` is unchanged.
 

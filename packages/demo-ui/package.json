@@ -23,7 +23,7 @@
     "dompurify": "^3.4.16"
   },
   "peerDependencies": {
-    "@takazudo/zfb": "^4.3.1"
+    "@takazudo/zfb": "^4.3.3"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "7.0.1",

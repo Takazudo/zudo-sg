@@ -172,7 +172,7 @@
   "peerDependencies": {
     "@takazudo/zfb": "^4.3.3",
     "@takazudo/zdtp": "^0.8.6",
-    "@takazudo/zudo-doc": "^6.0.0"
+    "@takazudo/zudo-doc": "^6.1.1"
   },
   "devDependencies": {
     "@takazudo/zdtp": "0.8.6",
