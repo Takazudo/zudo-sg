@@ -49,7 +49,7 @@
     "check": "pnpm typecheck && pnpm build && pnpm test"
   },
   "devDependencies": {
-    "@types/node": "^22.0.0",
+    "@types/node": "^22.20.5",
     "typescript": "^5.9.0",
     "vite": "7.3.5",
     "vitest": "4.1.11"
