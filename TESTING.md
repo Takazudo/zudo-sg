@@ -304,6 +304,26 @@ config refuses a report path that overlaps the output path. `pnpm test:e2e:ci`
 on a machine with `CI` set uses the same reporters as the PR job. A local arm
 that sets `ZUDO_SG_E2E_REPORT_DIR` also writes HTML and JSON into that directory.
 
+The Export/Load round-trip in `preview-token-panel.spec.ts` (#995) attaches its
+evidence from `finally`, pass or fail. Read these first:
+
+- `round-trip-evidence` (JSON): run identity, the stage that was active when it
+  stopped, and per-slot observations (`applied`, `post-reset`,
+  `import-after-analyze`, `import-after-load`, `post-load`). Each slot keeps the
+  last successful read apart from the latest read error. The import slots
+  record the actual checkbox/radio `checked`/`disabled` state and status lines;
+  `modeSides: "absent"` means zdtp did not render that fieldset. After a
+  failure, `failureReads` holds short (at most 2 s) final reads of the page,
+  iframe, and import modal.
+- `export-raw` (text): the export bytes as read, saved before any assertion or
+  parse.
+- `round-trip-diagnostics` (text): console errors, page errors, failed requests.
+
+Evidence that cannot be collected or attached shows up as an `evidence-error`
+annotation. It never replaces the test's own error and never fails a passing run.
+`e2e/helpers/round-trip-evidence.ts` holds that contract, and
+`scripts/__tests__/round-trip-evidence.test.ts` unit-tests it.
+
 ---
 
 ## Pre-commit Hook (lefthook)
