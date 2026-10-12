@@ -3,6 +3,7 @@ import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { dirname, extname, join, relative, resolve } from "node:path";
 import postcss from "postcss";
 import * as ts from "typescript";
+import { hashWindExplainProvenance } from "./wind-explain-provenance";
 
 export interface ClassOccurrence {
   token: string;
@@ -15,16 +16,6 @@ export interface ClassScan {
 }
 
 const EXCLUDED_SOURCE_DIRS = new Set(["__snapshots__"]);
-
-const WIND_CONFIG_INPUTS = [
-  "zfb.config.ts",
-  "zudo-sg.config.mjs",
-  "pnpm-lock.yaml",
-  "packages/demo-ui/styles/wind-tokens.mjs",
-  "packages/styleguide/package.json",
-  "packages/styleguide/src/config/index.ts",
-  "packages/styleguide/src/config/wind.ts",
-];
 
 export function getConfiguredClassHelpers(repoRoot: string): Set<string> {
   const source = readFileSync(resolve(repoRoot, "zfb.config.ts"), "utf8");
@@ -335,17 +326,8 @@ export function getWindCompilerVersion(repoRoot: string): string {
   return JSON.parse(readFileSync(manifestPath, "utf8")).version as string;
 }
 
-export function getWindConfigHash(repoRoot: string, compilerVersion: string): string {
-  const hash = createHash("sha256");
-  hash.update(`compiler:${compilerVersion}\n`);
-  for (const input of WIND_CONFIG_INPUTS) {
-    const path = resolve(repoRoot, input);
-    if (!existsSync(path)) throw new Error(`Missing wind config input: ${input}`);
-    hash.update(`${input}\0`);
-    hash.update(readFileSync(path));
-    hash.update("\0");
-  }
-  return hash.digest("hex");
+export function getWindConfigHash(repoRoot: string, compilerVersion: string): Promise<string> {
+  return hashWindExplainProvenance(repoRoot, compilerVersion);
 }
 
 export function getCandidateSetHash(candidates: string[]): string {
