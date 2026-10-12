@@ -1,5 +1,60 @@
 # Dependency audit register
 
+## Lock health follow-up — 2026-10-12, #977 / #978 / #979 / #980
+
+Implementation: #981, based on main `b2c7cb8186d063516f4fddb68f291fb5480025b6`.
+The original #963 remains open: compatible direct floors and a healthy root lock
+are not a package-side guarantee for retained consumer locks.
+
+### Consolidated updates and toolchain
+
+Selected source changes: #965 jsdom **30.1.2** (root and demo-ui), #966
+CodeMirror view **6.43.14**, #967 Lezer highlight **1.2.5**, and #968
+html-validate **11.16.2** (root and doc). Source PRs remain open until verified
+replacement integration. Node 22 consumer/type support, Node 24 CI, pnpm
+**11.5.2**, first-party pins, Vite/Vitest, Happy DOM, Preact and esbuild/KaTeX
+holds remain unchanged.
+
+The initial install retained view 6.43.1 beside 6.43.14 and exposed incompatible
+private EditorView types. Compatible pnpm dedupe normalizes the shared graph;
+frozen installation and nonmutating dedupe now pass. The graph has **437
+package/snapshot records** versus 438 on main; this is graph normalization and
+upgraded dependency closures, not a package removal.
+
+Registry metadata for html-validate 11.16.2 requires Node
+`^22.22.0 || >=24.8.0`; its optional Vitest/@vitest/expect peers accept
+`^3.2.0 || ^4.0.1 || ^5.0.0`, including retained Vitest 4.1.11.
+These are development-tool requirements, not changed published consumer floors.
+Local Node **24.19.0** passes root/doc types, fresh root/doc builds and both HTML
+validations with their unchanged `element-permitted-content` rules.
+The real zfb 4.3.1 Wind generator retains all **343 candidates** and every
+explanation: **310 resolved utilities, 31 ordinary classes, two markers**.
+Only generated input provenance changes. The 34 focused coverage, module identity,
+highlighting and jsdom sanitizer checks pass; final integration evidence belongs
+on #981 rather than substituting historical source-PR checks.
+
+### Dependabot graph ownership and dispositions
+
+| Graph | Before | After |
+| --- | --- | --- |
+| Shared root lock: root, apps/demo, doc, packages/create-zudo-sg, packages/demo-ui, packages/styleguide | `/` plus overlapping `/packages/*` and `/apps/*` | `/` owns all six importers, including doc |
+| Independent deployment tools | `/tools/deploy` | `/tools/deploy` retained |
+| Independent React proof | `/fixtures/react-descriptor-host` | `/fixtures/react-descriptor-host` retained |
+| Workflow actions | `/` | `/` retained |
+| Composite actions | `/.github/actions/*` | `/.github/actions/*` retained |
+
+All npm directories retain `@takazudo/*` exclusions and ignore only
+`@types/node` `version-update:semver-major`. Same-major Node 22 updates and
+unrelated majors remain available. YAML/options validate against SchemaStore's
+Dependabot v2 schema; all six actual lock importers were inspected. No hosted
+updater preview is available here; schema parsing does not prove future updater
+execution. #969's complete workspace proposal is the existing ownership evidence.
+
+State refreshed before implementation: #969/#970/#971/#972/#973/#975 are closed
+unmerged under Node 22 policy; #971 was green and was not closed for CI failure.
+#974 is closed unmerged as the exact duplicate of #965. No duplicate closure
+comments were posted. #965–#968 remain open pending #981 integration.
+
 ## Current audit — 2026-10-11, sweep #950 / maintenance #951 / React proof #952
 
 This section supersedes the historical decisions below. The zfb migration is
