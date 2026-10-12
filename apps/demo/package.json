@@ -17,10 +17,10 @@
     "@takazudo/zfb": "4.3.1",
     "@takazudo/zfb-runtime": "4.3.1",
     "@zudo-sg/demo-ui": "workspace:*",
-    "zod": "^4.0.0"
+    "zod": "^4.6.5"
   },
   "devDependencies": {
-    "@types/node": "^22.0.0",
+    "@types/node": "^22.20.5",
     "typescript": "^5.9.0",
     "vite": "7.3.5",
     "vitest": "4.1.11"

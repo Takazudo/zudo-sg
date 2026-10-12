@@ -1,5 +1,137 @@
 # Dependency audit register
 
+## Supported dependency consolidation — 2026-10-12, #991
+
+Implementation is on `maintenance/supported-deps-991`, based on main
+`cb10fbb0f2b041f7279e88f6e9f07e1f4af125a2`. [#981](https://github.com/Takazudo/zudo-sg/pull/981)
+is merged. Source PRs [#965](https://github.com/Takazudo/zudo-sg/pull/965)–[#968](https://github.com/Takazudo/zudo-sg/pull/968)
+were closed unmerged on 2026-10-12 after that integration. TypeScript 7
+PRs [#982](https://github.com/Takazudo/zudo-sg/pull/982) and
+[#988](https://github.com/Takazudo/zudo-sg/pull/988) stay open under
+[#990](https://github.com/Takazudo/zudo-sg/issues/990).
+[#963](https://github.com/Takazudo/zudo-sg/issues/963) stays open: this
+batch only reruns the existing retained-lock gate.
+
+### Baseline before the edits
+
+Measured locally on Node **24.13.0** and pnpm **11.5.2**.
+`pnpm install --frozen-lockfile` passed. Supply-chain verification and
+`pnpm dedupe --check` both reported **437** resolution entries, and the
+nonmutating dedupe check passed, so no compatible normalization was
+pending. Root `pnpm audit`: **2 low, zero moderate/high/critical**
+([GHSA-g7r4-m6w7-qqqr](https://github.com/advisories/GHSA-g7r4-m6w7-qqqr)
+esbuild, [GHSA-238p-pmpm-9mq7](https://github.com/advisories/GHSA-238p-pmpm-9mq7)
+KaTeX). `pnpm audit --prod --audit-level=high` and
+`pnpm audit --audit-level=high` passed. The production audit without that
+floor exits nonzero only because of the KaTeX low.
+`tools/deploy` frozen install passed with **91** supply-chain entries and
+**zero** advisories on both the full and production audits.
+
+The independent React fixture, still at exact Zod **4.3.6** and
+`@types/node` **22.19.15**, installed **182** resolution entries in its
+temporary consumer lock. Its full audit retained **one low** KaTeX finding
+and `pnpm audit --prod --audit-level=high` passed. That install's version
+assertion stopped on this Mac before the browser stages because
+`os.tmpdir()` returned a `/var/folders` path whose `realpath` is
+`/private/var/folders`; the audit above was taken from that retained
+install. Main's merged #981 head had all 14 PR Checks green, and
+Production Deploy on `cb10fbb` succeeded.
+
+Wind provenance before the edit, from the committed fixture: zfb **4.3.1**,
+**343** candidates (**310** resolved utilities, **31** ordinary classes,
+**2** markers), `candidateSetSha256`
+`478478942a02c3aded0a7136427019391d5362c1808c095091ccbb46f33cfd2a`,
+`windConfigSha256`
+`904487d61f6c65f338ca4af5e2d4be605a016393e3b8a2e10b8bcd2dc7a49a02`.
+
+### Selected updates and decisions
+
+| Source | Result | Ownership kept |
+| --- | --- | --- |
+| #983 | Zod **4.4.3 → 4.6.5** | caret ranges in root, apps/demo and doc |
+| #984 | `@testing-library/jest-dom` **6.9.1 → 7.0.1** | caret in root and the engine; exact `7.0.1` in demo-ui |
+| #985 | `@types/node` **22.19.21 → 22.20.5** | caret in all six shared-workspace importers |
+| #986 | `@playwright/test` **1.63.0 → 1.64.0** | caret in the root manifest; lockfile `playwright` and `playwright-core` are both **1.64.0** |
+| #987 | React fixture Zod **4.3.6 → 4.6.5** | exact pin; no committed fixture lockfile |
+| #989 | React fixture `@types/node` **22.19.15 → 22.20.5** | exact pin; no committed fixture lockfile |
+
+**Zero direct removals.** Zod, jest-dom, Node types and Playwright have
+live consumers: the docs schema, Vitest setup in the root and the engine,
+Playwright e2e and packed proofs, and TypeScript compilation. A package
+was not dropped because another importer also installs it. No one-shot
+unused-dependency detector was added, and no declaration was reclassified
+as unused. The engine-host fixture and the generated initializer template
+were left on their existing generation contract.
+
+jest-dom **7.0.1** requires Node `>=22` and peer
+`@testing-library/dom` `>=10 <11`. Its Vitest peer is optional and accepts
+retained Vitest **4.1.11**. The shared lock resolves one
+`@testing-library/dom@10.4.2` for the root, demo-ui and engine importers.
+No direct DOM declaration was added.
+
+### Graph delta
+
+`pnpm install` regenerated the shared lock from the final manifests.
+`pnpm dedupe --check` then exited **1**: `@types/set-cookie-parser`,
+`@types/ws`, `buffer-image-size` and `happy-dom` still peered
+`@types/node@22.19.21`. `pnpm dedupe` applied that compatible
+normalization (`Packages: -1`). The following `pnpm dedupe --check`
+passed, and `pnpm install --frozen-lockfile` was already up to date.
+That dedupe is normalization of the types peer, separate from the version
+upgrades.
+
+Resolution entries: **437 → 449** (**+12**). The twelve additions are the
+jest-dom 7 closure: `@testing-library/dom@10.4.2`,
+`@babel/code-frame@7.29.7`, `@babel/helper-validator-identifier@7.29.7`,
+`@babel/runtime@7.29.10`, `@types/aria-query@5.0.4`, `ansi-styles@5.2.0`,
+`aria-query@5.3.0`, `dom-accessibility-api@0.5.16`, `js-tokens@4.0.0`,
+`lz-string@1.5.0`, `pretty-format@27.5.1` and `react-is@17.0.2`.
+Zod, `@types/node`, `@playwright/test`, `playwright` and `playwright-core`
+replaced existing resolution entries. Workflows install Chromium with
+`pnpm exec playwright install chromium --with-deps`. No Playwright Docker
+image or image tag is present.
+
+The installer reported Zod **4.6.6** as available. This lock resolves
+**4.6.5**, the version selected by #983. `@types/node` **26.6.5** is a
+major outside the Node 22 policy and was not installed.
+
+### Holds and audit after the shared-lock update
+
+Fresh root audit is unchanged: **2 low, zero moderate/high/critical**.
+Deployment remains **zero**. Both high-level audit gates pass. No new
+high or critical finding was introduced. No override or audit ignore was
+added.
+
+| Package | Installed | Disposition |
+| --- | --- | --- |
+| esbuild | **0.27.7** retained; tsx family **0.28.2** retained | HOLD. Vite **7.3.5** and tsup **8.5.1** both depend on `^0.27.0`. The advisory's patched floor is **0.28.1**, outside those ranges. Vite 8 is not a compatible substitute. |
+| katex | **0.16.47** retained | HOLD. zudo-doc **6.0.0** peers `^0.16.0`. The patched floor **0.18.2** is outside that range. |
+| typescript | **5.9.3** retained | HOLD for #990. The compiler-API migration is a separate batch. |
+| Node types | **22.20.5** | KEEP on the Node 22 line. |
+
+### Wind provenance
+
+`pnpm exec tsx packages/demo-ui/scripts/refresh-authored-class-coverage.ts`
+ran the real `zfb wind explain --json --stdin --project-root .` compiler
+at zfb **4.3.1**. The candidate set, candidate hash and all **343**
+explanations are unchanged: **310** resolved utilities, **31** ordinary
+classes, **2** markers. `windConfigSha256` changed from
+`904487d61f6c65f338ca4af5e2d4be605a016393e3b8a2e10b8bcd2dc7a49a02` to
+`f578e57532ee8ededa741cc8c3c62e57cadad9d348f7593e46874b1ac82f7feb`
+because the generator hashes the entire root lockfile together with the
+unchanged engine manifest and Wind inputs. The hash inputs and the
+coverage assertions were not edited, and the digest was not written by
+hand.
+
+The updated React fixture was packed and installed outside the workspace.
+Exact pins resolved to Zod **4.6.5** and `@types/node` **22.20.5**, with
+the retained first-party pins unchanged (zfb **4.3.1**, zudo-doc **6.0.0**,
+zdtp **0.8.6**, esbuild **0.28.2**). The temporary consumer lock has **182**
+resolution entries, the same count as the Zod 4.3.6 / `@types/node` 22.19.15
+baseline. Its full audit remains **one low** KaTeX finding
+([GHSA-238p-pmpm-9mq7](https://github.com/advisories/GHSA-238p-pmpm-9mq7));
+the production high gate passes. The fixture still has no committed lockfile.
+
 ## Lock health follow-up — 2026-10-12, #977 / #978 / #979 / #980
 
 Implementation: #981, based on main `b2c7cb8186d063516f4fddb68f291fb5480025b6`.
@@ -10,8 +142,9 @@ are not a package-side guarantee for retained consumer locks.
 
 Selected source changes: #965 jsdom **30.1.2** (root and demo-ui), #966
 CodeMirror view **6.43.14**, #967 Lezer highlight **1.2.5**, and #968
-html-validate **11.16.2** (root and doc). Source PRs remain open until verified
-replacement integration. Node 22 consumer/type support, Node 24 CI, pnpm
+html-validate **11.16.2** (root and doc). Source PRs #965–#968 were
+closed unmerged on 2026-10-12 after #981 merged; they are not still open.
+Node 22 consumer/type support, Node 24 CI, pnpm
 **11.5.2**, first-party pins, Vite/Vitest, Happy DOM, Preact and esbuild/KaTeX
 holds remain unchanged.
 
@@ -53,7 +186,8 @@ execution. #969's complete workspace proposal is the existing ownership evidence
 State refreshed before implementation: #969/#970/#971/#972/#973/#975 are closed
 unmerged under Node 22 policy; #971 was green and was not closed for CI failure.
 #974 is closed unmerged as the exact duplicate of #965. No duplicate closure
-comments were posted. #965–#968 remain open pending #981 integration.
+comments were posted. #965–#968 were closed unmerged on 2026-10-12 after
+#981 merged into `cb10fbb`.
 
 ### Packed retained-lock browser evidence
 
