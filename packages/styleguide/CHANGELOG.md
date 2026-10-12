@@ -4,6 +4,24 @@ All notable changes to `@takazudo/zudo-sg` are documented in this file.
 
 The format is based on Keep a Changelog, and release notes are generated from the changelog MDX pages.
 
+## [0.5.2] - 2026-10-12
+
+This maintenance release raises the minimum versions of the engine's CodeMirror
+and Lezer runtime dependencies and documents how hosts recover from a stale
+Lezer lockfile. The public API is unchanged.
+
+### Other Changes
+
+- Raise the runtime dependency minimums to `@codemirror/view` ^6.43.14 and
+  `@lezer/highlight` ^1.2.5, so fresh installs resolve the versions the code
+  panel is tested against.
+- The README now explains how a host lockfile that keeps an older
+  `@lezer/common` breaks code-panel highlighting, and how `pnpm dedupe`
+  fixes it.
+- Development tooling only: TypeScript checks now run on the native
+  TypeScript 7 compiler through the TypeScript 6 API, and test dependencies
+  were updated (`@testing-library/jest-dom` 7, `@types/node` 22.20.5).
+
 ## [0.5.1] - 2026-10-12
 
 This release adds an opt-in, same-origin external preview runtime contract with
