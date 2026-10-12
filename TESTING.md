@@ -43,8 +43,9 @@ router) is covered by T0 unit tests today, with L4 E2E coverage added in T1.
 ### T0 — Inner loop (run constantly while implementing)
 
 ```bash
-pnpm check        # TypeScript typecheck (zfb check)
-pnpm test:unit    # vitest unit tests
+pnpm check                         # workspace typecheck, excluding doc/
+pnpm --filter @zudo-sg/doc check   # doc/ typecheck; not part of pnpm check
+pnpm test:unit                     # vitest unit tests
 ```
 
 ### T1 — Local pre-push gate
@@ -59,11 +60,11 @@ Steps in `scripts/run-b4push.sh`:
    `pnpm exec mdx-formatter --check '**/*.md' '**/*.mdx' '.claude/**/*.md'`
 2. Design token lint — `pnpm lint:tokens`
 3. Codegen drift checks — all `check:*` generators
-4. Type checking — `pnpm check`
+4. Type checking — `pnpm check` (engine, initializer, root, demo-ui, and demo; not `doc/`)
 5. Unit tests — `pnpm test:unit`
 6. Root build — `pnpm build`
 7. Demo build — `pnpm --filter @zudo-sg/demo build`
-8. Documentation build — `pnpm build:doc`
+8. Documentation typecheck and build — `pnpm --filter @zudo-sg/doc check`, then `pnpm build:doc`
 9. Link checks — root, demo, and documentation output
 10. HTML validation — `pnpm check:html`
 11. Playwright smoke e2e — `pnpm test:e2e` (`smoke`, `preview-token-panel`, and `demo-smoke`)
@@ -91,7 +92,7 @@ independent packed consumer proofs:
 - **lint-tokens** — `pnpm lint:tokens`
 - **codegen-drift** — z-index, story registry/category, and UI/root
   token-manifest drift checks
-- **typecheck** — `pnpm check`
+- **typecheck** — `pnpm check` (does not include `doc/`)
 - **unit** — `pnpm test:unit`
 - **styleguide-install** — `pnpm verify:styleguide-install`: packed module-mode
   consumer outside the workspace, non-root base, browser and dev-hydration proof
@@ -105,7 +106,7 @@ independent packed consumer proofs:
 - **build** — `pnpm build` (produces and caches `dist/`)
 - **build-demo** — `pnpm --filter @zudo-sg/demo build` (produces and caches
   `apps/demo/dist`), then `pnpm check:links:demo` against it
-- **build-doc** — `pnpm build:doc`, then `pnpm check:links:doc`
+- **build-doc** — `pnpm --filter @zudo-sg/doc check`, then `pnpm build:doc`, then `pnpm check:links:doc`
 - **smoke-e2e** — `pnpm test:e2e:ci` (Playwright, Chromium only; `smoke`,
   `preview-token-panel`, and `demo-smoke`; needs `build` and `build-demo`)
 - **dist-checks** — `pnpm check:links` + `pnpm check:html` against `dist/`
@@ -114,8 +115,9 @@ independent packed consumer proofs:
 ### Individual checks
 
 ```bash
-pnpm check              # typecheck
-pnpm test:unit          # unit tests (vitest)
+pnpm check                         # workspace typecheck, excluding doc/
+pnpm --filter @zudo-sg/doc check   # doc/ typecheck
+pnpm test:unit                     # unit tests (vitest)
 pnpm build              # build site → dist/
 pnpm --filter @zudo-sg/demo build  # build demo site → apps/demo/dist/
 pnpm check:links        # broken internal link check (needs dist/)

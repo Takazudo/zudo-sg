@@ -1,10 +1,39 @@
 {
-  "extends": "@takazudo/zudo-doc/tsconfig.base.json",
-  "include": ["src", "pages", "zfb.config.ts"],
+  // Snapshot of @takazudo/zudo-doc@6.0.0 packages/zudo-doc/tsconfig.base.json
+  // (b4f974598b27064a092eeadb5b2e5559078a8bb9), plus this workspace's include
+  // and @/* paths. baseUrl is omitted. Reconciliation: ZUDO_DEPS_PINS.md.
   "compilerOptions": {
-    "baseUrl": ".",
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "forceConsistentCasingInFileNames": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "allowJs": true,
+    "jsx": "react-jsx",
+    "jsxImportSource": "@takazudo/zfb/zudo-react",
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    "strictBindCallApply": true,
+    "strictPropertyInitialization": true,
+    "noImplicitThis": true,
+    "useUnknownInCatchVariables": true,
+    "alwaysStrict": true,
+    "types": ["node"],
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["./src/*"]
     }
-  }
+  },
+  "files": [
+    "./node_modules/@takazudo/zudo-doc/zfb-config-shim.d.ts",
+    "./node_modules/@takazudo/zudo-doc/virtual-modules.d.ts"
+  ],
+  "include": ["src", "pages", "zfb.config.ts"]
 }
