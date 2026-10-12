@@ -424,6 +424,15 @@ adopters must upgrade the toolchain together with the engine. Under this
 policy the floors are zfb `^4.3.3`, zudo-doc `^6.1.1` (was `^6.0.0`), and
 zdtp `^0.8.6`. The amendments below are historical.
 
+**Enforcement (2026-10-13, #1004).** `pnpm check:peer-floors`
+(`scripts/check-first-party-peer-floors.mjs`) runs first in `pnpm check`, so
+PR CI and b4push fail on drift. For every `@takazudo/*` name in the engine's
+and demo-ui's `peerDependencies` / `peerDependenciesMeta` it requires one
+unambiguous exact stable root pin, a peer range of exactly `^<root pin>`, and
+any direct copy in the owner equal to the root pin. Other range forms are
+rejected rather than interpreted. It checks manifest agreement only, not
+`node_modules`, the lockfile, or registry freshness.
+
 **Amendment (2026-09-15, #696 / #671):** reverse the original optional-peer
 treatment of `@takazudo/zdtp`. It is now a required peer at `^0.8.0`: the
 always-injected `/tokens` route value-imports `@takazudo/zdtp/dashboard`

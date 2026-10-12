@@ -1,4 +1,11 @@
 import { expect, test, type Page, type FrameLocator, type Locator } from "@playwright/test";
+import {
+  createRoundTripEvidence,
+  enterStage,
+  finalizeRoundTripEvidence,
+  observe,
+  recordExport,
+} from "./helpers/round-trip-evidence";
 
 // ---------------------------------------------------------------------------
 // H6 integration spec — Preview Token Panel (sg-preview-design-tokens/v1)
@@ -300,7 +307,10 @@ type IframeRoundTripState = {
 };
 
 /** One evaluation, so the two tokens cannot be observed at different times. */
-async function readIframeRoundTripState(frame: FrameLocator): Promise<IframeRoundTripState> {
+async function readIframeRoundTripState(
+  frame: FrameLocator,
+  options?: { timeout: number },
+): Promise<IframeRoundTripState> {
   return frame.locator(":root").evaluate((el) => {
     const root = el as HTMLElement;
     const computed = getComputedStyle(root);
@@ -310,7 +320,61 @@ async function readIframeRoundTripState(frame: FrameLocator): Promise<IframeRoun
       radiusInline: root.style.getPropertyValue("--radius-md").trim(),
       accentInline: root.style.getPropertyValue("--color-accent").trim(),
     };
-  });
+  }, undefined, options);
+}
+
+type ImportControlState = {
+  type: string;
+  name: string;
+  value: string;
+  label: string;
+  checked: boolean;
+  disabled: boolean;
+};
+
+type ImportModalState = {
+  scopeHeadingVisible: boolean;
+  fieldsets: Array<{ legend: string; controls: ImportControlState[] }>;
+  modeSides: "absent" | "present";
+  statuses: Array<{ role: string; text: string }>;
+};
+
+/**
+ * Actual checkbox/radio state of zdtp's import modal (native controls in
+ * zdtp 0.8.6's import-modal.tsx: "Tabs", optional "Mode sides", "Import
+ * strategy"), plus its status/alert lines. `innerText()` cannot show which
+ * boxes are checked, which is why this reads the controls themselves.
+ */
+async function readImportModalState(
+  importModal: Locator,
+  options?: { timeout: number },
+): Promise<ImportModalState> {
+  return importModal.evaluate((modal) => {
+    const text = (el: Element | null | undefined) => (el?.textContent ?? "").replace(/\s+/g, " ").trim();
+    const heading = [...modal.querySelectorAll('[role="heading"]')].find(
+      (el) => text(el) === "Import scope",
+    ) as HTMLElement | undefined;
+    const fieldsets = [...modal.querySelectorAll("fieldset")].map((fieldset) => ({
+      legend: text(fieldset.querySelector("legend")),
+      controls: [...fieldset.querySelectorAll<HTMLInputElement>("input")].map((input) => ({
+        type: input.type,
+        name: input.name,
+        value: input.value,
+        label: text(input.closest("label")),
+        checked: input.checked,
+        disabled: input.disabled,
+      })),
+    }));
+    return {
+      scopeHeadingVisible: Boolean(heading?.checkVisibility()),
+      fieldsets,
+      modeSides: fieldsets.some((f) => f.legend === "Mode sides") ? "present" : "absent",
+      statuses: [...modal.querySelectorAll('[role="status"], [role="alert"]')].map((el) => ({
+        role: el.getAttribute("role") ?? "",
+        text: text(el),
+      })),
+    } satisfies ImportModalState;
+  }, undefined, options);
 }
 
 async function attachJson(name: string, value: unknown): Promise<void> {
@@ -497,11 +561,27 @@ test("preview panel: Export emits zdtp schema; Load-from-JSON restores overrides
     diagnostics.push(`requestfailed: ${request.url()} ${request.failure()?.errorText ?? ""}`);
   });
 
+  const evidence = createRoundTripEvidence(test.info());
+  // Assigned as soon as they exist, so the failure-time reads in `finally`
+  // know what they can still look at.
+  let frame: FrameLocator | undefined;
+  let importModal: Locator | undefined;
+  let primaryError: unknown;
+  // Per-read cap, so a read stuck on a detached frame is recorded as an error
+  // and retried rather than silently outliving the poll.
+  const roundTrip = (slot: string) => () =>
+    observe(evidence, slot, () => readIframeRoundTripState(frame!, { timeout: 2_000 }));
+  const importScope = (slot: string) => () =>
+    observe(evidence, slot, () => readImportModalState(importModal!, { timeout: 1_000 }));
+
   try {
+    enterStage(evidence, "navigate");
     await gotoFirstDetailPage(page);
-    const frame = await waitForFirstPreviewFrame(page);
+    frame = await waitForFirstPreviewFrame(page);
     await waitForFirstIframeBridgeReady(page);
+    enterStage(evidence, "baseline");
     const baseline = await readIframeRoundTripState(frame);
+    evidence.observations.baseline = { last: baseline, reads: 1, errors: 0 };
     await attachJson("baseline", baseline);
     expect(baseline.radiusInline).toBe("");
     expect(baseline.accentInline).toBe("");
@@ -509,6 +589,7 @@ test("preview panel: Export emits zdtp schema; Load-from-JSON restores overrides
     expect(baseline.accent).not.toBe(COLOR_TAB_SENTINEL);
 
     // Open the preview panel.
+    enterStage(evidence, "apply");
     await openPreviewPanel(page);
 
     // Apply a --radius-md override via the panel UI so the state is non-default.
@@ -520,19 +601,16 @@ test("preview panel: Export emits zdtp schema; Load-from-JSON restores overrides
     // only the reserved-id Size tab above would not have caught that bug.
     await setPanelColorAccent(page, COLOR_TAB_SENTINEL);
 
-    let applied: IframeRoundTripState | undefined;
-    await expect.poll(async () => {
-      applied = await readIframeRoundTripState(frame);
-      return applied;
-    }).toEqual({
+    await expect.poll(roundTrip("applied")).toEqual({
       radius: "20rem",
       accent: COLOR_TAB_SENTINEL,
       radiusInline: "20rem",
       accentInline: COLOR_TAB_SENTINEL,
     });
-    await attachJson("applied", applied);
+    await attachJson("applied", evidence.observations.applied?.last);
 
     // Click Export to open the export modal.
+    enterStage(evidence, "export");
     await clickPanelAction(page, "Export");
 
     // Wait for the export modal.
@@ -545,6 +623,8 @@ test("preview panel: Export emits zdtp schema; Load-from-JSON restores overrides
     const jsonBlock = exportModal.locator('[role="none"]').first();
     await expect(jsonBlock).toBeVisible({ timeout: 3_000 });
     const exportedJson = (await jsonBlock.textContent()) ?? "";
+    // Keep the exact bytes before any assertion or parse can stop the test.
+    recordExport(evidence, exportedJson);
 
     // Assert the JSON contains zdtp's export format schema. zdtp 0.4.5 emits v2
     // for this preview panel because it has no ramp-reference color cluster; it
@@ -576,24 +656,22 @@ test("preview panel: Export emits zdtp schema; Load-from-JSON restores overrides
     await expect(exportModal).not.toBeVisible({ timeout: 3_000 });
 
     // Reset once. The poll only reads; it does not click Reset again.
+    enterStage(evidence, "reset");
     await clickPanelAction(page, "Reset");
-    let cleared: IframeRoundTripState | undefined;
-    await expect.poll(async () => {
-      cleared = await readIframeRoundTripState(frame);
-      return cleared;
-    }).toEqual({
+    await expect.poll(roundTrip("post-reset")).toEqual({
       radius: baseline.radius,
       accent: baseline.accent,
       radiusInline: "",
       accentInline: "",
     });
-    await attachJson("post-reset", cleared);
+    await attachJson("post-reset", evidence.observations["post-reset"]?.last);
 
     // Click "Load from JSON…" to open the import modal.
+    enterStage(evidence, "import-analyze");
     await clickPanelAction(page, "Load from JSON");
 
     // Wait for the import modal.
-    const importModal = page.locator(
+    importModal = page.locator(
       '[data-design-token-panel-modal-variant="import"]',
     );
     await expect(importModal).toBeVisible({ timeout: 5_000 });
@@ -607,6 +685,14 @@ test("preview panel: Export emits zdtp schema; Load-from-JSON restores overrides
     await importModal
       .getByRole("button", { name: "Analyze", exact: true })
       .click();
+    // Observe the actual selections and status while waiting, so a failed
+    // Analyze still leaves what the modal showed.
+    await expect
+      .poll(async () => {
+        const state = await importScope("import-after-analyze")();
+        return "readError" in state ? state : state.scopeHeadingVisible;
+      }, { message: '"Import scope" heading visible after Analyze', timeout: 5_000 })
+      .toBe(true);
     await expect(
       importModal.getByRole("heading", { name: "Import scope", exact: true }),
     ).toBeVisible({ timeout: 5_000 });
@@ -621,33 +707,57 @@ test("preview panel: Export emits zdtp schema; Load-from-JSON restores overrides
       exact: true,
     });
     await expect(loadConfirmBtn).toBeVisible({ timeout: 3_000 });
+    enterStage(evidence, "import-load");
     await loadConfirmBtn.click();
 
     // zdtp's import modal does NOT auto-close on success — it renders a "Loaded."
     // status and leaves the modal open with Load/Close buttons. Assert that
     // success status (a schema mismatch would instead surface an error and abort).
+    await expect
+      .poll(async () => {
+        const state = await importScope("import-after-load")();
+        return "readError" in state ? state : state.statuses.some((s) => /loaded/i.test(s.text));
+      }, { message: 'import modal reports "Loaded."', timeout: 5_000 })
+      .toBe(true);
     await expect(importModal.getByText(/loaded/i)).toBeVisible({ timeout: 5_000 });
 
     // One read of both tokens. The poll does not click Load again.
-    let restored: IframeRoundTripState | undefined;
-    await expect.poll(async () => {
-      restored = await readIframeRoundTripState(frame);
-      return restored;
-    }).toEqual({
+    enterStage(evidence, "post-load");
+    await expect.poll(roundTrip("post-load")).toEqual({
       radius: "20rem",
       accent: COLOR_TAB_SENTINEL,
       radiusInline: "20rem",
       accentInline: COLOR_TAB_SENTINEL,
     });
-    await attachJson("post-load", restored);
+    await attachJson("post-load", evidence.observations["post-load"]?.last);
 
     // Dismiss the modal.
+    enterStage(evidence, "dismiss");
     await importModal.getByRole("button", { name: "Close", exact: true }).click();
     await expect(importModal).not.toBeVisible({ timeout: 5_000 });
+    enterStage(evidence, "done");
+  } catch (error) {
+    primaryError = error;
+    throw error;
   } finally {
-    await test.info().attach("round-trip-diagnostics", {
-      body: diagnostics.join("\n") || "(none)",
-      contentType: "text/plain",
+    // Never throws: evidence failures become `evidence-error` annotations, so
+    // the rethrown error above (or the pass) is what the test reports.
+    const info = test.info();
+    await finalizeRoundTripEvidence({
+      evidence,
+      primaryError,
+      diagnostics,
+      failureReads: {
+        pageUrl: async () => (page.isClosed() ? "(page closed)" : page.url()),
+        iframe: async () =>
+          frame ? readIframeRoundTripState(frame, { timeout: 1_000 }) : "(frame not reached)",
+        importModal: async () =>
+          importModal
+            ? readImportModalState(importModal, { timeout: 1_000 })
+            : "(import modal not reached)",
+      },
+      attach: (name, body, contentType) => info.attach(name, { body, contentType }),
+      annotate: (type, description) => info.annotations.push({ type, description }),
     });
   }
 });

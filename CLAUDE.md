@@ -15,7 +15,7 @@ Documentation site built with [zudo-doc](https://github.com/zudolab/zudo-doc) �
 
 - `pnpm dev` — zfb dev server (port 4321)
 - `pnpm build` — static HTML export to `dist/`
-- `pnpm check` — TypeScript type checking
+- `pnpm check` — first-party peer-floor gate (`pnpm check:peer-floors`), then TypeScript type checking
 
 ## Key Directories
 
