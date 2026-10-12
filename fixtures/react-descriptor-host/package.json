@@ -19,7 +19,7 @@
     "@takazudo/zudo-sg": "file:.tarball/zudo-sg-engine.tgz",
     "diff": "8.0.4",
     "katex": "0.16.47",
-    "zod": "4.3.6",
+    "zod": "4.6.5",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "monaco-editor": "0.57.0",
