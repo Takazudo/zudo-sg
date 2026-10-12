@@ -12,7 +12,8 @@
       "DOM.Iterable"
     ],
     "skipLibCheck": true,
-    "noEmit": true
+    "noEmit": true,
+    "types": ["node", "react", "react-dom"]
   },
   "include": [
     "./**/*.ts",

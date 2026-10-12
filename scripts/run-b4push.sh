@@ -7,22 +7,23 @@ set -euo pipefail
 #   1. Format check (mdx)
 #   2. Design token lint (lint:tokens)
 #   3. Codegen drift check (check:z-index, check:sg-registry, check:token-manifest)
-#   4. Type checking (zfb check / tsc --noEmit)
+#   4. Type checking (pnpm check: engine, initializer, root, demo-ui, demo;
+#      doc/ is step 11, not this command)
 #   5. Unit tests (test:unit)
 #   6. Build (zfb build)
 #   7. Build demo (apps/demo — needed by check:links:demo and the demo-smoke e2e project)
 #   8. Link check (check:links + check:links:demo)
 #   9. HTML validation (check:html)
 #   10. Playwright smoke e2e (test:e2e — styleguide + demo-smoke projects)
-#   11. Doc site (optional, separate from the root lifecycle — #649): build doc
-#       + check:links:doc
+#   11. Doc site (optional, separate from the root lifecycle — #649):
+#       pnpm --filter @zudo-sg/doc check + build doc + check:links:doc
 #   12. Manual interactive smoke (operator-driven; auto-skipped when stdin is
 #       not a TTY, e.g. CI or agent-driven runs)
 #
 # Env overrides for non-interactive use:
 #   B4PUSH_SKIP_HTML_VALIDATE=1  — skip HTML validation (step 9)
 #   B4PUSH_SKIP_E2E=1            — skip Playwright smoke (step 10)
-#   B4PUSH_SKIP_DOC=1            — skip the doc site build + link check (step 11)
+#   B4PUSH_SKIP_DOC=1            — skip the doc typecheck, build, and link check (step 11)
 #   B4PUSH_SKIP_MANUAL_SMOKE=1   — force-skip the manual interactive smoke
 #                                  (step 12) even in an interactive shell
 
@@ -36,14 +37,14 @@ STEPS=(
   "Format check (mdx)"
   "Design token lint (lint:tokens)"
   "Codegen drift check"
-  "Type checking (zfb check)"
+  "Type checking (pnpm check, excluding doc)"
   "Unit tests (test:unit)"
   "Build (zfb build)"
   "Build demo (apps/demo)"
   "Link check (check:links + demo)"
   "HTML validation (html-validate)"
   "Playwright smoke e2e (test:e2e)"
-  "Doc site (optional): build doc + link check"
+  "Doc site (optional): typecheck + build + link check"
   "Manual interactive smoke"
 )
 TOTAL_STEPS=${#STEPS[@]}
@@ -116,9 +117,10 @@ else
 fi
 
 # ── Step 4: Type checking ─────────────────────────────
-# No bare-tsc fallback here: `pnpm check` is a chain (root zfb check + ui
-# typecheck + demo typecheck) and a root-only `tsc --noEmit` would silently
-# mask a ui/demo-only failure, since the root tsconfig excludes both.
+# No bare-tsc fallback here: `pnpm check` is a chain (engine, initializer,
+# root zfb check, demo-ui, and demo). It does not check doc/. A root-only
+# `tsc --noEmit` would silently mask a package failure, since the root
+# tsconfig excludes those projects.
 step
 if (cd "$ROOT_DIR" && pnpm check); then
   pass "Type checking passed"
@@ -190,17 +192,17 @@ fi
 
 # ── Step 11: Doc site (optional) ──────────────────────
 # doc/ (#649) is a standalone zudo-doc workspace with its own build/deploy,
-# decoupled from the root lifecycle. This step builds it and link-checks it
-# as a separate, independently-skippable block rather than gating the root
-# build/link-check steps above on it.
+# decoupled from the root lifecycle. This step typechecks it, builds it, and
+# link-checks it as a separate, independently-skippable block rather than
+# gating the root build/link-check steps above on it.
 step
 if [[ "${B4PUSH_SKIP_DOC:-}" == "1" ]]; then
-  skip "Doc site build + link check (B4PUSH_SKIP_DOC=1)"
+  skip "Doc site typecheck + build + link check (B4PUSH_SKIP_DOC=1)"
 else
-  if (cd "$ROOT_DIR" && heavy pnpm build:doc && pnpm check:links:doc); then
-    pass "Doc site build + link check passed"
+  if (cd "$ROOT_DIR" && pnpm --filter @zudo-sg/doc check && heavy pnpm build:doc && pnpm check:links:doc); then
+    pass "Doc site typecheck + build + link check passed"
   else
-    fail "Doc site build + link check"
+    fail "Doc site typecheck + build + link check"
   fi
 fi
 

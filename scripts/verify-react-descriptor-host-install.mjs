@@ -307,11 +307,20 @@ try {
   const versions = {};
   const fixturePackage = await json("package.json");
   const declared = { ...fixturePackage.dependencies, ...fixturePackage.devDependencies };
+  const npmAlias = /^npm:(@[^/]+\/[^@]+|[^@]+)@(\d+\.\d+\.\d+)$/;
   for (const name of Object.keys(declared)) {
     const filename = path.join(host, "node_modules", name, "package.json");
     assert((await realpath(filename)).startsWith(`${host}/node_modules/`), `${name} escaped foreign node_modules`);
-    versions[name] = JSON.parse(await readFile(filename, "utf8")).version;
-    assert(declared[name].startsWith("file:") || versions[name] === declared[name], `${name} differs from the exact fixture pin`);
+    const manifest = JSON.parse(await readFile(filename, "utf8"));
+    const alias = npmAlias.exec(declared[name]);
+    if (alias) {
+      assert(manifest.name === alias[1], `${name} alias resolved to ${manifest.name}, not ${alias[1]}`);
+      assert(manifest.version === alias[2], `${name} alias resolved to ${manifest.version}, not ${alias[2]}`);
+      versions[name] = `${manifest.name}@${manifest.version}`;
+    } else {
+      versions[name] = manifest.version;
+      assert(declared[name].startsWith("file:") || versions[name] === declared[name], `${name} differs from the exact fixture pin`);
+    }
   }
   await writeFile(path.join(host, "artifacts/versions.json"), JSON.stringify(versions, null, 2));
   console.log("Foreign versions:", versions);

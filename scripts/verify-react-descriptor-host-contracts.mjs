@@ -185,6 +185,15 @@ export async function assertReactDescriptorHostContracts({ hostDir, base, captur
   const require = createRequire(path.join(hostDir, "package.json"));
   const typescriptPath = await realpath(require.resolve("typescript"));
   assert(typescriptPath.startsWith(`${hostDir}${path.sep}node_modules${path.sep}`), "graph parser escaped the foreign installed dependencies");
+  const typescriptPackageDir = path.dirname(await realpath(path.join(hostDir, "node_modules", "typescript", "package.json")));
+  assert(typescriptPath.startsWith(`${typescriptPackageDir}${path.sep}`), "graph parser is not the installed typescript package");
+  const typescriptManifest = await readJson(path.join(typescriptPackageDir, "package.json"));
+  const declaredTypescript = (await readJson(path.join(hostDir, "package.json"))).devDependencies.typescript;
+  const typescriptAlias = /^npm:(@[^/]+\/[^@]+|[^@]+)@(\d+\.\d+\.\d+)$/.exec(declaredTypescript);
+  assert(typescriptAlias, "foreign typescript dependency must be an exact npm alias");
+  assert(typescriptManifest.name === typescriptAlias[1] && typescriptManifest.version === typescriptAlias[2],
+    `graph parser is ${typescriptManifest.name}@${typescriptManifest.version}, not ${typescriptAlias[1]}@${typescriptAlias[2]}`);
+  assert(typeof require("typescript").createSourceFile === "function", "installed typescript alias does not export the compiler API");
   const apiPath = await realpath(require.resolve("@takazudo/zudo-sg/registry/external-catalog-node"));
   assert(apiPath.startsWith(`${hostDir}${path.sep}node_modules${path.sep}`), "catalog validation escaped the foreign installed package");
   const api = await import(pathToFileURL(apiPath));

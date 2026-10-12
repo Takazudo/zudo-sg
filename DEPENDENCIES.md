@@ -1,5 +1,112 @@
 # Dependency audit register
 
+## TypeScript compiler coexistence — 2026-10-12, #990
+
+Implementation is on `maintenance/typescript-990`, based on main
+`65268a5df5b2c406c3579cde32b0b9ae71b313fc` (the #992 merge). This replaces
+the plain TypeScript 7 bumps in [#982](https://github.com/Takazudo/zudo-sg/pull/982)
+and [#988](https://github.com/Takazudo/zudo-sg/pull/988). Those PRs stay open
+until this replacement is on main. [#963](https://github.com/Takazudo/zudo-sg/issues/963)
+stays open: the migration does not change the retained-lock remedy.
+
+### Compiler ownership
+
+The six shared-workspace importers declare
+`"typescript": "npm:@typescript/typescript6@^6.0.2"` and
+`"@typescript/native": "npm:typescript@^7.0.2"`.
+`fixtures/react-descriptor-host` uses the same aliases with exact versions
+`6.0.2` and `7.0.2`, and still has no committed lockfile.
+`fixtures/engine-host`, `fixtures/descriptor-host`, and the generated
+default consumer stay on TypeScript `^5.9.0`.
+
+Measured on Node **24.13.0** and pnpm **11.5.2**. For the repository root,
+`apps/demo`, `doc`, `packages/create-zudo-sg`, `packages/demo-ui`, and
+`packages/styleguide`:
+
+- `node_modules/.bin/tsc` execs `@typescript/native/bin/tsc` from
+  `typescript@7.0.2` and prints **Version 7.0.2**.
+- `require("typescript")` resolves to `@typescript/typescript6@6.0.2`.
+  `ts.version` is **6.0.3** because that package depends on
+  `@typescript/old` (`npm:typescript@^6`), which this lock resolves as
+  `typescript@6.0.3`. `createSourceFile` is a function.
+- `@typescript/native/package.json` has name `typescript` and version
+  **7.0.2**.
+
+Native `tsc` is the direct alias. The 6.0.3 package is the compiler API,
+not a fallback for `tsc`.
+
+### Shared-lock delta
+
+`pnpm install` regenerated the shared lock from the alias manifests.
+`pnpm dedupe --check` then resolved **471** and passed.
+
+Package and snapshot records: **449 → 471** (**+22**). Twenty-three
+resolution keys were added and `typescript@5.9.3` was removed:
+
+- `typescript@7.0.2`, the native compiler
+- `@typescript/typescript6@6.0.2`, the `typescript` import
+- `typescript@6.0.3`, the API package's `@typescript/old` dependency
+- twenty optional `@typescript/typescript-<platform>@7.0.2` packages
+
+No other package key was added or removed. Peer keys that named
+`typescript@5.9.3` (Vitest, MSW, tsup, html-validate, jest-dom) now name
+`@typescript/typescript6@6.0.2`.
+
+### Audit after the shared-lock update
+
+Fresh root `pnpm audit`: **2 low, zero moderate/high/critical**
+([GHSA-g7r4-m6w7-qqqr](https://github.com/advisories/GHSA-g7r4-m6w7-qqqr)
+esbuild, [GHSA-238p-pmpm-9mq7](https://github.com/advisories/GHSA-238p-pmpm-9mq7)
+KaTeX). Audit metadata: **139** dependencies, **298** dev dependencies,
+**134** optional dependencies, **471** total. `pnpm audit --prod
+--audit-level=high` passed with the one production low. `pnpm audit
+--audit-level=high` passed with both lows. No override or audit ignore was
+added.
+
+| Package | Installed | Disposition |
+| --- | --- | --- |
+| typescript native | **7.0.2** | KEEP. Owns each importer's `node_modules/.bin/tsc`. |
+| typescript API | `@typescript/typescript6` **6.0.2**, resolved API **6.0.3** | KEEP. Live `import "typescript"` / `require("typescript")` consumers. |
+| esbuild | **0.27.7** retained; tsx family **0.28.2** retained | HOLD, unchanged from #991. |
+| katex | **0.16.47** retained | HOLD, unchanged from #991. |
+| Node types | **22.20.5** | KEEP on the Node 22 line. |
+| TypeScript 5.9 consumers | `^5.9.0` in the engine-host, descriptor-host, and generated template | KEEP outside this lock. The initializer's compiler is not the compiler a generated project installs. |
+
+### Wind provenance
+
+`pnpm exec tsx packages/demo-ui/scripts/refresh-authored-class-coverage.ts`
+ran the real `zfb wind explain` compiler at zfb **4.3.1**. The candidate
+set, candidate hash, and all **343** explanations are unchanged.
+`candidateSetSha256` remains
+`478478942a02c3aded0a7136427019391d5362c1808c095091ccbb46f33cfd2a`.
+`windConfigSha256` changed from
+`f578e57532ee8ededa741cc8c3c62e57cadad9d348f7593e46874b1ac82f7feb` to
+`4253392b8fe9354132d2ceee052af79f8bc7c5674a48cbf11cff12206bab70fd`
+because the generator hashes the entire root lockfile. The digest was not
+written by hand.
+
+### Independent React graph
+
+The fixture was copied outside the workspace, packed against engine
+**0.5.1**, and installed with pnpm **11.5.2** on Node **24.13.0**. No
+fixture lockfile is committed. The temporary consumer lock has **204**
+snapshot records, versus **182** on the #991 TypeScript 5.9.3 graph. The
+added records are the same coexistence closure: `typescript@7.0.2`,
+`@typescript/typescript6@6.0.2`, `typescript@6.0.3`, and the twenty
+optional native platform packages. Exact alias resolution is
+`typescript` → `@typescript/typescript6@6.0.2` and `@typescript/native` →
+`typescript@7.0.2`. `node_modules/.bin/tsc` is **7.0.2**. The API package's
+`ts.version` is **6.0.3**, and `createSourceFile` is present.
+
+That install's full audit is **one low** KaTeX finding
+([GHSA-238p-pmpm-9mq7](https://github.com/advisories/GHSA-238p-pmpm-9mq7)).
+Audit metadata: **145** dependencies, **26** dev dependencies, **53**
+optional dependencies, **204** total. `pnpm audit --prod --audit-level=high`
+passed. esbuild stays at the fixture's exact **0.28.2** pin, so the
+workspace esbuild advisory is not in this graph. After `preview:build` and
+`zudo-sg gen-token-manifest`, both `tsc --noEmit -p tsconfig.json` and
+`tsc --noEmit -p preview/tsconfig.json` passed with `baseUrl` absent.
+
 ## Supported dependency consolidation — 2026-10-12, #991
 
 Implementation is on `maintenance/supported-deps-991`, based on main

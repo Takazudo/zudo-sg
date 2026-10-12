@@ -1,17 +1,37 @@
 {
-  "extends": "@takazudo/zudo-doc/tsconfig.base.json",
+  // Snapshot of @takazudo/zudo-doc@6.0.0 packages/zudo-doc/tsconfig.base.json
+  // (b4f974598b27064a092eeadb5b2e5559078a8bb9). baseUrl is omitted. This host
+  // keeps checkJs and skipLibCheck:false. Reconciliation: ZUDO_DEPS_PINS.md.
   "compilerOptions": {
     "target": "ESNext",
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "forceConsistentCasingInFileNames": true,
+    "esModuleInterop": true,
+    "skipLibCheck": false,
     "allowJs": true,
     "checkJs": true,
-    "noEmit": true,
-    "strict": true,
     "jsx": "react-jsx",
     "jsxImportSource": "@takazudo/zfb/zudo-react",
-    "skipLibCheck": false
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    "strictBindCallApply": true,
+    "strictPropertyInitialization": true,
+    "noImplicitThis": true,
+    "useUnknownInCatchVariables": true,
+    "alwaysStrict": true,
+    "types": ["node", "react", "react-dom"]
   },
+  "files": [
+    "./node_modules/@takazudo/zudo-doc/zfb-config-shim.d.ts",
+    "./node_modules/@takazudo/zudo-doc/virtual-modules.d.ts"
+  ],
   "include": ["pages", "src", "zfb.config.ts", "zudo-sg.config.mjs"]
 }

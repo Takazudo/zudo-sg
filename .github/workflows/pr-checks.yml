@@ -6,7 +6,8 @@
 #   lint-tokens          — pnpm lint:tokens
 #   codegen-drift        — pnpm check:z-index, pnpm check:sg-registry,
 #                          pnpm check:token-manifest
-#   typecheck            — pnpm check (zfb check / tsc --noEmit + demo/doc typecheck)
+#   typecheck            — pnpm check (engine, initializer, root zfb check,
+#                          demo-ui, and demo). doc/ is not part of this command.
 #   unit                 — pnpm test:unit (vitest)
 #   styleguide-install   — pnpm verify:styleguide-install (#665 foreign-install
 #                          proof: packed tarball, fixtures/engine-host, non-root base)
@@ -20,8 +21,9 @@
 #   build                — pnpm build (zfb build → dist/)
 #   build-demo           — pnpm --filter @zudo-sg/demo build (apps/demo), then
 #                          pnpm check:links:demo against apps/demo/dist
-#   build-doc            — pnpm build:doc (doc), then pnpm check:links:doc
-#                          against doc/dist
+#   build-doc            — pnpm --filter @zudo-sg/doc check, pnpm build:doc,
+#                          then pnpm check:links:doc against doc/dist.
+#                          Root pnpm check stays separate from doc/.
 #   smoke-e2e            — pnpm test:e2e:ci (Playwright: styleguide smoke,
 #                          preview-token-panel, and demo-smoke;
 #                          needs build + build-demo)
@@ -309,6 +311,9 @@ jobs:
 
       - name: Setup
         uses: ./.github/actions/setup
+
+      - name: Typecheck doc site
+        run: pnpm --filter @zudo-sg/doc check
 
       - name: Build doc site
         run: pnpm build:doc

@@ -192,3 +192,65 @@ pnpm dlx create-zudo-doc@<ver> a<ver> --yes --pm pnpm --no-install --no-git \
   root utility mappings now point to `zfb.config.ts` and CSS properties to
   `src/styles/global.css`. No changes were needed to the version-bump or
   translation skill templates.
+
+## TypeScript compiler configuration
+
+The six shared-workspace importers and `fixtures/react-descriptor-host` use
+TypeScript 7's `tsc` through the `@typescript/native` alias
+(`npm:typescript@^7.0.2`, exact `7.0.2` in the React fixture) and the
+TypeScript 6 compiler API through the `typescript` import name
+(`npm:@typescript/typescript6@^6.0.2`, exact `6.0.2` in the React fixture).
+`@typescript/typescript6@6.0.2` publishes `tsc6` and re-exports the
+programmatic API. It depends on `@typescript/old` (`npm:typescript@^6`),
+which is not the compiler that owns `node_modules/.bin/tsc`. Native `tsc`
+must come from each importer's direct `@typescript/native` dependency.
+Published stable versions checked on 2026-10-12: `typescript` latest
+**7.0.2** (bin `tsc` only, no peer dependencies) and
+`@typescript/typescript6` latest **6.0.2** (bin `tsc6` only, no peer
+dependencies).
+
+`fixtures/engine-host`, `fixtures/descriptor-host`, and the generated
+default consumer stay on TypeScript `^5.9.0` and still extend the published
+`@takazudo/zudo-doc/tsconfig.base.json`. The initializer package's compiler
+is not the compiler installed into a project it generates.
+
+### Pinned zudo-doc base snapshot
+
+Upstream file: `@takazudo/zudo-doc@6.0.0`
+`packages/zudo-doc/tsconfig.base.json`, commit
+`b4f974598b27064a092eeadb5b2e5559078a8bb9`. The same blob is
+`6c863a3ae09e10c187742b8f1461f061ce789adb`. A later zudo-doc package version
+is not evidence that this file changed; compare the blob.
+
+The base sets `baseUrl: "."`, `jsx` / `jsxImportSource` to
+`@takazudo/zfb/zudo-react`, and
+`files: ["./zfb-config-shim.d.ts", "./virtual-modules.d.ts"]`. TypeScript 7
+rejects `baseUrl` (`TS5102`). Setting `baseUrl` to `null` is not a fix:
+`tsc` can clear it while zfb's config reader keeps the inherited value, so
+path aliases stop resolving in the product build.
+
+These importers therefore own the base options instead of extending the
+published file:
+
+- repository root `tsconfig.json`
+- `doc/tsconfig.json`
+- `fixtures/react-descriptor-host/tsconfig.json`
+
+Each copy omits `baseUrl`, keeps the zudo-react JSX settings, and points
+`files` at that project's own
+`node_modules/@takazudo/zudo-doc/zfb-config-shim.d.ts` and
+`virtual-modules.d.ts`. Root and doc keep `@/*` as `./src/*`. The React
+fixture keeps `checkJs` and `skipLibCheck: false`. Local include/exclude
+boundaries stay in the importer. `apps/demo` and `packages/demo-ui` never
+extended the base; they only drop their own `baseUrl`.
+`packages/create-zudo-sg` sets `types: ["node"]` because TypeScript 7 no
+longer loads `@types/*` automatically.
+
+On the next `@takazudo/zudo-doc` bump, diff the new
+`node_modules/@takazudo/zudo-doc/tsconfig.base.json` against these three
+snapshots. Carry new `compilerOptions` and any new `files` entry, still
+omit `baseUrl`, and rebase each new relative file from the package root
+into the importer's `node_modules/@takazudo/zudo-doc/` path. Do not copy an
+older Preact JSX setting back in. Re-run `pnpm check`,
+`pnpm --filter @zudo-sg/doc check`, and a zfb build of each host that uses
+`paths` before accepting the snapshot.
