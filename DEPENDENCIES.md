@@ -17,9 +17,8 @@ First-party peer floors follow the newest published release at every bump
 round (ADR §13, 2026-10-13 amendment). The fixture install line uses doc
 `^6.1.1` and zfb `^4.3.3`, matching the exact fixture pins.
 `@zudo-sg/demo-ui` peers zfb `^4.3.3` and pins md-wasm and its zfb
-devDependency to 4.3.3. Published zudo-doc 6.1.1
-peers zfb `^4.3.3` and zod `^4.3.6`; the workspace zod range `^4.6.5`
-already satisfies that peer. `tools/deploy` is unchanged.
+devDependency to 4.3.3. Published zudo-doc 6.1.1 peers zfb `^4.3.3` and
+zod `^4.3.6`; the workspace zod range `^4.6.5` already satisfies that peer. `tools/deploy` is unchanged.
 
 `pnpm install` on pnpm **11.5.2** replaced seven lock entries and removed
 seven. The lock contains no `@takazudo/zfb*@4.3.1` specifier.
