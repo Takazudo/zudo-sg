@@ -14,7 +14,7 @@ set -euo pipefail
 #   7. Build demo (apps/demo — needed by check:links:demo and the demo-smoke e2e project)
 #   8. Link check (check:links + check:links:demo)
 #   9. HTML validation (check:html)
-#   10. Playwright smoke e2e (test:e2e — styleguide + demo-smoke projects)
+#   10. Playwright e2e (test:e2e — every project in playwright.config.ts)
 #   11. Doc site (optional, separate from the root lifecycle — #649):
 #       pnpm --filter @zudo-sg/doc check + build doc + check:links:doc
 #   12. Manual interactive smoke (operator-driven; auto-skipped when stdin is

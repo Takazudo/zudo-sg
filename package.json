@@ -36,7 +36,7 @@
     "test:unit": "node scripts/ensure-styleguide-build.mjs && vitest run",
     "test:slow": "node scripts/ensure-styleguide-build.mjs && vitest run --config vitest.slow.config.ts",
     "test:e2e": "node scripts/ensure-styleguide-build.mjs && playwright test",
-    "test:e2e:ci": "node scripts/ensure-styleguide-build.mjs && playwright test --reporter=list",
+    "test:e2e:ci": "node scripts/ensure-styleguide-build.mjs && playwright test",
     "b4push": "bash scripts/run-b4push.sh",
     "prepare": "lefthook install"
   },

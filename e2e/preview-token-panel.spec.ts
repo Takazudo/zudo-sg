@@ -218,9 +218,6 @@ async function setPanelRadiusMd(page: Page, pxValue: string): Promise<void> {
   await radiusInput.fill(pxValue);
   // Dispatch an extra input event as a safety measure for older Preact builds.
   await radiusInput.dispatchEvent("input");
-
-  // Allow the sink apply to propagate via postMessage.
-  await page.waitForTimeout(150);
 }
 
 /**
@@ -245,9 +242,6 @@ async function setPanelColorAccent(page: Page, value: string): Promise<void> {
 
   await colorInput.fill(value);
   await colorInput.dispatchEvent("input");
-
-  // Allow the sink apply to propagate via postMessage.
-  await page.waitForTimeout(150);
 }
 
 /**
@@ -296,6 +290,34 @@ async function getIframeRootVar(
     (el, name) => getComputedStyle(el).getPropertyValue(name).trim(),
     cssVar,
   );
+}
+
+type IframeRoundTripState = {
+  radius: string;
+  accent: string;
+  radiusInline: string;
+  accentInline: string;
+};
+
+/** One evaluation, so the two tokens cannot be observed at different times. */
+async function readIframeRoundTripState(frame: FrameLocator): Promise<IframeRoundTripState> {
+  return frame.locator(":root").evaluate((el) => {
+    const root = el as HTMLElement;
+    const computed = getComputedStyle(root);
+    return {
+      radius: computed.getPropertyValue("--radius-md").trim(),
+      accent: computed.getPropertyValue("--color-accent").trim(),
+      radiusInline: root.style.getPropertyValue("--radius-md").trim(),
+      accentInline: root.style.getPropertyValue("--color-accent").trim(),
+    };
+  });
+}
+
+async function attachJson(name: string, value: unknown): Promise<void> {
+  await test.info().attach(name, {
+    body: JSON.stringify(value, null, 2),
+    contentType: "application/json",
+  });
 }
 
 /**
@@ -421,6 +443,9 @@ test("preview panel: Reset clears preview overrides; host chrome state is untouc
 }) => {
   await gotoFirstDetailPage(page);
   const frame = await waitForFirstPreviewFrame(page);
+  await waitForFirstIframeBridgeReady(page);
+  const radiusBefore = await getIframeRootVar(frame, "--radius-md");
+  expect(radiusBefore).not.toBe("20rem");
 
   // Write a host-chrome inline override to the host :root so we can verify it
   // survives the preview panel Reset.
@@ -450,10 +475,7 @@ test("preview panel: Reset clears preview overrides; host chrome state is untouc
   // After Reset, the sink's clear() path runs:
   //   clearPreviewVars(["--radius-md", …]) → sendClearCssVars(iframe, …) →
   //   iframe postMessage → iframe removes inline style → stylesheet default takes over.
-  await page.waitForTimeout(300);
-
-  // --radius-md must no longer be "20rem" (reverts to stylesheet default).
-  expect(await getIframeRootVar(frame, "--radius-md")).not.toBe("20rem");
+  await expect.poll(() => getIframeRootVar(frame, "--radius-md")).toBe(radiusBefore);
 
   // Host :root doc-chrome override must survive the preview panel Reset.
   expect(await getHostRootVar(page, "--zd-bg")).toBe("#aabbcc");
@@ -466,109 +488,168 @@ test("preview panel: Reset clears preview overrides; host chrome state is untouc
 test("preview panel: Export emits zdtp schema; Load-from-JSON restores overrides", async ({
   page,
 }) => {
-  await gotoFirstDetailPage(page);
-  const frame = await waitForFirstPreviewFrame(page);
-
-  // Open the preview panel.
-  await openPreviewPanel(page);
-
-  // Apply a --radius-md override via the panel UI so the state is non-default.
-  await setPanelRadiusMd(page, "20");
-
-  // Also dirty a Color-tab (`ui-color`, a non-reserved GenericTab id) token.
-  // Regression coverage for #197: zdtp's serializer previously dropped this
-  // tab from Export/Load even though Apply/Reset worked live — exercising
-  // only the reserved-id Size tab above would not have caught that bug.
-  await setPanelColorAccent(page, COLOR_TAB_SENTINEL);
-
-  // Click Export to open the export modal.
-  await clickPanelAction(page, "Export");
-
-  // Wait for the export modal.
-  const exportModal = page.locator(
-    '[data-design-token-panel-modal-variant="export"]',
-  );
-  await expect(exportModal).toBeVisible({ timeout: 5_000 });
-
-  // The export JSON is rendered in the [role="none"] json block inside the modal.
-  const jsonBlock = exportModal.locator('[role="none"]').first();
-  await expect(jsonBlock).toBeVisible({ timeout: 3_000 });
-  const exportedJson = (await jsonBlock.textContent()) ?? "";
-
-  // Assert the JSON contains zdtp's export format schema. zdtp 0.4.5 emits v2
-  // for this preview panel because it has no ramp-reference color cluster; it
-  // opportunistically emits v3 when object-valued color leaves are present.
-  // config.schemaId is display-only import-modal text, not the JSON schema.
-  expect(exportedJson).toContain('"$schema"');
-  expect(exportedJson).toContain("zudo-design-tokens/v2");
-
-  // Regression guard for #197: the Color tab (non-reserved "ui-color" tab id)
-  // must be captured by Export too, not just reserved-id tabs like Size —
-  // this is exactly the tab/token the fixed serializer bug affected.
-  expect(exportedJson).toContain('"ui-color"');
-  expect(exportedJson).toContain("--color-accent");
-
-  // Assert the JSON is well-formed.
-  const parsed = JSON.parse(exportedJson) as Record<string, unknown>;
-  expect(parsed).toBeTruthy();
-
-  // Close the export modal.
-  const closeBtn = exportModal.locator('[role="button"]', { hasText: "Close" });
-  await closeBtn.click();
-  await expect(exportModal).not.toBeVisible({ timeout: 3_000 });
-
-  // Reset to clear overrides so Load-from-JSON has something to restore.
-  await clickPanelAction(page, "Reset");
-  await page.waitForTimeout(300);
-
-  // Click "Load from JSON…" to open the import modal.
-  await clickPanelAction(page, "Load from JSON");
-
-  // Wait for the import modal.
-  const importModal = page.locator(
-    '[data-design-token-panel-modal-variant="import"]',
-  );
-  await expect(importModal).toBeVisible({ timeout: 5_000 });
-
-  // Fill the textarea with the previously exported JSON.
-  const textarea = importModal.locator("textarea").first();
-  await textarea.fill(exportedJson);
-
-  // zdtp 0.8.0 gates loading behind its scoped import flow: analyze the JSON
-  // first, then leave the default tabs/options selected and load it.
-  await importModal
-    .getByRole("button", { name: "Analyze", exact: true })
-    .click();
-  await expect(
-    importModal.getByRole("heading", { name: "Import scope", exact: true }),
-  ).toBeVisible({ timeout: 5_000 });
-
-  // Click the "Load" confirm button inside the import modal.
-  const loadConfirmBtn = importModal.getByRole("button", {
-    name: "Load",
-    exact: true,
+  const diagnostics: string[] = [];
+  page.on("pageerror", (error) => diagnostics.push(`pageerror: ${error.message}`));
+  page.on("console", (message) => {
+    if (message.type() === "error") diagnostics.push(`console: ${message.text()}`);
   });
-  await expect(loadConfirmBtn).toBeVisible({ timeout: 3_000 });
-  await loadConfirmBtn.click();
+  page.on("requestfailed", (request) => {
+    diagnostics.push(`requestfailed: ${request.url()} ${request.failure()?.errorText ?? ""}`);
+  });
 
-  // zdtp's import modal does NOT auto-close on success — it renders a "Loaded."
-  // status and leaves the modal open with Load/Close buttons. Assert that
-  // success status (a schema mismatch would instead surface an error and abort).
-  await expect(importModal.getByText(/loaded/i)).toBeVisible({ timeout: 5_000 });
+  try {
+    await gotoFirstDetailPage(page);
+    const frame = await waitForFirstPreviewFrame(page);
+    await waitForFirstIframeBridgeReady(page);
+    const baseline = await readIframeRoundTripState(frame);
+    await attachJson("baseline", baseline);
+    expect(baseline.radiusInline).toBe("");
+    expect(baseline.accentInline).toBe("");
+    expect(baseline.radius).not.toBe("20rem");
+    expect(baseline.accent).not.toBe(COLOR_TAB_SENTINEL);
 
-  // The real round-trip assertion: the loaded state is re-applied via the sink,
-  // so the iframe's --radius-md is restored to 20rem (it was cleared by Reset above).
-  await page.waitForTimeout(250);
-  expect(await getIframeRootVar(frame, "--radius-md")).toBe("20rem");
+    // Open the preview panel.
+    await openPreviewPanel(page);
 
-  // Same round-trip assertion for the Color tab (#197) — --color-accent must
-  // also be restored, proving the ui-color tab was captured by Export and
-  // correctly re-applied by Load, not just silently ignored.
-  expect(await getIframeRootVar(frame, "--color-accent")).toBe(COLOR_TAB_SENTINEL);
+    // Apply a --radius-md override via the panel UI so the state is non-default.
+    await setPanelRadiusMd(page, "20");
 
-  // Dismiss the modal.
-  await importModal.getByRole("button", { name: "Close", exact: true }).click();
-  await expect(importModal).not.toBeVisible({ timeout: 5_000 });
+    // Also dirty a Color-tab (`ui-color`, a non-reserved GenericTab id) token.
+    // Regression coverage for #197: zdtp's serializer previously dropped this
+    // tab from Export/Load even though Apply/Reset worked live — exercising
+    // only the reserved-id Size tab above would not have caught that bug.
+    await setPanelColorAccent(page, COLOR_TAB_SENTINEL);
+
+    let applied: IframeRoundTripState | undefined;
+    await expect.poll(async () => {
+      applied = await readIframeRoundTripState(frame);
+      return applied;
+    }).toEqual({
+      radius: "20rem",
+      accent: COLOR_TAB_SENTINEL,
+      radiusInline: "20rem",
+      accentInline: COLOR_TAB_SENTINEL,
+    });
+    await attachJson("applied", applied);
+
+    // Click Export to open the export modal.
+    await clickPanelAction(page, "Export");
+
+    // Wait for the export modal.
+    const exportModal = page.locator(
+      '[data-design-token-panel-modal-variant="export"]',
+    );
+    await expect(exportModal).toBeVisible({ timeout: 5_000 });
+
+    // The export JSON is rendered in the [role="none"] json block inside the modal.
+    const jsonBlock = exportModal.locator('[role="none"]').first();
+    await expect(jsonBlock).toBeVisible({ timeout: 3_000 });
+    const exportedJson = (await jsonBlock.textContent()) ?? "";
+
+    // Assert the JSON contains zdtp's export format schema. zdtp 0.4.5 emits v2
+    // for this preview panel because it has no ramp-reference color cluster; it
+    // opportunistically emits v3 when object-valued color leaves are present.
+    // config.schemaId is display-only import-modal text, not the JSON schema.
+    expect(exportedJson).toContain('"$schema"');
+    expect(exportedJson).toContain("zudo-design-tokens/v2");
+
+    // Regression guard for #197: the Color tab (non-reserved "ui-color" tab id)
+    // must be captured by Export too, not just reserved-id tabs like Size —
+    // this is exactly the tab/token the fixed serializer bug affected.
+    expect(exportedJson).toContain('"ui-color"');
+    expect(exportedJson).toContain("--color-accent");
+
+    // Assert the JSON is well-formed and the two edited leaves are exact.
+    const parsed = JSON.parse(exportedJson) as {
+      tabs?: {
+        size?: { raw?: Record<string, string> };
+        "ui-color"?: { raw?: Record<string, string> };
+      };
+    };
+    expect(parsed.tabs?.size?.raw?.["--radius-md"]).toBe("20rem");
+    expect(parsed.tabs?.["ui-color"]?.raw?.["--color-accent"]).toBe(COLOR_TAB_SENTINEL);
+    await attachJson("export", parsed);
+
+    // Close the export modal.
+    const closeBtn = exportModal.locator('[role="button"]', { hasText: "Close" });
+    await closeBtn.click();
+    await expect(exportModal).not.toBeVisible({ timeout: 3_000 });
+
+    // Reset once. The poll only reads; it does not click Reset again.
+    await clickPanelAction(page, "Reset");
+    let cleared: IframeRoundTripState | undefined;
+    await expect.poll(async () => {
+      cleared = await readIframeRoundTripState(frame);
+      return cleared;
+    }).toEqual({
+      radius: baseline.radius,
+      accent: baseline.accent,
+      radiusInline: "",
+      accentInline: "",
+    });
+    await attachJson("post-reset", cleared);
+
+    // Click "Load from JSON…" to open the import modal.
+    await clickPanelAction(page, "Load from JSON");
+
+    // Wait for the import modal.
+    const importModal = page.locator(
+      '[data-design-token-panel-modal-variant="import"]',
+    );
+    await expect(importModal).toBeVisible({ timeout: 5_000 });
+
+    // Fill the textarea with the previously exported JSON.
+    const textarea = importModal.locator("textarea").first();
+    await textarea.fill(exportedJson);
+
+    // zdtp 0.8.0 gates loading behind its scoped import flow: analyze the JSON
+    // first, then leave the default tabs/options selected and load it.
+    await importModal
+      .getByRole("button", { name: "Analyze", exact: true })
+      .click();
+    await expect(
+      importModal.getByRole("heading", { name: "Import scope", exact: true }),
+    ).toBeVisible({ timeout: 5_000 });
+    await test.info().attach("import-scope", {
+      body: (await importModal.innerText()) ?? "",
+      contentType: "text/plain",
+    });
+
+    // Click the "Load" confirm button inside the import modal.
+    const loadConfirmBtn = importModal.getByRole("button", {
+      name: "Load",
+      exact: true,
+    });
+    await expect(loadConfirmBtn).toBeVisible({ timeout: 3_000 });
+    await loadConfirmBtn.click();
+
+    // zdtp's import modal does NOT auto-close on success — it renders a "Loaded."
+    // status and leaves the modal open with Load/Close buttons. Assert that
+    // success status (a schema mismatch would instead surface an error and abort).
+    await expect(importModal.getByText(/loaded/i)).toBeVisible({ timeout: 5_000 });
+
+    // One read of both tokens. The poll does not click Load again.
+    let restored: IframeRoundTripState | undefined;
+    await expect.poll(async () => {
+      restored = await readIframeRoundTripState(frame);
+      return restored;
+    }).toEqual({
+      radius: "20rem",
+      accent: COLOR_TAB_SENTINEL,
+      radiusInline: "20rem",
+      accentInline: COLOR_TAB_SENTINEL,
+    });
+    await attachJson("post-load", restored);
+
+    // Dismiss the modal.
+    await importModal.getByRole("button", { name: "Close", exact: true }).click();
+    await expect(importModal).not.toBeVisible({ timeout: 5_000 });
+  } finally {
+    await test.info().attach("round-trip-diagnostics", {
+      body: diagnostics.join("\n") || "(none)",
+      contentType: "text/plain",
+    });
+  }
 });
 
 // ---------------------------------------------------------------------------
@@ -635,6 +716,9 @@ test("preview panel: Reset clears overrides from all visible preview iframes", a
 }) => {
   await gotoFirstDetailPage(page);
   const frame = await waitForFirstPreviewFrame(page);
+  await waitForFirstIframeBridgeReady(page);
+  const radiusBefore = await getIframeRootVar(frame, "--radius-md");
+  expect(radiusBefore).not.toBe("20rem");
 
   // Open the preview panel and apply an override via the Size tab UI so the
   // registry tracks it (required for Reset to send clear messages).
@@ -651,9 +735,7 @@ test("preview panel: Reset clears overrides from all visible preview iframes", a
   // After Reset, clearPreviewVars → sendClearCssVars sends a clear message to
   // every registered iframe. The first iframe should have its inline style
   // for --radius-md removed; computed value reverts to the stylesheet default.
-  await page.waitForTimeout(300);
-
-  expect(await getIframeRootVar(frame, "--radius-md")).not.toBe("20rem");
+  await expect.poll(() => getIframeRootVar(frame, "--radius-md")).toBe(radiusBefore);
 
   // If a second iframe is present, verify it also received the clear message.
   const allIframes = page.locator('iframe[src*="/components/preview"]');
@@ -662,11 +744,7 @@ test("preview panel: Reset clears overrides from all visible preview iframes", a
     const secondFrame = page
       .frameLocator('iframe[src*="/components/preview"]')
       .nth(1);
-    const secondRadius = await secondFrame.locator(":root").evaluate(
-      (el, name) => getComputedStyle(el).getPropertyValue(name).trim(),
-      "--radius-md",
-    );
-    expect(secondRadius).not.toBe("20rem");
+    await expect.poll(() => getIframeRootVar(secondFrame, "--radius-md")).not.toBe("20rem");
   }
 });
 

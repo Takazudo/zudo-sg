@@ -66,7 +66,7 @@ Steps in `scripts/run-b4push.sh`:
 7. Demo build — `pnpm --filter @zudo-sg/demo build`
 8. Link checks — root and demo output (`pnpm check:links` and `pnpm check:links:demo`)
 9. HTML validation — `pnpm check:html`
-10. Playwright smoke e2e — `pnpm test:e2e` (`smoke`, `preview-token-panel`, and `demo-smoke`)
+10. Playwright e2e — `pnpm test:e2e` (every project in `playwright.config.ts`)
 11. Documentation typecheck, build, and link check — `pnpm --filter @zudo-sg/doc check`, `pnpm build:doc`, and `pnpm check:links:doc` (`B4PUSH_SKIP_DOC=1` skips this step)
 12. Manual interactive smoke (operator-driven)
 
@@ -107,8 +107,11 @@ independent packed consumer proofs:
 - **build-demo** — `pnpm --filter @zudo-sg/demo build` (produces and caches
   `apps/demo/dist`), then `pnpm check:links:demo` against it
 - **build-doc** — `pnpm --filter @zudo-sg/doc check`, then `pnpm build:doc`, then `pnpm check:links:doc`
-- **smoke-e2e** — `pnpm test:e2e:ci` (Playwright, Chromium only; `smoke`,
-  `preview-token-panel`, and `demo-smoke`; needs `build` and `build-demo`)
+- **smoke-e2e** — `pnpm test:e2e:ci` (Playwright, Chromium only; every project
+  in `playwright.config.ts`; needs `build` and `build-demo`). The command does
+  not pass `--reporter`. CI writes the list log plus `playwright-report/`
+  (HTML, then `report.json`). A failed or cancelled job uploads that directory
+  for 7 days. The test step remains the assertion result.
 - **dist-checks** — `pnpm check:links` + `pnpm check:html` against `dist/`
   (needs `build`; merged into one job so both checks share a single install)
 
@@ -269,13 +272,36 @@ ZUDO_SG_SMOKE_PORT=54320 ZUDO_SG_DEMO_SMOKE_PORT=54321 pnpm test:e2e
 ```
 
 The static command requires both builds listed above and no foreign process on
-either target port. The three current projects are:
+either target port. `pnpm test:e2e` runs every project below:
 
 | Project | Specs | Surface |
 |---------|-------|---------|
-| `smoke` | `smoke.spec.ts` | Root styleguide, component catalog, and preview iframe |
+| `smoke` | `smoke.spec.ts` | Root styleguide and preview iframe |
+| `catalog-gallery` | `catalog-gallery.spec.ts` | Component catalogue gallery |
+| `foreign-thumbnail-colors` | `foreign-thumbnail-colors.spec.ts` | Foreign thumbnail color contract |
+| `tokens-dashboard` | `tokens-dashboard.spec.ts` | Token dashboard |
 | `preview-token-panel` | `preview-token-panel.spec.ts` | Preview-token panel and iframe isolation |
+| `preview-fidelity` | `preview-fidelity.spec.ts` | Preview fidelity |
+| `detail-workbench` | `detail-workbench.spec.ts` | Detail-page workbench |
+| `chrome-token-namespace` | `chrome-token-namespace.spec.ts` | `--sg-*` chrome token namespace |
 | `demo-smoke` | `demo-smoke.spec.ts`, `demo-transition.spec.ts`, `demo-refresh.spec.ts` | Demo rendering, navigation transitions, and refresh integration |
+
+Failure evidence uses `trace: "retain-on-failure"` and `screenshot: "only-on-failure"`,
+so a zero-retry failure still records a trace. Playwright empties `test-results/`
+at the start of every run, and the HTML reporter clears its own folder before
+writing. Keep each comparison arm outside that wiped directory, and do not put
+the report inside the output directory:
+
+```bash
+ZUDO_SG_E2E_REPORT_DIR=e2e-evidence/arm-a \
+ZUDO_SG_E2E_OUTPUT_DIR=e2e-evidence/arm-a-output \
+  pnpm exec playwright test --workers=5 --retries=0
+```
+
+`e2e-evidence/` is gitignored. A second arm needs its own two directories. The
+config refuses a report path that overlaps the output path. `pnpm test:e2e:ci`
+on a machine with `CI` set uses the same reporters as the PR job. A local arm
+that sets `ZUDO_SG_E2E_REPORT_DIR` also writes HTML and JSON into that directory.
 
 ---
 
