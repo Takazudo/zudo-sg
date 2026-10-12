@@ -308,9 +308,11 @@ try {
   const fixturePackage = await json("package.json");
   const declared = { ...fixturePackage.dependencies, ...fixturePackage.devDependencies };
   const npmAlias = /^npm:(@[^/]+\/[^@]+|[^@]+)@(\d+\.\d+\.\d+)$/;
+  // macOS os.tmpdir() is /var, a symlink of /private/var. Compare realpaths, as assertForeignPackage does.
+  const modules = `${await realpath(host)}${path.sep}node_modules${path.sep}`;
   for (const name of Object.keys(declared)) {
     const filename = path.join(host, "node_modules", name, "package.json");
-    assert((await realpath(filename)).startsWith(`${host}/node_modules/`), `${name} escaped foreign node_modules`);
+    assert((await realpath(filename)).startsWith(modules), `${name} escaped foreign node_modules`);
     const manifest = JSON.parse(await readFile(filename, "utf8"));
     const alias = npmAlias.exec(declared[name]);
     if (alias) {

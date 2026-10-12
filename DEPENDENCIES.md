@@ -1,5 +1,42 @@
 # Dependency audit register
 
+## zudo-doc 6.1.1 / zfb 4.3.3 — 2026-10-13, #1000
+
+Selected published tuple, rechecked against npm latest on 2026-10-13. No newer
+stable correction was present. `@takazudo/zdtp` stays **0.8.6**.
+
+| Package | Installed |
+| --- | --- |
+| `@takazudo/zudo-doc` | **6.1.1** |
+| `@takazudo/zudo-doc-history-server` | **6.1.1** (root only; `doc/` does not consume it) |
+| `@takazudo/zfb`, `@takazudo/zfb-runtime`, `@takazudo/zfb-md-wasm` | **4.3.3** |
+| `@takazudo/zdtp` | **0.8.6** |
+
+Engine peer floors are zfb `^4.3.3`, zudo-doc `^6.0.0`, zdtp `^0.8.6`.
+The fixture install line uses doc `^6.1.1` and zfb `^4.3.3`, matching the
+exact fixture pins. `@zudo-sg/demo-ui` keeps its zfb peer at `^4.3.1` and
+pins md-wasm and its zfb devDependency to 4.3.3. Published zudo-doc 6.1.1
+peers zfb `^4.3.3` and zod `^4.3.6`; the workspace zod range `^4.6.5`
+already satisfies that peer. `tools/deploy` is unchanged.
+
+`pnpm install` on pnpm **11.5.2** replaced seven lock entries and removed
+seven. The lock contains no `@takazudo/zfb*@4.3.1` specifier.
+`@takazudo/zfb-slugify` resolved at **4.3.3**. Root release-age exclusions
+stay name-scoped except version-specific slugify `4.3.3`. Fixture native and
+slugify exclusions are version-specific at `4.3.3`. The React fixture still
+has no committed lock.
+
+Installed `@takazudo/zudo-doc@6.1.1` `tsconfig.base.json` git blob is
+`6c863a3ae09e10c187742b8f1461f061ce789adb`, the same blob as 6.0.0, and it
+still contains `baseUrl`. Owned root, doc, and React-fixture configs were
+not changed except for that reconciliation note.
+
+`pnpm build:styleguide` was forced after install. The real Wind refresh at
+zfb **4.3.3** kept **343** candidates, the candidate-set hash, and the
+explanation payload. `compilerVersion` is `4.3.3`. `windConfigSha256` changed
+because compiler identity is part of the provenance document. A second
+refresh wrote identical bytes.
+
 ## TypeScript compiler coexistence — 2026-10-12, #990
 
 Implementation is on `maintenance/typescript-990`, based on main

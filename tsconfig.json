@@ -1,8 +1,9 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
   // Snapshot of @takazudo/zudo-doc@6.0.0 packages/zudo-doc/tsconfig.base.json
-  // (b4f974598b27064a092eeadb5b2e5559078a8bb9). baseUrl is omitted: TypeScript 7
-  // removes it, and baseUrl:null does not clear zfb's inherited value.
+  // (b4f974598b27064a092eeadb5b2e5559078a8bb9). 6.1.1 publishes the same blob
+  // (6c863a3ae09e10c187742b8f1461f061ce789adb); reconciliation is a no-op.
+  // baseUrl is omitted: TypeScript 7 removes it, and baseUrl:null does not clear zfb's inherited value.
   // Reconciliation: ZUDO_DEPS_PINS.md "TypeScript compiler configuration".
   "compilerOptions": {
     "target": "ESNext",

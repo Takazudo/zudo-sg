@@ -132,10 +132,10 @@ output as drift and never writes it.
 ## Installation
 
 ```sh
-pnpm add @takazudo/zudo-sg@latest @takazudo/zfb@^4.3.1 @takazudo/zfb-md-wasm@^4.3.1 @takazudo/zfb-runtime@^4.3.1 @takazudo/zudo-doc@^6.0.0 @takazudo/zdtp@^0.8.6 diff@^8.0.4 katex@^0.16.38 zod@^4.3.6
+pnpm add @takazudo/zudo-sg@latest @takazudo/zfb@^4.3.3 @takazudo/zfb-md-wasm@^4.3.3 @takazudo/zfb-runtime@^4.3.3 @takazudo/zudo-doc@^6.1.1 @takazudo/zdtp@^0.8.6 diff@^8.0.4 katex@^0.16.38 zod@^4.3.6
 ```
 
-The engine peers are `@takazudo/zfb ^4.3.1`, `@takazudo/zudo-doc ^6.0.0`,
+The engine peers are `@takazudo/zfb ^4.3.3`, `@takazudo/zudo-doc ^6.0.0`,
 and `@takazudo/zdtp ^0.8.6`. `@takazudo/zdtp` is required:
 the injected `/tokens` route loads its dashboard through the engine-owned
 opaque Preact adapter. Preact is a regular engine dependency, not a host peer. The
@@ -215,7 +215,7 @@ control. Any non-empty host navigation stays authoritative; set
 `chromeDefaults: false` in the second argument to keep an intentionally empty
 header. The engine requires `packageOwnedRoutes: true` on the host (its
 routes import zudo-doc's route-context virtual modules). On the engine's zfb
-peer floor (4.3.1) nothing else is needed: `zfb dev` seeds its island
+peer floor (4.3.3) nothing else is needed: `zfb dev` seeds its island
 scanner from the injected routes. `@takazudo/zudo-sg/islands` remains
 exported as a side-effect module that statically imports every engine
 island — importing it once from a host `pages/` file is optional and
@@ -505,8 +505,13 @@ the browser bundle. The engine does not install a browser or import React.
 - `validateExternalCatalogAssets({manifest, projectRoot, assetRoot, captures})`
   checks capture receipts against files. Missing images, stale loader/source
   hashes, wrong image hash/dimensions/fixture identity, and `failed` dispositions
-  throw. Intentional placeholders remain labelled. Paths reject symlinks,
-  including parents, before reading/writing. Captures must be complete,
+  throw. Intentional placeholders remain labelled. A project or asset root may
+  sit below a symlinked ancestor, including macOS `/var` and `/tmp`. The
+  configured root itself must be a real directory or absent: a live or dangling
+  symlink there is rejected, and so is every symlink beneath that root, even
+  one that points back inside it. Missing output directories are created only
+  after a successful capture; preflight, validation, and a failed capture do
+  not create them. Captures must be complete,
   noninterlaced 8-bit PNGs of at most 16,777,216 pixels, matching the declared
   viewport dimensions. Only IHDR/IDAT/IEND critical chunks are supported;
   palette chunks are outside this browser screenshot format. Legacy descriptor
