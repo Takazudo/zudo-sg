@@ -13,7 +13,7 @@
 // Usage:
 //   node scripts/check-first-party-peer-floors.mjs   # exit 1 on any mismatch
 
-import { readFileSync } from "node:fs";
+import { readFileSync, realpathSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -185,7 +185,18 @@ export function checkRepo(repoRoot) {
   return validatePeerFloors({ rootManifest, owners });
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+// realpath, not resolve: Node realpaths the main module URL, so a symlinked
+// checkout would otherwise skip the gate and exit 0.
+function isMain() {
+  if (!process.argv[1]) return false;
+  try {
+    return realpathSync(process.argv[1]) === fileURLToPath(import.meta.url);
+  } catch {
+    return false;
+  }
+}
+
+if (isMain()) {
   const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
   let problems;
   try {

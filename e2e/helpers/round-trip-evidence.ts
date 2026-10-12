@@ -144,7 +144,8 @@ function withTimeout<T>(read: () => Promise<T>, ms: number): Promise<T> {
   const timeout = new Promise<never>((_, reject) => {
     timer = setTimeout(() => reject(new Error(`read timed out after ${ms}ms`)), ms);
   });
-  return Promise.race([read(), timeout]).finally(() => clearTimeout(timer));
+  // `.then(read)` turns a synchronous throw into a rejection so the timer is still cleared.
+  return Promise.race([Promise.resolve().then(read), timeout]).finally(() => clearTimeout(timer));
 }
 
 export type FinalizeOptions = {
