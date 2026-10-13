@@ -10,18 +10,24 @@ type LifecycleEvent = { name: string; at: string; direction: string | null };
 
 async function installProbe(page: Page): Promise<void> {
   await page.addInitScript(() => {
-    const target = window as Window & { __lifecycle?: LifecycleEvent[] };
+    const target = window as Window & {
+      __lifecycle?: LifecycleEvent[];
+      __pendingDirection?: string | null;
+    };
     target.__lifecycle = [];
-    for (const name of ["before-swap", "after-swap", "page-load"]) {
-      document.addEventListener(`zfb:${name}`, (event) => {
-        const record = event as Event & { direction?: string };
-        target.__lifecycle?.push({
-          name,
-          at: location.pathname + location.hash,
-          direction: record.direction ?? null,
-        });
+    // zfb:after-swap is a plain Event. Direction is on zfb:before-swap.
+    document.addEventListener("zfb:before-swap", (event) => {
+      const record = event as Event & { direction?: string };
+      target.__pendingDirection = record.direction ?? null;
+    });
+    document.addEventListener("zfb:after-swap", () => {
+      target.__lifecycle?.push({
+        name: "after-swap",
+        at: location.pathname + location.hash,
+        direction: target.__pendingDirection ?? null,
       });
-    }
+      target.__pendingDirection = null;
+    });
   });
 }
 
@@ -58,7 +64,7 @@ async function waitForNextSwap(page: Page, before: number, step: string): Promis
 }
 
 async function expectArticle(page: Page, path: string, title: string, hash = ""): Promise<void> {
-  await expect(page).toHaveURL(new RegExp(`${path.replaceAll("/", "\\/")}${hash}$`));
+  await expect(page).toHaveURL(new RegExp(`${path.replaceAll("/", "\\/")}/?${hash}$`));
   await expect(page.locator("main h1")).toHaveText(title);
 }
 
@@ -87,7 +93,9 @@ test("Back restores a browser-created fragment and Forward returns to the next p
   const response = await page.goto(PAGE_A);
   expect(response?.status()).toBe(200);
   await page.locator("main h1").waitFor();
-  await page.locator("[data-zfb-island][data-zfb-island-mounted]").first().waitFor();
+  // The first mounted island is the hidden desktop SidebarToggle
+  // (`data-when="visible"`). Attachment is the hydration signal.
+  await page.locator("[data-zfb-island-mounted]").first().waitFor({ state: "attached" });
   const titleA = (await page.locator("main h1").innerText()).trim();
 
   const fragmentId = await page.evaluate(() => {
