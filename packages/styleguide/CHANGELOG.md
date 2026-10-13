@@ -4,6 +4,20 @@ All notable changes to `@takazudo/zudo-sg` are documented in this file.
 
 The format is based on Keep a Changelog, and release notes are generated from the changelog MDX pages.
 
+## [0.5.4] - 2026-10-13
+
+This maintenance release raises the zfb peer floor to the version the engine is
+built and tested against. The public API is unchanged.
+
+### Other Changes
+
+- The `@takazudo/zfb` peer floor is now ^4.4.0 (was ^4.3.3).
+  `@takazudo/zudo-doc` stays at ^6.1.1 and `@takazudo/zdtp` at ^0.8.6. Hosts on
+  an older zfb need to upgrade it together with the engine.
+- Fragment-history navigation is covered end to end under zfb 4.4.0: Back
+  restores the page behind a browser-created hash entry, and the following
+  Forward is reported as a forward navigation.
+
 ## [0.5.3] - 2026-10-13
 
 This maintenance release fixes catalog-root resolution beneath a symlinked

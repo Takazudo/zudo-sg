@@ -1,0 +1,20 @@
+---
+title: 0.5.4
+description: The zfb peer floor follows the 4.4.0 release.
+sidebar_position: 20
+pagination_next: null
+---
+
+Released: 2026-10-13
+
+This maintenance release raises the zfb peer floor to the version the engine is
+built and tested against. The public API is unchanged.
+
+### Other Changes
+
+- The `@takazudo/zfb` peer floor is now ^4.4.0 (was ^4.3.3).
+  `@takazudo/zudo-doc` stays at ^6.1.1 and `@takazudo/zdtp` at ^0.8.6. Hosts on
+  an older zfb need to upgrade it together with the engine.
+- Fragment-history navigation is covered end to end under zfb 4.4.0: Back
+  restores the page behind a browser-created hash entry, and the following
+  Forward is reported as a forward navigation.
