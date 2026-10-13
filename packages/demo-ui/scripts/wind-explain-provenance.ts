@@ -9,7 +9,7 @@ import { pathToFileURL } from "node:url";
  * value, final value). Hashing only the merged token map misses a preset
  * change whose host override keeps the same CSS value. `sources` and
  * `manifests` are outside that read set (ZFB 4.3.1 `map_wind_config`; the
- * 4.3.3 release does not change the explain or override read set).
+ * 4.3.3 and 4.4.0 releases do not change the explain or override read set).
  */
 export const WIND_EXPLAIN_PROVENANCE_SCHEMA_VERSION = 1;
 
@@ -72,7 +72,7 @@ async function loadEvaluatedConfig(repoRoot: string): Promise<unknown> {
 /**
  * Node caches an ESM module by its URL. The stamp makes a changed
  * `zfb.config.ts` load again in the same process. The separator is built at
- * runtime: zfb 4.3.3 copies `packages/` into the bundle shadow and rejects a
+ * runtime: zfb 4.4.0 still copies `packages/` into the bundle shadow and rejects a
  * dynamic import whose specifier text contains a query. Only a static
  * default raw-text import is accepted there.
  */

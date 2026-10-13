@@ -64,6 +64,12 @@ export default defineConfig({
       use: { baseURL: smokeServer.origin },
     },
     {
+      // zfb-runtime 4.4.0 fragment history: A -> A#fragment -> B -> Back -> Forward.
+      name: "fragment-history",
+      testMatch: "fragment-history.spec.ts",
+      use: { baseURL: smokeServer.origin },
+    },
+    {
       // The /components catalogue gallery (#540): inline SSR thumbnails, the
       // wide band, the filter contract, and the tile-size control.
       name: "catalog-gallery",

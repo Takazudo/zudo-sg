@@ -3,9 +3,9 @@
 Status: **Accepted** (epic #648, decision sub-task #650, 2026-09-13), with
 framework-migration amendments recorded below. Model: zudo-doc's package-owned
 route seam (`$HOME/repos/myoss/zudo-doc/packages/zudo-doc/docs/adr/route-injection-seam.md`).
-Current toolchain pins: `@takazudo/zfb` **4.3.3**, `@takazudo/zudo-doc`
+Current toolchain pins: `@takazudo/zfb` **4.4.0**, `@takazudo/zudo-doc`
 **6.1.1**, `@takazudo/zdtp` **0.8.6**, pnpm 11.5.2, Node 24. The engine's
-peer floors are `^4.3.3` / `^6.1.1` / `^0.8.6`; Preact is a regular engine
+peer floors are `^4.4.0` / `^6.1.1` / `^0.8.6`; Preact is a regular engine
 dependency for the opaque zdtp dashboard adapter, not a host peer.
 
 The original sections and spike report retain the implementation history from
@@ -190,7 +190,7 @@ unchanged.
   `withZudoSg()` passes the composed host wind data and configured component
   roots to the preview-CSS plugin. The entry is compiled independently of the
   host's global stylesheet so preview documents do not inherit host chrome.
-- `compilePreviewCss()` invokes the host-installed zfb 4.3.3 CLI with an
+- `compilePreviewCss()` invokes the host-installed zfb 4.4.0 CLI with an
   argument array: `zfb css --input <entry> --output <temp css> --config
   <generated config> --project-root <host root>`, followed by the component
   `--source` arguments and `--no-auto-source`. The generated config contains
@@ -259,7 +259,7 @@ and sidebar-resizer initialization. The host also owns `src/config/settings.ts`,
 **Current island rule (amended for finding 4; relaxed 2026-09-16 and rechecked
 for zfb 4.3.1).** Every `"use client"` component that must hydrate on an
 engine route is reached through the injected route entrypoints; the current
-zfb 4.3.3 peer floor's scanner includes package routes and plugin virtual modules in both build and
+zfb 4.4.0 peer floor's scanner includes package routes and plugin virtual modules in both build and
 dev. The host keeps one shim, `pages/lib/_zudo-sg-islands.ts`, containing
 `import "@takazudo/zudo-sg/islands";`, imported by `pages/index.tsx` (which
 also reaches the preview token panel through `_body-end-islands.tsx`). It is
@@ -373,7 +373,7 @@ disables this minimal-host default.
 | Staging | **none** — inject `routes-src/*.tsx` from the package realpath (workspace or node_modules); no `.zudo-sg/` dir, nothing to gitignore |
 | Route entrypoints | link assets only (`<link href={withBase(sgContext.previewCssUrl)}>`), read data from the virtual modules, call zudo-doc factories (`createRouteContext`, `createChrome`) — never plugin helpers |
 | Preview island | `routes-src/_preview-app.tsx`: `"use client"`, default export `ConfiguredPreviewApp` (displayName equal), statically imported by `components-preview.tsx`, renders `<PreviewApp registry={registry}/>`; the registry travels as an in-bundle argument, NEVER as island props (`data-props` is JSON — render closures would be dropped) |
-| Dev-hydration seed | `@takazudo/zudo-sg/islands` → `./dist/islands.js` (side-effect imports of every engine island + `../routes-src/_preview-app.tsx`); host shim `pages/lib/_zudo-sg-islands.ts` = `import "@takazudo/zudo-sg/islands";`, imported by `pages/index.tsx`. Kept for API stability; a no-op at the current zfb 4.3.3 floor, where dev and build scan injected routes |
+| Dev-hydration seed | `@takazudo/zudo-sg/islands` → `./dist/islands.js` (side-effect imports of every engine island + `../routes-src/_preview-app.tsx`); host shim `pages/lib/_zudo-sg-islands.ts` = `import "@takazudo/zudo-sg/islands";`, imported by `pages/index.tsx`. Kept for API stability; a no-op at the current zfb 4.4.0 floor, where dev and build scan injected routes |
 | Registry shim | `routes-src/_registry.ts` builds `createRegistry(storyModules, { categoryOrder, storyExportOrder, routes: ctx.routes })` once; every entrypoint and the preview wrapper import it |
 | Package styles and wind manifest | `@takazudo/zudo-sg/styles.css` → `./styles.css` (engine chrome styles); `@takazudo/zudo-sg/wind.json` → `./dist/wind.json` (engine utility candidates registered by `withZudoSg()`). zudo-doc 6 also supplies its own public `wind.json`; zfb composes package manifests with host `wind` configuration. There is no engine utility stylesheet export. |
 | Consumer CSS order | The current starter declares `@layer zw-reset, zd-flow`, then imports zudo-doc `theme.css`, host token/component CSS, zudo-doc `content.css`, `features.css`, `page-loading.css`, zdtp dashboard CSS, and zudo-sg `styles.css`. zfb composes wind utilities from host configuration and package manifests; utilities and authored engine styles are unlayered, and dashboard styles follow content CSS to win ties with prose. zudo-doc 6's `theme.css` supplies token values without the former color reset. |
@@ -402,7 +402,7 @@ run from `main` after the epic merges.
 ### 13. Required peers and inherited host prerequisites
 
 **Migration amendment (2026-10-11, zfb 4 migration S3a/E3).** Current
-required engine peers are `@takazudo/zfb ^4.3.3`, `@takazudo/zudo-doc
+required engine peers are `@takazudo/zfb ^4.4.0`, `@takazudo/zudo-doc
 ^6.1.1`, and `@takazudo/zdtp ^0.8.6`. The engine has no Preact peer. It
 declares `preact ^10.29.1` as a regular dependency solely for the opaque
 dashboard adapter that mounts zdtp inside the always-injected `/tokens`
@@ -421,7 +421,7 @@ The `/dev-bump-zudo-deps` resolver's peer-floor rows are applied, not
 skipped. The workspace already installs exactly those versions, so the floor
 is the tested version and not an older, untested minimum. The cost is that
 adopters must upgrade the toolchain together with the engine. Under this
-policy the floors are zfb `^4.3.3`, zudo-doc `^6.1.1` (was `^6.0.0`), and
+policy the floors are zfb `^4.4.0`, zudo-doc `^6.1.1` (was `^6.0.0`), and
 zdtp `^0.8.6`. The amendments below are historical.
 
 **Enforcement (2026-10-13, #1004).** `pnpm check:peer-floors`

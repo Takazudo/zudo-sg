@@ -23,7 +23,7 @@ function currentFixture() {
   const rootManifest: Manifest = {
     dependencies: {
       "@takazudo/zdtp": "0.8.6",
-      "@takazudo/zfb": "4.3.3",
+      "@takazudo/zfb": "4.4.0",
       "@takazudo/zudo-doc": "6.1.1",
       "@takazudo/zudo-sg": "workspace:*",
     },
@@ -32,19 +32,19 @@ function currentFixture() {
   const styleguide: Manifest = {
     devDependencies: {
       "@takazudo/zdtp": "0.8.6",
-      "@takazudo/zfb": "4.3.3",
+      "@takazudo/zfb": "4.4.0",
       "@takazudo/zudo-doc": "6.1.1",
     },
     peerDependencies: {
-      "@takazudo/zfb": "^4.3.3",
+      "@takazudo/zfb": "^4.4.0",
       "@takazudo/zdtp": "^0.8.6",
       "@takazudo/zudo-doc": "^6.1.1",
     },
   };
   const demoUi: Manifest = {
     dependencies: { "@takazudo/zudo-sg": "workspace:*" },
-    devDependencies: { "@takazudo/zfb": "4.3.3" },
-    peerDependencies: { "@takazudo/zfb": "^4.3.3" },
+    devDependencies: { "@takazudo/zfb": "4.4.0" },
+    peerDependencies: { "@takazudo/zfb": "^4.4.0" },
   };
   return { rootManifest, styleguide, demoUi };
 }
@@ -92,7 +92,7 @@ describe("validatePeerFloors", () => {
     const problems = run(f);
     expect(problems.map((p) => [p.owner, p.name, p.actual, p.expected])).toEqual([
       ["packages/styleguide/package.json", "@takazudo/zudo-doc", "^6.0.0", "^6.1.1"],
-      ["packages/demo-ui/package.json", "@takazudo/zfb", "^4.3.1", "^4.3.3"],
+      ["packages/demo-ui/package.json", "@takazudo/zfb", "^4.3.1", "^4.4.0"],
     ]);
   });
 
@@ -122,7 +122,7 @@ describe("validatePeerFloors", () => {
     deps(f.demoUi, "peerDependencies")["@takazudo/zfb"] = range;
     const problems = run(f);
     expect(problems).toHaveLength(1);
-    expect(problems[0]).toMatchObject({ actual: range, expected: "^4.3.3" });
+    expect(problems[0]).toMatchObject({ actual: range, expected: "^4.4.0" });
     expect(problems[0].fix).toContain("unsupported range form");
   });
 
@@ -165,7 +165,7 @@ describe("validatePeerFloors", () => {
 
   it("passes identical duplicate root declarations and fails conflicting ones", () => {
     const f = currentFixture();
-    f.rootManifest.devDependencies = { "@takazudo/zfb": "4.3.3" };
+    f.rootManifest.devDependencies = { "@takazudo/zfb": "4.4.0" };
     expect(run(f)).toEqual([]);
 
     f.rootManifest.optionalDependencies = { "@takazudo/zfb": "4.3.4" };
@@ -173,7 +173,7 @@ describe("validatePeerFloors", () => {
     expect(problems).toHaveLength(2);
     for (const p of problems) {
       expect(p.fix).toContain("conflicting root declarations");
-      expect(p.fix).toContain('devDependencies="4.3.3"');
+      expect(p.fix).toContain('devDependencies="4.4.0"');
       expect(p.fix).toContain('optionalDependencies="4.3.4"');
     }
   });
@@ -181,12 +181,12 @@ describe("validatePeerFloors", () => {
   it("discovers a newly added first-party peer automatically", () => {
     const f = currentFixture();
     deps(f.styleguide, "peerDependencies")["@takazudo/zfb-runtime"] = "^4.3.2";
-    deps(f.rootManifest, "dependencies")["@takazudo/zfb-runtime"] = "4.3.3";
+    deps(f.rootManifest, "dependencies")["@takazudo/zfb-runtime"] = "4.4.0";
     const problems = run(f);
     expect(problems).toHaveLength(1);
-    expect(problems[0]).toMatchObject({ name: "@takazudo/zfb-runtime", expected: "^4.3.3" });
+    expect(problems[0]).toMatchObject({ name: "@takazudo/zfb-runtime", expected: "^4.4.0" });
 
-    deps(f.styleguide, "peerDependencies")["@takazudo/zfb-runtime"] = "^4.3.3";
+    deps(f.styleguide, "peerDependencies")["@takazudo/zfb-runtime"] = "^4.4.0";
     expect(run(f)).toEqual([]);
   });
 
@@ -234,7 +234,7 @@ describe("validatePeerFloors", () => {
         owner: "packages/demo-ui/package.json",
         field: section,
         actual: "4.3.1",
-        expected: "4.3.3",
+        expected: "4.4.0",
       });
     },
   );
@@ -297,7 +297,7 @@ describe("check-first-party-peer-floors CLI", () => {
     expect(result.status).toBe(1);
     expect(result.stderr).toContain("packages/demo-ui/package.json → @takazudo/zfb [peerDependencies]");
     expect(result.stderr).toContain("actual:   ^4.3.1");
-    expect(result.stderr).toContain("expected: ^4.3.3");
+    expect(result.stderr).toContain("expected: ^4.4.0");
     expect(files.map((rel) => readFileSync(join(sandbox, rel), "utf8"))).toEqual(before);
   });
 

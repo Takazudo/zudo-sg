@@ -1,5 +1,69 @@
 # Dependency audit register
 
+## zfb 4.4.0 — 2026-10-13
+
+Selected published tuple, rechecked against npm latest on 2026-10-13. The only
+registry movement is the zfb family **4.3.3 → 4.4.0**. `@takazudo/zudo-doc`,
+`@takazudo/zudo-doc-history-server`, `@takazudo/zdtp`, `@takazudo/mdx-formatter`,
+`@takazudo/zudo-design-token-lint`, published `@takazudo/zudo-sg`, and
+`create-zudo-doc` stay at the versions recorded below. No newer stable
+correction was present. The resolver reported 25 bumps, 19 up-to-date rows,
+5 non-registry skips (`workspace:*` and fixture `file:.tarball`), and 0 errors
+across 12 manifests. That scan matches the checkout inventory: no nested git
+checkout and no symlinked package manifest.
+
+| Package | Installed |
+| --- | --- |
+| `@takazudo/zudo-doc` | **6.1.1** |
+| `@takazudo/zudo-doc-history-server` | **6.1.1** (root only; `doc/` does not consume it) |
+| `@takazudo/zfb`, `@takazudo/zfb-runtime`, `@takazudo/zfb-md-wasm` | **4.4.0** |
+| `@takazudo/zdtp` | **0.8.6** |
+
+Engine and demo-ui peer floors for zfb are `^4.4.0`. zudo-doc stays `^6.1.1`
+and zdtp stays `^0.8.6`. Direct copies stay exact `4.4.0`. Published
+`zfb-runtime@4.4.0` peers exact `zfb@4.4.0`. Published zudo-doc 6.1.1 still
+peers zfb `^4.3.3`, which accepts 4.4.0. The workspace zod range is unchanged.
+`tools/deploy` has no first-party dependency and its lockfile is unchanged.
+Engine workspace references and fixture `file:.tarball` references are unchanged.
+The starter still depends on `@takazudo/zudo-sg ^0.5.3`; this round does not
+release the engine or the initializer.
+
+Installed `@takazudo/zfb@4.4.0` depends on `@takazudo/zfb-slugify@4.4.0` and
+optional native packages `@takazudo/zfb-darwin-arm64`,
+`@takazudo/zfb-darwin-x64`, `@takazudo/zfb-linux-arm64-gnu`,
+`@takazudo/zfb-linux-x64-gnu`, and `@takazudo/zfb-win32-x64-msvc`, each
+`4.4.0`. Root release-age exclusions stay name-scoped except version-specific
+slugify `4.4.0`. The three foreign fixtures keep version-specific native and
+slugify exclusions, now at `4.4.0`. The React fixture keeps
+`monaco-editor>dompurify: 3.4.16`.
+
+`pnpm install` on pnpm **11.5.2** rewrote the shared root lockfile only.
+Resolved `@takazudo/zfb*@4.3.3` entries are gone. The lock still records
+zudo-doc 6.1.1's published peer range `^4.3.3`. `doc/` has no independent
+lockfile.
+
+Upstream release `v4.4.0` is commit `29377d1c0bfd607dea6d654557e46ff7bf536b2e`
+(previous `v4.3.3` commit `badb68360ed8d28e807f0d3770709da9e9b49529`).
+Runtime impact adopted here is the client-router fragment history fix:
+A → browser-created A#fragment → soft navigation to B → Back restores A and
+the fragment, and Forward is reported as `forward`. YAML frontmatter changes
+are limited to explicit-tag handling and alias depth; no previously accepted
+frontmatter changes value. md-wasm has no JavaScript export change. The root,
+demo, and doc content builds are the check for those parser differences.
+
+`pnpm build:styleguide` was forced after install. The real Wind refresh at
+zfb **4.4.0** kept **343** candidates, the candidate-set hash, and the
+explanation payload. `compilerVersion` is `4.4.0`. `windConfigSha256` changed
+because compiler identity is part of the provenance document
+(`fbb4e3253fc55c6b393f46f71082570a1a2dd9a49b20fd95f1246c8904739707` →
+`c2e67397f4e5dd8123a97ef4a6d6ffed25b8241f09a4fd906a14123ec7087c2f`). A second
+refresh wrote identical bytes.
+
+Installed `@takazudo/zudo-doc@6.1.1` `tsconfig.base.json` git blob is still
+`6c863a3ae09e10c187742b8f1461f061ce789adb` and still contains `baseUrl`.
+Owned TypeScript snapshots were not changed. The three `create-zudo-doc`
+pin entries stay at published 6.1.1; no scaffold resync was required.
+
 ## zudo-doc 6.1.1 / zfb 4.3.3 — 2026-10-13, #1000
 
 Selected published tuple, rechecked against npm latest on 2026-10-13. No newer

@@ -278,6 +278,7 @@ either target port. `pnpm test:e2e` runs every project below:
 | Project | Specs | Surface |
 |---------|-------|---------|
 | `smoke` | `smoke.spec.ts` | Root styleguide and preview iframe |
+| `fragment-history` | `fragment-history.spec.ts` | Browser-created fragment, Back, and Forward |
 | `catalog-gallery` | `catalog-gallery.spec.ts` | Component catalogue gallery |
 | `foreign-thumbnail-colors` | `foreign-thumbnail-colors.spec.ts` | Foreign thumbnail color contract |
 | `tokens-dashboard` | `tokens-dashboard.spec.ts` | Token dashboard |
