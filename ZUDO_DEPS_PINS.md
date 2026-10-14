@@ -60,9 +60,8 @@ pnpm dlx create-zudo-doc@<ver> a<ver> --yes --pm pnpm --no-install --no-git \
 - files: doc/tsconfig.json, doc/pages/, doc/src/styles/global.css, doc/package.json, doc/.zudo-doc.json, doc/.gitignore
 - source: packages/create-zudo-doc/templates/base/, packages/create-zudo-doc/src/scaffold.ts
 - track: releases
-- pinned: 6.1.1
-- observed-head: create-zudo-doc 6.1.1
-- updated: 2026-10-13
+- pinned: 6542b8300f4a554247563a3bac53e415a63ded51 (create-zudo-doc 6.2.0, v6.2.0)
+- updated: 2026-10-14
 - sync: cd <scratch> && pnpm dlx create-zudo-doc@<ver> a<ver> …  # bare dir name, not a path; use the flag set in "Regenerating a create-zudo-doc reference" above for BOTH the old and the new pin, then three-way merge
 - notes: local customizations to re-apply: `zfb.config.ts` site settings, `.htmlvalidate.json`, `wrangler.toml`, `DELETION_LEDGER.md`, the `check:html` script + `html-validate` devDep, `scripts/run-b4push.sh`, and `--strict-plain-css-imports` on the build script. All eight verified present after the 5.18.2 merge. No scaffold dependency required restoration at 5.18.2 either; the only dependency delta runs the other way — 5.16.1 shipped `@takazudo/zdtp` unconditionally, 5.18.2 ships it only when `designTokenPanel` is enabled, which `doc/` does not enable. `@takazudo/zdtp` and its now-dead `gen:z-index`/`check:z-index` scripts (wired to a `doc/src/config/z-index-tokens.ts` that never existed) were removed from `doc/package.json` and the root lockfile regenerated (`a88ec37`, #561/#565) — this was inert-dependency cleanup, not a scaffold-alignment merge. `doc/tsconfig.json`, `doc/pages/`, and `doc/src/styles/global.css` are now byte-identical to the 5.18.2 reference scaffold. At 5.19.0 there is nothing further to merge: `create-zudo-doc`'s published `templates/` tree is byte-identical to 5.18.2's (verified by diffing the two npm tarballs), and the release changes only CLI argument parsing — the positional argument became a destination path.
 
@@ -128,6 +127,16 @@ pnpm dlx create-zudo-doc@<ver> a<ver> --yes --pm pnpm --no-install --no-git \
   does not enable doc history, so history-server is not added. Local
   customizations stay in place.
 
+  At 6.2.0, compared all 29 published templates and scaffold logic against
+  6.1.1. Only `templates/base/tsconfig.json` changes: remove `baseUrl` and
+  make `@/*` explicitly relative. The owned doc snapshot already has both
+  properties, so this is a verified no-op. Scaffold pins move to zfb 4.5.0
+  and zudo-doc/history-server 6.2.0; consumed pins are adopted, while doc
+  history and MCP remain disabled. The MCP-only Wrangler change does not
+  apply. Settings, strict CSS imports, validators, deletion ledger, deployment
+  configuration and local scripts remain intact. Root/doc checks, builds and
+  link checks pass.
+
 ## create-zudo-doc (setup-doc-skill.sh)
 
 - repo: zudolab/zudo-doc
@@ -135,9 +144,8 @@ pnpm dlx create-zudo-doc@<ver> a<ver> --yes --pm pnpm --no-install --no-git \
 - files: doc/scripts/setup-doc-skill.sh
 - source: packages/create-zudo-doc/templates/base/scripts/setup-doc-skill.sh
 - track: releases
-- pinned: 6.1.1
-- observed-head: create-zudo-doc 6.1.1
-- updated: 2026-10-13
+- pinned: 6542b8300f4a554247563a3bac53e415a63ded51 (create-zudo-doc 6.2.0, v6.2.0)
+- updated: 2026-10-14
 - sync: cd <scratch> && pnpm dlx create-zudo-doc@<ver> a<ver> …  # same flag set as above; inspect the generated script, then three-way merge
 - notes: deliberately NOT fully synced, re-examined against the 5.19.0 generated script. Still-valid reasons: the host pins the stable "doc-wisdom" skill name (upstream derives `<projectName>-wisdom` from `@zudo-sg/doc`, which fails the script's own skill-name validation and would break user-level links), and upstream's config-driven locale map stays inert because `doc/zfb.config.ts` declares no `locales`. NO LONGER a divergence: the nested-workspace `REPO_ROOT` / `PROJECT_PREFIX` resolution is now identical upstream (removed during #548). ADOPTED (#551/#565): `ensure_symlink` now matches upstream's non-destructive posture — it replaces its own prior symlink (including a broken one) but refuses and exits 1 rather than `rm -rf`-ing a real file or directory sitting at a link target. Verified against a temporary fixture with `HOME` overridden, never against the real global skills directory. Upstream-only at 5.19.0 and still NOT adopted here (lower-value, unrelated to safety): `...zudoDoc({})` spread-aware top-level setting detection, and a "no explicit locale settings found" stderr note. The published `templates/` tree is otherwise byte-identical to 5.18.2's, so no other divergence changed. These two remaining follow-ups stay open.
 
@@ -164,6 +172,11 @@ pnpm dlx create-zudo-doc@<ver> a<ver> --yes --pm pnpm --no-install --no-git \
   No merge is needed. The scaffold's emitted dependency pins move; this script
   does not.
 
+  At 6.2.0, the published setup-script template is byte-identical to 6.1.1.
+  Verified no-op: the local doc-wisdom name, disabled locale behavior and
+  non-destructive symlink handling remain unchanged. No global symlink script
+  was run.
+
 ## create-zudo-doc (claude skills)
 
 - repo: zudolab/zudo-doc
@@ -171,9 +184,8 @@ pnpm dlx create-zudo-doc@<ver> a<ver> --yes --pm pnpm --no-install --no-git \
 - files: .claude/skills/zudo-doc-design-system/, .claude/skills/zudo-doc-version-bump/ (customized); .claude/skills/zudo-doc-translate/ (upstream-identical, tracked here only for completeness)
 - source: packages/create-zudo-doc/templates/features/claudeSkills/files/.claude/skills/
 - track: releases
-- pinned: 6.1.1
-- observed-head: create-zudo-doc 6.1.1
-- updated: 2026-10-13
+- pinned: 6542b8300f4a554247563a3bac53e415a63ded51 (create-zudo-doc 6.2.0, v6.2.0)
+- updated: 2026-10-14
 - sync: cd <scratch> && pnpm dlx create-zudo-doc@<ver> a<ver> …  # same flag set as above; inspect the generated skills, then three-way merge
 - notes: only design-system and version-bump are deliberate forks; re-examined against the 5.19.0 generated skills — the three templates are byte-identical between 5.16.1 and 5.19.0, so there is nothing new upstream to merge into either. Confirmed project rules: design-system carries the two token worlds + accent budget; version-bump is adapted for no `scripts/version-bump.sh`, a single changelog `index.mdx`, and no JA locale (`locales: {}`). `zudo-doc-translate` is NO LONGER a fork (#562, `3501b62`): the stale pre-generalization copy that described `src/content/docs-ja/` and `src/config/settings.ts` (neither of which exists here) was replaced verbatim with the current upstream `create-zudo-doc@5.19.0` template, which is already locale-agnostic (reads the project's own `zfb.config.ts` `locales` map instead of assuming En/Ja) and needs no project-specific delta because this project has i18n fully disabled. It is now upstream-identical with zero customizations, so there is nothing to sync or merge for it going forward. One known gap is accepted rather than fixed: the template tells the reader to read `defaultLocale`, `locales`, and `docsDir` from the `zudoDoc({...})` call in `zfb.config.ts`, but this project has no `zudoDoc(` call at all (`zfb.config.ts` builds `zudoDocPreset({ settings: presetSettings })`) and keeps those keys in `src/config/settings.ts`. It stays inert while `locales` is `{}` — either file leads to "no locales configured, nothing to translate" — but the skill must be re-forked, or the pointer fixed upstream, before i18n is enabled here.
   At 5.19.1, only `src/scaffold.ts` dependency pins changed (`@takazudo/zfb`, `@takazudo/zfb-runtime`, `@takazudo/zfb-md-wasm` 2.16.0, `@takazudo/zudo-doc` ^5.19.1, and `@takazudo/zdtp` 0.5.2 when Design Token Panel is enabled); the published `templates/` tree is byte-identical (verified by the 5.19.0/5.19.1 npm tarball diff), and `doc/package.json` already carries the 2.16.0 pins from this bump, so there is nothing to three-way merge.
@@ -207,6 +219,10 @@ pnpm dlx create-zudo-doc@<ver> a<ver> --yes --pm pnpm --no-install --no-git \
   At 6.1.1, all 29 published template files, including the three Claude skill
   templates, are byte-identical to 6.0.0. No skill merge is needed.
 
+  At 6.2.0, all three published Claude skill templates are byte-identical to
+  6.1.1. Verified no-op; customized design-system/version-bump guidance and
+  the unchanged translation template are preserved.
+
 ## TypeScript compiler configuration
 
 The six shared-workspace importers and `fixtures/react-descriptor-host` use
@@ -229,6 +245,18 @@ default consumer stay on TypeScript `^5.9.0` and still extend the published
 is not the compiler installed into a project it generates.
 
 ### Pinned zudo-doc base snapshot
+
+Current snapshot: published `@takazudo/zudo-doc@6.2.0`, commit
+`6542b8300f4a554247563a3bac53e415a63ded51` (verified release tags), blob
+`f052aebac2b57fd447455490f6d2122a0ba372e4`. Its sole change from 6.1.1
+is removal of `baseUrl`. Root and doc match every upstream compiler option;
+the React fixture retains its stricter `skipLibCheck: false` and `checkJs`.
+Owned options, relative aliases, rebased declaration files and include/exclude
+boundaries are unchanged. Root/doc checks and builds and the packed React
+consumer check/build pass. Reconciliation is a verified no-op apart from
+these provenance comments.
+
+### Historical baseUrl incompatibility (6.0.0–6.1.1)
 
 Upstream file: `@takazudo/zudo-doc@6.0.0`
 `packages/zudo-doc/tsconfig.base.json`, commit

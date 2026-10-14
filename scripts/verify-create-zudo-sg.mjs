@@ -299,6 +299,9 @@ async function assertScaffoldReleaseAgeExcludes(projectDir) {
       (name) => `${name}@${fixturePackage.dependencies?.[name]}`,
     ),
     `@takazudo/zudo-sg@${styleguidePackage.version}`,
+    ...Object.entries(zfbPackage.dependencies ?? {})
+      .filter(([name]) => name.startsWith("@takazudo/"))
+      .map(([name, version]) => `${name}@${version}`),
     ...Object.entries(zfbPackage.optionalDependencies ?? {}).map(
       ([name, version]) => `${name}@${version}`,
     ),

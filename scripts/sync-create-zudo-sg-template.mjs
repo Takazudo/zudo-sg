@@ -162,6 +162,10 @@ async function buildReleaseAgeExcludes(sourceDir, styleguideVersion, zfbPackageP
     ...RELEASE_AGE_DEPENDENCY_NAMES.map((name) => `${name}@${versions.get(name)}`),
     `@takazudo/zudo-sg@${styleguideVersion}`,
   ];
+  for (const [name, version] of Object.entries(zfbPackage.dependencies ?? {})) {
+    if (!name.startsWith("@takazudo/")) continue;
+    entries.push(`${name}@${exactVersion(version, `${name} dependency in ${zfbPackagePath}`)}`);
+  }
   for (const [name, version] of Object.entries(optionalDependencies)) {
     const optionalVersion = exactVersion(
       version,

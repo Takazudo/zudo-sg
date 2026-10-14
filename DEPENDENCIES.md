@@ -1,5 +1,116 @@
 # Dependency audit register
 
+## zudo-doc 6.2.0 / zfb 4.5.0 — 2026-10-14, #1009
+
+Based on main `38be876104e4362379bdda112df0cb0020e83498`, using Node
+**24.19.0** and repository-pinned pnpm **11.5.2**. The public maintenance
+procedure/resolver was retrieved together at `Takazudo/claude-settings`
+`f957ad2c293c297bdd8cfefd244f9c5ecf8ca4cb` and invoked from this checkout.
+The read-only plan scanned all **12** real manifests: **34 bumps**, **10
+up-to-date**, **5 non-registry skips**, **0 tags/errors/channel warnings**.
+The initial npm lookups failed because the default cache path was unavailable;
+using a session scratch cache restored normal registry resolution.
+
+| Package | Actual installed old → selected published stable |
+| --- | --- |
+| `@takazudo/zfb`, `@takazudo/zfb-runtime`, `@takazudo/zfb-md-wasm` | **4.4.0 → 4.5.0** |
+| `@takazudo/zudo-doc`, `@takazudo/zudo-doc-history-server` | **6.1.1 → 6.2.0** |
+| `create-zudo-doc` reference | **6.1.1 → 6.2.0** |
+| `@takazudo/zdtp` | **0.8.6**, unchanged |
+| `@takazudo/mdx-formatter`, `@takazudo/zudo-design-token-lint` | **1.3.0 / 2.1.0**, unchanged |
+
+Exact/caret styles and stable channels are preserved. The five skips are the
+root/demo-ui `workspace:*` engine dependencies and the three fixture tarball
+references. The generated engine pin remains derived from local engine
+**0.5.4**; initializer **0.2.3** is unchanged. Engine/demo-ui peer floors are
+exactly the corresponding root pin with a caret. Optional peer metadata and
+the peer-floor validator are unchanged. History-server remains a root direct
+consumer only; no optional feature or dependency was added to doc.
+
+### Published impact and scaffold reconciliation
+
+Version-specific npm metadata and old/new published tarballs were inspected.
+ZFB-family npm metadata has no gitHead; matching release tags verify commits
+`29377d1c0bfd607dea6d654557e46ff7bf536b2e` (4.4.0) and
+`dcf1e9235882e365a63cee9d551c58c9f0c19107` (4.5.0). Doc, history-server
+and initializer release tags verify `e37130018ee2ca0bf71e39a639e328a9621d4659`
+and `6542b8300f4a554247563a3bac53e415a63ded51`; create-zudo-doc's npm
+gitHead agrees. Tags establish source references, not byte equality between
+source trees and published build output. No unpublished artifacts were used.
+
+ZFB adds opt-in CSS compiler and ErrorBoundary APIs and corrects sibling radio
+reset behavior. Existing exports and Node 22 support remain. Runtime fixes
+same-path query Back/Forward ownership without a public API change. MD WASM
+has no package-specific code/API change; its release-version bytes change.
+zudo-doc raises all ZFB-family peers to `^4.5.0`, removes baseUrl, fixes
+sidebar scroll/history and appearance behavior, adds optional scopeRoot, and
+updates its Mermaid CDN URL. History-server's executable surface is unchanged.
+The existing CSS CLI integration and JSX/runtime imports stay in place.
+
+All **29** create-zudo-doc templates were compared. Only base tsconfig changes:
+remove baseUrl and make the alias explicitly relative. Owned root/doc/React
+snapshots already do this; options and boundaries are unchanged, with current
+provenance comments. The new base blob is
+`f052aebac2b57fd447455490f6d2122a0ba372e4`. The three pins-file entries were
+reconciled: setup/skill templates are byte-identical; customized guidance,
+doc-wisdom naming, disabled locales, safe symlinks, site settings, validators,
+deployment configuration, deletion ledger and strict CSS imports remain.
+MCP-only scaffold adapter/Wrangler changes do not apply. Compiler aliases stay
+TypeScript 7 native / TypeScript 6 API; engine-host, descriptor-host and the
+starter retain TypeScript 5.9.
+
+Only the shared **pnpm-lock.yaml** changed (**471** resolution records).
+Deployment tooling and retained negative controls are unchanged. Root/fixture
+version-specific slugify/native exemptions follow 4.5.0. The starter generator
+now includes installed ZFB's first-party regular dependencies, fixing its
+missing slugify exemption; it retains exact-version validation and excludes
+third-party dependencies. The foreign initializer proof validates all **12**
+exact exemptions. The template was regenerated from engine-host, never hand-edited.
+Forced engine build and actual Wind refresh retain **343** candidates and every
+explanation; only compiler identity/provenance changes. Repeated refresh is
+byte-identical. The coverage assertion follows the actual 4.5.0 compiler.
+
+### Actual checks and remaining delivery gates
+
+Baseline and final frozen installs pass. A clean checkout with the final
+manifests/shared lock also installs frozen. Generated starter clean/frozen
+installation passes. Root/doc types, peer floors, codegen, Wind/package shape,
+template sync, token lint, format, root/demo/doc builds and links, and root HTML
+validation pass. Final units: **177 files / 1,643 tests**; engine check:
+**56 files / 760 tests**; initializer: **2 files / 14 tests**.
+
+Packed descriptor, React descriptor (both bases, real workers/lifecycle),
+initializer and retained-Lezer diagnostic pass. The latter still proves
+reproduction/recovery, not a package-side fix for #963. Module-mode proof passes
+static scenarios and panel/browser checks but fails its seedless dev Counter
+probe on an implicit favicon 404 with system Chromium. The same command on
+untouched main reproduces the identical failure. No assertion, error filter or fixture
+favicon workaround was added.
+
+Pinned Chromium download is blocked by destination policy, including escalation.
+Local browser evidence uses system Chromium **154.0.8037.57**, with unchanged
+suite assertions and no retries. The updated full suite reports **82 passed /
+1 failed**: the token-dashboard persisted preview-panel test finds the panel
+still visible after Close following reload. The exact case passes in isolation
+on both base and updated code; untouched main's full suite passes **83/83**.
+This is unresolved, not a green current-head browser gate. No upstream defect
+has been attributed or reported without a stable public-package reproduction.
+The first b4push also caught the obsolete compiler-version assertion, now fixed;
+its original browser launch failures and non-TTY manual-smoke skip are not
+browser passes. Required pinned-browser CI and the unresolved close failure
+remain delivery gates. #963, #1001 and #997 stay outside this task.
+
+Focused browser checks on root and doc pass appearance selection, sidebar
+filtering, collapse/Restore, soft navigation, Back/Forward and reload with zero
+console/page/request failures. A separate scope probe confirms Broaden reaches
+the same forest as baseline.
+
+Independent read-only review approved the dependency/contracts and the starter
+fix/provenance. PR creation and merge remain held: same-repository PRs to main
+(including drafts) automatically deploy previews, and merging deploys all three
+production sites. Explicit deployment authorization and actual current-head CI,
+required approvals and policy are still required. No PR CI pass is claimed.
+
 ## zfb 4.4.0 — 2026-10-13
 
 Selected published tuple, rechecked against npm latest on 2026-10-13. The only
