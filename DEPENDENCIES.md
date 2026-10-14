@@ -93,12 +93,49 @@ suite assertions and no retries. The updated full suite reports **82 passed /
 1 failed**: the token-dashboard persisted preview-panel test finds the panel
 still visible after Close following reload. The exact case passes in isolation
 on both base and updated code; untouched main's full suite passes **83/83**.
-This is unresolved, not a green current-head browser gate. No upstream defect
-has been attributed or reported without a stable public-package reproduction.
+The initial report left the cause unresolved; follow-up diagnosis below
+establishes an existing upstream race. The current-head browser gate remains
+failed.
 The first b4push also caught the obsolete compiler-version assertion, now fixed;
 its original browser launch failures and non-TTY manual-smoke skip are not
-browser passes. Required pinned-browser CI and the unresolved close failure
+browser passes. Required pinned-browser CI and the unfixed close failure
 remain delivery gates. #963, #1001 and #997 stay outside this task.
+
+### Close failure diagnosis — 2026-10-14 follow-up
+
+The original full-run trace is retained. UI Close empties the panel root, then
+it repopulates about 40 ms later; this was a reopen, not a missed click.
+Matched instrumentation of 12 ordinary reload/edit/close sequences per tuple
+did not reproduce the narrow timing window, so those passes are not used to
+replace the failed full-suite result.
+
+A standalone app installed published `@takazudo/zdtp@0.8.6` and
+`preact@10.29.8`, bundled with esbuild 0.28.2, reproduces without ZFB,
+zudo-doc or consumer code. A natural-time Close at 248 ms after Open
+reproduced; clock-controlled scheduling reproduces the same transition
+deterministically. At 248 ms UI Close changes children from 1 to 0 while
+`-open` / `:visible` still contain `1`. The 250 ms open-recovery timer
+interprets that intentional empty root as dead and remounts from stale stored
+intent before the passive persistence effect clears it. The final state is
+children 1 / open 1 / visible 1. Public `handle.close()` is the control: it
+cancels recovery and clears intent synchronously, and remains 0 / null / 0.
+No dependency source or Preact implementation was patched.
+
+The same clock-controlled persisted-state reload/Open/UI-Close sequence
+reproduces on both main's zfb 4.4.0/doc 6.1.1 tuple and the candidate's
+4.5.0/6.2.0 tuple. The unchanged zdtp 0.8.6 dependency owns the defect; the
+83/83 baseline full run simply missed its timing window. The exact natural
+wall-time window depends on frame/effect scheduling.
+
+Independent read-only review confirmed the diagnosis and control. After
+duplicate/state checks against closed upstream #986, #1000 and #159, the
+distinct race was reported as
+[Takazudo/zudo-design-token-panel#1046](https://github.com/Takazudo/zudo-design-token-panel/issues/1046)
+with the minimal public app, deterministic browser sequence, source permalinks
+at release tag `183daa8edd4c460126763e9a7b6a45a6c7684e93`, and state
+evidence. It remains open. No consumer workaround, speculative override,
+assertion relaxation or passing full-suite retry was introduced. Browser
+parity remains held for a published upstream remedy and unchanged verification.
 
 Focused browser checks on root and doc pass appearance selection, sidebar
 filtering, collapse/Restore, soft navigation, Back/Forward and reload with zero
