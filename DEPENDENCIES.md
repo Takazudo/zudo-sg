@@ -1,5 +1,116 @@
 # Dependency audit register
 
+## ZFB 4.5.2 adopted; doc 7 and panel remedy held — 2026-10-15, #1009
+
+Continued the inspected maintenance commit
+`84204c873424365cd6d8f74ce3aa0f37cf3c05e4` in an isolated local checkout;
+main remains `38be876104e4362379bdda112df0cb0020e83498`. The user subsequently
+authorized commit, push, PR creation and its existing automatic preview
+deployment. Release, publication and production integration remain excluded.
+Public maintenance skill/resolver revision:
+`Takazudo/claude-settings@27b340cdcb110ef699dc7dc8c175e68839eb7187`.
+Verification uses Node 24.19.0 and repository-pinned pnpm 11.5.2.
+
+The resolver scanned all 12 manifests: 34 candidate bumps, 10 current rows,
+five non-registry skips, no tags/errors/channel warnings. Applied the 25
+ZFB-family rows, preserving exact/caret styles, stable channels, local engine
+versions, workspace links and fixture tarball contracts. Nine doc/history
+rows remain deliberately held; the final scan has 35 current rows.
+
+| Package | Maintenance input | Selected | Published latest |
+| --- | --- | --- | --- |
+| ZFB / runtime / MD WASM | 4.5.0 | 4.5.2 | 4.5.2 |
+| zudo-doc / history-server | 6.2.0 | 6.2.0 | 7.0.0 |
+| zdtp | 0.8.6 | 0.8.6 | 0.8.6 |
+| mdx-formatter / design-token-lint | 1.3.0 / 2.1.0 | unchanged | unchanged |
+
+### Published artifact assessment and preserved contracts
+
+Compared old/new npm tarballs, exports, engines and peers. Verified ZFB release
+refs `dcf1e9235882e365a63cee9d551c58c9f0c19107` and
+`57f625a2e3fc4bf69eb526c7bb8ef2103d4669d6`; family npm metadata has no
+`gitHead`. Source release notes and published binaries/WASM describe live
+`public/assets/` serving, ready-banner ordering, compact MDX table fixes,
+and symlink-aware Wind diagnostics. ZFB/runtime JavaScript payloads are
+unchanged apart from package metadata; public exports and Node 22 support
+remain. Runtime's exact ZFB peer moves with the family. All four published
+WASM sizes/SHA-256 digests match `shipped-artifacts.json`.
+
+Published zudo-doc 7.0.0 explicitly requires Node `>=24 <25` and KaTeX
+`^0.18.2 || ^0.19.0`, whereas this task preserves Node 22 consumers and
+existing third-party contracts. Holding doc/history at 6.2.0 is intentional;
+this is not an all-latest claim. Adoption of 7 needs an explicitly scoped
+runtime/peer migration. Exports are unchanged. The published 7.0.0 doc base
+snapshot and all 29 create-zudo-doc templates are byte-identical to 6.2.0.
+Reviewed all three provenance entries without falsely advancing their pins;
+see `ZUDO_DEPS_PINS.md`. Local TS7/TS6 aliases, TS5.9 consumers, scaffold
+customizations, optional features and disabled locales remain intact.
+
+Only the shared `pnpm-lock.yaml` changes. Deployment-tool and negative-control
+graphs are unchanged. First-party peer floors and exact release-age exemptions
+follow 4.5.2. After a forced engine build, the starter was regenerated from
+engine-host and installed ZFB metadata. Wind evidence was regenerated twice:
+343 candidates/explanations are unchanged; only compiler identity and its
+configuration fingerprint change. The compiler-version assertion advances
+without reducing coverage. Preact stays owned by the widget/engine adapter;
+the packed module proof confirms one Preact resolution.
+
+### Both original browser problems remain
+
+Registry metadata still reports zdtp 0.8.6 (modified
+2026-10-10T07:39:54.993Z). Upstream #1046 is closed after source integration,
+but that is not a published remedy. Against the actual installed package,
+the standalone deterministic UI-Close arm and the built host's persisted-state
+reload/Open/UI-Close arm both reproduce populated at 248 ms -> empty with
+stored open intent -> reopened after 250 ms recovery. Public `handle.close()`
+stays closed; the genuine dead-open-root control recovers. No package-source
+patch, runtime substitution, recovery delay change or consumer workaround was
+introduced.
+
+The unchanged packed module verifier again fails at seedless dev Counter with
+a console 404 after its static/scenario browser stages pass. The identical
+verifier on untouched main reproduces the same failure. This is the previously
+reported implicit-favicon baseline; neither update claims to fix it. The
+verifier stops there, so its later dev CSS-edit stages are not passed.
+
+Pinned Playwright Chromium 1248 / Chrome 156.0.8078.4 download returns HTTP
+403 `Domain forbidden`, including escalation. Browser diagnostics use system
+Chromium 154.0.8037.57 explicitly. They do not replace the pinned-browser CI
+gate or prove the timing race fixed. Non-TTY manual smoke is not a pass.
+
+### Verification and hold decision
+
+Clean/frozen shared-workspace install and generated-starter frozen install pass.
+Peer floors, workspace/doc type checks, codegen, template consistency, package
+shape/Wind checks, token lint, formatting, root/demo/doc builds and links,
+and root/doc HTML validation pass. Units: 177 root files / 1,643 tests;
+56 engine files / 760 tests; two initializer files / 14 tests.
+
+`pnpm b4push` fails only its pinned-browser step: all 83 cases stop at missing
+Chromium launch, not assertion results. The non-interactive manual step skips.
+Two separate unchanged full selections on system Chromium pass 83/83:
+default two workers, then the historical five-worker load with zero retries.
+These passing schedules do not supersede the deterministic reopened-panel
+failure or the earlier 82/1 result. Doc appearance, real sidebar filtering and
+clearing, collapse/expand, navigation, Back/Forward and reload checks have zero
+console/page/request errors.
+
+Packed vanilla descriptor, React descriptor (both bases, real workers and
+lifecycle), initializer and retained-Lezer diagnostic pass. The latter proves
+reproduction and consumer dedupe recovery, not a remedy for #963. Module-mode
+verification fails at the baseline seedless Counter 404 on both candidate and
+untouched main. No test, timeout, retry policy or error filter was weakened.
+
+HOLD: npm must publish the panel remedy before #1046 can be considered fixed
+for this consumer. The seedless Counter baseline and authoritative pinned-browser
+checks remain unresolved. Doc 7 is a separate Node 24/KaTeX migration decision.
+A draft PR is authorized for review; no current-head CI pass or merge approval
+is claimed. Refreshed workflows deploy previews on main-targeting PR
+opened/synchronize/reopened events (including drafts), now explicitly approved.
+All three production sites deploy on main pushes; production integration, tags,
+releases and package publication remain outside this approval.
+#1009 stays open; #963/#1001/#997 are unchanged.
+
 ## zudo-doc 6.2.0 / zfb 4.5.0 — 2026-10-14, #1009
 
 Based on main `38be876104e4362379bdda112df0cb0020e83498`, using Node

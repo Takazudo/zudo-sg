@@ -12,17 +12,17 @@ importers:
         specifier: 0.8.6
         version: 0.8.6(preact-render-to-string@6.7.0)
       '@takazudo/zfb':
-        specifier: 4.5.0
-        version: 4.5.0
+        specifier: 4.5.2
+        version: 4.5.2
       '@takazudo/zfb-md-wasm':
-        specifier: 4.5.0
-        version: 4.5.0
+        specifier: 4.5.2
+        version: 4.5.2
       '@takazudo/zfb-runtime':
-        specifier: 4.5.0
-        version: 4.5.0(@takazudo/zfb@4.5.0)
+        specifier: 4.5.2
+        version: 4.5.2(@takazudo/zfb@4.5.2)
       '@takazudo/zudo-doc':
         specifier: 6.2.0
-        version: 6.2.0(@takazudo/zdtp@0.8.6(preact-render-to-string@6.7.0))(@takazudo/zfb-md-wasm@4.5.0)(@takazudo/zfb-runtime@4.5.0(@takazudo/zfb@4.5.0))(@takazudo/zfb@4.5.0)(@takazudo/zudo-doc-history-server@6.2.0)(@types/node@22.20.5)(diff@8.0.4)(katex@0.16.47)(zod@4.6.5)
+        version: 6.2.0(@takazudo/zdtp@0.8.6(preact-render-to-string@6.7.0))(@takazudo/zfb-md-wasm@4.5.2)(@takazudo/zfb-runtime@4.5.2(@takazudo/zfb@4.5.2))(@takazudo/zfb@4.5.2)(@takazudo/zudo-doc-history-server@6.2.0)(@types/node@22.20.5)(diff@8.0.4)(katex@0.16.47)(zod@4.6.5)
       '@takazudo/zudo-doc-history-server':
         specifier: 6.2.0
         version: 6.2.0
@@ -100,11 +100,11 @@ importers:
   apps/demo:
     dependencies:
       '@takazudo/zfb':
-        specifier: 4.5.0
-        version: 4.5.0
+        specifier: 4.5.2
+        version: 4.5.2
       '@takazudo/zfb-runtime':
-        specifier: 4.5.0
-        version: 4.5.0(@takazudo/zfb@4.5.0)
+        specifier: 4.5.2
+        version: 4.5.2(@takazudo/zfb@4.5.2)
       '@zudo-sg/demo-ui':
         specifier: workspace:*
         version: link:../../packages/demo-ui
@@ -131,17 +131,17 @@ importers:
   doc:
     dependencies:
       '@takazudo/zfb':
-        specifier: 4.5.0
-        version: 4.5.0
+        specifier: 4.5.2
+        version: 4.5.2
       '@takazudo/zfb-md-wasm':
-        specifier: 4.5.0
-        version: 4.5.0
+        specifier: 4.5.2
+        version: 4.5.2
       '@takazudo/zfb-runtime':
-        specifier: 4.5.0
-        version: 4.5.0(@takazudo/zfb@4.5.0)
+        specifier: 4.5.2
+        version: 4.5.2(@takazudo/zfb@4.5.2)
       '@takazudo/zudo-doc':
         specifier: 6.2.0
-        version: 6.2.0(@takazudo/zdtp@0.8.6(preact-render-to-string@6.7.0))(@takazudo/zfb-md-wasm@4.5.0)(@takazudo/zfb-runtime@4.5.0(@takazudo/zfb@4.5.0))(@takazudo/zfb@4.5.0)(@takazudo/zudo-doc-history-server@6.2.0)(@types/node@22.20.5)(diff@8.0.4)(katex@0.16.47)(zod@4.6.5)
+        version: 6.2.0(@takazudo/zdtp@0.8.6(preact-render-to-string@6.7.0))(@takazudo/zfb-md-wasm@4.5.2)(@takazudo/zfb-runtime@4.5.2(@takazudo/zfb@4.5.2))(@takazudo/zfb@4.5.2)(@takazudo/zudo-doc-history-server@6.2.0)(@types/node@22.20.5)(diff@8.0.4)(katex@0.16.47)(zod@4.6.5)
       diff:
         specifier: ^8.0.3
         version: 8.0.4
@@ -186,8 +186,8 @@ importers:
   packages/demo-ui:
     dependencies:
       '@takazudo/zfb-md-wasm':
-        specifier: 4.5.0
-        version: 4.5.0
+        specifier: 4.5.2
+        version: 4.5.2
       '@takazudo/zudo-sg':
         specifier: workspace:*
         version: link:../styleguide
@@ -196,8 +196,8 @@ importers:
         version: 3.4.16
     devDependencies:
       '@takazudo/zfb':
-        specifier: 4.5.0
-        version: 4.5.0
+        specifier: 4.5.2
+        version: 4.5.2
       '@testing-library/jest-dom':
         specifier: 7.0.1
         version: 7.0.1(@testing-library/dom@10.4.2)(vitest@4.1.11(@types/node@22.20.5)(happy-dom@20.14.6)(jsdom@30.1.2)(msw@2.15.0(@types/node@22.20.5)(@typescript/typescript6@6.0.2))(vite@7.3.5(@types/node@22.20.5)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.15)(yaml@2.9.0)))
@@ -260,11 +260,11 @@ importers:
         specifier: 0.8.6
         version: 0.8.6(preact-render-to-string@6.7.0)
       '@takazudo/zfb':
-        specifier: 4.5.0
-        version: 4.5.0
+        specifier: 4.5.2
+        version: 4.5.2
       '@takazudo/zudo-doc':
         specifier: 6.2.0
-        version: 6.2.0(@takazudo/zdtp@0.8.6(preact-render-to-string@6.7.0))(@takazudo/zfb-md-wasm@4.5.0)(@takazudo/zfb-runtime@4.5.0(@takazudo/zfb@4.5.0))(@takazudo/zfb@4.5.0)(@takazudo/zudo-doc-history-server@6.2.0)(@types/node@22.20.5)(diff@8.0.4)(katex@0.16.47)(zod@4.6.5)
+        version: 6.2.0(@takazudo/zdtp@0.8.6(preact-render-to-string@6.7.0))(@takazudo/zfb-md-wasm@4.5.2)(@takazudo/zfb-runtime@4.5.2(@takazudo/zfb@4.5.2))(@takazudo/zfb@4.5.2)(@takazudo/zudo-doc-history-server@6.2.0)(@types/node@22.20.5)(diff@8.0.4)(katex@0.16.47)(zod@4.6.5)
       '@testing-library/jest-dom':
         specifier: ^7.0.1
         version: 7.0.1(@testing-library/dom@10.4.2)(vitest@4.1.11(@types/node@22.20.5)(happy-dom@20.14.6)(jsdom@30.1.2)(msw@2.15.0(@types/node@22.20.5)(@typescript/typescript6@6.0.2))(vite@7.3.5(@types/node@22.20.5)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.15)(yaml@2.9.0)))
@@ -1086,47 +1086,47 @@ packages:
     engines: {node: '>=22.0.0', pnpm: '>=10.0.0'}
     hasBin: true
 
-  '@takazudo/zfb-darwin-arm64@4.5.0':
-    resolution: {integrity: sha512-uC7pUVEIAwc/UDDUT8VA+IyCuui3Fjf5PGrEh1o3wzAUxf6OCbhMEbOg41wcQA1ywtk6W6AKymC1lEodklACYg==}
+  '@takazudo/zfb-darwin-arm64@4.5.2':
+    resolution: {integrity: sha512-sqWcsiyXSnjhXVhicKYDRmg58KnXOP3UxWpilbk0zXTS/qwTaOKsdDssjOkmxh1QyVcTXcCPVYv362M989uWSg==}
     cpu: [arm64]
     os: [darwin]
 
-  '@takazudo/zfb-darwin-x64@4.5.0':
-    resolution: {integrity: sha512-wgHCPykdNYePQ2/wQt/TJNrlvDZrGWo6eUm8NmQ7PIhOcIqqId7DVcKDztcJFq24xNFlR62y7d5H8ZE8jcv10A==}
+  '@takazudo/zfb-darwin-x64@4.5.2':
+    resolution: {integrity: sha512-DfppVm2xXsxvUTbwlIaoongXEL/iPSciVkf8HUHOfAqBN1mF5V9dVa4stwtA1M6CUUFcJVr00wA4RRoCHcV25Q==}
     cpu: [x64]
     os: [darwin]
 
-  '@takazudo/zfb-linux-arm64-gnu@4.5.0':
-    resolution: {integrity: sha512-+LnkMKm43NU43USftQ5015NZrhiod+UV6mJQvOkFAnB3XpCK22hlJ499p1f5UCMIfCmbSKQM+iCmfqWoHw/o4w==}
+  '@takazudo/zfb-linux-arm64-gnu@4.5.2':
+    resolution: {integrity: sha512-6Kl6zYbKaQ8X7KS29esizSRuiZuNHGvCCwzVUoZyKlmmxIJpZyT1bufIcNAjtD2Kt3OvE3bNDYBgpX4OWICb1A==}
     cpu: [arm64]
     os: [linux]
 
-  '@takazudo/zfb-linux-x64-gnu@4.5.0':
-    resolution: {integrity: sha512-zQWTaawt3/vLe/rc8cp8+6hTm1I5myvS43i9TkkzflRl3B6Rd4EhUmOzj4+aCQgeX6pumLWoBqd4C8dLVYIpCA==}
+  '@takazudo/zfb-linux-x64-gnu@4.5.2':
+    resolution: {integrity: sha512-rU7I1UkcnJh3rsY/UF8wPLSane1cEnQYbiJfi+oWU2kE4LFwU95RaVv8JRRKVKbme+Mg/DcWJ2EavnB/RTUvAQ==}
     cpu: [x64]
     os: [linux]
 
-  '@takazudo/zfb-md-wasm@4.5.0':
-    resolution: {integrity: sha512-vLPzAXLblRXqmfN/7EMnoS6OcMdKWVEgxkrjTMqGnWlin3npBZRoPGEpvxDZAJdOSN7jo61mMQ/O7YuFiPyj1w==}
+  '@takazudo/zfb-md-wasm@4.5.2':
+    resolution: {integrity: sha512-qL7MfS1SUfLDfiADGjONyy2U79UzY/8J5H4cnMSCzGw5nDbeDvAGX0xEfgUgc7qg8Hn639Pf/EtObz6mkNtVQg==}
     engines: {node: '>=20.0.0', pnpm: '>=10.0.0'}
 
-  '@takazudo/zfb-runtime@4.5.0':
-    resolution: {integrity: sha512-7tO9YzFKUERL7fwU+nq7V6DDj9OcaM4+jDplI9jl2Eq134UzimczU0Ic4on1sTQEIkFqWnFdc9kILbWgNiN/Ew==}
+  '@takazudo/zfb-runtime@4.5.2':
+    resolution: {integrity: sha512-WrQhGVgiUnANolbTTGaIXOwi0hRjYWKThzAQw/816m2bIo2QmXSPoy0Il1/nMsyujkU9HPC/yWUcnu6FYD8wTA==}
     engines: {node: '>=22.0.0', pnpm: '>=10.0.0'}
     peerDependencies:
-      '@takazudo/zfb': 4.5.0
+      '@takazudo/zfb': 4.5.2
 
-  '@takazudo/zfb-slugify@4.5.0':
-    resolution: {integrity: sha512-JQuVe4rYa2waDev3Bghno06p5NN8XKrbabEYnGWhsCp0D2OMj/dcfp5Xd5wEdViy9MKLutdgBiZXvvrDUQj0Fw==}
+  '@takazudo/zfb-slugify@4.5.2':
+    resolution: {integrity: sha512-3HkSLokbSQmkUOXXXGIMn7wpgYAmxsA/YqxXcwvhqDVwcaK/BBjCXnXY/FGoA2uJWxeY5hVATvLuy0nInHe7wg==}
     engines: {node: '>=22.0.0', pnpm: '>=10.0.0'}
 
-  '@takazudo/zfb-win32-x64-msvc@4.5.0':
-    resolution: {integrity: sha512-56uou5KLi0EJ5eQrY+3n+HJhHqeAWLPbO+AOtbP2DiA7CJg7fajnhsp6NRJGa0UahXypzzw73A82QyVXGE2f6g==}
+  '@takazudo/zfb-win32-x64-msvc@4.5.2':
+    resolution: {integrity: sha512-+IS9y+d4xi5tFyZW9Czp0YWOOcepPujUbr8WO6R+tff003zrByffDqYNRGky6pGKoePeGj1UbCY1GO2CWEkIGA==}
     cpu: [x64]
     os: [win32]
 
-  '@takazudo/zfb@4.5.0':
-    resolution: {integrity: sha512-zgLx4cfZ5UiIMXkWSbK+D5it7dFBb6lZxsmeJjZAyqbY6TLDXYu9Yfv9wAezjPILRyjnKLx3IE6TcOYseh1lxw==}
+  '@takazudo/zfb@4.5.2':
+    resolution: {integrity: sha512-WNJjp2q9oRXXxW3jVUJ8tSyHIvFprnX5v6s7ftgiidPGJsgeZUutLKH0Vl1nVnav4glcPJa8co1Wmb3afSp6jA==}
     engines: {node: '>=22.0.0', pnpm: '>=10.0.0'}
     hasBin: true
 
@@ -3129,19 +3129,19 @@ snapshots:
     transitivePeerDependencies:
       - preact-render-to-string
 
-  '@takazudo/zfb-darwin-arm64@4.5.0':
+  '@takazudo/zfb-darwin-arm64@4.5.2':
     optional: true
 
-  '@takazudo/zfb-darwin-x64@4.5.0':
+  '@takazudo/zfb-darwin-x64@4.5.2':
     optional: true
 
-  '@takazudo/zfb-linux-arm64-gnu@4.5.0':
+  '@takazudo/zfb-linux-arm64-gnu@4.5.2':
     optional: true
 
-  '@takazudo/zfb-linux-x64-gnu@4.5.0':
+  '@takazudo/zfb-linux-x64-gnu@4.5.2':
     optional: true
 
-  '@takazudo/zfb-md-wasm@4.5.0':
+  '@takazudo/zfb-md-wasm@4.5.2':
     dependencies:
       '@types/mdast': 4.0.4
       mdast-util-directive: 3.1.0
@@ -3149,25 +3149,25 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@takazudo/zfb-runtime@4.5.0(@takazudo/zfb@4.5.0)':
+  '@takazudo/zfb-runtime@4.5.2(@takazudo/zfb@4.5.2)':
     dependencies:
-      '@takazudo/zfb': 4.5.0
+      '@takazudo/zfb': 4.5.2
       hono: 4.13.13
 
-  '@takazudo/zfb-slugify@4.5.0': {}
+  '@takazudo/zfb-slugify@4.5.2': {}
 
-  '@takazudo/zfb-win32-x64-msvc@4.5.0':
+  '@takazudo/zfb-win32-x64-msvc@4.5.2':
     optional: true
 
-  '@takazudo/zfb@4.5.0':
+  '@takazudo/zfb@4.5.2':
     dependencies:
-      '@takazudo/zfb-slugify': 4.5.0
+      '@takazudo/zfb-slugify': 4.5.2
     optionalDependencies:
-      '@takazudo/zfb-darwin-arm64': 4.5.0
-      '@takazudo/zfb-darwin-x64': 4.5.0
-      '@takazudo/zfb-linux-arm64-gnu': 4.5.0
-      '@takazudo/zfb-linux-x64-gnu': 4.5.0
-      '@takazudo/zfb-win32-x64-msvc': 4.5.0
+      '@takazudo/zfb-darwin-arm64': 4.5.2
+      '@takazudo/zfb-darwin-x64': 4.5.2
+      '@takazudo/zfb-linux-arm64-gnu': 4.5.2
+      '@takazudo/zfb-linux-x64-gnu': 4.5.2
+      '@takazudo/zfb-win32-x64-msvc': 4.5.2
 
   '@takazudo/zudo-design-token-lint@2.1.0':
     dependencies:
@@ -3176,11 +3176,11 @@ snapshots:
 
   '@takazudo/zudo-doc-history-server@6.2.0': {}
 
-  '@takazudo/zudo-doc@6.2.0(@takazudo/zdtp@0.8.6(preact-render-to-string@6.7.0))(@takazudo/zfb-md-wasm@4.5.0)(@takazudo/zfb-runtime@4.5.0(@takazudo/zfb@4.5.0))(@takazudo/zfb@4.5.0)(@takazudo/zudo-doc-history-server@6.2.0)(@types/node@22.20.5)(diff@8.0.4)(katex@0.16.47)(zod@4.6.5)':
+  '@takazudo/zudo-doc@6.2.0(@takazudo/zdtp@0.8.6(preact-render-to-string@6.7.0))(@takazudo/zfb-md-wasm@4.5.2)(@takazudo/zfb-runtime@4.5.2(@takazudo/zfb@4.5.2))(@takazudo/zfb@4.5.2)(@takazudo/zudo-doc-history-server@6.2.0)(@types/node@22.20.5)(diff@8.0.4)(katex@0.16.47)(zod@4.6.5)':
     dependencies:
       '@inquirer/prompts': 8.5.2(@types/node@22.20.5)
-      '@takazudo/zfb': 4.5.0
-      '@takazudo/zfb-runtime': 4.5.0(@takazudo/zfb@4.5.0)
+      '@takazudo/zfb': 4.5.2
+      '@takazudo/zfb-runtime': 4.5.2(@takazudo/zfb@4.5.2)
       esbuild: 0.28.2
       fs-extra: 11.3.5
       minimist: 1.2.8
@@ -3193,7 +3193,7 @@ snapshots:
       zod: 4.6.5
     optionalDependencies:
       '@takazudo/zdtp': 0.8.6(preact-render-to-string@6.7.0)
-      '@takazudo/zfb-md-wasm': 4.5.0
+      '@takazudo/zfb-md-wasm': 4.5.2
       '@takazudo/zudo-doc-history-server': 6.2.0
       diff: 8.0.4
       katex: 0.16.47

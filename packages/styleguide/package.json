@@ -170,13 +170,13 @@
     "preact": "^10.29.1"
   },
   "peerDependencies": {
-    "@takazudo/zfb": "^4.5.0",
+    "@takazudo/zfb": "^4.5.2",
     "@takazudo/zdtp": "^0.8.6",
     "@takazudo/zudo-doc": "^6.2.0"
   },
   "devDependencies": {
     "@takazudo/zdtp": "0.8.6",
-    "@takazudo/zfb": "4.5.0",
+    "@takazudo/zfb": "4.5.2",
     "@takazudo/zudo-doc": "6.2.0",
     "@testing-library/jest-dom": "^7.0.1",
     "@types/culori": "^4.0.1",

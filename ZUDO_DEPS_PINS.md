@@ -1,5 +1,19 @@
 # ZUDO_DEPS_PINS
 
+## 2026-10-15 release review — 7.0.0 held
+
+Compared published `create-zudo-doc` 6.2.0 and 7.0.0 tarballs (release
+`82049856397927077c5288465db34e44d0939260`). All 29 files under
+`templates/` are byte-identical, including the base tsconfig, setup script
+and Claude skills. The published zudo-doc base tsconfig is also unchanged.
+All three entries retain their reconciled 6.2.0 pins and local customizations.
+
+The 7.0.0 generator changes dependency pins and emits `engines.node: ">=24 <25"`;
+zudo-doc 7 also drops Node 22 and raises the KaTeX peer to
+`^0.18.2 || ^0.19.0`. These runtime/peer migrations are held to preserve this
+task's Node 22 consumer contract. No 7.0.0 generator or shipping dependency
+was adopted. The compatible ZFB family independently advances to 4.5.2.
+
 ## Regenerating a create-zudo-doc reference
 
 Every entry below is synced by generating a reference scaffold and three-way merging it
