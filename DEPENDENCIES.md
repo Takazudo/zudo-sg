@@ -55,6 +55,34 @@ configuration fingerprint change. The compiler-version assertion advances
 without reducing coverage. Preact stays owned by the widget/engine adapter;
 the packed module proof confirms one Preact resolution.
 
+### Published SG consumers confirm the Doc 7 hold
+
+Consolidated the published-consumer evidence in
+[#1009's follow-up](https://github.com/Takazudo/zudo-sg/issues/1009#issuecomment-6196879481).
+Registry recheck confirms published `@takazudo/zudo-sg@0.5.4` still requires
+zudo-doc `^6.1.1`. Two isolated consumers use the real engine-host manifest
+with its tarball reference replaced by published SG 0.5.4. On Node 24.19.0,
+`pnpm install --strict-peer-dependencies --ignore-scripts` accepts ZFB 4.5.2,
+Doc 6.2.0 and KaTeX 0.16.x. With Doc 7.0.0 and its compatible KaTeX 0.19.x,
+the same command fails specifically on SG's Doc `^6.1.1` peer. Lifecycle
+scripts were intentionally disabled for this resolution proof; it is not a
+Doc 7 build/browser pass. This agrees with the separately reported successful
+Pinsel upgrade to ZFB 4.5.2 / Doc 6.2.0.
+
+The appropriate peer in this change remains `^6.2.0`, matching the validated
+root pin and ADR §13. Widening it to `^6.2.0 || ^7.0.0` would contradict the
+existing single-floor contract; replacing it with `^7.0.0` would require moving
+the root/fixtures and dropping their preserved Node 22 support. Neither change
+is justified by a successful Doc 6 consumer or byte-identical templates. No
+peer gate or runtime contract is weakened to make latest install.
+
+A future Doc 7 adoption needs a scoped Node 24/KaTeX migration, actual packed
+Doc 7 host/build/browser verification and a compatible SG peer change. A
+**subsequent published SG release** carrying that verified peer is required
+before downstream registry consumers such as Pinsel can adopt Doc 7. Merging
+source alone cannot change SG 0.5.4's published peer. This PR does not bump
+release versions, tag or publish, and does not claim Doc 7 compatibility.
+
 ### Both original browser problems remain
 
 Registry metadata still reports zdtp 0.8.6 (modified
