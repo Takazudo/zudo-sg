@@ -4,6 +4,18 @@ All notable changes to `create-zudo-sg` are documented in this file.
 
 The format is based on Keep a Changelog.
 
+## [0.2.4] - 2026-10-16
+
+### Changed
+
+- New projects install zfb, zfb-runtime, and zfb-md-wasm 4.5.2 (was 4.4.0)
+  and zudo-doc 6.2.0 (was 6.1.1), the versions the engine is tested against.
+- The scaffold's release-age exclusions now also cover zfb's own
+  `@takazudo/*` dependencies (such as zfb-slugify), so a fresh install does not
+  stall on them.
+- Update the starter engine range to `@takazudo/zudo-sg ^0.5.5`, whose zfb and
+  zudo-doc peer floors match those pins.
+
 ## [0.2.3] - 2026-10-13
 
 ### Changed
