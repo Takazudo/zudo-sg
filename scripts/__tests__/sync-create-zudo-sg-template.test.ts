@@ -161,6 +161,9 @@ describe("sync-create-zudo-sg-template.mjs", () => {
     ];
     const expectedReleaseAgeExcludes = [
       ...releasedDependencies.map((name) => `${name}@${fixturePackage.dependencies[name]}`),
+      ...Object.entries(zfbPackage.dependencies)
+        .filter(([name]) => name.startsWith("@takazudo/"))
+        .map(([name, version]) => `${name}@${version}`),
       ...Object.entries(zfbPackage.optionalDependencies).map(([name, version]) => `${name}@${version}`),
       `@takazudo/zudo-sg@${STYLEGUIDE_VERSION}`,
     ].sort();
@@ -306,6 +309,24 @@ describe("sync-create-zudo-sg-template.mjs", () => {
     const result = run(sandbox);
     expect(result.status).toBe(1);
     expect(result.stderr).toContain("Expected an exact semver");
+  });
+
+  it("exempts only exact first-party regular dependencies from installed zfb metadata", () => {
+    const sandbox = makeSandbox();
+    const metadataPath = join(sandbox, "node_modules", "@takazudo", "zfb", "package.json");
+    const metadata = JSON.parse(readFileSync(metadataPath, "utf8"));
+    metadata.dependencies["third-party"] = "^1.0.0";
+    writeFileSync(metadataPath, `${JSON.stringify(metadata, null, 2)}\n`);
+    expect(run(sandbox).status).toBe(0);
+    const excludes = readReleaseAgeExcludes(outputDir(sandbox));
+    expect(excludes).toContain(`@takazudo/zfb-slugify@${metadata.dependencies["@takazudo/zfb-slugify"]}`);
+    expect(excludes.some((entry) => entry.startsWith("third-party@"))).toBe(false);
+
+    metadata.dependencies["@takazudo/zfb-slugify"] = "^4.5.0";
+    writeFileSync(metadataPath, `${JSON.stringify(metadata, null, 2)}\n`);
+    const result = run(sandbox);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("Expected an exact semver for @takazudo/zfb-slugify");
   });
 
   it("accepts an injected zfb metadata path without a sandbox node_modules", async () => {

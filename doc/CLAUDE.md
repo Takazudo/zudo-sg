@@ -1,6 +1,6 @@
 # zudo-sg Docs
 
-This workspace is the contributor documentation site built with zudo-doc 6.1.1, zfb 4.4.0, MDX, zudo-wind, and zudo-react.
+This workspace is the contributor documentation site built with zudo-doc 6.2.0, zfb 4.5.2, MDX, zudo-wind, and zudo-react.
 
 ## Commands
 
