@@ -4,6 +4,18 @@ All notable changes to `@takazudo/zudo-sg` are documented in this file.
 
 The format is based on Keep a Changelog, and release notes are generated from the changelog MDX pages.
 
+## [0.5.5] - 2026-10-16
+
+This maintenance release raises the zfb and zudo-doc peer floors to the
+versions the engine is built and tested against. The public API is unchanged.
+
+### Other Changes
+
+- The `@takazudo/zfb` peer floor is now ^4.5.2 (was ^4.4.0) and the
+  `@takazudo/zudo-doc` peer floor is now ^6.2.0 (was ^6.1.1).
+  `@takazudo/zdtp` stays at ^0.8.6. Hosts on older versions need to upgrade
+  them together with the engine.
+
 ## [0.5.4] - 2026-10-13
 
 This maintenance release raises the zfb peer floor to the version the engine is
