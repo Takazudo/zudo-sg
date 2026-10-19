@@ -59,6 +59,72 @@ After the change: frozen install clean; `pnpm build:styleguide`,
 resolver shows no remaining ZFB bump rows. e2e, `b4push` and `verify:*` packed-consumer
 scripts are left to the central pass.
 
+### zudo-doc 7.0.0 adopted behind a `^6.2.0 || ^7.0.0` engine peer — #1019
+
+Wave 2 of #1017. Applied with
+`resolve-bumps.mjs @takazudo/zudo-doc @takazudo/zudo-doc-history-server --write`.
+Then `fixtures/descriptor-host` was reverted by hand, and the template's direct
+edit was replaced by `pnpm sync:create-template`.
+
+- **Moved to 7.0.0:** zudo-doc in root, `doc/`, `fixtures/engine-host`,
+  `fixtures/react-descriptor-host` and the engine devDependency.
+  History-server moved to 7.0.0 in root, its only consumer. The template follows
+  via sync.
+- **Engine peer** `@takazudo/zudo-doc` is `^6.2.0 || ^7.0.0`. There is no
+  `peerDependenciesMeta`, so nothing optional changed. `check:peer-floors` accepts this
+  exact form only for `packages/styleguide` → zudo-doc. The retained floor is
+  the `DOC_PEER_WINDOW` constant. The newest alternative must be `^<root pin>`.
+  Unit tests cover wrong package, wrong owner, wrong retained floor, stale
+  newest floor, reversed order, 3+ alternatives and malformed/whitespace forms.
+  The resolver now reports this peer as a `skip` row, because it does not
+  rewrite `||` ranges.
+- **Doc 6 lane:** `fixtures/descriptor-host` stays on zudo-doc 6.2.0 + KaTeX
+  `^0.16.38`. `scripts/descriptor-host-compat-lane.mjs` asserts it in a unit
+  test, and `verify:descriptor-host-install` checks both the manifest and the
+  installed versions. The final resolver dry-run has exactly one bump row:
+  that intentional exception.
+- **KaTeX** 0.16 → 0.19.0 (newest satisfying `^0.18.2 || ^0.19.0`, published
+  2026-10-01): root/doc/engine-host `^0.19.0`, React fixture exact `0.19.0`.
+  The root `.katex .base` color override now targets KaTeX 0.19's
+  `.katex-base`. Math is disabled, so this has no visible effect.
+- **Node:** engine-host (→ template), react-descriptor-host and `doc/` declare
+  `>=24 <25`. The `create-zudo-sg` CLI keeps `>=22`. Its `--help` exits 0 and
+  its 14 tests pass under Node 22.23.3.
+- **Release-age exemptions:** no edit was needed. Root and the three fixture
+  workspaces exempt `@takazudo/zudo-doc` by name, root also exempts
+  history-server by name, and doc 7 adds no new first-party dependency. The
+  template's derived list moves to `@takazudo/zudo-doc@7.0.0`.
+- **Scaffold / TS base:** `create-zudo-doc` 6.2.0 → 7.0.0 templates are
+  byte-identical. Scaffold-logic deltas are recorded in `ZUDO_DEPS_PINS.md`,
+  and the pins advance to `v7.0.0`. The published `tsconfig.base.json` blob
+  `f052aeb` is unchanged, so only the snapshot comments move.
+- **Host behaviour:** root `src/styles/global.css` carried a copy of doc 6's
+  view-transition chrome block. It was loaded after `features.css` and
+  overrode doc 7's sidebar category animation, one-sided stationary header and
+  `.sr-only` sidebar exclusion, so it was removed. No host overrides the
+  page-loading overlay, and the `overflow-wrap` change needs no host edit.
+  `doc/`, the fixtures and `apps/demo` (its own router) carry no such copy.
+  Wave 3 browser checks should cover: sidebar/header stability across
+  same-category and cross-category navigation, the loading overlay leaving the
+  header and sidebar undimmed, and narrow-width prose wrapping.
+- **No release:** engine and initializer versions are unchanged. The template
+  still depends on published `@takazudo/zudo-sg` `^0.5.5`, whose `^6.2.0`
+  peer rejects doc 7. A newly generated project resolves only once a release
+  with the window is published.
+
+Verification on Node 24.14.0 / pnpm 11.5.2: frozen install clean.
+`pnpm check:peer-floors`, `pnpm check` (engine 760 tests), `pnpm test:unit`
+(178 files, 1684 tests), `pnpm --filter @zudo-sg/doc check`,
+`pnpm build:styleguide`, `pnpm check:create-template` pass. `pnpm build`
+emits 89 pages. `pnpm --filter @zudo-sg/doc build` emits 51 pages. Strict-peer
+installs (`--strict-peer-dependencies --ignore-scripts`) of the three fixture
+manifests against a packed current engine all succeed: descriptor-host
+resolves zudo-doc 6.2.0 + KaTeX 0.16.47, and engine-host and the React fixture
+resolve 7.0.0 + 0.19.0. The negative control, the engine-host manifest against
+published `@takazudo/zudo-sg@0.5.5`, fails with an unmet
+`@takazudo/zudo-doc` peer. The scratch was deleted. e2e, `b4push`, `verify:*`
+and the Node 22 descriptor-host run are left to Wave 3 (#1020).
+
 ## ZFB 4.5.2 adopted; doc 7 and panel remedy held — 2026-10-15, #1009
 
 Continued the inspected maintenance commit

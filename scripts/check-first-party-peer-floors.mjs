@@ -6,6 +6,12 @@
 // @zudo-sg/demo-ui must be exactly `^<root exact pin>`, and any direct copy
 // of that package in the owner must equal the root pin.
 //
+// One narrow exception (ADR §13, 2026-10-19 amendment): the engine's
+// `@takazudo/zudo-doc` peer may instead be the two-major window
+// `^6.2.0 || ^<root exact pin>`, keeping doc 6 / Node 22 adopters supported
+// while doc 7 is adopted. The retained floor is fixed (DOC_PEER_WINDOW) and
+// the spelling must match exactly; every other `||` form stays rejected.
+//
 // This verifies manifest agreement only. It does not read node_modules, the
 // lockfile, or the npm registry — published-version freshness stays the job of
 // the dependency-bump round (/dev-bump-zudo-deps). It never edits manifests.
@@ -22,6 +28,17 @@ export const ROOT_MANIFEST = "package.json";
 export const OWNER_MANIFESTS = ["packages/styleguide/package.json", "packages/demo-ui/package.json"];
 const ROOT_PIN_SECTIONS = ["dependencies", "devDependencies", "optionalDependencies"];
 const OWNER_COPY_SECTIONS = ["dependencies", "devDependencies", "optionalDependencies"];
+
+/**
+ * ADR §13 (2026-10-19): the only owner/package allowed a two-major peer window,
+ * and the fixed older floor it retains. Remove this when doc 6 / Node 22
+ * support is retired (the peer then returns to plain `^<root pin>`).
+ */
+export const DOC_PEER_WINDOW = Object.freeze({
+  owner: "packages/styleguide/package.json",
+  name: "@takazudo/zudo-doc",
+  retainedFloor: "6.2.0",
+});
 
 const EXACT_STABLE = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
 const LOOSE_VERSION = /^[0-9]+\.[0-9]+\.[0-9]+/;
@@ -67,6 +84,18 @@ function peerRangeProblem(spec) {
   if (typeof spec !== "string") return `not a string (${JSON.stringify(spec)})`;
   if (spec.startsWith("^") && exactPinProblem(spec.slice(1)) === null) return null;
   return "unsupported range form (only `^MAJOR.MINOR.PATCH` is allowed)";
+}
+
+/**
+ * The exact window spelling accepted for `owner` → `name` at `rootPin`, or null
+ * when no window applies (other owner/package, or a root pin that is not on a
+ * newer major than the retained floor, where a window would be redundant).
+ */
+export function peerWindowForm(owner, name, rootPin) {
+  if (owner !== DOC_PEER_WINDOW.owner || name !== DOC_PEER_WINDOW.name) return null;
+  const retainedMajor = Number(DOC_PEER_WINDOW.retainedFloor.split(".")[0]);
+  if (Number(rootPin.split(".")[0]) <= retainedMajor) return null;
+  return `^${DOC_PEER_WINDOW.retainedFloor} || ^${rootPin}`;
 }
 
 function compareVersions(a, b) {
@@ -115,8 +144,20 @@ export function validatePeerFloors({ rootPath = ROOT_MANIFEST, rootManifest, own
         });
       } else {
         const actual = peers[name];
+        const windowForm = peerWindowForm(path, name, root.pin);
         const rangeProblem = peerRangeProblem(actual);
-        if (rangeProblem) {
+        if (windowForm !== null && actual === windowForm) {
+          // ADR §13 two-major window, accepted only in this exact spelling.
+        } else if (windowForm !== null && typeof actual === "string" && actual.includes("||")) {
+          problems.push({
+            owner: path,
+            name,
+            field: `peerDependencies${optional}`,
+            actual,
+            expected: `${expected} or "${windowForm}"`,
+            fix: `the only accepted window is "${windowForm}" (retained floor ${DOC_PEER_WINDOW.retainedFloor} first, then ^<root pin>, separated by " || "); set it to that or "${expected}"`,
+          });
+        } else if (rangeProblem) {
           problems.push({
             owner: path,
             name,

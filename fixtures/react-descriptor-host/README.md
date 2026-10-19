@@ -1,10 +1,10 @@
 # Packed React descriptor host
 
-This independent Node 22+ consumer uses React/ReactDOM 19.3.0 and Monaco 0.57.0 inside its own preview document. The catalog and chrome use the engine's renderer. No React adapter or React dependency is added to the engine.
+This independent Node 24 (`>=24 <25`, required by zudo-doc 7) consumer uses React/ReactDOM 19.3.0 and Monaco 0.57.0 inside its own preview document. The catalog and chrome use the engine's renderer. No React adapter or React dependency is added to the engine.
 
 From the repository, run `pnpm verify:react-descriptor-host-install -- --keep`. The verifier packs the current built engine, installs it outside the workspace, records installed versions and its own complete audit, builds the preview, captures real committed fixtures, validates receipts, then builds and exercises `/styleguide/` and `/`. `--keep` retains the foreign directory, generated lockfile, captures, audit and graph evidence. Run the repository's package build first after changing engine source.
 
-All direct fixture dependencies are exact. A committed lock containing a previous local tarball's integrity would not verify a current-head pack, so each verifier install generates its own independent lock and audits that actual graph. The known KaTeX 0.16.47 low advisory is inherited from the engine/docs graph; critical, high and moderate findings fail. This fresh install does not establish compatibility of every historical consumer lockfile (see issue #963).
+All direct fixture dependencies are exact. A committed lock containing a previous local tarball's integrity would not verify a current-head pack, so each verifier install generates its own independent lock and audits that actual graph. KaTeX is on 0.19.0, the line zudo-doc 7 requires, which also clears the 0.16.47 low advisory the doc 6 graph carried; critical, high and moderate findings fail. This fresh install does not establish compatibility of every historical consumer lockfile (see issue #963).
 
 `preview/entry.tsx` adapts the public `createExternalPreviewRuntime` controller to one React root. Ordinary prop edits and Reset call `root.render`; full fixture Reset unmounts the root and disposes the editor, model, owned worker, observer, listener and portal. The component uses an owned JSON worker through Monaco's current `createWebWorker({worker})` API. Validation executes in that worker, including after a full reset. No CDN or shared JSON worker manager is used.
 

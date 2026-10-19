@@ -4,8 +4,9 @@ Status: **Accepted** (epic #648, decision sub-task #650, 2026-09-13), with
 framework-migration amendments recorded below. Model: zudo-doc's package-owned
 route seam (`$HOME/repos/myoss/zudo-doc/packages/zudo-doc/docs/adr/route-injection-seam.md`).
 Current toolchain pins: `@takazudo/zfb` **4.5.3**, `@takazudo/zudo-doc`
-**6.2.0**, `@takazudo/zdtp` **0.8.6**, pnpm 11.5.2, Node 24. The engine's
-peer floors are `^4.5.3` / `^6.2.0` / `^0.8.6`; Preact is a regular engine
+**7.0.0**, `@takazudo/zdtp` **0.8.6**, pnpm 11.5.2, Node 24. The engine's
+peer ranges are `^4.5.3` / `^6.2.0 || ^7.0.0` (see §13, 2026-10-19) /
+`^0.8.6`; Preact is a regular engine
 dependency for the opaque zdtp dashboard adapter, not a host peer.
 
 The original sections and spike report retain the implementation history from
@@ -400,6 +401,44 @@ prerelease handling, no dist-tag cleanup. Version source of truth is
 run from `main` after the epic merges.
 
 ### 13. Required peers and inherited host prerequisites
+
+**Amendment (2026-10-19, #1017 / #1019): bounded two-major zudo-doc peer
+window.** The workspace, `doc/`, the engine-host fixture (and therefore the
+`create-zudo-sg` template) and the React descriptor fixture move to
+`@takazudo/zudo-doc` 7.0.0. The engine's `@takazudo/zudo-doc` peer becomes
+`^6.2.0 || ^7.0.0` instead of `^7.0.0`.
+
+- **Why.** zudo-sg 0.5.5 declares `^6.2.0`, so it rejects zudo-doc 7.0.0 and
+  blocks downstream doc 7 consumers (#1009). A plain `^7.0.0` would follow the
+  "peer floors follow latest" policy below, but zudo-doc 7 requires Node
+  `>=24 <25` and KaTeX `^0.18.2 || ^0.19.0`. That would drop adopters that
+  still run Node 22 on zudo-doc 6. The window keeps both groups supported.
+- **Exact scope.** This is the only exception to "peer range is exactly
+  `^<root pin>`". It applies only to owner `packages/styleguide` and package
+  `@takazudo/zudo-doc`. The range must be spelled exactly
+  `^6.2.0 || ^<root pin>`. The retained floor is fixed at `6.2.0` as
+  `DOC_PEER_WINDOW` in `scripts/check-first-party-peer-floors.mjs`. The newest
+  alternative must equal `^<root pin>`, so it still follows latest. Plain
+  `^<root pin>` stays valid. Every other `||` form is rejected: other packages,
+  demo-ui, another retained floor, a stale newest floor, reversed order, three
+  or more alternatives, and whitespace variants. Owner direct copies must still
+  equal the root pin. Unit tests cover each rejected case.
+- **Tested lanes.** Doc 7 is exercised by the workspace and by the engine-host
+  and React descriptor fixtures, which declare Node `>=24 <25`. The older half
+  is exercised by `fixtures/descriptor-host`, which stays on zudo-doc 6.2.0 +
+  KaTeX 0.16.x and is verified on Node 22.
+  `scripts/descriptor-host-compat-lane.mjs` asserts that lane in a unit test
+  and in `verify:descriptor-host-install`, so a generic dependency-bump run
+  cannot silently move it to doc 7. Limitation: descriptor-host disables the
+  in-engine preview and `/tokens` routes. The lane proves descriptor-mode
+  compatibility on doc 6, not every engine mode.
+- **Node.** The engine itself declares no Node floor. Doc 7 hosts need Node 24.
+  The `create-zudo-sg` CLI keeps `>=22`, but the project it generates needs
+  Node 24.
+- **Exit condition.** When doc 6 / Node 22 support is retired, drop the 6.x
+  alternative so the peer is plain `^<root pin>`. Then remove
+  `DOC_PEER_WINDOW` and its tests, and move or retire the descriptor-host lane.
+  Any other window needs its own ADR amendment.
 
 **Migration amendment (2026-10-11, zfb 4 migration S3a/E3).** Current
 required engine peers are `@takazudo/zfb ^4.5.3`, `@takazudo/zudo-doc

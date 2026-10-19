@@ -188,8 +188,12 @@ checks each optional package independently.
 
 ## Host requirements and caveats
 
-The starter targets zudo-react + zfb hosts. Keep these dependencies in a host
-that adopts the engine:
+The starter targets zudo-react + zfb hosts on zudo-doc 7, so the generated
+project requires Node.js 24 (`"engines": { "node": ">=24 <25" }`) and installs
+KaTeX 0.19. The `create-zudo-sg` CLI itself still runs on Node.js 22 or later;
+only installing and building the generated project needs Node.js 24.
+
+Keep these dependencies in a host that adopts the engine:
 
 - `@takazudo/zdtp` is required by the injected `/tokens` route at build time,
   and by the header trigger's preview token panel at runtime — `bundleZdtp: true`
