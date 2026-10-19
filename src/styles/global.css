@@ -432,6 +432,14 @@ body {
  * animates the sidebar across category changes; a host copy of the doc 6
  * block would override that, so none is kept here. */
 
+/* zudo-doc 7.0.0 sets `overflow-wrap: anywhere` on inline code, which collapses
+ * table columns and breaks cell code mid-word at narrow widths; restore the 6.x
+ * behaviour until zudolab/zudo-doc#4594 is fixed upstream. */
+.zd-content td code,
+.zd-content th code {
+  overflow-wrap: break-word;
+}
+
 /* ── Search highlight ── */
 [data-search-results] mark {
   background-color: var(--color-matched-keyword-bg);
