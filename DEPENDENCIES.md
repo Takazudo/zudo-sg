@@ -125,6 +125,54 @@ published `@takazudo/zudo-sg@0.5.5`, fails with an unmet
 `@takazudo/zudo-doc` peer. The scratch was deleted. e2e, `b4push`, `verify:*`
 and the Node 22 descriptor-host run are left to Wave 3 (#1020).
 
+### Central verification of the merged tuple — #1020
+
+The final tuple is ZFB/runtime/MD WASM 4.5.3 and zudo-doc/history-server 7.0.0
+(engine peer `^6.2.0 || ^7.0.0`). zdtp stays at 0.8.6, the newest published
+version: upstream Takazudo/zudo-design-token-panel#1046 is closed but not yet
+released. KaTeX is 0.19.0 where doc 7 is installed, and 0.16.x in the
+descriptor-host doc 6 lane.
+
+Ran serially through heavy-guard on Node 24.14.0, at the merged base:
+
+- `pnpm b4push` with HTML, E2E and doc enabled: all 12 steps pass (only the
+  operator manual smoke was skipped). Playwright: **83 passed, 0 failed**,
+  which matches or improves on the baseline. The zdtp preview-panel Close
+  race did not fire in this run; the limitation is unchanged, not fixed.
+- `verify:styleguide-install`, `verify:descriptor-host-install` (doc 6.2.0 +
+  KaTeX 0.16.47 compat lane, with an assertion), `verify:react-descriptor-host-install`,
+  `verify:retained-lezer-lock` and `verify:create-zudo-sg`: all pass.
+  Retained-lock behaves as on the baseline: the seeded split survives frozen
+  and normal installs, consumer dedupe recovers it, and #963 stays an open
+  compatibility obligation.
+- Doc 6 lane on **Node 22.23.3**: `scripts/verify-descriptor-host-install.mjs`
+  passes. The packed engine installs and builds outside the workspace under
+  base `/styleguide/`.
+
+Browser parity on both hosts (a disposable Playwright agent at 390–1280px;
+zero console, page and request errors):
+
+- Client-router navigation keeps the header unanimated. The sidebar stays
+  `stationary` within a category and fades across categories.
+- The loading overlay sits at x ≥ 256 and y ≥ 56, so it never dims the header
+  or sidebar.
+- Back/Forward, the appearance toggle and persistence, and the sidebar
+  filter, collapse, resizer and toggle all behave correctly.
+- The engine routes `/components`, a detail page, `/components/preview` and
+  `/tokens` render.
+- No page-level horizontal scroll at 390px.
+
+**Regression found and fixed:** doc 7's `overflow-wrap: anywhere` on inline
+code collapsed table columns at 390px and split cell code mid-word (`slu|g`,
+`st|ri|ng`). Both hosts now set `td code, th code { overflow-wrap: break-word }`.
+A re-check shows no between-letter breaks, and wide tables scroll inside their
+wrappers. This was reported upstream as zudolab/zudo-doc#4594; drop the
+override once that ships.
+
+**Remaining gates:** an engine/initializer release is needed before published
+consumers (and new scaffolds) can take doc 7. That is a separate
+`l-make-release` round; nothing was tagged or published here.
+
 ## ZFB 4.5.2 adopted; doc 7 and panel remedy held — 2026-10-15, #1009
 
 Continued the inspected maintenance commit
