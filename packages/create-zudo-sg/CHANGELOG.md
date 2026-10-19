@@ -4,6 +4,18 @@ All notable changes to `create-zudo-sg` are documented in this file.
 
 The format is based on Keep a Changelog.
 
+## [0.2.5] - 2026-10-19
+
+### Changed
+
+- New projects install zfb, zfb-runtime, and zfb-md-wasm 4.5.3 (was 4.5.2),
+  zudo-doc 7.0.0 (was 6.2.0), and KaTeX 0.19.0 (was 0.16.x), the versions the
+  engine is tested against.
+- Generated projects now declare Node `>=24 <25`, which zudo-doc 7 requires.
+  The `create-zudo-sg` command itself still runs on Node 22.
+- Update the starter engine range to `@takazudo/zudo-sg ^0.5.6`, whose
+  zudo-doc peer accepts both 6.2.0 and 7.
+
 ## [0.2.4] - 2026-10-16
 
 ### Changed
