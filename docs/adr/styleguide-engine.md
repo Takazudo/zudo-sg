@@ -3,9 +3,10 @@
 Status: **Accepted** (epic #648, decision sub-task #650, 2026-09-13), with
 framework-migration amendments recorded below. Model: zudo-doc's package-owned
 route seam (`$HOME/repos/myoss/zudo-doc/packages/zudo-doc/docs/adr/route-injection-seam.md`).
-Current toolchain pins: `@takazudo/zfb` **4.5.2**, `@takazudo/zudo-doc`
-**6.2.0**, `@takazudo/zdtp` **0.8.6**, pnpm 11.5.2, Node 24. The engine's
-peer floors are `^4.5.2` / `^6.2.0` / `^0.8.6`; Preact is a regular engine
+Current toolchain pins: `@takazudo/zfb` **4.5.3**, `@takazudo/zudo-doc`
+**7.0.0**, `@takazudo/zdtp` **0.8.6**, pnpm 11.5.2, Node 24. The engine's
+peer ranges are `^4.5.3` / `^6.2.0 || ^7.0.0` (see §13, 2026-10-19) /
+`^0.8.6`; Preact is a regular engine
 dependency for the opaque zdtp dashboard adapter, not a host peer.
 
 The original sections and spike report retain the implementation history from
@@ -190,7 +191,7 @@ unchanged.
   `withZudoSg()` passes the composed host wind data and configured component
   roots to the preview-CSS plugin. The entry is compiled independently of the
   host's global stylesheet so preview documents do not inherit host chrome.
-- `compilePreviewCss()` invokes the host-installed zfb 4.5.2 CLI with an
+- `compilePreviewCss()` invokes the host-installed zfb 4.5.3 CLI with an
   argument array: `zfb css --input <entry> --output <temp css> --config
   <generated config> --project-root <host root>`, followed by the component
   `--source` arguments and `--no-auto-source`. The generated config contains
@@ -259,7 +260,7 @@ and sidebar-resizer initialization. The host also owns `src/config/settings.ts`,
 **Current island rule (amended for finding 4; relaxed 2026-09-16 and rechecked
 for zfb 4.3.1).** Every `"use client"` component that must hydrate on an
 engine route is reached through the injected route entrypoints; the current
-zfb 4.5.2 peer floor's scanner includes package routes and plugin virtual modules in both build and
+zfb 4.5.3 peer floor's scanner includes package routes and plugin virtual modules in both build and
 dev. The host keeps one shim, `pages/lib/_zudo-sg-islands.ts`, containing
 `import "@takazudo/zudo-sg/islands";`, imported by `pages/index.tsx` (which
 also reaches the preview token panel through `_body-end-islands.tsx`). It is
@@ -373,7 +374,7 @@ disables this minimal-host default.
 | Staging | **none** — inject `routes-src/*.tsx` from the package realpath (workspace or node_modules); no `.zudo-sg/` dir, nothing to gitignore |
 | Route entrypoints | link assets only (`<link href={withBase(sgContext.previewCssUrl)}>`), read data from the virtual modules, call zudo-doc factories (`createRouteContext`, `createChrome`) — never plugin helpers |
 | Preview island | `routes-src/_preview-app.tsx`: `"use client"`, default export `ConfiguredPreviewApp` (displayName equal), statically imported by `components-preview.tsx`, renders `<PreviewApp registry={registry}/>`; the registry travels as an in-bundle argument, NEVER as island props (`data-props` is JSON — render closures would be dropped) |
-| Dev-hydration seed | `@takazudo/zudo-sg/islands` → `./dist/islands.js` (side-effect imports of every engine island + `../routes-src/_preview-app.tsx`); host shim `pages/lib/_zudo-sg-islands.ts` = `import "@takazudo/zudo-sg/islands";`, imported by `pages/index.tsx`. Kept for API stability; a no-op at the current zfb 4.5.2 floor, where dev and build scan injected routes |
+| Dev-hydration seed | `@takazudo/zudo-sg/islands` → `./dist/islands.js` (side-effect imports of every engine island + `../routes-src/_preview-app.tsx`); host shim `pages/lib/_zudo-sg-islands.ts` = `import "@takazudo/zudo-sg/islands";`, imported by `pages/index.tsx`. Kept for API stability; a no-op at the current zfb 4.5.3 floor, where dev and build scan injected routes |
 | Registry shim | `routes-src/_registry.ts` builds `createRegistry(storyModules, { categoryOrder, storyExportOrder, routes: ctx.routes })` once; every entrypoint and the preview wrapper import it |
 | Package styles and wind manifest | `@takazudo/zudo-sg/styles.css` → `./styles.css` (engine chrome styles); `@takazudo/zudo-sg/wind.json` → `./dist/wind.json` (engine utility candidates registered by `withZudoSg()`). zudo-doc 6 also supplies its own public `wind.json`; zfb composes package manifests with host `wind` configuration. There is no engine utility stylesheet export. |
 | Consumer CSS order | The current starter declares `@layer zw-reset, zd-flow`, then imports zudo-doc `theme.css`, host token/component CSS, zudo-doc `content.css`, `features.css`, `page-loading.css`, zdtp dashboard CSS, and zudo-sg `styles.css`. zfb composes wind utilities from host configuration and package manifests; utilities and authored engine styles are unlayered, and dashboard styles follow content CSS to win ties with prose. zudo-doc 6's `theme.css` supplies token values without the former color reset. |
@@ -401,8 +402,46 @@ run from `main` after the epic merges.
 
 ### 13. Required peers and inherited host prerequisites
 
+**Amendment (2026-10-19, #1017 / #1019): bounded two-major zudo-doc peer
+window.** The workspace, `doc/`, the engine-host fixture (and therefore the
+`create-zudo-sg` template) and the React descriptor fixture move to
+`@takazudo/zudo-doc` 7.0.0. The engine's `@takazudo/zudo-doc` peer becomes
+`^6.2.0 || ^7.0.0` instead of `^7.0.0`.
+
+- **Why.** zudo-sg 0.5.5 declares `^6.2.0`, so it rejects zudo-doc 7.0.0 and
+  blocks downstream doc 7 consumers (#1009). A plain `^7.0.0` would follow the
+  "peer floors follow latest" policy below, but zudo-doc 7 requires Node
+  `>=24 <25` and KaTeX `^0.18.2 || ^0.19.0`. That would drop adopters that
+  still run Node 22 on zudo-doc 6. The window keeps both groups supported.
+- **Exact scope.** This is the only exception to "peer range is exactly
+  `^<root pin>`". It applies only to owner `packages/styleguide` and package
+  `@takazudo/zudo-doc`. The range must be spelled exactly
+  `^6.2.0 || ^<root pin>`. The retained floor is fixed at `6.2.0` as
+  `DOC_PEER_WINDOW` in `scripts/check-first-party-peer-floors.mjs`. The newest
+  alternative must equal `^<root pin>`, so it still follows latest. Plain
+  `^<root pin>` stays valid. Every other `||` form is rejected: other packages,
+  demo-ui, another retained floor, a stale newest floor, reversed order, three
+  or more alternatives, and whitespace variants. Owner direct copies must still
+  equal the root pin. Unit tests cover each rejected case.
+- **Tested lanes.** Doc 7 is exercised by the workspace and by the engine-host
+  and React descriptor fixtures, which declare Node `>=24 <25`. The older half
+  is exercised by `fixtures/descriptor-host`, which stays on zudo-doc 6.2.0 +
+  KaTeX 0.16.x and is verified on Node 22 (PR Checks re-runs its packed-consumer proof on Node 22).
+  `scripts/descriptor-host-compat-lane.mjs` asserts that lane in a unit test
+  and in `verify:descriptor-host-install`, so a generic dependency-bump run
+  cannot silently move it to doc 7. Limitation: descriptor-host disables the
+  in-engine preview and `/tokens` routes. The lane proves descriptor-mode
+  compatibility on doc 6, not every engine mode.
+- **Node.** The engine itself declares no Node floor. Doc 7 hosts need Node 24.
+  The `create-zudo-sg` CLI keeps `>=22`, but the project it generates needs
+  Node 24.
+- **Exit condition.** When doc 6 / Node 22 support is retired, drop the 6.x
+  alternative so the peer is plain `^<root pin>`. Then remove
+  `DOC_PEER_WINDOW` and its tests, and move or retire the descriptor-host lane.
+  Any other window needs its own ADR amendment.
+
 **Migration amendment (2026-10-11, zfb 4 migration S3a/E3).** Current
-required engine peers are `@takazudo/zfb ^4.5.2`, `@takazudo/zudo-doc
+required engine peers are `@takazudo/zfb ^4.5.3`, `@takazudo/zudo-doc
 ^6.2.0`, and `@takazudo/zdtp ^0.8.6`. The engine has no Preact peer. It
 declares `preact ^10.29.1` as a regular dependency solely for the opaque
 dashboard adapter that mounts zdtp inside the always-injected `/tokens`
@@ -421,7 +460,7 @@ The `/dev-bump-zudo-deps` resolver's peer-floor rows are applied, not
 skipped. The workspace already installs exactly those versions, so the floor
 is the tested version and not an older, untested minimum. The cost is that
 adopters must upgrade the toolchain together with the engine. Under this
-policy the floors are zfb `^4.5.2`, zudo-doc `^6.2.0` (was `^6.0.0`), and
+policy the floors are zfb `^4.5.3`, zudo-doc `^6.2.0` (was `^6.0.0`), and
 zdtp `^0.8.6`. The amendments below are historical.
 
 **Enforcement (2026-10-13, #1004).** `pnpm check:peer-floors`

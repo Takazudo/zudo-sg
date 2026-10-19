@@ -1,6 +1,6 @@
 {
-  // Snapshot of @takazudo/zudo-doc@6.2.0 tsconfig.base.json
-  // (6542b8300f4a554247563a3bac53e415a63ded51; blob f052aebac2b57fd447455490f6d2122a0ba372e4).
+  // Snapshot of @takazudo/zudo-doc@7.0.0 tsconfig.base.json
+  // (82049856397927077c5288465db34e44d0939260; blob f052aebac2b57fd447455490f6d2122a0ba372e4, unchanged since 6.2.0).
   // Upstream now omits baseUrl too; compiler-option reconciliation is a no-op.
   // baseUrl is omitted. This host keeps checkJs and skipLibCheck:false.
   // Reconciliation: ZUDO_DEPS_PINS.md.
