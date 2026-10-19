@@ -273,6 +273,7 @@ describe("ADR §13 zudo-doc two-major peer window", () => {
     expect(peerWindowForm("packages/demo-ui/package.json", "@takazudo/zudo-doc", "7.0.0")).toBeNull();
     expect(peerWindowForm("packages/styleguide/package.json", "@takazudo/zfb", "7.0.0")).toBeNull();
     expect(peerWindowForm("packages/styleguide/package.json", "@takazudo/zudo-doc", "6.3.0")).toBeNull();
+    expect(peerWindowForm("packages/styleguide/package.json", "@takazudo/zudo-doc", "8.0.0")).toBeNull();
   });
 
   it("accepts exactly `^6.2.0 || ^<root pin>`", () => {
@@ -366,6 +367,17 @@ describe("ADR §13 zudo-doc two-major peer window", () => {
       actual: range,
     });
     expect(problems[0].expected).toContain("^7.0.0");
+  });
+
+  it("rejects a window that skips a major once the root pin moves two majors ahead", () => {
+    const f = doc7Fixture();
+    deps(f.rootManifest, "dependencies")["@takazudo/zudo-doc"] = "8.0.0";
+    deps(f.styleguide, "devDependencies")["@takazudo/zudo-doc"] = "8.0.0";
+    deps(f.styleguide, "peerDependencies")["@takazudo/zudo-doc"] = "^6.2.0 || ^8.0.0";
+    const problems = run(f);
+    expect(problems).toHaveLength(1);
+    expect(problems[0]).toMatchObject({ actual: "^6.2.0 || ^8.0.0", expected: "^8.0.0" });
+    expect(problems[0].fix).toContain("unsupported range form");
   });
 
   it("rejects a stale newest floor after the root pin moves", () => {

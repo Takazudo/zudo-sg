@@ -195,6 +195,17 @@ jobs:
       - name: Verify descriptor-host foreign install
         run: pnpm verify:descriptor-host-install
 
+      # ADR §13 doc 6 compat lane: descriptor-host stays on zudo-doc 6.2.0, so
+      # re-run the same packed-consumer proof on Node 22 (the engine build from
+      # the step above is reused).
+      - name: Setup Node 22
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+
+      - name: Verify descriptor-host foreign install on Node 22
+        run: node --version && node scripts/verify-descriptor-host-install.mjs
+
   # ---------------------------------------------------------------------------
   # Job: React 19 descriptor consumer foreign-install proof (#960)
   # Installs the packed engine outside the workspace, builds a host-owned React

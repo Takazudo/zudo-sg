@@ -88,13 +88,14 @@ function peerRangeProblem(spec) {
 
 /**
  * The exact window spelling accepted for `owner` → `name` at `rootPin`, or null
- * when no window applies (other owner/package, or a root pin that is not on a
- * newer major than the retained floor, where a window would be redundant).
+ * when no window applies (other owner/package, or a root pin that is not on the
+ * major right after the retained floor: on the same major the window is
+ * redundant, and two majors ahead it would silently drop the middle major).
  */
 export function peerWindowForm(owner, name, rootPin) {
   if (owner !== DOC_PEER_WINDOW.owner || name !== DOC_PEER_WINDOW.name) return null;
   const retainedMajor = Number(DOC_PEER_WINDOW.retainedFloor.split(".")[0]);
-  if (Number(rootPin.split(".")[0]) <= retainedMajor) return null;
+  if (Number(rootPin.split(".")[0]) !== retainedMajor + 1) return null;
   return `^${DOC_PEER_WINDOW.retainedFloor} || ^${rootPin}`;
 }
 

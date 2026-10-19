@@ -426,7 +426,7 @@ window.** The workspace, `doc/`, the engine-host fixture (and therefore the
 - **Tested lanes.** Doc 7 is exercised by the workspace and by the engine-host
   and React descriptor fixtures, which declare Node `>=24 <25`. The older half
   is exercised by `fixtures/descriptor-host`, which stays on zudo-doc 6.2.0 +
-  KaTeX 0.16.x and is verified on Node 22.
+  KaTeX 0.16.x and is verified on Node 22 (PR Checks re-runs its packed-consumer proof on Node 22).
   `scripts/descriptor-host-compat-lane.mjs` asserts that lane in a unit test
   and in `verify:descriptor-host-install`, so a generic dependency-bump run
   cannot silently move it to doc 7. Limitation: descriptor-host disables the

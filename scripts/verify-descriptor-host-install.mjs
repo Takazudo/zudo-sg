@@ -289,14 +289,14 @@ async function main() {
   const hostDir = await mkdtemp(path.join(os.tmpdir(), "zudo-sg-descriptor-host-"));
 
   try {
+    const laneProblems = doc6LaneManifestProblems(JSON.parse(await read(fixtureRoot, "package.json")));
+    assert(laneProblems.length === 0, laneProblems.join("\n"));
+    console.log("OK — fixtures/descriptor-host is still the zudo-doc 6.2.0 + KaTeX 0.16 compat lane (ADR §13).");
+
     const tarballIndex = process.argv.indexOf("--tarball");
     const tarballPath = tarballIndex === -1 ? await packEngine(artifacts) : path.resolve(checkArg("--tarball"));
     if (tarballIndex === -1) console.log(`Packing @takazudo/zudo-sg (${packageDirRelative}) -> ${artifacts}`);
     await assertTarballShape(tarballPath);
-
-    const laneProblems = doc6LaneManifestProblems(JSON.parse(await read(fixtureRoot, "package.json")));
-    assert(laneProblems.length === 0, laneProblems.join("\n"));
-    console.log("OK — fixtures/descriptor-host is still the zudo-doc 6.2.0 + KaTeX 0.16 compat lane (ADR §13).");
 
     console.log(`Copying fixtures/descriptor-host -> ${hostDir}`);
     await copyFixtureDir(fixtureRoot, hostDir);
