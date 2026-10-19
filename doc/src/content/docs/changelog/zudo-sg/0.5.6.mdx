@@ -1,0 +1,24 @@
+---
+title: 0.5.6
+description: The engine accepts zudo-doc 7 alongside 6.2.0, and the zfb peer floor follows 4.5.3.
+sidebar_position: 22
+pagination_next: null
+---
+
+Released: 2026-10-19
+
+This maintenance release lets hosts adopt zudo-doc 7 without dropping hosts that
+stay on zudo-doc 6.2.0 and Node 22. The public API is unchanged.
+
+### Features
+
+- The `@takazudo/zudo-doc` peer is now `^6.2.0 || ^7.0.0` (was ^6.2.0), so
+  hosts can install zudo-doc 7.0.0. zudo-doc 7 itself requires Node 24 and
+  KaTeX `^0.18.2 || ^0.19.0`; hosts that stay on zudo-doc 6.2.0 keep Node 22
+  and KaTeX 0.16.x. Every PR re-checks the 6.2.0 lane on Node 22.
+
+### Other Changes
+
+- The `@takazudo/zfb` peer floor is now ^4.5.3 (was ^4.5.2), matching the zfb
+  release the engine is built and tested against. `@takazudo/zdtp` stays at
+  ^0.8.6.

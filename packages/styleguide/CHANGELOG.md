@@ -4,6 +4,24 @@ All notable changes to `@takazudo/zudo-sg` are documented in this file.
 
 The format is based on Keep a Changelog, and release notes are generated from the changelog MDX pages.
 
+## [0.5.6] - 2026-10-19
+
+This maintenance release lets hosts adopt zudo-doc 7 without dropping hosts that
+stay on zudo-doc 6.2.0 and Node 22. The public API is unchanged.
+
+### Features
+
+- The `@takazudo/zudo-doc` peer is now `^6.2.0 || ^7.0.0` (was ^6.2.0), so
+  hosts can install zudo-doc 7.0.0. zudo-doc 7 itself requires Node 24 and
+  KaTeX `^0.18.2 || ^0.19.0`; hosts that stay on zudo-doc 6.2.0 keep Node 22
+  and KaTeX 0.16.x. Every PR re-checks the 6.2.0 lane on Node 22.
+
+### Other Changes
+
+- The `@takazudo/zfb` peer floor is now ^4.5.3 (was ^4.5.2), matching the zfb
+  release the engine is built and tested against. `@takazudo/zdtp` stays at
+  ^0.8.6.
+
 ## [0.5.5] - 2026-10-16
 
 This maintenance release raises the zfb and zudo-doc peer floors to the
