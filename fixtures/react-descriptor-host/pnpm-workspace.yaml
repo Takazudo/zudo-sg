@@ -7,12 +7,12 @@ minimumReleaseAgeExclude:
   - "@takazudo/zfb-md-wasm"
   - "@takazudo/zudo-doc"
   - "@takazudo/zdtp"
-  - '@takazudo/zfb-darwin-arm64@4.5.2'
-  - '@takazudo/zfb-darwin-x64@4.5.2'
-  - '@takazudo/zfb-linux-arm64-gnu@4.5.2'
-  - '@takazudo/zfb-linux-x64-gnu@4.5.2'
-  - '@takazudo/zfb-slugify@4.5.2'
-  - '@takazudo/zfb-win32-x64-msvc@4.5.2'
+  - '@takazudo/zfb-darwin-arm64@4.5.3'
+  - '@takazudo/zfb-darwin-x64@4.5.3'
+  - '@takazudo/zfb-linux-arm64-gnu@4.5.3'
+  - '@takazudo/zfb-linux-x64-gnu@4.5.3'
+  - '@takazudo/zfb-slugify@4.5.3'
+  - '@takazudo/zfb-win32-x64-msvc@4.5.3'
 
 overrides:
   monaco-editor>dompurify: 3.4.16
