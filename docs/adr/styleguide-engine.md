@@ -442,7 +442,7 @@ window.** The workspace, `doc/`, the engine-host fixture (and therefore the
 
 **Migration amendment (2026-10-11, zfb 4 migration S3a/E3).** Current
 required engine peers are `@takazudo/zfb ^4.6.0`, `@takazudo/zudo-doc
-^6.2.0`, and `@takazudo/zdtp ^0.8.6`. The engine has no Preact peer. It
+^6.2.0 || ^7.0.0` (window per §13), and `@takazudo/zdtp ^0.8.6`. The engine has no Preact peer. It
 declares `preact ^10.29.1` as a regular dependency solely for the opaque
 dashboard adapter that mounts zdtp inside the always-injected `/tokens`
 route; zdtp's compatible range resolves to the same runtime. Hosts render
@@ -460,7 +460,8 @@ The `/dev-bump-zudo-deps` resolver's peer-floor rows are applied, not
 skipped. The workspace already installs exactly those versions, so the floor
 is the tested version and not an older, untested minimum. The cost is that
 adopters must upgrade the toolchain together with the engine. Under this
-policy the floors are zfb `^4.6.0`, zudo-doc `^6.2.0` (was `^6.0.0`), and
+policy the floors are zfb `^4.6.0`, zudo-doc `^6.2.0` (was `^6.0.0`; now the
+`^6.2.0 || ^7.0.0` window per §13), and
 zdtp `^0.8.6`. The amendments below are historical.
 
 **Enforcement (2026-10-13, #1004).** `pnpm check:peer-floors`
