@@ -1,5 +1,50 @@
 # Dependency audit register
 
+## ZFB family 4.6.0 adopted — 2026-10-21
+
+Only `@takazudo/zfb`, `@takazudo/zfb-runtime` and `@takazudo/zfb-md-wasm` moved
+4.5.4 to 4.6.0. zudo-doc, history-server and zdtp were not touched; the
+`fixtures/descriptor-host` zudo-doc 6.2.0 lane stays as the asserted doc 6 lane.
+
+### Upstream impact 4.5.4 to 4.6.0
+
+Release `v4.6.0` (`Takazudo/zudo-front-builder`, changelog
+`docs/src/content/docs/changelog/zfb/v4.6.0.mdx`). Bug fixes and a security
+update only:
+
+- Island-free sites print the "skipping islands bundle" info line once per
+  build again (twice since 4.5.4).
+- pnpm store packages are staged into the build shadow only for importers
+  reachable from a page, component, layout or other entry, so `scripts/`,
+  `tests/` or `e2e/` imports no longer copy their dependency closures in.
+- Windows: the SSR shadow parent and plugin virtual modules use the ordinary
+  drive spelling instead of `\\?\` verbatim paths.
+- Security: `rustls` 0.23.46, `rustls-webpki` 0.103.16 (RUSTSEC-2026-0382) and
+  `webpki-roots` 1.0.10 (RUSTSEC-2026-0381) in the CLI's HTTPS client.
+- Published JS: `zfb` and `zfb-runtime` tarballs differ only in
+  `package.json` versions; `zfb-md-wasm` rebuilt its four WASM binaries (render
+  entry 1 byte smaller gzipped). Exports, engines and peers unchanged.
+- Consumer impact: none found beyond the Wind compiler identity change below.
+
+### What changed in this repo
+
+- All ZFB pins 4.6.0 and engine / demo-ui peers `^4.6.0`; the `create-zudo-sg`
+  template follows (`pnpm check:create-template` clean).
+- Version-specific release-age exemptions (root `zfb-slugify`, the six
+  `@takazudo/zfb-*` entries in each fixture workspace) moved to `@4.6.0`.
+- `authored-class-coverage.wind-explain.json` regenerated (compilerVersion
+  4.6.0, new Wind config hash; candidate set unchanged, 343 classes explained)
+  and the test's pinned compiler version updated.
+- Version mentions in CLAUDE.md, the engine ADR, the engine README and
+  `doc/CLAUDE.md` follow 4.6.0.
+
+### Verification
+
+`pnpm check`, `pnpm --filter @zudo-sg/doc check`, `pnpm check:create-template`,
+root build (88 HTML routes), demo and doc builds, root unit tests (178 files,
+1685 tests) and demo-ui tests (83 files, 603 tests) pass locally on Node 22;
+CI covers the Node 24 lanes, e2e and `verify:styleguide-install`.
+
 ## ZFB family 4.5.4 adopted — 2026-10-20
 
 Only `@takazudo/zfb`, `@takazudo/zfb-runtime` and `@takazudo/zfb-md-wasm` moved
