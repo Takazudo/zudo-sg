@@ -3,9 +3,9 @@
 Status: **Accepted** (epic #648, decision sub-task #650, 2026-09-13), with
 framework-migration amendments recorded below. Model: zudo-doc's package-owned
 route seam (`$HOME/repos/myoss/zudo-doc/packages/zudo-doc/docs/adr/route-injection-seam.md`).
-Current toolchain pins: `@takazudo/zfb` **4.5.3**, `@takazudo/zudo-doc`
+Current toolchain pins: `@takazudo/zfb` **4.5.4**, `@takazudo/zudo-doc`
 **7.0.0**, `@takazudo/zdtp` **0.8.6**, pnpm 11.5.2, Node 24. The engine's
-peer ranges are `^4.5.3` / `^6.2.0 || ^7.0.0` (see §13, 2026-10-19) /
+peer ranges are `^4.5.4` / `^6.2.0 || ^7.0.0` (see §13, 2026-10-19) /
 `^0.8.6`; Preact is a regular engine
 dependency for the opaque zdtp dashboard adapter, not a host peer.
 
@@ -191,7 +191,7 @@ unchanged.
   `withZudoSg()` passes the composed host wind data and configured component
   roots to the preview-CSS plugin. The entry is compiled independently of the
   host's global stylesheet so preview documents do not inherit host chrome.
-- `compilePreviewCss()` invokes the host-installed zfb 4.5.3 CLI with an
+- `compilePreviewCss()` invokes the host-installed zfb 4.5.4 CLI with an
   argument array: `zfb css --input <entry> --output <temp css> --config
   <generated config> --project-root <host root>`, followed by the component
   `--source` arguments and `--no-auto-source`. The generated config contains
@@ -260,7 +260,7 @@ and sidebar-resizer initialization. The host also owns `src/config/settings.ts`,
 **Current island rule (amended for finding 4; relaxed 2026-09-16 and rechecked
 for zfb 4.3.1).** Every `"use client"` component that must hydrate on an
 engine route is reached through the injected route entrypoints; the current
-zfb 4.5.3 peer floor's scanner includes package routes and plugin virtual modules in both build and
+zfb 4.5.4 peer floor's scanner includes package routes and plugin virtual modules in both build and
 dev. The host keeps one shim, `pages/lib/_zudo-sg-islands.ts`, containing
 `import "@takazudo/zudo-sg/islands";`, imported by `pages/index.tsx` (which
 also reaches the preview token panel through `_body-end-islands.tsx`). It is
@@ -441,7 +441,7 @@ window.** The workspace, `doc/`, the engine-host fixture (and therefore the
   Any other window needs its own ADR amendment.
 
 **Migration amendment (2026-10-11, zfb 4 migration S3a/E3).** Current
-required engine peers are `@takazudo/zfb ^4.5.3`, `@takazudo/zudo-doc
+required engine peers are `@takazudo/zfb ^4.5.4`, `@takazudo/zudo-doc
 ^6.2.0`, and `@takazudo/zdtp ^0.8.6`. The engine has no Preact peer. It
 declares `preact ^10.29.1` as a regular dependency solely for the opaque
 dashboard adapter that mounts zdtp inside the always-injected `/tokens`
@@ -460,7 +460,7 @@ The `/dev-bump-zudo-deps` resolver's peer-floor rows are applied, not
 skipped. The workspace already installs exactly those versions, so the floor
 is the tested version and not an older, untested minimum. The cost is that
 adopters must upgrade the toolchain together with the engine. Under this
-policy the floors are zfb `^4.5.3`, zudo-doc `^6.2.0` (was `^6.0.0`), and
+policy the floors are zfb `^4.5.4`, zudo-doc `^6.2.0` (was `^6.0.0`), and
 zdtp `^0.8.6`. The amendments below are historical.
 
 **Enforcement (2026-10-13, #1004).** `pnpm check:peer-floors`

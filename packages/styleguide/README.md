@@ -132,10 +132,10 @@ output as drift and never writes it.
 ## Installation
 
 ```sh
-pnpm add @takazudo/zudo-sg@latest @takazudo/zfb@^4.5.3 @takazudo/zfb-md-wasm@^4.5.3 @takazudo/zfb-runtime@^4.5.3 @takazudo/zudo-doc@^7.0.0 @takazudo/zdtp@^0.8.6 diff@^8.0.4 katex@^0.19.0 zod@^4.3.6
+pnpm add @takazudo/zudo-sg@latest @takazudo/zfb@^4.5.4 @takazudo/zfb-md-wasm@^4.5.4 @takazudo/zfb-runtime@^4.5.4 @takazudo/zudo-doc@^7.0.0 @takazudo/zdtp@^0.8.6 diff@^8.0.4 katex@^0.19.0 zod@^4.3.6
 ```
 
-The engine peers are `@takazudo/zfb ^4.5.3`, `@takazudo/zudo-doc
+The engine peers are `@takazudo/zfb ^4.5.4`, `@takazudo/zudo-doc
 ^6.2.0 || ^7.0.0`, and `@takazudo/zdtp ^0.8.6`. The command above installs
 zudo-doc 7, which requires Node.js 24 (`>=24 <25`) and KaTeX
 `^0.18.2 || ^0.19.0`. A host that must stay on Node.js 22 can instead install
@@ -220,7 +220,7 @@ control. Any non-empty host navigation stays authoritative; set
 `chromeDefaults: false` in the second argument to keep an intentionally empty
 header. The engine requires `packageOwnedRoutes: true` on the host (its
 routes import zudo-doc's route-context virtual modules). On the engine's zfb
-peer floor (4.5.3) nothing else is needed: `zfb dev` seeds its island
+peer floor (4.5.4) nothing else is needed: `zfb dev` seeds its island
 scanner from the injected routes. `@takazudo/zudo-sg/islands` remains
 exported as a side-effect module that statically imports every engine
 island — importing it once from a host `pages/` file is optional and

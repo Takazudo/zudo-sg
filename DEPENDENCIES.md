@@ -1,5 +1,50 @@
 # Dependency audit register
 
+## ZFB family 4.5.4 adopted — 2026-10-20
+
+Only `@takazudo/zfb`, `@takazudo/zfb-runtime` and `@takazudo/zfb-md-wasm` moved
+4.5.3 to 4.5.4. zudo-doc, history-server and zdtp were not touched; the
+`fixtures/descriptor-host` zudo-doc 6.2.0 lane stays as the asserted doc 6 lane.
+
+### Upstream impact 4.5.3 to 4.5.4
+
+Release `v4.5.4` (2026-10-20, `Takazudo/zudo-front-builder`, tag commit
+`ea90fe1245602079c3be086c4517f38368b32321`).
+
+- `zfb`: islands bug fixes only. The islands build identity is now derived from
+  esbuild's resolved browser graph, so unrelated edits no longer change shipped
+  islands JavaScript, and identity computation no longer fails through a symlink
+  alias. Island builds and `zfb dev` ticks may take slightly longer. The
+  published tarball differs only in `package.json`: version, exact-pinned
+  `zfb-slugify` and the five native optional packages, all 4.5.4. Exports,
+  engines and peers unchanged.
+- `zfb-runtime`, `zfb-md-wasm`: no package-specific changes; the four WASM
+  binaries and `dist/shipped-artifacts.json` were rebuilt.
+- Consumer impact: none found beyond the Wind compiler identity change below.
+
+### What changed in this repo
+
+- All ZFB pins 4.5.4 and engine / demo-ui peers `^4.5.4`; the
+  `create-zudo-sg` template regenerated with `pnpm sync:create-template`.
+- Version-specific release-age exemptions (root `zfb-slugify`, the six
+  `@takazudo/zfb-*` entries in each fixture workspace) moved to `@4.5.4`.
+- `authored-class-coverage.wind-explain.json` regenerated (compilerVersion
+  4.5.4; candidate set unchanged, 343 classes explained) and the test's pinned
+  compiler version updated.
+- Version mentions in CLAUDE.md, the engine ADR, the engine README and
+  `doc/CLAUDE.md` follow 4.5.4.
+
+### Verification
+
+`pnpm check`, `pnpm --filter @zudo-sg/doc check`, `pnpm check:create-template`,
+root build (88 HTML routes), demo and doc builds, unit tests (178 files, 1685
+tests) and demo-ui tests (83 files, 603 tests) pass. Every `b4push` step
+passes; the Playwright e2e suite (83 tests) passed against a stand-in Chromium
+because the container lacked the pinned headless-shell build.
+`verify:styleguide-install` fails its `--early-click` token-panel scenario on
+both this change and the untouched 4.5.3 parent in the same container, so it is
+not caused by this bump; CI is the judge for it.
+
 ## ZFB family 4.5.3 adopted; doc 7 left to the next topic — 2026-10-19, #1018
 
 Wave 1 of the doc 7 maintenance epic (#1017): baseline recorded, then only
