@@ -48,7 +48,7 @@ describe("demo-ui authored class coverage", () => {
 
     expect(scan.dynamicConstructions, "class values must use literal unions, not dynamic concatenation").toEqual([]);
     expect(fixture.schemaVersion).toBe(1);
-    expect(fixture.compilerVersion).toBe("4.5.4");
+    expect(fixture.compilerVersion).toBe("4.6.0");
     expect(getWindCompilerVersion(REPO_ROOT)).toBe(fixture.compilerVersion);
     expect(fixture.windConfigSha256).toBe(await getWindConfigHash(REPO_ROOT, fixture.compilerVersion));
     expect(fixture.candidateSetSha256).toBe(getCandidateSetHash(candidates));
