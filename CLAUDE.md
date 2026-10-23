@@ -5,8 +5,8 @@ Documentation site built with [zudo-doc](https://github.com/zudolab/zudo-doc) �
 ## Tech Stack
 
 - **zfb** — documentation build framework. The `@takazudo/zfb*` family is pinned to the stable
-  `4.6.0` release alongside zudo-doc `7.0.0` (Node 24). The engine's zudo-doc peer is the
-  bounded window `^6.2.0 || ^7.0.0` (ADR §13); `fixtures/descriptor-host` stays on zudo-doc
+  `4.7.0` release alongside zudo-doc `7.1.0` (Node 24). The engine's zudo-doc peer is the
+  bounded window `^6.2.0 || ^7.1.0` (ADR §13); `fixtures/descriptor-host` stays on zudo-doc
   6.2.0 + KaTeX 0.16 as the asserted doc 6 compat lane.
 - **MDX** — content format
 - **zudo-wind** — utility CSS with explicit tokens, breakpoints, and package manifests in `zfb.config.ts`
@@ -54,7 +54,7 @@ The styleguide catalog is dogfooded from the `@takazudo/zudo-sg` engine
 silently shadows the injected route. `pages/index.tsx` must keep importing
 `pages/lib/_body-end-islands.tsx`; it also imports
 `pages/lib/_zudo-sg-islands.ts`, kept for `@takazudo/zudo-sg/islands` API
-stability (a no-op under the current zfb 4.6.0 floor; injected-route island
+stability (a no-op under the current zfb 4.7.0 floor; injected-route island
 scanning first landed in 2.18.0 — ADR finding 4 amendment).
 
 The tree above covers only the root host's own `src/`. `packages/demo-ui`'s

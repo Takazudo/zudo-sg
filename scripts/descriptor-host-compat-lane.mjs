@@ -1,5 +1,5 @@
 // fixtures/descriptor-host is the intentional zudo-doc 6 / Node 22 compat lane
-// for the engine's `^6.2.0 || ^7.0.0` doc peer window (ADR §13, 2026-10-19
+// for the engine's `^6.2.0 || ^7.1.0` doc peer window (ADR §13, 2026-10-19
 // amendment). Every other host moves with the root zudo-doc pin; this one
 // must not. A generic `/dev-bump-zudo-deps` resolver run rewrites it to the
 // newest doc, so these assertions fail loudly instead of letting that

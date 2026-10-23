@@ -9,14 +9,6 @@
 @import "@takazudo/zudo-doc/page-loading.css";
 @import "@takazudo/zudo-doc/features.css";
 
-/* zudo-doc 7.0.0 sets `overflow-wrap: anywhere` on inline code, which collapses
- * table columns and breaks cell code mid-word at narrow widths; restore the 6.x
- * behaviour until zudolab/zudo-doc#4594 is fixed upstream. */
-.zd-content td code,
-.zd-content th code {
-  overflow-wrap: break-word;
-}
-
 /* Override design-token custom properties from the package theme here. */
 :root {
   /* e.g. --color-accent: oklch(0.6 0.2 250); */

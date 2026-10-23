@@ -1,5 +1,51 @@
 # Dependency audit register
 
+## zudo-doc 7.1.0 and ZFB family 4.7.0 adopted — 2026-10-23
+
+`@takazudo/zudo-doc` and `@takazudo/zudo-doc-history-server` moved 7.0.0 to
+7.1.0, and `@takazudo/zfb`, `zfb-runtime` and `zfb-md-wasm` moved 4.6.0 to
+4.7.0. zdtp stays 0.8.6. `fixtures/descriptor-host` keeps zudo-doc 6.2.0 (the
+asserted doc 6 lane); only its zfb family moves, inside 6.2.0's `^4.5.0` peer.
+
+**zfb 5.0.0 held.** It was published on 2026-10-23, but zudo-doc 7.1.0 peers
+`@takazudo/zfb ^4.7.0`, which rejects 5.x. 5.0.0 also raises `engines.node` to
+`>=24`, which would end the engine's Node 22 / doc 6 lane. Revisit it once a
+zudo-doc release accepts zfb 5.
+
+### Upstream impact
+
+- zudo-doc 7.1.0 (CHANGELOG + tarball diff): inline code in table cells is back
+  to `overflow-wrap: break-word` (zudolab/zudo-doc#4594). zfb peer floors move
+  to `^4.7.0`. A new `@takazudo/zudo-doc/plugins/optional-peers` preset plugin
+  shadows an absent or disabled optional `katex` / `diff` peer under Rolldown.
+  The preset settings gain an optional `math` flag. No other export changed.
+- zfb 4.7.0 (per the zudo-doc 7.1.0 changelog; the zfb JS tarballs differ only
+  in versions): Rolldown replaces esbuild as the page/SSR and island bundler, so
+  shipped island asset hashes change once (`ZFB_BUNDLER=esbuild` reverts). A
+  project's tsconfig JSX options now apply to TSX shipped inside packages, and
+  Windows `?url` island imports are fixed.
+- create-zudo-doc 7.1.0: no template changed. See ZUDO_DEPS_PINS.md.
+
+### What changed in this repo
+
+- All pins and the engine / demo-ui zfb peer floors move to 4.7.0. The engine's
+  zudo-doc peer window becomes `^6.2.0 || ^7.1.0` (ADR §13, enforced by
+  `check:peer-floors`). The `create-zudo-sg` template follows.
+- Version-specific release-age exemptions move to `@4.7.0` / `@7.1.0`.
+- `root-zfb-config.test.ts` expects the new `optional-peers` plugin after
+  `img-src-check`.
+- `authored-class-coverage.wind-explain.json` was regenerated: compiler 4.7.0
+  and a new Wind config hash. The candidate set is unchanged (343 classes
+  explained).
+- `doc/src/styles/global.css` drops its table-cell code workaround, which
+  7.1.0 fixes upstream.
+
+### Verification
+
+On Node 24.22.1 with pnpm 11.5.2, these pass: `pnpm check`,
+`pnpm check:create-template`, the root unit tests (178 files, 1685 tests), the
+root build (89 pages), and the demo and doc builds.
+
 ## ZFB family 4.6.0 adopted — 2026-10-21
 
 Only `@takazudo/zfb`, `@takazudo/zfb-runtime` and `@takazudo/zfb-md-wasm` moved
