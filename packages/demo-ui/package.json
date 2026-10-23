@@ -20,7 +20,7 @@
   "dependencies": {
     "@takazudo/zfb-md-wasm": "4.7.0",
     "@takazudo/zudo-sg": "workspace:*",
-    "dompurify": "^3.4.16"
+    "dompurify": "^3.4.17"
   },
   "peerDependencies": {
     "@takazudo/zfb": "^4.7.0"

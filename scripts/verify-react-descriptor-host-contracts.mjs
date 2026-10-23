@@ -57,8 +57,11 @@ function javascriptImports(ts, source) {
       } else {
         // zfb-md-wasm imports its emitted glue URL with a recovery-generation query.
         // Follow the concrete resource literal below; reject other opaque imports.
-        const binding = node.parent?.parent?.parent;
-        const name = binding && ts.isBindingElement(binding) && binding.propertyName;
+        // esbuild and Rolldown wrap the default `importGlue = specifier => import(specifier)`
+        // differently, so climb past the arrow/parentheses to the binding element.
+        let binding = node.parent;
+        while (binding && (ts.isArrowFunction(binding) || ts.isParenthesizedExpression(binding))) binding = binding.parent;
+        const name = binding && ts.isBindingElement(binding) && (binding.propertyName ?? binding.name);
         assert(name && ts.isIdentifier(name) && name.text === "importGlue", "host bundle contains an untraceable dynamic import");
         wasmGlueImport = true;
       }

@@ -15,4 +15,4 @@ minimumReleaseAgeExclude:
   - '@takazudo/zfb-win32-x64-msvc@4.7.0'
 
 overrides:
-  monaco-editor>dompurify: 3.4.16
+  monaco-editor>dompurify: 3.4.17
