@@ -1,5 +1,61 @@
 # Dependency audit register
 
+## ZFB 4.7.0 and zudo-doc 7.1.0 — 2026-10-23
+
+- ZFB, runtime and MD WASM: 4.6.0 → 4.7.0 across hosts, fixtures and
+  engine/demo-ui peer floors. Native/slugify release-age exclusions follow the
+  published exact 4.7.0 dependencies; all other install policies stay intact.
+- zudo-doc and history-server: 7.0.0 → 7.1.0. Engine doc peer window is
+  `^6.2.0 || ^7.1.0`; descriptor-host retains doc 6.2.0 and KaTeX 0.16.
+- zdtp 0.8.6, mdx-formatter 1.3.0 and design-token-lint 2.1.0 are current.
+- DOMPurify: 3.4.16 → 3.4.17 in demo-ui and the React fixture, including
+  its existing Monaco override/replacement. The unchanged foreign audit gate
+  exposed GHSA-cg2g-xh64-v4q7, GHSA-mrv2-3pqr-j5jr and GHSA-c6gr-qvv4-5v3f;
+  the patched foreign graph audits clean. The baseline root audit has eleven
+  advisories; the updated graph has eight, all existing Vite/Vitest/esbuild
+  toolchain findings. This update does not claim a clean root audit.
+
+### Upstream and consumer impact
+
+[ZFB v4.7.0](https://github.com/Takazudo/zudo-front-builder/releases/tag/v4.7.0)
+uses direct V8 and defaults page/island bundling to Rolldown. The published
+JS surface changes only family pins; MD WASM rebuilds without an API change.
+No bundler fallback is configured. [zudo-doc 7.1.0](https://github.com/zudolab/zudo-doc/blob/v7.1.0/packages/zudo-doc/CHANGELOG.md)
+fixes inline code wrapping inside tables and adds an optional-peer shadow
+plugin for absent/disabled KaTeX and diff. The root integration test now
+checks that exact plugin sequence and its feature-derived options.
+History-server has no package-specific changes.
+
+Published create-zudo-doc templates and the doc base tsconfig are unchanged.
+`ZUDO_DEPS_PINS.md` records the verified no-op reconciliation; customized
+scaffold features remain intact. The generated create-zudo-sg starter was
+synced from engine-host, and Wind coverage regenerated with 343 unchanged
+class candidates. The React bundle verifier recognizes both esbuild's
+parenthesized and Rolldown's direct WASM import expression while rejecting
+other opaque imports; positive and negative tests cover that boundary.
+
+The slow no-stub host now recreates its own frozen workspace dependency graph;
+linking the source node_modules into a partial host breaks Rolldown shadow
+resolution. It retains built engine assets, skips disposable install lifecycle
+scripts, and parses emitted string literals independently of quote style.
+All six build/dev assertions remain enabled.
+
+### Verification
+
+On Node 24 with pnpm 11.5.2, frozen installation and all automated b4push
+checks pass: 179 unit files / 1,694 tests, native root/demo/doc builds,
+typechecks, token lint, generated-file checks, HTML/internal links and 83
+Playwright tests. The six native no-stub slow tests also pass. The existing
+interactive smoke is skipped in this non-TTY environment.
+
+Packed initializer, styleguide consumer, retained-Lezer-lock recovery and
+React descriptor browser contracts pass. The descriptor compatibility fixture
+passes on both Node 22 and 24, retaining the doc 6 lane. Demo-ui's separate
+83-file / 603-test suite also passed before the DOMPurify patch; the final
+root and browser checks include that patch. Independent final diff review
+found no blockers. First failures and changed-input rechecks were preserved
+in the task handoff, including the original base's separate slow-test failure.
+
 ## ZFB family 4.6.0 adopted — 2026-10-21
 
 Only `@takazudo/zfb`, `@takazudo/zfb-runtime` and `@takazudo/zfb-md-wasm` moved

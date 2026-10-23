@@ -21,20 +21,24 @@
 // Run: `pnpm test:slow` (needs the engine package built: `pnpm build:styleguide`).
 // Model: zudo-doc's src/__tests__/route-injection-build.slow.test.ts.
 
-import { execSync, spawn, type ChildProcess } from "node:child_process";
-import { cpSync, existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { execFileSync, execSync, spawn, type ChildProcess } from "node:child_process";
+import { cpSync, existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import ts from "typescript";
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 
-/** Host entries the styleguide build needs; everything else (doc/, apps/, e2e/, dist/, …) stays out. */
+/** Copy the host and workspace sources needed to recreate its frozen dependency graph. */
 const COPY_ENTRIES = [
   ".gitignore",
   "package.json",
+  "pnpm-workspace.yaml",
+  "pnpm-lock.yaml",
+  ".npmrc",
   "tsconfig.json",
   "zfb.config.ts",
   "zudo-sg.config.mjs",
@@ -43,6 +47,10 @@ const COPY_ENTRIES = [
   "public",
   "src",
   "packages/demo-ui",
+  "packages/styleguide",
+  "packages/create-zudo-sg",
+  "apps/demo",
+  "doc",
 ];
 
 const ENGINE_ISLANDS = ["ConfiguredPreviewApp", "DetailWorkbench", "CodePanel", "CatalogFilter", "PreviewTokensButton"];
@@ -66,7 +74,16 @@ function copyHost(): string {
       filter: (src) => !/[/\\](node_modules|dist|\.zfb|\.zfb-build)([/\\]|$)/.test(src.slice(REPO_ROOT.length)),
     });
   }
-  symlinkSync(join(REPO_ROOT, "node_modules"), join(dir, "node_modules"));
+  // Rolldown's build shadow needs the host's own pnpm dependency graph.
+  // Lifecycle scripts are unnecessary here: retain the already-built engine
+  // and public assets, and do not install Git hooks in this disposable host.
+  execFileSync("corepack", ["pnpm", "install", "--frozen-lockfile", "--ignore-scripts"], {
+    cwd: dir,
+    env: process.env,
+    stdio: "pipe",
+  });
+  cpSync(join(REPO_ROOT, "packages/styleguide/dist"), join(dir, "packages/styleguide/dist"), { recursive: true });
+  cpSync(join(REPO_ROOT, "packages/styleguide/routes-src"), join(dir, "packages/styleguide/routes-src"), { recursive: true });
   return dir;
 }
 
@@ -217,7 +234,15 @@ describe("no-stub build: engine routes own /components, /components/[slug], /com
     const manifests = readdirSync(join(hostDir, "dist/assets")).filter((f) => /^islands-.*\.js$/.test(f));
     expect(manifests.length).toBeGreaterThan(0);
     const bundle = manifests.map((f) => read(`dist/assets/${f}`)).join("\n");
-    for (const name of ENGINE_ISLANDS) expect(bundle).toContain(`"${name}"`);
+    // Minifiers may emit quoted strings or no-substitution template literals.
+    const literals = new Set<string>();
+    const source = ts.createSourceFile("islands.js", bundle, ts.ScriptTarget.Latest, true, ts.ScriptKind.JS);
+    const visit = (node: ts.Node): void => {
+      if (ts.isStringLiteralLike(node)) literals.add(node.text);
+      ts.forEachChild(node, visit);
+    };
+    visit(source);
+    for (const name of ENGINE_ISLANDS) expect(literals.has(name), `registered island: ${name}`).toBe(true);
   });
 
   it("renders the token dashboards and the Preview tokens island on /tokens", () => {

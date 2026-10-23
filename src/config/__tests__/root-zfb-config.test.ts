@@ -23,6 +23,7 @@ describe("root zfb integration contract", () => {
       "@takazudo/zudo-doc/plugins/theme-packs",
       "@takazudo/zudo-doc/plugins/llms-txt",
       "@takazudo/zudo-doc/plugins/img-src-check",
+      "@takazudo/zudo-doc/plugins/optional-peers",
       // bundleZdtp keeps the throwing zdtp-loader stub out of the host build
       // even though designTokenPanel is off (the preview panel needs the loader).
       "./pages/lib/_doc-history-meta.mjs",
@@ -30,6 +31,9 @@ describe("root zfb integration contract", () => {
       "@takazudo/zudo-sg/plugins/preview-css",
       "@takazudo/zudo-sg/plugins/zdtp-apply-proxy",
     ]);
+    expect(config.plugins?.find(
+      ({ name }) => name === "@takazudo/zudo-doc/plugins/optional-peers",
+    )?.options).toEqual({ shadow: ["katex"], shadowIfMissing: ["diff"] });
   });
 
   it("enables the strict bridge and relies on zfb native public copying", () => {

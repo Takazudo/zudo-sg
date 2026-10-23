@@ -42,7 +42,7 @@ async function withMutations(changes, run) {
   }
 }
 
-function javascriptImports(ts, source) {
+export function javascriptImports(ts, source) {
   const imports = [];
   const literals = new Set();
   let wasmGlueImport = false;
@@ -57,9 +57,18 @@ function javascriptImports(ts, source) {
       } else {
         // zfb-md-wasm imports its emitted glue URL with a recovery-generation query.
         // Follow the concrete resource literal below; reject other opaque imports.
-        const binding = node.parent?.parent?.parent;
+        // esbuild parenthesizes the import expression; Rolldown emits it directly.
+        let body = node;
+        while (body.parent && ts.isParenthesizedExpression(body.parent)) body = body.parent;
+        const arrow = body.parent;
+        const binding = arrow && ts.isArrowFunction(arrow) && arrow.body === body && arrow.parent;
         const name = binding && ts.isBindingElement(binding) && binding.propertyName;
-        assert(name && ts.isIdentifier(name) && name.text === "importGlue", "host bundle contains an untraceable dynamic import");
+        const parameter = arrow && ts.isArrowFunction(arrow) && arrow.parameters.length === 1 && arrow.parameters[0].name;
+        assert(name && ts.isIdentifier(name) && name.text === "importGlue"
+          && parameter && ts.isIdentifier(parameter)
+          && node.arguments.length === 1 && ts.isIdentifier(node.arguments[0])
+          && node.arguments[0].text === parameter.text,
+        "host bundle contains an untraceable dynamic import");
         wasmGlueImport = true;
       }
     }
