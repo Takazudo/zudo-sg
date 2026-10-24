@@ -12,18 +12,18 @@
   },
   "dependencies": {
     "@takazudo/zdtp": "0.8.6",
-    "@takazudo/zfb": "4.6.0",
-    "@takazudo/zfb-md-wasm": "4.6.0",
-    "@takazudo/zfb-runtime": "4.6.0",
-    "@takazudo/zudo-doc": "7.0.0",
+    "@takazudo/zfb": "5.0.1",
+    "@takazudo/zfb-md-wasm": "5.0.1",
+    "@takazudo/zfb-runtime": "5.0.1",
+    "@takazudo/zudo-doc": "8.0.0",
     "@takazudo/zudo-sg": "file:.tarball/zudo-sg-engine.tgz",
     "diff": "8.0.4",
     "katex": "0.19.0",
-    "zod": "4.6.5",
+    "zod": "4.6.7",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "monaco-editor": "0.57.0",
-    "dompurify": "3.4.16"
+    "dompurify": "3.4.17"
   },
   "devDependencies": {
     "@types/node": "22.20.5",

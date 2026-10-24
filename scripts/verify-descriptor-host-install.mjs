@@ -31,7 +31,6 @@ import {
   runStreamed,
 } from "./verify-styleguide-install.mjs";
 import { BASE, launchChromium, startBuiltHost } from "./verify-styleguide-install-browser.mjs";
-import { doc6LaneInstalledProblems, doc6LaneManifestProblems } from "./descriptor-host-compat-lane.mjs";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
 const fixtureRoot = path.join(root, "fixtures/descriptor-host");
@@ -289,10 +288,6 @@ async function main() {
   const hostDir = await mkdtemp(path.join(os.tmpdir(), "zudo-sg-descriptor-host-"));
 
   try {
-    const laneProblems = doc6LaneManifestProblems(JSON.parse(await read(fixtureRoot, "package.json")));
-    assert(laneProblems.length === 0, laneProblems.join("\n"));
-    console.log("OK — fixtures/descriptor-host is still the zudo-doc 6.2.0 + KaTeX 0.16 compat lane (ADR §13).");
-
     const tarballIndex = process.argv.indexOf("--tarball");
     const tarballPath = tarballIndex === -1 ? await packEngine(artifacts) : path.resolve(checkArg("--tarball"));
     if (tarballIndex === -1) console.log(`Packing @takazudo/zudo-sg (${packageDirRelative}) -> ${artifacts}`);
@@ -306,12 +301,6 @@ async function main() {
     console.log("Installing (tarball + exact @takazudo/zfb / @takazudo/zudo-doc pins)");
     await run("corepack", ["pnpm", "install"], hostDir);
     await assertForeignPackage(hostDir);
-    const installedProblems = doc6LaneInstalledProblems({
-      zudoDoc: JSON.parse(await read(hostDir, "node_modules/@takazudo/zudo-doc/package.json")).version,
-      katex: JSON.parse(await read(hostDir, "node_modules/katex/package.json")).version,
-    });
-    assert(installedProblems.length === 0, installedProblems.join("\n"));
-    console.log("OK — the install resolved zudo-doc 6.2.0 + KaTeX 0.16.x (doc 6 compat lane).");
 
     console.log("Type-checking the consumer against packed declarations: tsc --noEmit -p tsconfig.json");
     await run("corepack", ["pnpm", "exec", "tsc", "--noEmit", "-p", "tsconfig.json"], hostDir);

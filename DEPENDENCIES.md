@@ -1,5 +1,72 @@
 # Dependency audit register
 
+## zudo-doc 8.0.0 and ZFB family 5.0.1 adopted; doc 6 lane retired — 2026-10-24
+
+`@takazudo/zudo-doc` and `@takazudo/zudo-doc-history-server` moved from 7.0.0
+to 8.0.0. `@takazudo/zfb`, `zfb-runtime` and `zfb-md-wasm` moved from 4.6.0 to
+5.0.1. zdtp stays at 0.8.6. The intermediate pair (doc 7.1.0 + zfb 4.7.0) was
+prepared first and then superseded in the same PR.
+
+**The zudo-doc 6 / Node 22 window is retired** (ADR §13, 2026-10-24
+amendment). zudo-doc 8 peers zfb `^5.0.1`, zfb 5 requires Node `>=24`, and
+zudo-doc 6.2.0 only accepts zfb `^4.5.0`. The engine's zudo-doc peer is now
+plain `^8.0.0`. The `DOC_PEER_WINDOW` checker branch,
+`scripts/descriptor-host-compat-lane.mjs` and the PR Checks Node 22 re-run are
+removed. `fixtures/descriptor-host` moves to doc 8 / zfb 5 / KaTeX 0.19.
+
+### Upstream impact
+
+- zudo-doc 7.1.0 fixes table-cell inline code wrapping (zudolab/zudo-doc#4594),
+  so this repo's workaround in `doc/src/styles/global.css` is removed.
+- zudo-doc 8.0.0 is breaking. It requires zfb `^5.0.1` and removes the 7.1.0
+  `plugins/optional-peers` export, because zfb now handles rejection-handled
+  optional imports itself. This repo never registered that plugin, and the
+  preset no longer adds it. 8.0.0 also adds `siteTreeNavInitiallyCollapsed`,
+  fixes prose spacing in tab panels and heading spacing in theme packs, drops
+  the Node upper cap, and moves the MCP SDK to 1.32.2.
+- zfb 4.7.0 and 5.x make Rolldown the page/SSR and island bundler (replacing
+  esbuild), so island asset hashes change. zfb 5.0.1 fixes lazy island chunks
+  that requested an unpublished `islands.js`, and raises `engines.node` to
+  `>=24`. In the JS tarballs only versions change; zfb-md-wasm also rebuilds its
+  WASM binaries.
+- Rolldown nests zfb-md-wasm's `importGlue` default one AST level shallower than
+  esbuild. The React descriptor contract now climbs past the arrow and parens to
+  the binding instead of using a fixed `parent.parent.parent`.
+
+### Unrelated CI drift fixed in the same PR
+
+- DOMPurify 3.4.17 fixes GHSA-cg2g-xh64-v4q7 (critical), GHSA-mrv2-3pqr-j5jr
+  (high) and GHSA-c6gr-qvv4-5v3f (low). These tripped the React descriptor
+  install audit. The fixture pin, its `monaco-editor>dompurify` override and
+  demo-ui's range move to 3.4.17.
+- `@lezer/common` 1.5.4 was published, so the retained Lezer diagnostic now
+  reads the shared common version from the clean control lock instead of
+  pinning 1.5.3.
+- zod 4.6.7 fixes GHSA-mrhx-c7xc-m3w5 (high, `<4.6.6`), which tripped the same
+  install audit through zudo-doc's `zod` peer. The fixture's exact pin and the
+  root, `apps/demo` and `doc` ranges move to 4.6.7.
+
+### What changed in this repo
+
+- All pins, the engine/demo-ui zfb peer floors (`^5.0.1`), the engine zudo-doc
+  peer (`^8.0.0`) and the `create-zudo-sg` template follow. Release-age
+  exemptions pinned to a version move to `@5.0.1` / `@8.0.0`.
+- `authored-class-coverage.wind-explain.json` is regenerated: compiler 5.0.1
+  and a new Wind config hash. The candidate set is unchanged (343 classes).
+- The engine README install line and the version mentions in the docs, ADR,
+  CLAUDE.md and tsconfig snapshot comments are updated.
+
+### Verification
+
+- `pnpm check` and `pnpm test:unit` (177 files, 1643 tests) pass.
+- Root, demo and doc builds pass. The root build still emits 89 pages.
+- Full e2e passes 83/83 with 5 workers and 0 retries, including the token
+  round-trip from #1001.
+- `check:create-template`, `verify:styleguide-install`,
+  `verify:descriptor-host-install`, `verify:react-descriptor-host-install`,
+  `verify:retained-lezer-lock` and `verify:create-zudo-sg` pass on packed
+  tarballs.
+
 ## ZFB family 4.6.0 adopted — 2026-10-21
 
 Only `@takazudo/zfb`, `@takazudo/zfb-runtime` and `@takazudo/zfb-md-wasm` moved

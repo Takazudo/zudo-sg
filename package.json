@@ -46,16 +46,16 @@
   },
   "dependencies": {
     "@takazudo/zdtp": "0.8.6",
-    "@takazudo/zfb": "4.6.0",
-    "@takazudo/zfb-md-wasm": "4.6.0",
-    "@takazudo/zfb-runtime": "4.6.0",
-    "@takazudo/zudo-doc": "7.0.0",
-    "@takazudo/zudo-doc-history-server": "7.0.0",
+    "@takazudo/zfb": "5.0.1",
+    "@takazudo/zfb-md-wasm": "5.0.1",
+    "@takazudo/zfb-runtime": "5.0.1",
+    "@takazudo/zudo-doc": "8.0.0",
+    "@takazudo/zudo-doc-history-server": "8.0.0",
     "@takazudo/zudo-sg": "workspace:*",
     "@zudo-sg/demo-ui": "workspace:*",
     "diff": "^8.0.4",
     "katex": "^0.19.0",
-    "zod": "^4.6.5"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@playwright/test": "^1.64.0",

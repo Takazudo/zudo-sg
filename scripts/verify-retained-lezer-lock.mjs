@@ -15,7 +15,20 @@ import { BASE, launchChromium, startBuiltHost } from "./verify-styleguide-instal
 const root = fileURLToPath(new URL("../", import.meta.url));
 const hash = source => createHash("sha256").update(source).digest("hex");
 const oldCommon = "1.5.2";
-const sharedCommon = "1.5.3";
+// The clean control resolves whatever @lezer/common is newest, so read the
+// shared version from its lock instead of pinning a release that goes stale.
+let sharedCommon;
+
+export function sharedCommonFromLock(source) {
+  const marker = "\nsnapshots:\n";
+  assert(source.split(marker).length === 2, "expected one pnpm snapshots section");
+  const highlightBlocks = [...source.split(marker)[1].matchAll(/^  '@lezer\/highlight@[^'\n]+':\n(?: {4}[^\n]*\n|\n)*/gmu)];
+  assert(highlightBlocks.length === 1, `expected one highlight snapshot, found ${highlightBlocks.length}`);
+  const edge = /^ {6}'@lezer\/common': (\d+\.\d+\.\d+)$/mu.exec(highlightBlocks[0][0]);
+  assert(edge, "highlight snapshot has no @lezer/common edge");
+  assert(edge[1] !== oldCommon, `clean control already resolves old common ${oldCommon}`);
+  return edge[1];
+}
 
 export function isExpectedHighlightFailure(error) {
   // Production minification renames the unminified `tags` identifier (the
@@ -230,6 +243,8 @@ async function main() {
       assert(report.runtime.pnpm === "11.5.2", "diagnostic requires pnpm 11.5.2");
       await pnpm(["install", "--no-frozen-lockfile"], "control-install");
       await assertForeignPackage(host);
+      sharedCommon = sharedCommonFromLock(await lock());
+      report.runtime.sharedCommon = sharedCommon;
       await graph("control", false);
       await save("control-lock.yaml", await lock());
       browser = await launchChromium(chromium);
