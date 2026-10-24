@@ -26,11 +26,9 @@ the root site's [Adopting the engine](https://zudo-sg.takazudomodular.com/docs/a
 
 ## Requirements
 
-- Generated and doc 7 hosts: Node.js 24 (`>=24 <25`). zudo-doc 7.1.0 and
-  the `create-zudo-sg` starter require it.
-- Engine consumers on zudo-doc 6.2.0: Node.js 22.12.0 or later. The engine's
-  `@takazudo/zudo-doc` peer is `^6.2.0 || ^7.1.0`, so a host that must stay
-  on Node.js 22 can keep zudo-doc 6.2.0 with KaTeX 0.16.
+- Engine hosts and generated starters: Node.js 24. zfb 5 and zudo-doc 8
+  require it, and the engine's `@takazudo/zudo-doc` peer is `^8.0.0`. The
+  former zudo-doc 6.2.0 / Node.js 22 option was retired with zfb 5.
 - The `create-zudo-sg` CLI itself still runs on Node.js 22.
 - Repository development/CI: Node.js 24. html-validate 11.16.2 requires
   `^22.22.0 || >=24.8.0`; retained jsdom dependencies additionally require

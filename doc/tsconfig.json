@@ -1,5 +1,5 @@
 {
-  // Snapshot of @takazudo/zudo-doc@7.1.0 tsconfig.base.json
+  // Snapshot of @takazudo/zudo-doc@8.0.0 tsconfig.base.json
   // (82049856397927077c5288465db34e44d0939260; blob f052aebac2b57fd447455490f6d2122a0ba372e4, unchanged since 6.2.0).
   // Upstream now omits baseUrl too; compiler-option reconciliation is a no-op.
   // This workspace's include and @/* paths stay here. baseUrl is omitted.

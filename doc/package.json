@@ -5,7 +5,7 @@
   "type": "module",
   "packageManager": "pnpm@11.5.2",
   "engines": {
-    "node": ">=24 <25"
+    "node": ">=24"
   },
   "scripts": {
     "dev": "zfb dev",
@@ -21,11 +21,11 @@
     "setup:doc-skill:both": "bash scripts/setup-doc-skill.sh --target both"
   },
   "dependencies": {
-    "@takazudo/zfb": "4.7.0",
-    "@takazudo/zfb-runtime": "4.7.0",
-    "@takazudo/zfb-md-wasm": "4.7.0",
-    "@takazudo/zudo-doc": "7.1.0",
-    "zod": "^4.6.5",
+    "@takazudo/zfb": "5.0.1",
+    "@takazudo/zfb-runtime": "5.0.1",
+    "@takazudo/zfb-md-wasm": "5.0.1",
+    "@takazudo/zudo-doc": "8.0.0",
+    "zod": "^4.6.7",
     "katex": "^0.19.0",
     "diff": "^8.0.3"
   },
