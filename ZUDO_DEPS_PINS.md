@@ -336,7 +336,7 @@ Current snapshot: published `@takazudo/zudo-doc@8.1.0`; the file is
 byte-identical to 7.0.0 (commit `82049856397927077c5288465db34e44d0939260`,
 verified `v7.0.0` tag, blob `f052aebac2b57fd447455490f6d2122a0ba372e4`, itself
 unchanged from 6.2.0), so the 7.0.0, 7.1.0, 8.0.0 and 8.1.0 reconciliations are verified no-ops. Only the snapshot comments in
-the root, `doc/` and React fixture tsconfigs move to 7.0.0. The JSX settings,
+the root, `doc/` and React fixture tsconfigs move to 8.1.0. The JSX settings,
 paths, include/exclude, checkJs/strict options and relative aliases are
 unchanged. The TS7/TS6 alias arrangement and the TS 5.9 fixture line are
 also unchanged. Recorded at 6.2.0: its sole change from 6.1.1
