@@ -4,6 +4,24 @@ All notable changes to `@takazudo/zudo-sg` are documented in this file.
 
 The format is based on Keep a Changelog, and release notes are generated from the changelog MDX pages.
 
+## [0.6.0] - 2026-10-25
+
+This release moves the engine onto the zfb 5 and zudo-doc 8 toolchain. The
+engine's public API is unchanged. Hosts upgrade by moving their zfb and
+zudo-doc installs to the new peer floors.
+
+### Breaking Changes
+
+- The `@takazudo/zfb` peer is now ^5.1.2 (was ^4.5.3). zfb 5 requires Node 24,
+  so hosts on Node 22 must upgrade Node first.
+- The `@takazudo/zudo-doc` peer is now ^8.1.0 (was `^6.2.0 || ^7.0.0`). The
+  zudo-doc 6.2.0 / Node 22 compatibility window is retired, and the engine is
+  no longer tested against zudo-doc 6 or 7. `@takazudo/zdtp` stays at ^0.8.6.
+
+### Other Changes
+
+- The README install line and peer list follow the new floors.
+
 ## [0.5.6] - 2026-10-19
 
 This maintenance release lets hosts adopt zudo-doc 7 without dropping hosts that
