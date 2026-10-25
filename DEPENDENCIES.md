@@ -1,5 +1,36 @@
 # Dependency audit register
 
+## zudo-doc 8.1.0 and ZFB family 5.1.2 adopted — 2026-10-25
+
+`@takazudo/zudo-doc` and `@takazudo/zudo-doc-history-server` moved from 8.0.0
+to 8.1.0. `@takazudo/zfb`, `zfb-runtime` and `zfb-md-wasm` moved from 5.0.1 to
+5.1.2. zdtp (0.8.6), mdx-formatter (1.3.0) and zudo-design-token-lint (2.1.0)
+were already latest (#1028).
+
+### Upstream impact
+
+- zudo-doc 8.1.0 requires zfb `^5.1.2`, so both families move together. It
+  adds the opt-in `headerBrand` setting (unused here) and a
+  `data-zd-site-name` hook on the home hero, fixes the scroll position after
+  a dynamic page transition from a focused persisted link, and fixes the
+  `SiteTreeNav` label gap. The scroll fix ships a new inline head script. This
+  repo pins no CSP inline-script hashes, so nothing changes for it.
+- zfb 5.1.0 adds an islands build guard: the build fails if an emitted islands
+  chunk imports the islands entry. 5.1.1 fixes Windows hosts and symlinked
+  project paths. 5.1.2 rebuilds the native engine and WASM binaries with no JS
+  API change. In the zfb/zfb-runtime tarballs only versions change.
+- `create-zudo-doc` 8.1.0 changes no template file, only pins (see
+  `ZUDO_DEPS_PINS.md`).
+
+### Consumer-side follow-through
+
+- All pins, the engine/demo-ui zfb peer floors (`^5.1.2`), the engine zudo-doc
+  peer (`^8.1.0`) and the `create-zudo-sg` template follow. Release-age
+  exemptions pinned to a version move to `@5.1.2` / `@8.1.0`.
+- `authored-class-coverage.wind-explain.json` is regenerated. Only
+  `compilerVersion` 5.1.2 and the Wind config hash change. All 343
+  explanations are unchanged.
+
 ## zudo-doc 8.0.0 and ZFB family 5.0.1 adopted; doc 6 lane retired — 2026-10-24
 
 `@takazudo/zudo-doc` and `@takazudo/zudo-doc-history-server` moved from 7.0.0
