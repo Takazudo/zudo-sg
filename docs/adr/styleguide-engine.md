@@ -3,10 +3,10 @@
 Status: **Accepted** (epic #648, decision sub-task #650, 2026-09-13), with
 framework-migration amendments recorded below. Model: zudo-doc's package-owned
 route seam (`$HOME/repos/myoss/zudo-doc/packages/zudo-doc/docs/adr/route-injection-seam.md`).
-Current toolchain pins: `@takazudo/zfb` **5.1.2**, `@takazudo/zudo-doc`
-**8.1.0**, `@takazudo/zdtp` **0.8.6**, pnpm 11.5.2, Node 24. The engine's
-peer ranges are `^5.1.2` / `^8.1.0` (§13 window retired 2026-10-24) /
-`^0.8.6`; Preact is a regular engine
+Current toolchain pins: `@takazudo/zfb` **5.1.5**, `@takazudo/zudo-doc`
+**9.0.0**, `@takazudo/zdtp` **0.8.7**, pnpm 11.5.2, Node 24. The engine's
+peer ranges are `^5.1.5` / `^9.0.0` (§13 window retired 2026-10-24) /
+`^0.8.7`; Preact is a regular engine
 dependency for the opaque zdtp dashboard adapter, not a host peer.
 
 The original sections and spike report retain the implementation history from
@@ -191,7 +191,7 @@ unchanged.
   `withZudoSg()` passes the composed host wind data and configured component
   roots to the preview-CSS plugin. The entry is compiled independently of the
   host's global stylesheet so preview documents do not inherit host chrome.
-- `compilePreviewCss()` invokes the host-installed zfb 5.1.2 CLI with an
+- `compilePreviewCss()` invokes the host-installed zfb 5.1.5 CLI with an
   argument array: `zfb css --input <entry> --output <temp css> --config
   <generated config> --project-root <host root>`, followed by the component
   `--source` arguments and `--no-auto-source`. The generated config contains
@@ -260,7 +260,7 @@ and sidebar-resizer initialization. The host also owns `src/config/settings.ts`,
 **Current island rule (amended for finding 4; relaxed 2026-09-16 and rechecked
 for zfb 4.3.1).** Every `"use client"` component that must hydrate on an
 engine route is reached through the injected route entrypoints; the current
-zfb 5.1.2 peer floor's scanner includes package routes and plugin virtual modules in both build and
+zfb 5.1.5 peer floor's scanner includes package routes and plugin virtual modules in both build and
 dev. The host keeps one shim, `pages/lib/_zudo-sg-islands.ts`, containing
 `import "@takazudo/zudo-sg/islands";`, imported by `pages/index.tsx` (which
 also reaches the preview token panel through `_body-end-islands.tsx`). It is
@@ -453,8 +453,8 @@ engine and generated hosts need Node 24. Only the `create-zudo-sg` CLI
 process itself still declares `>=22`.
 
 **Migration amendment (2026-10-11, zfb 4 migration S3a/E3).** Current
-required engine peers are `@takazudo/zfb ^5.1.2`, `@takazudo/zudo-doc
-^8.1.0`, and `@takazudo/zdtp ^0.8.6`. The engine has no Preact peer. It
+required engine peers are `@takazudo/zfb ^5.1.5`, `@takazudo/zudo-doc
+^9.0.0`, and `@takazudo/zdtp ^0.8.7`. The engine has no Preact peer. It
 declares `preact ^10.29.1` as a regular dependency solely for the opaque
 dashboard adapter that mounts zdtp inside the always-injected `/tokens`
 route; zdtp's compatible range resolves to the same runtime. Hosts render
@@ -472,9 +472,9 @@ The `/dev-bump-zudo-deps` resolver's peer-floor rows are applied, not
 skipped. The workspace already installs exactly those versions, so the floor
 is the tested version and not an older, untested minimum. The cost is that
 adopters must upgrade the toolchain together with the engine. Under this
-policy the floors are zfb `^5.1.2`, zudo-doc `^8.1.0` (the §13 window was
+policy the floors are zfb `^5.1.5`, zudo-doc `^9.0.0` (the §13 window was
 retired on 2026-10-24), and
-zdtp `^0.8.6`. The amendments below are historical.
+zdtp `^0.8.7`. The amendments below are historical.
 
 **Enforcement (2026-10-13, #1004).** `pnpm check:peer-floors`
 (`scripts/check-first-party-peer-floors.mjs`) runs first in `pnpm check`, so

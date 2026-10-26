@@ -11,11 +11,11 @@
     "preview:build": "node scripts/prepare.mjs"
   },
   "dependencies": {
-    "@takazudo/zdtp": "0.8.6",
-    "@takazudo/zfb": "5.1.2",
-    "@takazudo/zfb-md-wasm": "5.1.2",
-    "@takazudo/zfb-runtime": "5.1.2",
-    "@takazudo/zudo-doc": "8.1.0",
+    "@takazudo/zdtp": "0.8.7",
+    "@takazudo/zfb": "5.1.5",
+    "@takazudo/zfb-md-wasm": "5.1.5",
+    "@takazudo/zfb-runtime": "5.1.5",
+    "@takazudo/zudo-doc": "9.0.0",
     "@takazudo/zudo-sg": "file:.tarball/zudo-sg-engine.tgz",
     "diff": "8.0.4",
     "katex": "0.19.0",
