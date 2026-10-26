@@ -31,6 +31,9 @@ import { HEADER_TOKEN_TRIGGER_ITEM } from "@takazudo/zudo-sg/config";
 
 export const settings = {
   colorScheme: "Default Dark",
+  // zudo-doc 9 defaults an omitted themePack to Graphite; this site's own
+  // colorSchemes are tuned for the Classic chrome, so pin it explicitly.
+  themePack: "default",
   colorMode: {
     defaultMode: "dark",
     lightScheme: "Default Light",

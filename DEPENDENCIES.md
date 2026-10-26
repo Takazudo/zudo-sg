@@ -1,5 +1,54 @@
 # Dependency audit register
 
+## zudo-doc 9.0.0, ZFB family 5.1.5 and zdtp 0.8.7 adopted — 2026-10-27
+
+`@takazudo/zudo-doc` and `@takazudo/zudo-doc-history-server` moved from 8.1.0
+to 9.0.0. `@takazudo/zfb`, `zfb-runtime` and `zfb-md-wasm` moved from 5.1.2 to
+5.1.5, and `@takazudo/zdtp` from 0.8.6 to 0.8.7. mdx-formatter (1.3.0) and
+zudo-design-token-lint (2.1.0) were already latest.
+
+### Upstream impact
+
+- zudo-doc 9.0.0's breaking change is the default theme pack: a site that
+  omits `themePack` now gets **Graphite** instead of Classic. Sites that pass
+  custom `colorSchemes` or set `colorMode: false` keep the previous look, and
+  an explicit `themePack` always wins. The root site passes its own
+  `colorSchemes`, so it would already stay on Classic; `src/config/settings.ts`
+  now sets `themePack: "default"` explicitly so that choice no longer rides on
+  the inference rule (and the route descriptor stays equal to the host
+  settings).
+  `doc/`, the three fixtures and the `create-zudo-sg` template omit
+  `themePack` and take Graphite, which is also what a default
+  `create-zudo-doc` 9.0.0 scaffold produces. To keep Classic there, set
+  `themePack: "default"`. 9.0.0 also adds the Warm Mineral and Quiet Slate
+  packs and tag-chip hooks, and requires history-server 9.x.
+- zudo-doc 8.1.1–8.1.3 fix search-index/llms.txt prose, drop the spurious
+  `UNRESOLVED_IMPORT` warnings for the optional `katex`/`diff` peers, and
+  polish heading rules in nine non-default packs.
+- zfb 5.1.3–5.1.5 rebuild the native engine and WASM binaries (5.1.5 builds
+  against tokio 1.54.1, RUSTSEC-2026-0386). The JavaScript API is unchanged,
+  and zudo-doc 9.0.0 requires `^5.1.5`, so both families move together.
+- zdtp 0.8.7 adds a `@takazudo/zdtp/dashboard/client` mount API and fixes
+  panel-close persistence and early-click replay. Nothing here adopts the new
+  API yet.
+- `create-zudo-doc` 9.0.0 changes no template file, only pins and the
+  theme-pack default (see `ZUDO_DEPS_PINS.md`).
+
+### Consumer-side follow-through
+
+- All pins, the engine/demo-ui zfb peer floors (`^5.1.5`), the engine
+  zudo-doc peer (`^9.0.0`) and zdtp peer (`^0.8.7`) and the `create-zudo-sg`
+  template follow. Release-age exemptions pinned to a version move to
+  `@5.1.5` / `@9.0.0` / `@0.8.7`.
+- zudo-doc 8.1.1's math-off `katex-loader` stub plugin now appears in the root
+  preset's plugin list; `root-zfb-config.test.ts` expects it.
+- `authored-class-coverage.wind-explain.json` is regenerated. Only
+  `compilerVersion` and the Wind config hash change; all 343 explanations
+  are unchanged.
+- The published `@takazudo/zudo-sg@0.6.0` still declares `^8.1.0`, so the
+  new peers need a release before the template's `^0.6.0` engine pin
+  resolves cleanly against zudo-doc 9.
+
 ## zudo-doc 8.1.0 and ZFB family 5.1.2 adopted — 2026-10-25
 
 `@takazudo/zudo-doc` and `@takazudo/zudo-doc-history-server` moved from 8.0.0

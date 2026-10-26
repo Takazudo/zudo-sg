@@ -132,11 +132,11 @@ output as drift and never writes it.
 ## Installation
 
 ```sh
-pnpm add @takazudo/zudo-sg@latest @takazudo/zfb@^5.1.2 @takazudo/zfb-md-wasm@^5.1.2 @takazudo/zfb-runtime@^5.1.2 @takazudo/zudo-doc@^8.1.0 @takazudo/zdtp@^0.8.6 diff@^8.0.4 katex@^0.19.0 zod@^4.3.6
+pnpm add @takazudo/zudo-sg@latest @takazudo/zfb@^5.1.5 @takazudo/zfb-md-wasm@^5.1.5 @takazudo/zfb-runtime@^5.1.5 @takazudo/zudo-doc@^9.0.0 @takazudo/zdtp@^0.8.7 diff@^8.0.4 katex@^0.19.0 zod@^4.3.6
 ```
 
-The engine peers are `@takazudo/zfb ^5.1.2`, `@takazudo/zudo-doc ^8.1.0`,
-and `@takazudo/zdtp ^0.8.6`. zfb 5 and zudo-doc 8 require Node.js 24, and
+The engine peers are `@takazudo/zfb ^5.1.5`, `@takazudo/zudo-doc ^9.0.0`,
+and `@takazudo/zdtp ^0.8.7`. zfb 5 and zudo-doc 9 require Node.js 24, and
 zudo-doc requires KaTeX `^0.18.2 || ^0.19.0`. The former zudo-doc 6.2.0 /
 Node.js 22 option was retired with zfb 5. `@takazudo/zdtp` is required:
 the injected `/tokens` route loads its dashboard through the engine-owned
@@ -217,7 +217,7 @@ control. Any non-empty host navigation stays authoritative; set
 `chromeDefaults: false` in the second argument to keep an intentionally empty
 header. The engine requires `packageOwnedRoutes: true` on the host (its
 routes import zudo-doc's route-context virtual modules). On the engine's zfb
-peer floor (5.1.2) nothing else is needed: `zfb dev` seeds its island
+peer floor (5.1.5) nothing else is needed: `zfb dev` seeds its island
 scanner from the injected routes. `@takazudo/zudo-sg/islands` remains
 exported as a side-effect module that statically imports every engine
 island — importing it once from a host `pages/` file is optional and

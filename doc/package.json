@@ -21,10 +21,10 @@
     "setup:doc-skill:both": "bash scripts/setup-doc-skill.sh --target both"
   },
   "dependencies": {
-    "@takazudo/zfb": "5.1.2",
-    "@takazudo/zfb-runtime": "5.1.2",
-    "@takazudo/zfb-md-wasm": "5.1.2",
-    "@takazudo/zudo-doc": "8.1.0",
+    "@takazudo/zfb": "5.1.5",
+    "@takazudo/zfb-runtime": "5.1.5",
+    "@takazudo/zfb-md-wasm": "5.1.5",
+    "@takazudo/zudo-doc": "9.0.0",
     "zod": "^4.6.7",
     "katex": "^0.19.0",
     "diff": "^8.0.3"

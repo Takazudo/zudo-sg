@@ -23,6 +23,8 @@ describe("root zfb integration contract", () => {
       "@takazudo/zudo-doc/plugins/theme-packs",
       "@takazudo/zudo-doc/plugins/llms-txt",
       "@takazudo/zudo-doc/plugins/img-src-check",
+      // math is off, so the preset swaps @takazudo/zudo-doc/katex-loader for a stub.
+      "@takazudo/zudo-doc/plugins/katex-loader",
       // bundleZdtp keeps the throwing zdtp-loader stub out of the host build
       // even though designTokenPanel is off (the preview panel needs the loader).
       "./pages/lib/_doc-history-meta.mjs",
