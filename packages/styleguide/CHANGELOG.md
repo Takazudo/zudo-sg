@@ -4,6 +4,24 @@ All notable changes to `@takazudo/zudo-sg` are documented in this file.
 
 The format is based on Keep a Changelog, and release notes are generated from the changelog MDX pages.
 
+## [0.7.0] - 2026-10-27
+
+This release moves the engine onto zudo-doc 9. The engine's public API is
+unchanged. Hosts upgrade by moving their zudo-doc, zfb and zdtp installs to the
+new peer floors.
+
+### Breaking Changes
+
+- The `@takazudo/zudo-doc` peer is now ^9.0.0 (was ^8.1.0). zudo-doc 9 makes
+  Graphite the default theme pack when `themePack` is omitted; hosts that want
+  to keep the Classic look set `themePack: "default"` explicitly.
+- The `@takazudo/zfb` peer is now ^5.1.5 (was ^5.1.2) and the `@takazudo/zdtp`
+  peer is now ^0.8.7 (was ^0.8.6).
+
+### Other Changes
+
+- The README install line and peer list follow the new floors.
+
 ## [0.6.0] - 2026-10-25
 
 This release moves the engine onto the zfb 5 and zudo-doc 8 toolchain. The
