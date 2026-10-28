@@ -98,9 +98,9 @@ inside detail-page iframes.
 
 Module-mode stories use zfb's zudo-react runtime. Hosts using another
 framework can use descriptor mode with an external preview document; see the
-ADR's "Framework scope" decision. The `/tokens` dashboard is the one renderer
-exception: its opaque adapter mounts zdtp's Preact widget internally, with
-Preact installed as an engine dependency rather than a host peer.
+ADR's "Framework scope" decision. The `/tokens` dashboard mounts zdtp's
+zudo-react widget through an engine-owned adapter, sharing the host's
+`@takazudo/zfb` runtime; neither the engine nor the host depends on Preact.
 
 ## Quick start with the initializer
 
@@ -132,15 +132,16 @@ output as drift and never writes it.
 ## Installation
 
 ```sh
-pnpm add @takazudo/zudo-sg@latest @takazudo/zfb@^5.1.5 @takazudo/zfb-md-wasm@^5.1.5 @takazudo/zfb-runtime@^5.1.5 @takazudo/zudo-doc@^9.0.0 @takazudo/zdtp@^0.8.7 diff@^8.0.4 katex@^0.19.0 zod@^4.3.6
+pnpm add @takazudo/zudo-sg@latest @takazudo/zfb@^5.1.5 @takazudo/zfb-md-wasm@^5.1.5 @takazudo/zfb-runtime@^5.1.5 @takazudo/zudo-doc@^9.1.0 @takazudo/zdtp@^0.9.0 diff@^8.0.4 katex@^0.19.0 zod@^4.3.6
 ```
 
-The engine peers are `@takazudo/zfb ^5.1.5`, `@takazudo/zudo-doc ^9.0.0`,
-and `@takazudo/zdtp ^0.8.7`. zfb 5 and zudo-doc 9 require Node.js 24, and
+The engine peers are `@takazudo/zfb ^5.1.5`, `@takazudo/zudo-doc ^9.1.0`,
+and `@takazudo/zdtp ^0.9.0`. zfb 5 and zudo-doc 9 require Node.js 24, and
 zudo-doc requires KaTeX `^0.18.2 || ^0.19.0`. The former zudo-doc 6.2.0 /
 Node.js 22 option was retired with zfb 5. `@takazudo/zdtp` is required:
 the injected `/tokens` route loads its dashboard through the engine-owned
-opaque Preact adapter. Preact is a regular engine dependency, not a host peer. The
+adapter, which calls zdtp's `mountTokenDashboard` on the host's
+zudo-react runtime. The engine has no Preact dependency. The
 `@takazudo/zfb-md-wasm`, `@takazudo/zfb-runtime`, `diff`, `katex`, and `zod`
 entries are prerequisites inherited from zfb/zudo-doc; zudo-doc's published
 route dist imports `diff` and `katex` even when those features are disabled
@@ -325,7 +326,7 @@ The public leaf modules `@takazudo/zudo-sg/preview/external-runtime` and
 validators. They can be imported in Node/SSR without a browser. React,
 ReactDOM, fixture loaders and component closures belong only in the host's
 separately built same-origin preview document. The engine shell and catalog
-stay zudo-react; the opaque Preact/zdtp adapter remains independent.
+stay zudo-react, and so does the zdtp dashboard adapter.
 
 These contracts are additive. `preview/messages` remains import-free and
 continues accepting legacy messages with no `v` and current `v: 1` messages.

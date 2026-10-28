@@ -1,5 +1,53 @@
 # Dependency audit register
 
+## zudo-doc 9.1.0 and zdtp 0.9.0 adopted — 2026-10-28
+
+`@takazudo/zudo-doc` and `@takazudo/zudo-doc-history-server` moved from 9.0.0
+to 9.1.0. `@takazudo/zdtp` moved from 0.8.7 to 0.9.0 (#1034).
+
+### Upstream impact
+
+- zudo-doc 9.1.0 adds the sidebar branch-focus frame UI, fixes the
+  page-loading scrim, and refreshes dependency ranges. HtmlPreview hover
+  contrast is improved. Its `zdtp` peer now also accepts `^0.9.0`.
+- `categoryMatch` now matches only the whole top-level slug segment. Every
+  header-nav `categoryMatch` in `src/config/settings.ts` (`overview`,
+  `architecture`, `components`) is already a whole segment, so nothing relied
+  on prefix matching.
+- history-server 9.1.0 has no changes. The published `tsconfig.base.json` is
+  unchanged from 9.0.0. `create-zudo-doc` 9.1.0 changes only the
+  `claudeSkillsWriting` template SKILL.md, which `doc/` does not use.
+- Engine peer floor moves to `@takazudo/zudo-doc ^9.1.0`.
+- zdtp 0.9.0 drops Preact (breaking upstream). The panel and the static
+  dashboard render with zfb's zudo-react runtime; `TokenDashboard` is a
+  zudo-react component and `@takazudo/zdtp/dashboard/client`'s
+  `mountTokenDashboard` mounts through zudo-react, adds one
+  `display: contents` wrapper and throws on a non-empty host. Its new optional
+  peer is `@takazudo/zfb ^5.1.2`. The CHANGELOG calls the runtime a "bundled
+  copy", but the dist bare-imports `@takazudo/zfb/zudo-react*`, so zdtp shares
+  the host's zfb. It also fixes generic-tab undo leaving a stale `:root` value.
+
+### Consumer-side follow-through (zdtp 0.9.0)
+
+- All zdtp pins move to 0.9.0, the engine zdtp peer to `^0.9.0`, and the
+  `create-zudo-sg` template release-age exemption to `@takazudo/zdtp@0.9.0`.
+- The engine dashboard adapter calls `mountTokenDashboard` and returns the
+  handle's `dispose()`; the lazy import boundary and the empty mount host in
+  `token-dashboard-mount.tsx` are unchanged.
+- REMOVE: `preact` from `packages/styleguide` `dependencies` — the adapter was
+  its only import. The root lockfile now resolves neither `preact` nor
+  `preact-render-to-string`, and no workspace manifest declares either.
+- `verify:styleguide-install` replaces the shared-Preact and single-renderer
+  proofs: the packed host has no `preact` in its graph or lockfile, zdtp, the
+  engine and the host resolve one `@takazudo/zfb` (realpath), and a bundle
+  probe of the adapter plus zdtp's client finds no Preact input.
+- **Release required before the next `create-zudo-sg` release.** The
+  published `@takazudo/zudo-sg@0.7.0` still declares zdtp `^0.8.7` and mounts
+  the dashboard through Preact, so the template's `^0.7.0` engine pin must not
+  ship alongside zdtp 0.9.0 until the engine is released with these peer and
+  dependency changes (a breaking peer move, so 0.8.0). `verify:create-zudo-sg`
+  installs the locally packed engine, so CI does not catch the gap.
+
 ## zudo-doc 9.0.0, ZFB family 5.1.5 and zdtp 0.8.7 adopted — 2026-10-27
 
 `@takazudo/zudo-doc` and `@takazudo/zudo-doc-history-server` moved from 8.1.0

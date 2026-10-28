@@ -5,7 +5,7 @@ Documentation site built with [zudo-doc](https://github.com/zudolab/zudo-doc) �
 ## Tech Stack
 
 - **zfb** — documentation build framework. The `@takazudo/zfb*` family is pinned to the stable
-  `5.1.5` release alongside zudo-doc `9.0.0` (Node 24). The engine peers are plain
+  `5.1.5` release alongside zudo-doc `9.1.0` (Node 24). The engine peers are plain
   `^<root pin>` ranges; the doc 6 / Node 22 window and its `fixtures/descriptor-host`
   compat lane were retired with zfb 5 (ADR §13, 2026-10-24).
 - **MDX** — content format
@@ -185,8 +185,10 @@ root `zfb.config.ts` adds doc-chrome roles and composes engine `sg-*` roles and
 manifests through `withZudoSg()`. Component replacements use unlayered authored
 `zc-*` rules so they can override utilities emitted before authored CSS.
 
-Zdtp stays Preact inside the engine-owned opaque dashboard adapter. The root
-host and demo-ui use zudo-react and do not import that renderer directly.
+Since zdtp 0.9.0 the engine-owned dashboard adapter mounts zdtp's dashboard
+through `mountTokenDashboard` on the host's zudo-react runtime; no package in
+the repo depends on Preact for it. The root host and demo-ui do not import the
+adapter directly.
 
 ## Enabled Features
 

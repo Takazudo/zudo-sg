@@ -1,8 +1,7 @@
-// D1: the engine owns this opaque Preact renderer boundary.
-import { h, render } from "preact";
-import { TokenDashboard, type TokenDashboardProps } from "@takazudo/zdtp/dashboard";
+// D1: the engine owns this opaque dashboard boundary. zdtp >= 0.9 mounts through the host's zudo-react runtime and throws on a non-empty host.
+import { mountTokenDashboard, type TokenDashboardProps } from "@takazudo/zdtp/dashboard/client";
 
 export function mountDashboard(host: HTMLElement, props: TokenDashboardProps): () => void {
-  render(h(TokenDashboard, props), host);
-  return () => render(null, host);
+  const handle = mountTokenDashboard(host, props);
+  return () => handle.dispose();
 }
