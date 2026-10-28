@@ -4,10 +4,11 @@ Status: **Accepted** (epic #648, decision sub-task #650, 2026-09-13), with
 framework-migration amendments recorded below. Model: zudo-doc's package-owned
 route seam (`$HOME/repos/myoss/zudo-doc/packages/zudo-doc/docs/adr/route-injection-seam.md`).
 Current toolchain pins: `@takazudo/zfb` **5.1.5**, `@takazudo/zudo-doc`
-**9.1.0**, `@takazudo/zdtp` **0.8.7**, pnpm 11.5.2, Node 24. The engine's
+**9.1.0**, `@takazudo/zdtp` **0.9.0**, pnpm 11.5.2, Node 24. The engine's
 peer ranges are `^5.1.5` / `^9.1.0` (§13 window retired 2026-10-24) /
-`^0.8.7`; Preact is a regular engine
-dependency for the opaque zdtp dashboard adapter, not a host peer.
+`^0.9.0`. Since zdtp 0.9.0 the dashboard adapter mounts through the host's
+zudo-react runtime and the engine has no Preact dependency (2026-10-28
+amendment to decision 10).
 
 The original sections and spike report retain the implementation history from
 the earlier zfb and zudo-doc releases. The 2026-10-11 migration amendments
@@ -337,6 +338,11 @@ The `/tokens` route still mounts zdtp through an opaque, dynamically loaded
 Preact adapter inside a zudo-react island. The engine owns that Preact runtime
 as a regular dependency; it is not a host peer.
 
+**Amendment (2026-10-28, #1034).** zdtp 0.9.0 is Preact-free: the `/tokens`
+adapter still loads lazily inside the zudo-react island, but now calls
+`mountTokenDashboard` from `@takazudo/zdtp/dashboard/client`, which mounts on
+the host's zudo-react runtime. See the decision 10 amendment of the same date.
+
 ### 9. Composition API
 
 `import { zudoSg, withZudoSg } from "@takazudo/zudo-sg/config"` (pure data,
@@ -454,7 +460,7 @@ process itself still declares `>=22`.
 
 **Migration amendment (2026-10-11, zfb 4 migration S3a/E3).** Current
 required engine peers are `@takazudo/zfb ^5.1.5`, `@takazudo/zudo-doc
-^9.1.0`, and `@takazudo/zdtp ^0.8.7`. The engine has no Preact peer. It
+^9.1.0`, and `@takazudo/zdtp ^0.9.0`. The engine has no Preact peer. It
 declares `preact ^10.29.1` as a regular dependency solely for the opaque
 dashboard adapter that mounts zdtp inside the always-injected `/tokens`
 route; zdtp's compatible range resolves to the same runtime. Hosts render
@@ -462,6 +468,19 @@ components and stories with zudo-react and do not install a renderer directly.
 The host also retains zfb's matching runtime and Markdown WASM packages, plus
 `diff`, `katex`, and `zod` required by the published zudo-doc/zfb route graph;
 the package README records the fixture-equivalent install command.
+
+**Amendment (2026-10-28, #1034): zdtp 0.9.0 drops Preact.** The zdtp peer
+floor is `^0.9.0`, and the engine no longer declares `preact` in any
+dependency field. `TokenDashboard` is now a zudo-react component, and the
+engine adapter calls `mountTokenDashboard(host, props)` from
+`@takazudo/zdtp/dashboard/client`, disposing the returned handle on island
+teardown. zdtp bare-imports `@takazudo/zfb/zudo-react*` through its optional
+`@takazudo/zfb ^5.1.2` peer, so it shares the host's zfb runtime.
+`verify:styleguide-install` now proves that contract on the packed host: no
+`preact` in the resolved graph or lockfile, and zdtp, the engine, and the host
+resolve one `@takazudo/zfb` package (realpath); a bundle probe of the adapter
+and zdtp client confirms zero Preact inputs and one zudo-react source. The
+Preact sentences in the paragraph above are historical.
 
 **Policy amendment (2026-10-13): peer floors follow latest.** This replaces
 the "a floor is raised only when an upstream peer forces it" rule below, and
@@ -474,7 +493,7 @@ is the tested version and not an older, untested minimum. The cost is that
 adopters must upgrade the toolchain together with the engine. Under this
 policy the floors are zfb `^5.1.5`, zudo-doc `^9.1.0` (the §13 window was
 retired on 2026-10-24), and
-zdtp `^0.8.7`. The amendments below are historical.
+zdtp `^0.9.0`. The amendments below are historical.
 
 **Enforcement (2026-10-13, #1004).** `pnpm check:peer-floors`
 (`scripts/check-first-party-peer-floors.mjs`) runs first in `pnpm check`, so
@@ -984,6 +1003,8 @@ surfaces below.
   component. The engine's client island dynamically loads the opaque Preact
   adapter; the server and zudo-react renderer never receive a Preact node.
   Preact remains a regular engine dependency for this adapter, not a host peer.
+  (Superseded 2026-10-28, #1034: zdtp 0.9.0 mounts on zudo-react and the
+  engine no longer depends on Preact.)
 - **The engine package publishes `wind.json`.** `withZudoSg()` registers this
   manifest with the composed host `wind` config, replacing the earlier
   `safelist.css` export and standalone utility stylesheet. Engine-owned classes

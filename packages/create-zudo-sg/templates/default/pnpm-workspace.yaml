@@ -2,7 +2,7 @@ packages: []
 allowBuilds:
   esbuild: true
 minimumReleaseAgeExclude:
-  - "@takazudo/zdtp@0.8.7"
+  - "@takazudo/zdtp@0.9.0"
   - "@takazudo/zfb-darwin-arm64@5.1.5"
   - "@takazudo/zfb-darwin-x64@5.1.5"
   - "@takazudo/zfb-linux-arm64-gnu@5.1.5"
