@@ -1,5 +1,24 @@
 # Dependency audit register
 
+## zudo-doc 9.1.0 adopted — 2026-10-28
+
+`@takazudo/zudo-doc` and `@takazudo/zudo-doc-history-server` moved from 9.0.0
+to 9.1.0. `@takazudo/zdtp` (0.9.0) is handled in the follow-up sub-issue.
+
+### Upstream impact
+
+- zudo-doc 9.1.0 adds the sidebar branch-focus frame UI, fixes the
+  page-loading scrim, and refreshes dependency ranges. HtmlPreview hover
+  contrast is improved. Its `zdtp` peer now also accepts `^0.9.0`.
+- `categoryMatch` now matches only the whole top-level slug segment. Every
+  header-nav `categoryMatch` in `src/config/settings.ts` (`overview`,
+  `architecture`, `components`) is already a whole segment, so nothing relied
+  on prefix matching.
+- history-server 9.1.0 has no changes. The published `tsconfig.base.json` is
+  unchanged from 9.0.0. `create-zudo-doc` 9.1.0 changes only the
+  `claudeSkillsWriting` template SKILL.md, which `doc/` does not use.
+- Engine peer floor moves to `@takazudo/zudo-doc ^9.1.0`.
+
 ## zudo-doc 9.0.0, ZFB family 5.1.5 and zdtp 0.8.7 adopted — 2026-10-27
 
 `@takazudo/zudo-doc` and `@takazudo/zudo-doc-history-server` moved from 8.1.0
