@@ -4,6 +4,29 @@ All notable changes to `@takazudo/zudo-sg` are documented in this file.
 
 The format is based on Keep a Changelog, and release notes are generated from the changelog MDX pages.
 
+## [0.8.0] - 2026-10-28
+
+This release moves the engine onto zdtp 0.9, which renders with zfb's
+zudo-react runtime instead of Preact. The engine's public API is unchanged.
+Hosts upgrade by moving their zdtp and zudo-doc installs to the new peer
+floors.
+
+### Breaking Changes
+
+- The `@takazudo/zdtp` peer is now ^0.9.0 (was ^0.8.7). zdtp 0.8 hosts are no
+  longer supported.
+- The `@takazudo/zudo-doc` peer is now ^9.1.0 (was ^9.0.0).
+
+### Other Changes
+
+- The token dashboard adapter mounts through zdtp's `mountTokenDashboard` on
+  the host's zudo-react runtime. The engine no longer depends on `preact`, so
+  a host's install graph needs no Preact at all.
+- The packed-install verifier proves the host graph is Preact-free and that
+  the host, the engine and zdtp share one `@takazudo/zfb`. Its Chromium
+  fallback also finds newer Playwright builds unpacked to `chrome-linux64/`.
+- The README install line and peer list follow the new floors.
+
 ## [0.7.0] - 2026-10-27
 
 This release moves the engine onto zudo-doc 9. The engine's public API is
