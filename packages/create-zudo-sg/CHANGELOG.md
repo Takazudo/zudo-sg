@@ -4,6 +4,17 @@ All notable changes to `create-zudo-sg` are documented in this file.
 
 The format is based on Keep a Changelog.
 
+## [0.2.8] - 2026-10-28
+
+### Changed
+
+- New projects install zdtp 0.9.0 (was 0.8.7), which renders with zfb's
+  zudo-react runtime instead of Preact, and zudo-doc 9.1.0 (was 9.0.0), the
+  versions the engine is tested against.
+- Update the starter engine range to `@takazudo/zudo-sg ^0.8.0`, whose zdtp
+  and zudo-doc peer floors match those pins. New projects no longer install
+  Preact.
+
 ## [0.2.7] - 2026-10-27
 
 ### Changed
