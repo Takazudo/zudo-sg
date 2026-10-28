@@ -35,6 +35,6 @@
     "typescript": "npm:@typescript/typescript6@^6.0.2",
     "vite": "7.3.5",
     "vitest": "4.1.11",
-    "postcss": "^8.5.28"
+    "postcss": "^8.5.31"
   }
 }
