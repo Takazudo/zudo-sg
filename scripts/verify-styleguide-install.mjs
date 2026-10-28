@@ -346,7 +346,7 @@ export async function assertNoPreactAndSharedZfb(hostDir) {
   assert(engineZfb === hostZfb, `engine resolves a different @takazudo/zfb than the host: ${engineZfb} vs ${hostZfb}`);
   assert(zdtpZfb === hostZfb, `zdtp resolves a different @takazudo/zfb than the host: ${zdtpZfb} vs ${hostZfb}`);
   console.log(`OK — no Preact in the packed host graph or lockfile; host, engine and zdtp share one @takazudo/zfb (${hostZfb}).`);
-  return { adapterPath, zfbDir: hostZfb };
+  return hostZfb;
 }
 
 export async function assertSingleZudoReactRuntime(hostDir, zfbDir) {
@@ -770,7 +770,7 @@ async function main() {
     console.log("Installing (tarball + exact @takazudo/zfb / @takazudo/zudo-doc pins)");
     await run("corepack", ["pnpm", "install"], hostDir);
     await assertForeignPackage(hostDir);
-    const runtimeProof = await assertNoPreactAndSharedZfb(hostDir);
+    const sharedZfbDir = await assertNoPreactAndSharedZfb(hostDir);
 
     console.log("Removing the fixture registry before zudo-sg gen-registry (bootstrap proof)");
     await rm(path.join(hostDir, "src/styleguide/sg-registry.ts"), { force: true });
@@ -879,7 +879,7 @@ async function main() {
     await assertHeadAssets(hostDir);
 
     await assertProductionCss(hostDir);
-    await assertSingleZudoReactRuntime(hostDir, runtimeProof.zfbDir);
+    await assertSingleZudoReactRuntime(hostDir, sharedZfbDir);
 
     const buildIslandsManifestFiles = (await readdir(path.join(hostDir, "dist/assets"))).filter((f) => /^islands-.*\.js$/.test(f));
     assert(buildIslandsManifestFiles.length > 0, "no dist/assets/islands-*.js manifest found");
