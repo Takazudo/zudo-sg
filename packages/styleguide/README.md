@@ -140,7 +140,7 @@ and `@takazudo/zdtp ^0.9.0`. zfb 5 and zudo-doc 9 require Node.js 24, and
 zudo-doc requires KaTeX `^0.18.2 || ^0.19.0`. The former zudo-doc 6.2.0 /
 Node.js 22 option was retired with zfb 5. `@takazudo/zdtp` is required:
 the injected `/tokens` route loads its dashboard through the engine-owned
-engine-owned adapter, which calls zdtp's `mountTokenDashboard` on the host's
+adapter, which calls zdtp's `mountTokenDashboard` on the host's
 zudo-react runtime. The engine has no Preact dependency. The
 `@takazudo/zfb-md-wasm`, `@takazudo/zfb-runtime`, `diff`, `katex`, and `zod`
 entries are prerequisites inherited from zfb/zudo-doc; zudo-doc's published
