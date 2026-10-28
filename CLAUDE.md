@@ -5,7 +5,7 @@ Documentation site built with [zudo-doc](https://github.com/zudolab/zudo-doc) �
 ## Tech Stack
 
 - **zfb** — documentation build framework. The `@takazudo/zfb*` family is pinned to the stable
-  `5.1.5` release alongside zudo-doc `9.0.0` (Node 24). The engine peers are plain
+  `5.1.5` release alongside zudo-doc `9.1.0` (Node 24). The engine peers are plain
   `^<root pin>` ranges; the doc 6 / Node 22 window and its `fixtures/descriptor-host`
   compat lane were retired with zfb 5 (ADR §13, 2026-10-24).
 - **MDX** — content format
