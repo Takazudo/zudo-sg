@@ -4,21 +4,6 @@ All notable changes to `@takazudo/zudo-sg` are documented in this file.
 
 The format is based on Keep a Changelog, and release notes are generated from the changelog MDX pages.
 
-## [Unreleased]
-
-### Breaking Changes
-
-- The `@takazudo/zdtp` peer is now ^0.9.0 (was ^0.8.7). zdtp 0.9.0 renders
-  with zfb's zudo-react runtime instead of Preact, and the `/tokens` dashboard
-  adapter now mounts it with `mountTokenDashboard` from
-  `@takazudo/zdtp/dashboard/client`.
-- The `@takazudo/zudo-doc` peer is now ^9.1.0 (was ^9.0.0).
-
-### Other Changes
-
-- The engine no longer depends on Preact. Hosts install nothing new: zdtp's
-  dashboard shares the host's `@takazudo/zfb` runtime.
-
 ## [0.7.0] - 2026-10-27
 
 This release moves the engine onto zudo-doc 9. The engine's public API is
