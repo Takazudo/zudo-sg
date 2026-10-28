@@ -1,9 +1,9 @@
 # Dependency audit register
 
-## zudo-doc 9.1.0 adopted — 2026-10-28
+## zudo-doc 9.1.0 and zdtp 0.9.0 adopted — 2026-10-28
 
 `@takazudo/zudo-doc` and `@takazudo/zudo-doc-history-server` moved from 9.0.0
-to 9.1.0. `@takazudo/zdtp` (0.9.0) is handled in the follow-up sub-issue.
+to 9.1.0. `@takazudo/zdtp` moved from 0.8.7 to 0.9.0 (#1034).
 
 ### Upstream impact
 
@@ -18,6 +18,29 @@ to 9.1.0. `@takazudo/zdtp` (0.9.0) is handled in the follow-up sub-issue.
   unchanged from 9.0.0. `create-zudo-doc` 9.1.0 changes only the
   `claudeSkillsWriting` template SKILL.md, which `doc/` does not use.
 - Engine peer floor moves to `@takazudo/zudo-doc ^9.1.0`.
+- zdtp 0.9.0 drops Preact (breaking upstream). The panel and the static
+  dashboard render with zfb's zudo-react runtime; `TokenDashboard` is a
+  zudo-react component and `@takazudo/zdtp/dashboard/client`'s
+  `mountTokenDashboard` mounts through zudo-react, adds one
+  `display: contents` wrapper and throws on a non-empty host. Its new optional
+  peer is `@takazudo/zfb ^5.1.2`. The CHANGELOG calls the runtime a "bundled
+  copy", but the dist bare-imports `@takazudo/zfb/zudo-react*`, so zdtp shares
+  the host's zfb. It also fixes generic-tab undo leaving a stale `:root` value.
+
+### Consumer-side follow-through (zdtp 0.9.0)
+
+- All zdtp pins move to 0.9.0, the engine zdtp peer to `^0.9.0`, and the
+  `create-zudo-sg` template release-age exemption to `@takazudo/zdtp@0.9.0`.
+- The engine dashboard adapter calls `mountTokenDashboard` and returns the
+  handle's `dispose()`; the lazy import boundary and the empty mount host in
+  `token-dashboard-mount.tsx` are unchanged.
+- REMOVE: `preact` from `packages/styleguide` `dependencies` — the adapter was
+  its only import. The root lockfile no longer resolves Preact for zdtp; the
+  remaining `preact-render-to-string` declarations are unrelated to zdtp.
+- `verify:styleguide-install` replaces the shared-Preact and single-renderer
+  proofs: the packed host has no `preact` in its graph or lockfile, zdtp, the
+  engine and the host resolve one `@takazudo/zfb` (realpath), and a bundle
+  probe of the adapter plus zdtp's client finds no Preact input.
 
 ## zudo-doc 9.0.0, ZFB family 5.1.5 and zdtp 0.8.7 adopted — 2026-10-27
 

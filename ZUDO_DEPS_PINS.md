@@ -7,7 +7,8 @@ gitHead `f264a9331025cc7a94ce1bb4def1c5d8b8ffaf29`). The only `templates/`
 change is `features/claudeSkillsWriting/files/.claude/skills/zudo-doc-writing/SKILL.md`;
 `doc/` does not use that feature, so nothing is copied. `dist/scaffold.js`
 only moves pins: zudo-doc and history-server go to `^9.1.0`, `zdtp` to 0.9.0
-(adopted in the follow-up sub-issue), `wrangler` to 4.154.0 and `fs-extra` to
+(an optional feature `doc/` does not enable; the workspace adopts 0.9.0 in
+#1034), `wrangler` to 4.154.0 and `fs-extra` to
 `^11.4.1`. The three entries below advance to 9.1.0. `doc/package.json`
 adopts the zudo-doc pin. The published `tsconfig.base.json` is byte-identical
 to 9.0.0, so the tsconfig snapshot reconciliation is a no-op. Only its

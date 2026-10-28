@@ -18,8 +18,11 @@ function findFallbackChromiumExecutable(browsersPath) {
     .map((entry) => ({ name: entry.name, revision: Number(entry.name.split("-")[1]) }))
     .sort((a, b) => b.revision - a.revision);
   for (const candidate of candidates) {
-    const exe = path.join(browsersPath, candidate.name, "chrome-linux", "chrome");
-    if (existsSync(exe)) return exe;
+    // Newer Playwright Chromium builds unpack to chrome-linux64/ instead of chrome-linux/.
+    for (const dir of ["chrome-linux64", "chrome-linux"]) {
+      const exe = path.join(browsersPath, candidate.name, dir, "chrome");
+      if (existsSync(exe)) return exe;
+    }
   }
   return null;
 }

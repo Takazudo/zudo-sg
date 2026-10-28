@@ -201,9 +201,9 @@ Keep these dependencies in a host that adopts the engine:
   instead of zudo-doc's throwing stub (zudolab/zudo-doc#4261). Do not drop it.
 - `diff` and `katex` are required by the published zudo-doc route dist that
   the host loads, even when the corresponding optional features are disabled.
-- The engine owns the Preact dependency used by the opaque zdtp dashboard
-  adapter. Host components and stories use zudo-react and do not add a direct
-  `preact` dependency.
+- The engine's zdtp dashboard adapter mounts through the host's zudo-react
+  runtime (zdtp 0.9.0 is Preact-free). Host components and stories use
+  zudo-react and do not add a `preact` dependency.
 
 Keep the `tokens` block in `zudo-sg.config.mjs` as well. The initializer's
 configuration is typed with `tokens` required, and `gen-token-manifest` needs

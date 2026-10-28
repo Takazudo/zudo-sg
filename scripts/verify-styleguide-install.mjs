@@ -315,7 +315,10 @@ export async function assertForeignPackage(hostDir) {
   assert(installed.startsWith(modules), `installed engine resolves outside the scratch node_modules: ${installed}`);
 }
 
-export async function assertSharedPreact(hostDir) {
+// zdtp >= 0.9 is Preact-free and mounts through the host's zudo-react runtime
+// (`@takazudo/zfb/zudo-react`, zdtp's optional peer), so the packed host must
+// carry no Preact at all and exactly one zfb package.
+export async function assertNoPreactAndSharedZfb(hostDir) {
   const manifest = JSON.parse(await read(hostDir, "package.json"));
   const directDependencies = {
     ...manifest.dependencies,
@@ -324,36 +327,34 @@ export async function assertSharedPreact(hostDir) {
   };
   assert(!Object.hasOwn(directDependencies, "preact"), "fixture host declares a direct preact dependency");
 
+  const lockfile = await read(hostDir, "pnpm-lock.yaml");
+  const lockPreact = [...lockfile.matchAll(/^\s+'?preact@([^:'\r\n]+)'?:/gmu)].map((match) => match[1]);
+  assert(lockPreact.length === 0, `packed fixture lockfile resolves Preact: ${[...new Set(lockPreact)].join(", ")}`);
+  const virtualStore = path.join(hostDir, "node_modules/.pnpm");
+  const storePreact = (await readdir(virtualStore)).filter((entry) => entry.startsWith("preact@"));
+  assert(storePreact.length === 0, `packed fixture installed Preact: ${storePreact.join(", ")}`);
+
   const engineDir = await realpath(path.join(hostDir, "node_modules/@takazudo/zudo-sg"));
   const adapterPath = path.join(engineDir, "dist/token-dashboard/token-dashboard-adapter.js");
-  assert(existsSync(adapterPath), "packed engine is missing its Preact dashboard adapter");
-  const adapterPreact = await realpath(createRequire(adapterPath).resolve("preact"));
+  assert(existsSync(adapterPath), "packed engine is missing its dashboard adapter");
   const hostRequire = createRequire(path.join(hostDir, "package.json"));
-  const dashboardEntry = hostRequire.resolve("@takazudo/zdtp/dashboard");
-  const dashboardPreact = await realpath(createRequire(dashboardEntry).resolve("preact"));
-  assert(
-    adapterPreact === dashboardPreact,
-    `engine adapter and zdtp resolve different Preact copies: ${adapterPreact} vs ${dashboardPreact}`,
-  );
-
-  const lockfile = await read(hostDir, "pnpm-lock.yaml");
-  const lockVersions = new Set(
-    [...lockfile.matchAll(/^\s{2}preact@([^:\r\n]+):/gmu)].map((match) => match[1]),
-  );
-  assert(
-    lockVersions.size === 1,
-    `packed fixture lockfile has ${lockVersions.size} Preact resolutions: ${[...lockVersions].join(", ")}`,
-  );
-  console.log(`OK — engine adapter and zdtp resolve one Preact package (${adapterPreact}) and the lockfile has one resolution.`);
-  return { adapterPath };
+  const dashboardClient = hostRequire.resolve("@takazudo/zdtp/dashboard/client");
+  const zfbFrom = async (from) => path.dirname(await realpath(createRequire(from).resolve("@takazudo/zfb/package.json")));
+  const hostZfb = await zfbFrom(path.join(hostDir, "package.json"));
+  const engineZfb = await zfbFrom(adapterPath);
+  const zdtpZfb = await zfbFrom(dashboardClient);
+  assert(engineZfb === hostZfb, `engine resolves a different @takazudo/zfb than the host: ${engineZfb} vs ${hostZfb}`);
+  assert(zdtpZfb === hostZfb, `zdtp resolves a different @takazudo/zfb than the host: ${zdtpZfb} vs ${hostZfb}`);
+  console.log(`OK — no Preact in the packed host graph or lockfile; host, engine and zdtp share one @takazudo/zfb (${hostZfb}).`);
+  return hostZfb;
 }
 
-export async function assertSingleBundledRenderer(hostDir, adapterPath) {
-  const probePath = path.join(hostDir, ".f1-preact-renderer-graph.mjs");
+export async function assertSingleZudoReactRuntime(hostDir, zfbDir) {
+  const probePath = path.join(hostDir, ".zdtp-renderer-graph.mjs");
   const probeSource = [
     'import { mountDashboard } from "./node_modules/@takazudo/zudo-sg/dist/token-dashboard/token-dashboard-adapter.js";',
-    'import { TokenDashboard } from "@takazudo/zdtp/dashboard";',
-    "export { mountDashboard, TokenDashboard };",
+    'import { mountTokenDashboard } from "@takazudo/zdtp/dashboard/client";',
+    "export { mountDashboard, mountTokenDashboard };",
     "",
   ].join("\n");
   await writeFile(probePath, probeSource);
@@ -372,25 +373,19 @@ export async function assertSingleBundledRenderer(hostDir, adapterPath) {
       format: "esm",
       target: "es2022",
     });
-    const rendererInputs = Object.keys(result.metafile.inputs).filter((input) => {
-      const parts = input.replaceAll("\\", "/").split("/");
-      return (
-        parts.includes("preact") &&
-        parts.at(-2) === "dist" &&
-        ["preact.js", "preact.module.js", "preact.mjs"].includes(parts.at(-1))
+    const inputs = Object.keys(result.metafile.inputs).map((input) => input.replaceAll("\\", "/"));
+    const preactInputs = inputs.filter((input) => input.split("/").includes("preact"));
+    assert(preactInputs.length === 0, `packed adapter/zdtp bundle contains Preact inputs: ${preactInputs.join(", ")}`);
+    const runtimeInputs = inputs.filter((input) => /\/@takazudo\/zfb\/dist\/zudo-react\//u.test(input));
+    assert(runtimeInputs.length > 0, "packed adapter/zdtp bundle contains no zudo-react runtime input");
+    for (const input of runtimeInputs) {
+      const resolved = await realpath(path.resolve(hostDir, input));
+      assert(
+        resolved.startsWith(zfbDir + path.sep),
+        `bundled zudo-react input ${resolved} is outside the host's @takazudo/zfb package ${zfbDir}`,
       );
-    });
-    assert(
-      rendererInputs.length === 1,
-      `packed adapter/zdtp bundle contains ${rendererInputs.length} Preact renderer inputs: ${rendererInputs.join(", ")}`,
-    );
-    const emittedRenderer = await realpath(path.resolve(hostDir, rendererInputs[0]));
-    const packageRenderer = await realpath(createRequire(adapterPath).resolve("preact"));
-    assert(
-      emittedRenderer.startsWith(path.dirname(packageRenderer)),
-      `bundled renderer input ${emittedRenderer} is outside the adapter's installed Preact package ${packageRenderer}`,
-    );
-    console.log(`OK — packed adapter/zdtp bundle emits one Preact renderer input (${rendererInputs[0]}).`);
+    }
+    console.log(`OK — packed adapter/zdtp bundle is Preact-free and draws zudo-react from one zfb package (${runtimeInputs.length} inputs).`);
   } finally {
     await rm(probePath, { force: true });
   }
@@ -566,7 +561,7 @@ export async function assertHeadAssets(hostDir) {
 }
 
 // D1: packed HTML proves the server boundary and serialized declared data;
-// the opaque Preact widget is mounted only after client activation.
+// the opaque zdtp widget is mounted only after client activation.
 export function assertDashboardFallbacks(document) {
   const shells = [...document.querySelectorAll('[data-zfb-island-skip-ssr="TokenDashboardMount"]')];
   assert(shells.length === 3, "configured /tokens must render three TokenDashboardMount loading shells");
@@ -775,7 +770,7 @@ async function main() {
     console.log("Installing (tarball + exact @takazudo/zfb / @takazudo/zudo-doc pins)");
     await run("corepack", ["pnpm", "install"], hostDir);
     await assertForeignPackage(hostDir);
-    const preactProof = await assertSharedPreact(hostDir);
+    const sharedZfbDir = await assertNoPreactAndSharedZfb(hostDir);
 
     console.log("Removing the fixture registry before zudo-sg gen-registry (bootstrap proof)");
     await rm(path.join(hostDir, "src/styleguide/sg-registry.ts"), { force: true });
@@ -884,7 +879,7 @@ async function main() {
     await assertHeadAssets(hostDir);
 
     await assertProductionCss(hostDir);
-    await assertSingleBundledRenderer(hostDir, preactProof.adapterPath);
+    await assertSingleZudoReactRuntime(hostDir, sharedZfbDir);
 
     const buildIslandsManifestFiles = (await readdir(path.join(hostDir, "dist/assets"))).filter((f) => /^islands-.*\.js$/.test(f));
     assert(buildIslandsManifestFiles.length > 0, "no dist/assets/islands-*.js manifest found");

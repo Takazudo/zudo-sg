@@ -185,8 +185,10 @@ root `zfb.config.ts` adds doc-chrome roles and composes engine `sg-*` roles and
 manifests through `withZudoSg()`. Component replacements use unlayered authored
 `zc-*` rules so they can override utilities emitted before authored CSS.
 
-Zdtp stays Preact inside the engine-owned opaque dashboard adapter. The root
-host and demo-ui use zudo-react and do not import that renderer directly.
+Since zdtp 0.9.0 the engine-owned dashboard adapter mounts zdtp's dashboard
+through `mountTokenDashboard` on the host's zudo-react runtime; no package in
+the repo depends on Preact for it. The root host and demo-ui do not import the
+adapter directly.
 
 ## Enabled Features
 
