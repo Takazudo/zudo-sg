@@ -4,6 +4,24 @@ All notable changes to `@takazudo/zudo-sg` are documented in this file.
 
 The format is based on Keep a Changelog, and release notes are generated from the changelog MDX pages.
 
+## [0.8.1] - 2026-10-30
+
+A patch release that makes token dashboard failures easier to diagnose and
+picks up the zudo-doc 9.1.1 fix.
+
+### Bug Fixes
+
+- The token dashboard now tells an adapter import failure apart from a mount
+  failure. An import failure still shows "Unable to load declared token
+  defaults"; a mount failure clears any partial DOM and shows its own message.
+  Both log the underlying error to the console instead of discarding it.
+
+### Other Changes
+
+- The `@takazudo/zudo-doc` peer is now ^9.1.1 (was ^9.1.0), picking up the
+  9.1.1 fix for the `categoryMatch` regression with dash satellite
+  directories.
+
 ## [0.8.0] - 2026-10-28
 
 This release moves the engine onto zdtp 0.9, which renders with zfb's

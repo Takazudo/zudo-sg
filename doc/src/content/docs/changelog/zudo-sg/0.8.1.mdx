@@ -1,0 +1,24 @@
+---
+title: 0.8.1
+description: The token dashboard reports import and mount failures separately, and the zudo-doc peer floor moves to 9.1.1.
+sidebar_position: 26
+pagination_next: null
+---
+
+Released: 2026-10-30
+
+A patch release that makes token dashboard failures easier to diagnose and
+picks up the zudo-doc 9.1.1 fix.
+
+### Bug Fixes
+
+- The token dashboard now tells an adapter import failure apart from a mount
+  failure. An import failure still shows "Unable to load declared token
+  defaults"; a mount failure clears any partial DOM and shows its own message.
+  Both log the underlying error to the console instead of discarding it.
+
+### Other Changes
+
+- The `@takazudo/zudo-doc` peer is now ^9.1.1 (was ^9.1.0), picking up the
+  9.1.1 fix for the `categoryMatch` regression with dash satellite
+  directories.
