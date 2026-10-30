@@ -1,5 +1,22 @@
 # Dependency audit register
 
+## zudo-doc 9.1.1 adopted — 2026-10-30
+
+`@takazudo/zudo-doc` and `@takazudo/zudo-doc-history-server` moved from 9.1.0
+to 9.1.1.
+
+### Upstream impact
+
+- zudo-doc 9.1.1 fixes a 9.1.0 `categoryMatch` regression. A value owns `foo`,
+  `foo/...` and the dash satellites `foo-*` again (not `foo2`), and the longest
+  matching value wins. That restores the Claude tab for the generated
+  `claude-md/` and `claude-skills/` trees. The header-nav values here and in
+  `doc/` are whole top-level directories with no `-` satellites, so nothing
+  here changes.
+- history-server 9.1.1 has no changes beyond the version. The published
+  `tsconfig.base.json` is unchanged. `create-zudo-doc` 9.1.1 moves only pins.
+- Engine peer floor moves to `@takazudo/zudo-doc ^9.1.1`.
+
 ## zudo-doc 9.1.0 and zdtp 0.9.0 adopted — 2026-10-28
 
 `@takazudo/zudo-doc` and `@takazudo/zudo-doc-history-server` moved from 9.0.0
