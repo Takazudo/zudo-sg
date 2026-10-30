@@ -4,15 +4,6 @@ All notable changes to `@takazudo/zudo-sg` are documented in this file.
 
 The format is based on Keep a Changelog, and release notes are generated from the changelog MDX pages.
 
-## [Unreleased]
-
-### Bug Fixes
-
-- The `/tokens` dashboard now logs the real error to the console when it
-  fails. A failed adapter import still shows "Unable to load declared token
-  defaults". A failed zdtp mount now shows its own message, "Unable to render
-  the token dashboard", and any partial dashboard DOM is cleared first (#1037).
-
 ## [0.8.0] - 2026-10-28
 
 This release moves the engine onto zdtp 0.9, which renders with zfb's
