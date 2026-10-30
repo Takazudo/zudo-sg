@@ -8,6 +8,12 @@ export type TokenDashboardMountProps = Omit<TokenDashboardProps, "previewOverrid
   manifest: UiDesignTokensManifest;
 };
 
+function showFailure(host: HTMLElement, message: string) {
+  host.replaceChildren();
+  host.setAttribute("role", "alert");
+  host.textContent = message;
+}
+
 export function TokenDashboardMount({ manifest, ...props }: TokenDashboardMountProps) {
   const ref = { current: null as HTMLDivElement | null };
   const scope = getScope();
@@ -17,14 +23,20 @@ export function TokenDashboardMount({ manifest, ...props }: TokenDashboardMountP
     const host = ref.current!;
     void import("./token-dashboard-adapter.js").then(({ mountDashboard }) => {
       if (!alive) return;
-      unmount = mountDashboard(host, {
-        ...props,
-        previewOverrides: buildDashboardPreviewOverrides(manifest),
-      });
-    }).catch(() => {
+      try {
+        unmount = mountDashboard(host, {
+          ...props,
+          previewOverrides: buildDashboardPreviewOverrides(manifest),
+        });
+      } catch (error) {
+        console.error("[zudo-sg] token dashboard failed to mount", error);
+        // zdtp returns no handle when mountTokenDashboard throws, so clearing its partial DOM is all that can be undone.
+        showFailure(host, "Unable to render the token dashboard. Reload to try again.");
+      }
+    }, (error: unknown) => {
       if (!alive) return;
-      host.setAttribute("role", "alert");
-      host.textContent = "Unable to load declared token defaults. Reload to try again.";
+      console.error("[zudo-sg] token dashboard adapter failed to load", error);
+      showFailure(host, "Unable to load declared token defaults. Reload to try again.");
     });
     return () => {
       alive = false;
