@@ -4,8 +4,8 @@ Status: **Accepted** (epic #648, decision sub-task #650, 2026-09-13), with
 framework-migration amendments recorded below. Model: zudo-doc's package-owned
 route seam (`$HOME/repos/myoss/zudo-doc/packages/zudo-doc/docs/adr/route-injection-seam.md`).
 Current toolchain pins: `@takazudo/zfb` **5.1.5**, `@takazudo/zudo-doc`
-**9.1.0**, `@takazudo/zdtp` **0.9.0**, pnpm 11.5.2, Node 24. The engine's
-peer ranges are `^5.1.5` / `^9.1.0` (§13 window retired 2026-10-24) /
+**9.1.1**, `@takazudo/zdtp` **0.9.0**, pnpm 11.5.2, Node 24. The engine's
+peer ranges are `^5.1.5` / `^9.1.1` (§13 window retired 2026-10-24) /
 `^0.9.0`. Since zdtp 0.9.0 the dashboard adapter mounts through the host's
 zudo-react runtime and the engine has no Preact dependency (2026-10-28
 amendment to decision 10).
@@ -460,7 +460,7 @@ process itself still declares `>=22`.
 
 **Migration amendment (2026-10-11, zfb 4 migration S3a/E3).** Current
 required engine peers are `@takazudo/zfb ^5.1.5`, `@takazudo/zudo-doc
-^9.1.0`, and `@takazudo/zdtp ^0.9.0`. The engine has no Preact peer. It
+^9.1.1`, and `@takazudo/zdtp ^0.9.0`. The engine has no Preact peer. It
 declares `preact ^10.29.1` as a regular dependency solely for the opaque
 dashboard adapter that mounts zdtp inside the always-injected `/tokens`
 route; zdtp's compatible range resolves to the same runtime. Hosts render
@@ -491,7 +491,7 @@ The `/dev-bump-zudo-deps` resolver's peer-floor rows are applied, not
 skipped. The workspace already installs exactly those versions, so the floor
 is the tested version and not an older, untested minimum. The cost is that
 adopters must upgrade the toolchain together with the engine. Under this
-policy the floors are zfb `^5.1.5`, zudo-doc `^9.1.0` (the §13 window was
+policy the floors are zfb `^5.1.5`, zudo-doc `^9.1.1` (the §13 window was
 retired on 2026-10-24), and
 zdtp `^0.9.0`. The amendments below are historical.
 
