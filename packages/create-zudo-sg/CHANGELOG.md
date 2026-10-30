@@ -4,6 +4,15 @@ All notable changes to `create-zudo-sg` are documented in this file.
 
 The format is based on Keep a Changelog.
 
+## [0.2.9] - 2026-10-30
+
+### Changed
+
+- New projects install zudo-doc 9.1.1 (was 9.1.0), which fixes the 9.1.0
+  `categoryMatch` regression for dash satellite directories.
+- Update the starter engine range to `@takazudo/zudo-sg ^0.8.1`, whose
+  zudo-doc peer floor matches that pin.
+
 ## [0.2.8] - 2026-10-28
 
 ### Changed
