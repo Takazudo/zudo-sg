@@ -14,8 +14,8 @@
     "typecheck": "zfb check"
   },
   "dependencies": {
-    "@takazudo/zfb": "5.1.5",
-    "@takazudo/zfb-runtime": "5.1.5",
+    "@takazudo/zfb": "5.2.0",
+    "@takazudo/zfb-runtime": "5.2.0",
     "@zudo-sg/demo-ui": "workspace:*",
     "zod": "^4.6.7"
   },

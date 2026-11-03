@@ -1,5 +1,12 @@
 # ZUDO_DEPS_PINS
 
+## 2026-11-03 — independent ZFB 5.2.0 adoption
+
+`doc/` advances its ZFB package family to published 5.2.0. The three
+create-zudo-doc provenance entries and the TypeScript snapshot remain at
+published 9.1.1; no newer zudo-doc scaffold is adopted in this change.
+Local scaffold customizations and historical receipts remain intact.
+
 ## 2026-10-30 — 9.1.1 adopted
 
 Compared the published `create-zudo-doc` 9.1.0 and 9.1.1 tarballs (9.1.1

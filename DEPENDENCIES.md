@@ -1,5 +1,57 @@
 # Dependency audit register
 
+## ZFB 5.2.0 adoption — 2026-11-03
+
+The workspace, foreign-consumer fixtures and generated starter move the ZFB
+family from 5.1.5 to published stable 5.2.0. Engine and demo-ui peer floors
+move to `^5.2.0`. zudo-doc/history-server remain at published 9.1.1; their
+next dependency-adoption release is not published or substituted here.
+
+### Upstream impact
+
+Verified release tags `v5.1.5` (`526bcc552f04d21e8662f8df6c5eb5df0354238a`)
+and `v5.2.0` (`0f17c8e947548b4c4a82ebce112bd5f026e1b21b`) against GitHub.
+The npm metadata omits `gitHead`, so these are source references, not a
+claim that the published tarballs are identical to the source tree.
+
+- Published `@takazudo/zfb` differs only in package metadata, advancing its
+  slugify and optional native binary family. Exports and Node requirements
+  are unchanged.
+- Published `@takazudo/zfb-runtime` changes router/prefetch output and source
+  maps: native link/form intent, base-relative form actions, failed-prefetch
+  retries and cancellation of obsolete navigation after native history
+  traversal. Its exact ZFB peer moves together to 5.2.0. No consumer API or
+  configuration migration was required.
+- Published `@takazudo/zfb-md-wasm` keeps its exports and dependencies;
+  version metadata, shipped-artifact receipt, README and WASM binaries
+  change. The release changelog records no package-specific behavior change.
+
+The starter is regenerated from `fixtures/engine-host`. Scoped release-age
+exceptions track the new family. The 343-class Wind explanation fixture is
+regenerated with the installed compiler; only compiler version and its
+configuration fingerprint change, with identical candidates and outcomes.
+The zudo-doc scaffold provenance stays at 9.1.1 in `ZUDO_DEPS_PINS.md`.
+
+### Verification
+
+Node 24.19.0 / pnpm 11.5.2: install and frozen reinstall passed. `pnpm check`
+passed (762 engine tests and 14 initializer tests, package contracts and
+root/demo/demo-ui type checks); `pnpm --filter @zudo-sg/doc check` passed.
+Root unit suite passed 179 files / 1,645 tests. Peer-floor, generated
+starter, token-manifest, story-registry and z-index drift checks passed.
+
+Guarded root, documentation and demo builds passed with 89, 56 and 74
+pages respectively. Internal link checks passed for their 88, 54 and 73
+HTML files; root HTML validation passed. The root build reports the optional
+`UI_TOKEN_GROUPS` guarded import warning and unset `siteUrl` warning.
+Changed-file formatting and `git diff --check` passed. Independent diff
+review found no actionable findings. The manager's focused Chromium run
+passed all 18 root smoke, fragment-history and demo-transition tests. Its
+first attempt failed at browser launch for all 18 because pinned Chromium
+1248 was absent; installing that pinned browser resolved the environment
+failure without source or assertion changes. Broad browser, slow,
+packed-consumer and current-head CI suites remain unverified locally.
+
 ## zudo-doc 9.1.1 adopted — 2026-10-30
 
 `@takazudo/zudo-doc` and `@takazudo/zudo-doc-history-server` moved from 9.1.0
