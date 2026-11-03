@@ -45,9 +45,12 @@ pages respectively. Internal link checks passed for their 88, 54 and 73
 HTML files; root HTML validation passed. The root build reports the optional
 `UI_TOKEN_GROUPS` guarded import warning and unset `siteUrl` warning.
 Changed-file formatting and `git diff --check` passed. Independent diff
-review found no actionable findings. No tests failed or retried in this
-adoption run. Browser, slow and packed-consumer suites remain for the
-manager/CI verification lane; these local results do not claim those passes.
+review found no actionable findings. The manager's focused Chromium run
+passed all 18 root smoke, fragment-history and demo-transition tests. Its
+first attempt failed at browser launch for all 18 because pinned Chromium
+1248 was absent; installing that pinned browser resolved the environment
+failure without source or assertion changes. Broad browser, slow,
+packed-consumer and current-head CI suites remain unverified locally.
 
 ## zudo-doc 9.1.1 adopted — 2026-10-30
 
