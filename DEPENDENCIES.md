@@ -1,5 +1,44 @@
 # Dependency audit register
 
+## zudo-doc 9.1.2 adopted — 2026-11-03
+
+The workspace, consumer fixtures and generated starter adopt published
+`@takazudo/zudo-doc` 9.1.2; the root history-server pin also moves to 9.1.2.
+The engine peer floor advances to `^9.1.2` under the existing tested-floor
+policy. ZFB remains at 5.2.0.
+
+### Upstream impact
+
+The release source is `4b5b54e3e0f383cfbf1e7b6038c6b65ee7c5f9d2`
+(zudolab/zudo-doc#4695), after the ZFB adoption in #4694. Compared the
+registry tarballs for 9.1.1 and 9.1.2 and verified their SHA-512 integrity.
+The framework changes package metadata, README and changelog only; its
+compiled code, exports and base TypeScript config are byte-identical. Its
+ZFB family peer floors advance to `^5.2.0`, already satisfied here.
+History-server changes only package metadata and changelog. No consumer
+API or configuration migration is required.
+
+The starter is regenerated from `fixtures/engine-host`; its scoped
+release-age exception follows the new framework pin. Historical release
+notes and retired compatibility records remain unchanged.
+
+### Verification
+
+Node 24.19.0 / pnpm 11.5.2: install and frozen reinstall passed. `pnpm check`
+passed (762 engine and 14 initializer tests plus package/type contracts),
+and the doc check passed. Root unit tests passed 179 files / 1,645 tests.
+Generated starter, token manifest, story registry and z-index checks passed.
+Guarded root, demo and doc builds passed (89, 74 and 56 pages), as did all
+three link checks, root HTML validation and all 83 Chromium tests. Independent
+review found no actionable issue. Changed-file formatting and diff checks
+passed. Hosted slow/packed-consumer checks remain for current-head CI.
+
+The first resolver invocation used an unwritable default npm cache; the
+process-local workspace cache resolved that environment failure. The first
+pnpm template command tried an unwritable default store before install;
+using the existing workspace store and rerunning the generator resolved it.
+No source or test assertions were changed to address either environment error.
+
 ## ZFB 5.2.0 adoption — 2026-11-03
 
 The workspace, foreign-consumer fixtures and generated starter move the ZFB
