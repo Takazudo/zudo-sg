@@ -181,7 +181,8 @@ test("repo-root tracked skills use physical comparison and never replace foreign
     rmSync(other, { recursive: true, force: true });
   } finally {
     // unlink, not rmSync: Node 24.13 rmSync rejects a symlink to a directory.
-    if (repoAlias && existsSync(repoAlias)) unlinkSync(repoAlias);
+    // lstat, not existsSync: existsSync follows the link and would leak a dangling one.
+    if (repoAlias && lstatSync(repoAlias, { throwIfNoEntry: false })) unlinkSync(repoAlias);
     fixture.cleanup();
   }
 });
@@ -254,7 +255,10 @@ test("a main checkout path containing a space resolves in full (porcelain worktr
       realpathSync(join(fixture.project, "src/content/docs")),
     );
     const skill = readFileSync(join(globalLink, "SKILL.md"), "utf8");
-    assert.ok(skill.includes(fixture.project), "SKILL.md names the full spaced project path");
+    assert.ok(
+      skill.includes(realpathSync(fixture.project)) || skill.includes(fixture.project),
+      "SKILL.md names the full spaced project path",
+    );
   } finally {
     fixture.cleanup();
     rmSync(spaced, { recursive: true, force: true });

@@ -200,7 +200,10 @@ DOCS_DIR="$REPO_DOCS_DIR"
 
 # Validate docs directory exists
 if [ ! -d "$DOCS_DIR" ]; then
-  echo "Error: Documentation directory not found at $DOCS_DIR"
+  echo "Error: Documentation directory not found at $DOCS_DIR" >&2
+  if [ "$MAIN_PROJECT_DIR" != "$ROOT_DIR" ] && [ -d "$ROOT_DIR/src/content/docs" ]; then
+    echo "The skill links the main checkout ($REPO_ROOT), which has no docs tree yet; run this from main once the docs land there." >&2
+  fi
   exit 1
 fi
 
