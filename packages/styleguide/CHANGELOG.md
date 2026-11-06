@@ -4,6 +4,20 @@ All notable changes to `@takazudo/zudo-sg` are documented in this file.
 
 The format is based on Keep a Changelog, and release notes are generated from the changelog MDX pages.
 
+## [0.8.2] - 2026-11-06
+
+A patch release that moves the engine's tested peer floors to the current
+zfb and zudo-doc releases. No engine code changed.
+
+### Other Changes
+
+- The `@takazudo/zfb` peer is now ^5.2.2 (was ^5.1.5). zfb 5.2.x includes the
+  5.2.2 client-router fixes: form submission now matches native browser
+  behavior (encoding, form ownership, controls that shadow form properties),
+  and SVG/xlink URLs resolve against the document base.
+- The `@takazudo/zudo-doc` peer is now ^9.1.3 (was ^9.1.1). 9.1.3 requires
+  the zfb 5.2.2 family.
+
 ## [0.8.1] - 2026-10-30
 
 A patch release that makes token dashboard failures easier to diagnose and
