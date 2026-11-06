@@ -1,5 +1,22 @@
 # Dependency audit register
 
+## zudo-doc 9.1.4 adopted — 2026-11-07
+
+The workspace, `doc/`, consumer fixtures and the generated starter adopt
+published `@takazudo/zudo-doc` / `zudo-doc-history-server` 9.1.4. The engine's
+zudo-doc peer floor advances to `^9.1.4` under the tested-floor policy
+(ADR §13). Every other `@takazudo/*` dependency was already current: the ZFB
+family at 5.2.2, zdtp 0.9.0, mdx-formatter 1.3.0 and
+zudo-design-token-lint 2.1.0.
+
+### Upstream impact
+
+Per `npm diff` 9.1.3→9.1.4, `zudo-doc` changes only its version, its
+history-server dev pin and its changelog ("No package-specific changes").
+Peers are unchanged and no consumer-side edits were needed.
+`create-zudo-doc` 9.1.4 brings worktree-correctness fixes to the doc skill
+setup script; see `ZUDO_DEPS_PINS.md` for what `doc/` adopted.
+
 ## ZFB 5.2.2 and zudo-doc 9.1.3 adopted — 2026-11-06
 
 The workspace, `apps/demo`, `doc/`, consumer fixtures and the generated

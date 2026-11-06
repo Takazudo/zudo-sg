@@ -12,6 +12,7 @@ import {
   realpathSync,
   rmSync,
   symlinkSync,
+  unlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -29,8 +30,8 @@ function run(command, args, options = {}) {
   });
 }
 
-function createFixture() {
-  const repo = mkdtempSync(join(tmpdir(), "zudosg-doc-skill-repo-"));
+function createFixture({ repoParent } = {}) {
+  const repo = mkdtempSync(join(repoParent ?? tmpdir(), "zudosg-doc-skill-repo-"));
   const home = mkdtempSync(join(tmpdir(), "zudosg-doc-skill-home-"));
   const project = join(repo, "doc");
 
@@ -179,7 +180,8 @@ test("repo-root tracked skills use physical comparison and never replace foreign
 
     rmSync(other, { recursive: true, force: true });
   } finally {
-    if (repoAlias) rmSync(repoAlias, { force: true });
+    // unlink, not rmSync: Node 24.13 rmSync rejects a symlink to a directory.
+    if (repoAlias && existsSync(repoAlias)) unlinkSync(repoAlias);
     fixture.cleanup();
   }
 });
@@ -236,6 +238,80 @@ test("Update mode names AUTHORING.md when present and otherwise defers to the in
     assert.match(named, /Read the editorial policy `[^`]*\/doc\/AUTHORING\.md`/);
     assert.match(named, /Does this addition change what the category means\?/);
   } finally {
+    fixture.cleanup();
+  }
+});
+
+test("a main checkout path containing a space resolves in full (porcelain worktree list)", () => {
+  const spaced = mkdtempSync(join(tmpdir(), "zudosg doc skill spaced-"));
+  const fixture = createFixture({ repoParent: spaced });
+  try {
+    commitFixture(fixture);
+    runSetup(fixture, ["--target", "claude"]);
+    const globalLink = join(fixture.home, ".claude/skills/doc-wisdom");
+    assert.equal(
+      realpathSync(join(globalLink, "docs")),
+      realpathSync(join(fixture.project, "src/content/docs")),
+    );
+    const skill = readFileSync(join(globalLink, "SKILL.md"), "utf8");
+    assert.ok(skill.includes(fixture.project), "SKILL.md names the full spaced project path");
+  } finally {
+    fixture.cleanup();
+    rmSync(spaced, { recursive: true, force: true });
+  }
+});
+
+test("a worktree of a bare repository falls back to its own top level", () => {
+  const fixture = createFixture();
+  const bare = mkdtempSync(join(tmpdir(), "zudosg-doc-skill-bare-"));
+  const worktree = mkdtempSync(join(tmpdir(), "zudosg-doc-skill-bare-wt-"));
+  rmSync(bare, { recursive: true });
+  rmSync(worktree, { recursive: true });
+  try {
+    commitFixture(fixture);
+    run("git", ["clone", "-q", "--bare", fixture.repo, bare]);
+    run("git", ["-C", bare, "worktree", "add", "-q", "-b", "bare-wt", worktree]);
+
+    const worktreeProject = join(worktree, "doc");
+    run("bash", [join(worktreeProject, "scripts/setup-doc-skill.sh"), "--target", "claude"], {
+      cwd: worktreeProject,
+      env: fixture.env,
+    });
+    assert.equal(
+      realpathSync(join(fixture.home, ".claude/skills/doc-wisdom/docs")),
+      realpathSync(join(worktreeProject, "src/content/docs")),
+    );
+  } finally {
+    rmSync(worktree, { recursive: true, force: true });
+    rmSync(bare, { recursive: true, force: true });
+    fixture.cleanup();
+  }
+});
+
+test("from a linked worktree, categories and AUTHORING.md are read from the main tree", () => {
+  const fixture = createFixture();
+  const worktree = mkdtempSync(join(tmpdir(), "zudosg-doc-skill-main-tree-"));
+  rmSync(worktree, { recursive: true });
+  try {
+    commitFixture(fixture);
+    run("git", ["-C", fixture.repo, "worktree", "add", "-q", "-b", "main-tree-wt", worktree]);
+
+    const worktreeProject = join(worktree, "doc");
+    mkdirSync(join(worktreeProject, "src/content/docs/worktree-only"), { recursive: true });
+    writeFileSync(join(worktreeProject, "AUTHORING.md"), "# Worktree only\n");
+
+    run("bash", [join(worktreeProject, "scripts/setup-doc-skill.sh"), "--target", "claude"], {
+      cwd: worktreeProject,
+      env: fixture.env,
+    });
+    const skill = readFileSync(join(fixture.home, ".claude/skills/doc-wisdom/SKILL.md"), "utf8");
+    assert.match(skill, /getting-started/);
+    assert.doesNotMatch(skill, /worktree-only/);
+    assert.doesNotMatch(skill, /AUTHORING\.md/);
+  } finally {
+    if (existsSync(worktree)) {
+      run("git", ["-C", fixture.repo, "worktree", "remove", "--force", worktree]);
+    }
     fixture.cleanup();
   }
 });

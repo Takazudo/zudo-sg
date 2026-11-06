@@ -162,8 +162,24 @@ if [ "$SKILL_NAME" = "$DEFAULT_SKILL_NAME" ] && [ "$DEFAULT_SKILL_NAME" != "$LEG
 fi
 
 # Resolve the main repo root (handles git worktrees correctly)
-# Use the main worktree path so symlinks survive worktree removal
-REPO_ROOT="$(git -C "$ROOT_DIR" worktree list | head -1 | awk '{print $1}')"
+# Use the main worktree path so symlinks survive worktree removal. Read the
+# porcelain form: the plain listing is space-separated, so a checkout path
+# containing a space would be cut short (upstream zudo-doc #4705). When the
+# main entry is a bare repository it has no checkout to link into, so fall
+# back to the current worktree's top level.
+WORKTREE_PORCELAIN="$(git -C "$ROOT_DIR" worktree list --porcelain)"
+REPO_ROOT=""
+MAIN_WORKTREE_IS_BARE="false"
+while IFS= read -r porcelain_line; do
+  [ -z "$porcelain_line" ] && break
+  case "$porcelain_line" in
+    "worktree "*) REPO_ROOT="${porcelain_line#worktree }" ;;
+    bare) MAIN_WORKTREE_IS_BARE="true" ;;
+  esac
+done <<< "$WORKTREE_PORCELAIN"
+if [ "$MAIN_WORKTREE_IS_BARE" = "true" ] || [ -z "$REPO_ROOT" ]; then
+  REPO_ROOT="$(git -C "$ROOT_DIR" rev-parse --show-toplevel)"
+fi
 
 # Path from the repository root to the project directory: "" at the repo
 # root, "doc/" (trailing slash) when the project lives in a subdirectory
@@ -177,7 +193,10 @@ MAIN_PROJECT_DIR="${MAIN_PROJECT_DIR%/}"
 REPO_DOCS_DIR="$REPO_ROOT/${PROJECT_PREFIX}src/content/docs"
 REPO_DOCS_JA_DIR="$REPO_ROOT/${PROJECT_PREFIX}src/content/docs-ja"
 
-DOCS_DIR="$ROOT_DIR/src/content/docs"
+# Validate and enumerate the same tree the docs symlink targets (main), not
+# the worktree the script runs from, so the category list in SKILL.md matches
+# what the link shows (upstream zudo-doc #4704).
+DOCS_DIR="$REPO_DOCS_DIR"
 
 # Validate docs directory exists
 if [ ! -d "$DOCS_DIR" ]; then
@@ -274,7 +293,8 @@ safe_link_tracked_skill() {
   echo "  [$target] Linked tracked skill '$skill_name' -> $link_target"
 }
 
-DOCS_JA_DIR="$ROOT_DIR/src/content/docs-ja"
+# Same main-tree decision as DOCS_DIR: the docs-ja link targets main.
+DOCS_JA_DIR="$REPO_DOCS_JA_DIR"
 HAS_JA=""
 if [ -d "$DOCS_JA_DIR" ]; then
   HAS_JA="true"
@@ -320,7 +340,9 @@ VERIFY_STEP="Run \`pnpm build\` from \`$MAIN_PROJECT_DIR\` to confirm the site b
 # (AUTHORING.md); otherwise defer to whatever policy the instruction files
 # name. The four placement questions are embedded either way so Update mode
 # never depends on a network connection.
-if [ -f "$ROOT_DIR/AUTHORING.md" ]; then
+# Test the same tree the pointer names (MAIN_PROJECT_DIR): checking ROOT_DIR
+# from a linked worktree could name a file main lacks (upstream zudo-doc #4698).
+if [ -f "$MAIN_PROJECT_DIR/AUTHORING.md" ]; then
   POLICY_STEP="Read the editorial policy \`$MAIN_PROJECT_DIR/AUTHORING.md\` (categories, boundaries, URL and translation constraints)."
 else
   POLICY_STEP="Read the project's editorial policy: the file that \`CLAUDE.md\`, \`AGENTS.md\`, or \`README.md\` in \`$MAIN_PROJECT_DIR\` names for adding or organizing docs. If none is named, treat category boundaries as undecided and rely on the questions below."
