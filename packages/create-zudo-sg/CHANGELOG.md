@@ -4,6 +4,17 @@ All notable changes to `create-zudo-sg` are documented in this file.
 
 The format is based on Keep a Changelog.
 
+## [0.2.10] - 2026-11-06
+
+### Changed
+
+- New projects install zfb, zfb-runtime, and zfb-md-wasm 5.2.2 (was 5.1.5)
+  and zudo-doc 9.1.3 (was 9.1.1), the versions the engine is tested
+  against. zfb 5.2.2 includes the client-router fixes for form submission
+  and SVG/xlink URL resolution.
+- Update the starter engine range to `@takazudo/zudo-sg ^0.8.2`, whose zfb
+  and zudo-doc peer floors match those pins.
+
 ## [0.2.9] - 2026-10-30
 
 ### Changed
