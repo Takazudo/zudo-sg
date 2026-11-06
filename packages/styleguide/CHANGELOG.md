@@ -4,6 +4,17 @@ All notable changes to `@takazudo/zudo-sg` are documented in this file.
 
 The format is based on Keep a Changelog, and release notes are generated from the changelog MDX pages.
 
+## [0.8.3] - 2026-11-07
+
+A patch release that moves the engine's tested zudo-doc peer floor to the
+current release. No engine code changed.
+
+### Other Changes
+
+- The `@takazudo/zudo-doc` peer is now ^9.1.4 (was ^9.1.3). zudo-doc 9.1.4 has
+  no package-specific changes; its peers on the zfb 5.2.2 family and zdtp are
+  unchanged.
+
 ## [0.8.2] - 2026-11-06
 
 A patch release that moves the engine's tested peer floors to the current
