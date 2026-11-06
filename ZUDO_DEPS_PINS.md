@@ -16,9 +16,11 @@ changes the generator and templates:
   rather than scaffold defaults. Open follow-up.
 - `templates/base/scripts/setup-doc-skill.sh` Update mode gains a placement
   check (`POLICY_STEP` + four placement questions). ADOPTED verbatim into
-  `doc/scripts/setup-doc-skill.sh`; without `AUTHORING.md` it falls back to
-  "the policy the instruction files name", which is the correct branch here.
-  The existing deliberate divergences recorded below are unchanged.
+  `doc/scripts/setup-doc-skill.sh`. Without `AUTHORING.md` it falls back to
+  "the policy the instruction files name"; `doc/` names none yet, so Update
+  mode treats category boundaries as undecided and relies on the four
+  questions until the `AUTHORING.md` follow-up lands. The existing deliberate
+  divergences recorded below are unchanged.
 - `templates/features/claudeSkillsWriting/.../zudo-doc-writing/SKILL.md`
   changes; `doc/` does not use that feature, so nothing is copied.
 
@@ -311,7 +313,7 @@ pnpm dlx create-zudo-doc@<ver> a<ver> --yes --pm pnpm --no-install --no-git \
 - pinned: dee47852d9c12500b2dacf7a4d2a1d6bb0a8ecf5 (create-zudo-doc 9.1.3, npm gitHead)
 - updated: 2026-11-06
 - sync: cd <scratch> && pnpm dlx create-zudo-doc@<ver> a<ver> …  # same flag set as above; inspect the generated script, then three-way merge
-- notes: deliberately NOT fully synced, re-examined against the 5.19.0 generated script. Still-valid reasons: the host pins the stable "doc-wisdom" skill name (upstream derives `<projectName>-wisdom` from `@zudo-sg/doc`, which fails the script's own skill-name validation and would break user-level links), and upstream's config-driven locale map stays inert because `doc/zfb.config.ts` declares no `locales`. NO LONGER a divergence: the nested-workspace `REPO_ROOT` / `PROJECT_PREFIX` resolution is now identical upstream (removed during #548). ADOPTED (#551/#565): `ensure_symlink` now matches upstream's non-destructive posture — it replaces its own prior symlink (including a broken one) but refuses and exits 1 rather than `rm -rf`-ing a real file or directory sitting at a link target. Verified against a temporary fixture with `HOME` overridden, never against the real global skills directory. Upstream-only at 5.19.0 and still NOT adopted here (lower-value, unrelated to safety): `...zudoDoc({})` spread-aware top-level setting detection, and a "no explicit locale settings found" stderr note. The published `templates/` tree is otherwise byte-identical to 5.18.2's, so no other divergence changed. These two remaining follow-ups stay open.
+- notes: ADOPTED at 9.1.3: Update mode's `POLICY_STEP` placement check, verbatim (see the 2026-11-06 entry). Otherwise deliberately NOT fully synced, re-examined against the 5.19.0 generated script. Still-valid reasons: the host pins the stable "doc-wisdom" skill name (upstream derives `<projectName>-wisdom` from `@zudo-sg/doc`, which fails the script's own skill-name validation and would break user-level links), and upstream's config-driven locale map stays inert because `doc/zfb.config.ts` declares no `locales`. NO LONGER a divergence: the nested-workspace `REPO_ROOT` / `PROJECT_PREFIX` resolution is now identical upstream (removed during #548). ADOPTED (#551/#565): `ensure_symlink` now matches upstream's non-destructive posture — it replaces its own prior symlink (including a broken one) but refuses and exits 1 rather than `rm -rf`-ing a real file or directory sitting at a link target. Verified against a temporary fixture with `HOME` overridden, never against the real global skills directory. Upstream-only at 5.19.0 and still NOT adopted here (lower-value, unrelated to safety): `...zudoDoc({})` spread-aware top-level setting detection, and a "no explicit locale settings found" stderr note. The published `templates/` tree is otherwise byte-identical to 5.18.2's, so no other divergence changed. These two remaining follow-ups stay open.
 
   At 5.19.1, only `src/scaffold.ts` dependency pins changed (`@takazudo/zfb`, `@takazudo/zfb-runtime`, `@takazudo/zfb-md-wasm` 2.16.0, `@takazudo/zudo-doc` ^5.19.1, and `@takazudo/zdtp` 0.5.2 when Design Token Panel is enabled); the published `templates/` tree is byte-identical (verified by the 5.19.0/5.19.1 npm tarball diff), and `doc/package.json` already carries the 2.16.0 pins from this bump, so there is nothing to three-way merge.
 
