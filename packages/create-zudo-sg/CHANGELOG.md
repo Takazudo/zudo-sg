@@ -4,6 +4,15 @@ All notable changes to `create-zudo-sg` are documented in this file.
 
 The format is based on Keep a Changelog.
 
+## [0.2.11] - 2026-11-07
+
+### Changed
+
+- New projects install zudo-doc 9.1.4 (was 9.1.3), the version the engine is
+  tested against. 9.1.4 has no package-specific changes.
+- Update the starter engine range to `@takazudo/zudo-sg ^0.8.3`, whose zudo-doc
+  peer floor matches that pin.
+
 ## [0.2.10] - 2026-11-06
 
 ### Changed
