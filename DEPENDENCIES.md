@@ -1,5 +1,51 @@
 # Dependency audit register
 
+## ZFB 5.2.2 and zudo-doc 9.1.3 adopted — 2026-11-06
+
+The workspace, `apps/demo`, `doc/`, consumer fixtures and the generated
+starter adopt published `@takazudo/zfb`, `zfb-runtime` and `zfb-md-wasm`
+5.2.2 and `@takazudo/zudo-doc` / `zudo-doc-history-server` 9.1.3 together:
+zudo-doc 9.1.3 peers the ZFB family at `^5.2.2`. The engine and demo-ui peer
+floors advance to `^5.2.2` / `^9.1.3` under the tested-floor policy (ADR §13),
+and the release-age exceptions for the exact-pinned ZFB native binaries and
+`zfb-slugify` move to 5.2.2. All other `@takazudo/*` dependencies were
+already current.
+
+### Upstream impact
+
+No published gitHead for either family, so the registry tarballs are the
+source of truth (`npm diff` 5.2.0→5.2.2 and 9.1.2→9.1.3), cross-checked with
+the zudo-front-builder v5.2.1/v5.2.2 release notes and the zudo-doc
+changelog.
+
+- `zfb`: package metadata only; the native binaries and `zfb-slugify`
+  move with it.
+- `zfb-runtime`: client-router fixes only — form submission now follows
+  native browser encoding (URL-encoded entries, `text/plain`, submitter
+  encoding, form ownership, controls shadowing form properties, modified
+  submit activations) and SVG/xlink URLs resolve against the document base.
+  No API or configuration change.
+- `zfb-md-wasm`: rebuilt WASM artifacts, no package-specific changes.
+- `zudo-doc` / history-server 9.1.3: peer/dev pins and changelog only; the
+  base TypeScript config is byte-identical.
+
+Consumer-side: the demo-ui Wind explain fixture was regenerated (only its
+compiler version and config hash change; all 343 class outcomes are
+identical). `create-zudo-doc` 9.1.3 also adds an `AUTHORING.md` editorial
+policy and a setup-doc-skill placement check; see `ZUDO_DEPS_PINS.md` for
+what `doc/` adopted.
+
+### Verification
+
+Node 24.13.1 / pnpm 11.5.2: install and frozen reinstall passed. `pnpm check`
+passed (peer floors, 14 initializer tests, engine/package/type contracts,
+host/demo typechecks), as did `pnpm check:create-template` and the doc check.
+The demo-ui story suites passed 4 files / 304 tests, including Wind explain
+coverage against the regenerated fixture. Root unit tests passed 179 files /
+1,645 tests. Guarded root, demo and doc builds passed (89, 74 and 56 pages).
+`doc/scripts` setup-doc-skill tests passed (3). Chromium, slow and
+packed-consumer checks are left to current-head CI.
+
 ## zudo-doc 9.1.2 adopted — 2026-11-03
 
 The workspace, consumer fixtures and generated starter adopt published

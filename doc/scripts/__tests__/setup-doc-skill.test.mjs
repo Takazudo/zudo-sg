@@ -216,3 +216,26 @@ test("repo-root tracked links created from a linked worktree survive its removal
     fixture.cleanup();
   }
 });
+
+test("Update mode names AUTHORING.md when present and otherwise defers to the instruction files", () => {
+  const fixture = createFixture();
+  try {
+    const skillPath = join(fixture.home, ".claude/skills/doc-wisdom/SKILL.md");
+
+    runSetup(fixture, ["--target", "claude"]);
+    const fallback = readFileSync(skillPath, "utf8");
+    assert.match(fallback, /Check placement and decide create vs update/);
+    assert.match(fallback, /the file that `CLAUDE\.md`, `AGENTS\.md`, or `README\.md`/);
+    assert.doesNotMatch(fallback, /AUTHORING\.md/);
+
+    writeFileSync(join(fixture.project, "AUTHORING.md"), "# Authoring\n");
+    rmSync(fixture.home, { recursive: true, force: true });
+    mkdirSync(fixture.home, { recursive: true });
+    runSetup(fixture, ["--target", "claude"]);
+    const named = readFileSync(skillPath, "utf8");
+    assert.match(named, /Read the editorial policy `[^`]*\/doc\/AUTHORING\.md`/);
+    assert.match(named, /Does this addition change what the category means\?/);
+  } finally {
+    fixture.cleanup();
+  }
+});
