@@ -317,9 +317,13 @@ done
 # create-zudo-doc scaffold has no format script at all, while this repo's own
 # showcase exposes `format` (there is no `format:md` script anywhere, #2918).
 # `format:md` is checked too in case a downstream project defines its own
-# script under that literal name.
+# script under that literal name. Read the main tree's package.json (where
+# agents run the command), falling back to the running worktree when main
+# has no project there yet -- the same main-tree rule as DOCS_DIR (#1049).
+FORMAT_PACKAGE_JSON="$MAIN_PROJECT_DIR/package.json"
+[ -f "$FORMAT_PACKAGE_JSON" ] || FORMAT_PACKAGE_JSON="$ROOT_DIR/package.json"
 FORMAT_SCRIPT="$(node -e "
-const scripts = (require('$ROOT_DIR/package.json').scripts) || {};
+const scripts = (require('$FORMAT_PACKAGE_JSON').scripts) || {};
 console.log(
   scripts.format ? 'format'
   : scripts['format:mdx'] ? 'format:mdx'

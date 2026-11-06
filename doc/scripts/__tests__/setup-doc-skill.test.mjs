@@ -303,6 +303,13 @@ test("from a linked worktree, categories and AUTHORING.md are read from the main
     const worktreeProject = join(worktree, "doc");
     mkdirSync(join(worktreeProject, "src/content/docs/worktree-only"), { recursive: true });
     writeFileSync(join(worktreeProject, "AUTHORING.md"), "# Worktree only\n");
+    writeFileSync(
+      join(worktreeProject, "package.json"),
+      JSON.stringify({
+        name: "@zudo-sg/doc",
+        scripts: { format: "worktree-only", "format:mdx": "prettier --write .", build: "zfb build" },
+      }),
+    );
 
     run("bash", [join(worktreeProject, "scripts/setup-doc-skill.sh"), "--target", "claude"], {
       cwd: worktreeProject,
@@ -312,6 +319,8 @@ test("from a linked worktree, categories and AUTHORING.md are read from the main
     assert.match(skill, /getting-started/);
     assert.doesNotMatch(skill, /worktree-only/);
     assert.doesNotMatch(skill, /AUTHORING\.md/);
+    assert.match(skill, /pnpm format:mdx/);
+    assert.doesNotMatch(skill, /pnpm format(?!:)/);
   } finally {
     if (existsSync(worktree)) {
       run("git", ["-C", fixture.repo, "worktree", "remove", "--force", worktree]);
