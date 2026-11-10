@@ -7,7 +7,9 @@ import { defineConfig } from "vitest/config";
 // package code must not depend on the host alias (scripts/check-no-host-alias.mjs).
 export default defineConfig({
   root: import.meta.dirname,
-  esbuild: { jsx: "automatic", jsxImportSource: "@takazudo/zfb/zudo-react" },
+  oxc: {
+    jsx: { runtime: "automatic", importSource: "@takazudo/zfb/zudo-react" },
+  },
   resolve: {
     alias: {
       // zfb-only virtual module; the root vitest.config.ts carries the same alias.

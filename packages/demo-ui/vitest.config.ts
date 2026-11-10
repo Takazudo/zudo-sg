@@ -1,7 +1,9 @@
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
-  esbuild: { jsx: "automatic", jsxImportSource: "@takazudo/zfb/zudo-react" },
+  oxc: {
+    jsx: { runtime: "automatic", importSource: "@takazudo/zfb/zudo-react" },
+  },
   test: {
     include: ["src/**/__tests__/**/*.test.{ts,tsx}"],
     exclude: ["src/shared/__tests__/breakpoint-tokens.test.ts"],

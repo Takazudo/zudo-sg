@@ -1,4 +1,4 @@
-import "@testing-library/jest-dom/vitest";
+import "../../vitest-jest-dom.ts";
 import { afterEach, beforeEach } from "vitest";
 import { disposeAll } from "./src/test-utils/zudo-react.js";
 
@@ -7,8 +7,16 @@ afterEach(disposeAll);
 beforeEach(() => {
   const happy = (
     globalThis as unknown as {
-      happyDOM?: { settings: { navigation: { disableChildFrameNavigation: boolean } } };
+      happyDOM?: {
+        settings: {
+          enableIframePageLoading?: boolean;
+          navigation: { disableChildFrameNavigation: boolean };
+        };
+      };
     }
   ).happyDOM;
-  if (happy) happy.settings.navigation.disableChildFrameNavigation = true;
+  if (happy) {
+    happy.settings.enableIframePageLoading = true;
+    happy.settings.navigation.disableChildFrameNavigation = true;
+  }
 });

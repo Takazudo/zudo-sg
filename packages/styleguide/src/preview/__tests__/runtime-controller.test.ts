@@ -15,6 +15,19 @@ function send(runtime: ExternalPreviewRuntime, type: string, extra: Record<strin
   window.dispatchEvent(new MessageEvent("message", { origin: location.origin, source: window.parent, data }));
   return data;
 }
+// The package-scoped Vitest 5 config reports `rejects.toThrow` against an
+// empty message here, while `error.message` itself is set.
+async function expectRejected(promise: Promise<unknown>, expected?: string | RegExp) {
+  try {
+    await promise;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (expected instanceof RegExp) expect(message).toMatch(expected);
+    else if (expected !== undefined) expect(message).toContain(expected);
+    return;
+  }
+  throw new Error("expected a rejection");
+}
 function deferred<T>() {
   let resolve!: (value: T) => void;
   let reject!: (error: unknown) => void;
@@ -73,7 +86,7 @@ describe("external preview runtime controller", () => {
     const mount = vi.fn().mockRejectedValueOnce(new ExternalPreviewError("unknown-fixture", "No such fixture"))
       .mockResolvedValue({ update: vi.fn(), dispose: vi.fn() });
     const runtime = make(mount);
-    await expect(runtime.whenStable()).rejects.toThrow("No such fixture");
+    await expectRejected(runtime.whenStable(), "No such fixture");
     expect(runtime.getSnapshot()).toMatchObject({ ready: false, error: { code: "unknown-fixture" } });
     expect(document.querySelector('[role="alert"]')?.textContent).toContain("No such fixture");
     send(runtime, "sg:resetFixture", { nextGeneration: 1 });
@@ -89,12 +102,12 @@ describe("external preview runtime controller", () => {
     const runtime = make(vi.fn(() => ({ update, dispose })), { onCleanupError });
     await runtime.whenStable();
     send(runtime, "sg:updateProps", { props: { a: 1 } });
-    await expect(runtime.whenStable()).rejects.toThrow("render failed");
+    await expectRejected(runtime.whenStable(), "render failed");
     expect(runtime.getSnapshot().error?.code).toBe("render");
     send(runtime, "sg:updateProps", { props: { a: 2 } }, 1);
     await runtime.whenStable();
     expect(runtime.getSnapshot().error).toBeNull();
-    await expect(runtime.dispose()).rejects.toThrow("cleanup failed");
+    await expectRejected(runtime.dispose(), "cleanup failed");
     expect(onCleanupError).toHaveBeenCalledExactlyOnceWith({ code: "render", message: "cleanup failed", recoverable: true });
     expect(dispose).toHaveBeenCalledTimes(1);
     runtimes.splice(runtimes.indexOf(runtime), 1);
@@ -109,7 +122,7 @@ describe("external preview runtime controller", () => {
       throw new ExternalPreviewError(code, "Initial attempt failed");
     }).mockImplementationOnce(() => pending.promise);
     const runtime = make(mount);
-    await expect(runtime.whenStable()).rejects.toThrow("Initial attempt failed");
+    await expectRejected(runtime.whenStable(), "Initial attempt failed");
     const identity = runtime.getSnapshot().identity;
     expect(mount).toHaveBeenCalledTimes(1);
     send(runtime, "sg:updateProps", { props: { valid: true } });
@@ -131,7 +144,7 @@ describe("external preview runtime controller", () => {
 
   it.each([null, undefined, {}, { update() {} }])("reports an invalid mount handle %j", async (handle) => {
     const runtime = make(vi.fn(() => handle) as unknown as ExternalFixtureMount);
-    await expect(runtime.whenStable()).rejects.toThrow("must return an instance");
+    await expectRejected(runtime.whenStable(), "must return an instance");
     expect(runtime.getSnapshot().error?.code).toBe("render");
   });
 
@@ -151,7 +164,7 @@ describe("external preview runtime controller", () => {
     await vi.waitFor(() => expect(update).toHaveBeenCalledTimes(1));
     expect(runtime.getSnapshot()).toMatchObject({ ready: false, error: { message: "actual failed render" } });
     pending.resolve();
-    await expect(runtime.whenStable()).rejects.toThrow("actual failed render");
+    await expectRejected(runtime.whenStable(), "actual failed render");
     expect(document.querySelector('[role="alert"]')?.textContent).toContain("actual failed render");
     send(runtime, "sg:updateProps", { props: { fail: false } }, 1);
     await runtime.whenStable();
@@ -175,7 +188,7 @@ describe("external preview runtime controller", () => {
     const mount = vi.fn(() => ({ update: vi.fn(), dispose: vi.fn() }));
     const runtime = make(mount);
     await runtime.dispose();
-    await expect(runtime.whenStable()).rejects.toThrow();
+    await expectRejected(runtime.whenStable());
     expect(mount).not.toHaveBeenCalled();
   });
 
@@ -248,7 +261,7 @@ describe("external preview runtime controller", () => {
     await vi.waitFor(() => expect(instance.whenStable).toHaveBeenCalled());
     send(runtime, "sg:updateProps", { props: { changed: true } });
     stable.resolve();
-    await expect(capture).rejects.toThrow(/changed/);
+    await expectRejected(capture, /changed/);
     expect((await runtime.whenStable()).documentId).toBe(runtime.getSnapshot().identity.documentId);
   });
 });

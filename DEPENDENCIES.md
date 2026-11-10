@@ -1,5 +1,101 @@
 # Dependency audit register
 
+## zudo-doc 10.0.1 adopted — 2026-11-10
+
+The workspace, `doc/`, consumer fixtures and the generated starter adopt
+published `@takazudo/zudo-doc` / `zudo-doc-history-server` 10.0.1. zudo-doc
+10.0.1 still peers the ZFB family at `^6.0.1`, zdtp at
+`^0.5.2 || ^0.6.0 || ^0.7.0 || ^0.8.0 || ^0.9.0`, and history-server at
+`^10.0.0`, so 10.0.1 satisfies that peer and the installed ZFB 6.0.1 / zdtp
+0.9.3 pins stay. The engine's zudo-doc peer floor advances to `^10.0.1`
+under the tested-floor policy (ADR §13). `@takazudo/zudo-sg` and
+`create-zudo-sg` versions are not bumped and nothing is published from this
+change. mdx-formatter 1.3.0, zudo-design-token-lint 2.1.0, zfb 6.0.1 and
+zdtp 0.9.3 were already current.
+
+### Upstream impact
+
+`@takazudo/zudo-doc` and `@takazudo/zudo-doc-history-server` publish no
+`gitHead`. `create-zudo-doc@10.0.1` gitHead
+`a61351eb54fe500d34fdb3b696f019864959ad9d` is the `release: v10.0.1` merge
+on zudolab/zudo-doc. Registry tarballs are the consumer-facing source of
+truth (`npm diff` 10.0.0→10.0.1).
+
+- `@takazudo/zudo-doc` 10.0.0→10.0.1 (zudolab/zudo-doc, `packages/zudo-doc`,
+  changelog commit `7e5c783b`): the theme CLI treats `` `${...}` `` spans as
+  opaque, so list/apply can still read a later `themePack`. An omitted
+  `themePack` is reported as detected Graphite. A real config syntax error
+  is printed instead of the generic unreadable fallback. Apply still refuses
+  a value it cannot safely replace. Theme-pack CSS changes are comments
+  only (Classic's slug is `"classic"`, not the reserved `"default"` pack).
+  No export rename. This repo does not shell out to the theme CLI.
+  `themePack: "default"` on the root host stays; `doc/` still omits it.
+  Consumer impact: none in product code.
+- `@takazudo/zudo-doc-history-server` 10.0.0→10.0.1: version and changelog
+  only ("No package-specific changes"). Consumer impact: none.
+- `create-zudo-doc` 10.0.0→10.0.1 (changelog `f2e9ef42`): help text says
+  `"default"` aliases Graphite and Classic's slug is `"classic"`. The only
+  template change is a comment in `pages/docs/[[...slug]].tsx` naming
+  `DocHistoryBoundary` from `@takazudo/zudo-doc/doc-history-area`. That
+  comment is adopted in `doc/pages/docs/[[...slug]].tsx`. The local fork
+  still says `DesignTokenPanelBootstrap` without upstream's "server
+  boundary" wording. Scaffold pins move to `^10.0.1`. `doc/` does not
+  enable doc history or MCP, so the Wrangler comment correction does not
+  change `doc/package.json`. `tsconfig.base.json` is absent from the
+  tarball diff, so the snapshot reconciliation is a no-op apart from
+  comments.
+
+Left untouched (non-registry): `@takazudo/zudo-sg` `workspace:*` in the root
+and `packages/demo-ui`, and `file:.tarball/zudo-sg-engine.tgz` in the three
+fixtures. The generated starter's `@takazudo/zudo-sg` range stays `^0.9.0`.
+
+## Other outdated dependencies — 2026-11-10
+
+`pnpm outdated -r` after the toolchain bumps, and the GitHub Actions pins:
+
+- Adopted: KaTeX 0.19.1, `@codemirror/view` 6.43.15 (one copy, via a
+  `pnpm-workspace.yaml` override so the language packages do not keep
+  6.43.14), `@types/node` 24.19.2, html-validate 11.21.0, lefthook 2.2.2,
+  jsdom 31.0.0, tsup 9.0.0.
+- Not adopted: MSW 3.0.4. The styleguide build bundles `msw` / `msw/browser`
+  from the contact-form preview demo. MSW 3 pulls `debug/src/node.js`, and
+  the bundler fails with `Could not resolve "tty"`
+  (`node_modules/msw/node_modules/@mswjs/interceptors/node_modules/debug/src/node.js`).
+  Stayed on 2.15.0, the newest 2.x. CI Build and Build Styleguide Site
+  failed on 3.0.4; this revert is the fix.
+  `actions/checkout` was already commit `3d3c42e5`, which is v7.0.1; the
+  workflow comments now say that. `actions/download-artifact` 8.0.2,
+  `actions/github-script` 9.0.0, `actions/setup-node` 7.1.0, and
+  `actions/cache` v6 (tag points at 6.1.0) were already current.
+- Not adopted: `diff` 9.0.0. `@takazudo/zudo-doc@10.0.1` peers `diff` at
+  `^8.0.0`, so 9 does not satisfy the peer.
+- Not adopted: `@types/node` 26. The workspace engines are Node `>=24 <25`.
+  24.19.2 matches that runtime. Types for Node 26 describe APIs this
+  process does not have.
+
+## Vite 8.3.7, Vitest 5.1.0, and happy-dom 21.0.4 — 2026-11-10
+
+These replace Vite 7.3.5, Vitest 4.1.11, and happy-dom 20.14.6. Newer than
+the open Dependabot PRs: Vite 8.3.7 (PR #1013 named 8.3.6) and the same
+happy-dom 21.0.4 / Vitest 5.1.0 those PRs named.
+
+- Vite 8 transforms JSX with OXC and ignores `esbuild.jsxImportSource`.
+  Every Vitest config now sets `oxc.jsx.importSource` to
+  `@takazudo/zfb/zudo-react`. Without that, test files that contain JSX
+  import `react/jsx-dev-runtime`.
+- happy-dom 21 leaves `iframe.contentDocument` null unless
+  `enableIframePageLoading` is true. The Vitest setups turn that on and
+  keep `navigation.disableChildFrameNavigation` so preview `src` values
+  are not fetched.
+- Vitest 5's `Assertion` takes two type parameters. demo-ui typecheck
+  includes `vitest.setup.ts`, which imports
+  `@testing-library/jest-dom/vitest`, so the DOM matchers stay on `expect`.
+  That import is centralized in `vitest-jest-dom.ts` so `expect.extend`
+  runs once per worker.
+- In the package-scoped styleguide Vitest config, `rejects.toThrow` reports
+  an empty message for `runtime-controller` rejections whose `error.message`
+  is set. Those assertions read the message directly.
+
 ## ZFB 6.0.1, zudo-doc 10.0.0 and zdtp 0.9.3 adopted — 2026-11-10
 
 The workspace, `apps/demo`, `doc/`, consumer fixtures and the generated

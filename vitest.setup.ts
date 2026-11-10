@@ -1,7 +1,7 @@
 // Vitest global setup.
 //
 // - @testing-library/jest-dom adds DOM matchers (toBeInTheDocument, toHaveAttribute…).
-import "@testing-library/jest-dom/vitest";
+import "./vitest-jest-dom.ts";
 import { afterEach, beforeEach } from "vitest";
 import { disposeAll as disposeDemoUiIslands } from "./packages/demo-ui/src/test-utils/zudo-react.js";
 import { disposeAll as disposeStyleguideIslands } from "./packages/styleguide/src/__tests__/helpers/zudo-react.js";
@@ -27,8 +27,18 @@ afterEach(() => {
 beforeEach(() => {
   const happy = (
     globalThis as unknown as {
-      happyDOM?: { settings: { navigation: { disableChildFrameNavigation: boolean } } };
+      happyDOM?: {
+        settings: {
+          enableIframePageLoading?: boolean;
+          navigation: { disableChildFrameNavigation: boolean };
+        };
+      };
     }
   ).happyDOM;
-  if (happy) happy.settings.navigation.disableChildFrameNavigation = true;
+  // happy-dom 21 does not load iframe documents unless page loading is on.
+  // Child-frame navigation stays off so preview `src` values are not fetched.
+  if (happy) {
+    happy.settings.enableIframePageLoading = true;
+    happy.settings.navigation.disableChildFrameNavigation = true;
+  }
 });
