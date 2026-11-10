@@ -4,7 +4,23 @@ import { zudoDoc } from "@takazudo/zudo-doc/config";
 export default defineConfig(
   zudoDoc({
     port: 4323,
-    siteName: "zudo-sg Docs",
+    siteName: "zudo-sg",
+    logo: "/img/logo.svg",
+    headerBrand: { icon: "/img/brand/zudo-sg-symbol-small.svg" },
+    favicon: {
+      svg: "/favicon.svg",
+      png32: "/favicon-32x32.png",
+      png16: "/favicon-16x16.png",
+      ico: "/favicon.ico",
+    },
+    // zudoDoc shallow-merges nested settings, so retain every metadata role.
+    metaTags: {
+      description: true,
+      keywords: false,
+      ogImage: "/img/ogp.png",
+      ogSiteName: true,
+      twitterCard: "summary_large_image",
+    },
     siteTreeNavSecondary: ["changelog", "claude", "claude-md", "claude-skills"],
     siteUrl: "https://zudo-sg-doc.takazudomodular.com",
     // Explicit since zudo-doc 5.17.0 gated /sitemap.xml on this setting; before that
