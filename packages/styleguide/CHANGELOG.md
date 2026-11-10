@@ -4,6 +4,33 @@ All notable changes to `@takazudo/zudo-sg` are documented in this file.
 
 The format is based on Keep a Changelog, and release notes are generated from the changelog MDX pages.
 
+## [0.9.0] - 2026-11-10
+
+This release moves the engine onto zfb 6 and zudo-doc 10. The engine's public
+API is unchanged. Hosts upgrade by moving their zfb, zudo-doc, and zdtp
+installs to the new peer floors.
+
+### Breaking Changes
+
+- The `@takazudo/zfb` peer is now ^6.0.1 (was ^5.2.2). zfb 5 hosts are no
+  longer supported. zfb 6 bundles with Rolldown only, so `ZFB_BUNDLER`,
+  `ZFB_ROLLDOWN_PROTOTYPE`, and `ZFB_ESBUILD_BIN` must stay unset.
+- The `@takazudo/zudo-doc` peer is now ^10.0.0 (was ^9.1.4). zudo-doc 9 hosts
+  are no longer supported. `themePack: "default"` is now an alias for
+  Graphite, and Classic is `themePack: "classic"`.
+- The `@takazudo/zdtp` peer is now ^0.9.3 (was ^0.9.0).
+
+### Bug Fixes
+
+- Token dashboards follow the active theme pack's preview colors when that
+  pack ships a stylesheet, so a Graphite page and its dashboards share one
+  background. zudo-doc 10 also scopes the preview panel mount id to the
+  active pack (`storagePrefix--pack`).
+
+### Other Changes
+
+- The README install line and peer list follow the new floors.
+
 ## [0.8.3] - 2026-11-07
 
 A patch release that moves the engine's tested zudo-doc peer floor to the
