@@ -1,0 +1,84 @@
+{
+  "productName": "zudo-sg",
+  "acceptedDirection": "A06 / Rhythm",
+  "acceptedDate": "2026-11-11",
+  "timezone": "Asia/Tokyo",
+  "sourceRound": "zudo-sg-composition-r2",
+  "symbol": {
+    "viewBox": [
+      0,
+      0,
+      512,
+      512
+    ],
+    "shapeCount": 5,
+    "standardGutter": 22,
+    "compactGutter": 34,
+    "plane": [
+      0.91,
+      -0.2,
+      0,
+      0.81,
+      46,
+      116
+    ]
+  },
+  "typography": {
+    "family": "Jost",
+    "weight": 600,
+    "style": "normal",
+    "letterSpacing": "normal",
+    "file": "../../public/fonts/jost-600.woff2",
+    "sha256": "fa418d4c46615b4e07e2011eed91a3e399f88bf67bd8bc39e3fee14a04e442b5"
+  },
+  "lockup": {
+    "viewBox": [
+      0,
+      0,
+      410,
+      96
+    ],
+    "symbolSize": 96,
+    "wordmarkOriginX": 116,
+    "wordmarkBaseline": 70.304,
+    "fontSize": 82
+  },
+  "usage": {
+    "standard": "Above 32 CSS px",
+    "compact": "16–32 CSS px; documentation header",
+    "liveName": "zudo-sg"
+  },
+  "color": {
+    "dark": "#161816",
+    "light": "#ffffff"
+  },
+  "favicons": {
+    "adaptiveSvg": "compact symbol, transparent background; dark ink on light scheme and white on dark",
+    "pngIco": "compact symbol, opaque white background including gutters",
+    "icoSizes": [
+      16,
+      32,
+      48
+    ]
+  },
+  "socialCard": {
+    "size": [
+      1200,
+      630
+    ],
+    "background": "#ffffff",
+    "lockupPosition": [
+      190,
+      219
+    ],
+    "lockupScale": 2
+  },
+  "unchangedMasterSources": {
+    "assets/zudo-sg-symbol.svg": "assets/zudo-sg-a06-rhythm-symbol.svg",
+    "assets/zudo-sg-symbol-small.svg": "assets/zudo-sg-a06-rhythm-symbol-small.svg",
+    "assets/zudo-sg-lockup.svg": "assets/zudo-sg-a06-rhythm-lockup.svg",
+    "assets/zudo-sg-lockup-white.svg": "assets/zudo-sg-a06-rhythm-lockup-white.svg",
+    "fonts/jost-600.woff2": "fonts/jost-600.woff2",
+    "fonts/OFL.txt": "fonts/OFL.txt"
+  }
+}

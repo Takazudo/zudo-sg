@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="zudo-sg A06 / Rhythm">
+<title>zudo-sg — A06 / Rhythm</title>
+<desc>Five solid panels form a hierarchical composition: one large upper-left specimen, two stacked smaller specimens at right, and two unequal base panels.</desc>
+<g fill="currentColor" transform="matrix(0.91 -0.2 0 0.81 46 116)">
+<path d="M 0 26 Q 0 0 26 0 L 284 0 Q 289 0 289 5 L 289 285 Q 289 290 284 290 L 5 290 Q 0 290 0 285 Z"/>
+<path d="M 311 5 Q 311 0 316 0 L 434 0 Q 460 0 460 26 L 460 129 Q 460 134 455 134 L 316 134 Q 311 134 311 129 Z"/>
+<path d="M 311 161 Q 311 156 316 156 L 455 156 Q 460 156 460 161 L 460 285 Q 460 290 455 290 L 316 290 Q 311 290 311 285 Z"/>
+<path d="M 0 317 Q 0 312 5 312 L 145 312 Q 150 312 150 317 L 150 455 Q 150 460 145 460 L 26 460 Q 0 460 0 434 Z"/>
+<path d="M 172 317 Q 172 312 177 312 L 455 312 Q 460 312 460 317 L 460 434 Q 460 460 434 460 L 177 460 Q 172 460 172 455 Z"/>
+</g>
+</svg>
