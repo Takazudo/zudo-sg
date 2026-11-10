@@ -62,9 +62,15 @@ describe("root zfb integration contract", () => {
 
     // The trigger (#813/#816) is listed in src/config/settings.ts itself, so
     // `pages/index.tsx`'s own header carries it too — see the comment there.
-    // withZudoSg() therefore finds it already installed and appends nothing,
-    // and the route descriptor is the host settings byte-for-byte again.
-    expect(routeSettings).toEqual({ ...settings, bundleZdtp: true });
+    // withZudoSg() therefore finds it already installed and appends nothing.
+    // zudo-doc 10 resolves the authored `themePack: "default"` alias to
+    // Graphite before the route descriptor is sealed.
+    expect(settings.themePack).toBe("default");
+    expect(routeSettings).toEqual({
+      ...settings,
+      bundleZdtp: true,
+      themePack: "graphite",
+    });
 
     const triggers = (settings.headerRightItems as Array<{ type: string; html?: string }>).filter(
       (item) => item.type === "html" && item.html?.includes("sg-preview-tokens-trigger"),

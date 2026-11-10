@@ -8,12 +8,11 @@ import {
 } from "@takazudo/zudo-sg/token-dashboard";
 
 const TOKENS_PATH = withBase("/tokens");
-const PREVIEW_STATE_KEY = "sg-preview-tweak-state-v4";
+const PREVIEW_STORAGE_BASE = "sg-preview-tweak";
 const COLOR_SENTINEL = "oklch(0.42 0.18 210)";
 const PANEL_INSTANCES = {
   preview: {
     toggleEvent: "toggle-preview-token-panel",
-    storagePrefix: "sg-preview-tweak",
   },
 } as const;
 type PanelInstance = keyof typeof PANEL_INSTANCES;
@@ -115,8 +114,20 @@ async function rulerWidth(dashboardRoot: Locator): Promise<number> {
     .evaluate((node) => node.getBoundingClientRect().width);
 }
 
-function panelShell(page: Page, instance: PanelInstance): Locator {
-  return page.locator(`#${PANEL_INSTANCES[instance].storagePrefix}-root .tokenpanel-shell`);
+/** zudo-doc 10 scopes a non-Classic pack's panel storage, so the mount id is
+ *  `${prefix}--${pack}-root` (Classic keeps the bare prefix). */
+async function previewStoragePrefix(page: Page): Promise<string> {
+  const pack = await page.locator("html").getAttribute("data-theme-pack");
+  if (!pack || pack === "classic") return PREVIEW_STORAGE_BASE;
+  return `${PREVIEW_STORAGE_BASE}--${pack}`;
+}
+
+async function panelShell(page: Page, instance: PanelInstance): Promise<Locator> {
+  if (instance !== "preview") {
+    throw new Error(`Unknown panel instance ${instance}`);
+  }
+  const prefix = await previewStoragePrefix(page);
+  return page.locator(`#${prefix}-root .tokenpanel-shell`);
 }
 
 async function openPanel(page: Page, instance: PanelInstance): Promise<Locator> {
@@ -131,7 +142,7 @@ async function openPanel(page: Page, instance: PanelInstance): Promise<Locator> 
   await page.evaluate((name) => {
     window.dispatchEvent(new CustomEvent(name));
   }, toggleEvent);
-  const panel = panelShell(page, instance);
+  const panel = await panelShell(page, instance);
   await expect(panel).toBeVisible({ timeout: 10_000 });
   return panel;
 }
@@ -155,17 +166,18 @@ async function setPanelValue(
 }
 
 async function closePanel(page: Page, instance: PanelInstance): Promise<void> {
-  const panel = panelShell(page, instance);
+  const panel = await panelShell(page, instance);
   const close = panel.getByRole("button", { name: "Close panel", exact: true });
   await expect(close).toBeVisible({ timeout: 3_000 });
   await close.click();
   await expect(panel).not.toBeVisible({ timeout: 3_000 });
+  const prefix = await previewStoragePrefix(page);
   // zdtp persists visibility in an effect after removing the shell from the DOM.
   await expect
-    .poll(() => page.evaluate((prefix) => ({
-      open: localStorage.getItem(`${prefix}-open`),
-      visible: localStorage.getItem(`${prefix}:visible`),
-    }), PANEL_INSTANCES[instance].storagePrefix))
+    .poll(() => page.evaluate((storagePrefix) => ({
+      open: localStorage.getItem(`${storagePrefix}-open`),
+      visible: localStorage.getItem(`${storagePrefix}:visible`),
+    }), prefix))
     .toEqual({ open: null, visible: "0" });
 }
 
@@ -413,6 +425,7 @@ test("dashboard defaults stay isolated from saved preview panel state", async ({
   ).toBe("");
 
   const previewPanel = await openPanel(page, "preview");
+  const previewStateKey = `${await previewStoragePrefix(page)}-state-v4`;
   await setPanelValue(
     previewPanel,
     "Color",
@@ -421,7 +434,7 @@ test("dashboard defaults stay isolated from saved preview panel state", async ({
   );
 
   await expect
-    .poll(() => readPersistedState(page, PREVIEW_STATE_KEY))
+    .poll(() => readPersistedState(page, previewStateKey))
     .toMatchObject({
       tabs: {
         "ui-color": {
@@ -473,7 +486,7 @@ test("token reference keeps preview editing without legacy listing or copy contr
   await expect(page.getByRole("group", { name: "Copy format" })).toHaveCount(0);
 
   await page.getByRole("button", { name: "Preview tokens →", exact: true }).click();
-  const panel = panelShell(page, "preview");
+  const panel = await panelShell(page, "preview");
   await expect(panel).toBeVisible();
   await expect(panel.getByRole("tab", { name: "Color", exact: true })).toBeVisible();
   await closePanel(page, "preview");

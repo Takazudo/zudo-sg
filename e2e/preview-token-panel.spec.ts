@@ -416,7 +416,11 @@ test("preview panel: overrides reach iframe :root; host <html> is unchanged", as
   // Open the preview panel via the toggle event (verifies event channel wiring).
   await openPreviewPanel(page);
   await expect(page.locator(".tokenpanel-shell")).toHaveCount(1);
-  await expect(page.locator("#sg-preview-tweak-root .tokenpanel-shell")).toBeVisible();
+  const themePack = await page.locator("html").getAttribute("data-theme-pack");
+  const previewRootId = !themePack || themePack === "classic"
+    ? "sg-preview-tweak-root"
+    : `sg-preview-tweak--${themePack}-root`;
+  await expect(page.locator(`#${previewRootId} .tokenpanel-shell`)).toBeVisible();
 
   // Apply overrides via the bridge postMessage API.
   // This tests that the iframe's bridge receiver (installIframeReceiver) is

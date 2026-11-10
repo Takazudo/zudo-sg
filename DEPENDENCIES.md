@@ -1,5 +1,52 @@
 # Dependency audit register
 
+## ZFB 6.0.1, zudo-doc 10.0.0 and zdtp 0.9.3 adopted — 2026-11-10
+
+The workspace, `apps/demo`, `doc/`, consumer fixtures and the generated
+starter adopt published `@takazudo/zfb`, `zfb-runtime` and `zfb-md-wasm`
+6.0.1, `@takazudo/zudo-doc` / `zudo-doc-history-server` 10.0.0, and
+`@takazudo/zdtp` 0.9.3. zudo-doc 10 peers the ZFB family at `^6.0.1` and
+history-server at `^10.0.0`. The engine and demo-ui peer floors advance to
+`^6.0.1` / `^10.0.0` / `^0.9.3` under the tested-floor policy (ADR §13).
+`^6.0.1` does not include zfb 5, and `^10.0.0` does not include zudo-doc 9,
+so this is a breaking peer move for `@takazudo/zudo-sg` (Scheme B minor,
+0.8.3 → 0.9.0) and is not published from this change. Release-age exceptions
+for the exact-pinned ZFB native binaries and `zfb-slugify` move to 6.0.1.
+mdx-formatter 1.3.0 and zudo-design-token-lint 2.1.0 were already current.
+
+### Upstream impact
+
+Published packages carry no `gitHead`. Release tags were verified in the
+source repos (`v5.2.2`…`v6.0.1` on Takazudo/zudo-front-builder,
+`zudo-doc-v9.1.4`…`zudo-doc-v10.0.0` and the matching history-server tags on
+zudolab/zudo-doc, `v0.9.0`…`v0.9.3` on Takazudo/zudo-design-token-panel).
+The registry tarballs are the consumer-facing source of truth.
+
+- `zfb` 5.2.2→6.0.1: the npm tarball's JavaScript surface is unchanged
+  (package metadata, changelog pointer, README). v6.0.0 removes esbuild.
+  Setting `ZFB_BUNDLER`, `ZFB_ROLLDOWN_PROTOTYPE`, or `ZFB_ESBUILD_BIN`
+  fails startup. None are set in this repo. HTML minification keeps
+  `&amp;`, and zudo-wind reads interpolations inside `<script>` markup.
+- `zfb-runtime` 6.0.1 has no package-specific changes from 6.0.0. 6.0.0
+  leaves a few disconnected or reassociated form submissions to the browser.
+- `zfb-md-wasm` 6.0.1 has no package-specific changelog entry. The tarball
+  rebuilds the wasm and browser bundles (esbuild → rolldown in the package's
+  own devDependency). No export rename.
+- `zudo-doc` 10.0.0: `themePack: "default"` is now an alias for Graphite.
+  Classic is `themePack: "classic"`. `DEFAULT_THEME_PACK_SLUG` is removed.
+  This repo does not import that symbol. The root host keeps
+  `themePack: "default"` and takes Graphite. `doc/` omits `themePack`, which
+  already resolves to Graphite in light/dark mode. Peers move to the ZFB
+  6.0.1 family. 9.1.5 only changes doc-history manifest injection, and
+  `doc/` leaves doc history off.
+- `zudo-doc-history-server` 10.0.0: version and changelog only.
+- `zdtp` 0.9.3: built against zfb 6.0.1. Its zfb peer is
+  `^5.1.2 || ^6.0.0`, which accepts 6.0.1. 0.9.1 adds a non-visual
+  `data-zdtp-version` on the mounted shell. No JavaScript export change.
+
+`create-zudo-doc` 9.1.4→10.0.0 keeps all 29 template files byte-identical.
+`tsconfig.base.json` is byte-identical to 9.1.4. See `ZUDO_DEPS_PINS.md`.
+
 ## zudo-doc 9.1.4 adopted — 2026-11-07
 
 The workspace, `doc/`, consumer fixtures and the generated starter adopt

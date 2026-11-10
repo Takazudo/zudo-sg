@@ -5,7 +5,9 @@
 
 import type { JSX } from "@takazudo/zfb/zudo-react/jsx-runtime";
 import { Island } from "@takazudo/zfb";
+import themePackCatalog from "@takazudo/zudo-doc/catalog";
 import { resolveRampRef } from "@takazudo/zudo-doc/color-scheme-utils";
+import { resolveConfiguredThemePack } from "@takazudo/zudo-doc/theme-packs-registry";
 import { tokensManifest } from "virtual:zudo-sg-tokens";
 import { StyleguideLayout } from "../chrome/index.js";
 import { TOKENS_SLUG } from "../registry/index.js";
@@ -17,11 +19,30 @@ import { ctx } from "./_context.js";
 export const frontmatter = { title: "Design Tokens" };
 
 /**
- * Per-mode dashboard chrome colors resolved from the site's zudo-doc color
- * schemes (`--zdtp-dashboard-{light,dark}-{bg,fg}`); `undefined` when the
- * host passed no `colorSchemes` to the zudo-doc preset.
+ * Per-mode dashboard chrome colors (`--zdtp-dashboard-{light,dark}-{bg,fg}`).
+ *
+ * A theme pack with a stylesheet paints the page from its own palette, so the
+ * dashboards follow that pack's preview swatches. Classic (and a host with no
+ * pack stylesheet) keeps the color-scheme ramps. `undefined` when the host
+ * passed no `colorSchemes` and no styled pack is active.
  */
 function buildDashboardChromeStyle(): Record<string, string> | undefined {
+  const slug = resolveConfiguredThemePack({
+    themePack: settings.themePack,
+    colorMode: settings.colorMode,
+    customColorSchemes: Boolean(routeCtx.colorSchemes),
+  });
+  const pack = themePackCatalog.packs.find((entry) => entry.slug === slug);
+  if (pack?.hasStylesheet) {
+    const { light, dark } = pack.meta.preview;
+    return {
+      "--zdtp-dashboard-light-bg": light.bg,
+      "--zdtp-dashboard-light-fg": light.fg,
+      "--zdtp-dashboard-dark-bg": dark.bg,
+      "--zdtp-dashboard-dark-fg": dark.fg,
+    };
+  }
+
   const schemes = routeCtx.colorSchemes;
   if (!schemes) return undefined;
   const entries: Array<[string, string]> = [];
