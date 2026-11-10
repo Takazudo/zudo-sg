@@ -56,7 +56,13 @@ fixtures. The generated starter's `@takazudo/zudo-sg` range stays `^0.9.0`.
 - Adopted: KaTeX 0.19.1, `@codemirror/view` 6.43.15 (one copy, via a
   `pnpm-workspace.yaml` override so the language packages do not keep
   6.43.14), `@types/node` 24.19.2, html-validate 11.21.0, lefthook 2.2.2,
-  jsdom 31.0.0, tsup 9.0.0, MSW 3.0.4 (worker script regenerated).
+  jsdom 31.0.0, tsup 9.0.0.
+- Not adopted: MSW 3.0.4. The styleguide build bundles `msw` / `msw/browser`
+  from the contact-form preview demo. MSW 3 pulls `debug/src/node.js`, and
+  the bundler fails with `Could not resolve "tty"`
+  (`node_modules/msw/node_modules/@mswjs/interceptors/node_modules/debug/src/node.js`).
+  Stayed on 2.15.0, the newest 2.x. CI Build and Build Styleguide Site
+  failed on 3.0.4; this revert is the fix.
   `actions/checkout` was already commit `3d3c42e5`, which is v7.0.1; the
   workflow comments now say that. `actions/download-artifact` 8.0.2,
   `actions/github-script` 9.0.0, `actions/setup-node` 7.1.0, and
