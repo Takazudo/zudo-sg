@@ -13,6 +13,7 @@ import { routeContext } from "virtual:zudo-doc-route-context";
 import { chromeBindings } from "virtual:zudo-doc-chrome-bindings";
 import { createRouteContext, type RouteContextPayload } from "@takazudo/zudo-doc/route-context";
 import { createChrome } from "@takazudo/zudo-doc/chrome";
+import { resolveThemePackSsrSlug } from "@takazudo/zudo-doc/theme";
 import type { StyleguideLayoutProps } from "../chrome/index.js";
 import { buildNavNodes } from "../registry/index.js";
 import { ctx, withBase } from "./_context.js";
@@ -24,6 +25,14 @@ export const locale = routeCtx.defaultLocale;
 
 const chrome = createChrome(routeCtx, chromeBindings);
 export const { composeMetaTitle } = chrome;
+
+// Same SSR slug the package doc routes stamp on `<html>`. `?? null` keeps a
+// missing registry inert — the chrome unit stub omits the field, and
+// `resolveThemePackSsrSlug` only treats `null` as "feature off".
+export const themePackSsrSlug = resolveThemePackSsrSlug(
+  routeCtx.themePackRegistry ?? null,
+  routeCtx.settings,
+);
 
 /** The styleguide sidebar tree, built once and shared by every engine route. */
 export const navNodes = buildNavNodes(registry, { withBase, routes: ctx.routes });
@@ -43,7 +52,7 @@ export interface ChromeSlotOptions {
 
 type ChromeProps = Pick<
   StyleguideLayoutProps,
-  "title" | "lang" | "head" | "header" | "footer" | "bodyEnd" | "navNodes" | "sidebarToggle" | "enableClientRouter" | "noindex"
+  "title" | "lang" | "head" | "header" | "footer" | "bodyEnd" | "navNodes" | "sidebarToggle" | "enableClientRouter" | "noindex" | "dataThemePack"
 >;
 
 /** Every StyleguideLayout prop that comes from the doc chrome and the site settings. */
@@ -90,5 +99,6 @@ export function chromeProps({ pageTitle, path, extraHead, activeSlug, hideSideba
     sidebarToggle: Boolean(settings.sidebarToggle),
     enableClientRouter: Boolean(settings.dynamicPageTransition),
     noindex: Boolean(settings.noindex),
+    dataThemePack: themePackSsrSlug,
   };
 }

@@ -9,13 +9,14 @@ import type { NavNode } from "../../registry/nav-nodes.js";
 vi.mock("@takazudo/zudo-doc/doclayout", () => ({
   DocLayoutWithDefaults: (props: {
     contentWide?: boolean;
+    dataThemePack?: string;
     head?: Child;
     headerOverride?: Child;
     sidebarOverride?: Child;
     afterSidebar?: Child;
     children?: Child;
   }) => (
-    <html>
+    <html {...(props.dataThemePack ? { "data-theme-pack": props.dataThemePack } : {})}>
       <head>{props.head}</head>
       <body>
         {props.headerOverride}
@@ -89,6 +90,35 @@ function renderTokensLayout(
     </StyleguideLayout>,
   );
 }
+
+describe("StyleguideLayout theme-pack SSR", () => {
+  it("forwards dataThemePack onto the html element", () => {
+    const html = render(
+      <StyleguideLayout
+        title="Components"
+        lang="en"
+        head={<></>}
+        header={<></>}
+        footer={<></>}
+        bodyEnd={<></>}
+        navNodes={NAV_NODES}
+        sidebarToggle={SIDEBAR_TOGGLE}
+        enableClientRouter
+        noindex={false}
+        dataThemePack="graphite"
+      >
+        <p>content</p>
+      </StyleguideLayout>,
+    );
+    expect(html).toMatch(/<html[^>]* data-theme-pack="graphite"/);
+  });
+
+  it("omits data-theme-pack when the registry slug was not threaded", () => {
+    const html = renderTokensLayout();
+    const htmlTag = html.slice(0, html.indexOf(">") + 1);
+    expect(htmlTag).not.toContain("data-theme-pack");
+  });
+});
 
 describe("StyleguideLayout contentWide seam (#538)", () => {
   it("forwards contentWide=true through to data-zd-wide on .zd-doc-content-band", () => {
