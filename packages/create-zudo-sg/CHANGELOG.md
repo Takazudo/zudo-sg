@@ -4,6 +4,16 @@ All notable changes to `create-zudo-sg` are documented in this file.
 
 The format is based on Keep a Changelog.
 
+## [0.2.13] - 2026-11-11
+
+### Changed
+
+- New projects install zudo-doc 10.0.1 (was 10.0.0), Vite 8.3.7, Vitest 5.1.0,
+  happy-dom 21.0.4, and katex ^0.19.1, the versions the engine is tested
+  against.
+- Update the starter engine range to `@takazudo/zudo-sg ^0.9.1`, whose
+  zudo-doc peer floor matches that pin.
+
 ## [0.2.12] - 2026-11-11
 
 ### Changed
