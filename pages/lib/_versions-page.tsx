@@ -15,7 +15,7 @@ import type { VersionPageEntry, VersionsPageLabels } from "@takazudo/zudo-doc/na
 import type { JSX } from "@takazudo/zfb/zudo-react/jsx-runtime";
 import { FooterWithDefaults } from "./_footer-with-defaults";
 import { HeaderWithDefaults } from "./_header-with-defaults";
-import { HeadWithDefaults } from "./_head-with-defaults";
+import { HeadWithDefaults, themePackSsrSlug } from "./_head-with-defaults";
 import { composeMetaTitle } from "./_compose-meta-title";
 import { BodyEndIslands } from "./_body-end-islands";
 
@@ -58,6 +58,7 @@ export function VersionsPageView({ locale }: { locale: string }): JSX.Element {
       title={composeMetaTitle(pageTitle)}
       enableClientRouter={settings.dynamicPageTransition}
       head={<HeadWithDefaults title={pageTitle} />}
+      dataThemePack={themePackSsrSlug}
       lang={locale}
       noindex={settings.noindex}
       hideSidebar={true}

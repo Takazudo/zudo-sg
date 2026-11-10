@@ -104,6 +104,12 @@ export interface StyleguideLayoutProps {
   enableClientRouter: boolean;
   /** Mirrors the host's `settings.noindex`. */
   noindex: boolean;
+  /**
+   * Build-static `<html data-theme-pack>` value. Engine routes compute it
+   * with `resolveThemePackSsrSlug` and pass it through `chromeProps`.
+   * Omitted when the theme-pack registry was not threaded.
+   */
+  dataThemePack?: string;
   children: Child;
 }
 
@@ -122,6 +128,7 @@ export function StyleguideLayout({
   sidebarToggle,
   enableClientRouter,
   noindex,
+  dataThemePack,
   children,
 }: StyleguideLayoutProps): JSX.Element {
   const showCodePanel = Boolean(codePanel);
@@ -173,6 +180,7 @@ export function StyleguideLayout({
       title={title}
       enableClientRouter={enableClientRouter}
       head={composedHead}
+      dataThemePack={dataThemePack}
       lang={lang}
       noindex={noindex}
       hideSidebar={hideSidebar}

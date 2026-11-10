@@ -72,6 +72,28 @@ test("home page renders without JS errors or failed asset requests", async ({ pa
   expect(failedResponses).toEqual([]);
 });
 
+// First-load HTML, not the DOM after the theme-pack bootstrap or a client
+// navigation. `/` and `/docs/versions` are host-owned DocLayout pages;
+// `/components` and `/tokens` are engine routes that share the same
+// dataThemePack stamp. `/preview/contact` is a chrome-free component demo
+// and must stay off the doc pack.
+test("built documents server-render the configured Graphite theme pack", async ({ page }) => {
+  for (const path of ["/", "/docs/versions", "/components", "/tokens"]) {
+    const response = await page.goto(path);
+    expect(response?.status(), path).toBe(200);
+    const html = await response!.text();
+    expect(html, path).toMatch(/<html\b[^>]*\bdata-theme-pack=(?:"graphite"|graphite)(?=[\s>])/);
+    expect(html, path).toMatch(/theme-packs\/graphite\/pack\.css\?v=/);
+    expect(html, path).toContain("zudo-doc-theme-pack");
+  }
+
+  const preview = await page.goto("/preview/contact");
+  expect(preview?.status()).toBe(200);
+  const previewHtml = await preview!.text();
+  expect(previewHtml).not.toContain("data-theme-pack");
+  expect(previewHtml).not.toContain("theme-packs/");
+});
+
 test("overview docs page returns 200 and the old guide route returns 404", async ({ page }) => {
   // /docs/ has no index.html on the scaffold (trailingSlash: false, no root
   // docs index page). Navigate to the first real docs page instead.

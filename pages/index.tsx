@@ -28,7 +28,7 @@ import { SiteTreeNav } from "@takazudo/zudo-doc/site-tree-nav-island";
 import { routeContext } from "virtual:zudo-doc-route-context";
 import { FooterWithDefaults } from "./lib/_footer-with-defaults";
 import { HeaderWithDefaults } from "./lib/_header-with-defaults";
-import { HeadWithDefaults } from "./lib/_head-with-defaults";
+import { HeadWithDefaults, themePackSsrSlug } from "./lib/_head-with-defaults";
 import { composeMetaTitle } from "./lib/_compose-meta-title";
 import { BodyEndIslands } from "./lib/_body-end-islands";
 // Islands seed shim kept for `@takazudo/zudo-sg/islands` API stability — a
@@ -120,6 +120,7 @@ export default function IndexPage(): JSX.Element {
       title={composeMetaTitle(settings.siteName)}
       enableClientRouter={settings.dynamicPageTransition}
       head={<HeadWithDefaults title={settings.siteName} />}
+      dataThemePack={themePackSsrSlug}
       lang={locale}
       noindex={settings.noindex}
       hideSidebar={true}
