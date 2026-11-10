@@ -1,0 +1,25 @@
+---
+title: 0.9.1
+description: Host and catalog routes SSR the configured theme pack; peer floor moves to zudo-doc 10.0.1.
+sidebar_position: 30
+pagination_next: null
+---
+
+Released: 2026-11-11
+
+This release fixes first-paint theme packs on host pages and engine catalog
+routes, and raises the zudo-doc peer floor to the published 10.0.1 patch.
+
+### Bug Fixes
+
+- Host pages and engine catalog routes server-render the configured theme pack
+  (`data-theme-pack` plus the theme-pack bootstrap), so a first load of `/`,
+  `/docs/versions`, and the catalog no longer paints Classic when the host
+  selected another pack.
+
+### Other Changes
+
+- The `@takazudo/zudo-doc` peer is now `^10.0.1` (was `^10.0.0`).
+- Engine tooling moves to Vite 8.3.7, Vitest 5.1.0, and happy-dom 21.0.4.
+- Remaining Dependabot and package bumps land with this release; MSW stays at
+  2.15.0 so the site bundle keeps resolving.
