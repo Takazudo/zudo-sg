@@ -44,7 +44,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v5
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
 
@@ -75,7 +75,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v5
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup
         uses: ./.github/actions/setup
@@ -103,7 +103,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v5
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup
         uses: ./.github/actions/setup
@@ -133,7 +133,7 @@ jobs:
     steps:
       - name: Checkout repository
         # wrangler reads wrangler.toml from the repo root at deploy time.
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v5
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup deployment tools
         uses: ./.github/actions/setup-deploy
@@ -174,7 +174,7 @@ jobs:
     steps:
       - name: Checkout repository
         # wrangler reads apps/demo/wrangler.toml at deploy time.
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v5
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup deployment tools
         uses: ./.github/actions/setup-deploy
@@ -211,7 +211,7 @@ jobs:
     steps:
       - name: Checkout repository
         # wrangler reads doc/wrangler.toml at deploy time.
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v5
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup deployment tools
         uses: ./.github/actions/setup-deploy

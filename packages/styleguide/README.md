@@ -132,7 +132,7 @@ output as drift and never writes it.
 ## Installation
 
 ```sh
-pnpm add @takazudo/zudo-sg@latest @takazudo/zfb@^6.0.1 @takazudo/zfb-md-wasm@^6.0.1 @takazudo/zfb-runtime@^6.0.1 @takazudo/zudo-doc@^10.0.1 @takazudo/zdtp@^0.9.3 diff@^8.0.4 katex@^0.19.0 zod@^4.3.6
+pnpm add @takazudo/zudo-sg@latest @takazudo/zfb@^6.0.1 @takazudo/zfb-md-wasm@^6.0.1 @takazudo/zfb-runtime@^6.0.1 @takazudo/zudo-doc@^10.0.1 @takazudo/zdtp@^0.9.3 diff@^8.0.4 katex@^0.19.1 zod@^4.3.6
 ```
 
 The engine peers are `@takazudo/zfb ^6.0.1`, `@takazudo/zudo-doc ^10.0.1`,

@@ -49,6 +49,24 @@ Left untouched (non-registry): `@takazudo/zudo-sg` `workspace:*` in the root
 and `packages/demo-ui`, and `file:.tarball/zudo-sg-engine.tgz` in the three
 fixtures. The generated starter's `@takazudo/zudo-sg` range stays `^0.9.0`.
 
+## Other outdated dependencies — 2026-11-10
+
+`pnpm outdated -r` after the toolchain bumps, and the GitHub Actions pins:
+
+- Adopted: KaTeX 0.19.1, `@codemirror/view` 6.43.15 (one copy, via a
+  `pnpm-workspace.yaml` override so the language packages do not keep
+  6.43.14), `@types/node` 24.19.2, html-validate 11.21.0, lefthook 2.2.2,
+  jsdom 31.0.0, tsup 9.0.0, MSW 3.0.4 (worker script regenerated).
+  `actions/checkout` was already commit `3d3c42e5`, which is v7.0.1; the
+  workflow comments now say that. `actions/download-artifact` 8.0.2,
+  `actions/github-script` 9.0.0, `actions/setup-node` 7.1.0, and
+  `actions/cache` v6 (tag points at 6.1.0) were already current.
+- Not adopted: `diff` 9.0.0. `@takazudo/zudo-doc@10.0.1` peers `diff` at
+  `^8.0.0`, so 9 does not satisfy the peer.
+- Not adopted: `@types/node` 26. The workspace engines are Node `>=24 <25`.
+  24.19.2 matches that runtime. Types for Node 26 describe APIs this
+  process does not have.
+
 ## Vite 8.3.7, Vitest 5.1.0, and happy-dom 21.0.4 — 2026-11-10
 
 These replace Vite 7.3.5, Vitest 4.1.11, and happy-dom 20.14.6. Newer than
