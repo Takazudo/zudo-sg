@@ -19,11 +19,18 @@ beforeAll(() => {
   // Prevent happy-dom from actually trying to fetch/navigate the iframe's
   // `src` — these tests only exercise DOM selector matching + contentDocument
   // writes, not real page loads.
-  (
+  const happy = (
     window as unknown as {
-      happyDOM: { settings: { navigation: { disableChildFrameNavigation: boolean } } };
+      happyDOM: {
+        settings: {
+          enableIframePageLoading?: boolean;
+          navigation: { disableChildFrameNavigation: boolean };
+        };
+      };
     }
-  ).happyDOM.settings.navigation.disableChildFrameNavigation = true;
+  ).happyDOM;
+  happy.settings.enableIframePageLoading = true;
+  happy.settings.navigation.disableChildFrameNavigation = true;
 });
 
 const cleanups: Array<() => void> = [];

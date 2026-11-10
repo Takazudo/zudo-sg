@@ -49,6 +49,29 @@ Left untouched (non-registry): `@takazudo/zudo-sg` `workspace:*` in the root
 and `packages/demo-ui`, and `file:.tarball/zudo-sg-engine.tgz` in the three
 fixtures. The generated starter's `@takazudo/zudo-sg` range stays `^0.9.0`.
 
+## Vite 8.3.7, Vitest 5.1.0, and happy-dom 21.0.4 — 2026-11-10
+
+These replace Vite 7.3.5, Vitest 4.1.11, and happy-dom 20.14.6. Newer than
+the open Dependabot PRs: Vite 8.3.7 (PR #1013 named 8.3.6) and the same
+happy-dom 21.0.4 / Vitest 5.1.0 those PRs named.
+
+- Vite 8 transforms JSX with OXC and ignores `esbuild.jsxImportSource`.
+  Every Vitest config now sets `oxc.jsx.importSource` to
+  `@takazudo/zfb/zudo-react`. Without that, test files that contain JSX
+  import `react/jsx-dev-runtime`.
+- happy-dom 21 leaves `iframe.contentDocument` null unless
+  `enableIframePageLoading` is true. The Vitest setups turn that on and
+  keep `navigation.disableChildFrameNavigation` so preview `src` values
+  are not fetched.
+- Vitest 5's `Assertion` takes two type parameters. demo-ui typecheck
+  includes `vitest.setup.ts`, which imports
+  `@testing-library/jest-dom/vitest`, so the DOM matchers stay on `expect`.
+  That import is centralized in `vitest-jest-dom.ts` so `expect.extend`
+  runs once per worker.
+- In the package-scoped styleguide Vitest config, `rejects.toThrow` reports
+  an empty message for `runtime-controller` rejections whose `error.message`
+  is set. Those assertions read the message directly.
+
 ## ZFB 6.0.1, zudo-doc 10.0.0 and zdtp 0.9.3 adopted — 2026-11-10
 
 The workspace, `apps/demo`, `doc/`, consumer fixtures and the generated

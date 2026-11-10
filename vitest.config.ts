@@ -1,35 +1,38 @@
 import { configDefaults, defineConfig } from "vitest/config";
 import { resolve } from "node:path";
 
+const rootDir = import.meta.dirname;
+
 export default defineConfig({
-  // Vitest 4 can resolve Vite 8, whose OXC transform ignores these esbuild
-  // options. Keep Vite pinned to 7.3.5 for the zudo-react JSX runtime.
-  esbuild: { jsx: "automatic", jsxImportSource: "@takazudo/zfb/zudo-react" },
+  // Vite 8 transforms JSX with OXC and ignores esbuild.jsxImportSource.
+  oxc: {
+    jsx: { runtime: "automatic", importSource: "@takazudo/zfb/zudo-react" },
+  },
   resolve: {
     alias: {
-      "@/": resolve(__dirname, "src") + "/",
+      "@/": resolve(rootDir, "src") + "/",
       // zfb-only virtual module of @takazudo/zudo-sg/plugins/zdtp-apply-proxy —
       // plain Vite has no resolver for a "virtual:" specifier.
       "virtual:zudo-sg-preview-token-panel": resolve(
-        __dirname,
+        rootDir,
         "packages/styleguide/src/token-tweak/__tests__/stubs/virtual-preview-token-panel.ts",
       ),
       // zudo-doc-only virtual modules, sole importer packages/styleguide/src/routes/_chrome.tsx —
       // same reason: plain Vite has no resolver for a "virtual:" specifier.
       "virtual:zudo-doc-route-context": resolve(
-        __dirname,
+        rootDir,
         "packages/styleguide/src/routes/__tests__/stubs/virtual-doc-route-context.ts",
       ),
       "virtual:zudo-doc-chrome-bindings": resolve(
-        __dirname,
+        rootDir,
         "packages/styleguide/src/routes/__tests__/stubs/virtual-doc-chrome-bindings.ts",
       ),
       "virtual:zudo-sg-registry": resolve(
-        __dirname,
+        rootDir,
         "packages/styleguide/src/routes/__tests__/stubs/virtual-sg-registry.ts",
       ),
       "virtual:zudo-sg-tokens": resolve(
-        __dirname,
+        rootDir,
         "packages/styleguide/src/routes/__tests__/stubs/virtual-sg-tokens.ts",
       ),
     },

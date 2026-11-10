@@ -1,9 +1,9 @@
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
-  esbuild: {
-    jsx: "automatic",
-    jsxImportSource: "@takazudo/zfb/zudo-react",
+  // Vite 8 transforms JSX with OXC and ignores esbuild.jsxImportSource.
+  oxc: {
+    jsx: { runtime: "automatic", importSource: "@takazudo/zfb/zudo-react" },
   },
   test: {
     environment: "happy-dom",

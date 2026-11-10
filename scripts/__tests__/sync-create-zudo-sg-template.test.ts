@@ -180,13 +180,13 @@ describe("sync-create-zudo-sg-template.mjs", () => {
     expect(existsSync(join(target, "vitest.config.ts"))).toBe(true);
     expect(fixturePackage.scripts.test).toBe("vitest run --passWithNoTests");
     expect(fixturePackage.devDependencies).toMatchObject({
-      "happy-dom": "20.14.6",
-      vite: "7.3.5",
-      vitest: "4.1.11",
+      "happy-dom": "21.0.4",
+      vite: "8.3.7",
+      vitest: "5.1.0",
     });
     expect(fixturePackage.dependencies).not.toHaveProperty("preact");
     expect(readFileSync(join(target, "vitest.config.ts"), "utf8")).toContain(
-      'jsxImportSource: "@takazudo/zfb/zudo-react"',
+      'importSource: "@takazudo/zfb/zudo-react"',
     );
     const generatedText = readOutputText(target);
     for (const forbidden of [

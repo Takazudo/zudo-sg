@@ -2,7 +2,7 @@
 // setupFiles). Import it first from any `// @vitest-environment happy-dom`
 // suite. Mirrors the root `vitest.setup.ts`, which also applies when the root
 // config runs these suites — every step here is idempotent.
-import "@testing-library/jest-dom/vitest";
+import "../../../../vitest-jest-dom.ts";
 import { afterEach, beforeEach } from "vitest";
 import { disposeAll } from "./helpers/zudo-react.js";
 
@@ -12,8 +12,17 @@ afterEach(disposeAll);
 beforeEach(() => {
   const happy = (
     globalThis as unknown as {
-      happyDOM?: { settings: { navigation: { disableChildFrameNavigation: boolean } } };
+      happyDOM?: {
+        settings: {
+          enableIframePageLoading?: boolean;
+          navigation: { disableChildFrameNavigation: boolean };
+        };
+      };
     }
   ).happyDOM;
-  if (happy) happy.settings.navigation.disableChildFrameNavigation = true;
+  // happy-dom 21 leaves iframe.contentDocument null until page loading is enabled.
+  if (happy) {
+    happy.settings.enableIframePageLoading = true;
+    happy.settings.navigation.disableChildFrameNavigation = true;
+  }
 });
