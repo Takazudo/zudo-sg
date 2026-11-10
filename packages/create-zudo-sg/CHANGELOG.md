@@ -4,6 +4,17 @@ All notable changes to `create-zudo-sg` are documented in this file.
 
 The format is based on Keep a Changelog.
 
+## [0.2.12] - 2026-11-11
+
+### Changed
+
+- New projects install zfb, zfb-runtime, and zfb-md-wasm 6.0.1 (was 5.2.2),
+  zudo-doc 10.0.0 (was 9.1.4), and zdtp 0.9.3 (was 0.9.0), the versions the
+  engine is tested against. zudo-doc 10 aliases `themePack: "default"` to
+  Graphite; Classic is `themePack: "classic"`.
+- Update the starter engine range to `@takazudo/zudo-sg ^0.9.0`, whose zfb,
+  zudo-doc, and zdtp peer floors match those pins.
+
 ## [0.2.11] - 2026-11-07
 
 ### Changed
