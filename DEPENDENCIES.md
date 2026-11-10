@@ -1,5 +1,54 @@
 # Dependency audit register
 
+## zudo-doc 10.0.1 adopted — 2026-11-10
+
+The workspace, `doc/`, consumer fixtures and the generated starter adopt
+published `@takazudo/zudo-doc` / `zudo-doc-history-server` 10.0.1. zudo-doc
+10.0.1 still peers the ZFB family at `^6.0.1`, zdtp at
+`^0.5.2 || ^0.6.0 || ^0.7.0 || ^0.8.0 || ^0.9.0`, and history-server at
+`^10.0.0`, so 10.0.1 satisfies that peer and the installed ZFB 6.0.1 / zdtp
+0.9.3 pins stay. The engine's zudo-doc peer floor advances to `^10.0.1`
+under the tested-floor policy (ADR §13). `@takazudo/zudo-sg` and
+`create-zudo-sg` versions are not bumped and nothing is published from this
+change. mdx-formatter 1.3.0, zudo-design-token-lint 2.1.0, zfb 6.0.1 and
+zdtp 0.9.3 were already current.
+
+### Upstream impact
+
+`@takazudo/zudo-doc` and `@takazudo/zudo-doc-history-server` publish no
+`gitHead`. `create-zudo-doc@10.0.1` gitHead
+`a61351eb54fe500d34fdb3b696f019864959ad9d` is the `release: v10.0.1` merge
+on zudolab/zudo-doc. Registry tarballs are the consumer-facing source of
+truth (`npm diff` 10.0.0→10.0.1).
+
+- `@takazudo/zudo-doc` 10.0.0→10.0.1 (zudolab/zudo-doc, `packages/zudo-doc`,
+  changelog commit `7e5c783b`): the theme CLI treats `` `${...}` `` spans as
+  opaque, so list/apply can still read a later `themePack`. An omitted
+  `themePack` is reported as detected Graphite. A real config syntax error
+  is printed instead of the generic unreadable fallback. Apply still refuses
+  a value it cannot safely replace. Theme-pack CSS changes are comments
+  only (Classic's slug is `"classic"`, not the reserved `"default"` pack).
+  No export rename. This repo does not shell out to the theme CLI.
+  `themePack: "default"` on the root host stays; `doc/` still omits it.
+  Consumer impact: none in product code.
+- `@takazudo/zudo-doc-history-server` 10.0.0→10.0.1: version and changelog
+  only ("No package-specific changes"). Consumer impact: none.
+- `create-zudo-doc` 10.0.0→10.0.1 (changelog `f2e9ef42`): help text says
+  `"default"` aliases Graphite and Classic's slug is `"classic"`. The only
+  template change is a comment in `pages/docs/[[...slug]].tsx` naming
+  `DocHistoryBoundary` from `@takazudo/zudo-doc/doc-history-area`. That
+  comment is adopted in `doc/pages/docs/[[...slug]].tsx`. The local fork
+  still says `DesignTokenPanelBootstrap` without upstream's "server
+  boundary" wording. Scaffold pins move to `^10.0.1`. `doc/` does not
+  enable doc history or MCP, so the Wrangler comment correction does not
+  change `doc/package.json`. `tsconfig.base.json` is absent from the
+  tarball diff, so the snapshot reconciliation is a no-op apart from
+  comments.
+
+Left untouched (non-registry): `@takazudo/zudo-sg` `workspace:*` in the root
+and `packages/demo-ui`, and `file:.tarball/zudo-sg-engine.tgz` in the three
+fixtures. The generated starter's `@takazudo/zudo-sg` range stays `^0.9.0`.
+
 ## ZFB 6.0.1, zudo-doc 10.0.0 and zdtp 0.9.3 adopted — 2026-11-10
 
 The workspace, `apps/demo`, `doc/`, consumer fixtures and the generated
