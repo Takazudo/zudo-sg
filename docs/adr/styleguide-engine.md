@@ -406,6 +406,23 @@ prerelease handling, no dist-tag cleanup. Version source of truth is
 `packages/styleguide/package.json`; the first release is one `/l-make-release`
 run from `main` after the epic merges.
 
+**Amendment (2026-11-12, #1069): tokenless publication and shared release
+orchestration.** The `NPM_TOKEN` named above is retired from the release
+path. Both `publish-zudo-sg.yml` and `publish-create-zudo-sg.yml` authenticate
+only through npm Trusted Publishing (GitHub OIDC, `id-token: write` on the
+publish job alone); no workflow injects or falls back to an npm token. pnpm
+11's native publish performs the OIDC exchange, so `pnpm publish` (with its
+`workspace:` rewriting and explicit `--provenance`) stays the publisher. The
+canonical procedure for both packages is `packages/styleguide/RELEASE.md`;
+the Claude `/l-make-release` skill and the Codex `zudo-sg-release` skill are
+thin adapters over it and `scripts/release/release.mjs`. A dispatch-only
+`release.yml` coordinator verifies a candidate on `main` (exact push CI,
+manifest, notes, registry state), creates the tag and explicitly dispatches
+the publisher; each publisher re-verifies in Actions, skips publication when
+the version already exists with matching provenance, and completes the
+GitHub Release in a separate `contents: write` job. Stable-only `latest`, the
+tag namespaces and the release gates are unchanged.
+
 ### 13. Required peers and inherited host prerequisites
 
 **Amendment (2026-10-19, #1017 / #1019): bounded two-major zudo-doc peer
