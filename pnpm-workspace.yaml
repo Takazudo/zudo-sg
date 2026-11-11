@@ -8,11 +8,8 @@ packages:
 allowBuilds:
   esbuild: true
   lefthook: true
-  # msw's postinstall only runs `msw init` (copies mockServiceWorker.js into
-  # the workerDirectory declared in package.json's "msw" field below) — no
-  # network access, so it's safe to allow; this keeps the generated worker
-  # asset in sync with the installed msw version across future installs.
-  msw: true
+  # Regenerate the worker explicitly with the MSW CLI.
+  msw: false
 minimumReleaseAgeExclude:
   # First-party @takazudo packages — allowlisted by name so a freshly published
   # release (e.g. our own zudo-doc) installs without waiting out the

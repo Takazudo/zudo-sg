@@ -101,3 +101,33 @@ describe("contact preview worker lifetimes", () => {
     await vi.waitFor(() => expect(next.stop).toHaveBeenCalledOnce());
   });
 });
+
+it("reports unacknowledged cleanup and prevents a late stop from disabling a replacement", async () => {
+  const activate = createPreviewWorkerLifecycle();
+  const old = worker();
+  const pendingStop = deferred();
+  old.stop.mockImplementation(() => pendingStop.promise);
+  const ready = vi.fn();
+  const report = vi.fn();
+  const dispose = activate(async () => old, ready, vi.fn(), report);
+  await vi.waitFor(() => expect(ready).toHaveBeenCalledOnce());
+  vi.useFakeTimers();
+  try {
+    dispose();
+    await Promise.resolve();
+    await Promise.resolve();
+    const loadNext = vi.fn(async () => worker());
+    const failed = vi.fn();
+    const disposeNext = activate(loadNext, vi.fn(), failed);
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(report).toHaveBeenCalledWith(expect.objectContaining({ cause: expect.objectContaining({ message: expect.stringContaining("acknowledge cleanup") }) }));
+    expect(failed).toHaveBeenCalledOnce();
+    expect(loadNext).not.toHaveBeenCalled();
+    pendingStop.resolve();
+    await Promise.resolve();
+    expect(loadNext).not.toHaveBeenCalled();
+    disposeNext();
+  } finally {
+    vi.useRealTimers();
+  }
+});

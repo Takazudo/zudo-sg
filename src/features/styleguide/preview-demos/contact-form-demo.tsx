@@ -48,6 +48,7 @@ import ContactFormEnhancer from "@zudo-sg/demo-ui/src/forms/contact-form/contact
 import type { FormSubmitAdapter } from "@zudo-sg/demo-ui/src/forms/lib/create-form-enhancer.ts";
 import { withBase } from "@/utils/base";
 import { createPreviewWorkerLifecycle } from "./preview-worker-lifecycle";
+import { refreshPreviewWorker } from "./refresh-preview-worker";
 
 const SUCCESS_PATH = "/preview/api/contact-demo/send";
 const FAILURE_PATH = "/preview/api/contact-demo/send-fail";
@@ -106,6 +107,7 @@ function ContactFormDemo(): JSX.Element {
       );
       return {
         async start() {
+          await refreshPreviewWorker(withBase("/mockServiceWorker.js"), PREVIEW_SCOPE);
           const registration = await worker.start({
             serviceWorker: {
               url: withBase("/mockServiceWorker.js"),

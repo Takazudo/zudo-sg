@@ -36,7 +36,19 @@ export function createPreviewWorkerLifecycle() {
       } finally {
         if (worker) {
           try {
-            await worker.stop();
+            // MSW 3.0.4 stop waits for a worker acknowledgement. If that never
+            // arrives, report failed cleanup and forbid a replacement lifetime.
+            let timer: ReturnType<typeof setTimeout> | undefined;
+            try {
+              await Promise.race([
+                worker.stop(),
+                new Promise<never>((_, reject) => {
+                  timer = setTimeout(() => reject(new Error("Mock worker did not acknowledge cleanup within 10 seconds.")), 10_000);
+                }),
+              ]);
+            } finally {
+              clearTimeout(timer);
+            }
           } catch (cause) {
             teardownFailure = new Error("Mock worker cleanup failed; reload the preview before retrying.", { cause });
             reportCleanup(teardownFailure);

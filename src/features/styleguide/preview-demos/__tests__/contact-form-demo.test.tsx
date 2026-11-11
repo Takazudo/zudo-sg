@@ -11,7 +11,12 @@ const mock = vi.hoisted(() => ({
 vi.mock("msw", () => ({ http: { post: vi.fn() }, HttpResponse: { json: vi.fn() } }));
 vi.mock("msw/browser", () => ({ setupWorker: (...args: unknown[]) => {
   mock.setup(...args);
-  return { start: mock.start, stop: mock.stop, readyState: 1 };
+  let readyState = 0;
+  return {
+    start: (...options: unknown[]) => { readyState = 1; return mock.start(...options); },
+    stop: () => { readyState = 0; return mock.stop(); },
+    get readyState() { return readyState; },
+  };
 } }));
 
 beforeEach(() => {
@@ -19,7 +24,7 @@ beforeEach(() => {
   mock.stop.mockResolvedValue(undefined);
   mock.start.mockResolvedValue({ scope: "http://localhost:3000/preview/" });
 });
-afterEach(() => disposeAll());
+afterEach(() => { disposeAll(); vi.unstubAllGlobals(); });
 
 describe("root contact preview boundary", () => {
   it("renders the loading fallback with scanner metadata without starting MSW", () => {
@@ -28,6 +33,7 @@ describe("root contact preview boundary", () => {
     expect(html).toContain('data-zfb-island-skip-ssr="ContactFormDemo"');
     expect(html).toContain('data-zfb-build="root-host-test"');
     expect(html).toContain('/_zudo-sg/preview.css');
+    expect(html).toContain('/favicon.ico');
     expect(mock.setup).not.toHaveBeenCalled();
   });
 
@@ -88,4 +94,28 @@ describe("root contact preview boundary", () => {
     await island.flush();
     await vi.waitFor(() => expect(mock.stop).toHaveBeenCalledOnce());
   });
+});
+
+
+it("retries a failed real registration on a fresh island before MSW enable", async () => {
+  const active = Object.assign(new EventTarget(), {
+    scriptURL: new URL("/mockServiceWorker.js", location.origin).href,
+    state: "activated",
+  });
+  const serviceWorker = Object.assign(new EventTarget(), {
+    controller: active,
+    register: vi.fn().mockRejectedValueOnce(new Error("preflight registration failed")).mockResolvedValue({
+      scope: new URL("/preview/", location.origin).href, active, update: vi.fn(async () => {}),
+    }),
+  });
+  vi.stubGlobal("navigator", { serviceWorker });
+  const failed = renderIsland(ContactFormDemo, {});
+  await vi.waitFor(() => expect(failed.container.textContent).toContain("preflight registration failed"));
+  expect(mock.start).not.toHaveBeenCalled();
+  failed.dispose();
+  const retry = renderIsland(ContactFormDemo, {});
+  await vi.waitFor(() => expect(retry.container.querySelector('[data-contact-form]')).not.toBeNull());
+  expect(mock.start).toHaveBeenCalledOnce();
+  retry.dispose();
+  await vi.waitFor(() => expect(mock.stop).toHaveBeenCalledOnce());
 });

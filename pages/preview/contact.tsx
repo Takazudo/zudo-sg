@@ -47,6 +47,7 @@ export default function ContactPreviewRoute(): JSX.Element {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="robots" content="noindex" />
         <title>Contact Form Preview</title>
+        <link rel="icon" href={withBase("/favicon.ico")} />
         <link rel="stylesheet" href={withBase(DEFAULT_PREVIEW_CSS_URL)} />
       </head>
       <body class="bg-bg p-hsp-xl">

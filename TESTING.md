@@ -277,7 +277,7 @@ either target port. `pnpm test:e2e` runs every project below:
 
 | Project | Specs | Surface |
 |---------|-------|---------|
-| `smoke` | `smoke.spec.ts` | Root styleguide and preview iframe |
+| `smoke` | `smoke.spec.ts`, `contact-preview.spec.ts` | Root styleguide, preview iframe, and real MSW contact worker |
 | `fragment-history` | `fragment-history.spec.ts` | Browser-created fragment, Back, and Forward |
 | `catalog-gallery` | `catalog-gallery.spec.ts` | Component catalogue gallery |
 | `foreign-thumbnail-colors` | `foreign-thumbnail-colors.spec.ts` | Foreign thumbnail color contract |
@@ -378,3 +378,24 @@ for the concrete T3 implementation pattern.
 - **New E2E flows** → add `*.spec.ts` to `e2e/`. Styleguide flows belong in `smoke` or `preview-token-panel` (root preview, CI fallback 4700); demo flows belong in `demo-smoke` (demo preview, CI fallback 4701). Keep new product-specific Composer/Sitemapper tests in the standalone zudo-composer repository.
 - **Visual regression** → use `/verify-ui` skill ad-hoc; do not add L5 specs to CI until T3 is set up.
 - **Anything asserting DOMPurify output** → put `@vitest-environment jsdom` in the file's leading docblock. The former happy-dom 16.8.1 environment let DOMPurify report `isSupported: true` yet sanitize nothing — `<script>` and `onerror=` passed through verbatim — so XSS assertions there tested a sanitizer that never ran. Happy DOM is now pinned to 21.0.4. That release does not load iframe documents until `enableIframePageLoading` is set, which the Vitest setups do while child-frame navigation stays off. Keep the independent jsdom sanitizer environment and the runtime probe. `packages/demo-ui/src/content/prose-md/markdown-runtime.ts` refuses such a DOM outright (it probes the sanitizer before trusting it) and returns `html: null` with a `sanitize` error diagnostic, so the symptom is a null result rather than unsafe HTML.
+
+## Contact preview worker regression
+
+`pnpm exec playwright test --project smoke --grep 'contact preview MSW'` runs
+against both required static builds. It uses the actual MSW 3 worker for contact
+POSTs, checks its version and integrity response, exercises success and 500 retry,
+variant reset, unhandled browser-fetch bypass, and navigation/scope isolation.
+The upgrade test seeds the genuine MSW 2.15.0 generated worker fixture at the same
+script URL, removes that asset override, then verifies activation and behavior of
+MSW 3.0.4. It never routes contact responses. Regenerate the worker when updating
+the runtime with `pnpm exec msw init public --save`; MSW 3 has no postinstall
+script to copy it automatically.
+
+The host keeps `msw` and `msw/browser` deferred until island activation. The public
+zfb `bundle.external` setting excludes those imports only from neutral page/SSR
+processing; the separate browser islands pass bundles them. Existing preview
+registrations finish updating before MSW starts, because MSW 3.0.4 otherwise
+returns an old worker while updating it in the background. Worker lifetimes are
+serialized through asynchronous stop; rejected cleanup is reported and blocks a
+replacement until a new document loads. Focused unit tests cover disposal during
+imports/startup, delayed/rejected stop, and failed registration updates.
