@@ -60,7 +60,7 @@ export default defineConfig({
   projects: [
     {
       name: "smoke",
-      testMatch: "smoke.spec.ts",
+      testMatch: ["smoke.spec.ts", "contact-preview.spec.ts"],
       use: { baseURL: smokeServer.origin },
     },
     {

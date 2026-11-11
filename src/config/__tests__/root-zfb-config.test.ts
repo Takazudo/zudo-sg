@@ -48,6 +48,7 @@ describe("root zfb integration contract", () => {
     expect(config.bundle).toEqual({
       exclude: ["apps/demo/**", "doc/**"],
       mainFields: ["main", "module"],
+      external: ["msw", "msw/browser"],
     });
     expect(config.markdown?.features?.imageDimensions).toEqual({});
   });

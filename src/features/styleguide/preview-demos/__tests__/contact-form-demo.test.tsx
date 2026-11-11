@@ -11,14 +11,20 @@ const mock = vi.hoisted(() => ({
 vi.mock("msw", () => ({ http: { post: vi.fn() }, HttpResponse: { json: vi.fn() } }));
 vi.mock("msw/browser", () => ({ setupWorker: (...args: unknown[]) => {
   mock.setup(...args);
-  return { start: mock.start, stop: mock.stop };
+  let readyState = 0;
+  return {
+    start: (...options: unknown[]) => { readyState = 1; return mock.start(...options); },
+    stop: () => { readyState = 0; return mock.stop(); },
+    get readyState() { return readyState; },
+  };
 } }));
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mock.start.mockResolvedValue({ scope: "https://example.test/preview/" });
+  mock.stop.mockResolvedValue(undefined);
+  mock.start.mockResolvedValue({ scope: "http://localhost:3000/preview/" });
 });
-afterEach(() => disposeAll());
+afterEach(() => { disposeAll(); vi.unstubAllGlobals(); });
 
 describe("root contact preview boundary", () => {
   it("renders the loading fallback with scanner metadata without starting MSW", () => {
@@ -27,6 +33,7 @@ describe("root contact preview boundary", () => {
     expect(html).toContain('data-zfb-island-skip-ssr="ContactFormDemo"');
     expect(html).toContain('data-zfb-build="root-host-test"');
     expect(html).toContain('/_zudo-sg/preview.css');
+    expect(html).toContain('/favicon.ico');
     expect(mock.setup).not.toHaveBeenCalled();
   });
 
@@ -37,7 +44,7 @@ describe("root contact preview boundary", () => {
     await island.flush();
     expect(mock.start).toHaveBeenCalledWith({
       serviceWorker: { url: "/mockServiceWorker.js", options: { scope: "/preview/" } },
-      onUnhandledRequest: "bypass",
+      onUnhandledFrame: "bypass",
     });
     const first = island.container.querySelector('[data-contact-form]')!;
     const failure = getByRole(island.container, "button", { name: "5xx-recovery demo" });
@@ -54,7 +61,7 @@ describe("root contact preview boundary", () => {
     expect(second.isConnected).toBe(false);
     expect(mock.start).toHaveBeenCalledOnce();
     island.dispose();
-    expect(mock.stop).toHaveBeenCalledOnce();
+    await vi.waitFor(() => expect(mock.stop).toHaveBeenCalledOnce());
   });
 
   it("stops a worker whose registration finishes after disposal", async () => {
@@ -63,8 +70,8 @@ describe("root contact preview boundary", () => {
     const island = renderIsland(ContactFormDemo, {});
     await vi.waitFor(() => expect(mock.start).toHaveBeenCalledOnce());
     island.dispose();
-    resolveStart({ scope: "https://example.test/preview/" });
-    await vi.waitFor(() => expect(mock.stop).toHaveBeenCalledTimes(2));
+    resolveStart({ scope: "http://localhost:3000/preview/" });
+    await vi.waitFor(() => expect(mock.stop).toHaveBeenCalledOnce());
     expect(island.container.isConnected).toBe(false);
   });
 
@@ -85,6 +92,30 @@ describe("root contact preview boundary", () => {
     const island = renderIsland(ContactFormDemo, {});
     await vi.waitFor(() => expect(island.container.textContent).toContain("unexpected scope"));
     await island.flush();
-    expect(mock.stop).toHaveBeenCalledOnce();
+    await vi.waitFor(() => expect(mock.stop).toHaveBeenCalledOnce());
   });
+});
+
+
+it("retries a failed real registration on a fresh island before MSW enable", async () => {
+  const active = Object.assign(new EventTarget(), {
+    scriptURL: new URL("/mockServiceWorker.js", location.origin).href,
+    state: "activated",
+  });
+  const serviceWorker = Object.assign(new EventTarget(), {
+    controller: active,
+    register: vi.fn().mockRejectedValueOnce(new Error("preflight registration failed")).mockResolvedValue({
+      scope: new URL("/preview/", location.origin).href, active, update: vi.fn(async () => {}),
+    }),
+  });
+  vi.stubGlobal("navigator", { serviceWorker });
+  const failed = renderIsland(ContactFormDemo, {});
+  await vi.waitFor(() => expect(failed.container.textContent).toContain("preflight registration failed"));
+  expect(mock.start).not.toHaveBeenCalled();
+  failed.dispose();
+  const retry = renderIsland(ContactFormDemo, {});
+  await vi.waitFor(() => expect(retry.container.querySelector('[data-contact-form]')).not.toBeNull());
+  expect(mock.start).toHaveBeenCalledOnce();
+  retry.dispose();
+  await vi.waitFor(() => expect(mock.stop).toHaveBeenCalledOnce());
 });
