@@ -4,6 +4,17 @@ All notable changes to `@takazudo/zudo-sg` are documented in this file.
 
 The format is based on Keep a Changelog, and release notes are generated from the changelog MDX pages.
 
+## [0.9.2] - 2026-11-11
+
+This release raises the engine's tested peer floors to the published
+zudo-doc 10.0.3 and zdtp 0.9.4 patches. Those tarballs are pin, peer, and
+declaration changes, with no engine product-code change.
+
+### Other Changes
+
+- The `@takazudo/zudo-doc` peer is now `^10.0.3` (was `^10.0.1`).
+- The `@takazudo/zdtp` peer is now `^0.9.4` (was `^0.9.3`).
+
 ## [0.9.1] - 2026-11-11
 
 This release fixes first-paint theme packs on host pages and engine catalog
