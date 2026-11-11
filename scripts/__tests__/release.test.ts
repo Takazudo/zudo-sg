@@ -19,6 +19,7 @@ import {
   registryState,
   resolveGithubToken,
   resolvePackage,
+  resolveSuperseded,
   selectCiRuns,
 } from "../release/release-lib.mjs";
 
@@ -572,5 +573,89 @@ describe("release notes sources", () => {
         notes: "n",
       }).action,
     ).toBe("create");
+  });
+});
+
+describe("review follow-ups", () => {
+  const run = (over: Record<string, unknown>) => ({
+    id: 10,
+    head_sha: SHA,
+    event: "push",
+    head_branch: "main",
+    path: ".github/workflows/main-deploy.yml",
+    status: "completed",
+    conclusion: "success",
+    run_attempt: 1,
+    ...over,
+  });
+
+  it("prefers a newer run over an older re-run of the same workflow", () => {
+    const ci = selectCiRuns(
+      [run({ id: 10, run_attempt: 2, conclusion: "failure" }), run({ id: 11, run_attempt: 1 })],
+      { sha: SHA },
+    );
+    expect(ci.ok).toBe(true);
+  });
+
+  it("accepts a concurrency-cancelled deploy only when a descendant main commit succeeded", () => {
+    const ci = selectCiRuns([run({ conclusion: "cancelled" })], { sha: SHA });
+    expect(ci.ok).toBe(false);
+    const later = [run({ id: 12, head_sha: OTHER })];
+    expect(resolveSuperseded(ci, { laterRuns: later, sha: SHA, isAncestor: () => true }).ok).toBe(
+      true,
+    );
+    expect(resolveSuperseded(ci, { laterRuns: later, sha: SHA, isAncestor: () => false }).ok).toBe(
+      false,
+    );
+    expect(resolveSuperseded(ci, { laterRuns: [], sha: SHA, isAncestor: () => true }).ok).toBe(
+      false,
+    );
+    const failed = selectCiRuns([run({ conclusion: "failure" })], { sha: SHA });
+    expect(
+      resolveSuperseded(failed, { laterRuns: later, sha: SHA, isAncestor: () => true }).ok,
+    ).toBe(false);
+  });
+
+  it("reads CRLF changelog sources", () => {
+    const crlf = "---\r\ntitle: 1.0.0\r\n---\r\n\r\nReleased: 2026-11-12\r\n\r\n- x\r\n";
+    expect(extractReleaseNotes(engine, "1.0.0", crlf)).toBe("\nReleased: 2026-11-12\n\n- x\n");
+  });
+
+  it("stops on a stray tag that is not a prepared commit on main", () => {
+    const facts = {
+      version: "1.0.0",
+      candidateSha: SHA,
+      tagSha: SHA,
+      registry: "not-found",
+      identity: "unknown",
+      release: false,
+    };
+    expect(nextStage({ ...facts, manifestVersion: "1.0.0", onMain: false }).stage).toBe("stop");
+    expect(nextStage({ ...facts, manifestVersion: "0.9.0", onMain: true }).stage).toBe("stop");
+  });
+
+  it("pages through all Releases so older tags are still found", async () => {
+    const page = (n: number, size: number) =>
+      Array.from({ length: size }, (_, i) => ({ tag_name: `v0.${n}.${i}` }));
+    const { impl, calls } = fakeFetch((url) => ({
+      status: 200,
+      body: url.endsWith("&page=1") ? page(1, 100) : page(2, 3),
+    }));
+    const releases = await createGithubClient({ token: "t", fetch: impl }).releases();
+    expect(releases).toHaveLength(103);
+    expect(calls).toHaveLength(2);
+  });
+
+  it("classifies an unreadable annotated tag instead of crashing", async () => {
+    const { impl } = fakeFetch((url) =>
+      url.includes("/git/ref/")
+        ? { status: 200, body: { object: { type: "tag", sha: "c".repeat(40) } } }
+        : { status: 404 },
+    );
+    await expect(
+      createGithubClient({ token: "t", fetch: impl }).tagSha("v1.0.0"),
+    ).rejects.toMatchObject({
+      code: "tag-unreadable",
+    });
   });
 });

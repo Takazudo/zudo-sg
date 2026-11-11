@@ -300,8 +300,10 @@ never move or delete a pushed release tag.
    refused) and manifest version.
 4. `release.mjs verify-candidate`: the tagged commit is on `main`, notes exist,
    the tag is not elsewhere, and the commit's exact push CI succeeded (waits up
-   to 10 minutes for pending runs).
-5. `release.mjs publish-decision`: **not found** → build, gate and publish;
+   to 10 minutes for pending runs). A `main-deploy.yml` run that GitHub
+   cancelled because a newer push queued behind it counts only when the same
+   workflow later succeeded on a `main` commit containing the candidate.
+5. The same step decides publication from the registry: **not found** → build, gate and publish;
    **found with provenance matching this repo, workflow, tag and commit** →
    skip publication (resume); **uncertain or foreign** → fail.
 6. The package's release gates (unchanged), then

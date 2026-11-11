@@ -102,25 +102,20 @@ jobs:
       # Repository-owned guards (scripts/release/release.mjs, tested in
       # scripts/__tests__/release.test.ts): exact tag namespace + manifest
       # version, the tagged commit is on main with green push CI, and the
-      # registry state decides whether this run publishes. An existing version
+      # registry state decides (same step) whether this run publishes. An existing version
       # whose provenance matches this tag/commit skips to finalization; an
       # uncertain registry answer or a foreign existing version stops here.
       - name: Guard release tag
         id: tag
         run: node scripts/release/release.mjs guard-tag --package engine --github-output
 
-      - name: Guard candidate commit (on main, exact CI green)
+      - name: Guard candidate commit (on main, exact CI green) and decide publication
+        id: decide
         env:
           GH_TOKEN: ${{ github.token }}
         run: >-
           node scripts/release/release.mjs verify-candidate --package engine
-          --version "${{ steps.tag.outputs.version }}" --sha "$GITHUB_SHA" --wait-ci 600
-
-      - name: Decide publication from registry state
-        id: decide
-        run: >-
-          node scripts/release/release.mjs publish-decision --package engine
-          --version "${{ steps.tag.outputs.version }}" --sha "$GITHUB_SHA" --github-output
+          --version "${{ steps.tag.outputs.version }}" --sha "$GITHUB_SHA" --wait-ci 600 --github-output
 
       - name: Build + typecheck + test the package
         if: steps.decide.outputs.publish == 'true'

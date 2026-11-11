@@ -278,7 +278,8 @@ export function selectCiRuns(runs, { sha, branch = "main", required = REQUIRED_C
     if (run.head_sha !== sha || run.event !== "push" || run.head_branch !== branch) continue;
     const path = String(run.path ?? "").replace(/@.*$/, "");
     const current = latest.get(path);
-    const rank = (r) => [r.run_attempt ?? 1, Date.parse(r.created_at ?? 0) || 0, r.id ?? 0];
+    // A re-run keeps its run id and bumps run_attempt, so id orders distinct runs first.
+    const rank = (r) => [r.id ?? 0, r.run_attempt ?? 1];
     if (!current || compareRank(rank(run), rank(current)) > 0) latest.set(path, run);
   }
   const selected = [...latest.entries()].map(([path, run]) => ({
@@ -294,10 +295,41 @@ export function selectCiRuns(runs, { sha, branch = "main", required = REQUIRED_C
   return {
     ok: missing.length === 0 && pending.length === 0 && failing.length === 0,
     selected,
+    // main-deploy's concurrency group cancels a queued run when a newer push
+    // queues behind it; such a run proves nothing either way (see resolveSuperseded).
+    cancelledRequired: failing.filter(
+      (r) => r.conclusion === "cancelled" && required.includes(r.path),
+    ),
     missing,
     pending,
     failing,
   };
+}
+
+/**
+ * Accept a required run cancelled by concurrency only when the same workflow
+ * later succeeded on a main commit that contains the candidate. Any other
+ * failure still rejects the candidate.
+ */
+export function resolveSuperseded(ci, { laterRuns, isAncestor, sha, branch = "main" }) {
+  if (ci.ok || ci.missing.length || ci.pending.length) return ci;
+  if (ci.failing.length !== ci.cancelledRequired.length) return ci;
+  const superseded = [];
+  for (const cancelled of ci.cancelledRequired) {
+    const later = laterRuns.find(
+      (run) =>
+        String(run.path ?? "").replace(/@.*$/, "") === cancelled.path &&
+        run.event === "push" &&
+        run.head_branch === branch &&
+        run.status === "completed" &&
+        run.conclusion === "success" &&
+        run.head_sha !== sha &&
+        isAncestor(sha, run.head_sha),
+    );
+    if (!later) return ci;
+    superseded.push({ ...cancelled, supersededBy: later.head_sha, url: later.html_url });
+  }
+  return { ...ci, ok: true, failing: [], superseded };
 }
 
 function compareRank(a, b) {
@@ -361,28 +393,45 @@ export function createGithubClient({
       );
       return data?.workflow_runs ?? [];
     },
+    async mainRuns(workflowPath) {
+      const file = workflowPath.split("/").pop();
+      const { data } = await request(
+        "GET",
+        `/actions/workflows/${file}/runs?branch=main&event=push&status=success&per_page=50`,
+      );
+      return data?.workflow_runs ?? [];
+    },
     async tagSha(tag) {
       const { status, data } = await request("GET", `/git/ref/tags/${tag}`);
       if (status === 404) return null;
       if (data.object.type === "commit") return data.object.sha;
       const annotated = await request("GET", `/git/tags/${data.object.sha}`);
+      if (annotated.status === 404) {
+        throw new ReleaseError("tag-unreadable", `tag object for ${tag} could not be read`);
+      }
       return annotated.data.object.sha;
     },
     async releases() {
-      const { data } = await request("GET", "/releases?per_page=100");
-      return data ?? [];
+      // Listing (not /releases/tags/{tag}) is the only way to see drafts.
+      const all = [];
+      for (let page = 1; ; page++) {
+        const { data } = await request("GET", `/releases?per_page=100&page=${page}`);
+        all.push(...(data ?? []));
+        if (!data || data.length < 100) return all;
+      }
     },
   };
 }
 
 /** Release notes from the existing sources, byte-compatible with past Releases. */
 export function extractReleaseNotes(pkg, version, source) {
+  source = source.replace(/\r\n/g, "\n");
   if (pkg.notesKind === "mdx") {
     const lines = source.split("\n");
     let fences = 0;
     let start = -1;
     for (let i = 0; i < lines.length; i++) {
-      if (lines[i] === "---" && ++fences === 2) {
+      if (lines[i].trimEnd() === "---" && ++fences === 2) {
         start = i + 1;
         break;
       }
@@ -530,6 +579,12 @@ export function nextStage({
       return {
         stage: "stop",
         reason: `tag already points at ${tagSha}, not ${candidateSha}; never move a release tag`,
+      };
+    }
+    if (!onMain || manifestVersion !== version) {
+      return {
+        stage: "stop",
+        reason: `tag ${tagSha} is not a prepared release commit on main (manifest ${manifestVersion}); the publisher would refuse it`,
       };
     }
     return {

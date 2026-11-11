@@ -32,6 +32,7 @@ import {
   nextStage,
   publishDecision,
   registryState,
+  resolveSuperseded,
   resolveGithubToken,
   resolvePackage,
   selectCiRuns,
@@ -150,6 +151,8 @@ function describeCi(ci) {
 
 const commands = {
   async status(pkg) {
+    // Resume decisions must come from the remote's state, not a stale clone.
+    git("fetch", "--quiet", "--tags", "--prune", "origin");
     const version = values.version ?? manifestVersionAt(pkg, "origin/main");
     const tag = tagFor(pkg, version);
     const tagSha = gitOk("rev-parse", "-q", "--verify", `refs/tags/${tag}^{commit}`)
@@ -289,7 +292,22 @@ const commands = {
     const tagSha = await client.tagSha(tag);
     if (tagSha && tagSha !== sha)
       errors.push(`tag ${tag} already points at ${tagSha}; release tags are never moved`);
-    const ci = await waitForCi(client, sha, Number(values["wait-ci"]));
+    let ci = await waitForCi(client, sha, Number(values["wait-ci"]));
+    if (!ci.ok && ci.cancelledRequired.length) {
+      const laterRuns = (
+        await Promise.all(ci.cancelledRequired.map((r) => client.mainRuns(r.path)))
+      ).flat();
+      ci = resolveSuperseded(ci, {
+        laterRuns,
+        sha,
+        isAncestor: (a, b) => gitOk("merge-base", "--is-ancestor", a, b),
+      });
+      for (const r of ci.superseded ?? []) {
+        console.log(
+          `::notice::${r.path} for ${sha} was cancelled by concurrency; accepted via later success on ${r.supersededBy}`,
+        );
+      }
+    }
     if (!ci.ok) errors.push(`CI for ${sha} is not green: ${describeCi(ci)}`);
     if (errors.length) throw new ReleaseError("candidate-rejected", errors.join("\n"));
     const decision = await publishDecision({ pkg, version, sha });
