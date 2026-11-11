@@ -10,8 +10,11 @@
 # `v*.*.*` / `X.Y.Z` or the job fails fast — no dist-tag branching, no stale-
 # `next` cleanup step (there is no `next` tag to ever go stale).
 #
-# `/l-make-release` (.claude/skills/l-make-release/SKILL.md) is the only
-# intended caller of the tag push that fires this workflow.
+# Release procedure: packages/styleguide/RELEASE.md. The tag arrives either
+# as a push from an operator or from release.yml, which creates it and then
+# dispatches this workflow explicitly (a GITHUB_TOKEN tag push fires nothing).
+# npm authentication is Trusted Publishing (OIDC) only; npm's trusted
+# publisher entry names this file, so the publish job must stay here.
 
 name: Publish zudo-sg to npm
 
@@ -26,15 +29,23 @@ concurrency:
   group: publish-zudo-sg
   cancel-in-progress: false
 
-permissions:
-  contents: read
-  id-token: write
+# Nothing at workflow level; each job states exactly what it needs.
+permissions: {}
 
 jobs:
   publish:
     name: Build, verify, and publish
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 35
+    # id-token is the npm Trusted Publishing (OIDC) credential; actions:read
+    # lets the candidate guard read the tagged commit's CI runs.
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
+    outputs:
+      version: ${{ steps.tag.outputs.version }}
+      published: ${{ steps.decide.outputs.publish }}
     steps:
       # workflow_dispatch allows a manual run (e.g. to retry a failed
       # publish), but `--no-git-checks` below means it would otherwise publish
@@ -51,6 +62,10 @@ jobs:
 
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Full history so the candidate guard can prove the tag is on main.
+          fetch-depth: 0
+          persist-credentials: false
 
       - name: Setup pnpm
         uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
@@ -59,7 +74,8 @@ jobs:
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
-          registry-url: https://registry.npmjs.org
+          # No registry-url input; it would write a token-based .npmrc. pnpm publishes
+          # to registry.npmjs.org by default and authenticates through OIDC.
           cache: pnpm
 
       - name: Install dependencies
@@ -83,23 +99,46 @@ jobs:
           fi
           echo "Publishing @takazudo/zudo-sg@$VERSION to dist-tag latest"
 
+      # Repository-owned guards (scripts/release/release.mjs, tested in
+      # scripts/__tests__/release.test.ts): exact tag namespace + manifest
+      # version, the tagged commit is on main with green push CI, and the
+      # registry state decides (same step) whether this run publishes. An existing version
+      # whose provenance matches this tag/commit skips to finalization; an
+      # uncertain registry answer or a foreign existing version stops here.
+      - name: Guard release tag
+        id: tag
+        run: node scripts/release/release.mjs guard-tag --package engine --github-output
+
+      - name: Guard candidate commit (on main, exact CI green) and decide publication
+        id: decide
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          node scripts/release/release.mjs verify-candidate --package engine
+          --version "${{ steps.tag.outputs.version }}" --sha "$GITHUB_SHA" --wait-ci 600 --github-output
+
       - name: Build + typecheck + test the package
+        if: steps.decide.outputs.publish == 'true'
         run: pnpm --filter @takazudo/zudo-sg check
 
       - name: Install Chromium
+        if: steps.decide.outputs.publish == 'true'
         run: pnpm exec playwright install chromium --with-deps
 
       - name: Verify foreign install (fixtures/engine-host)
+        if: steps.decide.outputs.publish == 'true'
         run: pnpm verify:styleguide-install
 
       # Descriptor mode + externalPreview (#887, epic #879 confirm): the
       # foreign-install proof above only exercises module-mode hosts.
       - name: Verify descriptor-host foreign install (fixtures/descriptor-host)
+        if: steps.decide.outputs.publish == 'true'
         run: pnpm verify:descriptor-host-install
 
       # React remains fixture-owned; prove its external runtime and real workers
       # against this exact packed engine before allowing publication (#960).
       - name: Verify React descriptor-host foreign install (fixtures/react-descriptor-host)
+        if: steps.decide.outputs.publish == 'true'
         run: pnpm verify:react-descriptor-host-install
 
       # Real-artifact gate, run BEFORE `pnpm publish`: packs the tree,
@@ -107,13 +146,45 @@ jobs:
       # would, and imports the exports map. Last chance to catch a
       # files[]/bin/exports regression before it ships to the registry.
       - name: Check pack (verify published artifact)
+        if: steps.decide.outputs.publish == 'true'
         run: bash scripts/check-pack.sh
 
-      # NPM_TOKEN must be a granular access token with publish rights for
-      # @takazudo and Bypass 2FA enabled. After the first publish, configure
-      # Trusted Publishing (OIDC) for this workflow; id-token/provenance alone
-      # do not establish npm-side trust (see packages/styleguide/RELEASE.md).
+      # Tokenless: npm Trusted Publishing (GitHub OIDC) is the only credential.
+      # pnpm 11 exchanges the job's id-token itself; there is deliberately no
+      # NODE_AUTH_TOKEN / NPM_TOKEN fallback, so a missing trusted-publisher
+      # configuration fails here instead of silently using a long-lived token.
       - name: Publish package
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        if: steps.decide.outputs.publish == 'true'
         run: pnpm --filter @takazudo/zudo-sg publish --tag latest --access public --no-git-checks --provenance
+
+      - name: Confirm the version is on the registry
+        if: steps.decide.outputs.publish == 'true'
+        run: node scripts/release/release.mjs await-published --package engine --version "${{ steps.tag.outputs.version }}"
+
+  # GitHub Release completion, separate from publication: a failure here never
+  # republishes or bumps anything. Re-run this job (or re-dispatch the exact
+  # tag) to resume; an existing Release is kept, never overwritten.
+  finalize:
+    name: Finalize GitHub Release
+    needs: publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+
+      - name: Create or keep the GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          node scripts/release/release.mjs finalize --package engine
+          --version "${{ needs.publish.outputs.version }}" --sha "$GITHUB_SHA"

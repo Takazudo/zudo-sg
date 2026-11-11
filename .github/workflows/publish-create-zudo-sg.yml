@@ -8,6 +8,12 @@
 # `scripts/verify-create-zudo-sg.mjs`. Its `--published-engine` mode leaves the
 # template's registry dependency untouched, proving that the shipped caret
 # range resolves to the published @takazudo/zudo-sg package.
+#
+# Release procedure: packages/styleguide/RELEASE.md. The tag arrives either
+# as a push from an operator or from release.yml, which creates it and then
+# dispatches this workflow explicitly (a GITHUB_TOKEN tag push fires nothing).
+# npm authentication is Trusted Publishing (OIDC) only; npm's trusted
+# publisher entry names this file, so the publish job must stay here.
 
 name: Publish create-zudo-sg to npm
 
@@ -22,15 +28,23 @@ concurrency:
   group: publish-create-zudo-sg
   cancel-in-progress: false
 
-permissions:
-  contents: read
-  id-token: write
+# Nothing at workflow level; each job states exactly what it needs.
+permissions: {}
 
 jobs:
   publish:
     name: Build, verify, and publish
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 35
+    # id-token is the npm Trusted Publishing (OIDC) credential; actions:read
+    # lets the candidate guard read the tagged commit's CI runs.
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
+    outputs:
+      version: ${{ steps.tag.outputs.version }}
+      published: ${{ steps.decide.outputs.publish }}
     steps:
       # workflow_dispatch allows a manual retry, but --no-git-checks below
       # would otherwise publish from any ref. Require the exact initializer
@@ -45,6 +59,10 @@ jobs:
 
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Full history so the candidate guard can prove the tag is on main.
+          fetch-depth: 0
+          persist-credentials: false
 
       - name: Setup pnpm
         uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
@@ -53,7 +71,8 @@ jobs:
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
-          registry-url: https://registry.npmjs.org
+          # No registry-url input; it would write a token-based .npmrc. pnpm publishes
+          # to registry.npmjs.org by default and authenticates through OIDC.
           cache: pnpm
 
       - name: Install dependencies
@@ -74,22 +93,75 @@ jobs:
           fi
           echo "Publishing create-zudo-sg@$VERSION to dist-tag latest"
 
+      # Repository-owned guards (scripts/release/release.mjs, tested in
+      # scripts/__tests__/release.test.ts): exact tag namespace + manifest
+      # version, the tagged commit is on main with green push CI, and the
+      # registry state decides (same step) whether this run publishes. An existing version
+      # whose provenance matches this tag/commit skips to finalization; an
+      # uncertain registry answer or a foreign existing version stops here.
+      - name: Guard release tag
+        id: tag
+        run: node scripts/release/release.mjs guard-tag --package create-zudo-sg --github-output
+
+      - name: Guard candidate commit (on main, exact CI green) and decide publication
+        id: decide
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          node scripts/release/release.mjs verify-candidate --package create-zudo-sg
+          --version "${{ steps.tag.outputs.version }}" --sha "$GITHUB_SHA" --wait-ci 600 --github-output
+
       - name: Build + typecheck + test create-zudo-sg
+        if: steps.decide.outputs.publish == 'true'
         run: pnpm --filter create-zudo-sg check
 
       - name: Check create-zudo-sg template
+        if: steps.decide.outputs.publish == 'true'
         run: pnpm check:create-template
 
       # This is intentionally after the template check and before publish:
       # it scaffolds from the packed initializer, installs the template's
       # unchanged ^X.Y.Z engine range from npm, and builds the foreign host.
       - name: Verify scaffold with published engine
+        if: steps.decide.outputs.publish == 'true'
         run: pnpm verify:create-zudo-sg --published-engine
 
-      # NPM_TOKEN must have publish rights for create-zudo-sg. After the first
-      # publish, Trusted Publishing (OIDC) can replace the token; provenance
-      # is enabled here for either setup.
+      # Tokenless: npm Trusted Publishing (GitHub OIDC) is the only credential.
+      # pnpm 11 exchanges the job's id-token itself; there is deliberately no
+      # NODE_AUTH_TOKEN / NPM_TOKEN fallback, so a missing trusted-publisher
+      # configuration fails here instead of silently using a long-lived token.
       - name: Publish package
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        if: steps.decide.outputs.publish == 'true'
         run: pnpm publish --filter create-zudo-sg --tag latest --access public --no-git-checks --provenance
+
+      - name: Confirm the version is on the registry
+        if: steps.decide.outputs.publish == 'true'
+        run: node scripts/release/release.mjs await-published --package create-zudo-sg --version "${{ steps.tag.outputs.version }}"
+
+  # GitHub Release completion, separate from publication: a failure here never
+  # republishes or bumps anything. Re-run this job (or re-dispatch the exact
+  # tag) to resume; an existing Release is kept, never overwritten.
+  finalize:
+    name: Finalize GitHub Release
+    needs: publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+
+      - name: Create or keep the GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          node scripts/release/release.mjs finalize --package create-zudo-sg
+          --version "${{ needs.publish.outputs.version }}" --sha "$GITHUB_SHA"
