@@ -1,0 +1,133 @@
+# Release coordinator for @takazudo/zudo-sg and create-zudo-sg.
+#
+# The hosted half of the canonical procedure in packages/styleguide/RELEASE.md.
+# An operator (local Claude Code, Codex Cloud, or a human) prepares and merges
+# the release commit into main, then dispatches this workflow once with the
+# exact package, version and commit. That dispatch is the release decision.
+#
+#   verify   (read-only)       candidate on main, manifest/notes/tag agree,
+#                              exact push CI green, registry state known
+#   tag      (contents:write)  create the exact tag at the verified commit
+#   dispatch (actions:write)   explicitly start the package's publish workflow
+#                              at that tag
+#
+# A tag created with GITHUB_TOKEN does not trigger the publisher's `push: tags`
+# event, so publication is started by an explicit workflow_dispatch of the
+# publish workflow itself (that dispatch is allowed to start a run, and keeps
+# the npm Trusted Publisher's workflow filename = the publishing workflow).
+# The publish workflow then builds, re-verifies, publishes and finalizes the
+# GitHub Release.
+#
+# dry_run (default true) runs only the read-only verify job: it cannot create
+# tags, dispatch publication, publish packages or create Releases.
+
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      package:
+        description: Package to release
+        required: true
+        type: choice
+        options:
+          - engine
+          - create-zudo-sg
+      version:
+        description: Exact stable version already committed in the package manifest (X.Y.Z)
+        required: true
+        type: string
+      sha:
+        description: Full 40-character release commit on main
+        required: true
+        type: string
+      dry_run:
+        description: Verify only (no tag, no publication, no Release)
+        required: true
+        type: boolean
+        default: true
+
+concurrency:
+  group: release-${{ inputs.package }}
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  verify:
+    name: Verify candidate
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      tag: ${{ steps.candidate.outputs.tag }}
+      tag_exists: ${{ steps.candidate.outputs.tag_exists }}
+      workflow: ${{ steps.candidate.outputs.workflow }}
+    steps:
+      # The coordinator only runs its main-branch definition: a dispatch from
+      # any other ref could carry an edited copy of these guards.
+      - name: Refuse non-main dispatch
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "::error::dispatch the Release workflow from main, not '$GITHUB_REF'"
+          exit 1
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+
+      - name: Verify release candidate
+        id: candidate
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PACKAGE: ${{ inputs.package }}
+          VERSION: ${{ inputs.version }}
+          SHA: ${{ inputs.sha }}
+          DRY_RUN_FLAG: ${{ inputs.dry_run && '--dry-run' || '' }}
+        run: >-
+          node scripts/release/release.mjs verify-candidate --package "$PACKAGE"
+          --version "$VERSION" --sha "$SHA" --github-output $DRY_RUN_FLAG
+
+  tag:
+    name: Create release tag
+    needs: verify
+    if: ${{ !inputs.dry_run }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - name: Create the exact tag at the verified commit
+        if: needs.verify.outputs.tag_exists != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.verify.outputs.tag }}
+          SHA: ${{ inputs.sha }}
+        run: gh api -X POST "repos/$GITHUB_REPOSITORY/git/refs" -f "ref=refs/tags/$TAG" -f "sha=$SHA" --jq .ref
+
+  dispatch:
+    name: Dispatch publisher
+    needs: [verify, tag]
+    if: ${{ !inputs.dry_run }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: write
+    steps:
+      - name: Start the publish workflow at the exact tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          WORKFLOW: ${{ needs.verify.outputs.workflow }}
+          TAG: ${{ needs.verify.outputs.tag }}
+        run: |
+          gh workflow run "$WORKFLOW" --repo "$GITHUB_REPOSITORY" --ref "$TAG"
+          echo "Dispatched $WORKFLOW at $TAG — follow it with: gh run list --workflow $WORKFLOW --limit 3" >> "$GITHUB_STEP_SUMMARY"
