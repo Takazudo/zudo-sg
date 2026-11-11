@@ -132,11 +132,11 @@ output as drift and never writes it.
 ## Installation
 
 ```sh
-pnpm add @takazudo/zudo-sg@latest @takazudo/zfb@^6.0.1 @takazudo/zfb-md-wasm@^6.0.1 @takazudo/zfb-runtime@^6.0.1 @takazudo/zudo-doc@^10.0.1 @takazudo/zdtp@^0.9.3 diff@^8.0.4 katex@^0.19.1 zod@^4.3.6
+pnpm add @takazudo/zudo-sg@latest @takazudo/zfb@^6.0.1 @takazudo/zfb-md-wasm@^6.0.1 @takazudo/zfb-runtime@^6.0.1 @takazudo/zudo-doc@^10.0.2 @takazudo/zdtp@^0.9.4 diff@^8.0.4 katex@^0.19.1 zod@^4.3.6
 ```
 
-The engine peers are `@takazudo/zfb ^6.0.1`, `@takazudo/zudo-doc ^10.0.1`,
-and `@takazudo/zdtp ^0.9.3`. zfb 6 and zudo-doc 10 require Node.js 24, and
+The engine peers are `@takazudo/zfb ^6.0.1`, `@takazudo/zudo-doc ^10.0.2`,
+and `@takazudo/zdtp ^0.9.4`. zfb 6 and zudo-doc 10 require Node.js 24, and
 zudo-doc requires KaTeX `^0.18.2 || ^0.19.0`. The former zudo-doc 6.2.0 /
 Node.js 22 option was retired with zfb 5. `@takazudo/zdtp` is required:
 the injected `/tokens` route loads its dashboard through the engine-owned
