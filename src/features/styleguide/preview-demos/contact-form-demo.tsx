@@ -47,6 +47,7 @@ import { ContactForm } from "@zudo-sg/demo-ui/src/forms/contact-form/contact-for
 import ContactFormEnhancer from "@zudo-sg/demo-ui/src/forms/contact-form/contact-form-enhancer.tsx";
 import type { FormSubmitAdapter } from "@zudo-sg/demo-ui/src/forms/lib/create-form-enhancer.ts";
 import { withBase } from "@/utils/base";
+import { createPreviewWorkerLifecycle } from "./preview-worker-lifecycle";
 
 const SUCCESS_PATH = "/preview/api/contact-demo/send";
 const FAILURE_PATH = "/preview/api/contact-demo/send-fail";
@@ -59,7 +60,7 @@ const PREVIEW_SCOPE = withBase("/preview/");
 
 // A worker belongs to one activated island. Cleanup stops it, including when
 // its asynchronous imports/registration finish after the island was disposed.
-type MockWorker = ReturnType<typeof import("msw/browser")["setupWorker"]>;
+const activateWorker = createPreviewWorkerLifecycle();
 
 const submitSuccess: FormSubmitAdapter = async (data) => {
   const res = await fetch(withBase(SUCCESS_PATH), {
@@ -91,40 +92,44 @@ function ContactFormDemo(): JSX.Element {
   const workerState = signal<"starting" | "ready" | "error">("starting");
   const workerError = signal<string | null>(null);
 
-  scope.onActivate(() => {
-    let aborted = false;
-    let worker: MockWorker | undefined;
-    void Promise.all([import("msw"), import("msw/browser")])
-      .then(async ([{ http, HttpResponse }, { setupWorker }]) => {
-        if (aborted) return;
-        worker = setupWorker(
-          http.post(withBase(SUCCESS_PATH), () => HttpResponse.json({ ok: true })),
-          http.post(withBase(FAILURE_PATH), () => HttpResponse.json(
-            { message: "Server rejected the request (mocked failure)." },
-            { status: 500 },
-          )),
-        );
-        const registration = await worker.start({
-          serviceWorker: {
-            url: withBase("/mockServiceWorker.js"),
-            options: { scope: PREVIEW_SCOPE },
-          },
-          onUnhandledRequest: "bypass",
-        });
-        if (aborted) { worker.stop(); return; }
-        if (registration && !registration.scope.endsWith(PREVIEW_SCOPE)) {
-          throw new Error(`[contact-form-demo] MSW registered at unexpected scope "${registration.scope}"; expected it to end with "${PREVIEW_SCOPE}".`);
-        }
-        workerState.value = "ready";
-      })
-      .catch((err: unknown) => {
-        worker?.stop();
-        if (aborted) return;
-        workerError.value = err instanceof Error ? err.message : String(err);
-        workerState.value = "error";
-      });
-    return () => { aborted = true; worker?.stop(); };
-  });
+  scope.onActivate(() => activateWorker(
+    async () => {
+      const [{ http, HttpResponse }, { setupWorker }] = await Promise.all([
+        import("msw"), import("msw/browser"),
+      ]);
+      const worker = setupWorker(
+        http.post(withBase(SUCCESS_PATH), () => HttpResponse.json({ ok: true })),
+        http.post(withBase(FAILURE_PATH), () => HttpResponse.json(
+          { message: "Server rejected the request (mocked failure)." },
+          { status: 500 },
+        )),
+      );
+      return {
+        async start() {
+          const registration = await worker.start({
+            serviceWorker: {
+              url: withBase("/mockServiceWorker.js"),
+              options: { scope: PREVIEW_SCOPE },
+            },
+            onUnhandledFrame: "bypass",
+          });
+          if (registration && registration.scope !== new URL(PREVIEW_SCOPE, location.origin).href) {
+            throw new Error(`[contact-form-demo] MSW registered at unexpected scope "${registration.scope}"; expected "${PREVIEW_SCOPE}".`);
+          }
+        },
+        async stop() {
+          // MSW 3.0.4 NetworkReadyState: DISABLED=0, ENABLED=1. A failed
+          // registration can leave it disabled, where stop() would itself throw.
+          if (worker.readyState === 1) await worker.stop();
+        },
+      };
+    },
+    () => { workerState.value = "ready"; },
+    (err) => {
+      workerError.value = err instanceof Error ? err.message : String(err);
+      workerState.value = "error";
+    },
+  ));
 
   return <For each={computed(() => [workerState.value])} by={(state) => state}>
     {(state) => {

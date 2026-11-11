@@ -51,18 +51,9 @@ export default defineConfig({
   strictContentBridge: true,
   // Retained public zfb guard: reject plain CSS imports that cannot be emitted.
   strictPlainCssImports: true,
-  // #215: msw's core resolves through path-to-regexp@6, a CJS-main/module-only
-  // package (no `exports` map). esbuild's `--platform=neutral` page/SSR pass
-  // (used for the client island bundle) has an EMPTY main-fields list by
-  // default, so it rejects that dependency ("Main fields must be configured
-  // explicitly when using the neutral platform") the moment any island
-  // transitively imports `msw`/`msw/browser` (src/features/styleguide/
-  // preview-demos/contact-form-demo.tsx, #235 — retargeted from the retired
-  // dialog-demo.tsx). This is zfb's own documented escape hatch
-  // for exactly this case — see the `msw` → `path-to-regexp@6` example in
-  // node_modules/@takazudo/zfb's BundleConfig.mainFields doc (zfb #676).
-  // `bundle.external: ["path-to-regexp"]` would scope this narrower, but
-  // mainFields is zfb's *documented* fix for this msw case (#676), so we use it.
+  // MSW 3 is browser-only here: leave its deferred imports external in zfb's
+  // neutral page/SSR pass; the separate browser islands pass bundles them.
+  // Keep mainFields for other CJS dependencies of the neutral pass (#215).
   // zfb treats apps/ as an extra source root and recursively runs root markdown
   // processing over demo MDX; apps/demo owns its own config/public tree, so keep
   // that separate build outside the root bundle. `doc/` is excluded for the
@@ -72,6 +63,7 @@ export default defineConfig({
   bundle: {
     exclude: ["apps/demo/**", "doc/**"],
     mainFields: ["main", "module"],
+    external: ["msw", "msw/browser"],
   },
   // Collections, markdown.features, codeHighlight, resolveMarkdownLinks,
   // stripMdExt, trailingSlash, and the package plugin descriptors (search

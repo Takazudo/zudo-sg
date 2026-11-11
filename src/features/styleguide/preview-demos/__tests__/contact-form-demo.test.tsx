@@ -11,12 +11,13 @@ const mock = vi.hoisted(() => ({
 vi.mock("msw", () => ({ http: { post: vi.fn() }, HttpResponse: { json: vi.fn() } }));
 vi.mock("msw/browser", () => ({ setupWorker: (...args: unknown[]) => {
   mock.setup(...args);
-  return { start: mock.start, stop: mock.stop };
+  return { start: mock.start, stop: mock.stop, readyState: 1 };
 } }));
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mock.start.mockResolvedValue({ scope: "https://example.test/preview/" });
+  mock.stop.mockResolvedValue(undefined);
+  mock.start.mockResolvedValue({ scope: "http://localhost:3000/preview/" });
 });
 afterEach(() => disposeAll());
 
@@ -37,7 +38,7 @@ describe("root contact preview boundary", () => {
     await island.flush();
     expect(mock.start).toHaveBeenCalledWith({
       serviceWorker: { url: "/mockServiceWorker.js", options: { scope: "/preview/" } },
-      onUnhandledRequest: "bypass",
+      onUnhandledFrame: "bypass",
     });
     const first = island.container.querySelector('[data-contact-form]')!;
     const failure = getByRole(island.container, "button", { name: "5xx-recovery demo" });
@@ -54,7 +55,7 @@ describe("root contact preview boundary", () => {
     expect(second.isConnected).toBe(false);
     expect(mock.start).toHaveBeenCalledOnce();
     island.dispose();
-    expect(mock.stop).toHaveBeenCalledOnce();
+    await vi.waitFor(() => expect(mock.stop).toHaveBeenCalledOnce());
   });
 
   it("stops a worker whose registration finishes after disposal", async () => {
@@ -63,8 +64,8 @@ describe("root contact preview boundary", () => {
     const island = renderIsland(ContactFormDemo, {});
     await vi.waitFor(() => expect(mock.start).toHaveBeenCalledOnce());
     island.dispose();
-    resolveStart({ scope: "https://example.test/preview/" });
-    await vi.waitFor(() => expect(mock.stop).toHaveBeenCalledTimes(2));
+    resolveStart({ scope: "http://localhost:3000/preview/" });
+    await vi.waitFor(() => expect(mock.stop).toHaveBeenCalledOnce());
     expect(island.container.isConnected).toBe(false);
   });
 
@@ -85,6 +86,6 @@ describe("root contact preview boundary", () => {
     const island = renderIsland(ContactFormDemo, {});
     await vi.waitFor(() => expect(island.container.textContent).toContain("unexpected scope"));
     await island.flush();
-    expect(mock.stop).toHaveBeenCalledOnce();
+    await vi.waitFor(() => expect(mock.stop).toHaveBeenCalledOnce());
   });
 });
