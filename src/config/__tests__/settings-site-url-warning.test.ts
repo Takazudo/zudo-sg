@@ -3,8 +3,9 @@
  * since a missing siteUrl silently drops OGP absolute image URLs and
  * canonical link tags from build output.
  *
- * This exercises the real production configuration rather than a stand-in:
- * root settings.ts: siteUrl is "" today → the warning must fire.
+ * This exercises the real production configuration rather than a stand-in.
+ * #1063 sets the showcase origin so og:image is emitted; the warning stays
+ * for a future empty value and must not fire while the origin is set.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -23,11 +24,10 @@ afterEach(() => {
 });
 
 describe("siteUrl configuration", () => {
-  it("fires when siteUrl is empty (root settings.ts)", async () => {
+  it("uses the showcase origin and does not warn (root settings.ts)", async () => {
     const { settings } = await import("../settings");
 
-    expect(settings.siteUrl).toBe("");
-    expect(warnSpy).toHaveBeenCalledTimes(1);
-    expect(warnSpy.mock.calls[0]?.[0]).toMatch(/siteUrl/i);
+    expect(settings.siteUrl).toBe("https://zudo-sg.takazudomodular.com");
+    expect(warnSpy).not.toHaveBeenCalled();
   });
 });

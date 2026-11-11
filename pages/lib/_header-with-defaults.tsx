@@ -314,6 +314,7 @@ export function HeaderWithDefaults(
       languageSwitcher={languageSwitcher}
       persistKey={persistKey}
       siteName={settings.siteName}
+      headerBrand={settings.headerBrand}
       headerNav={settings.headerNav}
       headerRightItems={headerRightItems}
       colorModeEnabled={Boolean(settings.colorMode)}

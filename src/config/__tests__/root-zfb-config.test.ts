@@ -83,7 +83,19 @@ describe("root zfb integration contract", () => {
       // zudo-doc's own panel — while `bundleZdtp` above keeps the real
       // zdtp loader in the build for the preview panel.
       designTokenPanel: false,
-      logo: "auto",
+      logo: "/img/logo.svg",
+      headerBrand: { icon: "/img/brand/zudo-sg-symbol-small.svg" },
+      favicon: {
+        svg: "/favicon.svg",
+        png32: "/favicon-32x32.png",
+        png16: "/favicon-16x16.png",
+        ico: "/favicon.ico",
+      },
+      siteUrl: "https://zudo-sg.takazudomodular.com",
+      metaTags: {
+        ogImage: "/img/ogp.png",
+        twitterCard: "summary_large_image",
+      },
       entryDocSlug: "overview",
       tocToggle: true,
       versions: [],

@@ -80,6 +80,37 @@
  * boundary and its earlier bridge is intentionally superseded here. */
 @import "../../packages/demo-ui/styles/syntax-highlight.css";
 
+/* A06 / Rhythm wordmark, same treatment as doc/src/styles/global.css.
+   ZFB preserves this URL in assets/styles-*.css, so ../fonts resolves to
+   public/fonts next to the emitted stylesheet (doc/brand/README.md). */
+@font-face {
+  font-family: "Zudo SG Brand Jost";
+  src: url("../fonts/jost-600.woff2") format("woff2");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root:has([data-header-logo][data-header-brand]) {
+  --zdc-header-logo-font: "Zudo SG Brand Jost", var(--font-sans);
+  --zdc-header-logo-weight: 600;
+}
+
+html [data-header-logo][data-header-brand],
+html[data-theme-pack] [data-header-logo][data-header-brand] {
+  letter-spacing: normal;
+  text-transform: none;
+  font-style: normal;
+}
+
+html [data-zd-home-hero] [data-zd-site-name] {
+  font-family: "Zudo SG Brand Jost", var(--font-sans);
+  font-weight: 600;
+  font-style: normal;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
 /* ========================================
  * Design Token System
  *

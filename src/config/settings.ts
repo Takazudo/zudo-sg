@@ -48,10 +48,19 @@ export const settings = {
   // relocated here without restructuring those package types. Each carries
   // a cross-reference comment pointing back to this block.
   siteName: "zudo-sg",
-  logo: "auto",
-  // Falsy siteUrl silently omits OGP absolute image URLs and canonical link
-  // tags from build output — see the module-load warning below.
-  siteUrl: "" as string,
+  // A06 / Rhythm (#1063). Same assets as doc/zfb.config.ts, copied from
+  // doc/public. "auto" would paint the generated plate instead of the symbol.
+  logo: "/img/logo.svg",
+  favicon: {
+    svg: "/favicon.svg",
+    png32: "/favicon-32x32.png",
+    png16: "/favicon-16x16.png",
+    ico: "/favicon.ico",
+  },
+  headerBrand: { icon: "/img/brand/zudo-sg-symbol-small.svg" },
+  // Absolute origin so og:image / twitter:image are emitted. A falsy value
+  // drops those tags — see the module-load warning below.
+  siteUrl: "https://zudo-sg.takazudomodular.com",
   // -------------------------------------------------------------------------
   siteDescription:
     "A zudo-doc-based styleguide host and provider of the @zudo-sg/demo-ui component library.",
@@ -78,7 +87,7 @@ The same library drives a multi-page demo site, so the components can be explore
     keywords: "",
     ogImage: "/img/ogp.png",
     ogSiteName: true,
-    twitterCard: "summary",
+    twitterCard: "summary_large_image",
     // Branding identity field (#194) — kept here because MetaTagsConfig is
     // externally typed by @takazudo/zudo-doc; see the Branding block above.
     twitterCreator: "@Takazudo",
