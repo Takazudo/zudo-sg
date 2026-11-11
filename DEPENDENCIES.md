@@ -1,5 +1,60 @@
 # Dependency audit register
 
+## zudo-doc 10.0.2 and zdtp 0.9.4 adopted — 2026-11-11
+
+The workspace, `doc/`, consumer fixtures and the generated starter adopt
+published `@takazudo/zudo-doc` / `zudo-doc-history-server` 10.0.2 and
+`@takazudo/zdtp` 0.9.4. zudo-doc 10.0.2 still peers the ZFB family at
+`^6.0.1`, zdtp at `^0.5.2 || ^0.6.0 || ^0.7.0 || ^0.8.0 || ^0.9.0`, and
+history-server at `^10.0.0`. Installed ZFB 6.0.1 satisfies the zfb peer.
+zdtp 0.9.4's optional zfb peer stays `^5.1.2 || ^6.0.0`. The engine peer
+floors advance to zudo-doc `^10.0.2` and zdtp `^0.9.4` under the
+tested-floor policy (ADR §13). `@takazudo/zudo-sg` and `create-zudo-sg`
+versions are not bumped and nothing is published from this change.
+mdx-formatter 1.3.0, zudo-design-token-lint 2.1.0, and zfb 6.0.1 were
+already current.
+
+### Upstream impact
+
+`@takazudo/zudo-doc`, `@takazudo/zudo-doc-history-server`, and `@takazudo/zdtp`
+publish no `gitHead`. Verified tags: `zudo-doc-v10.0.1`
+`a61351eb54fe500d34fdb3b696f019864959ad9d` → `zudo-doc-v10.0.2`
+`76e44dbc058f4876ca9ffd09b5151deb95d3bfbe`, the matching history-server tags
+on those same commits, and `v0.9.3`
+`27f1bf8a2f45f734324d52746d8f4571d017aab0` → `v0.9.4`
+`872cf4d77fa1db201357c3641933a34ff21689d4` on
+Takazudo/zudo-design-token-panel. `create-zudo-doc@10.0.2` gitHead
+`4062ac5c581df130656e2a6bfabe6d680077a594` is the `v10.0.2` tag. Registry
+tarballs are the consumer-facing source of truth.
+
+- `@takazudo/zudo-doc` 10.0.1→10.0.2 (zudolab/zudo-doc, `packages/zudo-doc`):
+  the changelog only widens the optional `diff` peer to `^8.0.0 || ^9.0.0`.
+  No export rename. Declaration emit reorders some unions and rewrites the
+  robots default export as a function type; both are TypeScript 7 emit
+  differences, not API changes. Consumer impact: none in product code.
+  `diff` stays on 8.x because the peer does not require 9.
+- `@takazudo/zudo-doc-history-server` 10.0.1→10.0.2: the changelog says
+  "No package-specific changes." The published `.d.ts` files switch from
+  bundled `export { }` to per-declaration `export` because the package
+  build now runs `tsc` after tsup. New `args.d.ts`, `server.d.ts`, and
+  `shared.d.ts` are that emit split. `doc/` does not enable doc history.
+  Consumer impact: none.
+- `@takazudo/zdtp` 0.9.3→0.9.4 (Takazudo/zudo-design-token-panel,
+  `packages/zdtp`): the changelog and source diff are docs, demos, and
+  tests. `src/config/color-scheme-utils.ts` changes comments only. Package
+  `exports` and peers are unchanged (`@takazudo/zfb` optional
+  `^5.1.2 || ^6.0.0`). Published chunk filenames were rebuilt. Consumer
+  impact: none found — plain bump.
+- `create-zudo-doc` 10.0.1→10.0.2: `templates/` is byte-identical.
+  `dist/scaffold.js` moves the pins listed in `ZUDO_DEPS_PINS.md`.
+  `dist/prompts.js` null-checks a missing `@clack/prompts` 1.x value.
+  The generated `typescript: ^7.0.2` pin is not copied onto `doc/`, which
+  keeps its TypeScript 6/7 alias split.
+
+Left untouched (non-registry): `@takazudo/zudo-sg` `workspace:*` in the root
+and `packages/demo-ui`, and `file:.tarball/zudo-sg-engine.tgz` in the three
+fixtures. The generated starter's `@takazudo/zudo-sg` range stays `^0.9.1`.
+
 ## zudo-doc 10.0.1 adopted — 2026-11-10
 
 The workspace, `doc/`, consumer fixtures and the generated starter adopt
