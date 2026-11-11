@@ -18,7 +18,6 @@ import { resolveNavSource } from "./lib/_nav-source-docs";
 import { getCategoryGroups } from "@/styleguide/registry";
 import { collectTags } from "@/utils/tags";
 import { toRouteSlug } from "@/utils/slug";
-import { AutoLogo } from "@takazudo/zudo-doc/auto-logo";
 import { DocLayoutWithDefaults } from "@takazudo/zudo-doc/doclayout";
 import { CompactProse } from "@takazudo/zudo-doc/home-intro";
 import type { SidebarNavNode } from "@takazudo/zudo-doc/sidebar";
@@ -47,6 +46,12 @@ export const frontmatter = { title: "Home" };
 // and keeps the underline, and the two sites must not disagree on the same row.
 const heroLink =
   "text-fg underline hover:text-accent focus-visible:text-accent";
+
+/** Theme-adaptive hero mark. Matches @takazudo/zudo-doc's home-page mask. */
+function logoMaskStyle(url: string): { "-webkit-mask": string; mask: string } {
+  const mask = `url("${url.replace(/[\\"]/g, "\\$&")}") center/contain no-repeat`;
+  return { "-webkit-mask": mask, mask };
+}
 
 // The "See all tags" link is NOT part of that carve-out: 5.25.0 restyled it to
 // match the secondary link row, i.e. ordinary chrome — no static underline.
@@ -135,15 +140,18 @@ export default function IndexPage(): JSX.Element {
       footerOverride={<FooterWithDefaults lang={locale} />}
       bodyEndComponents={<BodyEndIslands basePath={settings.base ?? "/"} />}
     >
-      {/* Hero: logo left, title+desc+links right, block centered */}
-      <div class="zd-home-hero mb-vsp-xl">
+      {/* Hero: logo left, title+desc+links right, block centered.
+          Path logos use the package home's currentColor mask. data-zd-*
+          hooks the Jost wordmark (doc/src/styles/global.css). */}
+      <div class="zd-home-hero mb-vsp-xl" data-zd-home-hero={true}>
         <div class="zd-home-inner flex flex-col items-center justify-center text-center gap-hsp-md lg:flex-row lg:text-left lg:gap-hsp-xl">
-          <AutoLogo
-            seed={settings.siteName}
-            class="w-[320px] max-w-full aspect-[1200/630] text-fg shrink-0"
+          <div
+            class="w-[320px] max-w-full aspect-[1200/630] bg-fg shrink-0"
+            style={logoMaskStyle(withBase(settings.logo))}
+            aria-hidden="true"
           />
           <div class="zd-home-copy min-w-0 lg:flex-1">
-            <h1 class="text-heading font-bold mb-vsp-2xs break-words">{settings.siteName}</h1>
+            <h1 class="text-heading font-bold mb-vsp-2xs break-words" data-zd-site-name={true}>{settings.siteName}</h1>
             <p class="text-muted text-small mb-vsp-sm">{settings.siteDescription}</p>
             <div class="zd-home-links flex flex-wrap items-center justify-center lg:justify-start gap-hsp-md text-small">
               {overview && (

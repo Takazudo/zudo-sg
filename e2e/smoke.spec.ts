@@ -33,9 +33,9 @@ async function clickAndWaitForSwap(page: Page, selector: string): Promise<boolea
 // Intentionally minimal — a single page load that confirms:
 //   1. The root page returns HTTP 200 and visible content.
 //   2. No JavaScript runtime errors.
-//   3. No failed (>= 400) same-origin resource requests — the home hero renders
-//      its brand mark inline via AutoLogo and the <head> links the generated
-//      favicon set, so a missing static asset surfaces here (#123).
+//   3. No failed (>= 400) same-origin resource requests — the home hero masks
+//      /img/logo.svg and the <head> links the favicon set, so a missing static
+//      asset surfaces here (#123).
 //   4. A docs content page returns 200.
 // Deeper interactive flows belong in dedicated T1 specs added later.
 
@@ -45,13 +45,12 @@ test("home page renders without JS errors or failed asset requests", async ({ pa
     jsErrors.push(err.message);
   });
 
-  // 404 detection (#123): generated favicon assets ship in public/, and the
-  // home hero renders its brand mark inline via AutoLogo, so any >= 400 response
-  // is a genuine regression (a missing asset), not scaffold noise. This replaces
-  // the former unused isScaffoldResourceError() filter, which silently tolerated
-  // every 404. The home route exercises both the favicon links (<head>) and the
-  // inline AutoLogo hero, so removing or renaming a referenced favicon asset
-  // fails this test.
+  // 404 detection (#123): favicon assets ship in public/, and the home hero
+  // masks /img/logo.svg, so any >= 400 response is a genuine regression (a
+  // missing asset), not scaffold noise. This replaces the former unused
+  // isScaffoldResourceError() filter, which silently tolerated every 404. The
+  // home route exercises both the favicon links (<head>) and the hero logo, so
+  // removing or renaming a referenced favicon or logo asset fails this test.
   const failedResponses: string[] = [];
   page.on("response", (res) => {
     if (res.status() >= 400) failedResponses.push(`${res.status()} ${res.url()}`);
@@ -68,7 +67,7 @@ test("home page renders without JS errors or failed asset requests", async ({ pa
 
   // No uncaught JavaScript errors.
   expect(jsErrors).toEqual([]);
-  // No missing static assets (favicon set; the hero logo is inline AutoLogo).
+  // No missing static assets (favicon set and the hero logo).
   expect(failedResponses).toEqual([]);
 });
 
