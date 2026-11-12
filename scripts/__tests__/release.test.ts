@@ -9,11 +9,16 @@ import {
   PACKAGES,
   ReleaseError,
   checkTagRef,
+  checkCandidateFreshness,
   createGithubClient,
+  createReleaseTag,
+  dispatchPublisher,
+  releasePathsChanged,
   extractReleaseNotes,
   finalizeRelease,
   nextStage,
   parseTag,
+  planDispatch,
   planFinalization,
   publishDecision,
   registryState,
@@ -21,6 +26,8 @@ import {
   resolvePackage,
   resolveSuperseded,
   selectCiRuns,
+  summarizePublisherJobs,
+  templateEngineVersion,
 } from "../release/release-lib.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -83,6 +90,11 @@ function registry({ versions, attest }: { versions?: string[]; attest?: unknown 
     if (url.includes("/-/npm/v1/attestations/"))
       return attest ? { status: 200, body: attest } : { status: 404 };
     if (!versions) return { status: 404, body: { error: "Not found" } };
+    const exact = /\/(\d+\.\d+\.\d+)$/.exec(url);
+    if (exact)
+      return versions.includes(exact[1])
+        ? { status: 200, body: { version: exact[1] } }
+        : { status: 404 };
     return {
       status: 200,
       body: { versions: Object.fromEntries(versions.map((v) => [v, { version: v }])) },
@@ -368,12 +380,15 @@ describe("missing auth", () => {
 describe("finalization resume", () => {
   const notes = "### Changed\n\n- thing\n";
   const github = (releases: unknown[], tagSha: string | null = SHA) => {
-    const posts: unknown[] = [];
+    const posts: Record<string, unknown>[] = [];
     return {
       posts,
       tagSha: async () => tagSha,
-      releases: async () => releases,
-      request: async (_m: string, _p: string, body: unknown) => {
+      releases: async () => [
+        ...releases,
+        ...posts.map((p) => ({ ...p, html_url: "https://example.test/r" })),
+      ],
+      request: async (_m: string, _p: string, body: Record<string, unknown>) => {
         posts.push(body);
         return { status: 201, data: { html_url: "https://example.test/r" } };
       },
@@ -657,5 +672,531 @@ describe("review follow-ups", () => {
     ).rejects.toMatchObject({
       code: "tag-unreadable",
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Coordinator hardening (#1081): write-time rechecks, resend/conflict,
+// readback after ambiguous answers, exact publisher run tracking.
+// ---------------------------------------------------------------------------
+
+type FakeRun = {
+  id: number;
+  head_branch: string;
+  head_sha: string;
+  event: string;
+  status: string;
+  conclusion: string | null;
+  html_url: string;
+};
+
+const uncertain = (message = "socket hang up") =>
+  Object.assign(new ReleaseError("github-network", message), { uncertain: true });
+
+function fakeGithub(opts: {
+  tag?: string | null;
+  onMain?: boolean;
+  create?: () => { status: number; data?: unknown } | Error;
+  runs?: FakeRun[];
+  dispatch?: (runs: FakeRun[]) => { status: number; data?: unknown } | Error;
+  mainHead?: string;
+  mainVersion?: string;
+  changed?: string[] | null;
+}) {
+  const state = { tag: opts.tag ?? null, runs: [...(opts.runs ?? [])], writes: [] as string[] };
+  return {
+    state,
+    tagSha: async () => state.tag,
+    isOnMain: async () => opts.onMain ?? true,
+    mainHead: async () => opts.mainHead ?? SHA,
+    fileAt: async () => JSON.stringify({ version: opts.mainVersion ?? "1.0.0" }),
+    changedFiles: async () => (opts.changed === undefined ? [] : opts.changed),
+    createTagRef: async (_tag: string, sha: string) => {
+      state.writes.push(`tag ${sha}`);
+      const result = opts.create ? opts.create() : ((state.tag = sha), { status: 201 });
+      if (result instanceof Error) throw result;
+      return result;
+    },
+    workflowRuns: async () => state.runs,
+    run: async (id: number) => state.runs.find((r) => r.id === id) ?? null,
+    dispatchWorkflow: async () => {
+      state.writes.push("dispatch");
+      const result = opts.dispatch ? opts.dispatch(state.runs) : { status: 204 };
+      if (result instanceof Error) throw result;
+      return result;
+    },
+  };
+}
+
+const pubRun = (over: Partial<FakeRun>): FakeRun => ({
+  id: 100,
+  head_branch: "v1.0.0",
+  head_sha: SHA,
+  event: "workflow_dispatch",
+  status: "completed",
+  conclusion: "success",
+  html_url: "https://example.test/run",
+  ...over,
+});
+
+describe("tag creation at write time", () => {
+  const unpublished = fakeFetch(registry({ versions: ["0.9.0"] })).impl;
+  const args = { pkg: engine, version: "1.0.0", sha: SHA, fetch: unpublished };
+
+  it("creates the tag after re-checking tag, main and registry", async () => {
+    const gh = fakeGithub({});
+    expect(await createReleaseTag({ ...args, github: gh })).toMatchObject({ action: "created" });
+    expect(gh.state.writes).toEqual([`tag ${SHA}`]);
+  });
+
+  it("treats a resend at the same SHA as success without writing", async () => {
+    const gh = fakeGithub({ tag: SHA });
+    expect(await createReleaseTag({ ...args, github: gh })).toMatchObject({ action: "exists" });
+    expect(gh.state.writes).toEqual([]);
+  });
+
+  it("refuses an existing tag at another SHA and never writes", async () => {
+    const gh = fakeGithub({ tag: OTHER });
+    await expect(createReleaseTag({ ...args, github: gh })).rejects.toMatchObject({
+      code: "tag-conflict",
+    });
+    expect(gh.state.writes).toEqual([]);
+  });
+
+  it("re-checks main ancestry and the registry right before the write", async () => {
+    const offMain = fakeGithub({ onMain: false });
+    await expect(createReleaseTag({ ...args, github: offMain })).rejects.toMatchObject({
+      code: "candidate-rejected",
+    });
+    const flaky = fakeFetch(() => ({ status: 429 })).impl;
+    const gh = fakeGithub({});
+    await expect(createReleaseTag({ ...args, fetch: flaky, github: gh })).rejects.toMatchObject({
+      code: "registry-uncertain",
+    });
+    expect(offMain.state.writes).toEqual([]);
+    expect(gh.state.writes).toEqual([]);
+  });
+
+  it("reads back after a lost race (422) or an uncertain POST", async () => {
+    // Another writer created the same tag between the recheck and the POST.
+    const raced = fakeGithub({});
+    raced.createTagRef = async () => ((raced.state.tag = SHA), { status: 422 });
+    expect(await createReleaseTag({ ...args, github: raced })).toMatchObject({ action: "exists" });
+
+    const conflicting = fakeGithub({});
+    conflicting.createTagRef = async () => ((conflicting.state.tag = OTHER), { status: 422 });
+    await expect(createReleaseTag({ ...args, github: conflicting })).rejects.toMatchObject({
+      code: "tag-conflict",
+    });
+
+    const landed = fakeGithub({});
+    landed.createTagRef = async () => {
+      landed.state.tag = SHA;
+      throw uncertain();
+    };
+    expect(await createReleaseTag({ ...args, github: landed })).toMatchObject({ action: "exists" });
+
+    const lost = fakeGithub({ create: () => uncertain() });
+    await expect(createReleaseTag({ ...args, github: lost })).rejects.toMatchObject({
+      code: "tag-uncertain",
+    });
+  });
+
+  it("keeps a 403's GitHub details and points to the owner routes, not a PAT", async () => {
+    const { impl } = fakeFetch((url, init) =>
+      init?.method === "POST"
+        ? {
+            status: 403,
+            body: {
+              message: "Resource not accessible by integration",
+              documentation_url: "https://docs.github.com/rest/git/refs#create-a-reference",
+            },
+          }
+        : url.includes("/compare/")
+          ? { status: 200, body: { status: "ahead" } }
+          : url.endsWith("/git/ref/heads/main")
+            ? { status: 200, body: { object: { type: "commit", sha: SHA } } }
+            : url.includes("/contents/")
+              ? {
+                  status: 200,
+                  body: { content: Buffer.from('{"version":"1.0.0"}').toString("base64") },
+                }
+              : { status: 404 },
+    );
+    const client = createGithubClient({ token: "t", fetch: impl });
+    const error = await createReleaseTag({ ...args, github: client }).catch((e) => e);
+    expect(error.code).toBe("github-auth");
+    expect(error.message).toContain("Resource not accessible by integration");
+    expect(error.message).toContain("docs.github.com");
+    expect(error.message).toMatch(/Do not add a PAT/);
+  });
+});
+
+describe("GitHub error details", () => {
+  it("separates rate limits and network failures from auth", async () => {
+    const limited = fakeFetch(() => ({
+      status: 403,
+      body: { message: "Resource not accessible by integration" },
+    }));
+    const res = (status: number, headers: Record<string, string>) =>
+      new Response(JSON.stringify({ message: "x" }), { status, headers });
+    const rateLimited = createGithubClient({
+      token: "t",
+      fetch: (async () => res(403, { "x-ratelimit-remaining": "0" })) as unknown as typeof fetch,
+    });
+    await expect(rateLimited.ciRuns(SHA)).rejects.toMatchObject({ code: "github-rate-limit" });
+    await expect(
+      createGithubClient({ token: "t", fetch: limited.impl }).ciRuns(SHA),
+    ).rejects.toMatchObject({ code: "github-auth" });
+    const down = createGithubClient({
+      token: "t",
+      fetch: fakeFetch(() => new Error("ECONNRESET")).impl,
+    });
+    await expect(down.ciRuns(SHA)).rejects.toMatchObject({
+      code: "github-network",
+      uncertain: true,
+    });
+    const flaky = createGithubClient({
+      token: "t",
+      fetch: fakeFetch(() => ({ status: 502 })).impl,
+    });
+    await expect(flaky.ciRuns(SHA)).rejects.toMatchObject({ uncertain: true });
+  });
+});
+
+describe("publisher dispatch and exact run tracking", () => {
+  const args = { pkg: engine, version: "1.0.0", sha: SHA, sleep: async () => {} };
+
+  it("reuses an in-flight or successful run instead of dispatching again", async () => {
+    expect(planDispatch([pubRun({ status: "in_progress", conclusion: null })]).action).toBe(
+      "reuse",
+    );
+    const gh = fakeGithub({ runs: [pubRun({ id: 7 })] });
+    expect(await dispatchPublisher({ ...args, github: gh })).toMatchObject({
+      action: "reused",
+      run: { id: 7 },
+    });
+    expect(gh.state.writes).toEqual([]);
+  });
+
+  it("dispatches after failed runs and returns the exact run id from the answer", async () => {
+    const gh = fakeGithub({
+      runs: [pubRun({ id: 1, conclusion: "failure" })],
+      dispatch: (runs) => {
+        runs.push(pubRun({ id: 2, status: "queued", conclusion: null }));
+        return { status: 200, data: { workflow_run_id: 2, html_url: "u" } };
+      },
+    });
+    expect(await dispatchPublisher({ ...args, github: gh })).toMatchObject({
+      action: "dispatched",
+      run: { id: 2 },
+    });
+    expect(gh.state.writes).toEqual(["dispatch"]);
+  });
+
+  it("finds the run by readback when the answer has no id or was uncertain", async () => {
+    const plain = fakeGithub({
+      dispatch: (runs) => (
+        runs.push(pubRun({ id: 3, status: "queued", conclusion: null })),
+        { status: 204 }
+      ),
+    });
+    expect((await dispatchPublisher({ ...args, github: plain })).run.id).toBe(3);
+    const lostAnswer = fakeGithub({
+      dispatch: (runs) => (
+        runs.push(pubRun({ id: 4, status: "queued", conclusion: null })),
+        uncertain()
+      ),
+    });
+    const result = await dispatchPublisher({ ...args, github: lostAnswer });
+    expect(result.run.id).toBe(4);
+    expect(result.detail).toMatch(/readback/);
+  });
+
+  it("fails loudly on a refused, invisible or ambiguous dispatch", async () => {
+    const refused = fakeGithub({
+      dispatch: () =>
+        Object.assign(new ReleaseError("github-auth", "HTTP 403"), { uncertain: false }),
+    });
+    await expect(dispatchPublisher({ ...args, github: refused })).rejects.toMatchObject({
+      code: "github-auth",
+    });
+    const invisible = fakeGithub({ dispatch: () => uncertain() });
+    await expect(
+      dispatchPublisher({ ...args, github: invisible, attempts: 2 }),
+    ).rejects.toMatchObject({ code: "dispatch-uncertain" });
+    const twice = fakeGithub({
+      dispatch: (runs) => (
+        runs.push(pubRun({ id: 5, status: "queued", conclusion: null })),
+        runs.push(pubRun({ id: 6, status: "queued", conclusion: null })),
+        { status: 204 }
+      ),
+    });
+    await expect(dispatchPublisher({ ...args, github: twice })).rejects.toMatchObject({
+      code: "dispatch-ambiguous",
+    });
+  });
+
+  it("ignores runs for another tag or commit", async () => {
+    const gh = fakeGithub({
+      runs: [pubRun({ id: 8, head_branch: "v0.9.9" }), pubRun({ id: 9, head_sha: OTHER })],
+      dispatch: (runs) => (
+        runs.push(pubRun({ id: 10, status: "queued", conclusion: null })),
+        { status: 204 }
+      ),
+    });
+    expect((await dispatchPublisher({ ...args, github: gh })).run.id).toBe(10);
+  });
+
+  it("reports publication and finalization outcomes separately", () => {
+    expect(
+      summarizePublisherJobs([
+        { name: "Build, verify, and publish", status: "completed", conclusion: "success" },
+        { name: "Finalize GitHub Release", status: "completed", conclusion: "failure" },
+      ]),
+    ).toEqual({ publish: "success", finalize: "failure" });
+    expect(summarizePublisherJobs([])).toEqual({ publish: "absent", finalize: "absent" });
+  });
+});
+
+describe("candidate pinning", () => {
+  const base = { version: "1.0.0", sha: SHA, mainHead: SHA, mainManifestVersion: "1.0.0" };
+
+  it("keeps a new candidate pinned when main advances, refuses a superseded one", () => {
+    expect(checkCandidateFreshness({ ...base, newRelease: true })).toEqual({
+      errors: [],
+      notices: [],
+    });
+    const advanced = checkCandidateFreshness({ ...base, newRelease: true, mainHead: OTHER });
+    expect(advanced.errors).toEqual([]);
+    expect(advanced.notices[0]).toMatch(/stays pinned to a{40}/);
+    expect(
+      checkCandidateFreshness({
+        ...base,
+        newRelease: true,
+        mainHead: OTHER,
+        mainManifestVersion: "1.0.1",
+      }).errors[0],
+    ).toMatch(/superseded/);
+  });
+
+  it("keeps the original SHA on resume whatever main declares now", () => {
+    const resume = checkCandidateFreshness({
+      ...base,
+      newRelease: false,
+      mainHead: OTHER,
+      mainManifestVersion: "2.0.0",
+    });
+    expect(resume.errors).toEqual([]);
+    expect(resume.notices[0]).toMatch(/resume/);
+  });
+
+  it("reads the initializer template's engine floor", () => {
+    expect(templateEngineVersion({ dependencies: { "@takazudo/zudo-sg": "^0.9.4" } })).toBe(
+      "0.9.4",
+    );
+    expect(
+      templateEngineVersion({ dependencies: { "@takazudo/zudo-sg": "workspace:*" } }),
+    ).toBeNull();
+    const template = JSON.parse(
+      readFileSync(join(ROOT, "packages/create-zudo-sg/templates/default/package.json"), "utf8"),
+    );
+    expect(templateEngineVersion(template)).toBe(
+      JSON.parse(readFileSync(join(ROOT, "packages/styleguide/package.json"), "utf8")).version,
+    );
+  });
+});
+
+describe("registry lag never reads as unpublished", () => {
+  it("confirms a version missing from the packument against the version document", async () => {
+    const lagging = fakeFetch((url) =>
+      url.endsWith("/1.0.0")
+        ? { status: 200, body: { version: "1.0.0" } }
+        : { status: 200, body: { versions: { "0.9.0": {} } } },
+    ).impl;
+    expect(
+      (await registryState({ name: engine.name, version: "1.0.0", fetch: lagging })).state,
+    ).toBe("found");
+    const limited = fakeFetch((url) =>
+      url.endsWith("/1.0.0") ? { status: 429 } : { status: 200, body: { versions: {} } },
+    ).impl;
+    expect(
+      (await registryState({ name: engine.name, version: "1.0.0", fetch: limited })).state,
+    ).toBe("uncertain");
+  });
+});
+
+describe("finalization readback", () => {
+  it("accepts a Release that exists after an uncertain create, fails when it does not", async () => {
+    const published = fakeFetch(registry({ versions: ["1.0.0"] })).impl;
+    const releases: Record<string, unknown>[] = [];
+    const landed = {
+      tagSha: async () => SHA,
+      releases: async () => releases,
+      request: async (_m: string, _p: string, body: Record<string, unknown>) => {
+        releases.push({ ...body, html_url: "https://example.test/r" });
+        throw uncertain();
+      },
+    };
+    const call = (github: typeof landed) =>
+      finalizeRelease({
+        pkg: engine,
+        version: "1.0.0",
+        sha: SHA,
+        notes: "n\n",
+        github,
+        fetch: published,
+      });
+    expect(await call(landed)).toMatchObject({ action: "created", matches: true });
+    const lost = {
+      ...landed,
+      releases: async () => [],
+      request: async () => Promise.reject(uncertain()),
+    };
+    await expect(call(lost)).rejects.toMatchObject({ code: "release-uncertain" });
+  });
+});
+
+describe("coordinator workflow contract", () => {
+  const text = readFileSync(join(ROOT, ".github/workflows/release.yml"), "utf8");
+  const job = (name: string, next?: string) =>
+    text.slice(text.indexOf(`\n  ${name}:`), next ? text.indexOf(`\n  ${next}:`) : undefined);
+
+  it("scopes write permissions to exactly the job that writes", () => {
+    expect(text).toMatch(/^permissions: \{\}$/m);
+    expect(text.match(/contents: write/g)).toHaveLength(1);
+    expect(text.match(/actions: write/g)).toHaveLength(1);
+    expect(job("tag", "dispatch")).toContain("contents: write");
+    expect(job("dispatch")).toContain("actions: write");
+    expect(text).not.toContain("id-token");
+    expect(text).not.toMatch(/secrets\./);
+  });
+
+  it("routes writes through the rechecking helpers and waits for pending CI", () => {
+    expect(job("verify", "tag")).toContain("--wait-ci 600");
+    expect(job("tag", "dispatch")).toContain("release.mjs create-tag");
+    expect(job("dispatch")).toContain("release.mjs dispatch-publisher");
+    expect(text).not.toMatch(/gh api -X POST|gh workflow run/);
+  });
+
+  it("keeps publication green once pnpm publish succeeded and waits for visibility in finalize", () => {
+    for (const file of ["publish-zudo-sg.yml", "publish-create-zudo-sg.yml"]) {
+      const pub = readFileSync(join(ROOT, ".github/workflows", file), "utf8");
+      const publishJob = pub.slice(pub.indexOf("\n  publish:"), pub.indexOf("\n  finalize:"));
+      const finalize = pub.slice(pub.indexOf("\n  finalize:"));
+      expect(publishJob).not.toContain("await-published");
+      expect(finalize).toMatch(/await-published[\s\S]*--timeout \d+[\s\S]*release\.mjs finalize/);
+    }
+  });
+});
+
+describe("review follow-ups: superseded candidates and error details", () => {
+  const unpublished = fakeFetch(registry({ versions: ["0.9.0"] })).impl;
+  const args = { pkg: engine, version: "1.0.0", sha: SHA, fetch: unpublished };
+
+  it("refuses a candidate when later main commits touched its release files", () => {
+    const base = {
+      version: "1.0.0",
+      sha: SHA,
+      newRelease: true,
+      mainHead: OTHER,
+      mainManifestVersion: "1.0.0",
+    };
+    expect(
+      checkCandidateFreshness({
+        ...base,
+        changedPackagePaths: releasePathsChanged(engine, "1.0.0", [
+          "packages/styleguide/src/x.ts",
+          "apps/demo/y.ts",
+        ]),
+      }).errors[0],
+    ).toMatch(/changed release files after a{40} \(packages\/styleguide\/src\/x.ts\)/);
+    expect(
+      checkCandidateFreshness({
+        ...base,
+        changedPackagePaths: releasePathsChanged(engine, "1.0.0", ["apps/demo/y.ts", "doc/z.mdx"]),
+      }),
+    ).toMatchObject({ errors: [] });
+    expect(checkCandidateFreshness({ ...base, changedPackagePaths: null }).errors[0]).toMatch(
+      /too far/,
+    );
+    expect(
+      releasePathsChanged(initializer, "0.2.17", [
+        "packages/create-zudo-sg/templates/default/package.json",
+        "packages/styleguide/a.ts",
+      ]),
+    ).toEqual(["packages/create-zudo-sg/templates/default/package.json"]);
+  });
+
+  it("re-applies the superseded rule in the tag job right before the write", async () => {
+    const bumped = fakeGithub({ mainHead: OTHER, mainVersion: "1.1.0" });
+    await expect(createReleaseTag({ ...args, github: bumped })).rejects.toMatchObject({
+      code: "candidate-superseded",
+    });
+    const touched = fakeGithub({ mainHead: OTHER, changed: ["packages/styleguide/src/a.ts"] });
+    await expect(createReleaseTag({ ...args, github: touched })).rejects.toMatchObject({
+      code: "candidate-superseded",
+    });
+    const unrelated = fakeGithub({ mainHead: OTHER, changed: ["apps/demo/a.ts"] });
+    expect(await createReleaseTag({ ...args, github: unrelated })).toMatchObject({
+      action: "created",
+    });
+    expect(bumped.state.writes).toEqual([]);
+    expect(touched.state.writes).toEqual([]);
+  });
+
+  it("keeps a ruleset's 422 rule names in the refusal", async () => {
+    const gh = fakeGithub({
+      create: () => ({
+        status: 422,
+        data: {
+          message: "Repository rule violations found",
+          errors: [{ message: "Cannot create ref due to creations being restricted." }],
+          documentation_url: "https://docs.github.com/rules",
+        },
+      }),
+    });
+    const error = await createReleaseTag({ ...args, github: gh }).catch((e) => e);
+    expect(error.code).toBe("tag-not-created");
+    expect(error.message).toContain("creations being restricted");
+    expect(error.message).toContain("docs.github.com/rules");
+    expect(error.message).toMatch(/Do not add a PAT/);
+  });
+
+  it("reports a 404 on a write as an error, not as absence", async () => {
+    const { impl } = fakeFetch(() => ({ status: 404, body: { message: "Not Found" } }));
+    const client = createGithubClient({ token: "t", fetch: impl });
+    await expect(client.dispatchWorkflow("publish-zudo-sg.yml", "v1.0.0")).rejects.toMatchObject({
+      code: "github-error",
+      status: 404,
+      uncertain: false,
+    });
+    expect(await client.tagSha("v1.0.0")).toBeNull();
+  });
+
+  it("classifies a secondary rate limit as rate-limit, not auth", async () => {
+    const client = createGithubClient({
+      token: "t",
+      fetch: (async () =>
+        new Response(JSON.stringify({ message: "You have exceeded a secondary rate limit" }), {
+          status: 403,
+          headers: { "retry-after": "60" },
+        })) as unknown as typeof fetch,
+    });
+    await expect(client.ciRuns(SHA)).rejects.toMatchObject({ code: "github-rate-limit" });
+  });
+
+  it("treats behind/diverged compare results as off main", async () => {
+    for (const status of ["behind", "diverged"]) {
+      const { impl } = fakeFetch(() => ({ status: 200, body: { status } }));
+      expect(await createGithubClient({ token: "t", fetch: impl }).isOnMain(SHA)).toBe(false);
+    }
+    const { impl } = fakeFetch(() => ({ status: 200, body: { status: "ahead" } }));
+    expect(await createGithubClient({ token: "t", fetch: impl }).isOnMain(SHA)).toBe(true);
+  });
+
+  it("names every coordinator run by its exact inputs", () => {
+    const text = readFileSync(join(ROOT, ".github/workflows/release.yml"), "utf8");
+    expect(text).toMatch(/^run-name: .*inputs\.package.*inputs\.version.*inputs\.sha.*dry run/m);
   });
 });

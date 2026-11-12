@@ -25,6 +25,11 @@ export const PACKAGES = {
     notesSource: (version) => `doc/src/content/docs/changelog/zudo-sg/${version}.mdx`,
     notesKind: "mdx",
     title: (version) => `@takazudo/zudo-sg ${version}`,
+    // Paths whose change after a candidate means that candidate no longer ships main's package.
+    releasePaths: (version) => [
+      "packages/styleguide/",
+      `doc/src/content/docs/changelog/zudo-sg/${version}.mdx`,
+    ],
   },
   "create-zudo-sg": {
     key: "create-zudo-sg",
@@ -35,6 +40,7 @@ export const PACKAGES = {
     notesSource: () => "packages/create-zudo-sg/CHANGELOG.md",
     notesKind: "keep-a-changelog",
     title: (version) => `create-zudo-sg ${version}`,
+    releasePaths: () => ["packages/create-zudo-sg/"],
   },
 };
 
@@ -166,7 +172,37 @@ export async function registryState({
       manifest: packument.versions[version],
     };
   }
-  return { state: "not-found", detail: `${name}@${version} is not published` };
+  // The packument can lag a fresh publish (CDN / abbreviated metadata), so a
+  // missing version is confirmed against the exact-version document before it
+  // may count as unpublished. Anything but a clean 404 or 200 stays uncertain.
+  let exact;
+  try {
+    exact = await fetchImpl(`${registry}/${encodePackageName(name)}/${version}`, {
+      headers: { Accept: "application/json", "Cache-Control": "no-cache" },
+    });
+  } catch (error) {
+    return { state: "uncertain", detail: `registry version request failed: ${error.message}` };
+  }
+  if (exact.status === 404) {
+    return { state: "not-found", detail: `${name}@${version} is not published` };
+  }
+  if (exact.ok) {
+    let manifest;
+    try {
+      manifest = await exact.json();
+    } catch {}
+    if (manifest?.version === version) {
+      return {
+        state: "found",
+        detail: `${name}@${version} is published (packument lagging)`,
+        manifest,
+      };
+    }
+  }
+  return {
+    state: "uncertain",
+    detail: `packument lacks ${version} but the version document answered HTTP ${exact.status}`,
+  };
 }
 
 /**
@@ -348,6 +384,45 @@ export function resolveGithubToken({ env = process.env, ghAuthToken } = {}) {
   return token;
 }
 
+/**
+ * A GitHub REST failure with the details an operator needs afterwards: the
+ * status, GitHub's own message and documentation link, the permission header
+ * GitHub says the endpoint accepts, and the request id. `uncertain` marks a
+ * failure after which the write may or may not have happened (network error,
+ * 5xx), so callers must read back instead of assuming either outcome.
+ */
+export class GithubHttpError extends ReleaseError {
+  constructor({ method, path, status, message, documentationUrl, acceptedPermissions, requestId }) {
+    const kind =
+      status === 0
+        ? "github-network"
+        : status === 429
+          ? "github-rate-limit"
+          : status === 401 || status === 403
+            ? "github-auth"
+            : "github-error";
+    const parts = [
+      `GitHub ${method} ${path || "/"} answered ${status ? `HTTP ${status}` : "no response"}`,
+    ];
+    if (message) parts.push(`message: ${message}`);
+    if (acceptedPermissions) parts.push(`accepted permissions: ${acceptedPermissions}`);
+    if (documentationUrl) parts.push(`docs: ${documentationUrl}`);
+    if (requestId) parts.push(`request id: ${requestId}`);
+    super(kind, parts.join("; "));
+    this.status = status;
+    this.githubMessage = message ?? "";
+    this.uncertain = status === 0 || status >= 500;
+  }
+}
+
+/** GitHub's message plus its errors[] entries (rule names for ruleset refusals). */
+export function githubPayloadMessage(payload) {
+  const errors = Array.isArray(payload?.errors)
+    ? payload.errors.map((e) => (typeof e === "string" ? e : (e.message ?? e.code))).join(", ")
+    : "";
+  return [payload?.message, errors].filter(Boolean).join(" — ");
+}
+
 export function createGithubClient({
   token,
   fetch: fetchImpl = fetch,
@@ -355,34 +430,53 @@ export function createGithubClient({
   api = GITHUB_API,
 }) {
   if (!token) throw new ReleaseError("missing-auth", "GitHub client created without a token");
-  async function request(method, path, body) {
-    const response = await fetchImpl(`${api}/repos/${repo}${path}`, {
-      method,
-      headers: {
-        Accept: "application/vnd.github+json",
-        Authorization: `Bearer ${token}`,
-        "X-GitHub-Api-Version": "2022-11-28",
-        ...(body ? { "Content-Type": "application/json" } : {}),
-      },
-      body: body ? JSON.stringify(body) : undefined,
-    });
-    if (response.status === 404) return { status: 404, data: null };
-    if (response.status === 401 || response.status === 403) {
-      throw new ReleaseError(
-        "github-auth",
-        `GitHub ${method} ${path} answered HTTP ${response.status}`,
-      );
+  async function request(method, path, body, { allow = [] } = {}) {
+    let response;
+    try {
+      response = await fetchImpl(`${api}/repos/${repo}${path}`, {
+        method,
+        headers: {
+          Accept: "application/vnd.github+json",
+          Authorization: `Bearer ${token}`,
+          "X-GitHub-Api-Version": "2022-11-28",
+          ...(body ? { "Content-Type": "application/json" } : {}),
+        },
+        body: body ? JSON.stringify(body) : undefined,
+      });
+    } catch (error) {
+      throw new GithubHttpError({ method, path, status: 0, message: error.message });
     }
-    if (!response.ok) {
-      throw new ReleaseError(
-        "github-error",
-        `GitHub ${method} ${path} answered HTTP ${response.status}`,
-      );
+    // Absent only for reads; a 404 on a write (missing workflow, invisible repo) is an error.
+    if (response.status === 404 && method === "GET") return { status: 404, data: null };
+    if (!response.ok && !allow.includes(response.status)) {
+      let payload = {};
+      try {
+        payload = (await response.json()) ?? {};
+      } catch {}
+      // A primary rate limit is a 403 with no remaining quota: still not an auth verdict.
+      const status =
+        response.status === 403 &&
+        (response.headers.get("x-ratelimit-remaining") === "0" ||
+          response.headers.get("retry-after") ||
+          /rate limit/i.test(String(payload.message)))
+          ? 429
+          : response.status;
+      throw new GithubHttpError({
+        method,
+        path,
+        status,
+        message: githubPayloadMessage(payload),
+        documentationUrl: payload.documentation_url,
+        acceptedPermissions: response.headers.get("x-accepted-github-permissions"),
+        requestId: response.headers.get("x-github-request-id"),
+      });
     }
-    return {
-      status: response.status,
-      data: response.status === 204 ? null : await response.json(),
-    };
+    let data = null;
+    if (response.status !== 204) {
+      const text = await response.text();
+      data = text ? JSON.parse(text) : null;
+    }
+    return { status: response.status, data };
   }
   return {
     request,
@@ -410,6 +504,60 @@ export function createGithubClient({
         throw new ReleaseError("tag-unreadable", `tag object for ${tag} could not be read`);
       }
       return annotated.data.object.sha;
+    },
+    async mainHead() {
+      const { status, data } = await request("GET", "/git/ref/heads/main");
+      if (status === 404) throw new ReleaseError("github-error", "refs/heads/main is not readable");
+      return data.object.sha;
+    },
+    /** True when sha is main's HEAD or one of its ancestors (GitHub compare API). */
+    async isOnMain(sha) {
+      const { status, data } = await request("GET", `/compare/${sha}...main`);
+      if (status === 404) return false;
+      return data.status === "ahead" || data.status === "identical";
+    },
+    /** Files changed from base to head (head must contain base). */
+    async changedFiles(base, head) {
+      const { status, data } = await request("GET", `/compare/${base}...${head}?per_page=100`);
+      if (status === 404)
+        throw new ReleaseError("github-error", `cannot compare ${base}...${head}`);
+      // The compare API lists at most 300 files; past that, treat everything as changed.
+      if ((data.files?.length ?? 0) >= 300) return null;
+      return (data.files ?? []).map((f) => f.filename);
+    },
+    async fileAt(path, ref) {
+      const { status, data } = await request("GET", `/contents/${path}?ref=${ref}`);
+      if (status === 404) return null;
+      return Buffer.from(data.content, "base64").toString("utf8");
+    },
+    async createTagRef(tag, sha) {
+      return request("POST", "/git/refs", { ref: `refs/tags/${tag}`, sha }, { allow: [422] });
+    },
+    async workflowRuns(workflow, branch) {
+      const { data } = await request(
+        "GET",
+        `/actions/workflows/${workflow}/runs?branch=${encodeURIComponent(branch)}&per_page=50`,
+      );
+      return data?.workflow_runs ?? [];
+    },
+    async run(id) {
+      const { data } = await request("GET", `/actions/runs/${id}`);
+      return data;
+    },
+    async runJobs(id) {
+      const { data } = await request("GET", `/actions/runs/${id}/jobs?per_page=100`);
+      return data?.jobs ?? [];
+    },
+    /**
+     * workflow_dispatch with return_run_details: GitHub answers 200 with the
+     * new run's id; an older API answers 204 and the caller finds the run by readback.
+     */
+    async dispatchWorkflow(workflow, ref, inputs) {
+      return request("POST", `/actions/workflows/${workflow}/dispatches`, {
+        ref,
+        ...(inputs ? { inputs } : {}),
+        return_run_details: true,
+      });
     },
     async releases() {
       // Listing (not /releases/tags/{tag}) is the only way to see drafts.
@@ -540,14 +688,37 @@ export async function finalizeRelease({
   if (plan.action === "conflict") throw new ReleaseError("release-conflict", plan.detail);
   if (plan.action === "keep") return plan;
   if (dryRun) return { action: "create", dryRun: true, detail: `would create Release ${tag}` };
-  const { data } = await github.request("POST", "/releases", {
-    tag_name: tag,
-    name: pkg.title(version),
-    body: notes,
-    draft: false,
-    prerelease: false,
-  });
-  return { action: "created", url: data?.html_url, detail: `created Release ${tag}` };
+  let postError = null;
+  try {
+    await github.request(
+      "POST",
+      "/releases",
+      { tag_name: tag, name: pkg.title(version), body: notes, draft: false, prerelease: false },
+      { allow: [422] },
+    );
+  } catch (error) {
+    // After a network/5xx failure the Release may exist anyway: read back first.
+    if (!error.uncertain) throw error;
+    postError = error;
+  }
+  const readback = (await github.releases()).find((r) => r.tag_name === tag);
+  if (!readback) {
+    throw new ReleaseError(
+      postError ? "release-uncertain" : "release-missing",
+      `Release ${tag} is not visible after the create request${postError ? ` (${postError.message})` : ""}; re-run finalize (it keeps an existing Release)`,
+    );
+  }
+  if (readback.draft || readback.prerelease) {
+    throw new ReleaseError("release-conflict", `Release ${tag} reads back as draft/prerelease`);
+  }
+  const matches =
+    readback.name === pkg.title(version) && normalize(readback.body) === normalize(notes);
+  return {
+    action: "created",
+    matches,
+    url: readback.html_url,
+    detail: `created Release ${tag} (read back${matches ? "" : " with different text"})`,
+  };
 }
 
 /**
@@ -602,4 +773,274 @@ export function nextStage({
     stage: "prepare",
     reason: "bump, changelog, verify and integrate the candidate into main",
   };
+}
+
+/**
+ * Candidate pinning. A new release (no tag, not on npm) is pinned to the SHA
+ * the operator passed — normally the CI-green main HEAD at preparation time —
+ * and is never silently replaced by a newer main. It is refused only when
+ * main has since moved the package to another version (the candidate is
+ * superseded). A resume (tag exists or version published) keeps its original
+ * SHA whatever main looks like now.
+ */
+export function checkCandidateFreshness({
+  version,
+  sha,
+  newRelease,
+  mainHead,
+  mainManifestVersion,
+  changedPackagePaths = [],
+}) {
+  const errors = [];
+  const notices = [];
+  if (!newRelease) {
+    notices.push(`resume: keeping the original candidate ${sha}`);
+    return { errors, notices };
+  }
+  if (mainManifestVersion !== version) {
+    errors.push(
+      `main (${mainHead}) now declares version ${mainManifestVersion}; candidate ${version} at ${sha} is superseded — prepare a new candidate instead of tagging an old one`,
+    );
+  } else if (mainHead !== sha && changedPackagePaths === null) {
+    errors.push(
+      `main (${mainHead}) moved too far past ${sha} to compare; re-pick the candidate (release.mjs pick-candidate)`,
+    );
+  } else if (mainHead !== sha && changedPackagePaths.length) {
+    errors.push(
+      `main (${mainHead}) changed release files after ${sha} (${changedPackagePaths.slice(0, 5).join(", ")}${changedPackagePaths.length > 5 ? ", …" : ""}); version ${version} would ship without them — pin main's HEAD instead (release.mjs pick-candidate)`,
+    );
+  } else if (mainHead !== sha) {
+    notices.push(
+      `main advanced to ${mainHead} after the candidate without touching release files; the release stays pinned to ${sha} (never replaced silently)`,
+    );
+  }
+  return { errors, notices };
+}
+
+/** Changed paths that belong to the package's release (null = unknown, too many). */
+export function releasePathsChanged(pkg, version, files) {
+  if (files === null) return null;
+  const roots = pkg.releasePaths(version);
+  return files.filter((f) => roots.some((r) => (r.endsWith("/") ? f.startsWith(r) : f === r)));
+}
+
+/** The `^X.Y.Z` engine range the initializer template ships; null when absent. */
+export function templateEngineVersion(templateManifest) {
+  const range = templateManifest?.dependencies?.[PACKAGES.engine.name];
+  const match = new RegExp(`^\\^(${STABLE})$`).exec(range ?? "");
+  return match ? match[1] : null;
+}
+
+/**
+ * Write-time tag creation for the coordinator's tag job. Re-checks immediately
+ * before the write (tag, main ancestry, registry), treats the same name at the
+ * same SHA as success, refuses another SHA, and reads the ref back after an
+ * ambiguous answer instead of assuming either outcome.
+ */
+export async function createReleaseTag({
+  pkg,
+  version,
+  sha,
+  github,
+  fetch: fetchImpl = fetch,
+  registry = REGISTRY,
+}) {
+  const tag = tagFor(pkg, version);
+  const existing = await github.tagSha(tag);
+  if (existing === sha) return { action: "exists", tag, detail: `tag ${tag} already at ${sha}` };
+  if (existing) {
+    throw new ReleaseError(
+      "tag-conflict",
+      `tag ${tag} points at ${existing}, not ${sha}; release tags are never moved`,
+    );
+  }
+  if (!(await github.isOnMain(sha))) {
+    throw new ReleaseError("candidate-rejected", `${sha} is no longer reachable from main`);
+  }
+  // Same superseded rule as verify, re-read now: main may have moved while verify waited for CI.
+  const mainHead = await github.mainHead();
+  const manifest = await github.fileAt(`${pkg.dir}/package.json`, mainHead);
+  const freshness = checkCandidateFreshness({
+    version,
+    sha,
+    newRelease: true,
+    mainHead,
+    mainManifestVersion: manifest ? JSON.parse(manifest).version : "(unreadable)",
+    changedPackagePaths:
+      mainHead === sha
+        ? []
+        : releasePathsChanged(pkg, version, await github.changedFiles(sha, mainHead)),
+  });
+  if (freshness.errors.length)
+    throw new ReleaseError("candidate-superseded", freshness.errors.join("\n"));
+  // Throws on an uncertain registry or a foreign existing version.
+  await publishDecision({ pkg, version, sha, fetch: fetchImpl, registry });
+
+  let response = null;
+  let failure = null;
+  try {
+    response = await github.createTagRef(tag, sha);
+  } catch (error) {
+    if (!error.uncertain) throw annotateTagFailure(error, tag);
+    failure = error;
+  }
+  const after = await github.tagSha(tag);
+  if (after === sha) {
+    const raced = response?.status === 422 || failure;
+    return {
+      action: raced ? "exists" : "created",
+      tag,
+      detail: raced
+        ? `tag ${tag} at ${sha} confirmed by readback after ${failure ? `an uncertain answer (${failure.message})` : "HTTP 422"}`
+        : `created tag ${tag} at ${sha}`,
+    };
+  }
+  if (after) {
+    throw new ReleaseError(
+      "tag-conflict",
+      `tag ${tag} appeared at ${after}, not ${sha} (concurrent writer); release tags are never moved`,
+    );
+  }
+  const why = failure
+    ? failure.message
+    : `HTTP ${response?.status}${response?.data ? `; message: ${githubPayloadMessage(response.data)}` : ""}${response?.data?.documentation_url ? `; docs: ${response.data.documentation_url}` : ""}`;
+  throw annotateTagFailure(
+    new ReleaseError(
+      failure ? "tag-uncertain" : "tag-not-created",
+      `tag ${tag} is absent after the create request (${why}); nothing was published — re-run the coordinator after fixing the cause`,
+    ),
+    tag,
+  );
+}
+
+function annotateTagFailure(error, tag) {
+  if (error.code === "github-auth" || /rule|protect/i.test(error.message)) {
+    error.message += `\nThe workflow token could not create ${tag}. Do not add a PAT or bypass a ruleset: an owner either allows GitHub Actions to create release tags, or pushes the tag from an authenticated local session (RELEASE.md step 7, local route).`;
+  }
+  return error;
+}
+
+/** Publisher runs that belong to one exact tag + commit, newest first. */
+export function publisherRunsFor(runs, { tag, sha }) {
+  return runs
+    .filter((r) => r.head_branch === tag && (!sha || r.head_sha === sha))
+    .sort((a, b) => (b.id ?? 0) - (a.id ?? 0));
+}
+
+/**
+ * Reuse before dispatch: an in-flight publisher run for the tag is followed,
+ * not duplicated; a successful one means nothing is left to dispatch. Only
+ * when every earlier run ended unsuccessfully (or none exists) is a new run
+ * dispatched — the publisher's registry/provenance guard keeps that safe.
+ */
+export function planDispatch(runs) {
+  const active = runs.find((r) => r.status !== "completed");
+  if (active)
+    return {
+      action: "reuse",
+      run: active,
+      reason: "a publisher run for this tag is still in progress",
+    };
+  const succeeded = runs.find((r) => r.conclusion === "success");
+  if (succeeded)
+    return {
+      action: "reuse",
+      run: succeeded,
+      reason: "a publisher run for this tag already succeeded",
+    };
+  return {
+    action: "dispatch",
+    reason: runs.length
+      ? "earlier publisher runs did not succeed"
+      : "no publisher run for this tag yet",
+  };
+}
+
+const runInfo = (r) => ({
+  id: r.id,
+  url: r.html_url,
+  status: r.status,
+  conclusion: r.conclusion ?? null,
+});
+
+/**
+ * Dispatch the package's publisher at the exact tag and return the exact run
+ * it started. The run id comes from the dispatch answer when GitHub returns
+ * it, otherwise from a readback that must find exactly one new run.
+ */
+export async function dispatchPublisher({
+  pkg,
+  version,
+  sha,
+  github,
+  sleep = (ms) => new Promise((r) => setTimeout(r, ms)),
+  attempts = 12,
+  intervalMs = 5_000,
+}) {
+  const tag = tagFor(pkg, version);
+  const tagRuns = publisherRunsFor(await github.workflowRuns(pkg.workflow, tag), { tag });
+  const plan = planDispatch(tagRuns.filter((r) => r.head_sha === sha));
+  if (plan.action === "reuse")
+    return { action: "reused", tag, run: runInfo(plan.run), detail: plan.reason };
+
+  const known = new Set(tagRuns.map((r) => r.id));
+  let failure = null;
+  let answer = null;
+  try {
+    answer = await github.dispatchWorkflow(pkg.workflow, tag);
+  } catch (error) {
+    if (!error.uncertain) throw error;
+    failure = error;
+  }
+  const id = answer?.data?.workflow_run_id;
+  if (id) {
+    const run = await github.run(id);
+    if (run && run.head_branch !== tag) {
+      throw new ReleaseError(
+        "dispatch-mismatch",
+        `run ${id} started at ${run.head_branch}, not ${tag}`,
+      );
+    }
+    return {
+      action: "dispatched",
+      tag,
+      run: run
+        ? runInfo(run)
+        : { id, url: answer.data.html_url, status: "queued", conclusion: null },
+      detail: `dispatched ${pkg.workflow} at ${tag}`,
+    };
+  }
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    const fresh = publisherRunsFor(await github.workflowRuns(pkg.workflow, tag), { tag }).filter(
+      (r) => !known.has(r.id) && r.event === "workflow_dispatch",
+    );
+    if (fresh.length === 1) {
+      return {
+        action: "dispatched",
+        tag,
+        run: runInfo(fresh[0]),
+        detail: `dispatched ${pkg.workflow} at ${tag}${failure ? ` (confirmed by readback after: ${failure.message})` : " (run found by readback)"}`,
+      };
+    }
+    if (fresh.length > 1) {
+      throw new ReleaseError(
+        "dispatch-ambiguous",
+        `${fresh.length} new ${pkg.workflow} runs appeared for ${tag}: ${fresh.map((r) => r.html_url).join(", ")} — the publisher serializes them; follow each`,
+      );
+    }
+    await sleep(intervalMs);
+  }
+  throw new ReleaseError(
+    failure ? "dispatch-uncertain" : "dispatch-not-visible",
+    `no ${pkg.workflow} run for ${tag} is visible after dispatch${failure ? ` (${failure.message})` : ""}; re-run the dispatch job — it reuses any run that appears instead of starting another`,
+  );
+}
+
+/** Publication and finalization outcomes of one publisher run, kept apart. */
+export function summarizePublisherJobs(jobs) {
+  const pick = (prefix) => {
+    const job = jobs.find((j) => j.name.startsWith(prefix));
+    return job ? (job.status === "completed" ? job.conclusion : job.status) : "absent";
+  };
+  return { publish: pick("Build, verify, and publish"), finalize: pick("Finalize GitHub Release") };
 }

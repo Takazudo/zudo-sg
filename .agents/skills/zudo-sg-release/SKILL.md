@@ -22,14 +22,23 @@ the runbook disagree, the runbook wins.
   says "dry run", stop after step 6.
 - **Begin and resume with** `node scripts/release/release.mjs status --package
   <engine|create-zudo-sg>` and continue at the reported stage.
-- **Auth.** Use `GH_TOKEN` (or `gh auth`) for GitHub. Never request, create or
-  use an npm token, and never run `npm publish`/`pnpm publish` yourself — the
-  publish workflows do that through OIDC.
+- **Auth.** Use `GH_TOKEN` (or `gh auth`) for GitHub, or the GitHub MCP/connector
+  tools when the shell has no valid token (`release.mjs preflight` tells you
+  which). An unauthenticated `gh` alone does not prove dispatch is
+  unavailable. Never request, create or use an npm token or a PAT, and never
+  run `npm publish`/`pnpm publish` yourself — the publish workflows do that
+  through OIDC.
+- **Candidate.** Pin it with `release.mjs pick-candidate` (main's HEAD with
+  green push CI) and dispatch exactly that SHA. Never replace it silently when
+  `main` moves; a resume keeps the SHA the tag already carries.
 - **Cloud sessions.** Use the PR integration route (step 5), then dispatch
-  `release.yml` (step 7). If the preflight in the runbook's "Codex Cloud"
-  section fails (e.g. no Actions dispatch access), stop after integration and
-  report exactly which permission is missing; do not fall back to a tag push
-  with other credentials.
+  `release.yml` (step 7) through the runbook's "Dispatch routes" (REST, then
+  GitHub MCP). If neither can dispatch, stop after integration, report exactly
+  which permission is missing, and give the user the Actions UI link with the
+  exact inputs; do not fall back to a tag push with other credentials.
+- **Exact runs.** Follow the publisher run id the coordinator's `dispatch`
+  job reports; report publish and finalize outcomes separately
+  (`release.mjs publisher-runs`).
 - **Heavy gates.** If the environment cannot run a local gate, say which one
   and why in the report; the hosted publisher still runs the release gates.
 - **Report** per step 9, keeping publication and finalization outcomes

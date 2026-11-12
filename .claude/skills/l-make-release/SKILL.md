@@ -49,12 +49,26 @@ runbook ever disagree, the runbook wins — fix this file.
   stage, never bump because finalization failed, never move a tag.
 - **Integration route.** On the owner's Mac the direct `main` push in step 5 is
   permitted. Use the PR route instead when the session cannot push `main`.
-- **Release step.** Prefer dispatching `release.yml` (step 7). The local tag
-  push is the equivalent fallback when dispatch is unavailable.
+- **Candidate.** Pin the candidate with `release.mjs pick-candidate` (main's
+  HEAD once its push CI is green) and pass that exact SHA to every dispatch.
+  Never swap it for a newer `main` on your own; on resume reuse the SHA the
+  tag/publication already carries.
+- **Release step.** Prefer dispatching `release.yml` (step 7). Run
+  `release.mjs preflight` first. If `gh` is unauthenticated, do not conclude
+  dispatch is impossible: use the GitHub MCP tools (`actions_run_trigger`
+  `run_workflow`, inputs as strings; read back with `actions_list` /
+  `actions_get` / `get_job_logs`) per the runbook's "Dispatch routes". If no
+  route can dispatch, tell the user to start it from the Actions UI with the
+  exact inputs. The local tag push is the owner's fallback when the workflow
+  token cannot create the tag; never add a PAT or bypass a ruleset.
+- **Exact runs.** Take the publisher run id from the coordinator's `dispatch`
+  job output and follow that run; report its publish and finalize jobs
+  separately (`release.mjs publisher-runs`).
 - **Heavy gates.** Run `pnpm b4push` and other long local suites through the
   machine's heavy-test guard when one is configured, in the background, and
   resume when they finish.
 - **Waiting.** Watch CI and publisher runs with `gh run watch <id>
-  --exit-status` in the background rather than polling.
+  --exit-status` in the background rather than polling (with MCP only, check
+  the exact run id at widening intervals).
 - **Report** per the runbook's step 9, keeping publication and finalization
   outcomes separate.

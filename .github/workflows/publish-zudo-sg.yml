@@ -157,18 +157,27 @@ jobs:
         if: steps.decide.outputs.publish == 'true'
         run: pnpm --filter @takazudo/zudo-sg publish --tag latest --access public --no-git-checks --provenance
 
-      - name: Confirm the version is on the registry
-        if: steps.decide.outputs.publish == 'true'
-        run: node scripts/release/release.mjs await-published --package engine --version "${{ steps.tag.outputs.version }}"
+      - name: Record the publication outcome
+        env:
+          PUBLISH: ${{ steps.decide.outputs.publish }}
+        run: |
+          if [ "$PUBLISH" = "true" ]; then
+            echo "- publish: \`pnpm publish\` succeeded; registry visibility is confirmed by the finalize job" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "- publish: already on npm with matching provenance; publication skipped" >> "$GITHUB_STEP_SUMMARY"
+          fi
 
   # GitHub Release completion, separate from publication: a failure here never
-  # republishes or bumps anything. Re-run this job (or re-dispatch the exact
-  # tag) to resume; an existing Release is kept, never overwritten.
+  # republishes or bumps anything. The publish job is green as soon as
+  # `pnpm publish` succeeded; waiting for the registry to show the version
+  # happens here, so a slow registry fails only this job. Re-run this job
+  # (`gh run rerun <id> --failed`) to resume; an existing Release is kept,
+  # never overwritten.
   finalize:
     name: Finalize GitHub Release
     needs: publish
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 25
     permissions:
       contents: write
     steps:
@@ -181,6 +190,11 @@ jobs:
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
+
+      - name: Wait until the version is visible on the registry
+        run: >-
+          node scripts/release/release.mjs await-published --package engine
+          --version "${{ needs.publish.outputs.version }}" --timeout 900
 
       - name: Create or keep the GitHub Release
         env:
