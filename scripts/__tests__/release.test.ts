@@ -1247,3 +1247,23 @@ describe("finalization readback lag (v0.9.5 publisher run 43256125588)", () => {
     });
   });
 });
+
+describe("dispatch readback after a confirmed run id (create-zudo-sg 0.2.17)", () => {
+  it("keeps the dispatched run id when looking the run up answers 5xx", async () => {
+    const gh = fakeGithub({
+      dispatch: () => ({ status: 200, data: { workflow_run_id: 42, html_url: "u42" } }),
+    });
+    gh.run = async () => {
+      throw uncertain("HTTP 500");
+    };
+    const result = await dispatchPublisher({
+      pkg: initializer,
+      version: "0.2.17",
+      sha: SHA,
+      github: gh,
+      sleep: async () => {},
+    });
+    expect(result).toMatchObject({ action: "dispatched", run: { id: 42, url: "u42" } });
+    expect(gh.state.writes).toEqual(["dispatch"]);
+  });
+});
