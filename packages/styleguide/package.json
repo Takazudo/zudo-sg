@@ -170,11 +170,11 @@
   },
   "peerDependencies": {
     "@takazudo/zfb": "^6.0.1",
-    "@takazudo/zdtp": "^0.9.4",
+    "@takazudo/zdtp": "^0.9.5",
     "@takazudo/zudo-doc": "^10.0.3"
   },
   "devDependencies": {
-    "@takazudo/zdtp": "0.9.4",
+    "@takazudo/zdtp": "0.9.5",
     "@takazudo/zfb": "6.0.1",
     "@takazudo/zudo-doc": "10.0.3",
     "@testing-library/jest-dom": "^7.0.1",

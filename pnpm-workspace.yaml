@@ -18,6 +18,7 @@ minimumReleaseAgeExclude:
   - '@takazudo/zudo-doc'
   - '@takazudo/zudo-doc-history-server'
   - '@takazudo/zdtp'
+  - '@takazudo/zudo-design-token-lint'
   # Locked zfb packages and their optional native binaries may be newly
   # published when this workspace is installed.
   - '@takazudo/zfb'

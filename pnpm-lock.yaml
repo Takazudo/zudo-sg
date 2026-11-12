@@ -12,8 +12,8 @@ importers:
   .:
     dependencies:
       '@takazudo/zdtp':
-        specifier: 0.9.4
-        version: 0.9.4(@takazudo/zfb@6.0.1)
+        specifier: 0.9.5
+        version: 0.9.5(@takazudo/zfb@6.0.1)
       '@takazudo/zfb':
         specifier: 6.0.1
         version: 6.0.1
@@ -25,7 +25,7 @@ importers:
         version: 6.0.1(@takazudo/zfb@6.0.1)
       '@takazudo/zudo-doc':
         specifier: 10.0.3
-        version: 10.0.3(@takazudo/zdtp@0.9.4(@takazudo/zfb@6.0.1))(@takazudo/zfb-md-wasm@6.0.1)(@takazudo/zfb-runtime@6.0.1(@takazudo/zfb@6.0.1))(@takazudo/zfb@6.0.1)(@takazudo/zudo-doc-history-server@10.0.3)(@types/node@24.19.2)(diff@8.0.4)(katex@0.19.1)(zod@4.6.7)
+        version: 10.0.3(@takazudo/zdtp@0.9.5(@takazudo/zfb@6.0.1))(@takazudo/zfb-md-wasm@6.0.1)(@takazudo/zfb-runtime@6.0.1(@takazudo/zfb@6.0.1))(@takazudo/zfb@6.0.1)(@takazudo/zudo-doc-history-server@10.0.3)(@types/node@24.19.2)(diff@8.0.4)(katex@0.19.1)(zod@4.6.7)
       '@takazudo/zudo-doc-history-server':
         specifier: 10.0.3
         version: 10.0.3
@@ -52,8 +52,8 @@ importers:
         specifier: 1.3.0
         version: 1.3.0
       '@takazudo/zudo-design-token-lint':
-        specifier: 2.1.0
-        version: 2.1.0
+        specifier: 2.1.3
+        version: 2.1.3
       '@testing-library/jest-dom':
         specifier: ^7.0.1
         version: 7.0.1(@testing-library/dom@10.4.2)(vitest@5.1.0(@types/node@24.19.2)(happy-dom@21.0.4)(jsdom@31.0.0)(msw@3.0.4(@types/node@24.19.2)(@typescript/typescript6@6.0.2)(graphql@16.14.2)(vite@8.3.7(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)))(vite@8.3.7(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)))
@@ -144,7 +144,7 @@ importers:
         version: 6.0.1(@takazudo/zfb@6.0.1)
       '@takazudo/zudo-doc':
         specifier: 10.0.3
-        version: 10.0.3(@takazudo/zdtp@0.9.4(@takazudo/zfb@6.0.1))(@takazudo/zfb-md-wasm@6.0.1)(@takazudo/zfb-runtime@6.0.1(@takazudo/zfb@6.0.1))(@takazudo/zfb@6.0.1)(@takazudo/zudo-doc-history-server@10.0.3)(@types/node@24.19.2)(diff@8.0.4)(katex@0.19.1)(zod@4.6.7)
+        version: 10.0.3(@takazudo/zdtp@0.9.5(@takazudo/zfb@6.0.1))(@takazudo/zfb-md-wasm@6.0.1)(@takazudo/zfb-runtime@6.0.1(@takazudo/zfb@6.0.1))(@takazudo/zfb@6.0.1)(@takazudo/zudo-doc-history-server@10.0.3)(@types/node@24.19.2)(diff@8.0.4)(katex@0.19.1)(zod@4.6.7)
       diff:
         specifier: ^8.0.3
         version: 8.0.4
@@ -257,14 +257,14 @@ importers:
         version: 8.5.32
     devDependencies:
       '@takazudo/zdtp':
-        specifier: 0.9.4
-        version: 0.9.4(@takazudo/zfb@6.0.1)
+        specifier: 0.9.5
+        version: 0.9.5(@takazudo/zfb@6.0.1)
       '@takazudo/zfb':
         specifier: 6.0.1
         version: 6.0.1
       '@takazudo/zudo-doc':
         specifier: 10.0.3
-        version: 10.0.3(@takazudo/zdtp@0.9.4(@takazudo/zfb@6.0.1))(@takazudo/zfb-md-wasm@6.0.1)(@takazudo/zfb-runtime@6.0.1(@takazudo/zfb@6.0.1))(@takazudo/zfb@6.0.1)(@takazudo/zudo-doc-history-server@10.0.3)(@types/node@24.19.2)(diff@8.0.4)(katex@0.19.1)(zod@4.6.7)
+        version: 10.0.3(@takazudo/zdtp@0.9.5(@takazudo/zfb@6.0.1))(@takazudo/zfb-md-wasm@6.0.1)(@takazudo/zfb-runtime@6.0.1(@takazudo/zfb@6.0.1))(@takazudo/zfb@6.0.1)(@takazudo/zudo-doc-history-server@10.0.3)(@types/node@24.19.2)(diff@8.0.4)(katex@0.19.1)(zod@4.6.7)
       '@testing-library/jest-dom':
         specifier: ^7.0.1
         version: 7.0.1(@testing-library/dom@10.4.2)(vitest@5.1.0(@types/node@24.19.2)(happy-dom@21.0.4)(jsdom@31.0.0)(msw@3.0.4(@types/node@24.19.2)(@typescript/typescript6@6.0.2)(graphql@16.14.2)(vite@8.3.7(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)))(vite@8.3.7(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)))
@@ -1119,8 +1119,8 @@ packages:
     engines: {node: '>=18.0.0'}
     hasBin: true
 
-  '@takazudo/zdtp@0.9.4':
-    resolution: {integrity: sha512-dLrGmE7tqaHlmI4wN21KSjU6Qh45UO6pb9rh8uBYM3xyMyOuW7M9jJECD95Fq3kDfHU0kY3G9n7MJONKQNILBg==}
+  '@takazudo/zdtp@0.9.5':
+    resolution: {integrity: sha512-cVIoNz5rTqymbptZu30OYRkgA/mSa/RHdUV0A03HdAaozXEt/9dAFbyJXIG8FJy6UREMx60k1ErEUjOn72IWGA==}
     engines: {node: '>=22.0.0', pnpm: '>=10.0.0'}
     hasBin: true
     peerDependencies:
@@ -1173,8 +1173,8 @@ packages:
     engines: {node: '>=24.0.0', pnpm: '>=10.0.0'}
     hasBin: true
 
-  '@takazudo/zudo-design-token-lint@2.1.0':
-    resolution: {integrity: sha512-vUDvwP77toHnt+pK+U1/v5H3MoxItCW9xmgV0hBAEQZzA65V+9lk8AuHQH3XTJ22szEYeWncKF78e0BzMh8Afw==}
+  '@takazudo/zudo-design-token-lint@2.1.3':
+    resolution: {integrity: sha512-cbDwzbaMr0cGgibVWqI8V3MapCthWeHm25rL9n5R96ar5kueLaVQ7UUKJCk8wjR4hhIo93rQQwO8wWsmna6z/w==}
     engines: {node: '>=18'}
     hasBin: true
 
@@ -3158,7 +3158,7 @@ snapshots:
       '@takazudo/mdx-formatter-linux-x64-gnu': 1.3.0
       '@takazudo/mdx-formatter-win32-x64-msvc': 1.3.0
 
-  '@takazudo/zdtp@0.9.4(@takazudo/zfb@6.0.1)':
+  '@takazudo/zdtp@0.9.5(@takazudo/zfb@6.0.1)':
     dependencies:
       '@tailwindcss/browser': 4.3.2
       culori: 4.0.2
@@ -3206,14 +3206,14 @@ snapshots:
       '@takazudo/zfb-linux-x64-gnu': 6.0.1
       '@takazudo/zfb-win32-x64-msvc': 6.0.1
 
-  '@takazudo/zudo-design-token-lint@2.1.0':
+  '@takazudo/zudo-design-token-lint@2.1.3':
     dependencies:
       chalk: 5.6.2
       glob: 13.0.6
 
   '@takazudo/zudo-doc-history-server@10.0.3': {}
 
-  '@takazudo/zudo-doc@10.0.3(@takazudo/zdtp@0.9.4(@takazudo/zfb@6.0.1))(@takazudo/zfb-md-wasm@6.0.1)(@takazudo/zfb-runtime@6.0.1(@takazudo/zfb@6.0.1))(@takazudo/zfb@6.0.1)(@takazudo/zudo-doc-history-server@10.0.3)(@types/node@24.19.2)(diff@8.0.4)(katex@0.19.1)(zod@4.6.7)':
+  '@takazudo/zudo-doc@10.0.3(@takazudo/zdtp@0.9.5(@takazudo/zfb@6.0.1))(@takazudo/zfb-md-wasm@6.0.1)(@takazudo/zfb-runtime@6.0.1(@takazudo/zfb@6.0.1))(@takazudo/zfb@6.0.1)(@takazudo/zudo-doc-history-server@10.0.3)(@types/node@24.19.2)(diff@8.0.4)(katex@0.19.1)(zod@4.6.7)':
     dependencies:
       '@inquirer/prompts': 8.7.5(@types/node@24.19.2)
       '@takazudo/zfb': 6.0.1
@@ -3229,7 +3229,7 @@ snapshots:
       yaml: 2.9.1
       zod: 4.6.7
     optionalDependencies:
-      '@takazudo/zdtp': 0.9.4(@takazudo/zfb@6.0.1)
+      '@takazudo/zdtp': 0.9.5(@takazudo/zfb@6.0.1)
       '@takazudo/zfb-md-wasm': 6.0.1
       '@takazudo/zudo-doc-history-server': 10.0.3
       diff: 8.0.4
