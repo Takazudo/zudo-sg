@@ -1016,7 +1016,18 @@ export async function dispatchPublisher({
   }
   const id = answer?.data?.workflow_run_id;
   if (id) {
-    const run = await github.run(id);
+    // The id in the dispatch answer is the record; looking the run up only
+    // confirms its tag. A 5xx there (seen on create-zudo-sg 0.2.17) must not fail
+    // a dispatch that already happened.
+    let run = null;
+    try {
+      run = await github.run(id);
+    } catch (error) {
+      if (!error.uncertain) throw error;
+      console.log(
+        `::warning::run ${id} was dispatched but could not be read back: ${error.message}`,
+      );
+    }
     if (run && run.head_branch !== tag) {
       throw new ReleaseError(
         "dispatch-mismatch",
