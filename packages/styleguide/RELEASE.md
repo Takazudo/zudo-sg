@@ -108,6 +108,7 @@ initializer.
 ```sh
 git fetch origin --tags --prune
 pnpm install --frozen-lockfile
+node scripts/release/release.mjs preflight      # which GitHub/registry access this shell has
 node scripts/release/release.mjs status --package engine
 node scripts/release/release.mjs status --package create-zudo-sg
 ```
@@ -249,6 +250,29 @@ release files — the pushed commit, or the PR's merge commit. Wait until its
 push CI (`Production Deploy`, `main-deploy.yml`) is green; the guards require
 success of that exact SHA, not of a later or earlier `main`.
 
+**Pin it.** For a new release, the candidate is `main`'s HEAD once its push CI
+is green:
+
+```sh
+node scripts/release/release.mjs pick-candidate --package <key> --wait-ci 600
+# → sha=<40-char main HEAD> version=X.Y.Z tag=<tag>
+```
+
+Without a working `GH_TOKEN`/`gh`, read `origin/main`'s SHA with git and
+confirm its `main-deploy.yml` push run succeeded through the GitHub MCP tools
+(`actions_list` → `list_workflow_runs`, `resource_id: main-deploy.yml`); the
+coordinator's dry run (step 6) then re-checks it authoritatively.
+`pick-candidate` never falls back to an older green commit: if HEAD's CI is
+red or HEAD does not declare the version, there is no candidate. From here on
+the SHA is fixed. If `main` moves before the dispatch, the coordinator keeps
+the pinned SHA and says so (a `main advanced …` notice); it refuses only when
+`main` now declares a different version for the package (the candidate is
+superseded — prepare a new one, never tag an old commit by accident). A
+resume — the tag exists or the version is on npm — always keeps the original
+SHA. (A zdtp release from an older SHA once failed with a 403 whose cause is
+not established; pinning the current green HEAD avoids that shape rather than
+explaining it.)
+
 ### 6. Dry run (optional, non-publishing)
 
 ```sh
@@ -265,19 +289,34 @@ already published with matching provenance.
 ### 7. Release
 
 Preferred — the hosted coordinator (works from any environment that can
-dispatch workflows):
+dispatch workflows; see "Dispatch routes" below):
 
 ```sh
 gh workflow run release.yml --ref main \
   -f package=<key> -f version=X.Y.Z -f sha=<candidate-sha> -f dry_run=false
 ```
 
-`release.yml` verifies the candidate (read-only job), creates the exact tag at
-that SHA through the API (`contents: write`, only in that job), then
-explicitly dispatches the package's publish workflow at the tag
-(`actions: write`, only in that job). A tag created by `GITHUB_TOKEN` does not
-fire `push: tags` workflows, which is why publication is dispatched
-explicitly.
+`release.yml` has three jobs, each holding only the permission it needs:
+
+| Job | Permission | What it does |
+| --- | --- | --- |
+| `verify` | `contents: read`, `actions: read` | candidate on main, manifest/notes, tag absent or at this SHA, exact push CI green (waits up to 10 minutes for a pending run), registry decision, candidate not superseded; for the initializer, the template's `^X.Y.Z` engine is on npm (engine first) |
+| `tag` | `contents: write` | `release.mjs create-tag`: re-reads the tag, main ancestry and the registry **immediately before the write**; same tag at the same SHA = success (resend), at another SHA = refused; after a 422 or an ambiguous answer (network/5xx) it reads the ref back instead of guessing |
+| `dispatch` | `contents: read`, `actions: write` | `release.mjs dispatch-publisher`: reuses a publisher run for the tag that is in progress or succeeded; otherwise dispatches the publisher at the tag and records the **exact run id/URL** (from the dispatch answer, or a readback that must find exactly one new run) |
+
+`id-token: write` exists only in the publishers' `publish` job. A tag created
+by `GITHUB_TOKEN` does not fire `push: tags` workflows, which is why
+publication is dispatched explicitly.
+
+If the `tag` job fails with a 403/422, its log keeps GitHub's message,
+documentation link, accepted-permissions header and request id. Do **not** add
+a PAT or bypass a ruleset: the owner either allows GitHub Actions to create
+release tags, or uses the local route below. Nothing was published.
+
+Concurrency: dispatches of the same package queue in one group (`release-<key>`;
+a running coordinator is never cancelled, a newer pending dispatch replaces an
+older pending one). Because every write re-checks durable state, a duplicate
+dispatch reuses the existing tag and publisher run instead of repeating them.
 
 Equivalent — a tag push from an authenticated local session:
 
@@ -288,6 +327,35 @@ git push origin <tag>
 
 Both routes reach the same publisher. Never tag an unverified commit, and
 never move or delete a pushed release tag.
+
+#### Dispatch routes
+
+`gh` failing (`gh auth status` → invalid/missing token) only says this shell
+cannot reach GitHub's REST API; it does **not** mean the session cannot
+dispatch. Run `release.mjs preflight`, then use the first route that works:
+
+1. **`gh` / REST** (`GH_TOKEN` or `gh auth`) — the commands in steps 6–7.
+2. **GitHub MCP tools** (Claude Code on the web, Codex with a GitHub
+   connector). Pass every input as a string:
+   - dispatch: `actions_run_trigger` → `method: run_workflow`,
+     `workflow_id: release.yml`, `ref: main`,
+     `inputs: {package: "<key>", version: "X.Y.Z", sha: "<candidate-sha>", dry_run: "true"|"false"}`;
+   - readback: `actions_list` → `list_workflow_runs`, `resource_id: release.yml`,
+     `workflow_runs_filter: {event: "workflow_dispatch"}` — take the newest run
+     created after the dispatch whose `head_sha` is main's HEAD and whose
+     triggering actor is the operator; then `list_workflow_jobs` on that run
+     id and `get_job_logs` for the step output;
+   - the `dispatch` job log names the exact publisher run
+     (`run_id=…`, `run_url=…`); follow it with `actions_get` →
+     `get_workflow_run` and `list_workflow_jobs` (publish vs finalize);
+   - cancel / resume: `actions_run_trigger` → `cancel_workflow_run`,
+     `rerun_failed_jobs` with that run id.
+3. **Actions UI** — <https://github.com/Takazudo/zudo-sg/actions/workflows/release.yml>
+   → *Run workflow* on `main`, fill the four inputs. The run's summary shows
+   the exact publisher run link.
+
+Whatever the route, record the coordinator run URL and the publisher run id
+it reports; never infer "the newest run" for a publisher when an id is known.
 
 ### 8. What the publish workflow does
 
@@ -308,17 +376,29 @@ never move or delete a pushed release tag.
    skip publication (resume); **uncertain or foreign** → fail.
 6. The package's release gates (unchanged), then
    `pnpm publish … --tag latest --access public --no-git-checks --provenance`
-   with no token, then a registry visibility check.
+   with no token. The job is green as soon as `pnpm publish` succeeded; it
+   no longer waits for the registry to show the version (a slow registry
+   used to turn an already successful publication red).
 
-`finalize` job (`contents: write` only; needs `publish`): re-checks that the
-version is on npm and the tag points at the run's commit, then creates the
-GitHub Release (`@takazudo/zudo-sg X.Y.Z` / `create-zudo-sg X.Y.Z`) from the
+`finalize` job (`contents: write` only; needs `publish`): waits up to 15
+minutes for the version to be visible (an uncertain registry answer keeps
+waiting, never counts as unpublished), re-checks that the tag points at the
+run's commit, then creates the GitHub Release (`@takazudo/zudo-sg X.Y.Z` / `create-zudo-sg X.Y.Z`) from the
 changelog source. An existing matching Release is kept. An existing Release
 with different text is **left untouched** with a warning. A draft or
 prerelease with that tag fails for a human to resolve.
 
-Publication and finalization are separate job outcomes. Watch with
-`gh run list --workflow <publisher> --limit 3` and `gh run watch <id>`.
+After creating it, the Release is read back; an ambiguous create answer is
+resolved by that readback rather than by retrying the POST.
+
+Publication and finalization are separate job outcomes. Follow the exact run
+id the coordinator reported (`gh run watch <id>`), and list every publisher
+run of the tag with both outcomes apart:
+
+```sh
+node scripts/release/release.mjs publisher-runs --package <key> --version X.Y.Z
+# run=<id> … publish=success finalize=failure …
+```
 
 ### 9. Verify and report
 
@@ -351,12 +431,24 @@ Actions colour, decides.
     **new version** through the procedure.
 - **Version is on npm with matching provenance (finalization missing or
   failed)** — do **not** bump or republish. Re-run only the failed job
-  (`gh run rerun <run-id> --failed`) or dispatch the publisher at the exact
-  tag; the publish job skips publication and `finalize` runs again.
+  (`gh run rerun <run-id> --failed`, or MCP `rerun_failed_jobs`); since the
+  publish job is green once `pnpm publish` succeeded, this re-runs `finalize`
+  alone. Dispatching the publisher at the exact tag also works: its publish
+  job skips publication via provenance.
+- **Coordinator failed after the tag** (e.g. the dispatch job) — re-run the
+  coordinator with the **same** inputs: the tag job sees the tag at this SHA
+  and succeeds without writing, the dispatch job reuses a running or
+  successful publisher run, or dispatches one.
+- **Cancel** — before the tag exists, cancel the coordinator run
+  (`gh run cancel <id>` / MCP `cancel_workflow_run`) and follow "Gate/CI
+  failure before tagging". After the tag exists there is nothing to cancel
+  safely: let the publisher finish or fail, then resume from `status`.
 - **Version on npm with mismatched or missing provenance** — stop. Someone
   published outside this workflow; reconcile by hand.
 - **Registry uncertain** — wait and re-run `status`; never infer "unpublished"
-  from an error.
+  from an error. Auth, network, rate-limit (429) and server answers are all
+  uncertain; a packument without the version is double-checked against the
+  exact-version document before it counts as "not found".
 - **Tag exists at a different commit** — stop; never move a release tag.
 
 ## Codex Cloud
@@ -368,10 +460,12 @@ session passes the acceptance below, Cloud runtime acceptance is **pending**
 (tracked in #1072).
 
 **Environment setup** (Cloud environment settings): Node 24 with corepack
-(`corepack enable`), setup script `pnpm install --frozen-lockfile`, a
-`GH_TOKEN` secret scoped to `Takazudo/zudo-sg` with Contents, Pull requests
-and Actions **read/write** (no npm credential of any kind), and internet
-access to `api.github.com`, `github.com` and `registry.npmjs.org`.
+(`corepack enable`), setup script `pnpm install --frozen-lockfile`, and
+internet access to `api.github.com`, `github.com` and `registry.npmjs.org`.
+GitHub access comes from either a `GH_TOKEN` secret scoped to
+`Takazudo/zudo-sg` with Contents, Pull requests and Actions **read/write**, or
+the platform's GitHub MCP tools (see "Dispatch routes"). Never an npm
+credential of any kind.
 
 **Preflight + acceptance prompt** (paste into the Cloud session):
 
@@ -379,7 +473,10 @@ access to `api.github.com`, `github.com` and `registry.npmjs.org`.
 In Takazudo/zudo-sg, run the release preflight from packages/styleguide/RELEASE.md
 ("Codex Cloud"). Do not publish anything and do not create tags or Releases.
 
-1. Report node -v, pnpm -v, git remote -v, and git rev-parse HEAD origin/main.
+1. Report node -v, pnpm -v, git remote -v, git rev-parse HEAD origin/main, and
+   node scripts/release/release.mjs preflight. If preflight reports GitHub REST
+   unavailable, do steps 2 and 4 through the GitHub MCP tools instead
+   (RELEASE.md "Dispatch routes") and say which route you used.
 2. Prove GitHub access beyond clone, recording each command's exact result:
    - gh api repos/Takazudo/zudo-sg --jq .permissions   (push must be true)
    - gh run list --workflow main-deploy.yml --limit 1

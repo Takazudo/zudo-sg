@@ -6,20 +6,36 @@
 # exact package, version and commit. That dispatch is the release decision.
 #
 #   verify   (read-only)       candidate on main, manifest/notes/tag agree,
-#                              exact push CI green, registry state known
-#   tag      (contents:write)  create the exact tag at the verified commit
-#   dispatch (actions:write)   explicitly start the package's publish workflow
-#                              at that tag
+#                              exact push CI green (waits for a pending run),
+#                              registry state known, candidate not superseded,
+#                              initializer: its template's engine is on npm
+#   tag      (contents:write)  re-check right before the write, create the
+#                              exact tag (same name + same SHA = success,
+#                              another SHA = refused), read back after an
+#                              ambiguous answer
+#   dispatch (actions:write)   reuse an in-flight/successful publisher run for
+#                              the tag, else dispatch it and record the exact
+#                              run id
+#
+# The SHA input is the pinned candidate: for a new release, the CI-green main
+# HEAD the operator picked (`release.mjs pick-candidate`). It is never
+# re-resolved here, so a main that moved on does not silently change what is
+# released; a resume (tag or publication exists) keeps the original SHA.
 #
 # A tag created with GITHUB_TOKEN does not trigger the publisher's `push: tags`
 # event, so publication is started by an explicit workflow_dispatch of the
 # publish workflow itself (that dispatch is allowed to start a run, and keeps
 # the npm Trusted Publisher's workflow filename = the publishing workflow).
 # The publish workflow then builds, re-verifies, publishes and finalizes the
-# GitHub Release.
+# GitHub Release. Publication and finalization are separate jobs there.
 #
 # dry_run (default true) runs only the read-only verify job: it cannot create
 # tags, dispatch publication, publish packages or create Releases.
+#
+# Parallel dispatches of the same package queue in one concurrency group (a
+# newer pending run replaces an older pending one; a running one is never
+# cancelled), and every write re-checks durable state, so a duplicate dispatch
+# reuses the tag and the publisher run instead of repeating them.
 
 name: Release
 
@@ -95,39 +111,75 @@ jobs:
           DRY_RUN_FLAG: ${{ inputs.dry_run && '--dry-run' || '' }}
         run: >-
           node scripts/release/release.mjs verify-candidate --package "$PACKAGE"
-          --version "$VERSION" --sha "$SHA" --github-output $DRY_RUN_FLAG
+          --version "$VERSION" --sha "$SHA" --wait-ci 600 --github-output $DRY_RUN_FLAG
 
   tag:
     name: Create release tag
     needs: verify
     if: ${{ !inputs.dry_run }}
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     permissions:
       contents: write
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
     steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+
+      # Re-checks the tag, main ancestry and the registry immediately before the
+      # write; an existing tag at this SHA is success, at another SHA a refusal.
+      # A 403/422 is reported with GitHub's message — no PAT, no ruleset bypass.
       - name: Create the exact tag at the verified commit
-        if: needs.verify.outputs.tag_exists != 'true'
+        id: tag
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ needs.verify.outputs.tag }}
+          PACKAGE: ${{ inputs.package }}
+          VERSION: ${{ inputs.version }}
           SHA: ${{ inputs.sha }}
-        run: gh api -X POST "repos/$GITHUB_REPOSITORY/git/refs" -f "ref=refs/tags/$TAG" -f "sha=$SHA" --jq .ref
+        run: >-
+          node scripts/release/release.mjs create-tag --package "$PACKAGE"
+          --version "$VERSION" --sha "$SHA" --github-output
 
   dispatch:
     name: Dispatch publisher
     needs: [verify, tag]
     if: ${{ !inputs.dry_run }}
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     permissions:
+      contents: read
       actions: write
+    outputs:
+      run_id: ${{ steps.dispatch.outputs.run_id }}
+      run_url: ${{ steps.dispatch.outputs.run_url }}
     steps:
-      - name: Start the publish workflow at the exact tag
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+
+      # Reuses an in-flight or successful publisher run for this tag; otherwise
+      # dispatches one and records exactly the run it started.
+      - name: Start (or reuse) the publish workflow at the exact tag
+        id: dispatch
         env:
           GH_TOKEN: ${{ github.token }}
-          WORKFLOW: ${{ needs.verify.outputs.workflow }}
-          TAG: ${{ needs.verify.outputs.tag }}
-        run: |
-          gh workflow run "$WORKFLOW" --repo "$GITHUB_REPOSITORY" --ref "$TAG"
-          echo "Dispatched $WORKFLOW at $TAG — follow it with: gh run list --workflow $WORKFLOW --limit 3" >> "$GITHUB_STEP_SUMMARY"
+          PACKAGE: ${{ inputs.package }}
+          VERSION: ${{ inputs.version }}
+          SHA: ${{ inputs.sha }}
+        run: >-
+          node scripts/release/release.mjs dispatch-publisher --package "$PACKAGE"
+          --version "$VERSION" --sha "$SHA" --github-output
