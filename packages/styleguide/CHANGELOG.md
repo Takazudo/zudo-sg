@@ -4,6 +4,23 @@ All notable changes to `@takazudo/zudo-sg` are documented in this file.
 
 The format is based on Keep a Changelog, and release notes are generated from the changelog MDX pages.
 
+## [0.9.5] - 2026-11-12
+
+This release ships through the hardened release coordinator. The engine's
+runtime behaviour is unchanged from 0.9.4; only how the package is verified,
+tagged and published changed.
+
+### Bug Fixes
+
+- The publish job now succeeds as soon as `pnpm publish` succeeds; waiting for
+  the registry to show the version moved to GitHub Release finalization, so a
+  slow registry no longer turns a successful publication red.
+- Release tagging re-checks the tag, `main` and the registry immediately before
+  writing, reuses a tag already at the same commit, and refuses any other
+  commit.
+- The coordinator reuses an in-flight or successful publish run for the tag and
+  records the exact run it started.
+
 ## [0.9.4] - 2026-11-12
 
 This release moves the zdtp peer floor to the 0.9.5 patch the engine is now
