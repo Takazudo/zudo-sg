@@ -1046,6 +1046,7 @@ describe("finalization readback", () => {
         notes: "n\n",
         github,
         fetch: published,
+        sleep: async () => {},
       });
     expect(await call(landed)).toMatchObject({ action: "created", matches: true });
     const lost = {
@@ -1198,5 +1199,51 @@ describe("review follow-ups: superseded candidates and error details", () => {
   it("names every coordinator run by its exact inputs", () => {
     const text = readFileSync(join(ROOT, ".github/workflows/release.yml"), "utf8");
     expect(text).toMatch(/^run-name: .*inputs\.package.*inputs\.version.*inputs\.sha.*dry run/m);
+  });
+});
+
+describe("finalization readback lag (v0.9.5 publisher run 43256125588)", () => {
+  const published = fakeFetch(registry({ versions: ["1.0.0"] })).impl;
+  const notes = "n\n";
+  const body = { tag_name: "v1.0.0", name: "@takazudo/zudo-sg 1.0.0", body: notes, html_url: "u" };
+  const base = {
+    pkg: engine,
+    version: "1.0.0",
+    sha: SHA,
+    notes,
+    fetch: published,
+    sleep: async () => {},
+  };
+
+  it("retries a list that lags a 201 and finds the Release", async () => {
+    let lists = 0;
+    const github = {
+      tagSha: async () => SHA,
+      releases: async () => (++lists >= 4 ? [body] : []),
+      request: async () => ({ status: 201, data: body }),
+    };
+    expect(await finalizeRelease({ ...base, github })).toMatchObject({
+      action: "created",
+      matches: true,
+    });
+  });
+
+  it("prefers the by-tag readback and trusts a confirmed 201 when every read lags", async () => {
+    const byTag = {
+      tagSha: async () => SHA,
+      releases: async () => [],
+      releaseByTag: async () => body,
+      request: async () => ({ status: 201, data: body }),
+    };
+    expect(await finalizeRelease({ ...base, github: byTag })).toMatchObject({ action: "created" });
+    const lagging = { ...byTag, releaseByTag: async () => null };
+    expect(await finalizeRelease({ ...base, github: lagging })).toMatchObject({
+      action: "created",
+      url: "u",
+    });
+    const unconfirmed = { ...lagging, request: async () => ({ status: 422, data: {} }) };
+    await expect(finalizeRelease({ ...base, github: unconfirmed })).rejects.toMatchObject({
+      code: "release-missing",
+    });
   });
 });
