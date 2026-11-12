@@ -12,8 +12,8 @@ tested-floor policy (ADR §13), the engine peer floor advances to zdtp
 The starter template is regenerated with `pnpm sync:create-template`, which
 moves its zdtp pin and its `minimumReleaseAgeExclude` entry to 0.9.5. The
 root `minimumReleaseAgeExclude` now allowlists
-`@takazudo/zudo-design-token-lint` by name, like the other first-party
-packages. `@takazudo/zudo-sg` and `create-zudo-sg` versions are not bumped
+`@takazudo/zudo-design-token-lint` by name, like zudo-doc, zdtp and the zfb
+family (`@takazudo/mdx-formatter` is still not on that list). `@takazudo/zudo-sg` and `create-zudo-sg` versions are not bumped
 here. zfb 6.0.1, zudo-doc / history-server 10.0.3 and mdx-formatter 1.3.0
 were already current.
 
