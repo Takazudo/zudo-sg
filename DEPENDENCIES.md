@@ -1,5 +1,42 @@
 # Dependency audit register
 
+## zdtp 0.9.5 and zudo-design-token-lint 2.1.3 adopted — 2026-11-12
+
+The workspace, the engine, the consumer fixtures and the generated starter
+adopt published `@takazudo/zdtp` 0.9.5. The root adopts
+`@takazudo/zudo-design-token-lint` 2.1.3. zdtp 0.9.5 still declares its
+optional zfb peer as `^5.1.2 || ^6.0.0`, which installed ZFB 6.0.1 satisfies.
+zudo-doc 10.0.3's zdtp peer (`... || ^0.9.0`) is satisfied too. Under the
+tested-floor policy (ADR §13), the engine peer floor advances to zdtp
+`^0.9.5`: `check:peer-floors` requires the peer to be exactly `^<root pin>`.
+The starter template is regenerated with `pnpm sync:create-template`, which
+moves its zdtp pin and its `minimumReleaseAgeExclude` entry to 0.9.5. The
+root `minimumReleaseAgeExclude` now allowlists
+`@takazudo/zudo-design-token-lint` by name, like zudo-doc, zdtp and the zfb
+family (`@takazudo/mdx-formatter` is still not on that list). `@takazudo/zudo-sg` and `create-zudo-sg` versions are not bumped
+here. zfb 6.0.1, zudo-doc / history-server 10.0.3 and mdx-formatter 1.3.0
+were already current.
+
+### Upstream impact
+
+Registry tarballs are the consumer-facing source of truth.
+
+- `@takazudo/zdtp` 0.9.4→0.9.5 (Takazudo/zudo-design-token-panel): the
+  changelog lists only release-tooling work (a shared release gate, registry
+  verification, Trusted Publishing CI; Takazudo/zudo-design-token-panel#1115). In the published
+  tarball, `dist/` differs only in renamed chunk hashes
+  (`index-DNwrAO1n.js`→`index-lqAeJ6Lo.js`,
+  `index-D0AhMv3e.js`→`index-BmzFtRW3.js`) and the imports that reference
+  them. `exports`, peers and dependencies are unchanged. Consumer impact:
+  none in product code.
+- `@takazudo/zudo-design-token-lint` 2.1.0→2.1.3: the published tarball
+  differs only in the `package.json` version. Consumer impact: none.
+
+No vendored create-zudo-doc artifact changes, so `ZUDO_DEPS_PINS.md` has no
+new entry. Left untouched (non-registry): `@takazudo/zudo-sg` `workspace:*`
+in the root and `packages/demo-ui`, and `file:.tarball/zudo-sg-engine.tgz` in
+the three fixtures.
+
 ## zudo-doc 10.0.3 adopted — 2026-11-11
 
 The workspace, `doc/`, consumer fixtures and the generated starter adopt
