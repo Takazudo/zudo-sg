@@ -4,6 +4,20 @@ All notable changes to `@takazudo/zudo-sg` are documented in this file.
 
 The format is based on Keep a Changelog, and release notes are generated from the changelog MDX pages.
 
+## [0.9.3] - 2026-11-12
+
+This release is the first one published through npm Trusted Publishing
+(GitHub OIDC) with no long-lived npm token. The package contents are
+unchanged from 0.9.2.
+
+### Other Changes
+
+- The publish workflow authenticates to npm only through Trusted Publishing
+  and keeps `--provenance`; no workflow reads an npm token.
+- Releases run through a shared release helper and a hosted `release.yml`
+  coordinator that verifies the candidate commit, tags it, dispatches the
+  publisher, and creates the GitHub Release from this changelog.
+
 ## [0.9.2] - 2026-11-11
 
 This release raises the engine's tested peer floors to the published
