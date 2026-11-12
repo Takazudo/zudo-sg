@@ -559,6 +559,11 @@ export function createGithubClient({
         return_run_details: true,
       });
     },
+    /** Published Release for one tag (drafts are only visible in the list). */
+    async releaseByTag(tag) {
+      const { status, data } = await request("GET", `/releases/tags/${tag}`);
+      return status === 404 ? null : data;
+    },
     async releases() {
       // Listing (not /releases/tags/{tag}) is the only way to see drafts.
       const all = [];
@@ -663,6 +668,9 @@ export async function finalizeRelease({
   fetch: fetchImpl = fetch,
   dryRun = false,
   registry = REGISTRY,
+  sleep = (ms) => new Promise((r) => setTimeout(r, ms)),
+  readbackAttempts = 6,
+  readbackIntervalMs = 5_000,
 }) {
   const tag = tagFor(pkg, version);
   const reg = await registryState({ name: pkg.name, version, fetch: fetchImpl, registry });
@@ -689,8 +697,9 @@ export async function finalizeRelease({
   if (plan.action === "keep") return plan;
   if (dryRun) return { action: "create", dryRun: true, detail: `would create Release ${tag}` };
   let postError = null;
+  let created = null;
   try {
-    await github.request(
+    created = await github.request(
       "POST",
       "/releases",
       { tag_name: tag, name: pkg.title(version), body: notes, draft: false, prerelease: false },
@@ -701,7 +710,20 @@ export async function finalizeRelease({
     if (!error.uncertain) throw error;
     postError = error;
   }
-  const readback = (await github.releases()).find((r) => r.tag_name === tag);
+  // The Releases list is eventually consistent: a Release answered 201 can be
+  // missing from it for a few seconds, so read back by tag and retry briefly.
+  let readback = null;
+  for (let attempt = 1; attempt <= readbackAttempts && !readback; attempt++) {
+    if (attempt > 1) await sleep(readbackIntervalMs);
+    readback =
+      (github.releaseByTag ? await github.releaseByTag(tag) : null) ??
+      (await github.releases()).find((r) => r.tag_name === tag) ??
+      null;
+  }
+  if (!readback && created?.status === 201 && created.data?.tag_name === tag) {
+    // GitHub confirmed the create; only the readback lags. The create answer is the record.
+    readback = created.data;
+  }
   if (!readback) {
     throw new ReleaseError(
       postError ? "release-uncertain" : "release-missing",

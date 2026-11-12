@@ -4,6 +4,15 @@ All notable changes to `create-zudo-sg` are documented in this file.
 
 The format is based on Keep a Changelog.
 
+## [0.2.17] - 2026-11-12
+
+### Changed
+
+- Update the starter engine range to `@takazudo/zudo-sg ^0.9.5`.
+- Published through the hardened release coordinator: the publish job now
+  succeeds once `pnpm publish` succeeds, and registry visibility is awaited
+  during GitHub Release finalization.
+
 ## [0.2.16] - 2026-11-12
 
 ### Changed
