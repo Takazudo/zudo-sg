@@ -265,9 +265,12 @@ coordinator's dry run (step 6) then re-checks it authoritatively.
 `pick-candidate` never falls back to an older green commit: if HEAD's CI is
 red or HEAD does not declare the version, there is no candidate. From here on
 the SHA is fixed. If `main` moves before the dispatch, the coordinator keeps
-the pinned SHA and says so (a `main advanced …` notice); it refuses only when
-`main` now declares a different version for the package (the candidate is
-superseded — prepare a new one, never tag an old commit by accident). A
+the pinned SHA and says so (a `main advanced …` notice); it refuses when
+`main` now declares a different version for the package, or when commits after
+the candidate changed the package's release files (its package directory, or
+the engine's changelog page) — then the candidate is superseded: re-pin
+`main`'s HEAD, never tag an old commit by accident. The tag job re-applies
+this rule just before it writes. A
 resume — the tag exists or the version is on npm — always keeps the original
 SHA. (A zdtp release from an older SHA once failed with a 403 whose cause is
 not established; pinning the current green HEAD avoids that shape rather than
@@ -315,7 +318,8 @@ release tags, or uses the local route below. Nothing was published.
 
 Concurrency: dispatches of the same package queue in one group (`release-<key>`;
 a running coordinator is never cancelled, a newer pending dispatch replaces an
-older pending one). Because every write re-checks durable state, a duplicate
+older pending one — a dry run too, so never dispatch a dry run while a real run
+of that package is still pending). Because every write re-checks durable state, a duplicate
 dispatch reuses the existing tag and publisher run instead of repeating them.
 
 Equivalent — a tag push from an authenticated local session:
@@ -340,11 +344,13 @@ dispatch. Run `release.mjs preflight`, then use the first route that works:
    - dispatch: `actions_run_trigger` → `method: run_workflow`,
      `workflow_id: release.yml`, `ref: main`,
      `inputs: {package: "<key>", version: "X.Y.Z", sha: "<candidate-sha>", dry_run: "true"|"false"}`;
-   - readback: `actions_list` → `list_workflow_runs`, `resource_id: release.yml`,
-     `workflow_runs_filter: {event: "workflow_dispatch"}` — take the newest run
-     created after the dispatch whose `head_sha` is main's HEAD and whose
-     triggering actor is the operator; then `list_workflow_jobs` on that run
-     id and `get_job_logs` for the step output;
+   - readback: the dispatch answer (HTTP 204) carries no run id. List
+     `actions_list` → `list_workflow_runs`, `resource_id: release.yml`,
+     `workflow_runs_filter: {event: "workflow_dispatch"}` and take the run
+     whose `display_title` is exactly
+     `Release <key> X.Y.Z <candidate-sha>` (plus ` (dry run)` for a dry run),
+     created after the dispatch; then `list_workflow_jobs` on that run id and
+     `get_job_logs` for the step output;
    - the `dispatch` job log names the exact publisher run
      (`run_id=…`, `run_url=…`); follow it with `actions_get` →
      `get_workflow_run` and `list_workflow_jobs` (publish vs finalize);

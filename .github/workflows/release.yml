@@ -33,11 +33,15 @@
 # tags, dispatch publication, publish packages or create Releases.
 #
 # Parallel dispatches of the same package queue in one concurrency group (a
-# newer pending run replaces an older pending one; a running one is never
-# cancelled), and every write re-checks durable state, so a duplicate dispatch
-# reuses the tag and the publisher run instead of repeating them.
+# newer pending run replaces an older pending one, dry runs included; a
+# running one is never cancelled), and every write re-checks durable state, so
+# a duplicate dispatch reuses the tag and the publisher run instead of
+# repeating them. Do not dispatch a dry run while a real run is still pending.
 
 name: Release
+# Exact identity of each coordinator run, so a readback (gh, GitHub MCP, the
+# Actions UI) matches its run by display_title instead of "the newest run".
+run-name: "Release ${{ inputs.package }} ${{ inputs.version }} ${{ inputs.sha }}${{ inputs.dry_run && ' (dry run)' || '' }}"
 
 on:
   workflow_dispatch:

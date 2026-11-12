@@ -13,6 +13,7 @@ import {
   createGithubClient,
   createReleaseTag,
   dispatchPublisher,
+  releasePathsChanged,
   extractReleaseNotes,
   finalizeRelease,
   nextStage,
@@ -698,12 +699,18 @@ function fakeGithub(opts: {
   create?: () => { status: number; data?: unknown } | Error;
   runs?: FakeRun[];
   dispatch?: (runs: FakeRun[]) => { status: number; data?: unknown } | Error;
+  mainHead?: string;
+  mainVersion?: string;
+  changed?: string[] | null;
 }) {
   const state = { tag: opts.tag ?? null, runs: [...(opts.runs ?? [])], writes: [] as string[] };
   return {
     state,
     tagSha: async () => state.tag,
     isOnMain: async () => opts.onMain ?? true,
+    mainHead: async () => opts.mainHead ?? SHA,
+    fileAt: async () => JSON.stringify({ version: opts.mainVersion ?? "1.0.0" }),
+    changedFiles: async () => (opts.changed === undefined ? [] : opts.changed),
     createTagRef: async (_tag: string, sha: string) => {
       state.writes.push(`tag ${sha}`);
       const result = opts.create ? opts.create() : ((state.tag = sha), { status: 201 });
@@ -807,7 +814,14 @@ describe("tag creation at write time", () => {
           }
         : url.includes("/compare/")
           ? { status: 200, body: { status: "ahead" } }
-          : { status: 404 },
+          : url.endsWith("/git/ref/heads/main")
+            ? { status: 200, body: { object: { type: "commit", sha: SHA } } }
+            : url.includes("/contents/")
+              ? {
+                  status: 200,
+                  body: { content: Buffer.from('{"version":"1.0.0"}').toString("base64") },
+                }
+              : { status: 404 },
     );
     const client = createGithubClient({ token: "t", fetch: impl });
     const error = await createReleaseTag({ ...args, github: client }).catch((e) => e);
@@ -822,7 +836,7 @@ describe("GitHub error details", () => {
   it("separates rate limits and network failures from auth", async () => {
     const limited = fakeFetch(() => ({
       status: 403,
-      body: { message: "API rate limit exceeded" },
+      body: { message: "Resource not accessible by integration" },
     }));
     const res = (status: number, headers: Record<string, string>) =>
       new Response(JSON.stringify({ message: "x" }), { status, headers });
@@ -1073,5 +1087,116 @@ describe("coordinator workflow contract", () => {
       expect(publishJob).not.toContain("await-published");
       expect(finalize).toMatch(/await-published[\s\S]*--timeout \d+[\s\S]*release\.mjs finalize/);
     }
+  });
+});
+
+describe("review follow-ups: superseded candidates and error details", () => {
+  const unpublished = fakeFetch(registry({ versions: ["0.9.0"] })).impl;
+  const args = { pkg: engine, version: "1.0.0", sha: SHA, fetch: unpublished };
+
+  it("refuses a candidate when later main commits touched its release files", () => {
+    const base = {
+      version: "1.0.0",
+      sha: SHA,
+      newRelease: true,
+      mainHead: OTHER,
+      mainManifestVersion: "1.0.0",
+    };
+    expect(
+      checkCandidateFreshness({
+        ...base,
+        changedPackagePaths: releasePathsChanged(engine, "1.0.0", [
+          "packages/styleguide/src/x.ts",
+          "apps/demo/y.ts",
+        ]),
+      }).errors[0],
+    ).toMatch(/changed release files after a{40} \(packages\/styleguide\/src\/x.ts\)/);
+    expect(
+      checkCandidateFreshness({
+        ...base,
+        changedPackagePaths: releasePathsChanged(engine, "1.0.0", ["apps/demo/y.ts", "doc/z.mdx"]),
+      }),
+    ).toMatchObject({ errors: [] });
+    expect(checkCandidateFreshness({ ...base, changedPackagePaths: null }).errors[0]).toMatch(
+      /too far/,
+    );
+    expect(
+      releasePathsChanged(initializer, "0.2.17", [
+        "packages/create-zudo-sg/templates/default/package.json",
+        "packages/styleguide/a.ts",
+      ]),
+    ).toEqual(["packages/create-zudo-sg/templates/default/package.json"]);
+  });
+
+  it("re-applies the superseded rule in the tag job right before the write", async () => {
+    const bumped = fakeGithub({ mainHead: OTHER, mainVersion: "1.1.0" });
+    await expect(createReleaseTag({ ...args, github: bumped })).rejects.toMatchObject({
+      code: "candidate-superseded",
+    });
+    const touched = fakeGithub({ mainHead: OTHER, changed: ["packages/styleguide/src/a.ts"] });
+    await expect(createReleaseTag({ ...args, github: touched })).rejects.toMatchObject({
+      code: "candidate-superseded",
+    });
+    const unrelated = fakeGithub({ mainHead: OTHER, changed: ["apps/demo/a.ts"] });
+    expect(await createReleaseTag({ ...args, github: unrelated })).toMatchObject({
+      action: "created",
+    });
+    expect(bumped.state.writes).toEqual([]);
+    expect(touched.state.writes).toEqual([]);
+  });
+
+  it("keeps a ruleset's 422 rule names in the refusal", async () => {
+    const gh = fakeGithub({
+      create: () => ({
+        status: 422,
+        data: {
+          message: "Repository rule violations found",
+          errors: [{ message: "Cannot create ref due to creations being restricted." }],
+          documentation_url: "https://docs.github.com/rules",
+        },
+      }),
+    });
+    const error = await createReleaseTag({ ...args, github: gh }).catch((e) => e);
+    expect(error.code).toBe("tag-not-created");
+    expect(error.message).toContain("creations being restricted");
+    expect(error.message).toContain("docs.github.com/rules");
+    expect(error.message).toMatch(/Do not add a PAT/);
+  });
+
+  it("reports a 404 on a write as an error, not as absence", async () => {
+    const { impl } = fakeFetch(() => ({ status: 404, body: { message: "Not Found" } }));
+    const client = createGithubClient({ token: "t", fetch: impl });
+    await expect(client.dispatchWorkflow("publish-zudo-sg.yml", "v1.0.0")).rejects.toMatchObject({
+      code: "github-error",
+      status: 404,
+      uncertain: false,
+    });
+    expect(await client.tagSha("v1.0.0")).toBeNull();
+  });
+
+  it("classifies a secondary rate limit as rate-limit, not auth", async () => {
+    const client = createGithubClient({
+      token: "t",
+      fetch: (async () =>
+        new Response(JSON.stringify({ message: "You have exceeded a secondary rate limit" }), {
+          status: 403,
+          headers: { "retry-after": "60" },
+        })) as unknown as typeof fetch,
+    });
+    await expect(client.ciRuns(SHA)).rejects.toMatchObject({ code: "github-rate-limit" });
+  });
+
+  it("treats behind/diverged compare results as off main", async () => {
+    for (const status of ["behind", "diverged"]) {
+      const { impl } = fakeFetch(() => ({ status: 200, body: { status } }));
+      expect(await createGithubClient({ token: "t", fetch: impl }).isOnMain(SHA)).toBe(false);
+    }
+    const { impl } = fakeFetch(() => ({ status: 200, body: { status: "ahead" } }));
+    expect(await createGithubClient({ token: "t", fetch: impl }).isOnMain(SHA)).toBe(true);
+  });
+
+  it("names every coordinator run by its exact inputs", () => {
+    const text = readFileSync(join(ROOT, ".github/workflows/release.yml"), "utf8");
+    expect(text).toMatch(/^run-name: .*inputs\.package.*inputs\.version.*inputs\.sha.*dry run/m);
   });
 });

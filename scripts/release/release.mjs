@@ -41,6 +41,7 @@ import {
   publishDecision,
   publisherRunsFor,
   registryState,
+  releasePathsChanged,
   resolveSuperseded,
   resolveGithubToken,
   resolvePackage,
@@ -383,6 +384,11 @@ const commands = {
       newRelease: !tagSha && decision.publish,
       mainHead,
       mainManifestVersion: manifestVersionAt(pkg, mainHead),
+      changedPackagePaths: releasePathsChanged(
+        pkg,
+        version,
+        git("diff", "--name-only", sha, mainHead).split("\n").filter(Boolean),
+      ),
     });
     for (const notice of freshness.notices) console.log(`::notice::${notice}`);
     if (freshness.errors.length)

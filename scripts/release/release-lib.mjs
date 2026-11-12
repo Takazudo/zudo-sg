@@ -25,6 +25,11 @@ export const PACKAGES = {
     notesSource: (version) => `doc/src/content/docs/changelog/zudo-sg/${version}.mdx`,
     notesKind: "mdx",
     title: (version) => `@takazudo/zudo-sg ${version}`,
+    // Paths whose change after a candidate means that candidate no longer ships main's package.
+    releasePaths: (version) => [
+      "packages/styleguide/",
+      `doc/src/content/docs/changelog/zudo-sg/${version}.mdx`,
+    ],
   },
   "create-zudo-sg": {
     key: "create-zudo-sg",
@@ -35,6 +40,7 @@ export const PACKAGES = {
     notesSource: () => "packages/create-zudo-sg/CHANGELOG.md",
     notesKind: "keep-a-changelog",
     title: (version) => `create-zudo-sg ${version}`,
+    releasePaths: () => ["packages/create-zudo-sg/"],
   },
 };
 
@@ -409,6 +415,14 @@ export class GithubHttpError extends ReleaseError {
   }
 }
 
+/** GitHub's message plus its errors[] entries (rule names for ruleset refusals). */
+export function githubPayloadMessage(payload) {
+  const errors = Array.isArray(payload?.errors)
+    ? payload.errors.map((e) => (typeof e === "string" ? e : (e.message ?? e.code))).join(", ")
+    : "";
+  return [payload?.message, errors].filter(Boolean).join(" — ");
+}
+
 export function createGithubClient({
   token,
   fetch: fetchImpl = fetch,
@@ -432,25 +446,26 @@ export function createGithubClient({
     } catch (error) {
       throw new GithubHttpError({ method, path, status: 0, message: error.message });
     }
-    if (response.status === 404) return { status: 404, data: null };
+    // Absent only for reads; a 404 on a write (missing workflow, invisible repo) is an error.
+    if (response.status === 404 && method === "GET") return { status: 404, data: null };
     if (!response.ok && !allow.includes(response.status)) {
       let payload = {};
       try {
         payload = (await response.json()) ?? {};
       } catch {}
-      const errors = Array.isArray(payload.errors)
-        ? payload.errors.map((e) => (typeof e === "string" ? e : (e.message ?? e.code))).join(", ")
-        : "";
       // A primary rate limit is a 403 with no remaining quota: still not an auth verdict.
       const status =
-        response.status === 403 && response.headers.get("x-ratelimit-remaining") === "0"
+        response.status === 403 &&
+        (response.headers.get("x-ratelimit-remaining") === "0" ||
+          response.headers.get("retry-after") ||
+          /rate limit/i.test(String(payload.message)))
           ? 429
           : response.status;
       throw new GithubHttpError({
         method,
         path,
         status,
-        message: [payload.message, errors].filter(Boolean).join(" — "),
+        message: githubPayloadMessage(payload),
         documentationUrl: payload.documentation_url,
         acceptedPermissions: response.headers.get("x-accepted-github-permissions"),
         requestId: response.headers.get("x-github-request-id"),
@@ -500,6 +515,20 @@ export function createGithubClient({
       const { status, data } = await request("GET", `/compare/${sha}...main`);
       if (status === 404) return false;
       return data.status === "ahead" || data.status === "identical";
+    },
+    /** Files changed from base to head (head must contain base). */
+    async changedFiles(base, head) {
+      const { status, data } = await request("GET", `/compare/${base}...${head}?per_page=100`);
+      if (status === 404)
+        throw new ReleaseError("github-error", `cannot compare ${base}...${head}`);
+      // The compare API lists at most 300 files; past that, treat everything as changed.
+      if ((data.files?.length ?? 0) >= 300) return null;
+      return (data.files ?? []).map((f) => f.filename);
+    },
+    async fileAt(path, ref) {
+      const { status, data } = await request("GET", `/contents/${path}?ref=${ref}`);
+      if (status === 404) return null;
+      return Buffer.from(data.content, "base64").toString("utf8");
     },
     async createTagRef(tag, sha) {
       return request("POST", "/git/refs", { ref: `refs/tags/${tag}`, sha }, { allow: [422] });
@@ -760,6 +789,7 @@ export function checkCandidateFreshness({
   newRelease,
   mainHead,
   mainManifestVersion,
+  changedPackagePaths = [],
 }) {
   const errors = [];
   const notices = [];
@@ -771,12 +801,27 @@ export function checkCandidateFreshness({
     errors.push(
       `main (${mainHead}) now declares version ${mainManifestVersion}; candidate ${version} at ${sha} is superseded — prepare a new candidate instead of tagging an old one`,
     );
+  } else if (mainHead !== sha && changedPackagePaths === null) {
+    errors.push(
+      `main (${mainHead}) moved too far past ${sha} to compare; re-pick the candidate (release.mjs pick-candidate)`,
+    );
+  } else if (mainHead !== sha && changedPackagePaths.length) {
+    errors.push(
+      `main (${mainHead}) changed release files after ${sha} (${changedPackagePaths.slice(0, 5).join(", ")}${changedPackagePaths.length > 5 ? ", …" : ""}); version ${version} would ship without them — pin main's HEAD instead (release.mjs pick-candidate)`,
+    );
   } else if (mainHead !== sha) {
     notices.push(
-      `main advanced to ${mainHead} after the candidate; the release stays pinned to ${sha} (never replaced silently)`,
+      `main advanced to ${mainHead} after the candidate without touching release files; the release stays pinned to ${sha} (never replaced silently)`,
     );
   }
   return { errors, notices };
+}
+
+/** Changed paths that belong to the package's release (null = unknown, too many). */
+export function releasePathsChanged(pkg, version, files) {
+  if (files === null) return null;
+  const roots = pkg.releasePaths(version);
+  return files.filter((f) => roots.some((r) => (r.endsWith("/") ? f.startsWith(r) : f === r)));
 }
 
 /** The `^X.Y.Z` engine range the initializer template ships; null when absent. */
@@ -812,6 +857,22 @@ export async function createReleaseTag({
   if (!(await github.isOnMain(sha))) {
     throw new ReleaseError("candidate-rejected", `${sha} is no longer reachable from main`);
   }
+  // Same superseded rule as verify, re-read now: main may have moved while verify waited for CI.
+  const mainHead = await github.mainHead();
+  const manifest = await github.fileAt(`${pkg.dir}/package.json`, mainHead);
+  const freshness = checkCandidateFreshness({
+    version,
+    sha,
+    newRelease: true,
+    mainHead,
+    mainManifestVersion: manifest ? JSON.parse(manifest).version : "(unreadable)",
+    changedPackagePaths:
+      mainHead === sha
+        ? []
+        : releasePathsChanged(pkg, version, await github.changedFiles(sha, mainHead)),
+  });
+  if (freshness.errors.length)
+    throw new ReleaseError("candidate-superseded", freshness.errors.join("\n"));
   // Throws on an uncertain registry or a foreign existing version.
   await publishDecision({ pkg, version, sha, fetch: fetchImpl, registry });
 
@@ -842,9 +903,7 @@ export async function createReleaseTag({
   }
   const why = failure
     ? failure.message
-    : response?.status === 422
-      ? `HTTP 422 ${response.data?.message ?? ""}`.trim()
-      : `HTTP ${response?.status}`;
+    : `HTTP ${response?.status}${response?.data ? `; message: ${githubPayloadMessage(response.data)}` : ""}${response?.data?.documentation_url ? `; docs: ${response.data.documentation_url}` : ""}`;
   throw annotateTagFailure(
     new ReleaseError(
       failure ? "tag-uncertain" : "tag-not-created",
