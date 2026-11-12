@@ -4,6 +4,15 @@ All notable changes to `create-zudo-sg` are documented in this file.
 
 The format is based on Keep a Changelog.
 
+## [0.2.16] - 2026-11-12
+
+### Changed
+
+- New projects install zdtp 0.9.5 (was 0.9.4), the version the engine is
+  tested against.
+- Update the starter engine range to `@takazudo/zudo-sg ^0.9.4`, whose zdtp
+  peer floor matches that pin.
+
 ## [0.2.15] - 2026-11-12
 
 ### Changed
