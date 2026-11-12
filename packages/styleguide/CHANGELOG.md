@@ -4,6 +4,16 @@ All notable changes to `@takazudo/zudo-sg` are documented in this file.
 
 The format is based on Keep a Changelog, and release notes are generated from the changelog MDX pages.
 
+## [0.9.4] - 2026-11-12
+
+This release moves the zdtp peer floor to the 0.9.5 patch the engine is now
+tested against. zdtp 0.9.5 changes only upstream release tooling, so the
+engine's runtime behaviour is unchanged from 0.9.3.
+
+### Other Changes
+
+- The `@takazudo/zdtp` peer is now `^0.9.5` (was `^0.9.4`).
+
 ## [0.9.3] - 2026-11-12
 
 This release is the first one published through npm Trusted Publishing
