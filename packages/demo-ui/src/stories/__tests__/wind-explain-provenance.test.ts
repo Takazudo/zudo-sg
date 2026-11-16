@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -27,6 +27,14 @@ function tempProject(config: unknown): string {
 
 function rewriteConfig(root: string, config: unknown): void {
   writeFileSync(join(root, "zfb.config.json"), `${JSON.stringify(config)}\n`);
+}
+
+// writeFileSync truncates first, so a parallel vitest worker can observe an
+// empty packages/styleguide/package.json and fail module resolution.
+function replaceFile(path: string, contents: string): void {
+  const temporary = `${path}.${process.pid}.tmp`;
+  writeFileSync(temporary, contents);
+  renameSync(temporary, path);
 }
 
 interface ProvenanceFixture {
@@ -112,14 +120,14 @@ describe("wind explain provenance", () => {
     const lock = readFileSync(lockPath, "utf8");
     const manifest = readFileSync(manifestPath, "utf8");
     try {
-      writeFileSync(lockPath, `${lock}\n# wind-provenance-noise\n`);
+      replaceFile(lockPath, `${lock}\n# wind-provenance-noise\n`);
       const parsed = JSON.parse(manifest) as { version: string };
       parsed.version = `${parsed.version}-provenance-noise`;
-      writeFileSync(manifestPath, `${JSON.stringify(parsed, null, 2)}\n`);
+      replaceFile(manifestPath, `${JSON.stringify(parsed, null, 2)}\n`);
       expect(await hashWindExplainProvenance(REPO_ROOT, compilerVersion)).toBe(hash);
     } finally {
-      writeFileSync(lockPath, lock);
-      writeFileSync(manifestPath, manifest);
+      replaceFile(lockPath, lock);
+      replaceFile(manifestPath, manifest);
     }
     expect(await hashWindExplainProvenance(REPO_ROOT, `${compilerVersion}-other`)).not.toBe(hash);
   });
