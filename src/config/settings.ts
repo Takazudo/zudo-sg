@@ -158,7 +158,6 @@ The same library drives a multi-page demo site, so the components can be explore
   assetViewerIndex: false as boolean,
   // Package default for an opt-in feature not enabled here.
   assetViewerIndexing: false as false,
-  findInPage: false as boolean,
   docHistory: true as boolean,
   docHistoryUi: false,
   docHistoryExclude: [] as string[],

@@ -169,14 +169,14 @@
     "postcss": "^8.5.32"
   },
   "peerDependencies": {
-    "@takazudo/zfb": "^6.0.1",
-    "@takazudo/zdtp": "^0.9.5",
-    "@takazudo/zudo-doc": "^10.0.3"
+    "@takazudo/zfb": "^7.0.0",
+    "@takazudo/zdtp": "^0.9.8",
+    "@takazudo/zudo-doc": "^13.0.0"
   },
   "devDependencies": {
-    "@takazudo/zdtp": "0.9.5",
-    "@takazudo/zfb": "6.0.1",
-    "@takazudo/zudo-doc": "10.0.3",
+    "@takazudo/zdtp": "0.9.8",
+    "@takazudo/zfb": "7.0.0",
+    "@takazudo/zudo-doc": "13.0.0",
     "@testing-library/jest-dom": "^7.0.1",
     "@types/culori": "^4.0.1",
     "@types/node": "^24.19.2",

@@ -541,17 +541,6 @@ body {
   }
 }
 
-/* ── Find-in-page highlight (W7A: unconditional — Tauri feature gates at runtime) ── */
-.find-match {
-  background-color: color-mix(in oklch, var(--color-warning) 40%, transparent);
-  border-radius: 2px;
-}
-.find-match-active {
-  background-color: color-mix(in oklch, var(--color-warning) 70%, transparent);
-  border-radius: 2px;
-  outline: 2px solid color-mix(in oklch, var(--color-warning) 90%, transparent);
-}
-
 /* ========================================
  * Image enlarge (.zd-enlargeable) — W7A: unconditional, runtime-gated
  * ======================================== */

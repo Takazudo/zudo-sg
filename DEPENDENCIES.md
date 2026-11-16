@@ -1,5 +1,72 @@
 # Dependency audit register
 
+## ZFB 7.0.0, zudo-doc 13.0.0 and zdtp 0.9.8 adopted — 2026-11-16
+
+The workspace, the engine, `doc/`, the consumer fixtures and the generated
+starter adopt the published ZFB 7.0.0 family (`@takazudo/zfb`,
+`zfb-runtime`, `zfb-md-wasm`), `@takazudo/zudo-doc` and
+`@takazudo/zudo-doc-history-server` 13.0.0, and `@takazudo/zdtp` 0.9.8.
+The root also adopts `@takazudo/mdx-formatter` 1.3.1 and
+`@takazudo/zudo-design-token-lint` 2.2.0. zudo-doc 13 peers the ZFB family
+at `^7.0.0` and history-server at `^13.0.0` (optional). zdtp 0.9.8 accepts
+`@takazudo/zfb` `^5.1.2 || ^6.0.0 || ^7.0.0`. Under the tested-floor policy
+(ADR §13), the engine peer floors move to zfb `^7.0.0`, zudo-doc `^13.0.0`
+and zdtp `^0.9.8`. `@takazudo/zudo-sg` and `create-zudo-sg` versions are not
+bumped here.
+
+ZFB 7 suspends the Linux arm64 npm CLI and CSS carrier, so
+`@takazudo/zfb-linux-arm64-gnu` is no longer an optional dependency.
+Release-age excludes drop that package. `@takazudo/zfb-slugify` moves to
+7.0.0. Linux x64, macOS and Windows npm installs are unchanged. These
+packages publish no `gitHead`; provenance is the GitHub tag.
+
+### Upstream impact
+
+- `@takazudo/zfb` 6.0.1→7.0.0 (Takazudo/zudo-front-builder, tag `v7.0.0`):
+  the 7.0.0 breaking change is the Linux arm64 npm suspension. 6.1.x, which
+  had not been adopted here, is bugfix-only for the packages this repo
+  installs (public-asset ignore, stylesheet query preservation, prefetch
+  strategy). Consumer impact: drop the arm64 carrier from release-age
+  excludes. No call-site API change.
+- `@takazudo/zfb-runtime` and `@takazudo/zfb-md-wasm` 6.0.1→7.0.0: runtime
+  has no package-specific 7.0.0 change. md-wasm rebuilds artifacts and
+  digests; this repo does not pin those digests.
+- `@takazudo/zdtp` 0.9.5→0.9.8 (Takazudo/zudo-design-token-panel, tag
+  `v0.9.8`): 0.9.6 and 0.9.7 are release-tooling only. 0.9.8 keeps the panel
+  working when `localStorage` is blocked and accepts the ZFB 7 peer.
+  Consumer impact: the peer floor. No product call site changes.
+- `@takazudo/zudo-doc` 10.0.3→13.0.0 (zudolab/zudo-doc, tag
+  `zudo-doc-v13.0.0`, commit `55265affb84bbcff409eae2fde9b13ac6ada591a`):
+  11.0.0 removes Tauri and `findInPage` (12.0.0 throws if the key remains).
+  The `./find-in-page` export is gone. 13.0.0 requires the ZFB 7 family and
+  zdtp 0.9.8 for a design-token panel. Consumer impact: delete `findInPage`
+  from `src/config/settings.ts` and the unused `.find-match` rules in
+  `src/styles/global.css`. `contentSignals` is optional and left unset.
+  `tsconfig.base.json` is byte-identical (blob
+  `f052aebac2b57fd447455490f6d2122a0ba372e4`); only snapshot comments move.
+- `@takazudo/zudo-doc-history-server` 10.0.3→13.0.0: changelog says no
+  package-specific changes at 11, 12 and 13. The peer floor is `^13.0.0`.
+- `@takazudo/mdx-formatter` 1.3.0→1.3.1 (tag `v1.3.1`): formatter behavior
+  unchanged. Consumer impact: none.
+- `@takazudo/zudo-design-token-lint` 2.1.3→2.2.0 (tag `v2.2.0`): opt-in
+  `arbitraryValues` check, enabled by the built-in z-index preset. This
+  repo's `.design-token-lint.json` does not use that preset. Consumer
+  impact: none.
+
+`create-zudo-doc` 10.0.3→13.0.0 template diff (git, tag `v13.0.0`, same
+commit `55265aff`): `templates/base/` and `setup-doc-skill.sh` are unchanged.
+The design-system skill template drops the removed find-in-page clause; that
+hunk is adopted in `.claude/skills/zudo-doc-design-system/SKILL.md`. Tauri
+scaffold templates are deleted upstream and were not vendored here. Scaffold
+pins move to ZFB 7.0.0, zudo-doc `^13.0.0`, history-server `^13.0.0` and
+zdtp 0.9.8; `doc/package.json` adopts the ZFB and zudo-doc pins. It does not
+enable doc history, the design-token panel, MCP or deploy, so history-server,
+zdtp and the Wrangler 4.163.0 pin are not added. Details:
+`ZUDO_DEPS_PINS.md`.
+
+Left untouched (non-registry): `@takazudo/zudo-sg` `workspace:*` and
+`file:.tarball/zudo-sg-engine.tgz`.
+
 ## zdtp 0.9.5 and zudo-design-token-lint 2.1.3 adopted — 2026-11-12
 
 The workspace, the engine, the consumer fixtures and the generated starter

@@ -18,16 +18,16 @@
     "check": "pnpm run typecheck && pnpm run test"
   },
   "dependencies": {
-    "@takazudo/zfb-md-wasm": "6.0.1",
+    "@takazudo/zfb-md-wasm": "7.0.0",
     "@takazudo/zudo-sg": "workspace:*",
     "dompurify": "^3.4.17"
   },
   "peerDependencies": {
-    "@takazudo/zfb": "^6.0.1"
+    "@takazudo/zfb": "^7.0.0"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "7.0.1",
-    "@takazudo/zfb": "6.0.1",
+    "@takazudo/zfb": "7.0.0",
     "@types/node": "^24.19.2",
     "happy-dom": "21.0.4",
     "jsdom": "^31.0.0",
