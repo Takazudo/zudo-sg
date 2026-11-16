@@ -1,0 +1,34 @@
+---
+title: 0.10.0
+description: Peer floors move to zfb 7.0.0, zudo-doc 13.0.0, and zdtp 0.9.8.
+sidebar_position: 35
+pagination_next: null
+---
+
+Released: 2026-11-16
+
+This release moves the engine onto zfb 7, zudo-doc 13, and zdtp 0.9.8.
+Hosts upgrade those installs together with the engine. The public API is
+otherwise unchanged.
+
+### Breaking Changes
+
+- The `@takazudo/zfb` peer is now ^7.0.0 (was ^6.0.1). zfb 6 hosts are no
+  longer supported. ZFB 7 suspends the Linux arm64 npm CLI and CSS carrier;
+  Linux x64, macOS, and Windows npm installs are unchanged.
+- The `@takazudo/zudo-doc` peer is now ^13.0.0 (was ^10.0.3). zudo-doc 12
+  and earlier are no longer supported. zudo-doc 11 removed `findInPage`;
+  leaving that key set throws from 12 onward.
+- The `@takazudo/zdtp` peer is now ^0.9.8 (was ^0.9.5). A design-token panel
+  on zfb 7 needs zdtp 0.9.8 or newer.
+
+### Bug Fixes
+
+- Release finalization reads a GitHub Release back by tag and retries when
+  the list lags behind a confirmed create.
+- A publisher run id from the dispatch answer is kept when the follow-up
+  run lookup answers HTTP 5xx.
+
+### Other Changes
+
+- The README install line and the generated starter follow the new floors.
