@@ -1,5 +1,39 @@
 # Dependency audit register
 
+## zdtp 0.9.9 and zudo-doc 13.0.1 adopted — 2026-11-19
+
+The workspace, the engine, `doc/`, the consumer fixtures and the generated
+starter adopt published `@takazudo/zdtp` 0.9.9, `@takazudo/zudo-doc` and
+`@takazudo/zudo-doc-history-server` 13.0.1, on top of the ZFB 7.1.0 family
+already adopted in this branch. zudo-doc 13.0.1 requires the ZFB family at
+`^7.1.0`. zdtp 0.9.9 still accepts `@takazudo/zfb`
+`^5.1.2 || ^6.0.0 || ^7.0.0`. Under the tested-floor policy (ADR §13), the
+engine peer floors move to zudo-doc `^13.0.1` and zdtp `^0.9.9`. The zfb
+floor stays `^7.1.0`. `@takazudo/zudo-sg` and `create-zudo-sg` versions are
+not bumped here.
+
+### Upstream impact
+
+- `@takazudo/zdtp` 0.9.8→0.9.9 (Takazudo/zudo-design-token-panel, tag
+  `v0.9.9`): changelog is a dependency bump onto zfb 7.1.0 and zudo-doc 13,
+  plus a consumer-test expectation. The zfb peer is unchanged. Consumer
+  impact: the peer floor. No product call site changes.
+- `@takazudo/zudo-doc` 13.0.0→13.0.1 (zudolab/zudo-doc, tag
+  `zudo-doc-v13.0.1`, commit `bc75e37cea1e383518d4cac27df8dcc6eb2b9a8c`):
+  the tarball changes `package.json` and `CHANGELOG.md` only. The ZFB peer
+  becomes `^7.1.0`, which this repo already installs. `tsconfig.base.json`
+  is absent from the diff. Consumer impact: the peer floor and the snapshot
+  comments.
+- `@takazudo/zudo-doc-history-server` 13.0.0→13.0.1: changelog says no
+  package-specific changes. The root pin moves to 13.0.1. `doc/` still
+  leaves doc history off, so history-server is not added there.
+- `create-zudo-doc` 13.0.0→13.0.1: `templates/` is unchanged.
+  `dist/scaffold.js` moves the pins above and optional Wrangler to 4.165.0.
+  `doc/` does not enable MCP or deploy, so Wrangler is not adopted.
+
+Left untouched (non-registry): `@takazudo/zudo-sg` `workspace:*` and
+`file:.tarball/zudo-sg-engine.tgz`.
+
 ## ZFB 7.1.0 adopted — 2026-11-19
 
 The workspace, the engine, `doc/`, the consumer fixtures and the generated

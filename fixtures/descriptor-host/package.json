@@ -10,11 +10,11 @@
     "check": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@takazudo/zdtp": "0.9.8",
+    "@takazudo/zdtp": "0.9.9",
     "@takazudo/zfb": "7.1.0",
     "@takazudo/zfb-md-wasm": "7.1.0",
     "@takazudo/zfb-runtime": "7.1.0",
-    "@takazudo/zudo-doc": "13.0.0",
+    "@takazudo/zudo-doc": "13.0.1",
     "@takazudo/zudo-sg": "file:.tarball/zudo-sg-engine.tgz",
     "diff": "^8.0.4",
     "katex": "^0.19.1",
