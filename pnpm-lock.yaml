@@ -25,7 +25,7 @@ importers:
         version: 7.1.0(@takazudo/zfb@7.1.0)
       '@takazudo/zudo-doc':
         specifier: 13.0.1
-        version: 13.0.1(@takazudo/zdtp@0.9.9(@takazudo/zfb@7.1.0))(@takazudo/zfb-md-wasm@7.1.0)(@takazudo/zfb-runtime@7.1.0(@takazudo/zfb@7.1.0))(@takazudo/zfb@7.1.0)(@takazudo/zudo-doc-history-server@13.0.1)(@types/node@24.19.2)(diff@8.0.4)(katex@0.19.1)(zod@4.6.7)
+        version: 13.0.1(@takazudo/zdtp@0.9.9(@takazudo/zfb@7.1.0))(@takazudo/zfb-md-wasm@7.1.0)(@takazudo/zfb-runtime@7.1.0(@takazudo/zfb@7.1.0))(@takazudo/zfb@7.1.0)(@takazudo/zudo-doc-history-server@13.0.1)(@types/node@24.19.2)(diff@9.0.0)(katex@0.19.1)(zod@4.6.7)
       '@takazudo/zudo-doc-history-server':
         specifier: 13.0.1
         version: 13.0.1
@@ -36,8 +36,8 @@ importers:
         specifier: workspace:*
         version: link:packages/demo-ui
       diff:
-        specifier: ^8.0.4
-        version: 8.0.4
+        specifier: ^9.0.0
+        version: 9.0.0
       katex:
         specifier: ^0.19.1
         version: 0.19.1
@@ -144,10 +144,10 @@ importers:
         version: 7.1.0(@takazudo/zfb@7.1.0)
       '@takazudo/zudo-doc':
         specifier: 13.0.1
-        version: 13.0.1(@takazudo/zdtp@0.9.9(@takazudo/zfb@7.1.0))(@takazudo/zfb-md-wasm@7.1.0)(@takazudo/zfb-runtime@7.1.0(@takazudo/zfb@7.1.0))(@takazudo/zfb@7.1.0)(@takazudo/zudo-doc-history-server@13.0.1)(@types/node@24.19.2)(diff@8.0.4)(katex@0.19.1)(zod@4.6.7)
+        version: 13.0.1(@takazudo/zdtp@0.9.9(@takazudo/zfb@7.1.0))(@takazudo/zfb-md-wasm@7.1.0)(@takazudo/zfb-runtime@7.1.0(@takazudo/zfb@7.1.0))(@takazudo/zfb@7.1.0)(@takazudo/zudo-doc-history-server@13.0.1)(@types/node@24.19.2)(diff@9.0.0)(katex@0.19.1)(zod@4.6.7)
       diff:
-        specifier: ^8.0.3
-        version: 8.0.4
+        specifier: ^9.0.0
+        version: 9.0.0
       katex:
         specifier: ^0.19.1
         version: 0.19.1
@@ -264,7 +264,7 @@ importers:
         version: 7.1.0
       '@takazudo/zudo-doc':
         specifier: 13.0.1
-        version: 13.0.1(@takazudo/zdtp@0.9.9(@takazudo/zfb@7.1.0))(@takazudo/zfb-md-wasm@7.1.0)(@takazudo/zfb-runtime@7.1.0(@takazudo/zfb@7.1.0))(@takazudo/zfb@7.1.0)(@takazudo/zudo-doc-history-server@13.0.1)(@types/node@24.19.2)(diff@8.0.4)(katex@0.19.1)(zod@4.6.7)
+        version: 13.0.1(@takazudo/zdtp@0.9.9(@takazudo/zfb@7.1.0))(@takazudo/zfb-md-wasm@7.1.0)(@takazudo/zfb-runtime@7.1.0(@takazudo/zfb@7.1.0))(@takazudo/zfb@7.1.0)(@takazudo/zudo-doc-history-server@13.0.1)(@types/node@24.19.2)(diff@9.0.0)(katex@0.19.1)(zod@4.6.7)
       '@testing-library/jest-dom':
         specifier: ^7.0.1
         version: 7.0.1(@testing-library/dom@10.4.2)(vitest@5.1.0(@types/node@24.19.2)(happy-dom@21.0.4)(jsdom@31.0.0)(msw@3.0.4(@types/node@24.19.2)(@typescript/typescript6@6.0.2)(graphql@16.14.2)(vite@8.3.7(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)))(vite@8.3.7(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)))
@@ -309,8 +309,8 @@ packages:
     resolution: {integrity: sha512-qehxGkRj55h/ff8EMaJ+cYhyaKlHIxqYDn682wQD7RNp9UujOQsHog2uS0r2vzr4pW+sXf90NeeayjcNaX3fFg==}
     engines: {node: '>=6.9.0'}
 
-  '@babel/runtime@7.29.10':
-    resolution: {integrity: sha512-NpugTzbKgGrNe45Ui32cN8vCFFMxVtP/9rtfwv0nP5FRDAjvYBxJcLVpYA9mr1jxP6cnIT7x9LUzuDTbWYYNRA==}
+  '@babel/runtime@7.29.14':
+    resolution: {integrity: sha512-Y5tqevQaUAZhhj82BpYMNC1ssvLQTVAfwKdm8iy8qwmhvC2/CpcAu8OC+QEtjM7pMk7knx83u1Qj8gzkicyelw==}
     engines: {node: '>=6.9.0'}
 
   '@codemirror/autocomplete@6.20.3':
@@ -1604,8 +1604,8 @@ packages:
   devlop@1.1.0:
     resolution: {integrity: sha512-RWmIqhcFf1lRYBvNmr7qTNuyCt/7/ns2jbpp1+PalgE/rDQcBT0fioSMUpJ93irlUhC5hrg4cYqe6U+0ImW0rA==}
 
-  diff@8.0.4:
-    resolution: {integrity: sha512-DPi0FmjiSU5EvQV0++GFDOJ9ASQUVFh5kD+OzOnYdi7n3Wpm9hWWGfB/O2blfHcMVTL5WkQXSnRiK9makhrcnw==}
+  diff@9.0.0:
+    resolution: {integrity: sha512-svtcdpS8CgJyqAjEQIXdb3OjhFVVYjzGAPO8WGCmRbrml64SPw/jJD4GoE98aR7r25A0XcgrK3F02yw9R/vhQw==}
     engines: {node: '>=0.3.1'}
 
   dom-accessibility-api@0.5.16:
@@ -2323,8 +2323,8 @@ packages:
     resolution: {integrity: sha512-wXR/dYpcqKmfWpEdZjiKJOwCNFndD0DMnrW/cYjVGttEkBfVgcLFHoNrlj47mjOVic9yyNu65alsgF4NQyTa2g==}
     engines: {node: '>=12.0.0'}
 
-  tinyrainbow@3.1.0:
-    resolution: {integrity: sha512-Bf+ILmBgretUrdJxzXM0SgXLZ3XfiaUuOj/IKQHuTXip+05Xn+uyEYdVg0kYDipTBcLrCVyUzAPz7QmArb0mmw==}
+  tinyrainbow@3.2.0:
+    resolution: {integrity: sha512-LgO3D9yZJjApUiuUfl9iFAwrtaX4+lok3wJIqttGoKCHlWUqHqbQpnxCf82L8FjgKsh4iGo78hqJwgL8F6To2A==}
     engines: {node: '>=14.0.0'}
 
   tldts-core@7.4.8:
@@ -2596,7 +2596,7 @@ snapshots:
 
   '@babel/helper-validator-identifier@7.29.7': {}
 
-  '@babel/runtime@7.29.10': {}
+  '@babel/runtime@7.29.14': {}
 
   '@codemirror/autocomplete@6.20.3':
     dependencies:
@@ -3213,7 +3213,7 @@ snapshots:
 
   '@takazudo/zudo-doc-history-server@13.0.1': {}
 
-  '@takazudo/zudo-doc@13.0.1(@takazudo/zdtp@0.9.9(@takazudo/zfb@7.1.0))(@takazudo/zfb-md-wasm@7.1.0)(@takazudo/zfb-runtime@7.1.0(@takazudo/zfb@7.1.0))(@takazudo/zfb@7.1.0)(@takazudo/zudo-doc-history-server@13.0.1)(@types/node@24.19.2)(diff@8.0.4)(katex@0.19.1)(zod@4.6.7)':
+  '@takazudo/zudo-doc@13.0.1(@takazudo/zdtp@0.9.9(@takazudo/zfb@7.1.0))(@takazudo/zfb-md-wasm@7.1.0)(@takazudo/zfb-runtime@7.1.0(@takazudo/zfb@7.1.0))(@takazudo/zfb@7.1.0)(@takazudo/zudo-doc-history-server@13.0.1)(@types/node@24.19.2)(diff@9.0.0)(katex@0.19.1)(zod@4.6.7)':
     dependencies:
       '@inquirer/prompts': 8.7.5(@types/node@24.19.2)
       '@takazudo/zfb': 7.1.0
@@ -3232,7 +3232,7 @@ snapshots:
       '@takazudo/zdtp': 0.9.9(@takazudo/zfb@7.1.0)
       '@takazudo/zfb-md-wasm': 7.1.0
       '@takazudo/zudo-doc-history-server': 13.0.1
-      diff: 8.0.4
+      diff: 9.0.0
       katex: 0.19.1
     transitivePeerDependencies:
       - '@types/node'
@@ -3240,7 +3240,7 @@ snapshots:
   '@testing-library/dom@10.4.2':
     dependencies:
       '@babel/code-frame': 7.29.7
-      '@babel/runtime': 7.29.10
+      '@babel/runtime': 7.29.14
       '@types/aria-query': 5.0.4
       aria-query: 5.3.0
       dom-accessibility-api: 0.5.16
@@ -3389,7 +3389,7 @@ snapshots:
       '@vitest/spy': 4.1.11
       '@vitest/utils': 4.1.11
       chai: 6.3.0
-      tinyrainbow: 3.1.0
+      tinyrainbow: 3.2.0
     optional: true
 
   '@vitest/mocker@5.1.0(msw@3.0.4(@types/node@24.19.2)(@typescript/typescript6@6.0.2)(graphql@16.14.2)(vite@8.3.7(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)))(vite@8.3.7(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))':
@@ -3404,7 +3404,7 @@ snapshots:
 
   '@vitest/pretty-format@4.1.11':
     dependencies:
-      tinyrainbow: 3.1.0
+      tinyrainbow: 3.2.0
     optional: true
 
   '@vitest/spy@4.1.11':
@@ -3416,7 +3416,7 @@ snapshots:
     dependencies:
       '@vitest/pretty-format': 4.1.11
       convert-source-map: 2.0.0
-      tinyrainbow: 3.1.0
+      tinyrainbow: 3.2.0
     optional: true
 
   acorn@8.18.0: {}
@@ -3547,7 +3547,7 @@ snapshots:
     dependencies:
       dequal: 2.0.3
 
-  diff@8.0.4: {}
+  diff@9.0.0: {}
 
   dom-accessibility-api@0.5.16: {}
 
@@ -4418,7 +4418,7 @@ snapshots:
       fdir: 6.5.0(picomatch@4.0.7)
       picomatch: 4.0.7
 
-  tinyrainbow@3.1.0:
+  tinyrainbow@3.2.0:
     optional: true
 
   tldts-core@7.4.8: {}
