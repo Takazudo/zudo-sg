@@ -11,9 +11,9 @@
   },
   "dependencies": {
     "@takazudo/zdtp": "0.9.8",
-    "@takazudo/zfb": "7.0.0",
-    "@takazudo/zfb-md-wasm": "7.0.0",
-    "@takazudo/zfb-runtime": "7.0.0",
+    "@takazudo/zfb": "7.1.0",
+    "@takazudo/zfb-md-wasm": "7.1.0",
+    "@takazudo/zfb-runtime": "7.1.0",
     "@takazudo/zudo-doc": "13.0.0",
     "@takazudo/zudo-sg": "file:.tarball/zudo-sg-engine.tgz",
     "diff": "^8.0.4",

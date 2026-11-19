@@ -1,5 +1,46 @@
 # Dependency audit register
 
+## ZFB 7.1.0 adopted — 2026-11-19
+
+The workspace, the engine, `doc/`, the consumer fixtures and the generated
+starter adopt the published ZFB 7.1.0 family (`@takazudo/zfb`,
+`zfb-runtime`, `zfb-md-wasm`). `@takazudo/zudo-doc`,
+`@takazudo/zudo-doc-history-server` and `@takazudo/zdtp` stay at 13.0.0 /
+0.9.8. Those two lines are being released upstream in parallel; this change
+does not guess their next versions. zudo-doc 13.0.0 peers the ZFB family at
+`^7.0.0`, and zdtp 0.9.8 accepts `@takazudo/zfb` `^5.1.2 || ^6.0.0 || ^7.0.0`,
+both of which install 7.1.0. Under the tested-floor policy (ADR §13), the
+engine zfb peer floor moves to `^7.1.0`. The zudo-doc and zdtp floors stay
+`^13.0.0` and `^0.9.8` until those packages are adopted. `@takazudo/zudo-sg`
+and `create-zudo-sg` versions are not bumped here.
+
+ZFB 7.1.0 publishes the Linux arm64 npm carrier again, so
+`@takazudo/zfb-linux-arm64-gnu` returns as an optional dependency.
+`@takazudo/zfb-slugify` moves to 7.1.0. These packages publish no `gitHead`;
+provenance is the GitHub tag `v7.1.0` (commit
+`0cc567875e159f7251f89367cc475096aff5a6a8`).
+
+### Upstream impact
+
+- `@takazudo/zfb` 7.0.0→7.1.0 (Takazudo/zudo-front-builder, tag `v7.1.0`):
+  restores `@takazudo/zfb-linux-arm64-gnu` and shares a bounded MDX cache
+  across production build passes. Consumer impact: put the arm64 carrier
+  back on the release-age excludes. No call-site API change.
+- `@takazudo/zfb-runtime` 7.0.0→7.1.0: adds explicit stable-paths snapshots
+  and a lightweight stable-paths entry, accepts typed snapshot inputs
+  without index signatures, and preserves mutable paths consumer types.
+  This repo does not call those new entries. Consumer impact: none found.
+- `@takazudo/zfb-md-wasm` 7.0.0→7.1.0: no package-specific changes. The
+  tarball rebuilds wasm artifacts; this repo does not pin those digests.
+
+`create-zudo-doc` stays at 13.0.0 (npm `latest`). Its vendored scaffold is
+not regenerated. `doc/package.json` takes the ZFB 7.1.0 pins ahead of that
+scaffold, same as the earlier independent ZFB adoptions. Details:
+`ZUDO_DEPS_PINS.md`.
+
+Left untouched (non-registry): `@takazudo/zudo-sg` `workspace:*` and
+`file:.tarball/zudo-sg-engine.tgz`.
+
 ## ZFB 7.0.0, zudo-doc 13.0.0 and zdtp 0.9.8 adopted — 2026-11-16
 
 The workspace, the engine, `doc/`, the consumer fixtures and the generated
