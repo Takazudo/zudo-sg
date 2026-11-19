@@ -4,6 +4,25 @@ All notable changes to `@takazudo/zudo-sg` are documented in this file.
 
 The format is based on Keep a Changelog, and release notes are generated from the changelog MDX pages.
 
+## [0.11.0] - 2026-11-19
+
+This release moves the engine onto zfb 7.1.0, zudo-doc 13.0.1, and zdtp 0.9.9.
+Hosts upgrade those installs together with the engine. The public API is
+otherwise unchanged.
+
+### Breaking Changes
+
+- The `@takazudo/zfb` peer is now ^7.1.0 (was ^7.0.0). zfb 7.0.0 hosts are no
+  longer supported. ZFB 7.1.0 publishes the Linux arm64 npm CLI and CSS
+  carrier again. Linux x64, macOS, and Windows npm installs are unchanged.
+- The `@takazudo/zudo-doc` peer is now ^13.0.1 (was ^13.0.0). zudo-doc 13.0.1
+  requires the ZFB 7.1.0 family.
+- The `@takazudo/zdtp` peer is now ^0.9.9 (was ^0.9.8).
+
+### Other Changes
+
+- The README install line and the generated starter follow the new floors.
+
 ## [0.10.0] - 2026-11-16
 
 This release moves the engine onto zfb 7, zudo-doc 13, and zdtp 0.9.8.

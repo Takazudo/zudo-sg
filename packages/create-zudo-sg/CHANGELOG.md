@@ -4,6 +4,17 @@ All notable changes to `create-zudo-sg` are documented in this file.
 
 The format is based on Keep a Changelog.
 
+## [0.2.19] - 2026-11-19
+
+### Changed
+
+- New projects install zfb, zfb-runtime, and zfb-md-wasm 7.1.0 (was 7.0.0),
+  zudo-doc 13.0.1 (was 13.0.0), and zdtp 0.9.9 (was 0.9.8), the versions the
+  engine is tested against. ZFB 7.1.0 publishes the Linux arm64 npm carrier
+  again.
+- Update the starter engine range to `@takazudo/zudo-sg ^0.11.0`, whose zfb,
+  zudo-doc, and zdtp peer floors match those pins.
+
 ## [0.2.18] - 2026-11-16
 
 ### Changed
