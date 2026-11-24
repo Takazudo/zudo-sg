@@ -1,0 +1,29 @@
+---
+title: 0.12.0
+description: Peer floors move to zfb 7.2.0, zudo-doc 14.0.0, and zdtp 0.9.10.
+sidebar_position: 37
+pagination_next: null
+---
+
+Released: 2026-11-24
+
+This release moves the engine onto zfb 7.2.0, zudo-doc 14.0.0, and zdtp 0.9.10.
+Hosts upgrade those installs together with the engine. zudo-doc 14 removes
+`claudeResources` and `codexResources`; publish the same files with `docSources`.
+
+### Breaking Changes
+
+- The `@takazudo/zudo-doc` peer is now ^14.0.0 (was ^13.0.1). zudo-doc 14
+  requires the ZFB 7.2.0 family. `claudeResources` and `codexResources` are
+  gone, with no compatibility shim. Use `docSources` and the `claude-code`
+  or `codex` preset. Old routes such as `/docs/claude-skills/` are not
+  redirected; the pages live under the source mount, for example
+  `/docs/claude/skills/`.
+- The `@takazudo/zfb` peer is now ^7.2.0 (was ^7.1.0). zfb 7.1.0 hosts are no
+  longer supported. Production routing is unchanged. 7.2.0 adds dev-only
+  trailing-slash dispatch, dev 404 reasons, and an opt-in provenance trace.
+- The `@takazudo/zdtp` peer is now ^0.9.10 (was ^0.9.9).
+
+### Other Changes
+
+- The README install line and the generated starter follow the new floors.
