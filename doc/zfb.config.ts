@@ -21,7 +21,7 @@ export default defineConfig(
       ogSiteName: true,
       twitterCard: "summary_large_image",
     },
-    siteTreeNavSecondary: ["changelog", "claude", "claude-md", "claude-skills"],
+    siteTreeNavSecondary: ["changelog", "claude"],
     siteUrl: "https://zudo-sg-doc.takazudomodular.com",
     // Explicit since zudo-doc 5.17.0 gated /sitemap.xml on this setting; before that
     // the route was emitted unconditionally and this deployed site shipped one.
@@ -34,16 +34,19 @@ export default defineConfig(
     llmsTxt: true,
     imageEnlarge: true,
     dynamicPageTransition: true,
-    claudeResources: {
-      claudeDir: "../.claude",
-      scanRoot: "..",
-    },
-    defaultLocaleOnlyPrefixes: [
-      "/docs/claude-md/",
-      "/docs/claude-skills/",
-      "/docs/claude-agents/",
-      "/docs/claude-commands/",
+    // zudo-doc 14 removed claudeResources. The claude-code preset publishes
+    // the same tree under /docs/claude/<section>/ (instructions, commands,
+    // skills, agents). scanRoot stays the repo root so CLAUDE.md discovery
+    // is not limited to this doc workspace.
+    docSources: [
+      {
+        id: "claude",
+        preset: "claude-code",
+        root: "../.claude",
+        scanRoot: "..",
+      },
     ],
+    defaultLocaleOnlyPrefixes: ["/docs/claude/"],
     // Package release history for the published engine (@takazudo/zudo-sg).
     // The postBuild `changelog` plugin regenerates packages/styleguide/CHANGELOG.md
     // from these MDX pages every `pnpm build:doc` — outputFile resolves against

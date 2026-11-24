@@ -1,10 +1,10 @@
 # zudo-sg Docs
 
-This workspace is the contributor documentation site built with zudo-doc 13.0.1, zfb 7.2.0, MDX, zudo-wind, and zudo-react.
+This workspace is the contributor documentation site built with zudo-doc 14.0.0, zfb 7.2.0, MDX, zudo-wind, and zudo-react.
 
 ## Commands
 
-- `pnpm dev` — start zfb on port 4323.
+- `pnpm dev` — start zfb on port 4323 and `zudo-doc sources watch` beside it.
 - `pnpm check` — typecheck config, routes, and MDX.
 - `pnpm build` — run `zfb build --strict-plain-css-imports` and generate the static site in `dist/`.
 - `pnpm check:html` — validate generated HTML after a build.

@@ -164,8 +164,6 @@ The same library drives a multi-page demo site, so the components can be explore
   bodyFootUtilArea: false as false,
   htmlPreview: undefined as HtmlPreviewConfig | undefined,
   versions: [] satisfies VersionConfig[] as VersionConfig[] | false,
-  claudeResources: false as { claudeDir: string; projectRoot?: string } | false,
-  codexResources: false as { codexDir: string; projectRoot?: string } | false,
   defaultLocaleOnlyPrefixes: [] as string[],
   footer: {
     links: [],
