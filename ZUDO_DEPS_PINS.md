@@ -1,5 +1,15 @@
 # ZUDO_DEPS_PINS
 
+## 2026-11-24 — independent ZFB 7.2.0 adoption
+
+`doc/` and the rest of the workspace advance the ZFB package family to
+published 7.2.0 (tag `v7.2.0`, commit
+`a752204e85426093de9c00304aa35e58dc97ea9e`). npm `create-zudo-doc` is still
+13.0.1, so the three create-zudo-doc provenance entries and the TypeScript
+snapshot stay at that pin. No scaffold templates are regenerated and no
+local customizations are re-applied. zudo-doc and zdtp pins are unchanged
+in this adoption.
+
 ## 2026-11-19 — 13.0.1 adopted with zdtp 0.9.9
 
 Compared the published `create-zudo-doc` 13.0.0 and 13.0.1 tarballs. 13.0.1
