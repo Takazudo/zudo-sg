@@ -4,6 +4,17 @@ All notable changes to `create-zudo-sg` are documented in this file.
 
 The format is based on Keep a Changelog.
 
+## [0.2.20] - 2026-11-24
+
+### Changed
+
+- New projects install zfb, zfb-runtime, and zfb-md-wasm 7.2.0 (was 7.1.0),
+  zudo-doc 14.0.0 (was 13.0.1), and zdtp 0.9.10 (was 0.9.9), the versions the
+  engine is tested against. zudo-doc 14 replaces `claudeResources` and
+  `codexResources` with `docSources`.
+- Update the starter engine range to `@takazudo/zudo-sg ^0.12.0`, whose zfb,
+  zudo-doc, and zdtp peer floors match those pins.
+
 ## [0.2.19] - 2026-11-19
 
 ### Changed
