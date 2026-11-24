@@ -18,22 +18,22 @@
     "check": "pnpm run typecheck && pnpm run test"
   },
   "dependencies": {
-    "@takazudo/zfb-md-wasm": "7.1.0",
+    "@takazudo/zfb-md-wasm": "7.2.0",
     "@takazudo/zudo-sg": "workspace:*",
     "dompurify": "^3.4.17"
   },
   "peerDependencies": {
-    "@takazudo/zfb": "^7.1.0"
+    "@takazudo/zfb": "^7.2.0"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "7.0.1",
-    "@takazudo/zfb": "7.1.0",
+    "@takazudo/zfb": "7.2.0",
     "@types/node": "^24.19.2",
     "happy-dom": "21.0.4",
     "jsdom": "^31.0.0",
     "@typescript/native": "npm:typescript@^7.0.2",
     "typescript": "npm:@typescript/typescript6@^6.0.2",
-    "vite": "8.3.7",
+    "vite": "8.3.8",
     "vitest": "5.1.0",
     "postcss": "^8.5.32"
   }

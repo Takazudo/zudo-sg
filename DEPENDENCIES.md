@@ -1,5 +1,72 @@
 # Dependency audit register
 
+## ZFB 7.2.0 adopted — 2026-11-24
+
+The workspace, the engine, `doc/`, the consumer fixtures and the generated
+starter adopt the published ZFB 7.2.0 family (`@takazudo/zfb`,
+`zfb-runtime`, `zfb-md-wasm`). `@takazudo/zudo-doc`,
+`@takazudo/zudo-doc-history-server` and `@takazudo/zdtp` stay at 13.0.1 /
+0.9.9. Those two lines are being released upstream in parallel; this change
+does not guess their next versions. zudo-doc 13.0.1 peers the ZFB family at
+`^7.1.0`, and zdtp 0.9.9 accepts `@takazudo/zfb`
+`^5.1.2 || ^6.0.0 || ^7.0.0`, both of which install 7.2.0. `zfb-runtime`
+7.2.0 peers `@takazudo/zfb` at the exact version `7.2.0`, so the family
+moves together. Under the tested-floor policy (ADR §13), the engine zfb
+peer floor moves to `^7.2.0`. The zudo-doc and zdtp floors stay `^13.0.1`
+and `^0.9.9` until those packages are adopted. `@takazudo/zudo-sg` and
+`create-zudo-sg` versions are not bumped here.
+
+`@takazudo/zfb-slugify` and the platform carriers, including
+`@takazudo/zfb-linux-arm64-gnu`, move to 7.2.0. These packages publish no
+`gitHead`; provenance is the GitHub tag `v7.2.0` (commit
+`a752204e85426093de9c00304aa35e58dc97ea9e`).
+
+### Upstream impact
+
+- `@takazudo/zfb` 7.1.0→7.2.0 (Takazudo/zudo-front-builder, tag `v7.2.0`):
+  dev-only trailing-slash dispatch for request-time pages when
+  `trailingSlash` is true, a dev 404 reason header, an opt-in
+  `ZFB_DEV_PROVENANCE_TRACE`, and dev refresh fixes. `zfb build` and
+  production routing stay strict. The published tarball's public type
+  change is the `trailingSlash` doc comment. Consumer impact: none found.
+  No call site sets the new dev router option.
+- `@takazudo/zfb-runtime` 7.1.0→7.2.0: adds optional
+  `devTrailingSlashDispatch` and `devTrailingSlashLookupPath`. The default
+  router stays strict. This repo does not call `createPageRouter` with
+  that option. Consumer impact: none found.
+- `@takazudo/zfb-md-wasm` 7.1.0→7.2.0: no package-specific changes. The
+  tarball rebuilds wasm artifacts; this repo does not pin those digests.
+
+`create-zudo-doc` stays at 13.0.1 (npm `latest`). Its vendored scaffold is
+not regenerated. `doc/package.json` takes the ZFB 7.2.0 pins ahead of that
+scaffold. Details: `ZUDO_DEPS_PINS.md`.
+
+### Other outdated dependencies
+
+Open Dependabot pull requests judged with this adoption:
+
+- Adopted from #1088: Vite 8.3.7→8.3.8 in the workspace, the engine, the
+  demo, `create-zudo-sg`, and the engine-host fixture. The 8.3.8 notes are
+  bugfixes and CSS/dev performance. This repo does not set
+  `build.cssCodeSplit: false`. CI on #1088 was green.
+- Adopted from #1087 and #1091: `diff` 8.0.4→9.0.0. zudo-doc 13.0.1 already
+  peers `^8.0.0 || ^9.0.0`. The 2026-11-10 "not adopted" note applied to
+  zudo-doc 10.0.1, which peered `^8` only. This repo does not import
+  `diff`. The root and `doc/` ranges become `^9.0.0`; the foreign fixtures
+  follow. CI on both pull requests was green.
+- Adopted from #1089 and #1090 together: React and ReactDOM 19.3.0→19.3.1
+  in `fixtures/react-descriptor-host`. Each pull request alone failed
+  React Descriptor Host Foreign Install (`page.waitForFunction` timeout)
+  while installing a split pair. `@types/react` and `@types/react-dom`
+  stay at 19.3.0; 19.3.1 types are not published.
+- Not adopted: #1086, MSW 3.0.4→3.0.6. The contact-preview worker is the
+  generated 3.0.4 script (`public/mockServiceWorker.js`, checksum
+  `0bd5af64c8dc112df5e0c5e9c8a2b15a`) and the smoke test asserts that
+  pair. The pull request does not regenerate the worker. Left open.
+
+Left untouched (non-registry): `@takazudo/zudo-sg` `workspace:*` and
+`file:.tarball/zudo-sg-engine.tgz`.
+
 ## zdtp 0.9.9 and zudo-doc 13.0.1 adopted — 2026-11-19
 
 The workspace, the engine, `doc/`, the consumer fixtures and the generated

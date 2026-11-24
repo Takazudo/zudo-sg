@@ -181,7 +181,7 @@ describe("sync-create-zudo-sg-template.mjs", () => {
     expect(fixturePackage.scripts.test).toBe("vitest run --passWithNoTests");
     expect(fixturePackage.devDependencies).toMatchObject({
       "happy-dom": "21.0.4",
-      vite: "8.3.7",
+      vite: "8.3.8",
       vitest: "5.1.0",
     });
     expect(fixturePackage.dependencies).not.toHaveProperty("preact");

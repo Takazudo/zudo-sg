@@ -14,12 +14,12 @@
   },
   "dependencies": {
     "@takazudo/zdtp": "0.9.9",
-    "@takazudo/zfb": "7.1.0",
-    "@takazudo/zfb-md-wasm": "7.1.0",
-    "@takazudo/zfb-runtime": "7.1.0",
+    "@takazudo/zfb": "7.2.0",
+    "@takazudo/zfb-md-wasm": "7.2.0",
+    "@takazudo/zfb-runtime": "7.2.0",
     "@takazudo/zudo-doc": "13.0.1",
     "@takazudo/zudo-sg": "^0.11.0",
-    "diff": "^8.0.4",
+    "diff": "^9.0.0",
     "katex": "^0.19.1",
     "zod": "^4.3.6"
   },
@@ -27,7 +27,7 @@
     "@types/node": "^22.0.0",
     "happy-dom": "21.0.4",
     "typescript": "^5.9.0",
-    "vite": "8.3.7",
+    "vite": "8.3.8",
     "vitest": "5.1.0"
   },
   "engines": {

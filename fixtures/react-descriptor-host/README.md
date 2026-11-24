@@ -1,6 +1,6 @@
 # Packed React descriptor host
 
-This independent Node 24 (`>=24 <25`, required by zudo-doc 7) consumer uses React/ReactDOM 19.3.0 and Monaco 0.57.0 inside its own preview document. The catalog and chrome use the engine's renderer. No React adapter or React dependency is added to the engine.
+This independent Node 24 (`>=24 <25`, required by zudo-doc 7) consumer uses React/ReactDOM 19.3.1 and Monaco 0.57.0 inside its own preview document. The catalog and chrome use the engine's renderer. No React adapter or React dependency is added to the engine.
 
 From the repository, run `pnpm verify:react-descriptor-host-install -- --keep`. The verifier packs the current built engine, installs it outside the workspace, records installed versions and its own complete audit, builds the preview, captures real committed fixtures, validates receipts, then builds and exercises `/styleguide/` and `/`. `--keep` retains the foreign directory, generated lockfile, captures, audit and graph evidence. Run the repository's package build first after changing engine source.
 
