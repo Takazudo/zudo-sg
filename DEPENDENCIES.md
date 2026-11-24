@@ -1,5 +1,55 @@
 # Dependency audit register
 
+## zudo-doc 14.0.0 and zdtp 0.9.10 adopted — 2026-11-24
+
+The workspace, the engine, `doc/`, the consumer fixtures and the generated
+starter adopt published `@takazudo/zudo-doc` and
+`@takazudo/zudo-doc-history-server` 14.0.0 and `@takazudo/zdtp` 0.9.10, on
+top of the ZFB 7.2.0 family already on main. zudo-doc 14.0.0 requires the
+ZFB family at `^7.2.0` and history-server at `^14.0.0`. zdtp 0.9.10 still
+accepts `@takazudo/zfb` `^5.1.2 || ^6.0.0 || ^7.0.0`. Under the tested-floor
+policy (ADR §13), the engine peer floors move to zudo-doc `^14.0.0` and
+zdtp `^0.9.10`. The zfb floor stays `^7.2.0`. `@takazudo/zudo-sg` and
+`create-zudo-sg` versions are not bumped in this change.
+
+These packages publish no `gitHead`. Provenance is the GitHub tag
+`zudo-doc-v14.0.0` (annotated tag `c15c4779d2be3be439fb02d5b1304a94807ce96d`,
+commit `30d25a048c5a4b1abdb03b63a1dbb6e8e559b747`; `create-zudo-doc` tag
+`v14.0.0` peels to the same commit) and zdtp tag `v0.9.10` (commit
+`d2de068dca98656e56f22c65854c30658afde10e`).
+
+### Upstream impact
+
+- `@takazudo/zudo-doc` 13.0.1→14.0.0 (zudolab/zudo-doc, tag
+  `zudo-doc-v14.0.0`): breaking. `claudeResources` and `codexResources`, and
+  the `plugins/claude-resources` and `plugins/codex-resources` plugins, are
+  removed. The same content is `docSources` with the `claude-code` or
+  `codex` preset. Old routes such as `/docs/claude-skills/…` are not
+  redirected; pages live under the source mount, `/docs/claude/skills/…`.
+  Consumer impact: `doc/zfb.config.ts` replaces `claudeResources` with a
+  `claude-code` preset (`root: "../.claude"`, `scanRoot: ".."`), narrows
+  `defaultLocaleOnlyPrefixes` to `/docs/claude/`, and drops the retired
+  `claude-md` / `claude-skills` entries from `siteTreeNavSecondary`. `doc/`
+  runs `zudo-doc sources watch` beside `zfb dev`. The root host had both
+  resource settings set to `false`; those keys are removed. `tsconfig.base.json`
+  is absent from the tarball diff (blob
+  `f052aebac2b57fd447455490f6d2122a0ba372e4`); only snapshot comments move.
+- `@takazudo/zudo-doc-history-server` 13.0.1→14.0.0: changelog says no
+  package-specific changes. The root pin moves to 14.0.0. `doc/` still
+  leaves doc history off, so history-server is not added there.
+- `@takazudo/zdtp` 0.9.9→0.9.10 (Takazudo/zudo-design-token-panel, tag
+  `v0.9.10`): changelog is a dependency bump onto zfb 7.2.0. The zfb peer
+  is unchanged. Consumer impact: the peer floor. No product call site changes.
+- `create-zudo-doc` 13.0.1→14.0.0: `templates/` is unchanged.
+  `dist/scaffold.js` moves the pins above, optional Wrangler to 4.167.0,
+  and generates `docSources` gitignore lines plus a `dev:sources` sidecar.
+  `doc/` does not enable MCP or deploy, so Wrangler is not adopted. The
+  gitignore and dev sidecar are adopted because this workspace publishes
+  Claude sources.
+
+Left untouched (non-registry): `@takazudo/zudo-sg` `workspace:*` and
+`file:.tarball/zudo-sg-engine.tgz`.
+
 ## ZFB 7.2.0 adopted — 2026-11-24
 
 The workspace, the engine, `doc/`, the consumer fixtures and the generated

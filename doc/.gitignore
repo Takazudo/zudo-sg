@@ -22,12 +22,15 @@ pnpm-debug.log*
 # Cloudflare Wrangler
 .wrangler/
 
-# Generated Claude Code resource docs (regenerated on every zfb dev/build).
+# Generated docSources output (regenerated on every zfb dev/build).
+# claude/ is the zudo-doc 14 claude-code mount. The older category dirs stay
+# ignored so a checkout that still has 13.x output does not commit it.
 src/content/docs/claude/
 src/content/docs/claude-md/
 src/content/docs/claude-commands/
 src/content/docs/claude-skills/
 src/content/docs/claude-agents/
+public/doc-sources/
 
 # Generated doc-lookup skill
 .claude/skills/doc-wisdom/SKILL.md

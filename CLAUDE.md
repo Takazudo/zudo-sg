@@ -5,7 +5,7 @@ Documentation site built with [zudo-doc](https://github.com/zudolab/zudo-doc) �
 ## Tech Stack
 
 - **zfb** — documentation build framework. The `@takazudo/zfb*` family is pinned to the stable
-  `7.2.0` release alongside zudo-doc `13.0.1` and zdtp `0.9.9` (Node 24). The engine peers are plain
+  `7.2.0` release alongside zudo-doc `14.0.0` and zdtp `0.9.10` (Node 24). The engine peers are plain
   `^<root pin>` ranges; the doc 6 / Node 22 window and its `fixtures/descriptor-host`
   compat lane were retired with zfb 5 (ADR §13, 2026-10-24).
 - **MDX** — content format
@@ -197,7 +197,7 @@ adapter directly.
   `@takazudo/zudo-doc/sidebar-tree-island` package island (not a separate
   toggleable feature)
 - **imageEnlarge** — Click-to-enlarge images
-- **claudeResources** — Moved to the `doc/` workspace
+- **docSources** — The `doc/` workspace publishes `.claude` through zudo-doc's `claude-code` preset
 - **claudeSkills** — The `doc/` workspace ships zudo-doc-design-system, zudo-doc-translate, zudo-doc-version-bump skills
 - **designTokenPanel** — OFF. The doc-chrome token panel (the "zdtp" header
   button) was removed: it was host-only wiring `create-zudo-sg` never

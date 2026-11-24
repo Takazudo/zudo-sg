@@ -67,7 +67,7 @@ export default defineConfig({
   },
   // Collections, markdown.features, codeHighlight, resolveMarkdownLinks,
   // stripMdExt, trailingSlash, and the package plugin descriptors (search
-  // index, llms.txt, claude-resources) — see node_modules/@takazudo/zudo-doc
+  // index, llms.txt, doc-sources) — see node_modules/@takazudo/zudo-doc
   // /dist/preset.d.ts for the full fragment this spreads in.
   ...preset,
   // Styleguide engine (@takazudo/zudo-sg/config, ADR decision 9): appends the

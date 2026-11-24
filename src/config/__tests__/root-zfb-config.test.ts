@@ -18,6 +18,9 @@ describe("root zfb integration contract", () => {
   it("keeps metadata serialization after preset history and appends the zudo-sg engine plugins last", () => {
     expect(config.plugins?.map(({ name }) => name)).toEqual([
       "@takazudo/zudo-doc/plugins/routes",
+      // zudo-doc 14 always registers doc-sources. This host leaves docSources
+      // unset, so the plugin's default is an empty list.
+      "@takazudo/zudo-doc/plugins/doc-sources",
       "@takazudo/zudo-doc/plugins/doc-history",
       "@takazudo/zudo-doc/plugins/search-index",
       "@takazudo/zudo-doc/plugins/theme-packs",
